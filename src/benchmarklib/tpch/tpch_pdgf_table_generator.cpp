@@ -15,12 +15,11 @@ namespace hyrise {
 
 TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, 128ul, false, false, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::string>{}) {}
+    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::string>{}) {}
 
-TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration, uint32_t pdgf_work_unit_size,
-                                               bool only_generate_partial_data, bool partial_data_generate_whole_tables,
+TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                                const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
-    : AbstractPDGFTableGenerator(scale_factor, pdgf_work_unit_size, only_generate_partial_data, partial_data_generate_whole_tables, benchmark_config, std::move(queries_to_run)),
+    : AbstractPDGFTableGenerator(scale_factor, benchmark_config, std::move(queries_to_run)),
     _clustering_configuration(clustering_configuration) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::generate() {

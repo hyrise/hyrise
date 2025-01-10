@@ -17,15 +17,10 @@
 #include "utils/timer.hpp"
 
 namespace hyrise {
-AbstractPDGFTableGenerator::AbstractPDGFTableGenerator(float scale_factor, uint32_t pdgf_work_unit_size, bool only_generate_partial_data,
-                                                       bool partial_data_generate_whole_tables, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
+AbstractPDGFTableGenerator::AbstractPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
                                                        std::vector<std::string> queries_to_run)
     : AbstractTableGenerator(benchmark_config),
       _scale_factor(scale_factor),
-      _pdgf_work_unit_size(pdgf_work_unit_size),
-      _num_cores(benchmark_config->data_preparation_cores),
-      _only_generate_partial_data(only_generate_partial_data),
-      _partial_data_generate_whole_tables(partial_data_generate_whole_tables),
       _queries_to_run(std::move(queries_to_run)),
       _columns_to_generate(std::make_shared<std::set<std::string>>()) {}
 
@@ -37,7 +32,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   Assert(!_benchmark_config->cache_binary_tables, "Caching of half-empty tables containing dummy segments is currently not supported");
 
   std::cerr << "Setting up shared memory.\n";
-  auto reader = create_shared_memory_reader(_pdgf_work_unit_size, _benchmark_config->chunk_size, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
+  const auto reader = create_shared_memory_reader(
+    _benchmark_config->pdgf_work_unit_size, _benchmark_config->chunk_size,
+    SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
   /**
@@ -46,7 +43,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
    */
   auto timer = Timer{};
   std::cerr << "Receiving table schemas from PDGF!\n";
-  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, _pdgf_work_unit_size, _num_cores, _scale_factor);
+  auto pdgf_schema = PdgfProcess::for_schema_generation(
+    PDGF_DIRECTORY_ROOT,
+    _benchmark_config->pdgf_work_unit_size, _benchmark_config->data_preparation_cores,
+    _scale_factor);
   pdgf_schema.run();
   while (reader->has_next_table()) {
     auto schema_builder = reader->read_next_schema();
@@ -70,9 +70,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   /**
    * Collect columns to generate
    */
-  if (_only_generate_partial_data) {
+  if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
     for (const auto& query: _queries_to_run) {
-      _collect_columns(query, _partial_data_generate_whole_tables);
+      _collect_columns(query);
     }
   }
 
@@ -80,14 +80,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
    * Generate tables
    */
   std::cerr << "Generating tables with PDGF\n";
-  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, _pdgf_work_unit_size, _num_cores, _scale_factor);
-  if (_only_generate_partial_data) {
+  auto pdgf_data = PdgfProcess::for_data_generation(
+    PDGF_DIRECTORY_ROOT,
+    _benchmark_config->pdgf_work_unit_size, _benchmark_config->data_preparation_cores,
+    _scale_factor);
+  if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
     pdgf_data.set_column_filter(_columns_to_generate);
   }
   pdgf_data.run();
   auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
   while (reader->has_next_table()) {
-    table_builders.emplace_back(reader->read_next_table(_benchmark_config->encoding_config, _num_cores));
+    table_builders.emplace_back(reader->read_next_table(_benchmark_config->encoding_config, _benchmark_config->data_preparation_cores));
   }
   std::cerr << "Awaiting PDGF teardown\n";
   pdgf_data.await_teardown();
@@ -104,7 +107,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   return table_info_by_name;
 }
 
-void AbstractPDGFTableGenerator::_collect_columns(const std::string& sql, bool whole_table) {
+void AbstractPDGFTableGenerator::_collect_columns(const std::string& sql) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
   auto pipeline = pipeline_builder.create_pipeline();
 
@@ -121,8 +124,8 @@ void AbstractPDGFTableGenerator::_collect_columns(const std::string& sql, bool w
       auto pruned_column_ids_iter = table_node->pruned_column_ids().begin();
       for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
            stored_column_id < stored_table->column_count(); ++stored_column_id) {
-        if (!whole_table) {
-          // Only prune columns if we do not want to generate the whole table
+        if (_benchmark_config->columns_to_generate == ColumnsToGenerate::OnlyUsedColumns) {
+          // Only prune columns if we do not want to generate whole tables
           if (pruned_column_ids_iter != table_node->pruned_column_ids().end() && stored_column_id == *pruned_column_ids_iter) {
             ++pruned_column_ids_iter;
             continue;

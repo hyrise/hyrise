@@ -601,7 +601,11 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("pipeline_metrics", "Track SQL pipeline metrics (runtime of steps in SQL pipeline, optimizer rule durations) and add them to the output JSON (see -o). Tracking pipeline metrics switches off plan caching.", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
     ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0"))
-    ("only_load_data", "Only load the benchmark data (for the specified queries, if only generating used columns is active), do not benchmark the queries.", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
+    ("only_load_data", "Only load the benchmark data (for the specified queries, if only generating used columns is active), do not benchmark the queries.", cxxopts::value<bool>()->default_value("false"))
+    ("pdgf_data_gen", "Instead of using the bundled db-gen to generate the data, rely on the Parallel Data Generation Framework.", cxxopts::value<bool>()->default_value("false"))
+    ("pdgf_work_unit_size", "Number of rows to generate in one workunit with PDGF", cxxopts::value<int>()->default_value("128"))
+    ("only_generate_used_columns", "Determine and only generate columns used by the specified queries.", cxxopts::value<bool>()->default_value("false"))
+    ("only_generate_used_tables", "Determine and only generate complete tables used by the specified queries.", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
   // clang-format on
 
   return cli_options;

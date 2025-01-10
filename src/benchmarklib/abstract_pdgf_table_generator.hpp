@@ -23,20 +23,14 @@ class Table;
 class AbstractPDGFTableGenerator : public AbstractTableGenerator {
  public:
   // Constructor for creating a AbstractPDGFTableGenerator in a benchmark
-  explicit AbstractPDGFTableGenerator(float scale_factor, uint32_t pdgf_work_unit_size,
-                                      bool only_generate_used_columns, bool partial_data_generate_whole_tables,
-                                      const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run);
+  explicit AbstractPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
-  void _collect_columns(const std::string& sql, bool whole_table);
+  void _collect_columns(const std::string& sql);
 
   float _scale_factor;
-  uint32_t _pdgf_work_unit_size;
-  uint32_t _num_cores;
-  bool _only_generate_partial_data;
-  bool _partial_data_generate_whole_tables;
   std::vector<std::string> _queries_to_run;
   std::shared_ptr<std::set<std::string>> _columns_to_generate;
 };

@@ -28,8 +28,7 @@ class TPCHPDGFTableGenerator : virtual public AbstractPDGFTableGenerator {
                               ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TPCHPDGFTableGenerator in a benchmark
-  explicit TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration, uint32_t pdgf_work_unit_size,
-                                  bool only_generate_used_columns, bool partial_data_generate_whole_tables,
+  explicit TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                   const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;

@@ -54,11 +54,7 @@ int main(int argc, char* argv[]) {
                    "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
                    "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
                    "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")) // NOLINT
-    ("tpch_cache_directory", "Base directory to write cached tables to", cxxopts::value<std::string>()->default_value("tpch_cached_tables"))
-    ("pdgf_data_gen", "Instead of using the bundled db-gen to generate the data, rely on the Parallel Data Generation Framework.", cxxopts::value<bool>()->default_value("false"))
-    ("pdgf_work_unit_size", "Number of rows to generate in one workunit with PDGF", cxxopts::value<int>()->default_value("128"))
-    ("only_generate_used_columns", "Determine and only generate columns used by the specified queries.", cxxopts::value<bool>()->default_value("false"))
-    ("only_generate_used_tables", "Determine and only generate complete tables used by the specified queries.", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("tpch_cache_directory", "Base directory to write cached tables to", cxxopts::value<std::string>()->default_value("tpch_cached_tables")); // NOLINT
   // clang-format on
 
   auto config = std::shared_ptr<BenchmarkConfig>{};
@@ -68,10 +64,6 @@ int main(int argc, char* argv[]) {
   auto jcch = false;
   auto jcch_skewed = false;
   auto cache_directory = std::string{};
-  auto pdgf_data_gen = false;
-  auto pdgf_work_unit_size = int{};
-  auto only_generate_used_columns = false;
-  auto only_generate_used_tables = false;
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -104,13 +96,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  pdgf_data_gen = cli_parse_result["pdgf_data_gen"].as<bool>();
-  Assert(!jcch || !pdgf_data_gen, "At the moment, cannot generate jcch data using PDGF.");
-  pdgf_work_unit_size = cli_parse_result["pdgf_work_unit_size"].as<int>();
-  only_generate_used_columns = cli_parse_result["only_generate_used_columns"].as<bool>();
-  only_generate_used_tables = cli_parse_result["only_generate_used_tables"].as<bool>();
-  Assert(pdgf_data_gen || (!only_generate_used_columns && !only_generate_used_tables), "Only generating a column subset is only supported when using PDGF.");
-  Assert(!only_generate_used_columns || !only_generate_used_tables, "Cannot decide between generating only columns and only tables!");
+  Assert(!(jcch && config->enable_pdgf_data_generation), "At the moment, cannot generate jcch data using PDGF.");
 
   auto clustering_configuration = ClusteringConfiguration::None;
   if (cli_parse_result.count("clustering")) {
@@ -178,15 +164,11 @@ int main(int argc, char* argv[]) {
   auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
   auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
 
-  if (pdgf_data_gen) {
-    std::cout << "- data generation using PDGF is active\n";
-    std::cout << "- rows per work unit: " << pdgf_work_unit_size << "\n";
-    std::cout << "- partial table generation is " << (only_generate_used_tables ?  "active": "not active") << ", ";
-    std::cout << "- partial column generation is " << (only_generate_used_columns ? "active" : "not active") << "\n";
+  if (config->enable_pdgf_data_generation) {
     auto runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
                                                             clustering_configuration, item_ids);
     auto queries = std::vector<std::string>{};
-    if (only_generate_used_columns || only_generate_used_tables) {
+    if (config->columns_to_generate != ColumnsToGenerate::All) {
       auto benchmark_items = runner->items();
       queries.reserve(benchmark_items.size());
       for (auto item : benchmark_items) {
@@ -194,9 +176,7 @@ int main(int argc, char* argv[]) {
       }
     }
     table_generator = std::make_unique<TPCHPDGFTableGenerator>(
-        scale_factor, clustering_configuration, pdgf_work_unit_size,
-        only_generate_used_columns || only_generate_used_tables, only_generate_used_tables,
-        config, queries);
+        scale_factor, clustering_configuration, config, queries);
     item_runner = std::move(runner);
   } else if (jcch) {
     // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the

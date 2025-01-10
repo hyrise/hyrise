@@ -15,6 +15,11 @@ namespace hyrise {
  */
 enum class BenchmarkMode { Ordered, Shuffled };
 
+/**
+ * What data to generate for a benchmark run. Only used in combination with PDGF.
+ */
+enum class ColumnsToGenerate { All, OnlyUsedColumns, OnlyUsedTables };
+
 using Duration = std::chrono::nanoseconds;
 // `steady_clock` guarantees that the clock is not adjusted while benchmarking.
 using TimePoint = std::chrono::steady_clock::time_point;
@@ -35,6 +40,8 @@ class BenchmarkConfig {
                   const bool init_enable_scheduler, const uint32_t init_cores,
                   const uint32_t init_data_preparation_cores, const uint32_t init_clients,
                   const bool init_enable_visualization, const bool init_verify, const bool init_cache_binary_tables,
+                  const bool init_enable_pdgf_data_generation, const int32_t pdgf_work_unit_size,
+                  const ColumnsToGenerate init_columns_to_generate,
                   const bool init_system_metrics, const bool init_pipeline_metrics,
                   const std::vector<std::string>& init_plugins);
 
@@ -54,6 +61,9 @@ class BenchmarkConfig {
   uint32_t clients{1};
   bool enable_visualization{false};
   bool verify{false};
+  bool enable_pdgf_data_generation{false};
+  int32_t pdgf_work_unit_size{128};
+  ColumnsToGenerate columns_to_generate{ColumnsToGenerate::All};
   // Defaults to false for internal use. Benchmark, console, and server binaries set caching of benchmark data using
   // binary files to true by default.
   bool cache_binary_tables{false};

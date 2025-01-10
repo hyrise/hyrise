@@ -48,6 +48,8 @@ set(
     tpcds/tpcds_table_generator.cpp
     tpcds/tpcds_table_generator.hpp
 
+    ssb/ssb_pdgf_table_generator.cpp
+    ssb/ssb_pdgf_table_generator.hpp
     ssb/ssb_table_generator.cpp
     ssb/ssb_table_generator.hpp
 

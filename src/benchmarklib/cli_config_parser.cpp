@@ -150,6 +150,27 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
     std::cout << "- Automatically verifying results with SQLite. This will make the performance numbers invalid\n";
   }
 
+  auto columns_to_generate = ColumnsToGenerate::All;
+  const auto only_generate_used_columns = parse_result["only_generate_used_columns"].as<bool>();
+  const auto only_generate_used_tables = parse_result["only_generate_used_tables"].as<bool>();
+  Assert(!only_generate_used_columns || !only_generate_used_tables, "Cannot decide between generating only columns and only tables!");
+  if (only_generate_used_columns) {
+    columns_to_generate = ColumnsToGenerate::OnlyUsedColumns;
+  }
+  if (only_generate_used_tables) {
+    columns_to_generate = ColumnsToGenerate::OnlyUsedTables;
+  }
+
+  const auto pdgf_data_gen = parse_result["pdgf_data_gen"].as<bool>();
+  const auto pdgf_work_unit_size = parse_result["pdgf_work_unit_size"].as<int>();
+  Assert(pdgf_data_gen || columns_to_generate == ColumnsToGenerate::All, "Only generating a column subset is only supported when using PDGF.");
+  if (pdgf_data_gen) {
+    std::cout << "- data generation using PDGF is active\n";
+    std::cout << "- rows per PDGF work unit: " << pdgf_work_unit_size << "\n";
+    std::cout << "- partial table generation is " << (only_generate_used_tables ?  "active": "not active") << "\n";
+    std::cout << "- partial column generation is " << (only_generate_used_columns ? "active" : "not active") << "\n";
+  }
+
   const auto cache_binary_tables = !parse_result["dont_cache_binary_tables"].as<bool>();
   if (cache_binary_tables) {
     std::cout << "- Caching tables as binary files\n";
@@ -183,7 +204,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   return std::make_shared<BenchmarkConfig>(
       benchmark_mode, chunk_size, *encoding_config, chunk_indexes, table_indexes, only_load_data, max_runs, timeout_duration,
       warmup_duration, output_file_path, enable_scheduler, cores, data_preparation_cores, clients, enable_visualization,
-      verify, cache_binary_tables, system_metrics, pipeline_metrics, plugins);
+      verify, cache_binary_tables, pdgf_data_gen, pdgf_work_unit_size, columns_to_generate, system_metrics, pipeline_metrics, plugins);
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
