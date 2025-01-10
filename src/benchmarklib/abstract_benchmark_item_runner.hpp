@@ -41,6 +41,9 @@ class AbstractBenchmarkItemRunner {
   // Returns the BenchmarkItemIDs of all selected items
   virtual const std::vector<BenchmarkItemID>& items() const = 0;
 
+  // Returns the query strings of all items.
+  virtual const std::vector<std::string> query_strings() = 0;
+
   // Returns true if an item without an associated dedicated result exists, else false.
   bool has_item_without_dedicated_result();
 

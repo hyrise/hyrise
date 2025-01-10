@@ -7,6 +7,7 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
 #include "ssb/ssb_table_generator.hpp"
+#include "ssb/ssb_pdgf_table_generator.hpp"
 
 /**
  * The Star Schema Benchmark was introduced by O'Neil et al. "The Star Schema Benchmark and Augmented Fact Table
@@ -71,34 +72,40 @@ int main(int argc, char* argv[]) {
   Assert(!config->verify || scale_factor < 0.11,
          "SSB result verification is only supported fo scale factors <= 0.1 (--scale 0.1).");
 
-  // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
-  // SSB implementation calls those generators externally. This is because we would get linking conflicts if we were
-  // to include both generators.
-
-  // Try to find dbgen binary.
   const auto executable_path = std::filesystem::canonical(std::string{argv[0]}).remove_filename();
-  const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
-  Assert(std::filesystem::exists(ssb_dbgen_path / "dbgen"),
-         std::string{"SSB dbgen not found at "} + ssb_dbgen_path.c_str());
   const auto query_path = executable_path / "../resources/benchmark/ssb/queries";
-  const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
-
-  // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
-  auto ssb_data_path_str = std::stringstream{};
-  ssb_data_path_str << "ssb_data/sf-" << std::noshowpoint << scale_factor;
-  std::filesystem::create_directories(ssb_data_path_str.str());
-  // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths.
-  const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str.str());
-
-  std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << '\n';
-  std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';
-
-  // Create the table generator and item runner.
-  auto table_generator =
-      std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, config);
-
   auto benchmark_item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(
       config, query_path, std::unordered_set<std::string>{}, query_subset);
+  auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
+
+  if (config->enable_pdgf_data_generation) {
+    auto queries = benchmark_item_runner->query_strings();
+    table_generator = std::make_unique<SSBPDGFTableGenerator>(scale_factor, config, queries);
+  } else {
+    // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
+    // SSB implementation calls those generators externally. This is because we would get linking conflicts if we were
+    // to include both generators.
+
+    // Try to find dbgen binary.
+    const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
+    Assert(std::filesystem::exists(ssb_dbgen_path / "dbgen"),
+           std::string{"SSB dbgen not found at "} + ssb_dbgen_path.c_str());
+    const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
+
+    // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
+    auto ssb_data_path_str = std::stringstream{};
+    ssb_data_path_str << "ssb_data/sf-" << std::noshowpoint << scale_factor;
+    std::filesystem::create_directories(ssb_data_path_str.str());
+    // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths.
+    const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str.str());
+
+    std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << '\n';
+    std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';
+
+    // Create the table generator and item runner.
+    auto table_generator =
+        std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, config);
+  }
 
   auto benchmark_runner =
       std::make_shared<BenchmarkRunner>(*config, std::move(benchmark_item_runner), std::move(table_generator), context);

@@ -27,6 +27,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
     return AbstractPDGFTableGenerator::generate();
 }
 
+const std::string TPCHPDGFTableGenerator::_pdgf_schema_config_file() const {
+  return "pdgf-core_config_tpc-h-schema.xml";
+}
+
 AbstractTableGenerator::IndexesByTable TPCHPDGFTableGenerator::_indexes_by_table() const {
   return {{"part", {{"p_partkey"}}},
           {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},

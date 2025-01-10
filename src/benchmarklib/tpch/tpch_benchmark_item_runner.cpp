@@ -119,8 +119,13 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   }
 }
 
-std::string TPCHBenchmarkItemRunner::build_query(const BenchmarkItemID item_id) {
-  return _build_query(item_id);
+const std::vector<std::string> TPCHBenchmarkItemRunner::query_strings() {
+  auto queries = std::vector<std::string>{};
+  queries.reserve(_items.size());
+  for (const auto item : _items) {
+    queries.emplace_back(_build_query(item));
+  }
+  return queries;
 }
 
 std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id) {

@@ -167,16 +167,8 @@ int main(int argc, char* argv[]) {
   if (config->enable_pdgf_data_generation) {
     auto runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
                                                             clustering_configuration, item_ids);
-    auto queries = std::vector<std::string>{};
-    if (config->columns_to_generate != ColumnsToGenerate::All) {
-      auto benchmark_items = runner->items();
-      queries.reserve(benchmark_items.size());
-      for (auto item : benchmark_items) {
-        queries.emplace_back(runner->build_query(item));
-      }
-    }
-    table_generator = std::make_unique<TPCHPDGFTableGenerator>(
-        scale_factor, clustering_configuration, config, queries);
+    auto queries = runner->query_strings();
+    table_generator = std::make_unique<TPCHPDGFTableGenerator>(scale_factor, clustering_configuration, config, queries);
     item_runner = std::move(runner);
   } else if (jcch) {
     // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the

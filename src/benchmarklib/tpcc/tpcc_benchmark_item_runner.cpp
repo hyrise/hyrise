@@ -25,6 +25,10 @@ const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
   return items;
 }
 
+const std::vector<std::string> TPCCBenchmarkItemRunner::query_strings() {
+  throw std::logic_error("Not implemented!");
+}
+
 bool TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   auto successful = false;
   switch (item_id) {
