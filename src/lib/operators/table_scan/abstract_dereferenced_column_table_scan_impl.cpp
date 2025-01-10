@@ -7,6 +7,7 @@
 #include "storage/split_pos_list_by_chunk_id.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -97,7 +98,7 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
   const auto num_remaining_null_row_id_positions = remaining_null_row_id_positions.size();
   matches.resize(num_previous_matches + num_remaining_null_row_id_positions);
 
-  for (auto index = size_t{0}; index < num_remaining_null_row_id_positions; ++index) {
+  for (auto index = ChunkOffset{0}; index < num_remaining_null_row_id_positions; ++index) {
     matches[num_previous_matches + index] = RowID{chunk_id, remaining_null_row_id_positions[index].chunk_offset};
   }
 }
