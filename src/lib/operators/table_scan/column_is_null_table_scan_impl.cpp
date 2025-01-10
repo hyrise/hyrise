@@ -6,7 +6,6 @@
 #include <string>
 
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
-#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
