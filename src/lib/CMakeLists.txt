@@ -253,6 +253,8 @@ set(
     operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
+    operators/reduce.cpp
+    operators/reduce.hpp
     operators/sort.cpp
     operators/sort.hpp
     operators/table_scan.cpp

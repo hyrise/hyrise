@@ -112,6 +112,7 @@ set(
     lib/operators/print_test.cpp
     lib/operators/product_test.cpp
     lib/operators/projection_test.cpp
+    lib/operators/reduce_test.cpp
     lib/operators/sort_test.cpp
     lib/operators/table_scan_between_test.cpp
     lib/operators/table_scan_sorted_segment_search_test.cpp
