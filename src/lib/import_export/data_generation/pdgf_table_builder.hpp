@@ -49,7 +49,7 @@ class PDGFTableBuilder : public BasePDGFTableBuilder {
   uint32_t _table_id;
   std::string _table_name;
   int64_t _table_num_rows;
-  std::atomic_int64_t _remaining_work_units_to_read;
+  std::atomic_int64_t _remaining_rows_to_generate;
 
   uint8_t _num_generated_columns;
   std::array<std::shared_ptr<BasePDGFColumn>, num_columns> _generated_columns;

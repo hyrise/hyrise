@@ -32,7 +32,7 @@ PDGFTableBuilder<work_unit_size, num_columns>::PDGFTableBuilder(uint32_t table_i
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 bool PDGFTableBuilder<work_unit_size, num_columns>::reader_should_handle_another_work_unit() {
-    auto res = _remaining_work_units_to_read--; // Value will be decremented after reading.
+    const auto res = _remaining_rows_to_generate.fetch_sub(work_unit_size);
     // All work units have been read (or are in progress of being read by still active reader threads,
     // so the current reader is done now.
     return res > 0;
@@ -84,7 +84,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
   boost::algorithm::to_lower(_table_name);
   std::cerr << "TABLE NAME " << _table_name << "\n";
   _table_num_rows = * reinterpret_cast<int64_t*>(info_cell->data[3][0]);
-  _remaining_work_units_to_read.store((_table_num_rows + work_unit_size - 1) / work_unit_size); // ceil(_table_num_rows // work_unit_size)
+  _remaining_rows_to_generate.store(_table_num_rows);
 
   // Retrieve information from already loaded schema table
   Assert(Hyrise::get().storage_manager.has_table(_table_name), "Expected table to be already registered with storage manager. Maybe the table schema was not loaded beforehand?");
@@ -116,6 +116,13 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id,
                                               SharedMemoryDataCell<work_unit_size, num_columns>* data_cell, uint32_t num_contained_rows) {
   DebugAssert(table_id == _table_id, "Trying to append data to a table it does not belong to!");
   DebugAssert(num_contained_rows <= work_unit_size, "Reported cells in rows is too large!");
+  // When have originally assigned the work unit, we assumed it was full
+  // Now, we might have to update our calculation.
+  // Note that this might lead workers to terminate early, as they might have seen no rows remaining when asking
+  // whether to handle more work units, but then we have climbed above 0 again here.
+  // However, we are still guaranteed to read the full data, because the worker thread currently executing this function
+  // will see the updated value on its next cycle.
+  _remaining_rows_to_generate += work_unit_size - num_contained_rows;
   for (auto row = size_t{0}; row < num_contained_rows; ++row) {
     for (auto col = uint8_t{0}; col < _num_generated_columns; ++col) {
       _generated_columns[col]->virtual_add((sorting_id * work_unit_size) + row, data_cell->data[row][col]);
@@ -145,4 +152,16 @@ template class PDGFTableBuilder<1024u, 16u>; //   512
 template class PDGFTableBuilder<2048u, 16u>; //   256
 template class PDGFTableBuilder<4096u, 16u>; //   128
 template class PDGFTableBuilder<8192u, 16u>; //    64
+
+template class PDGFTableBuilder<   8u, 32u>; // 32768
+template class PDGFTableBuilder<  16u, 32u>; // 16384
+template class PDGFTableBuilder<  32u, 32u>; //  8192
+template class PDGFTableBuilder<  64u, 32u>; //  4096
+template class PDGFTableBuilder< 128u, 32u>; //  2048 buffer size
+template class PDGFTableBuilder< 256u, 32u>; //  1024
+template class PDGFTableBuilder< 512u, 32u>; //   512
+template class PDGFTableBuilder<1024u, 32u>; //   256
+template class PDGFTableBuilder<2048u, 32u>; //   128
+template class PDGFTableBuilder<4096u, 32u>; //    64
+template class PDGFTableBuilder<8192u, 32u>; //    32
 } // namespace hyrise

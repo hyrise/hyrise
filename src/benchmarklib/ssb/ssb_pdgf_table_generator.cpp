@@ -19,7 +19,7 @@ SSBPDGFTableGenerator::SSBPDGFTableGenerator(float scale_factor, const std::shar
     : AbstractPDGFTableGenerator(scale_factor, benchmark_config, queries_to_run) {}
 
 std::string SSBPDGFTableGenerator::_pdgf_schema_config_file() const {
-  return "ssb-schema.xml";
+  return "ssb-schema-non-duplicated-fields.xml";
 }
 
 std::string SSBPDGFTableGenerator::_pdgf_schema_generation_file() const {

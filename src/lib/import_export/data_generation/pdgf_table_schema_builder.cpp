@@ -128,4 +128,16 @@ template class PDGFTableSchemaBuilder<1024u, 16u>; //   512
 template class PDGFTableSchemaBuilder<2048u, 16u>; //   256
 template class PDGFTableSchemaBuilder<4096u, 16u>; //   128
 template class PDGFTableSchemaBuilder<8192u, 16u>; //    64
+
+template class PDGFTableSchemaBuilder<   8u, 32u>; // 32768
+template class PDGFTableSchemaBuilder<  16u, 32u>; // 16384
+template class PDGFTableSchemaBuilder<  32u, 32u>; //  8192
+template class PDGFTableSchemaBuilder<  64u, 32u>; //  4096
+template class PDGFTableSchemaBuilder< 128u, 32u>; //  2048 buffer size
+template class PDGFTableSchemaBuilder< 256u, 32u>; //  1024
+template class PDGFTableSchemaBuilder< 512u, 32u>; //   512
+template class PDGFTableSchemaBuilder<1024u, 32u>; //   256
+template class PDGFTableSchemaBuilder<2048u, 32u>; //   128
+template class PDGFTableSchemaBuilder<4096u, 32u>; //    64
+template class PDGFTableSchemaBuilder<8192u, 32u>; //    32
 } // namespace hyrise

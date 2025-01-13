@@ -148,4 +148,5 @@ template class MultiProcessRingBuffer<  512u>;
 template class MultiProcessRingBuffer<  256u>;
 template class MultiProcessRingBuffer<  128u>;
 template class MultiProcessRingBuffer<   64u>;
+template class MultiProcessRingBuffer<   32u>;
 } // namespace hyrise
