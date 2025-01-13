@@ -1588,101 +1588,96 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsSimple) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      " * "
-      "FROM "
-      "  int_float INNER JOIN int_float2 USING (a)");
+    "SELECT * FROM int_float INNER JOIN int_float2 USING (a)");
 
+  // clang-format off
   const auto expected_lqp =
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
-                           JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
-                                          stored_table_node_int_float, stored_table_node_int_float2));
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
+      stored_table_node_int_float,
+      stored_table_node_int_float2));
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsColumnAlias) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      " * "
-      "FROM "
-      "  int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)");
+  "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)");
 
-  const auto expected_lqp = AliasNode::make(
-      expression_vector(int_float_a, int_float_b, int_float2_b), std::vector<std::string>({"c", "d", "b"}),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
-                           JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
-                                          stored_table_node_int_float, stored_table_node_int_float2)));
-
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+    std::vector<std::string>({"c", "d", "b"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+      JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
+        stored_table_node_int_float,
+        stored_table_node_int_float2)));
+  // clang-format on
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsBadNamedColumn) {
   // int_float2 alias (c,b) does not contain a column named d
-  EXPECT_THROW(sql_to_lqp_helper("SELECT "
-                                 " * "
-                                 "FROM "
-                                 "  int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (d)"),
-               InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper(
+      "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (d)"),
+    InvalidInputException);
 
   // int_float2 alias (c,c) is ambiguous
-  EXPECT_THROW(sql_to_lqp_helper("SELECT "
-                                 " * "
-                                 "FROM "
-                                 "  int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,c) USING (c)"),
-               InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper(
+      "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,c) USING (c)"),
+    InvalidInputException);
 
   // int_float alias (c,c) is ambiguous
-  EXPECT_THROW(sql_to_lqp_helper("SELECT "
-                                 " * "
-                                 "FROM "
-                                 "  int_float AS int_float(c,c) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)"),
-               InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper(
+      "SELECT * FROM int_float AS int_float(c,c) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)"),
+    InvalidInputException);
 
   // int_float alias (c,b) does not contain a column named d
-  EXPECT_THROW(sql_to_lqp_helper("SELECT "
-                                 " * "
-                                 "FROM "
-                                 "  int_float AS int_float(c,b) INNER JOIN int_float2 AS intfloat2(c,d) USING (d)"),
-               InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper(
+      "SELECT * FROM int_float AS int_float(c,b) INNER JOIN int_float2 AS intfloat2(c,d) USING (d)"),
+    InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsMultipleColumns) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      " * "
-      "FROM "
-      "  int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,d) USING (c,d)");
+    "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,d) USING (c,d)");
 
-  const auto expected_lqp = AliasNode::make(
-      expression_vector(int_float_a, int_float_b), std::vector<std::string>({"c", "d"}),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-                           JoinNode::make(JoinMode::Inner,
-                                          std::vector<std::shared_ptr<AbstractExpression>>{
-                                              equals_(int_float_a, int_float2_a), equals_(int_float_b, int_float2_b)},
-                                          stored_table_node_int_float, stored_table_node_int_float2)));
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b), std::vector<std::string>({"c", "d"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+      JoinNode::make(JoinMode::Inner,
+        std::vector<std::shared_ptr<AbstractExpression>>{
+          equals_(int_float_a, int_float2_a),
+          equals_(int_float_b, int_float2_b)
+        },
+        stored_table_node_int_float,
+        stored_table_node_int_float2)));
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsNested) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      " * "
-      "FROM "
-      " int_float JOIN (SELECT a, int_float2.b, int_float5.d FROM int_float2 JOIN int_float5 USING (a)) AS "
-      "int_float_comb(a, c, d) USING (a)");
+    "SELECT * FROM int_float JOIN "
+      "(SELECT a, int_float2.b, int_float5.d FROM int_float2 JOIN int_float5 USING (a))"
+    "AS int_float_comb(a, c, d) USING (a)");
 
-  const auto expected_lqp = AliasNode::make(
-      expression_vector(int_float_a, int_float_b, int_float2_b, int_float5_d),
-      std::vector<std::string>({"a", "b", "c", "d"}),
-      ProjectionNode::make(
-          expression_vector(int_float_a, int_float_b, int_float2_b, int_float5_d),
-          JoinNode::make(
-              JoinMode::Inner, equals_(int_float_a, int_float2_a), stored_table_node_int_float,
-              ProjectionNode::make(expression_vector(int_float2_a, int_float2_b, int_float5_d),
-                                   JoinNode::make(JoinMode::Inner, equals_(int_float2_a, int_float5_a),
-                                                  stored_table_node_int_float2, stored_table_node_int_float5)))));
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b, int_float2_b, int_float5_d),
+    std::vector<std::string>({"a", "b", "c", "d"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b, int_float5_d),
+      JoinNode::make(
+        JoinMode::Inner,
+        equals_(int_float_a, int_float2_a), stored_table_node_int_float,
+        ProjectionNode::make(expression_vector(int_float2_a, int_float2_b, int_float5_d),
+          JoinNode::make(JoinMode::Inner, equals_(int_float2_a, int_float5_a),
+            stored_table_node_int_float2,
+            stored_table_node_int_float5)))));
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
