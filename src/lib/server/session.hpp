@@ -18,7 +18,7 @@ namespace hyrise {
 // Example usage can be found here: https://stackoverflow.com/questions/52479293/postgresql-refcursor-and-portal-name
 class Session {
  public:
-  explicit Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info);
+  explicit Session(boost::asio::io_context& io_context, const SendExecutionInfo send_execution_info);
 
   // Start new session.
   void run();
