@@ -33,8 +33,6 @@ PdgfProcess::PdgfProcess(std::string schema_config_file, std::string schema_gene
   if (_pdgf_num_cores == 0) {
     _pdgf_num_cores = 1;
   }
-
-  _pdgf_num_cores = 64;
 }
 
 PdgfProcess::~PdgfProcess() {
