@@ -73,7 +73,8 @@ void PDGFColumn<T>::virtual_add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
   initialize_segment(static_cast<ChunkID>(segment_index), false);
-  _data_segments[segment_index][segment_position] = * reinterpret_cast<T*>(data);
+  auto val = * reinterpret_cast<T*>(data);
+  _data_segments[segment_index][segment_position] = val;
 }
 
 template<>
