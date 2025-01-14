@@ -25,7 +25,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
                                  const uint32_t init_data_preparation_cores, const uint32_t init_clients,
                                  const bool init_enable_visualization, const bool init_verify,
                                  const bool init_cache_binary_tables,
-                                 const bool init_enable_pdgf_data_generation, const int32_t pdgf_work_unit_size,
+                                 const bool init_enable_pdgf_data_generation, const uint64_t init_pdgf_project_seed,
+                                 const int32_t pdgf_work_unit_size,
                                  const ColumnsToGenerate init_columns_to_generate, const bool init_system_metrics,
                                  const bool init_pipeline_metrics, const std::vector<std::string>& init_plugins)
     : benchmark_mode{init_benchmark_mode},
@@ -45,6 +46,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       enable_visualization{init_enable_visualization},
       verify{init_verify},
       enable_pdgf_data_generation{init_enable_pdgf_data_generation},
+      pdgf_project_seed{init_pdgf_project_seed},
       pdgf_work_unit_size{pdgf_work_unit_size},
       columns_to_generate{init_columns_to_generate},
       cache_binary_tables{init_cache_binary_tables},

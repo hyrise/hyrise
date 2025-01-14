@@ -40,7 +40,8 @@ class BenchmarkConfig {
                   const bool init_enable_scheduler, const uint32_t init_cores,
                   const uint32_t init_data_preparation_cores, const uint32_t init_clients,
                   const bool init_enable_visualization, const bool init_verify, const bool init_cache_binary_tables,
-                  const bool init_enable_pdgf_data_generation, const int32_t pdgf_work_unit_size,
+                  const bool init_enable_pdgf_data_generation, const uint64_t pdgf_project_seed,
+                  const int32_t pdgf_work_unit_size,
                   const ColumnsToGenerate init_columns_to_generate,
                   const bool init_system_metrics, const bool init_pipeline_metrics,
                   const std::vector<std::string>& init_plugins);
@@ -62,6 +63,7 @@ class BenchmarkConfig {
   bool enable_visualization{false};
   bool verify{false};
   bool enable_pdgf_data_generation{false};
+  uint64_t pdgf_project_seed{123456789};
   int32_t pdgf_work_unit_size{128};
   ColumnsToGenerate columns_to_generate{ColumnsToGenerate::All};
   // Defaults to false for internal use. Benchmark, console, and server binaries set caching of benchmark data using

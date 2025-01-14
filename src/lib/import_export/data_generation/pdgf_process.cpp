@@ -11,23 +11,24 @@
 namespace hyrise {
 
 PdgfProcess PdgfProcess::for_schema_generation(std::string schema_config_file, std::string schema_generation_file, std::string pdgf_directory_root,
-                                               uint32_t work_unit_size, uint32_t pdgf_num_cores, float scale_factor) {
-  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), work_unit_size, pdgf_num_cores, "-writeTableSchemas", scale_factor);
+                                               uint64_t project_seed, uint32_t work_unit_size, uint32_t pdgf_num_cores, float scale_factor) {
+  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), project_seed, work_unit_size, pdgf_num_cores, "-writeTableSchemas", scale_factor);
 }
 
 PdgfProcess PdgfProcess::for_data_generation(std::string schema_config_file, std::string schema_generation_file, std::string pdgf_directory_root,
-                                             uint32_t work_unit_size, uint32_t pdgf_num_cores, float scale_factor) {
-  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), work_unit_size, pdgf_num_cores, "-start", scale_factor);
+                                             uint64_t project_seed, uint32_t work_unit_size, uint32_t pdgf_num_cores, float scale_factor) {
+  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), project_seed, work_unit_size, pdgf_num_cores, "-start", scale_factor);
 }
 
 PdgfProcess::PdgfProcess(std::string schema_config_file, std::string schema_generation_file, std::string pdgf_directory_root,
-                         uint32_t work_unit_size, uint32_t pdgf_num_cores, std::string pdgf_command, float scale_factor) :
+                         uint64_t project_seed, uint32_t work_unit_size, uint32_t pdgf_num_cores, std::string pdgf_command, float scale_factor) :
   _schema_config_file(std::move(schema_config_file)),
   _schema_generation_file(std::move(schema_generation_file)),
   _pdgf_directory_root(std::move(pdgf_directory_root)),
   _pdgf_work_unit_size(work_unit_size),
   _pdgf_num_cores(pdgf_num_cores),
   _pdgf_command(std::move(pdgf_command)),
+  _project_seed(project_seed),
   _scale_factor(scale_factor) {
   if (_pdgf_num_cores == 0) {
     _pdgf_num_cores = 1;
@@ -172,6 +173,7 @@ void PdgfProcess::_configure_pdgf_arguments() {
                                           "-load", _schema_config_file,
                                           "-load", _schema_generation_file,
                                           "-noShell", "-closeWhenDone",
+                                          "-seed", std::to_string(_project_seed),
                                           "-sf", std::to_string(_scale_factor),
                                           "-workers", std::to_string(_pdgf_num_cores),
                                           _pdgf_command

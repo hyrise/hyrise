@@ -162,10 +162,12 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   }
 
   const auto pdgf_data_gen = parse_result["pdgf_data_gen"].as<bool>();
+  const auto pdgf_project_seed = parse_result["pdgf_project_seed"].as<uint64_t>();
   const auto pdgf_work_unit_size = parse_result["pdgf_work_unit_size"].as<int>();
   Assert(pdgf_data_gen || columns_to_generate == ColumnsToGenerate::All, "Only generating a column subset is only supported when using PDGF.");
   if (pdgf_data_gen) {
     std::cout << "- data generation using PDGF is active\n";
+    std::cout << "- PDGF project seed is: " << pdgf_project_seed << "\n";
     std::cout << "- rows per PDGF work unit: " << pdgf_work_unit_size << "\n";
     std::cout << "- partial table generation is " << (only_generate_used_tables ?  "active": "not active") << "\n";
     std::cout << "- partial column generation is " << (only_generate_used_columns ? "active" : "not active") << "\n";
@@ -204,7 +206,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   return std::make_shared<BenchmarkConfig>(
       benchmark_mode, chunk_size, *encoding_config, chunk_indexes, table_indexes, only_load_data, max_runs, timeout_duration,
       warmup_duration, output_file_path, enable_scheduler, cores, data_preparation_cores, clients, enable_visualization,
-      verify, cache_binary_tables, pdgf_data_gen, pdgf_work_unit_size, columns_to_generate, system_metrics, pipeline_metrics, plugins);
+      verify, cache_binary_tables, pdgf_data_gen, pdgf_project_seed, pdgf_work_unit_size, columns_to_generate, system_metrics, pipeline_metrics, plugins);
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
