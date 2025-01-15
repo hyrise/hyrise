@@ -21,6 +21,17 @@ class OperatorsReduceTest : public BaseTest {
     _int_int->execute();
   }
 
+  void create_hashes() {
+    auto reduce = std::make_shared<Reduce>(_int_int);
+    reduce->_create_filter(ColumnID{0}, 65536);
+    auto filter = reduce->export_filter();
+    (void) filter;
+    for (auto& i : *filter) {
+      std::cout << static_cast<uint64_t>(i);
+    }
+    std::cout << std::endl;
+  }
+
  protected:
   std::shared_ptr<TableWrapper> _int_int;
 };
@@ -30,6 +41,7 @@ TEST_F(OperatorsReduceTest, DoubleScan) {
   auto reduce = std::make_shared<Reduce>(_int_int);
   reduce->execute();
   EXPECT_TABLE_EQ_UNORDERED(reduce->get_output(), expected);
+  create_hashes();
 }
 
 }  // namespace hyrise
