@@ -50,9 +50,9 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
       _scan_encoded_segment(*dictionary_segment, chunk_id, matches, position_filter);
     } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<SegmentDataType>*>(&segment)) {
       _scan_encoded_segment(*lz4_segment, chunk_id, matches, position_filter);
-    } else if (const auto* const frame_of_reference_segment =
-                   dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
-      _scan_encoded_segment(*frame_of_reference_segment, chunk_id, matches, position_filter);
+    // } else if (const auto* const frame_of_reference_segment =
+    //                dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
+    //   _scan_encoded_segment(*frame_of_reference_segment, chunk_id, matches, position_filter);
     } else {
       const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
       if (!chunk_sorted_by.empty()) {
@@ -183,7 +183,7 @@ bool ColumnIsNullTableScanImpl::_matches_all(const BaseSegmentType& segment) con
       return false;
 
     case PredicateCondition::IsNotNull:
-      return !segment.null_values().has_value();
+      return !segment.contains_nulls();
 
     default:
       Fail("Unsupported comparison type encountered");
@@ -194,7 +194,7 @@ template <typename BaseSegmentType>
 bool ColumnIsNullTableScanImpl::_matches_none(const BaseSegmentType& segment) const {
   switch (predicate_condition) {
     case PredicateCondition::IsNull:
-      return !segment.null_values().has_value();
+      return !segment.contains_nulls();
 
     case PredicateCondition::IsNotNull:
       return false;
@@ -227,10 +227,8 @@ void ColumnIsNullTableScanImpl::_scan_encoded_segment(const BaseSegmentType& seg
                 "DictionarySegments without or with exclusivly NULLs should have been caught by edge case handling.");
     _scan_iterable_for_null_values(create_iterable_from_attribute_vector(segment), chunk_id, matches, position_filter);
   } else {
-    const auto& null_values = segment.null_values();
-    DebugAssert(null_values.has_value(),
-                "Segment without null_values vector should have been caught by edge case handling.");
-    _scan_iterable_for_null_values(NullValueVectorIterable{*null_values}, chunk_id, matches, position_filter);
+    DebugAssert(segment.contains_nulls(), "Columns that are not nullable should have been caught by edge case handling.");
+    _scan_iterable_for_null_values(NullValueVectorIterable{segment.null_values()}, chunk_id, matches, position_filter);
   }
 }
 

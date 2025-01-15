@@ -323,11 +323,11 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool /*colum
     export_values(ofstream, lz4_block);
   }
 
-  if (lz4_segment.null_values()) {
+  if (lz4_segment.contains_nulls()) {
     // Write NULL value size
-    export_value(ofstream, static_cast<uint32_t>(lz4_segment.null_values()->size()));
+    export_value(ofstream, static_cast<uint32_t>(lz4_segment.null_values().size()));
     // Write NULL values
-    export_values(ofstream, *lz4_segment.null_values());
+    export_values(ofstream, lz4_segment.null_values());
   } else {
     // No NULL values
     export_value(ofstream, uint32_t{0});
