@@ -13,12 +13,13 @@ namespace hyrise {
  */
 class ExportNode : public EnableMakeForLQPNode<ExportNode>, public AbstractNonQueryNode {
  public:
-  ExportNode(const std::string& init_file_name, const FileType init_file_type);
+  ExportNode(const std::string& init_file_name, const FileType init_file_type, const EncodingType init_file_encoding = EncodingType::Unencoded);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string file_name;
   const FileType file_type;
+  const EncodingType file_encoding;
 
  protected:
   size_t _on_shallow_hash() const override;

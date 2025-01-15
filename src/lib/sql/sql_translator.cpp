@@ -75,6 +75,7 @@
 #include "sql/sql_identifier_resolver.hpp"
 #include "sql/sql_identifier_resolver_proxy.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -1822,14 +1823,33 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   // so on. Anyway, we would need to decouple data loading and storing the table and have to load metadata or even the
   // whole table when translating the SQL statement.
   AssertInput(!import_statement.whereClause, "Predicates on imported files are not supported.");
-  return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                          import_type_to_file_type(import_statement.type));
+
+  if (!import_statement.encoding) {
+    return ImportNode::make(import_statement.tableName, import_statement.filePath,
+                        import_type_to_file_type(import_statement.type));
+  }
+
+  auto file_encoding = magic_enum::enum_cast<EncodingType>(std::string{import_statement.encoding}, magic_enum::case_insensitive);
+  AssertInput(file_encoding.has_value(), "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
+  return ImportNode::make(import_statement.tableName, import_statement.filePath, import_type_to_file_type(import_statement.type), file_encoding.value());
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
+  auto file_encoding = EncodingType::Unencoded;
+
+  // Do this before resolving the SELECT. This allows checks during SELECT translation.
+  if (export_statement.encoding) {
+    AssertInput(false, "A specified output encoding is not yet supported. To achieve the same result, export the table once, then load using the wished encoding and export again.");
+
+    // The following code shows how we would pass the encoding to the ExportNode. 
+    // The implementation of this feature would happen in Export Operator. See lib/operators/export.hpp.
+    auto file_encoding_wrapper = magic_enum::enum_cast<EncodingType>(std::string{export_statement.encoding}, magic_enum::case_insensitive);
+    AssertInput(file_encoding_wrapper.has_value(), "Unknown encoding type '" + std::string{export_statement.encoding} + "'.");
+    file_encoding = file_encoding_wrapper.value();
+  }
 
   if (export_statement.select) {
     lqp = _translate_select_statement(*export_statement.select);
@@ -1844,7 +1864,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
     }
   }
 
-  return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type), lqp);
+  return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type), file_encoding, lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

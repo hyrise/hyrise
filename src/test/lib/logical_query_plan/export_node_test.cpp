@@ -19,7 +19,7 @@ class ExportNodeTest : public BaseTest {
 };
 
 TEST_F(ExportNodeTest, Description) {
-  EXPECT_EQ(_export_node->description(), "[Export] to 'file_name' (csv)");
+  EXPECT_EQ(_export_node->description(), "[Export] to 'file_name' (csv) with encoding (unencoded)");
 }
 
 TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
