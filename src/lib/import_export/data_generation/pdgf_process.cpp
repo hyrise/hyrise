@@ -152,7 +152,8 @@ void PdgfProcess::_configure_pdgf_properties() {
     "bankmark.pdgf.log.folder", "/scratch/jan-eric.hellenberg",
     "CONCURRENT_SCHED_DEFAULT_WORKUNIT_SIZE", std::to_string(_pdgf_work_unit_size),
     "SHM_BUFFER_CONTAINED_WORK_UNITS", std::to_string(524288 / _pdgf_work_unit_size / 2), // divide by 2 for 32 column buffer
-    "MICRO_BENCHMARK_GENERATION", "SINGLE_WORKER"
+    "MICRO_BENCHMARK_GENERATION", "SINGLE_WORKER",
+    "MEMORY_CHECK_RESTART_PROMT_ENABLED", "0"
   };
 
   for (size_t i = 0; i < properties.size(); i += 2) {
