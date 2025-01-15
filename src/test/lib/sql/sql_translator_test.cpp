@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
+
 #include <optional>
+
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -3201,7 +3203,8 @@ TEST_F(SQLTranslatorTest, CopyStatementImport) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BINARY);");
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BINARY);");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
@@ -3215,33 +3218,41 @@ TEST_F(SQLTranslatorTest, CopyStatementImport) {
 }
 
 TEST_F(SQLTranslatorTest, CopyStatementImportEncoding) {
-    {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'unencoded');");
+  {
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'unencoded');");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::Unencoded);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'Dictionary');");
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'Dictionary');");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::Dictionary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'RUNLENGTH');");
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'RUNLENGTH');");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::RunLength);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'FixedStringDictionary');");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::FixedStringDictionary);
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'FixedStringDictionary');");
+    const auto expected_lqp =
+        ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::FixedStringDictionary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'FrameOfReference');");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::FrameOfReference);
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'FrameOfReference');");
+    const auto expected_lqp =
+        ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::FrameOfReference);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'LZ4');");
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'LZ4');");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::LZ4);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
@@ -3275,7 +3286,8 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT BINARY);");
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT BINARY);");
     const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Binary, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
@@ -3285,7 +3297,8 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    EXPECT_THROW(sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'unencoded');"), InvalidInputException);
+    EXPECT_THROW(sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'unencoded');"),
+                 InvalidInputException);
   }
   {
     // clang-format off

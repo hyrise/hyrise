@@ -1,3 +1,8 @@
+#include <optional>
+#include <tuple>
+
+#include "magic_enum.hpp"
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
@@ -5,6 +10,8 @@
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {
@@ -18,12 +25,36 @@ class OperatorsImportTest : public BaseTest {
       {FileType::Binary, ".bin"}, {FileType::Tbl, ".tbl"}, {FileType::Csv, ".csv"}};
 };
 
-class OperatorsImportMultiFileTypeTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
+class OperatorsImportMultiFileTypeAndEncodingTest
+    : public OperatorsImportTest,
+      public ::testing::WithParamInterface<std::tuple<FileType, std::optional<EncodingType>>> {};
 
-INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportMultiFileTypeTest,
-                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), enum_formatter<FileType>);
+std::string file_types_and_encodings_name_generator(
+    const ::testing::TestParamInfo<std::tuple<FileType, std::optional<EncodingType>>>& info) {
+  auto [file_type, encoding_type] = info.param;
 
-TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
+  // Convert FileType and EncodingType to strings for the name
+  std::string file_type_str = std::string{magic_enum::enum_name(file_type)};
+
+  std::string encoding_type_str = encoding_type ? std::string{magic_enum::enum_name(*encoding_type)} : "None";
+
+  return file_type_str + "_" + encoding_type_str;
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    FileTypesAndEncodings, OperatorsImportMultiFileTypeAndEncodingTest,
+    ::testing::Combine(
+        ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary),
+        ::testing::Values(
+            std::nullopt, EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
+            // EncodingType::FixedStringDictionary, // Both FixedStringDictionary and FrameOfReference do not work with float.
+            // EncodingType::FrameOfReference,
+            EncodingType::LZ4)),
+    file_types_and_encodings_name_generator);  // add function to format tuples into strings
+
+TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithFileType) {
+  const auto& [file_type, encoding] = GetParam();
+
   auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({1.1f});
@@ -31,14 +62,24 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   expected_table->append({3.3f});
   expected_table->append({4.4f});
 
-  const auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
-  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, GetParam());
+  // Make all chunks in the expected table immutable to allow encoding.
+  for (auto chunk_id = ChunkID{0}; chunk_id < expected_table->chunk_count(); ++chunk_id) {
+    expected_table->get_chunk(chunk_id)->set_immutable();
+  }
+
+  if (encoding) {
+    const auto encoding_spec = SegmentEncodingSpec{*encoding};
+    ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+  }
+
+  const auto reference_filename = reference_filepath + reference_filenames.at(file_type);
+  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, file_type, encoding);
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
 }
 
-TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
+TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithoutFileType) {
   auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({1.1f});
@@ -46,18 +87,60 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
   expected_table->append({3.3f});
   expected_table->append({4.4f});
 
+  // Make all chunks in the expected table immutable to allow encoding.
+  for (auto chunk_id = ChunkID{0}; chunk_id < expected_table->chunk_count(); ++chunk_id) {
+    expected_table->get_chunk(chunk_id)->set_immutable();
+  }
+
+  const auto& [file_type, encoding] = GetParam();
+
+  if (encoding) {
+    const auto encoding_spec = SegmentEncodingSpec{*encoding};
+    ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+  }
+
   const auto reference_filename =
-      reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
-  auto importer = std::make_shared<Import>(reference_filename, "a");
+      reference_filepath + reference_filenames.at(file_type) + file_extensions.at(file_type);
+  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, file_type, encoding);
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
 }
 
-TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
+TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncoding) {
+  auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
+  expected_table->append({1.1f});
+  expected_table->append({2.2f});
+  expected_table->append({3.3f});
+  expected_table->append({4.4f});
+
+  // Make all chunks in the expected table immutable to allow encoding.
+  for (auto chunk_id = ChunkID{0}; chunk_id < expected_table->chunk_count(); ++chunk_id) {
+    expected_table->get_chunk(chunk_id)->set_immutable();
+  }
+
+  const auto& [file_type, encoding] = GetParam();
+
+  if (encoding) {
+    const auto encoding_spec = SegmentEncodingSpec{*encoding};
+    ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+  }
+
   const auto reference_filename =
-      reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
-  auto importer = std::make_shared<Import>(reference_filename, "a");
+      reference_filepath + reference_filenames.at(file_type) + file_extensions.at(file_type);
+  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, file_type, encoding);
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+}
+
+TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, HasCorrectMvccData) {
+  const auto& [file_type, encoding] = GetParam();
+
+  const auto reference_filename =
+      reference_filepath + reference_filenames.at(file_type) + file_extensions.at(file_type);
+  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, file_type, encoding);
   importer->execute();
 
   auto table = Hyrise::get().storage_manager.get_table("a");
@@ -65,6 +148,61 @@ TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
   EXPECT_EQ(table->uses_mvcc(), UseMvcc::Yes);
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->has_mvcc_data());
   EXPECT_EQ(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.load(), CommitID{0});
+}
+
+TEST_F(OperatorsImportTest, EncodeImportWithFrameOfReference) {
+  const auto& encoding_type = EncodingType::FrameOfReference;
+  auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data, ChunkOffset{4});
+
+  expected_table->append({123});
+  expected_table->append({1234});
+  expected_table->append({12345});
+
+  // Make all chunks in the expected table immutable to allow encoding.
+  for (auto chunk_id = ChunkID{0}; chunk_id < expected_table->chunk_count(); ++chunk_id) {
+    expected_table->get_chunk(chunk_id)->set_immutable();
+  }
+  // Encode the expected table with FrameOfReference
+  const auto encoding_spec = SegmentEncodingSpec{encoding_type};
+  ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+
+  const auto filename = std::string{"resources/test_data/tbl/int.tbl"};
+  auto importer = std::make_shared<Import>(filename, "a", Chunk::DEFAULT_SIZE, FileType::Tbl, encoding_type);
+  importer->execute();
+
+  auto table = Hyrise::get().storage_manager.get_table("a");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
+TEST_F(OperatorsImportTest, EncodeImportWithFixedStringDictionary) {
+  const auto encoding_type = EncodingType::FixedStringDictionary;
+  auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String, false}}, TableType::Data, ChunkOffset{6});
+
+  expected_table->append({"xxx"});
+  expected_table->append({"www"});
+  expected_table->append({"yyy"});
+  expected_table->append({"uuu"});
+  expected_table->append({"ttt"});
+  expected_table->append({"zzz"});
+
+  // Make all chunks in the expected table immutable to allow encoding.
+  for (auto chunk_id = ChunkID{0}; chunk_id < expected_table->chunk_count(); ++chunk_id) {
+    expected_table->get_chunk(chunk_id)->set_immutable();
+  }
+  // Encode the expected table with FrameOfReference
+  const auto encoding_spec = SegmentEncodingSpec{encoding_type};
+  ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+
+  const auto filename = std::string{"resources/test_data/tbl/string.tbl"};
+  auto importer = std::make_shared<Import>(filename, "a", Chunk::DEFAULT_SIZE, FileType::Tbl, encoding_type);
+  importer->execute();
+
+  auto table = Hyrise::get().storage_manager.get_table("a");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {

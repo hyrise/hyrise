@@ -33,7 +33,8 @@ class Import : public AbstractReadOnlyOperator {
    */
   explicit Import(const std::string& init_filename, const std::string& tablename,
                   const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, const FileType file_type = FileType::Auto,
-                  const std::optional<EncodingType> table_encoding = std::nullopt, const std::optional<CsvMeta>& csv_meta = std::nullopt);
+                  const std::optional<EncodingType> table_encoding = std::nullopt,
+                  const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
   const std::string& name() const final;
   const std::string filename;

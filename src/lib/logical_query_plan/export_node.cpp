@@ -17,13 +17,17 @@
 
 namespace hyrise {
 
-ExportNode::ExportNode(const std::string& init_file_name, const FileType init_file_type, const std::optional<EncodingType> init_file_encoding)
-    : AbstractNonQueryNode(LQPNodeType::Export), file_name(init_file_name), file_type(init_file_type), file_encoding(init_file_encoding) {}
+ExportNode::ExportNode(const std::string& init_file_name, const FileType init_file_type,
+                       const std::optional<EncodingType> init_file_encoding)
+    : AbstractNonQueryNode(LQPNodeType::Export),
+      file_name(init_file_name),
+      file_type(init_file_type),
+      file_encoding(init_file_encoding) {}
 
 std::string ExportNode::description(const DescriptionMode /*mode*/) const {
   auto file_type_str = std::string{magic_enum::enum_name(file_type)};
   boost::algorithm::to_lower(file_type_str);
-  
+
   if (file_encoding) {
     auto file_encoding_str = std::string{magic_enum::enum_name(*file_encoding)};
     boost::algorithm::to_lower(file_encoding_str);
@@ -47,7 +51,8 @@ std::shared_ptr<AbstractLQPNode> ExportNode::_on_shallow_copy(LQPNodeMapping& /*
 
 bool ExportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& export_node = static_cast<const ExportNode&>(rhs);
-  return file_name == export_node.file_name && file_type == export_node.file_type && file_encoding == export_node.file_encoding;
+  return file_name == export_node.file_name && file_type == export_node.file_type &&
+         file_encoding == export_node.file_encoding;
 }
 
 }  // namespace hyrise

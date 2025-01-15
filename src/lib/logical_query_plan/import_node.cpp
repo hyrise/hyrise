@@ -5,8 +5,8 @@
 #include <sstream>
 #include <string>
 
-#include <boost/container_hash/hash.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/container_hash/hash.hpp>
 
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -29,7 +29,8 @@ std::string ImportNode::description(const DescriptionMode /*mode*/) const {
   if (table_encoding) {
     auto file_encoding_str = std::string{magic_enum::enum_name(*table_encoding)};
     boost::algorithm::to_lower(file_encoding_str);
-    return "[Import] Name: '" + table_name + "' from '" + file_name + "' (" + file_type_str + ") using encoding (" + file_encoding_str + ")";
+    return "[Import] Name: '" + table_name + "' from '" + file_name + "' (" + file_type_str + ") using encoding (" +
+           file_encoding_str + ")";
   }
 
   return "[Import] Name: '" + table_name + "' from '" + file_name + "' (" + file_type_str + ")";

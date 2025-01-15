@@ -1826,12 +1826,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
 
   if (!import_statement.encoding) {
     return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                        import_type_to_file_type(import_statement.type));
+                            import_type_to_file_type(import_statement.type));
   }
 
-  auto file_encoding = magic_enum::enum_cast<EncodingType>(std::string{import_statement.encoding}, magic_enum::case_insensitive);
+  auto file_encoding =
+      magic_enum::enum_cast<EncodingType>(std::string{import_statement.encoding}, magic_enum::case_insensitive);
   AssertInput(file_encoding.has_value(), "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
-  return ImportNode::make(import_statement.tableName, import_statement.filePath, import_type_to_file_type(import_statement.type), file_encoding.value());
+  return ImportNode::make(import_statement.tableName, import_statement.filePath,
+                          import_type_to_file_type(import_statement.type), file_encoding.value());
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.
@@ -1841,7 +1843,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
 
   // Do this before resolving the SELECT. This allows checks during SELECT translation.
   if (export_statement.encoding) {
-    AssertInput(false, "A specified output encoding is not yet supported. To achieve the same result, export the table once, then load using the wished encoding and export again.");
+    AssertInput(false,
+                "A specified output encoding is not yet supported. To achieve the same result, export the table once, "
+                "then load using the wished encoding and export again.");
     // The implementation of this feature would happen in the Export Operator. See lib/operators/export.hpp
   }
 
