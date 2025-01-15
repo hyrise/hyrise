@@ -23,7 +23,7 @@
 namespace hyrise {
 
 Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
-               const FileType file_type, const EncodingType table_encoding, const std::optional<CsvMeta>& csv_meta)
+               const FileType file_type, const std::optional<EncodingType> table_encoding, const std::optional<CsvMeta>& csv_meta)
     : AbstractReadOnlyOperator(OperatorType::Import),
       filename(init_filename),
       _tablename(tablename),
@@ -69,8 +69,9 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   Hyrise::get().storage_manager.add_table(_tablename, table);
 
-  if(_table_encoding != EncodingType::Unencoded) {
-    auto segment_encoding_spec = SegmentEncodingSpec(_table_encoding);
+  // If a table encoding is specified, encode the table accordingly.
+  if(_table_encoding) {
+    auto segment_encoding_spec = SegmentEncodingSpec(_table_encoding.value());
     auto chunk_encoding_spec = ChunkEncodingSpec(table->column_count(), segment_encoding_spec);
 
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table(_tablename), chunk_encoding_spec);

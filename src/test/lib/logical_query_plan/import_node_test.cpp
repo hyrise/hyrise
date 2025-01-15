@@ -15,7 +15,7 @@ class ImportNodeTest : public BaseTest {
 };
 
 TEST_F(ImportNodeTest, Description) {
-  EXPECT_EQ(_import_node->description(), "[Import] Name: 'table_name' from 'file_name' (csv) with encoding (unencoded)");
+  EXPECT_EQ(_import_node->description(), "[Import] Name: 'table_name' from 'file_name' (csv) using encoding (unencoded)");
 }
 
 TEST_F(ImportNodeTest, HashingAndEqualityCheck) {

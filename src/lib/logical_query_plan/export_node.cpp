@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <boost/algorithm/string.hpp>
@@ -12,19 +13,24 @@
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace hyrise {
 
-ExportNode::ExportNode(const std::string& init_file_name, const FileType init_file_type, const EncodingType init_file_encoding)
+ExportNode::ExportNode(const std::string& init_file_name, const FileType init_file_type, const std::optional<EncodingType> init_file_encoding)
     : AbstractNonQueryNode(LQPNodeType::Export), file_name(init_file_name), file_type(init_file_type), file_encoding(init_file_encoding) {}
 
 std::string ExportNode::description(const DescriptionMode /*mode*/) const {
   auto file_type_str = std::string{magic_enum::enum_name(file_type)};
-  auto file_encoding_str = std::string{magic_enum::enum_name(file_encoding)};
   boost::algorithm::to_lower(file_type_str);
-  boost::algorithm::to_lower(file_encoding_str);
+  
+  if (file_encoding) {
+    auto file_encoding_str = std::string{magic_enum::enum_name(*file_encoding)};
+    boost::algorithm::to_lower(file_encoding_str);
 
-  return "[Export] to '" + file_name + "' (" + file_type_str + ") with encoding (" + file_encoding_str + ")";
+    return "[Export] to '" + file_name + "' (" + file_type_str + ") with encoding (" + file_encoding_str + ")";
+  }
+  return "[Export] to '" + file_name + "' (" + file_type_str + ")";
 }
 
 size_t ExportNode::_on_shallow_hash() const {
