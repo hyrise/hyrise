@@ -36,31 +36,38 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
     _benchmark_config->pdgf_work_unit_size, _benchmark_config->chunk_size,
     SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+  auto timer = Timer{};
 
   /**
    * Read schema. Note that the SharedMemoryReader MUST be created first as it will create the shared resources PDGF will
    * bind to.
    */
-  auto timer = Timer{};
-  std::cerr << "Receiving table schemas from PDGF!\n";
-  auto pdgf_schema = PdgfProcess::for_schema_generation(
-    _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
-    _benchmark_config->pdgf_project_seed, _benchmark_config->pdgf_work_unit_size, _benchmark_config->data_preparation_cores,
-    _scale_factor);
-  pdgf_schema.run();
-  while (reader->has_next_table()) {
-    auto schema_builder = reader->read_next_schema();
-    // Directly add the (empty) table to the storage manager here.
-    // This table will be replaced later once we have received data, but we will need the tables to be present in order for the optimizer to
-    // be able to tell us which columns we need to generate for our _queries_to_run
-    auto table = schema_builder->build_table();
-    Hyrise::get().storage_manager.add_table(schema_builder->table_name(), table);
-    // Already insert the tables here because not all of them will be replaced when data is generated later
-    table_info_by_name[schema_builder->table_name()].table = table;
+  if (Hyrise::get().storage_manager.tables().empty()) {
+    std::cerr << "Receiving table schemas from PDGF!\n";
+    auto pdgf_schema = PdgfProcess::for_schema_generation(
+      _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
+      _benchmark_config->pdgf_project_seed, _benchmark_config->pdgf_work_unit_size, _benchmark_config->data_preparation_cores,
+      _scale_factor);
+    pdgf_schema.run();
+    while (reader->has_next_table()) {
+      auto schema_builder = reader->read_next_schema();
+      // Directly add the (empty) table to the storage manager here.
+      // This table will be replaced later once we have received data, but we will need the tables to be present in order for the optimizer to
+      // be able to tell us which columns we need to generate for our _queries_to_run
+      auto table = schema_builder->build_table();
+      Hyrise::get().storage_manager.add_table(schema_builder->table_name(), table);
+      // Already insert the tables here because not all of them will be replaced when data is generated later
+      table_info_by_name[schema_builder->table_name()].table = table;
+    }
+    std::cerr << "Awaiting PDGF teardown\n";
+    pdgf_schema.await_teardown();
+    std::cout << "- Hyrise PDGF: Loading schema done (" << format_duration(timer.lap()) << ")\n" << std::flush;
+  } else {
+    std::cerr << "Not loading schema from PDGF as we already have loaded tables!\n";
+    for (auto& table : Hyrise::get().storage_manager.tables()) {
+      table_info_by_name[table.first].table = table.second;
+    }
   }
-  std::cerr << "Awaiting PDGF teardown\n";
-  pdgf_schema.await_teardown();
-  std::cout << "- Hyrise PDGF: Loading schema done (" << format_duration(timer.lap()) << ")\n" << std::flush;
 
   /**
    * Reset shared memory buffer. This is important because we will proceed to launch PDGF a second time.
@@ -134,6 +141,10 @@ void AbstractPDGFTableGenerator::_collect_columns(const std::string& sql) {
 
         // non-pruned column
         auto column_info = stored_table->column_definitions()[stored_column_id];
+        if (column_info.loaded) {
+          // This column appears to have been loaded already as part of a previous (partial) benchmark run.
+          continue;
+        }
         auto full_name = table_node->table_name + ":" + column_info.name;
         _columns_to_generate->insert(full_name);
         ++output_column_id;

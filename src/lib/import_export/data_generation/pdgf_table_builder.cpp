@@ -71,6 +71,10 @@ std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_tabl
       chunk->put_segment(table_column_index, column->obtain_segment(chunk_index));
     }
   }
+  for (auto i = size_t{0}; i < _num_generated_columns; ++i) {
+    auto table_column_index = _generated_column_mappings[i];
+    table->column_definitions()[table_column_index].loaded = true;
+  }
 
   return table;
 }

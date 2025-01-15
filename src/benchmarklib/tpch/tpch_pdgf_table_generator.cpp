@@ -67,6 +67,13 @@ void TPCHPDGFTableGenerator::_add_constraints(
   const auto& nation_table = table_info_by_name.at("nation").table;
   const auto& region_table = table_info_by_name.at("region").table;
 
+  // If we already added the constraints previously (because we are executing the benchmark in multiple separate steps),
+  // we don't need to do so again.
+  if (!part_table->soft_key_constraints().empty()) {
+    std::cout << "[WARNING] Skipped adding constraints to TPC-H tables because we already have done so, apparently!\n";
+    return;
+  }
+
   // Set constraints.
 
   // part - 1 PK.

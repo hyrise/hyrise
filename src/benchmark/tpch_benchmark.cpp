@@ -39,49 +39,17 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  * The same binary is used to run the JCC-H benchmark. For this, simply use the -j flag.
  */
 
-int main(int argc, char* argv[]) {
-  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
-
-  // clang-format off
-  cli_options.add_options()
-    ("s,scale", "Database scale factor (10.0 ~ 10 GB)", cxxopts::value<float>()->default_value("10"))
-    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
-    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("j,jcch", "Use JCC-H data and query generators instead of TPC-H. If this parameter is used, table data always "
-               "contains skew. With --jcch=skewed, queries are generated to be affected by this skew. With "
-               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")) // NOLINT
-    ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
-                   "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
-                   "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
-                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")) // NOLINT
-    ("tpch_cache_directory", "Base directory to write cached tables to", cxxopts::value<std::string>()->default_value("tpch_cached_tables")); // NOLINT
-  // clang-format on
-
-  auto config = std::shared_ptr<BenchmarkConfig>{};
-  auto comma_separated_queries = std::string{};
+void run_benchmark(char* argv[], const cxxopts::ParseResult& cli_parse_result, std::shared_ptr<BenchmarkConfig> config, std::vector<BenchmarkItemID>& item_ids) {
   auto scale_factor = float{};
   auto use_prepared_statements = false;
   auto jcch = false;
   auto jcch_skewed = false;
   auto cache_directory = std::string{};
 
-  // Parse command line args
-  const auto cli_parse_result = cli_options.parse(argc, argv);
-
-  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
-    return 0;
-  }
-
-  if (cli_parse_result.count("queries")) {
-    comma_separated_queries = cli_parse_result["queries"].as<std::string>();
-  }
-
   cache_directory = cli_parse_result["tpch_cache_directory"].as<std::string>();
   std::cout << "- Cache directory is " << cache_directory << "\n";
 
   scale_factor = cli_parse_result["scale"].as<float>();
-
-  config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
   use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
   jcch = cli_parse_result.count("jcch");
@@ -108,26 +76,6 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration) << "' configuration\n";
-  }
-
-  std::vector<BenchmarkItemID> item_ids;
-
-  // Build list of query ids to be benchmarked and display it
-  if (comma_separated_queries.empty()) {
-    std::transform(tpch_queries.begin(), tpch_queries.end(), std::back_inserter(item_ids), [](auto& pair) {
-      return BenchmarkItemID{pair.first - 1};
-    });
-  } else {
-    // Split the input into query ids, ignoring leading, trailing, or duplicate commas
-    auto item_ids_str = std::vector<std::string>();
-    boost::trim_if(comma_separated_queries, boost::is_any_of(","));
-    boost::split(item_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
-    std::transform(item_ids_str.begin(), item_ids_str.end(), std::back_inserter(item_ids), [](const auto& item_id_str) {
-      const auto item_id =
-          BenchmarkItemID{boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
-      DebugAssert(item_id < 22, "There are only 22 queries.");
-      return item_id;
-    });
   }
 
   std::cout << "- Benchmarking Queries: [ ";
@@ -168,7 +116,7 @@ int main(int argc, char* argv[]) {
     auto runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
                                                             clustering_configuration, item_ids);
     auto queries = runner->query_strings();
-    table_generator = std::make_unique<TPCHPDGFTableGenerator>(scale_factor, clustering_configuration, config, queries);
+    table_generator = std::make_unique<TPCHPDGFTableGenerator>(scale_factor, clustering_configuration, config, queries); // TODO: Do the serialization in the TPCHPDGFTableGenerator?
     item_runner = std::move(runner);
   } else if (jcch) {
     // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
@@ -222,4 +170,67 @@ int main(int argc, char* argv[]) {
   }
 
   benchmark_runner->run();
+}
+
+int main(int argc, char* argv[]) {
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
+
+  // clang-format off
+  cli_options.add_options()
+    ("s,scale", "Database scale factor (10.0 ~ 10 GB)", cxxopts::value<float>()->default_value("10"))
+    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
+    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("j,jcch", "Use JCC-H data and query generators instead of TPC-H. If this parameter is used, table data always "
+               "contains skew. With --jcch=skewed, queries are generated to be affected by this skew. With "
+               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")) // NOLINT
+    ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
+                   "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
+                   "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
+                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")) // NOLINT
+    ("tpch_cache_directory", "Base directory to write cached tables to", cxxopts::value<std::string>()->default_value("tpch_cached_tables")); // NOLINT
+  // clang-format on
+
+  // Parse command line args
+  const auto cli_parse_result = cli_options.parse(argc, argv);
+
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
+    return 0;
+  }
+
+  auto comma_separated_queries = std::string{};
+  if (cli_parse_result.count("queries")) {
+    comma_separated_queries = cli_parse_result["queries"].as<std::string>();
+  }
+
+  std::vector<BenchmarkItemID> item_ids;
+
+  // Build list of query ids to be benchmarked and display it
+  if (comma_separated_queries.empty()) {
+    std::transform(tpch_queries.begin(), tpch_queries.end(), std::back_inserter(item_ids), [](auto& pair) {
+      return BenchmarkItemID{pair.first - 1};
+    });
+  } else {
+    // Split the input into query ids, ignoring leading, trailing, or duplicate commas
+    auto item_ids_str = std::vector<std::string>();
+    boost::trim_if(comma_separated_queries, boost::is_any_of(","));
+    boost::split(item_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
+    std::transform(item_ids_str.begin(), item_ids_str.end(), std::back_inserter(item_ids), [](const auto& item_id_str) {
+      const auto item_id =
+          BenchmarkItemID{boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
+      DebugAssert(item_id < 22, "There are only 22 queries.");
+      return item_id;
+    });
+  }
+
+  auto config = std::shared_ptr<BenchmarkConfig>{};
+  config = CLIConfigParser::parse_cli_options(cli_parse_result);
+
+  if (config->separate_benchmark_cycle_per_query) {
+    for (const auto& item_id : item_ids) {
+      auto single_item_id = std::vector<BenchmarkItemID>{item_id};
+      run_benchmark(argv, cli_parse_result, config, single_item_id);
+    }
+  } else {
+    run_benchmark(argv, cli_parse_result, config, item_ids);
+  }
 }

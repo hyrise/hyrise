@@ -580,6 +580,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   cli_options.add_options()
     ("help", "print a summary of CLI options")
     ("full_help", "print more detailed information about configuration options")
+    ("separate_benchmark_cycle_per_query", "Whether to execute a full benchmark cycle for each query, instead of only one cycle for all queries", cxxopts::value<bool>()->default_value("false"))
     ("r,runs", "Maximum number of runs per item, negative values mean infinity", cxxopts::value<int64_t>()->default_value("-1"))  // NOLINT(whitespace/line_length)
     ("c,chunk_size", "Chunk size", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE)))
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<uint64_t>()->default_value("60"))

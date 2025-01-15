@@ -65,7 +65,7 @@ template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<Table> PDGFTableSchemaBuilder<work_unit_size, num_columns>::_assemble_table_metadata() {
   auto table_column_definitions = TableColumnDefinitions{};
   for (auto& column : _table_columns) {
-    table_column_definitions.emplace_back(column->name(), column->type(), false);
+    table_column_definitions.emplace_back(column->name(), column->type(), false, false);
   }
 
   return std::make_shared<Table>(table_column_definitions, TableType::Data, _hyrise_table_chunk_size, UseMvcc::Yes);

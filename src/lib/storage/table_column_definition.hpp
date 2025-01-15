@@ -11,6 +11,7 @@ namespace hyrise {
 struct TableColumnDefinition final {
   TableColumnDefinition() = default;
   TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable);
+  TableColumnDefinition(const std::string& init_name, const DataType init_data_type, const bool init_nullable, const bool init_loaded);
 
   bool operator==(const TableColumnDefinition& rhs) const;
   size_t hash() const;
@@ -18,6 +19,7 @@ struct TableColumnDefinition final {
   std::string name;
   DataType data_type{DataType::Int};
   bool nullable{false};
+  mutable bool loaded{true};
 };
 
 // So that google test, e.g., prints readable error messages
