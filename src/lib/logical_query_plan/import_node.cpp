@@ -24,6 +24,7 @@ ImportNode::ImportNode(const std::string& init_table_name, const std::string& in
 
 std::string ImportNode::description(const DescriptionMode /*mode*/) const {
   auto file_type_str = std::string{magic_enum::enum_name(file_type)};
+  boost::algorithm::to_lower(file_type_str);
 
   if (table_encoding) {
     auto file_encoding_str = std::string{magic_enum::enum_name(*table_encoding)};

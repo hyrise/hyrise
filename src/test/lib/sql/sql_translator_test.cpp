@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <optional>
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -3209,7 +3210,12 @@ TEST_F(SQLTranslatorTest, CopyStatementImport) {
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
-  {
+  // Do not allow predicates on imported files.
+  EXPECT_THROW(sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WHERE foo = 'bar';"), InvalidInputException);
+}
+
+TEST_F(SQLTranslatorTest, CopyStatementImportEncoding) {
+    {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'unencoded');");
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::Unencoded);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3239,8 +3245,11 @@ TEST_F(SQLTranslatorTest, CopyStatementImport) {
     const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::LZ4);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
-  // Do not allow predicates on imported files.
-  EXPECT_THROW(sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WHERE foo = 'bar';"), InvalidInputException);
+  {
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN);");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, std::nullopt);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 TEST_F(SQLTranslatorTest, CopyStatementExport) {
