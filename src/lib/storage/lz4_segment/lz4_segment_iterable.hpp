@@ -68,9 +68,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
                                                             _segment.null_values().cbegin(), position_filter->cbegin(),
                                                             position_filter->cbegin()};
-      auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
-                                                          _segment.null_values().cend(), position_filter->cbegin(),
-                                                          position_filter->cend()};
+      auto end =
+          PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), _segment.null_values().cend(),
+                                                   position_filter->cbegin(), position_filter->cend()};
 
       functor(begin, end);
     } else {

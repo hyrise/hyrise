@@ -26,19 +26,19 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
       if (_segment.contains_nulls()) {
         auto begin = Iterator<OffsetValueDecompressor>{&_segment.block_minima(), &_segment.null_values(),
-                                                      offset_values.create_decompressor(), ChunkOffset{0}};
+                                                       offset_values.create_decompressor(), ChunkOffset{0}};
 
         auto end = Iterator<OffsetValueDecompressor>{&_segment.block_minima(), &_segment.null_values(),
-                                                    offset_values.create_decompressor(),
-                                                    static_cast<ChunkOffset>(_segment.size())};
+                                                     offset_values.create_decompressor(),
+                                                     static_cast<ChunkOffset>(_segment.size())};
         functor(begin, end);
       } else {
         auto begin = Iterator<OffsetValueDecompressor>{&_segment.block_minima(), nullptr,
-                                                      offset_values.create_decompressor(), ChunkOffset{0}};
+                                                       offset_values.create_decompressor(), ChunkOffset{0}};
 
-        auto end = Iterator<OffsetValueDecompressor>{&_segment.block_minima(), nullptr,
-                                                    offset_values.create_decompressor(),
-                                                    static_cast<ChunkOffset>(_segment.size())};
+        auto end =
+            Iterator<OffsetValueDecompressor>{&_segment.block_minima(), nullptr, offset_values.create_decompressor(),
+                                              static_cast<ChunkOffset>(_segment.size())};
         functor(begin, end);
       }
     });
@@ -63,12 +63,12 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
         functor(begin, end);
       } else {
         auto begin = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
-            &_segment.block_minima(), nullptr, offset_values.create_decompressor(),
-            position_filter->cbegin(), position_filter->cbegin()};
+            &_segment.block_minima(), nullptr, offset_values.create_decompressor(), position_filter->cbegin(),
+            position_filter->cbegin()};
 
         auto end = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
-            &_segment.block_minima(), nullptr, offset_values.create_decompressor(),
-            position_filter->cbegin(), position_filter->cend()};
+            &_segment.block_minima(), nullptr, offset_values.create_decompressor(), position_filter->cbegin(),
+            position_filter->cend()};
 
         functor(begin, end);
       }

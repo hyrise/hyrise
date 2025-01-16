@@ -78,7 +78,7 @@ std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) 
 
 template <typename T>
 bool LZ4Segment<T>::contains_nulls() const {
-    return _null_values.has_value();
+  return _null_values.has_value();
 }
 
 template <typename T>
