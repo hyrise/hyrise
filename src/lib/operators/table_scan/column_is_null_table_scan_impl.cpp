@@ -45,10 +45,10 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     // the _scan_generic_segment() method because their NULL values are stored in runs, making iteration less
     // straightforward.
 
-    if (!(_try_nongeneric_segment_scan<BaseValueSegment>(segment, chunk_id, matches, position_filter) ||
-          _try_nongeneric_segment_scan<BaseDictionarySegment>(segment, chunk_id, matches, position_filter) ||
-          _try_nongeneric_segment_scan<LZ4Segment<SegmentDataType>>(segment, chunk_id, matches, position_filter) ||
-          _try_nongeneric_segment_scan<FrameOfReferenceSegment<int32_t>>(segment, chunk_id, matches,
+    if (!(_try_non_generic_segment_scan<BaseValueSegment>(segment, chunk_id, matches, position_filter) ||
+          _try_non_generic_segment_scan<BaseDictionarySegment>(segment, chunk_id, matches, position_filter) ||
+          _try_non_generic_segment_scan<LZ4Segment<SegmentDataType>>(segment, chunk_id, matches, position_filter) ||
+          _try_non_generic_segment_scan<FrameOfReferenceSegment<int32_t>>(segment, chunk_id, matches,
                                                                          position_filter))) {
       const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
       if (!chunk_sorted_by.empty()) {
@@ -121,7 +121,7 @@ bool ColumnIsNullTableScanImpl::_try_non_generic_segment_scan(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (const auto* typed_segment = dynamic_cast<const SegmentType*>(&segment)) {
-    _scan_nongeneric_segment(*typed_segment, chunk_id, matches, position_filter);
+    _scan_non_generic_segment(*typed_segment, chunk_id, matches, position_filter);
     return true;
   }
   return false;
