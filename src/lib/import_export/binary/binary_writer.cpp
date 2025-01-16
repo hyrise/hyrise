@@ -285,10 +285,10 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
   export_values(ofstream, frame_of_reference_segment.block_minima());
 
   // Write flag if optional NULL value vector is written
-  export_value(ofstream, static_cast<BoolAsByteType>(frame_of_reference_segment.null_values().has_value()));
-  if (frame_of_reference_segment.null_values()) {
+  export_value(ofstream, static_cast<BoolAsByteType>(frame_of_reference_segment.contains_nulls()));
+  if (frame_of_reference_segment.contains_nulls()) {
     // Write NULL values
-    export_values(ofstream, *frame_of_reference_segment.null_values());
+    export_values(ofstream, frame_of_reference_segment.null_values());
   }
 
   // Write offset values

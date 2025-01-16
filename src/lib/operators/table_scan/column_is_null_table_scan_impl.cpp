@@ -219,15 +219,9 @@ void ColumnIsNullTableScanImpl::_scan_encoded_segment(const BaseSegmentType& seg
     return;
   }
 
-  if constexpr (std::is_same_v<BaseSegmentType, hyrise::BaseValueSegment>) {
-    DebugAssert(segment.is_nullable(), "Columns that are not nullable should have been caught by edge case handling.");
-    _scan_iterable_for_null_values(NullValueVectorIterable{segment.null_values()}, chunk_id, matches, position_filter);
-  } else if constexpr (std::is_same_v<BaseSegmentType, hyrise::BaseDictionarySegment>) {
-    DebugAssert(segment.unique_values_count() != 0 && segment.unique_values_count() != segment.size(),
-                "DictionarySegments without or with exclusivly NULLs should have been caught by edge case handling.");
+  if constexpr (std::is_same_v<BaseSegmentType, hyrise::BaseDictionarySegment>) {
     _scan_iterable_for_null_values(create_iterable_from_attribute_vector(segment), chunk_id, matches, position_filter);
   } else {
-    DebugAssert(segment.contains_nulls(), "Columns that are not nullable should have been caught by edge case handling.");
     _scan_iterable_for_null_values(NullValueVectorIterable{segment.null_values()}, chunk_id, matches, position_filter);
   }
 }
