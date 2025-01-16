@@ -13,6 +13,8 @@ class BaseValueSegment : public AbstractSegment {
  public:
   using AbstractSegment::AbstractSegment;
 
+  virtual bool contains_nulls() const = 0;
+
   // returns true if segment supports null values
   virtual bool is_nullable() const = 0;
 
