@@ -22,11 +22,11 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
   ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                             const PredicateCondition& init_predicate_condition);
 
-  std::string description() const override;
+  std::string description() const final;
 
  protected:
   void _scan_non_reference_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                   const std::shared_ptr<const AbstractPosList>& position_filter) override;
+                                   const std::shared_ptr<const AbstractPosList>& position_filter) final;
 
   void _scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                              const std::shared_ptr<const AbstractPosList>& position_filter) const;
@@ -34,6 +34,11 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
   void _scan_generic_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                                     const std::shared_ptr<const AbstractPosList>& position_filter,
                                     const SortMode sorted_by) const;
+
+  /**
+   * @defgroup Method used for faster handling of value, dictionary, lz4, and frame_of_reference segments 
+   * @{
+   */
 
   template <typename SegmentType>
   bool _try_non_generic_segment_scan(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
