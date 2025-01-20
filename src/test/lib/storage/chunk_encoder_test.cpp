@@ -126,7 +126,7 @@ TEST_F(ChunkEncoderTest, ThrowOnEncodingReferenceSegments) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Dictionary},
                         SegmentEncodingSpec{EncodingType::Dictionary}};
-  auto chunk = std::const_pointer_cast<Chunk>(table_scan->get_output()->get_chunk(ChunkID{0u}));
+  auto chunk = std::const_pointer_cast<Chunk>(table_scan->get_output()->get_chunk(ChunkID{0}));
   const auto column_data_types = _table->column_data_types();
   EXPECT_THROW(ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec), std::logic_error);
 }
@@ -157,7 +157,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTableUsingSameEncoding) {
   _table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(_table, segment_encoding_spec);
 
-  for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
     const auto chunk = _table->get_chunk(chunk_id);
     assert_chunk_encoding(chunk, chunk_encoding_spec);
   }
@@ -167,7 +167,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   const auto chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
 
   const auto chunk_encoding_specs = std::map<ChunkID, ChunkEncodingSpec>{
-      {ChunkID{0u},
+      {ChunkID{0},
        {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::RunLength},
         SegmentEncodingSpec{EncodingType::Unencoded}}},
       {ChunkID{2u},
@@ -191,7 +191,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
 }
 
 TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
-  const auto chunk_ids = std::vector<ChunkID>{ChunkID{0u}, ChunkID{2u}};
+  const auto chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2u}};
 
   const auto segment_encoding_spec = SegmentEncodingSpec{EncodingType::Dictionary};
   const auto chunk_encoding_spec = ChunkEncodingSpec{3u, segment_encoding_spec};
