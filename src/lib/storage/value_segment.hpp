@@ -52,8 +52,6 @@ class ValueSegment : public BaseValueSegment {
   const pmr_vector<T>& values() const;
   pmr_vector<T>& values();
 
-  bool contains_nulls() const final;
-
   // Return whether segment supports null values.
   bool is_nullable() const final;
 

@@ -285,10 +285,10 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
   export_values(ofstream, frame_of_reference_segment.block_minima());
 
   // Write flag if optional NULL value vector is written
-  export_value(ofstream, static_cast<BoolAsByteType>(frame_of_reference_segment.contains_nulls()));
-  if (frame_of_reference_segment.contains_nulls()) {
+  export_value(ofstream, static_cast<BoolAsByteType>(frame_of_reference_segment.null_values().has_value()));
+  if (frame_of_reference_segment.null_values()) {
     // Write NULL values
-    export_values(ofstream, frame_of_reference_segment.null_values());
+    export_values(ofstream, *frame_of_reference_segment.null_values());
   }
 
   // Write offset values
@@ -323,11 +323,11 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool /*colum
     export_values(ofstream, lz4_block);
   }
 
-  if (lz4_segment.contains_nulls()) {
+  if (lz4_segment.null_values()) {
     // Write NULL value size
-    export_value(ofstream, static_cast<uint32_t>(lz4_segment.null_values().size()));
+    export_value(ofstream, static_cast<uint32_t>(lz4_segment.null_values()->size()));
     // Write NULL values
-    export_values(ofstream, lz4_segment.null_values());
+    export_values(ofstream, *lz4_segment.null_values());
   } else {
     // No NULL values
     export_value(ofstream, uint32_t{0});

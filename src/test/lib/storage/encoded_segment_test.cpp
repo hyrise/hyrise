@@ -685,13 +685,13 @@ TEST_F(EncodedSegmentTest, FrameOfReference) {
 
   EXPECT_EQ(for_segment->block_minima().size(), 1);  // single block
   EXPECT_EQ(for_segment->offset_values().size(), row_count);
-  EXPECT_TRUE(for_segment->contains_nulls());
-  EXPECT_EQ(for_segment->null_values().size(), row_count);
+  EXPECT_TRUE(for_segment->null_values());
+  EXPECT_EQ(for_segment->null_values()->size(), row_count);
 
-  EXPECT_FALSE(for_segment->null_values()[0]);
-  EXPECT_TRUE(for_segment->null_values()[1]);
-  EXPECT_TRUE(for_segment->null_values()[7]);
-  EXPECT_FALSE(for_segment->null_values()[16]);
+  EXPECT_FALSE((*for_segment->null_values())[0]);
+  EXPECT_TRUE((*for_segment->null_values())[1]);
+  EXPECT_TRUE((*for_segment->null_values())[7]);
+  EXPECT_FALSE((*for_segment->null_values())[16]);
 
   // Block minium should be the smallest value: 0
   EXPECT_EQ(for_segment->block_minima().front(), minimum);
@@ -714,7 +714,7 @@ TEST_F(EncodedSegmentTest, FrameOfReference) {
   const auto for_segment_no_nulls =
       std::dynamic_pointer_cast<const FrameOfReferenceSegment<int32_t>>(encoded_segment_no_nulls);
   ASSERT_TRUE(for_segment_no_nulls);
-  EXPECT_FALSE(for_segment_no_nulls->contains_nulls());
+  EXPECT_FALSE(for_segment_no_nulls->null_values());
 }
 
 }  // namespace hyrise

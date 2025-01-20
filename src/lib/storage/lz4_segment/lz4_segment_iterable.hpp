@@ -24,10 +24,10 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     auto decompressed_segment = _segment.decompress();
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += decompressed_segment.size();
-    if (_segment.contains_nulls()) {
+    if (_segment.null_values()) {
       auto begin =
-          Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values().cbegin(), ChunkOffset{0u}};
-      auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values().cend(),
+          Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values()->cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values()->cend(),
                                          static_cast<ChunkOffset>(decompressed_segment.size())};
       functor(begin, end);
     } else {
@@ -64,13 +64,13 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     }
 
     using PosListIteratorType = decltype(position_filter->cbegin());
-    if (_segment.contains_nulls()) {
+    if (_segment.null_values()) {
       auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
-                                                            _segment.null_values().cbegin(), position_filter->cbegin(),
+                                                            _segment.null_values()->cbegin(), position_filter->cbegin(),
                                                             position_filter->cbegin()};
-      auto end =
-          PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), _segment.null_values().cend(),
-                                                   position_filter->cbegin(), position_filter->cend()};
+      auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
+                                                          _segment.null_values()->cend(), position_filter->cbegin(),
+                                                          position_filter->cend()};
 
       functor(begin, end);
     } else {

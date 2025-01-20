@@ -35,13 +35,9 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
                                     const std::shared_ptr<const AbstractPosList>& position_filter,
                                     const SortMode sorted_by) const;
 
-  template <typename SegmentType>
-  bool _try_non_generic_segment_scan(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                     const std::shared_ptr<const AbstractPosList>& position_filter);
-
   template <typename BaseSegmentType>
-  void _scan_non_generic_segment(const BaseSegmentType& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                 const std::shared_ptr<const AbstractPosList>& position_filter);
+  void _scan_encoded_segment(const BaseSegmentType& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                             const std::shared_ptr<const AbstractPosList>& position_filter);
 
   /**
    * @defgroup Methods used for handling different segments
