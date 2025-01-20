@@ -740,6 +740,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
       if (hsql_table_ref.join->type == hsql::kJoinNatural) {
         return _translate_natural_join(*hsql_table_ref.join);
       } else {
+        if (hsql_table_ref.join->namedColumns && !hsql_table_ref.join->namedColumns->empty()) {
+          return _translate_named_columns_join(*hsql_table_ref.join);
+        }
         return _translate_predicated_join(*hsql_table_ref.join);
       }
 
@@ -1047,6 +1050,73 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
+  result_state.lqp = lqp;
+  return result_state;
+}
+
+SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(const hsql::JoinDefinition& join) {
+  const auto join_mode = translate_join_mode(join.type);
+
+  auto left_state = _translate_table_ref(*join.left);
+  auto right_state = _translate_table_ref(*join.right);
+
+  auto left_input_lqp = left_state.lqp;
+  auto right_input_lqp = right_state.lqp;
+
+  Assert(!join.namedColumns->empty(), "Expected at least one named column.");
+  Assert(!join.condition, "Did not expect join condition for join using named columns.");
+
+  const auto& left_sql_identifier_resolver = left_state.sql_identifier_resolver;
+  const auto& right_sql_identifier_resolver = right_state.sql_identifier_resolver;
+
+  Assert(left_sql_identifier_resolver, "Expected SQLIdentifierResolver for left input.");
+  Assert(right_sql_identifier_resolver, "Expected SQLIdentifierResolver for right input.");
+
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+  join_predicates.reserve(join.namedColumns->size());
+
+  // Add all named columns to the join predicate.
+  for (const auto& named_column : *(join.namedColumns)) {
+    const auto& named_column_identifier = SQLIdentifier(named_column);
+
+    AssertInput(left_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier),
+                "Could not find column " + named_column + " in left input.");
+    AssertInput(right_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier),
+                "Could not find column " + named_column + " in right input.");
+
+    // Left and right can resolve the named column. Add join predicate.
+    join_predicates.emplace_back(
+        equals_(left_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier),
+                right_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier)));
+  }
+
+  // left_state becomes the result state.
+  auto result_state = std::move(left_state);
+
+  // Add the columns from right expression except the named columns.
+  for (const auto& right_element : right_state.elements_in_order) {
+    const auto& right_expression = right_element.expression;
+
+    if (!right_element.identifiers.empty()) {
+      // Ignore previous names if there is an alias.
+      const auto& right_identifier = right_element.identifiers.back();
+
+      // Do not add a column named in the join a second time. It is already in the left_state.
+      if (std::find(join.namedColumns->begin(), join.namedColumns->end(), right_identifier.column_name) !=
+          join.namedColumns->end()) {
+        continue;
+      }
+
+      result_state.elements_in_order.emplace_back(right_element);
+      result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
+      if (right_identifier.table_name) {
+        result_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_element);
+        result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
+      }
+    }
+  }
+
+  auto lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
   result_state.lqp = lqp;
   return result_state;
 }
