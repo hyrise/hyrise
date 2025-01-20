@@ -130,7 +130,7 @@ bool ColumnIsNullTableScanImpl::_matches_all(const BaseDictionarySegment& segmen
       return segment.unique_values_count() == segment.size();
 
     default:
-      Fail("Unsupported comparison type encountered");
+      Fail("Unsupported comparison type encountered.");
   }
 }
 
@@ -144,7 +144,7 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseDictionarySegment& segme
       return segment.unique_values_count() == 0;
 
     default:
-      Fail("Unsupported comparison type encountered");
+      Fail("Unsupported comparison type encountered.");
   }
 }
 
@@ -158,7 +158,7 @@ bool ColumnIsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) co
       return !segment.is_nullable();
 
     default:
-      Fail("Unsupported comparison type encountered");
+      Fail("Unsupported comparison type encountered.");
   }
 }
 
@@ -172,7 +172,7 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) c
       return false;
 
     default:
-      Fail("Unsupported comparison type encountered");
+      Fail("Unsupported comparison type encountered.");
   }
 }
 
@@ -186,7 +186,7 @@ bool ColumnIsNullTableScanImpl::_matches_all(const BaseSegmentType& segment) con
       return !segment.null_values().has_value();
 
     default:
-      Fail("Unsupported comparison type encountered");
+      Fail("Unsupported comparison type encountered.");
   }
 }
 
@@ -200,7 +200,7 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseSegmentType& segment) co
       return false;
 
     default:
-      Fail("Unsupported comparison type encountered");
+      Fail("Unsupported comparison type encountered.");
   }
 }
 
