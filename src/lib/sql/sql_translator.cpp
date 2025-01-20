@@ -75,6 +75,7 @@
 #include "sql/sql_identifier_resolver.hpp"
 #include "sql/sql_identifier_resolver_proxy.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -740,6 +741,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
       if (hsql_table_ref.join->type == hsql::kJoinNatural) {
         return _translate_natural_join(*hsql_table_ref.join);
       } else {
+        if (hsql_table_ref.join->namedColumns && !hsql_table_ref.join->namedColumns->empty()) {
+          return _translate_named_columns_join(*hsql_table_ref.join);
+        }
         return _translate_predicated_join(*hsql_table_ref.join);
       }
 
@@ -1047,6 +1051,63 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
+  result_state.lqp = lqp;
+  return result_state;
+}
+
+SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(const hsql::JoinDefinition& join) {
+  const auto join_mode = translate_join_mode(join.type);
+
+  auto left_state = _translate_table_ref(*join.left);
+  auto right_state = _translate_table_ref(*join.right);
+
+  auto left_input_lqp = left_state.lqp;
+  auto right_input_lqp = right_state.lqp;
+
+  AssertInput(!join.condition, "Specify either a condition or namedColums for JOIN not both");
+
+  const auto left_sql_identifier_resolver = left_state.sql_identifier_resolver;
+
+  Assert(left_sql_identifier_resolver, "Could not find valid sql_identifier resolver");
+
+  // left_state becomes the result state.
+  auto result_state = std::move(left_state);
+
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  // Go through right input and find the columns that are named in the join and present in the left input.
+  for (const auto& right_element : right_state.elements_in_order) {
+    const auto& right_expression = right_element.expression;
+    const auto& right_identifiers = right_element.identifiers;
+
+    if (!right_identifiers.empty()) {
+      // Ignore previous names if there is an alias.
+      const auto right_identifier = right_identifiers.back();
+
+      const auto left_expression =
+          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
+
+      if (left_expression && std::find(join.namedColumns->begin(), join.namedColumns->end(),
+                                       right_identifier.column_name) != join.namedColumns->end()) {
+        // Two columns match and are named. Therefore create a join predicate.
+        join_predicates.emplace_back(equals_(left_expression, right_expression));
+        continue;
+      }
+
+      // No matching column in the left input found or the column was not one of the named_columns.
+      // Add the column from the right input to the output.
+      result_state.elements_in_order.emplace_back(right_element);
+      result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
+      if (right_identifier.table_name) {
+        result_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_element);
+        result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
+      }
+    }
+  }
+
+  AssertInput(join_predicates.size() == join.namedColumns->size(), "Could not find all named columns in input tables");
+
+  auto lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
   result_state.lqp = lqp;
   return result_state;
 }
@@ -1762,14 +1823,31 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   // so on. Anyway, we would need to decouple data loading and storing the table and have to load metadata or even the
   // whole table when translating the SQL statement.
   AssertInput(!import_statement.whereClause, "Predicates on imported files are not supported.");
+
+  if (!import_statement.encoding) {
+    return ImportNode::make(import_statement.tableName, import_statement.filePath,
+                            import_type_to_file_type(import_statement.type));
+  }
+
+  auto file_encoding =
+      magic_enum::enum_cast<EncodingType>(std::string{import_statement.encoding}, magic_enum::case_insensitive);
+  AssertInput(file_encoding.has_value(), "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                          import_type_to_file_type(import_statement.type));
+                          import_type_to_file_type(import_statement.type), file_encoding.value());
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  // Do this before resolving the SELECT. This allows checks during SELECT translation.
+  if (export_statement.encoding) {
+    AssertInput(false,
+                "A specified output encoding is not yet supported. To achieve the same result, export the table once, "
+                "then load using the wished encoding and export again.");
+    // The implementation of this feature would happen in the Export Operator. See lib/operators/export.hpp
+  }
 
   if (export_statement.select) {
     lqp = _translate_select_statement(*export_statement.select);
