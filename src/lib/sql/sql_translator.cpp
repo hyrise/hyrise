@@ -1069,8 +1069,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   const auto& left_sql_identifier_resolver = left_state.sql_identifier_resolver;
   const auto& right_sql_identifier_resolver = right_state.sql_identifier_resolver;
 
-  Assert(left_sql_identifier_resolver, "Could not find valid sql_identifier resolver for left input.");
-  Assert(right_sql_identifier_resolver, "Could not find valid sql_identifier resolver for right input.");
+  Assert(left_sql_identifier_resolver, "Expected SQLIdentifierResolver for left input.");
+  Assert(right_sql_identifier_resolver, "Expected SQLIdentifierResolver for right input.");
 
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   join_predicates.reserve(join.namedColumns->size());
