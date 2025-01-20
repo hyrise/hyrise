@@ -41,14 +41,13 @@ std::string file_types_and_encodings_name_generator(
   return file_type_str + "_" + encoding_type_str;
 }
 
+// Both FixedStringDictionary and FrameOfReference do not work with float. They are tested with int below.
 INSTANTIATE_TEST_SUITE_P(
     FileTypesAndEncodings, OperatorsImportMultiFileTypeAndEncodingTest,
     ::testing::Combine(
         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary),
         ::testing::Values(
             std::nullopt, EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
-            // EncodingType::FixedStringDictionary, // Both FixedStringDictionary and FrameOfReference do not work with float.
-            // EncodingType::FrameOfReference,
             EncodingType::LZ4)),
     file_types_and_encodings_name_generator);  // add function to format tuples into strings
 
