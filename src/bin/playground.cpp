@@ -25,7 +25,7 @@ int main() {
   constexpr auto CORE_COUNT = 8;
   constexpr auto RUN_COUNT = 10;
 
-  constexpr auto BUILD_SIDE_SIZE = size_t{1'000'000};
+  constexpr auto BUILD_SIDE_SIZE = size_t{50'000'000};
   // constexpr auto BUILD_SIDE_SIZE = size_t{100'000'000};
   constexpr auto BUILD_PROBE_SIZE_FACTOR = size_t{10};
   constexpr auto PARTITION_COUNT = size_t{8};
