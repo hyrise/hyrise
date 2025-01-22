@@ -740,7 +740,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
       if (hsql_table_ref.join->type == hsql::kJoinNatural) {
         return _translate_natural_join(*hsql_table_ref.join);
       } else {
-        if (hsql_table_ref.join->namedColumns && !hsql_table_ref.join->namedColumns->empty()) {
+        if (hsql_table_ref.join->namedColumns) {
           return _translate_named_columns_join(*hsql_table_ref.join);
         }
         return _translate_predicated_join(*hsql_table_ref.join);
@@ -1058,10 +1058,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   const auto join_mode = translate_join_mode(join.type);
 
   auto left_state = _translate_table_ref(*join.left);
-  auto right_state = _translate_table_ref(*join.right);
+  const auto& right_state = _translate_table_ref(*join.right);
 
-  auto left_input_lqp = left_state.lqp;
-  auto right_input_lqp = right_state.lqp;
+  const auto left_input_lqp = left_state.lqp;
+  const auto& right_input_lqp = right_state.lqp;
 
   Assert(!join.namedColumns->empty(), "Expected at least one named column.");
   Assert(!join.condition, "Did not expect join condition for join using named columns.");
@@ -1072,28 +1072,35 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   Assert(left_sql_identifier_resolver, "Expected SQLIdentifierResolver for left input.");
   Assert(right_sql_identifier_resolver, "Expected SQLIdentifierResolver for right input.");
 
-  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
-  join_predicates.reserve(join.namedColumns->size());
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{join.namedColumns->size()};
+
+  const auto resolve_table_name = [](const auto& input_ref) {
+    Assert(input_ref.alias || input_ref.name, "Every table or nested SELECT must have either a name or an alias.");
+    return input_ref.alias ? input_ref.alias->name : input_ref.name;
+  };
 
   // Add all named columns to the join predicate.
-  for (const auto& named_column : *(join.namedColumns)) {
-    const auto& named_column_identifier = SQLIdentifier(named_column);
+  for (auto named_column_idx = size_t{0}; named_column_idx < join.namedColumns->size(); ++named_column_idx) {
+    const auto& named_column = (*join.namedColumns)[named_column_idx];
+    const auto named_column_identifier = SQLIdentifier{named_column};
 
-    AssertInput(left_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier),
-                "Could not find column " + named_column + " in left input.");
-    AssertInput(right_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier),
-                "Could not find column " + named_column + " in right input.");
+    const auto& left_expression = left_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier);
+    const auto& right_expression = right_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier);
 
-    // Left and right can resolve the named column. Add join predicate.
-    join_predicates.emplace_back(
-        equals_(left_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier),
-                right_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier)));
+    const auto* left_table_name = resolve_table_name(*join.left);
+    const auto* right_table_name = resolve_table_name(*join.right);
+
+    AssertInput(left_expression, "Could not resolve '" + named_column + "' on '" + left_table_name + "'.");
+    AssertInput(right_expression, "Could not resolve '" + named_column + "' on '" + right_table_name + "'.");
+
+    // Left and right can resolve the named column. Set the join predicate.
+    join_predicates[named_column_idx] = std::shared_ptr<AbstractExpression>(equals_(left_expression, right_expression));
   }
 
-  // left_state becomes the result state.
+  // `left_state` becomes the result state.
   auto result_state = std::move(left_state);
 
-  // Add the columns from right expression except the named columns.
+  // Add the remaining right expressions to the output.
   for (const auto& right_element : right_state.elements_in_order) {
     const auto& right_expression = right_element.expression;
 
@@ -1101,7 +1108,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
       // Ignore previous names if there is an alias.
       const auto& right_identifier = right_element.identifiers.back();
 
-      // Do not add a column named in the join a second time. It is already in the left_state.
+      // Do not add a column named in the join a second time. It is already in `left_state`.
       if (std::find(join.namedColumns->begin(), join.namedColumns->end(), right_identifier.column_name) !=
           join.namedColumns->end()) {
         continue;

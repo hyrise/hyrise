@@ -1587,8 +1587,8 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsSimple) {
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-    "SELECT * FROM int_float INNER JOIN int_float2 USING (a)");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float INNER JOIN int_float2 USING (a)");
 
   // clang-format off
   const auto expected_lqp =
@@ -1602,8 +1602,8 @@ TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsSimple) {
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsColumnAlias) {
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-  "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)");
 
   // clang-format off
   const auto expected_lqp =
@@ -1619,29 +1619,29 @@ TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsColumnAlias) {
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsBadNamedColumn) {
   // int_float2 alias (c,b) does not contain a column named d
-  EXPECT_THROW(sql_to_lqp_helper(
-      "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (d)"),
-    InvalidInputException);
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (d)"),
+      InvalidInputException);
 
   // int_float2 alias (c,c) is ambiguous
-  EXPECT_THROW(sql_to_lqp_helper(
-      "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,c) USING (c)"),
-    InvalidInputException);
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,c) USING (c)"),
+      InvalidInputException);
 
   // int_float alias (c,c) is ambiguous
-  EXPECT_THROW(sql_to_lqp_helper(
-      "SELECT * FROM int_float AS int_float(c,c) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)"),
-    InvalidInputException);
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,c) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)"),
+      InvalidInputException);
 
   // int_float alias (c,b) does not contain a column named d
-  EXPECT_THROW(sql_to_lqp_helper(
-      "SELECT * FROM int_float AS int_float(c,b) INNER JOIN int_float2 AS intfloat2(c,d) USING (d)"),
-    InvalidInputException);
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,b) INNER JOIN int_float2 AS intfloat2(c,d) USING (d)"),
+      InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsMultipleColumns) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-    "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,d) USING (c,d)");
+      "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,d) USING (c,d)");
 
   // clang-format off
   const auto expected_lqp =
@@ -1661,9 +1661,9 @@ TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsMultipleColumns) {
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsNested) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-    "SELECT * FROM int_float JOIN "
+      "SELECT * FROM int_float JOIN "
       "(SELECT a, int_float2.b, int_float5.d FROM int_float2 JOIN int_float5 USING (a))"
-    "AS int_float_comb(a, c, d) USING (a)");
+      "AS int_float_comb(a, c, d) USING (a)");
 
   // clang-format off
   const auto expected_lqp =
