@@ -1846,7 +1846,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
     AssertInput(false,
                 "A specified output encoding is not yet supported. To achieve the same result, export the table once, "
                 "then load using the wished encoding and export again.");
-    // The implementation of this feature would happen in the Export Operator. See lib/operators/export.hpp
   }
 
   if (export_statement.select) {
