@@ -1463,12 +1463,7 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
   // Test that predicates in the JOIN condition that reference only the null-supplying side are pushed down
 
   const auto [actual_lqp_left, translation_info_1] = sql_to_lqp_helper(
-      "SELECT"
-      "  * "
-      "FROM "
-      "  int_float AS a LEFT JOIN int_float2 AS b "
-      "    ON b.a > 5 AND a.a = b.a "
-      "WHERE b.b < 2;");
+      "SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a WHERE b.b < 2;");
 
   // clang-format off
 
@@ -1483,12 +1478,7 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
   EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
 
   const auto [actual_lqp_right, translation_info_2] = sql_to_lqp_helper(
-      "SELECT"
-      "  * "
-      "FROM "
-      "  int_float AS a RIGHT JOIN int_float2 AS b "
-      "    ON a.a > 5 AND a.a = b.a "
-      "WHERE b.b < 2;");
+      "SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a WHERE b.b < 2;");
 
   // clang-format off
 
@@ -1522,13 +1512,8 @@ TEST_F(SQLTranslatorTest, JoinOuterPredicatesForNullPreservingSide) {
 TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
   // Also test that columns can be referenced after a natural join
 
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      "  * "
-      "FROM "
-      "  int_float AS a NATURAL JOIN int_float2 AS b "
-      "WHERE "
-      "  a.b > 10 AND a.a > 5");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT  * FROM int_float AS a NATURAL JOIN int_float2 AS b WHERE a.b > 10 AND a.a > 5");
 
   // clang-format off
   const auto expected_lqp =
@@ -1547,11 +1532,8 @@ TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
 TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   // Test that the Natural join can work with column aliases and that the output columns have the correct name
 
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      "  * "
-      "FROM "
-      "  int_float AS a NATURAL JOIN (SELECT a AS d, b AS a, c FROM int_int_int) AS b");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS a NATURAL JOIN (SELECT a AS d, b AS a, c FROM int_int_int) AS b");
 
   const auto aliases = std::vector<std::string>{{"a", "b", "d", "c"}};
   const auto subquery_aliases = std::vector<std::string>{{"d", "a", "c"}};
@@ -1564,6 +1546,26 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
         stored_table_node_int_float,
         AliasNode::make(expression_vector(int_int_int_a, int_int_int_b, int_int_int_c), subquery_aliases,
           stored_table_node_int_int_int))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinNaturalDerivedTable) {
+  // Test that the Natural join can work with derived tables.
+
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float NATURAL JOIN (SELECT 123 as a) bar;");
+
+  const auto derived_table_node = AliasNode::make(expression_vector(123), std::vector<std::string>({"a"}),
+                                                  ProjectionNode::make(expression_vector(123), DummyTableNode::make()));
+
+  // clang-format off
+  const auto expected_lqp = 
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b), 
+    JoinNode::make(JoinMode::Inner, equals_(int_float_a, 123), 
+      stored_table_node_int_float, 
+      derived_table_node));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
