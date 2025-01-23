@@ -62,20 +62,21 @@ ChunkOffset FrameOfReferenceSegment<T, U>::size() const {
 }
 
 template <typename T, typename U>
-std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_block_minima = pmr_vector<T>(_block_minima, alloc);
-  auto new_offset_values = _offset_values->copy_using_allocator(alloc);
+std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_memory_resource(
+    const MemoryResource& memory_resource) const {
+  // auto new_block_minima = pmr_vector<T>(_block_minima, &memory_resource);
+  // auto new_offset_values = _offset_values->copy_using_memory_resource(memory_resource);
 
-  std::optional<pmr_vector<bool>> null_values;
-  if (_null_values) {
-    null_values = pmr_vector<bool>(*_null_values, alloc);
-  }
+  // std::optional<pmr_vector<bool>> null_values;
+  // if (_null_values) {
+  //   null_values = pmr_vector<bool>(*_null_values, alloc);
+  // }
 
-  auto copy = std::make_shared<FrameOfReferenceSegment>(std::move(new_block_minima), std::move(null_values),
-                                                        std::move(new_offset_values));
-  copy->access_counter = access_counter;
-  return copy;
+  // auto copy = std::make_shared<FrameOfReferenceSegment>(std::move(new_block_minima), std::move(null_values),
+  //                                                       std::move(new_offset_values));
+  // copy->access_counter = access_counter;
+  // return copy;
+  return nullptr;
 }
 
 template <typename T, typename U>

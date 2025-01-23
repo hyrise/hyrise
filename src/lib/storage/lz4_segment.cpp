@@ -436,33 +436,34 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
-  for (const auto& block : _lz4_blocks) {
-    auto block_copy = pmr_vector<char>{block, alloc};
-    new_lz4_blocks.emplace_back(std::move(block_copy));
-  }
+std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_memory_resource(const MemoryResource& memory_resource) const {
+  // auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
+  // for (const auto& block : _lz4_blocks) {
+  //   auto block_copy = pmr_vector<char>{block, alloc};
+  //   new_lz4_blocks.emplace_back(std::move(block_copy));
+  // }
 
-  auto new_null_values =
-      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
-  auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
+  // auto new_null_values =
+  //     _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
+  // auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
 
-  auto copy = std::shared_ptr<LZ4Segment<T>>{};
+  // auto copy = std::shared_ptr<LZ4Segment<T>>{};
 
-  if (_string_offsets) {
-    auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_allocator(alloc) : nullptr;
-    copy = std::make_shared<LZ4Segment<T>>(std::move(new_lz4_blocks), std::move(new_null_values),
-                                           std::move(new_dictionary), std::move(new_string_offsets), _block_size,
-                                           _last_block_size, _compressed_size, _num_elements);
-  } else {
-    copy = std::make_shared<LZ4Segment<T>>(std::move(new_lz4_blocks), std::move(new_null_values),
-                                           std::move(new_dictionary), _block_size, _last_block_size, _compressed_size,
-                                           _num_elements);
-  }
+  // if (_string_offsets) {
+  //   auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_memory_resource(alloc) : nullptr;
+  //   copy = std::make_shared<LZ4Segment<T>>(std::move(new_lz4_blocks), std::move(new_null_values),
+  //                                          std::move(new_dictionary), std::move(new_string_offsets), _block_size,
+  //                                          _last_block_size, _compressed_size, _num_elements);
+  // } else {
+  //   copy = std::make_shared<LZ4Segment<T>>(std::move(new_lz4_blocks), std::move(new_null_values),
+  //                                          std::move(new_dictionary), _block_size, _last_block_size, _compressed_size,
+  //                                          _num_elements);
+  // }
 
-  copy->access_counter = access_counter;
+  // copy->access_counter = access_counter;
 
-  return copy;
+  // return copy;
+  return nullptr;
 }
 
 template <typename T>

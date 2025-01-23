@@ -282,8 +282,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         ++output_segments_iter;
       }
 
-      *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
-                                                    stored_chunk->get_allocator(), std::move(output_indexes));
+      *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(), std::move(output_indexes));
 
       if (!stored_chunk->is_mutable()) {
         // Marking the chunk as immutable is cheap here: the MvccData's `max_begin_cid` is already set, so

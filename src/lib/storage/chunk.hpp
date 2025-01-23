@@ -51,9 +51,8 @@ class Chunk : private Noncopyable {
   // account for NULL being encoded as a separate value ID.
   static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
-  Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
-
+  Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr, Indexes indexes = {});
+  
   // Returns whether new rows can be appended to this chunk. Chunks are set immutable during `set_immutable().
   bool is_mutable() const;
 
@@ -115,11 +114,9 @@ class Chunk : private Noncopyable {
 
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
-  void migrate(MemoryResource* memory_source);
+  void migrate(MemoryResource& memory_source);
 
   bool references_exactly_one_table() const;
-
-  const PolymorphicAllocator<Chunk>& get_allocator() const;
 
   /**
    * To perform Chunk pruning, a Chunk can be associated with statistics.
@@ -196,7 +193,7 @@ class Chunk : private Noncopyable {
   std::vector<std::shared_ptr<const AbstractSegment>> _get_segments_for_ids(
       const std::vector<ColumnID>& column_ids) const;
 
-  PolymorphicAllocator<Chunk> _alloc;
+  std::shared_ptr<MemoryResource> _memory_resource;
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
   Indexes _indexes;

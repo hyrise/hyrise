@@ -215,7 +215,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         }
       }
 
-      const auto chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator());
+      const auto chunk = std::make_shared<Chunk>(out_segments, nullptr);
       chunk->set_immutable();
       if (keep_chunk_sort_order && !chunk_in->individually_sorted_by().empty()) {
         chunk->set_individually_sorted_by(chunk_in->individually_sorted_by());
