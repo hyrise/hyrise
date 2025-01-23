@@ -190,7 +190,7 @@ bool Chunk::references_exactly_one_table() const {
   return true;
 }
 
-void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
+void Chunk::migrate(MemoryResource* memory_source) {
   // Migrating chunks with indexes is not implemented yet.
   if (!_indexes.empty()) {
     Fail("Cannot migrate chunk with indexes.");

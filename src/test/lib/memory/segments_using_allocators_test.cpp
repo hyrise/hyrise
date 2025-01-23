@@ -9,7 +9,7 @@
 namespace hyrise {
 
 // A simple polymorphic memory resource that tracks how much memory was allocated.
-class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
+class SimpleTrackingMemoryResource : public MemoryResource {
  public:
   size_t allocated{0};
 

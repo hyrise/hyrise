@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/container/pmr/memory_resource.hpp>
 #include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "all_type_variant.hpp"
@@ -116,7 +115,7 @@ class Chunk : private Noncopyable {
 
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
-  void migrate(boost::container::pmr::memory_resource* memory_source);
+  void migrate(MemoryResource* memory_source);
 
   bool references_exactly_one_table() const;
 
