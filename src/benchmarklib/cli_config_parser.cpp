@@ -113,6 +113,11 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
     std::cout << "- Encoding is '" << encoding_type_str << "'\n";
   }
 
+  const auto dont_generate_table_statistics = parse_result["dont_generate_table_statistics"].as<bool>();
+  if (dont_generate_table_statistics) {
+    std::cout << "- NOT generating table statistics!\n";
+  }
+
   const auto chunk_indexes = parse_result["chunk_indexes"].as<bool>();
   if (chunk_indexes) {
     std::cout << "- Creating chunk indexes (separate index per chunk; columns defined by benchmark)\n";
@@ -211,7 +216,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   }
 
   return std::make_shared<BenchmarkConfig>(
-      benchmark_mode, chunk_size, *encoding_config, chunk_indexes, table_indexes, only_load_data, separate_benchmark_cycle_per_query, max_runs, timeout_duration,
+      benchmark_mode, chunk_size, *encoding_config, dont_generate_table_statistics, chunk_indexes, table_indexes, only_load_data, separate_benchmark_cycle_per_query, max_runs, timeout_duration,
       warmup_duration, output_file_path, enable_scheduler, cores, data_preparation_cores, clients, enable_visualization,
       verify, cache_binary_tables, pdgf_data_gen, pdgf_project_seed, pdgf_num_cores, pdgf_work_unit_size, columns_to_generate, system_metrics, pipeline_metrics, plugins);
 }

@@ -310,7 +310,7 @@ void AbstractTableGenerator::generate_and_store() {
         if (storage_manager.has_table(table_name)) {
           storage_manager.drop_table(table_name);
         }
-        storage_manager.add_table(table_name, table_info.table);
+        storage_manager.add_table(table_name, table_info.table, !_benchmark_config->dont_generate_table_statistics);
         const auto output =
             std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
         std::cout << output << std::flush;

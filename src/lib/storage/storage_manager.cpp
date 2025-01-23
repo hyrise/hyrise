@@ -25,6 +25,10 @@
 namespace hyrise {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
+  add_table(name, std::move(table), true);
+}
+
+void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table, bool generate_statistics) {
   const auto table_iter = _tables.find(name);
   const auto view_iter = _views.find(name);
   Assert(table_iter == _tables.end() || !table_iter->second,
@@ -40,9 +44,13 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
     Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   }
 
-  // Create table statistics and chunk pruning statistics for added table.
-  table->set_table_statistics(TableStatistics::from_table(*table));
-  generate_chunk_pruning_statistics(table);
+  if (generate_statistics) {
+    // Create table statistics and chunk pruning statistics for added table.
+    table->set_table_statistics(TableStatistics::from_table(*table));
+    generate_chunk_pruning_statistics(table);
+  } else {
+      std::cout << "Skipped generating statistics for table " + name + " due to benchmark configuration.\n";
+  }
 
   _tables[name] = std::move(table);
 }

@@ -16,7 +16,8 @@ BenchmarkConfig::BenchmarkConfig(const ChunkOffset init_chunk_size, const bool i
     : chunk_size{init_chunk_size}, cache_binary_tables{init_cache_binary_tables} {}
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
-                                 const EncodingConfig& init_encoding_config, const bool init_chunk_indexes,
+                                 const EncodingConfig& init_encoding_config,
+                                 const bool init_dont_generate_table_statistics, const bool init_chunk_indexes,
                                  const bool init_table_indexes, const bool init_only_load_data,
                                  const bool init_separate_benchmark_cycle_per_query,
                                  const int64_t init_max_runs,
@@ -33,6 +34,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
     : benchmark_mode{init_benchmark_mode},
       chunk_size{init_chunk_size},
       encoding_config{init_encoding_config},
+      dont_generate_table_statistics{init_dont_generate_table_statistics},
       chunk_indexes{init_chunk_indexes},
       table_indexes{init_table_indexes},
       only_load_data{init_only_load_data},
