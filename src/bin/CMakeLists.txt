@@ -36,6 +36,19 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+# Configure pdgf_single_column_test
+add_executable(
+    hyrisePDGFSingleColumnTest
+
+    pdgf_single_column_test.cpp
+)
+
+target_link_libraries(
+    hyrisePDGFSingleColumnTest
+    hyrise
+    hyriseBenchmarkLib
+)
+
 # Configure client
 add_executable(
     hyriseClient
