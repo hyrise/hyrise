@@ -26,8 +26,9 @@
 
 namespace hyrise {
 
-Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data, Indexes indexes)
-    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
+Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data, 
+  PolymorphicAllocator<Chunk> alloc, Indexes indexes)
+    : _alloc(alloc), _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
   DebugAssert(!_segments.empty(),
               "Chunks without segments are not legal, as the row count of such a chunk cannot be determined.");
 
@@ -196,6 +197,10 @@ void Chunk::migrate(MemoryResource& memory_source) {
     new_segments.push_back(segment->copy_using_memory_resource(memory_source));
   }
   _segments = std::move(new_segments);
+}
+
+const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const {
+  return _alloc;
 }
 
 size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {

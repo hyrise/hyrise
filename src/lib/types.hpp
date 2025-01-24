@@ -70,9 +70,7 @@ using Cost = float;
 //
 // TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-// using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 using PolymorphicAllocator = std::pmr::polymorphic_allocator<T>;
-// using MemoryResource = boost::container::pmr::memory_resource;
 using MemoryResource = std::pmr::memory_resource;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
