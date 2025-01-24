@@ -17,8 +17,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-
 #include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"

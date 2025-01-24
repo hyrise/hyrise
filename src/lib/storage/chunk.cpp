@@ -10,8 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/memory_resource.hpp>
-
 #include "abstract_segment.hpp"
 #include "all_type_variant.hpp"
 #include "base_value_segment.hpp"
@@ -26,8 +24,8 @@
 
 namespace hyrise {
 
-Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data, 
-  PolymorphicAllocator<Chunk> alloc, Indexes indexes)
+Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data, PolymorphicAllocator<Chunk> alloc,
+             Indexes indexes)
     : _alloc(alloc), _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
   DebugAssert(!_segments.empty(),
               "Chunks without segments are not legal, as the row count of such a chunk cannot be determined.");

@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include <boost/container/pmr/global_resource.hpp>
-
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"

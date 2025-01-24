@@ -52,9 +52,8 @@ class Chunk : private Noncopyable {
   static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-    PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{},
-    Indexes indexes = {});
-  
+        PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{}, Indexes indexes = {});
+
   // Returns whether new rows can be appended to this chunk. Chunks are set immutable during `set_immutable().
   bool is_mutable() const;
 

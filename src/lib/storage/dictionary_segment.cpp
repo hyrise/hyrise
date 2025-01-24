@@ -63,7 +63,7 @@ template <typename T>
 std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_memory_resource(
     MemoryResource& memory_resource) const {
   auto new_attribute_vector = _attribute_vector->copy_using_memory_resource(memory_resource);
-  auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, PolymorphicAllocator<T>(&memory_resource));
+  auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, &memory_resource);
   auto copy = std::make_shared<DictionarySegment<T>>(std::move(new_dictionary), std::move(new_attribute_vector));
   copy->access_counter = access_counter;
   return copy;

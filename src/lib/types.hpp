@@ -11,8 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-
 #include "strong_typedef.hpp"
 
 /**
