@@ -249,8 +249,6 @@ class Table : private Noncopyable {
   const std::vector<ColumnID>& value_clustered_by() const;
   void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
-  void migrate_column(const ColumnID column_id, MemoryResource& memory_resource);
-
  protected:
   void _add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
 

@@ -660,10 +660,6 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
   _table_indexes_statistics.emplace_back(TableIndexStatistics{{column_id}, chunks_to_index});
 }
 
-void Table::migrate_column(const ColumnID column_id, MemoryResource& memory_resource) {
-  // for (const auto chunk_id : chunk)
-}
-
 template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,
                                                        const std::string& name);
 template void Table::create_chunk_index<CompositeGroupKeyIndex>(const std::vector<ColumnID>& column_ids,

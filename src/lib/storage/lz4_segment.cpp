@@ -436,7 +436,7 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_memory_resource(const MemoryResource& memory_resource) const {
+std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_memory_resource(MemoryResource& memory_resource) const {
   // auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
   // for (const auto& block : _lz4_blocks) {
   //   auto block_copy = pmr_vector<char>{block, alloc};

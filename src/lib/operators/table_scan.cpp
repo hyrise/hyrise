@@ -215,7 +215,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         }
       }
 
-      // TODO(MW) remove using allocator of chunk_in?
       const auto chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator());
       chunk->set_immutable();
       if (keep_chunk_sort_order && !chunk_in->individually_sorted_by().empty()) {

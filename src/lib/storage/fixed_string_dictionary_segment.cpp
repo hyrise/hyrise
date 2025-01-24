@@ -68,7 +68,7 @@ ChunkOffset FixedStringDictionarySegment<T>::size() const {
 
 template <typename T>
 std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_memory_resource(
-    const MemoryResource& memory_resource) const {
+    MemoryResource& memory_resource) const {
   // auto new_dictionary = std::make_shared<FixedStringVector>(*_dictionary, &memory_resource);
   // auto new_attribute_vector = _attribute_vector->copy_using_memory_resource(memory_resource);
 

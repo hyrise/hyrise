@@ -46,7 +46,7 @@ BitPackingIterator BitPackingVector::on_end() const {
 }
 
 std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_memory_resource(
-    const MemoryResource& memory_resource) const {
+    MemoryResource& memory_resource) const {
   // auto data_copy = pmr_compact_vector(_data.bits(), _data.size(), alloc);
 
   // // zero initialize the compact_vector's memory, see bitpacking_compressor.cpp

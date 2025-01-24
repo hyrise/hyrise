@@ -282,7 +282,6 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         ++output_segments_iter;
       }
 
-      // TODO(MW) remove using allocator of stored_chunk?
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(), 
         stored_chunk->get_allocator(), std::move(output_indexes));
 

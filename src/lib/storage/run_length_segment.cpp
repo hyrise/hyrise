@@ -60,7 +60,7 @@ ChunkOffset RunLengthSegment<T>::size() const {
 
 template <typename T>
 std::shared_ptr<AbstractSegment> RunLengthSegment<T>::copy_using_memory_resource(
-    const MemoryResource& memory_resource) const {
+    MemoryResource& memory_resource) const {
   // auto new_values = std::make_shared<pmr_vector<T>>(*_values, alloc);
   // auto new_null_values = std::make_shared<pmr_vector<bool>>(*_null_values, alloc);
   // auto new_end_positions = std::make_shared<pmr_vector<ChunkOffset>>(*_end_positions, alloc);

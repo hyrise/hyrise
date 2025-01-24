@@ -44,7 +44,7 @@ class BaseCompressedVector : private Noncopyable {
   virtual std::unique_ptr<BaseVectorDecompressor> create_base_decompressor() const = 0;
 
   virtual std::unique_ptr<const BaseCompressedVector> copy_using_memory_resource(
-      const MemoryResource& memory_resource) const = 0;
+      MemoryResource& memory_resource) const = 0;
 };
 
 /**
@@ -125,7 +125,7 @@ class CompressedVector : public BaseCompressedVector {
   }
 
   std::unique_ptr<const BaseCompressedVector> copy_using_memory_resource(
-      const MemoryResource& memory_resource) const final {
+      MemoryResource& memory_resource) const final {
     return _self().on_copy_using_memory_resource(memory_resource);
   }
 

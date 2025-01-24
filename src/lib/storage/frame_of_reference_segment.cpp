@@ -63,7 +63,7 @@ ChunkOffset FrameOfReferenceSegment<T, U>::size() const {
 
 template <typename T, typename U>
 std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_memory_resource(
-    const MemoryResource& memory_resource) const {
+    MemoryResource& memory_resource) const {
   // auto new_block_minima = pmr_vector<T>(_block_minima, &memory_resource);
   // auto new_offset_values = _offset_values->copy_using_memory_resource(memory_resource);
 
