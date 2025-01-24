@@ -230,10 +230,17 @@ void BenchmarkRunner::run() {
 
   // Create report.
   const auto write_report = _config.output_file_path && (!_config.verify && !_config.enable_visualization);
-  auto report = write_report ? _create_report() : nlohmann::json{};
+  auto report = nlohmann::json{};
+  if (write_report) {
+    auto timer = Timer{};
+    std::cout << "- Creating report for benchmark run.\n";
+    report = _create_report();
+    std::cout << "- Creating report done (" << timer.lap_formatted() << ")\n";
+  }
 
   // Write report to file.
   if (write_report) {
+    std::cout << "- Writing benchmark report to file.\n";
     _write_report_to_file(*_config.output_file_path, report);
   } else if (_config.output_file_path) {
     std::cout << "- Not writing JSON result as either verification or visualization are activated.\n";
@@ -252,9 +259,13 @@ void BenchmarkRunner::run() {
 
   // Regardless of whether we have run any queries, we need to teardown the scheduler.
   if (Hyrise::get().scheduler()) {
+    std::cout << "- Finishing scheduler!\n";
     Hyrise::get().scheduler()->finish();
     Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+    std::cout << "- Scheduler finished.\n";
   }
+
+  std::cout << "- Hyrise Benchmark done at " << std::chrono::steady_clock::now().time_since_epoch().count() << "\n";
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
