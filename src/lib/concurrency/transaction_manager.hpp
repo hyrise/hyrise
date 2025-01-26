@@ -97,7 +97,7 @@ class TransactionManager : public Noncopyable {
   // been there "from the beginning of time".
   static constexpr auto INITIAL_COMMIT_ID = CommitID{1};
 
-  std::shared_ptr<CommitContext> _last_commit_context;
+  std::atomic<std::shared_ptr<CommitContext>> _last_commit_context;
 
   mutable std::mutex _active_snapshot_commit_ids_mutex;
   std::unordered_multiset<CommitID> _active_snapshot_commit_ids;

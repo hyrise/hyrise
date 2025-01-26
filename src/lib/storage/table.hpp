@@ -152,7 +152,7 @@ class Table : private Noncopyable {
     auto row_counter = size_t{0};
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto chunk = std::atomic_load(&_chunks[chunk_id]);
+      auto chunk = _chunks[chunk_id].load();
       if (!chunk) {
         continue;
       }
@@ -272,7 +272,7 @@ class Table : private Noncopyable {
    *
    * For the ZeroAllocator, see the implementation of Table::append_chunk.
    */
-  tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>> _chunks;
+  tbb::concurrent_vector<std::atomic<std::shared_ptr<Chunk>>, ZeroAllocator<std::atomic<std::shared_ptr<Chunk>>>> _chunks;
 
   TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _table_order_constraints;

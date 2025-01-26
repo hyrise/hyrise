@@ -82,7 +82,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 }
 
 std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
-  return std::atomic_load(&_segments.at(column_id));
+  return _segments.at(column_id);
 }
 
 ColumnCount Chunk::column_count() const {
