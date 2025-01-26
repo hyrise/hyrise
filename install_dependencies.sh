@@ -63,7 +63,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     ./contrib/download_prerequisites
                     mkdir build && cd build
                     ../configure --prefix=${HOME}/GCC-13.2.0 --enable-languages=c,c++ --disable-multilib
-                    make -j \$(nproc) && make install
+                    make -j $(nproc) && make install
                     sudo update-alternatives --install /usr/bin/gcc-13 gcc-13 ${HOME}/GCC-13.2.0/bin/gcc 90
                     sudo update-alternatives --install /usr/bin/g++-13 g++-13 ${HOME}/GCC-13.2.0/bin/g++ 90
                 fi
