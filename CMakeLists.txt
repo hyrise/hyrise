@@ -67,6 +67,12 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
      endif()
  endif()
 
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14.0)
+        add_compile_options(-Wno-deprecated-declarations)
+    endif()
+endif()
+
 # Enable address and undefined behavior sanitization if requested
 option(ENABLE_ADDR_UB_LEAK_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
 if (${ENABLE_ADDR_UB_LEAK_SANITIZATION})
@@ -223,3 +229,4 @@ add_subdirectory(src)
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort
+
