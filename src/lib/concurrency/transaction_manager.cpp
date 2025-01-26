@@ -26,7 +26,7 @@ TransactionManager::~TransactionManager() {
 TransactionManager& TransactionManager::operator=(TransactionManager&& transaction_manager) noexcept {
   _next_transaction_id = transaction_manager._next_transaction_id.load();
   _last_commit_id = transaction_manager._last_commit_id.load();
-  _last_commit_context = transaction_manager._last_commit_context.load();
+  _last_commit_context = transaction_manager._last_commit_context;
   _active_snapshot_commit_ids = transaction_manager._active_snapshot_commit_ids;
   return *this;
 }
@@ -84,13 +84,13 @@ std::optional<CommitID> TransactionManager::get_lowest_active_snapshot_commit_id
  * loop.
  */
 std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
-  auto current_context = _last_commit_context.load();
+  auto current_context = std::atomic_load(&_last_commit_context);
   auto next_context = std::shared_ptr<CommitContext>();
 
   auto success = false;
   while (!success) {
     while (current_context->has_next()) {
-      current_context = _last_commit_context).load();
+      current_context = std::atomic_load(&_last_commit_context);
     }
 
     next_context = std::make_shared<CommitContext>(CommitID{current_context->commit_id() + 1});
@@ -105,7 +105,7 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
      * Only one thread at a time can ever reach this code since only one thread succeeds to set _last_commit_context’s
      * successor.
      */
-    success = std::atomic_compare_exchange_strong(_last_commit_context, &current_context, next_context);
+    success = std::atomic_compare_exchange_strong(&_last_commit_context, &current_context, next_context);
 
     Assert(success, "Invariant violated.");
   }
