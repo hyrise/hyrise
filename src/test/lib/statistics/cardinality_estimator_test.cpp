@@ -1,3 +1,9 @@
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -28,7 +34,9 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/storage_manager.hpp"
 #include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -125,7 +133,7 @@ class CardinalityEstimatorTest : public BaseTest {
     g_a = node_g->get_column("a");
   }
 
-  CardinalityEstimator estimator;
+  CardinalityEstimator estimator{};
   std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b, c_x, c_y, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g;
 };
@@ -143,8 +151,10 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
   EXPECT_EQ(result_table_statistics->row_count, 100);
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
   EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(result_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(result_table_statistics->column_statistics.at(2));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(1)));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
 }
 
 TEST_F(CardinalityEstimatorTest, Alias) {
@@ -434,24 +444,17 @@ TEST_F(CardinalityEstimatorTest, JoinAnti) {
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {
-  const auto limit_lqp_a = LimitNode::make(value_(1), node_a);
-  EXPECT_EQ(estimator.estimate_cardinality(limit_lqp_a), 1);
+  const auto limit_lqp = LimitNode::make(value_(1), node_a);
+  EXPECT_EQ(estimator.estimate_cardinality(limit_lqp), 1);
 
-  const auto limit_statistics_a = estimator.estimate_statistics(limit_lqp_a);
+  const auto limit_statistics = estimator.estimate_statistics(limit_lqp);
 
-  EXPECT_EQ(limit_statistics_a->row_count, 1);
-  ASSERT_EQ(limit_statistics_a->column_statistics.size(), 2);
+  EXPECT_EQ(limit_statistics->row_count, 1);
+  ASSERT_EQ(limit_statistics->column_statistics.size(), 2);
 
-  const auto column_statistics_a =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(limit_statistics_a->column_statistics.at(0));
-  const auto column_statistics_b =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(limit_statistics_a->column_statistics.at(1));
-
-  // Limit doesn't write out StatisticsObjects
-  ASSERT_TRUE(column_statistics_a);
-  EXPECT_FALSE(column_statistics_a->histogram);
-  ASSERT_TRUE(column_statistics_b);
-  EXPECT_FALSE(column_statistics_b->histogram);
+  // Limit does not write out StatisticsObjects.
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*limit_statistics->column_statistics.at(0)));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*limit_statistics->column_statistics.at(1)));
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithValueExpressionExeedingInputRowCount) {
@@ -810,7 +813,8 @@ TEST_F(CardinalityEstimatorTest, Projection) {
   EXPECT_EQ(result_table_statistics->row_count, 100);
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
   EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(result_table_statistics->column_statistics.at(1));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(1)));
   EXPECT_EQ(result_table_statistics->column_statistics.at(2), input_table_statistics->column_statistics.at(0));
 }
 
@@ -839,14 +843,7 @@ TEST_F(CardinalityEstimatorTest, StaticTable) {
   EXPECT_FLOAT_EQ(dummy_statistics->row_count, 3.0f);
   ASSERT_EQ(dummy_statistics->column_statistics.size(), 1);
   ASSERT_EQ(dummy_statistics->column_statistics[0]->data_type, DataType::Int);
-
-  const auto& attribute_statistics =
-      static_cast<const AttributeStatistics<int32_t>&>(*dummy_statistics->column_statistics[0]);
-  EXPECT_FALSE(attribute_statistics.histogram);
-  EXPECT_FALSE(attribute_statistics.min_max_filter);
-  EXPECT_FALSE(attribute_statistics.range_filter);
-  EXPECT_FALSE(attribute_statistics.null_value_ratio);
-  EXPECT_FALSE(attribute_statistics.distinct_value_count);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*dummy_statistics->column_statistics[0]));
 
   // Case (ii): Statistics available, simply forward them.
   table->set_table_statistics(TableStatistics::from_table(*table));
@@ -1090,28 +1087,74 @@ TEST_F(CardinalityEstimatorTest, WindowNode) {
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
   EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(0));
   EXPECT_EQ(result_table_statistics->column_statistics.at(1), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(result_table_statistics->column_statistics.at(2));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
+  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+
   // Enable statistics caching.
   estimator.guarantee_bottom_up_construction();
   const auto& statistics_cache = estimator.cardinality_estimation_cache.statistics_by_lqp;
   ASSERT_TRUE(statistics_cache);
   EXPECT_TRUE(statistics_cache->empty());
 
-  // Estimate the cardinality of a node with statistics caching enabled.
-  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+  // Estimate the cardinality of a node with statistics caching.
   estimator.estimate_cardinality(predicate_node_1);
   EXPECT_EQ(statistics_cache->size(), 2);
   EXPECT_TRUE(statistics_cache->contains(node_a));
   EXPECT_TRUE(statistics_cache->contains(predicate_node_1));
 
-  // Estimate the cardinality of a node with statistics caching disabled.
-  const auto predicate_node_2 = PredicateNode::make(less_than_(a_b, 55), node_a);
+  // Estimate the cardinality of a node without statistics caching.
+  const auto predicate_node_2 = PredicateNode::make(less_than_(a_a, 55), node_a);
   estimator.estimate_cardinality(predicate_node_2, false);
   EXPECT_EQ(statistics_cache->size(), 2);
   EXPECT_FALSE(statistics_cache->contains(predicate_node_2));
+}
+
+TEST_F(CardinalityEstimatorTest, EstimationsOnDummyStatistics) {
+  // In some cases, there are no statistics available when we want to perform estimations, e.g., because they happen
+  // to be on the result of an aggregation. Ensure that everything works out then. We do not care about the estimation
+  // results here.
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(between_inclusive_(count_(c_y), 37, 72),
+    PredicateNode::make(less_than_(min_(d_b), 24),
+      PredicateNode::make(equals_(min_(d_b), avg_(d_c)),
+        PredicateNode::make(greater_than_(min_(d_b), a_b),
+          PredicateNode::make(less_than_(a_a, avg_(d_c)),
+            JoinNode::make(JoinMode::Inner, equals_(sum_(a_b), b_a),
+              JoinNode::make(JoinMode::Inner, equals_(c_x, sum_(a_b)),
+                JoinNode::make(JoinMode::Inner, equals_(sum_(a_b), min_(d_b)),
+                  AggregateNode::make(expression_vector(a_a), expression_vector(sum_(a_b)),
+                    node_a),
+                  AggregateNode::make(expression_vector(d_a), expression_vector(min_(d_b), avg_(d_c)),
+                    node_d)),
+                AggregateNode::make(expression_vector(c_x), expression_vector(count_(c_y)),
+                  node_c)),
+              node_b))))));
+  // clang-format on
+
+  estimator.estimate_cardinality(lqp);
+}
+
+TEST_F(CardinalityEstimatorTest, DummyStatistics) {
+  const auto dummy_statistics = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Int);
+
+  EXPECT_EQ(dummy_statistics->data_type, DataType::Int);
+
+  // Dummy statistics forward themselves when scaled.
+  EXPECT_EQ(dummy_statistics->scaled(0.2f), dummy_statistics);
+
+  // They cannot be used for actual estimations.
+  EXPECT_THROW(dummy_statistics->sliced(PredicateCondition::Equals, 1), std::logic_error);
+  EXPECT_THROW(dummy_statistics->pruned(123, PredicateCondition::Equals, 1), std::logic_error);
+
+  auto stream = std::stringstream{};
+  stream << *dummy_statistics;
+  EXPECT_EQ(stream.str(), "DummyStatistics");
 }
 
 }  // namespace hyrise
