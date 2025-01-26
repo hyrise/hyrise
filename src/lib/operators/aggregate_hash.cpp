@@ -10,6 +10,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <memory_resource>
 #include <numeric>
 #include <string>
 #include <type_traits>

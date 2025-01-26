@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <limits>
 #include <memory>
+#include <memory_resource>
 #include <mutex>
 #include <utility>
 #include <vector>

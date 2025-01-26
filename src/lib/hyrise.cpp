@@ -1,6 +1,7 @@
 #include "hyrise.hpp"
 
 #include <memory>
+#include <memory_resource>
 
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/abstract_scheduler.hpp"

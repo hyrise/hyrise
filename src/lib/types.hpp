@@ -66,7 +66,6 @@ using Cost = float;
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
 //
-// TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
 using PolymorphicAllocator = std::pmr::polymorphic_allocator<T>;
 using MemoryResource = std::pmr::memory_resource;
