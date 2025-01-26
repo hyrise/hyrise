@@ -55,10 +55,21 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     # boost::unordered_flat_map. Thus, we manually retrieve it.
                     sudo add-apt-repository -y ppa:mhier/libboost-latest
                     sudo apt-get update
+                    # Install ggc 13.2 from source as this is the minimum version Hyrise requires.
+                    echo "Installing gcc 13.2 from source, which can take a while."
+                    wget http://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.xz
+                    tar xf gcc-13.2.0.tar.xz
+                    cd gcc-13.2.0/
+                    ./contrib/download_prerequisites
+                    mkdir build && cd build
+                    ../configure --prefix=${HOME}/GCC-13.2.0 --enable-languages=c,c++ --disable-multilib
+                    make -j \$(nproc) && make install
+                    sudo update-alternatives --install /usr/bin/gcc-13 gcc-13 ${HOME}/GCC-13.2.0/bin/gcc 90
+                    sudo update-alternatives --install /usr/bin/g++-13 g++-13 ${HOME}/GCC-13.2.0/bin/g++ 90
                 fi
 
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost1.81-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-13 gcc-13 gcovr git graphviz libboost1.81-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
@@ -77,7 +88,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 90 --slave /usr/bin/g++ g++ /usr/bin/g++-13
                 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-17 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-17 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-17 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-17 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-17  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-17
             else
                 echo "Error during installation."

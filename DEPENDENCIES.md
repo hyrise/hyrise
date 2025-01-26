@@ -11,7 +11,7 @@
 | coreutils                 | any              |    Mac   |                         Yes (scripts) |
 | cmake                     | >= 3.18          |    All   |                                    No |
 | dos2unix                  | any              |    All   |                         Yes (linting) |
-| gcc                       | >= 11.4          |    All   | Yes, if clang installed, not for OS X |
+| gcc                       | >= 13.2          |    All   | Yes, if clang installed, not for OS X |
 | graphviz                  | any              |    All   |             Yes (query visualization) |
 | libnuma-dev               | any              |    Linux |                            Yes (numa) |
 | libnuma1                  | any              |    Linux |                            Yes (numa) |
