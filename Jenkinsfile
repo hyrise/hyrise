@@ -63,7 +63,7 @@ try {
 
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      def hyriseCI = docker.image('hyrise/hyrise-ci:23.10');
+      def hyriseCI = docker.image('hyrise/hyrise-ci:24.04');
       hyriseCI.pull()
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
@@ -91,7 +91,7 @@ try {
 
             cmake = 'cmake -DCI_BUILD=ON'
 
-            // We don't use unity builds with clang-tidy (see below) and GCC 11 builds as it triggers a GoogleTest
+            // We don't use unity builds with clang-tidy (see below) and GCC 13 builds as it triggers a GoogleTest
             // issue (see https://github.com/google/googletest/issues/3552).
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
@@ -100,13 +100,13 @@ try {
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
             // support older versions. We test LLVM 15 (oldest LLVM version shipped with Ubuntu 23.10 that works with
-            // more recent libstdc++ versions) and GCC 11 (oldest version supported by Hyrise). We execute at least
+            // more recent libstdc++ versions) and GCC 13 (oldest version supported by Hyrise). We execute at least
             // debug runs for them. If you want to upgrade compiler versions, please update install_dependencies.sh,
             // DEPENDENCIES.md, and the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             clang15 = '-DCMAKE_C_COMPILER=clang-15 -DCMAKE_CXX_COMPILER=clang++-15'
-            gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-            gcc11 = '-DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11'
+            gcc = '-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14'
+            gcc13 = '-DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13'
 
             debug = '-DCMAKE_BUILD_TYPE=Debug'
             release = '-DCMAKE_BUILD_TYPE=Release'
@@ -123,7 +123,7 @@ try {
 
             // Configure the rest in parallel. We use unity builds to decrease build times, except for two
             // configurations: (1) clang tidy as it might otherwise miss issues with unity builds (e.g., missing
-            // includes) and (2) GCC 11 debug builds of GTest (see https://github.com/google/googletest/issues/3552).
+            // includes) and (2) GCC 13 debug builds of GTest (see https://github.com/google/googletest/issues/3552).
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
@@ -134,7 +134,7 @@ try {
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           ${ninja} .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} ${no_lto} ${ninja} .. &\
             mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}           ${ninja} .. &\
-            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}                      ${ninja} .. &\
+            mkdir gcc-13-debug && cd gcc-13-debug &&                                                     ${cmake} ${debug}          ${gcc13}                      ${ninja} .. &\
             wait"
           }
 
@@ -154,13 +154,13 @@ try {
               sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-debug && ./hyriseTest"
             }
-          }, gcc11Debug: {
-            stage("gcc-11-debug") {
-               // We give more cores (ncores / 2.5) to GCC 11 as it is the only configuration that has issues with unity
+          }, gcc13Debug: {
+            stage("gcc-13-debug") {
+               // We give more cores (ncores / 2.5) to GCC 13 as it is the only configuration that has issues with unity
                // builds (GoogleTest cannot be compiled). When switching to a more recent GCC version, this should be
                // evaluated again.
-              sh "cd gcc-11-debug && ninja all -j \$(( \$(nproc) * 2 / 5))"
-              sh "cd gcc-11-debug && ./hyriseTest"
+              sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) * 2 / 5))"
+              sh "cd gcc-13-debug && ./hyriseTest"
             }
           }, lint: {
             stage("Linting") {

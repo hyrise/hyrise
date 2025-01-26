@@ -5,7 +5,7 @@
 # While it would be desirable to use Python's virtual environments, they are not straightforward to use in Jenkins'
 # scripted pipelines. With Python >= 3.11, we need to use --break-system-packages.
 
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y \
@@ -20,8 +20,10 @@ RUN apt-get update \
         cmake \
         curl \
         dos2unix \
-        g++-11 \
-        gcc-11 \
+        g++-13 \
+        gcc-13 \
+        g++-14 \
+        gcc-14 \
         git \
         graphviz \
         libboost1.81-all-dev \
