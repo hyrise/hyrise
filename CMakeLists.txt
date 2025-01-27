@@ -67,10 +67,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
      endif()
  endif()
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14.0)
-        add_compile_options(-Wno-deprecated-declarations)
-    endif()
+# atomic_load ... deprecated but llvm is määh here
+# need it for GCC14. but clang also uses libstdc++ of v14. so its problematic from now on pretty much always.
+# but not a problem, as we can still use the check with LLVM&macOS.
+if(NOT APPLE)
+    add_compile_options(-Wno-deprecated-declarations)
 endif()
 
 # Enable address and undefined behavior sanitization if requested
