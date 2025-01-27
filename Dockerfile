@@ -26,7 +26,7 @@ RUN apt-get update \
         gcc-14 \
         git \
         graphviz \
-        libboost1.81-all-dev \
+        libboost-all-dev \
         libhwloc-dev \
         libncurses5-dev \
         libnuma-dev \
