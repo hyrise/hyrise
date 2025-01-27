@@ -123,10 +123,10 @@ void PdgfProcess::_monitor_liveliness() {
       }
 
       if (!_child.running()) {
-        child_dead_since += 100;
+        child_dead_since += 50;
         // We need to wait sufficiently long here, because PDGF will already terminate once it has managed to write
         // all the data, while Hyrise still has some work to do reading the remaining cells.
-        if (child_dead_since >= 60'000) {
+        if (child_dead_since >= 120'000) {
           std::cerr << "PDGF is already dead for a while, but data transmission is still not marked complete!\n";
           std::cerr << "We cannot properly handle this at the moment, so we will just force Hyrise to exit now...\n";
           exit(EXIT_FAILURE);
