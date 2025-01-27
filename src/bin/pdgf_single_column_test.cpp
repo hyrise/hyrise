@@ -79,8 +79,9 @@ int main(int argc, char* argv[]) {
     auto builder = reader->read_next_table(encoding_config, num_cores);
   }
   auto time = timer.lap();
+  std::cerr << "Awaiting PDGF teardown\n";
   pdgf_data.await_teardown();
-  std::cerr << "Loading/Generating tables done (" << format_duration(time) << ")\n";
+  std::cerr << "- Hyrise PDGF: Generating tables done (" << format_duration(time) << ")\n";
 
   std::cerr << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
 
