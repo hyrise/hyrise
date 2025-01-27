@@ -59,11 +59,11 @@ ChunkOffset RunLengthSegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> RunLengthSegment<T>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_values = std::make_shared<pmr_vector<T>>(*_values, alloc);
-  auto new_null_values = std::make_shared<pmr_vector<bool>>(*_null_values, alloc);
-  auto new_end_positions = std::make_shared<pmr_vector<ChunkOffset>>(*_end_positions, alloc);
+std::shared_ptr<AbstractSegment> RunLengthSegment<T>::copy_using_memory_resource(
+    MemoryResource& memory_resource) const {
+  auto new_values = std::make_shared<pmr_vector<T>>(*_values, &memory_resource);
+  auto new_null_values = std::make_shared<pmr_vector<bool>>(*_null_values, &memory_resource);
+  auto new_end_positions = std::make_shared<pmr_vector<ChunkOffset>>(*_end_positions, &memory_resource);
 
   auto copy = std::make_shared<RunLengthSegment<T>>(new_values, new_null_values, new_end_positions);
 
