@@ -60,7 +60,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
   // Sort queries by name
-  std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) {
+  std::ranges::sort(_queries, [](const Query& lhs, const Query& rhs) {
     return lhs.name < rhs.name;
   });
 }

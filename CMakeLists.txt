@@ -67,9 +67,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
      endif()
  endif()
 
-# atomic_load ... deprecated but llvm is määh here
-# need it for GCC14. but clang also uses libstdc++ of v14. so its problematic from now on pretty much always.
-# but not a problem, as we can still use the check with LLVM&macOS.
+# Starting with GCC-14's libstdc++, std::atomic_load for shared pointers is deprecated (as part of C++20). However,
+# as of LLVM 19, libc++ has not implemented std::atomic<std::shared_ptr>. As we use libstdc++ on Linux, also when
+# compiling with clang, we disable deprecation warnings.
+# As only disable on Linux as clang on macOS uses libc++. Once libc++ implements the missing atomics, the active warning
+# on macOS will make us aware of it.
 if(NOT APPLE)
     add_compile_options(-Wno-deprecated-declarations)
 endif()
@@ -230,4 +232,3 @@ add_subdirectory(src)
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort
-

@@ -99,9 +99,9 @@ try {
             ninja = '-GNinja'
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
-            // support older versions. We test LLVM 16 (older versions might work, but libstdc++ of GCC 14 requires LLVM
-            // 16) and GCC 13 (oldest version supported by Hyrise). We execute at least debug runs for them. If you want
-            // to upgrade compiler versions, please update install_dependencies.sh, DEPENDENCIES.md, and the
+            // support older versions. We test LLVM 16 (older versions might work, but LLVM 15 has issues with libstdc++
+            // of GCC 14) and GCC 13 (oldest version supported by Hyrise). We execute at least debug runs for them. If
+            // you want to upgrade compiler versions, please update install_dependencies.sh, DEPENDENCIES.md, and the
             // documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             clang16 = '-DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16'
