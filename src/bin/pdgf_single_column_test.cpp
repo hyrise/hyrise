@@ -75,14 +75,21 @@ int main(int argc, char* argv[]) {
   pdgf_data.set_column_filter(column_filter);
   pdgf_data.run();
   auto encoding_config = EncodingConfig();
+  auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
   while (reader->has_next_table()) {
-    auto builder = reader->read_next_table(encoding_config, num_cores);
+    table_builders.emplace_back(reader->read_next_table(encoding_config, num_cores));
   }
   auto time = timer.lap();
   std::cerr << "Awaiting PDGF teardown\n";
   pdgf_data.await_teardown();
   std::cerr << "- Hyrise PDGF: Generating tables done (" << format_duration(time) << ")\n";
 
+  // This next line is solely to ensure the memory of the unfinished tables within the table builders is not deallocated early,
+  // which might cause problems with the PDGF liveness watcher (because the pdgf_data.await_teardown() call might be done
+  // only after the deallocation, so much to late).
+  // We also don't want the deallocation to interfere with our measurements (if the timer.lap() call comes later,
+  // that would be even more annoying)
+  table_builders.clear();
   std::cerr << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
 
   // Teardown
