@@ -32,6 +32,9 @@ class AbstractPDGFTableGenerator : public AbstractTableGenerator {
   virtual std::string _pdgf_schema_generation_file() const {
    return "default-shm-reflective-generation.xml";
   };
+  virtual uint32_t _pdgf_buffer_columns() const {
+   return 32u;
+  }
 
   void _collect_columns(const std::string& sql);
 

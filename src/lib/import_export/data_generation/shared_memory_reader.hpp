@@ -21,7 +21,7 @@ class BaseSharedMemoryReader : Noncopyable {
 };
 
 std::shared_ptr<BaseSharedMemoryReader> create_shared_memory_reader(
- uint32_t work_unit_size, ChunkOffset hyrise_table_chunk_size,
+ uint32_t work_unit_size, uint32_t reader_num_columns, ChunkOffset hyrise_table_chunk_size,
  const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem);
 
 template <uint32_t work_unit_size, uint32_t num_columns>

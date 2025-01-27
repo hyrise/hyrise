@@ -16,22 +16,33 @@
 #include "utils/timer.hpp"
 
 namespace hyrise {
+template <uint32_t reader_num_columns>
 std::shared_ptr<BaseSharedMemoryReader> create_shared_memory_reader(
   uint32_t work_unit_size, ChunkOffset hyrise_table_chunk_size,
   const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem) {
   switch (work_unit_size) {
-    case    8u: return std::make_shared<SharedMemoryReader<   8u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case   16u: return std::make_shared<SharedMemoryReader<  16u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case   32u: return std::make_shared<SharedMemoryReader<  32u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case   64u: return std::make_shared<SharedMemoryReader<  64u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case  128u: return std::make_shared<SharedMemoryReader< 128u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case  256u: return std::make_shared<SharedMemoryReader< 256u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case  512u: return std::make_shared<SharedMemoryReader< 512u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 1024u: return std::make_shared<SharedMemoryReader<1024u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 2048u: return std::make_shared<SharedMemoryReader<2048u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 4096u: return std::make_shared<SharedMemoryReader<4096u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 8192u: return std::make_shared<SharedMemoryReader<8192u, 32u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case    8u: return std::make_shared<SharedMemoryReader<   8u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   16u: return std::make_shared<SharedMemoryReader<  16u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   32u: return std::make_shared<SharedMemoryReader<  32u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   64u: return std::make_shared<SharedMemoryReader<  64u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  128u: return std::make_shared<SharedMemoryReader< 128u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  256u: return std::make_shared<SharedMemoryReader< 256u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  512u: return std::make_shared<SharedMemoryReader< 512u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 1024u: return std::make_shared<SharedMemoryReader<1024u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 2048u: return std::make_shared<SharedMemoryReader<2048u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 4096u: return std::make_shared<SharedMemoryReader<4096u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 8192u: return std::make_shared<SharedMemoryReader<8192u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
     default: throw std::runtime_error("Unknown work unit size for shared memory reader!");
+  }
+}
+
+std::shared_ptr<BaseSharedMemoryReader> create_shared_memory_reader(
+uint32_t work_unit_size, uint32_t reader_num_columns, ChunkOffset hyrise_table_chunk_size,
+const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem) {
+  switch (reader_num_columns) {
+    case 16u: return create_shared_memory_reader<16u>(work_unit_size, hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 32u: return create_shared_memory_reader<32u>(work_unit_size, hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    default: throw std::runtime_error("Invalid number of buffer columns for shared memory reader!");
   }
 }
 

@@ -31,9 +31,9 @@ AbstractPDGFTableGenerator::AbstractPDGFTableGenerator(float scale_factor, const
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::generate() {
   Assert(!_benchmark_config->cache_binary_tables, "Caching of half-empty tables containing dummy segments is currently not supported");
 
-  std::cerr << "Setting up shared memory.\n";
+  std::cerr << "Setting up shared memory (" << _pdgf_buffer_columns() << " buffer columns).\n";
   const auto reader = create_shared_memory_reader(
-    _benchmark_config->pdgf_work_unit_size, _benchmark_config->chunk_size,
+    _benchmark_config->pdgf_work_unit_size, _pdgf_buffer_columns(), _benchmark_config->chunk_size,
     SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
   auto timer = Timer{};
@@ -47,7 +47,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
     auto pdgf_schema = PdgfProcess::for_schema_generation(
       _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
       _benchmark_config->pdgf_project_seed, _benchmark_config->pdgf_work_unit_size, _benchmark_config->pdgf_num_cores,
-      _scale_factor);
+      _pdgf_buffer_columns(), _scale_factor);
     pdgf_schema.run();
     while (reader->has_next_table()) {
       auto schema_builder = reader->read_next_schema();
@@ -90,7 +90,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   auto pdgf_data = PdgfProcess::for_data_generation(
     _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
     _benchmark_config->pdgf_project_seed, _benchmark_config->pdgf_work_unit_size, _benchmark_config->pdgf_num_cores,
-    _scale_factor);
+    _pdgf_buffer_columns(), _scale_factor);
   if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
     pdgf_data.set_column_filter(_columns_to_generate);
   }
