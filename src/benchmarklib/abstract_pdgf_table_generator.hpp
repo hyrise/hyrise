@@ -23,9 +23,10 @@ class Table;
 class AbstractPDGFTableGenerator : public AbstractTableGenerator {
  public:
   // Constructor for creating a AbstractPDGFTableGenerator in a benchmark
-  explicit AbstractPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run);
+  explicit AbstractPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::pair<BenchmarkItemID, std::string>> queries_to_run);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
+  std::unordered_map<std::string, BenchmarkTableInfo> _generate(std::optional<std::string> single_query_string);
 
  protected:
   virtual std::string _pdgf_schema_config_file() const = 0;
@@ -39,7 +40,7 @@ class AbstractPDGFTableGenerator : public AbstractTableGenerator {
   void _collect_columns(const std::string& sql);
 
   float _scale_factor;
-  std::vector<std::string> _queries_to_run;
+  std::vector<std::pair<BenchmarkItemID, std::string>> _queries_to_run;
   std::shared_ptr<std::set<std::string>> _columns_to_generate;
 };
 }  // namespace hyrise

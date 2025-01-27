@@ -18,7 +18,7 @@
 
 namespace hyrise {
 AbstractPDGFTableGenerator::AbstractPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                                                       std::vector<std::string> queries_to_run)
+                                                       std::vector<std::pair<BenchmarkItemID, std::string>> queries_to_run)
     : AbstractTableGenerator(benchmark_config),
       _scale_factor(scale_factor),
       _queries_to_run(std::move(queries_to_run)),
@@ -29,6 +29,19 @@ AbstractPDGFTableGenerator::AbstractPDGFTableGenerator(float scale_factor, const
 #define BUFFER_FREE_SEM "/PDGF_BUFFER_FREE_SEM"
 
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::generate() {
+  std::unordered_map<std::string, BenchmarkTableInfo> benchmark_tables;
+  if (_benchmark_config->separate_benchmark_cycle_per_query) {
+    for (const auto& query: _queries_to_run) {
+      std::cerr << "Generating ONLY data for query with ID " << query.first << " (note: off-by-one for TPC-H, etc.)\n";
+      benchmark_tables = _generate(std::optional{query.second});
+    }
+  } else {
+    benchmark_tables = _generate(std::nullopt);
+  }
+  return benchmark_tables;
+}
+
+std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::_generate(std::optional<std::string> single_query_string) {
   Assert(!_benchmark_config->cache_binary_tables, "Caching of half-empty tables containing dummy segments is currently not supported");
 
   std::cerr << "Setting up shared memory (" << _pdgf_buffer_columns() << " buffer columns).\n";
@@ -78,37 +91,48 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
    * Collect columns to generate
    */
   if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
-    for (const auto& query: _queries_to_run) {
-      _collect_columns(query);
+    if (single_query_string) {
+      _collect_columns(single_query_string.value());
+    } else {
+      for (const auto &query_string: _queries_to_run | std::views::values) {
+        _collect_columns(query_string);
+      }
     }
   }
 
   /**
    * Generate tables
    */
-  std::cerr << "Generating tables with PDGF\n";
-  auto pdgf_data = PdgfProcess::for_data_generation(
-    _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
-    _benchmark_config->pdgf_project_seed, _benchmark_config->pdgf_work_unit_size, _benchmark_config->pdgf_num_cores,
-    _pdgf_buffer_columns(), _scale_factor);
-  if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
-    pdgf_data.set_column_filter(_columns_to_generate);
-  }
-  pdgf_data.run();
-  auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
-  while (reader->has_next_table()) {
-    table_builders.emplace_back(reader->read_next_table(_benchmark_config->encoding_config, _benchmark_config->data_preparation_cores));
-  }
-  std::cerr << "Awaiting PDGF teardown\n";
-  pdgf_data.await_teardown();
-  std::cout << "- Hyrise PDGF: Generating tables done (" << format_duration(timer.lap()) << ")\n" << std::flush;
+  if (_benchmark_config->columns_to_generate == ColumnsToGenerate::All || !_columns_to_generate->empty()) {
+    std::cerr << "Generating tables with PDGF\n";
+    auto pdgf_data = PdgfProcess::for_data_generation(
+      _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
+      _benchmark_config->pdgf_project_seed, _benchmark_config->pdgf_work_unit_size, _benchmark_config->pdgf_num_cores,
+      _pdgf_buffer_columns(), _scale_factor);
+    if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
+      pdgf_data.set_column_filter(_columns_to_generate);
+    }
+    pdgf_data.run();
+    auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
+    while (reader->has_next_table()) {
+      table_builders.emplace_back(reader->read_next_table(_benchmark_config->encoding_config, _benchmark_config->data_preparation_cores));
+    }
+    std::cerr << "Awaiting PDGF teardown\n";
+    pdgf_data.await_teardown();
+    std::cout << "- Hyrise PDGF: Generating tables done (" << format_duration(timer.lap()) << ")\n" << std::flush;
 
-  /**
-   * Return completely generated tables
-   */
-  std::cerr << "Finalizing generated tables\n";
-  for (auto& table_builder: table_builders) {
-    table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
+    /**
+     * Return completely generated tables
+     */
+    std::cerr << "Finalizing generated tables\n";
+    for (auto& table_builder: table_builders) {
+      table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
+    }
+
+    // Required in case we are doing multiple single-query generations
+    _columns_to_generate->clear();
+  } else {
+    std::cerr << "Not invoking PDGF, all required columns already present!\n";
   }
 
   return table_info_by_name;

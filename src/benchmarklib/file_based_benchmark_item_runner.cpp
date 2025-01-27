@@ -83,11 +83,11 @@ const std::vector<BenchmarkItemID>& FileBasedBenchmarkItemRunner::items() const 
   return _items;
 }
 
-const std::vector<std::string> FileBasedBenchmarkItemRunner::query_strings() {
-  auto queries = std::vector<std::string>{};
+const std::vector<std::pair<BenchmarkItemID, std::string>> FileBasedBenchmarkItemRunner::query_strings() {
+  auto queries = std::vector<std::pair<BenchmarkItemID, std::string>>{};
   queries.reserve(_items.size());
   for (const auto item : _items) {
-    queries.emplace_back(_queries[item].sql);
+    queries.emplace_back(std::make_pair(item, _queries[item].sql));
   }
   return queries;
 }

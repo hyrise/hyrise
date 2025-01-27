@@ -225,12 +225,12 @@ int main(int argc, char* argv[]) {
   auto config = std::shared_ptr<BenchmarkConfig>{};
   config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
-  if (config->separate_benchmark_cycle_per_query) {
-    for (const auto& item_id : item_ids) {
-      auto single_item_id = std::vector<BenchmarkItemID>{item_id};
-      run_benchmark(argv, cli_parse_result, config, single_item_id);
-    }
-  } else {
+  // if (config->separate_benchmark_cycle_per_query) {
+  //   for (const auto& item_id : item_ids) {
+  //     auto single_item_id = std::vector<BenchmarkItemID>{item_id};
+  //     run_benchmark(argv, cli_parse_result, config, single_item_id);
+  //   }
+  // } else {
     run_benchmark(argv, cli_parse_result, config, item_ids);
-  }
+  // }
 }

@@ -15,10 +15,10 @@ namespace hyrise {
 
 TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::string>{}) {}
+    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::pair<BenchmarkItemID, std::string>>{}) {}
 
 TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                                               const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
+                                               const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::pair<BenchmarkItemID, std::string>> queries_to_run)
     : AbstractPDGFTableGenerator(scale_factor, benchmark_config, std::move(queries_to_run)),
     _clustering_configuration(clustering_configuration) {}
 

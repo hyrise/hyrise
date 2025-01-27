@@ -15,7 +15,7 @@ namespace hyrise {
 
 const auto ssb_table_names = std::vector<std::string>{"part", "customer", "supplier", "date", "lineorder"};
 
-SSBPDGFTableGenerator::SSBPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
+SSBPDGFTableGenerator::SSBPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::pair<BenchmarkItemID, std::string>> queries_to_run)
     : AbstractPDGFTableGenerator(scale_factor, benchmark_config, queries_to_run) {}
 
 std::string SSBPDGFTableGenerator::_pdgf_schema_config_file() const {

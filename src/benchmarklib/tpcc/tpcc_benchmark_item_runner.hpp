@@ -15,7 +15,7 @@ class TPCCBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
-  const std::vector<std::string> query_strings() override;
+  const std::vector<std::pair<BenchmarkItemID, std::string>> query_strings() override;
 
   const std::vector<int>& weights() const override;
 

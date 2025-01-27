@@ -25,7 +25,7 @@ const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
   return items;
 }
 
-const std::vector<std::string> TPCCBenchmarkItemRunner::query_strings() {
+const std::vector<std::pair<BenchmarkItemID, std::string>> TPCCBenchmarkItemRunner::query_strings() {
   throw std::logic_error("Not implemented!");
 }
 

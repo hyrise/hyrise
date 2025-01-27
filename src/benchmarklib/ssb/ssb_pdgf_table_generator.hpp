@@ -16,7 +16,7 @@ class SSBPDGFTableGenerator : virtual public AbstractPDGFTableGenerator {
  public:
   // Constructor for creating a SSBPDGFTableGenerator in a benchmark.
   explicit SSBPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                                 std::vector<std::string> queries_to_run);
+                                 std::vector<std::pair<BenchmarkItemID, std::string>> queries_to_run);
 
  protected:
   std::string _pdgf_schema_config_file() const override;

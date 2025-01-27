@@ -29,7 +29,7 @@ class TPCHPDGFTableGenerator : virtual public AbstractPDGFTableGenerator {
 
   // Constructor for creating a TPCHPDGFTableGenerator in a benchmark
   explicit TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                                  const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run);
+                                  const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::pair<BenchmarkItemID, std::string>> queries_to_run);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
