@@ -48,6 +48,7 @@ class PDGFColumn : public BasePDGFColumn {
 
  protected:
   SegmentEncodingSpec _encoding_spec;
+  std::vector<bool> _segment_initialized;
   std::vector<std::shared_ptr<std::mutex>> _segment_initialization_locks;
   std::vector<pmr_vector<T>> _data_segments;
   std::vector<std::shared_ptr<JobTask>> _encoding_tasks;

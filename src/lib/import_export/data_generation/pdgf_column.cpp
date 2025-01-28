@@ -25,9 +25,11 @@ PDGFColumn<T>::PDGFColumn(DataType data_type, SegmentEncodingSpec encoding_spec,
   _data_segments.resize(req_chunks);
   _encoding_tasks.resize(req_chunks);
   _finished_segments.resize(req_chunks);
+  _segment_initialized.reserve(req_chunks);
   _segment_initialization_locks.reserve(req_chunks);
   _segment_fullness.reserve(req_chunks);
   for (auto chunk_index = uint32_t{0}; chunk_index < req_chunks; chunk_index++) {
+      _segment_initialized.push_back(false);
       _segment_initialization_locks.push_back(std::make_shared<std::mutex>());
       _segment_fullness.push_back(std::make_shared<std::atomic_uint32_t>(0));
   }
@@ -42,7 +44,8 @@ PDGFColumn<T>::PDGFColumn(DataType data_type, SegmentEncodingSpec encoding_spec,
 template<typename T>
 void PDGFColumn<T>::initialize_segment(ChunkID chunk_id, bool should_try_continue_initialization) {
   // If the lock is gone, we know that the segment is already initialized.
-  if (const auto lock = _segment_initialization_locks[chunk_id]) {
+  if (!_segment_initialized[chunk_id]) { // no need for locking anymore once we have initialized the vector.
+    const auto lock = _segment_initialization_locks[chunk_id];
     auto locked = lock->try_lock();
     if (!locked) {
       if (chunk_id + 1 < _data_segments.size()) {
@@ -57,7 +60,7 @@ void PDGFColumn<T>::initialize_segment(ChunkID chunk_id, bool should_try_continu
     if (_data_segments[chunk_id].size() == 0) {
       _data_segments[chunk_id].resize(std::min(static_cast<int64_t>(_chunk_size), _num_rows - chunk_id * _chunk_size));
     }
-    _segment_initialization_locks[chunk_id] = nullptr; // no need for locking anymore once we have initialize the vector.
+    _segment_initialized[chunk_id] = true;
     lock->unlock();
   } else if (should_try_continue_initialization && chunk_id + 1 < _data_segments.size()) {
     // We are in a stall situation; other threads were as well, apparently, and already initialized the current segment.
