@@ -28,14 +28,17 @@ int main(int argc, char* argv[]) {
       ("cores", "", cxxopts::value<uint32_t>())
       ("pdgf_num_cores", "", cxxopts::value<uint32_t>())
       ("pdgf_work_unit_size", "", cxxopts::value<uint32_t>())
-      ("column", "", cxxopts::value<std::string>());
+      ("columns", "", cxxopts::value<std::string>());
   cli_options.allow_unrecognised_options();
   const auto cli_parse_result = cli_options.parse(argc, argv);
   auto scale = cli_parse_result["scale"].as<float>();
   auto num_cores = cli_parse_result["cores"].as<uint32_t>();
   auto pdgf_num_cores = cli_parse_result["pdgf_num_cores"].as<uint32_t>();
   auto work_unit_size = cli_parse_result["pdgf_work_unit_size"].as<uint32_t>();
-  auto column = cli_parse_result["column"].as<std::string>();
+  auto semicolon_separated_columns = cli_parse_result["columns"].as<std::string>();
+  auto columns = std::vector<std::string>();
+  boost::trim_if(semicolon_separated_columns, boost::is_any_of(";"));
+  boost::split(columns, semicolon_separated_columns, boost::is_any_of(";"), boost::token_compress_on);
 
   auto shm_buffer_num_columns = 16u;
 
@@ -70,8 +73,7 @@ int main(int argc, char* argv[]) {
   reader->reset();
 
   auto pdgf_data = PdgfProcess::for_data_generation("pdgf-core_config_tpc-h-schema.xml", "default-shm-reflective-generation.xml", PDGF_DIRECTORY_ROOT, 123456789, work_unit_size, pdgf_num_cores, shm_buffer_num_columns, scale);
-  auto column_filter = std::make_shared<std::set<std::string>>();
-  column_filter->insert(column);
+  auto column_filter = std::make_shared<std::set<std::string>>(columns.begin(), columns.end());
   pdgf_data.set_column_filter(column_filter);
   pdgf_data.run();
   auto encoding_config = EncodingConfig();
