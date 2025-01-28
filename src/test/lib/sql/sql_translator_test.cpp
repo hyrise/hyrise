@@ -1561,10 +1561,10 @@ TEST_F(SQLTranslatorTest, JoinNaturalDerivedTable) {
                                                   ProjectionNode::make(expression_vector(123), DummyTableNode::make()));
 
   // clang-format off
-  const auto expected_lqp = 
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b), 
-    JoinNode::make(JoinMode::Inner, equals_(int_float_a, 123), 
-      stored_table_node_int_float, 
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_a, 123),
+      stored_table_node_int_float,
       derived_table_node));
   // clang-format on
 
