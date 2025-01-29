@@ -28,9 +28,9 @@ NodeQueueScheduler::NodeQueueScheduler() {
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-  if (HYRISE_DEBUG && _active) {
+  if (_active) {
     // We cannot throw an exception because destructors are noexcept by default.
-    std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it.\n";
+    std::cerr << "NodeQueueScheduler::finish() must be called before destroying the scheduler.\n";
     std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
   }
 }
