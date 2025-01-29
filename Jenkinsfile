@@ -121,7 +121,7 @@ try {
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity} .. && make -j \$(nproc) libjemalloc-build"
 
             // Configure the rest in parallel. We use unity builds to decrease build times. The only exception is the
-            // clang tidy build as it might otherwise miss some issues (e.g., missing includes).
+            // clang-tidy build as it might otherwise miss some issues (e.g., missing includes).
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
