@@ -142,7 +142,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * be created at the end of this function.
    *
    * Lookup in `join_graph_statistics_cache` is expected to have a higher hit rate (since every bitmask represents
-   * multiple LQPs) than `statistics_by_lqp`. Thus, the lookup in `join_graph_statistics_cache` is performed last.
+   * multiple LQPs) than `statistics_by_lqp`. Thus, the lookup in `join_graph_statistics_cache` is performed first.
    *
    * Finally, try a lookup in the temporary cache used for the estimation of a single LQP.
    */
