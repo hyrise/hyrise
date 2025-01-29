@@ -1620,22 +1620,22 @@ TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsColumnAlias) {
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsBadNamedColumn) {
-  // int_float2 alias (c,b) does not contain a column named d
+  // `int_float2` alias `(c,b)` does not contain a column named `d`.
   EXPECT_THROW(
       sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (d)"),
       InvalidInputException);
 
-  // int_float2 alias (c,c) is ambiguous
+  // `int_float2` alias `(c,c)` is ambiguous.
   EXPECT_THROW(
       sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,c) USING (c)"),
       InvalidInputException);
 
-  // int_float alias (c,c) is ambiguous
+  // `int_float` alias `(c,c)` is ambiguous.
   EXPECT_THROW(
       sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,c) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)"),
       InvalidInputException);
 
-  // int_float alias (c,b) does not contain a column named d
+  // `int_float` alias `(c,b)` does not contain a column named `d`.
   EXPECT_THROW(
       sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,b) INNER JOIN int_float2 AS intfloat2(c,d) USING (d)"),
       InvalidInputException);
