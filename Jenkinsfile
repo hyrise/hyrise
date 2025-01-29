@@ -91,8 +91,7 @@ try {
 
             cmake = 'cmake -DCI_BUILD=ON'
 
-            // We don't use unity builds with clang-tidy (see below) and GCC 13 builds as it triggers a GoogleTest
-            // issue (see https://github.com/google/googletest/issues/3552).
+            // We do not use unity builds with clang-tidy (see below).
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
             // To speed compiling up, we use ninja for most builds.
