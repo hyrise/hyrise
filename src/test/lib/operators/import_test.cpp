@@ -7,6 +7,7 @@
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "operators/import.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -155,8 +156,17 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
       reference_filepath + reference_filenames.at(file_type) + file_extensions.at(file_type);
   auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, file_type, encoding);
   importer->execute();
+  auto table = Hyrise::get().storage_manager.get_table("a");
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+
+  auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  auto expected_segment = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+
+  // Check if the imported segment has the same type as the manually encoded one.
+  resolve_segment_type<float>(*segment, [&](const auto& segment) {
+    EXPECT_TRUE(std::dynamic_pointer_cast<std::remove_reference_t<decltype(segment)>>(expected_segment));
+  });
 }
 
 TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, HasCorrectMvccData) {
@@ -198,6 +208,14 @@ TEST_F(OperatorsImportTest, EncodeImportWithFrameOfReference) {
   const auto table = Hyrise::get().storage_manager.get_table("a");
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+
+  auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  auto expected_segment = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+
+  // Check if the imported segment has the same type as the manually encoded one.
+  resolve_segment_type<float>(*segment, [&](const auto& segment) {
+    EXPECT_TRUE(std::dynamic_pointer_cast<std::remove_reference_t<decltype(segment)>>(expected_segment));
+  });
 }
 
 TEST_F(OperatorsImportTest, EncodeImportWithFixedStringDictionary) {
