@@ -10,6 +10,7 @@
 #include "import_export/data_generation/shared_memory_reader.hpp"
 #include "import_export/data_generation/pdgf_process.hpp"
 #include "storage/chunk.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
@@ -86,13 +87,20 @@ int main(int argc, char* argv[]) {
   pdgf_data.await_teardown();
   std::cerr << "- Hyrise PDGF: Generating tables done (" << format_duration(time) << ")\n";
 
+  auto table_size = size_t{0};
+  for (const auto& builder : table_builders) {
+    auto table = builder->build_table();
+    table_size += table->memory_usage(MemoryUsageCalculationMode::Full);
+  }
+  std::cerr << "- Hyrise total table size is: " << table_size << "\n";
+
   // This next line is solely to ensure the memory of the unfinished tables within the table builders is not deallocated early,
   // which might cause problems with the PDGF liveness watcher (because the pdgf_data.await_teardown() call might be done
   // only after the deallocation, so much to late).
   // We also don't want the deallocation to interfere with our measurements (if the timer.lap() call comes later,
   // that would be even more annoying)
-  table_builders.clear();
-  std::cerr << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
+  // HOWEVER, no that we calculate the table sizes after the benchmark, this is not needed anymore.
+  // table_builders.clear();
 
   // Teardown
   scheduler->finish();
