@@ -61,7 +61,8 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
 
 INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanStringTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary,
-                                           EncodingType::FixedStringDictionary, EncodingType::RunLength),
+                                           EncodingType::FixedStringDictionary, EncodingType::VariableStringDictionary,
+                                           EncodingType::RunLength),
                          enum_formatter<EncodingType>);
 
 TEST_P(OperatorsTableScanStringTest, ScanEquals) {
