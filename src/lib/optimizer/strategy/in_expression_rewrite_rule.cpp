@@ -128,7 +128,8 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
     return;
   }
 
-  const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
+  const auto cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+  cardinality_estimator->guarantee_bottom_up_construction(lqp_root);
   visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type != LQPNodeType::Predicate) {
       // This rule only rewrites IN if it is part of a predicate (not, e.g., `SELECT a IN (1, 2) AS foo`)
