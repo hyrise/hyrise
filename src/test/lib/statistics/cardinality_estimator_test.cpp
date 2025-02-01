@@ -159,6 +159,18 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
       dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
 }
 
+TEST_F(CardinalityEstimatorTest, AggregateWithoutGroupBy) {
+  const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)), node_a);
+
+  const auto input_table_statistics = node_a->table_statistics();
+  const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
+
+  EXPECT_EQ(result_table_statistics->row_count, 1);
+  ASSERT_EQ(result_table_statistics->column_statistics.size(), 1);
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(0)));
+}
+
 TEST_F(CardinalityEstimatorTest, Alias) {
   // clang-format off
   const auto input_lqp =

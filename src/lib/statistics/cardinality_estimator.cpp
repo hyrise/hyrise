@@ -410,7 +410,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
     }
   }
 
-  return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
+  // AggregateNodes without GROUP BY columns always return a single row.
+  const auto cardinality =
+      aggregate_node.aggregate_expressions_begin_idx == 0 ? Cardinality{1} : input_table_statistics->row_count;
+
+  return std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
@@ -1098,8 +1102,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     } else {
       // TODO(anyone): If we do hot have histograms on both sides, use some other algorithm/statistics to estimate the
       //               join.
-      const auto left_cardinality = Cardinality{left_input_table_statistics.row_count};
-      const auto right_cardinality = Cardinality{right_input_table_statistics.row_count};
+      const auto left_cardinality = left_input_table_statistics.row_count;
+      const auto right_cardinality = right_input_table_statistics.row_count;
       cardinality = std::max(left_cardinality, std::max(right_cardinality, left_cardinality * right_cardinality));
     }
 
@@ -1198,8 +1202,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     } else {
       // TODO(anyone): If we do not have histograms on both sides, use some other algorithm/statistics to estimate the
       //               join.
-      const auto left_cardinality = Cardinality{left_input_table_statistics.row_count};
-      const auto right_cardinality = Cardinality{right_input_table_statistics.row_count};
+      const auto left_cardinality = left_input_table_statistics.row_count;
+      const auto right_cardinality = right_input_table_statistics.row_count;
       cardinality = std::max(left_cardinality, std::max(right_cardinality, left_cardinality * right_cardinality));
 
       cardinality = left_input_table_statistics.row_count;
