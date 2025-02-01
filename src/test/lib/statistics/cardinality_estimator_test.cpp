@@ -446,16 +446,16 @@ TEST_F(CardinalityEstimatorTest, JoinAnti) {
 }
 
 TEST_F(CardinalityEstimatorTest, JoinWithDummyStatistics) {
-  // Joins on projections, aggregates, etc. cannot use histograms. For now, we expect, ...
+  // Joins on projections, aggregates, etc. cannot use histograms. For now, we expect those joins to preserve all tuples
+  // in the worst case.
   for (const auto join_mode : magic_enum::enum_values<JoinMode>()) {
-    std::cout << join_mode << "\n";
     const auto right_input = ProjectionNode::make(expression_vector(value_(42)), DummyTableNode::make());
     const auto join_node =
         join_mode == JoinMode::Cross ? JoinNode::make(join_mode) : JoinNode::make(join_mode, equals_(a_a, value_(123)));
     join_node->set_left_input(node_a);
     join_node->set_right_input(right_input);
 
-    EXPECT_EQ(estimator.estimate_cardinality(join_node), 0);
+    EXPECT_EQ(estimator.estimate_cardinality(join_node), 100) << " for " << join_mode << " join";
   }
 }
 
