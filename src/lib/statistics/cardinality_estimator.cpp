@@ -1088,8 +1088,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     auto cardinality = Cardinality{0};
     auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-    auto left_histogram = left_input_column_statistics->histogram;
-    auto right_histogram = right_input_column_statistics->histogram;
+    auto left_histogram = left_input_column_statistics ? left_input_column_statistics->histogram : nullptr;
+    auto right_histogram = right_input_column_statistics ? right_input_column_statistics->histogram : nullptr;
 
     if (left_histogram && right_histogram) {
       // If we have histograms, we use the principle of inclusion to determine the number of matches between two bins.

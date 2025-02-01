@@ -4,6 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include "magic_enum.hpp"
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -441,6 +443,20 @@ TEST_F(CardinalityEstimatorTest, JoinAnti) {
 
   const auto anti_null_as_true_join_lqp = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(a_a, b_a), node_a, node_b);
   EXPECT_EQ(estimator.estimate_statistics(anti_null_as_true_join_lqp), node_a->table_statistics());
+}
+
+TEST_F(CardinalityEstimatorTest, JoinWithDummyStatistics) {
+  // Joins on projections, aggregates, etc. cannot use histograms. For now, we expect, ...
+  for (const auto join_mode : magic_enum::enum_values<JoinMode>()) {
+    std::cout << join_mode << "\n";
+    const auto right_input = ProjectionNode::make(expression_vector(value_(42)), DummyTableNode::make());
+    const auto join_node =
+        join_mode == JoinMode::Cross ? JoinNode::make(join_mode) : JoinNode::make(join_mode, equals_(a_a, value_(123)));
+    join_node->set_left_input(node_a);
+    join_node->set_right_input(right_input);
+
+    EXPECT_EQ(estimator.estimate_cardinality(join_node), 0);
+  }
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {

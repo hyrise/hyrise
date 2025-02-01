@@ -233,6 +233,14 @@ SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE 
 -- exists to semi join reformulation: query not rewriteable
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20
 
+-- Join on constant
+SELECT * FROM int_date NATURAL JOIN (SELECT 3 AS a) foo;
+SELECT * FROM int_date INNER JOIN (SELECT 3 AS c) foo ON (a = c);
+SELECT * FROM int_date INNER JOIN (SELECT 3 AS c) foo ON (a < c);
+SELECT a FROM int_date NATURAL JOIN (SELECT 3 AS a) foo;
+SELECT a FROM int_date INNER JOIN (SELECT 3 AS c) foo ON (a = c);
+SELECT a FROM int_date INNER JOIN (SELECT 3 AS c) foo ON (a < c);
+
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
 SELECT SUM(b) + AVG(c) AS x FROM mixed GROUP BY id + 5;
