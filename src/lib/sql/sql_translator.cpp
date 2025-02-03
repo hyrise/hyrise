@@ -1058,7 +1058,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   const auto join_mode = translate_join_mode(join.type);
 
   auto left_state = _translate_table_ref(*join.left);
-  const auto& right_state = _translate_table_ref(*join.right);
+  const auto right_state = _translate_table_ref(*join.right);
 
   const auto left_input_lqp = left_state.lqp;
   const auto& right_input_lqp = right_state.lqp;
@@ -1072,7 +1072,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   Assert(left_sql_identifier_resolver, "Expected SQLIdentifierResolver for left input.");
   Assert(right_sql_identifier_resolver, "Expected SQLIdentifierResolver for right input.");
 
-  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{join.namedColumns->size()};
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>(join.namedColumns->size());
 
   const auto resolve_table_name = [](const auto& input_ref) {
     Assert(input_ref.alias || input_ref.name, "Every table or nested SELECT must have either a name or an alias.");

@@ -1551,16 +1551,18 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinNaturalDerivedTable) {
-  // Test that the Natural join can work with derived tables.
+TEST_F(SQLTranslatorTest, JoinNaturalSelectedConstant) {
+  // Test that the natural join can work with selected constants.
 
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("SELECT * FROM int_float NATURAL JOIN (SELECT 123 as a) bar;");
 
-  const auto derived_table_node = AliasNode::make(expression_vector(123), std::vector<std::string>({"a"}),
-                                                  ProjectionNode::make(expression_vector(123), DummyTableNode::make()));
-
   // clang-format off
+  const auto derived_table_node =
+  AliasNode::make(expression_vector(123), std::vector<std::string>({"a"}),
+    ProjectionNode::make(expression_vector(123),
+      DummyTableNode::make()));
+
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
     JoinNode::make(JoinMode::Inner, equals_(int_float_a, 123),
