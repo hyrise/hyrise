@@ -1061,7 +1061,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   const auto right_state = _translate_table_ref(*join.right);
 
   const auto left_input_lqp = left_state.lqp;
-  const auto& right_input_lqp = right_state.lqp;
+  const auto right_input_lqp = right_state.lqp;
 
   Assert(!join.namedColumns->empty(), "Expected at least one named column.");
   Assert(!join.condition, "Did not expect join condition for join using named columns.");
