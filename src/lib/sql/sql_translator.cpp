@@ -1060,9 +1060,6 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   auto left_state = _translate_table_ref(*join.left);
   const auto right_state = _translate_table_ref(*join.right);
 
-  const auto left_input_lqp = left_state.lqp;
-  const auto right_input_lqp = right_state.lqp;
-
   Assert(!join.namedColumns->empty(), "Expected at least one named column.");
   Assert(!join.condition, "Did not expect join condition for join using named columns.");
 
@@ -1097,9 +1094,6 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
     join_predicates[named_column_idx] = std::shared_ptr<AbstractExpression>(equals_(left_expression, right_expression));
   }
 
-  // `left_state` becomes the result state.
-  auto result_state = std::move(left_state);
-
   // Add the remaining right expressions to the output.
   for (const auto& right_element : right_state.elements_in_order) {
     const auto& right_expression = right_element.expression;
@@ -1114,18 +1108,18 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
         continue;
       }
 
-      result_state.elements_in_order.emplace_back(right_element);
-      result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
+      left_state.elements_in_order.emplace_back(right_element);
+      left_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
       if (right_identifier.table_name) {
-        result_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_element);
-        result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
+        left_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_element);
+        left_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
       }
     }
   }
 
-  auto lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
-  result_state.lqp = lqp;
-  return result_state;
+  auto lqp = JoinNode::make(join_mode, join_predicates, left_state.lqp, right_state.lqp);
+  left_state.lqp = lqp;
+  return left_state;
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
