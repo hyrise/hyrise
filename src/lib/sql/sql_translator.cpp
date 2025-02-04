@@ -1057,6 +1057,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
 SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(const hsql::JoinDefinition& join) {
   const auto join_mode = translate_join_mode(join.type);
 
+  // We reuse `left_state` for the construction of the updated `TableSourceState`.
   auto left_state = _translate_table_ref(*join.left);
   const auto right_state = _translate_table_ref(*join.right);
 
