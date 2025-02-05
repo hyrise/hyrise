@@ -120,9 +120,9 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(
 }
 
 template <typename BaseSegmentType>
-void ColumnIsNullTableScanImpl::_scan_typed_segment(
-    const BaseSegmentType& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) {
+void ColumnIsNullTableScanImpl::_scan_typed_segment(const BaseSegmentType& segment, const ChunkID chunk_id,
+                                                    RowIDPosList& matches,
+                                                    const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
     ++num_chunks_with_all_rows_matching;
