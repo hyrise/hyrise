@@ -66,16 +66,20 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
     const auto chunk = segment.referenced_table()->get_chunk(referenced_chunk_id);
     auto referenced_segment = chunk->get_segment(segment.referenced_column_id());
 
-    const auto num_previous_matches = matches.size();
+    const auto num_previous_matches = static_cast<ChunkOffset>(matches.size());
 
     _scan_non_reference_segment(*referenced_segment, chunk_id, matches, position_filter);
 
-    const auto num_matches = matches.size();
+    const auto num_matches = static_cast<ChunkOffset>(matches.size());
 
-    // The scan has filled `matches` assuming that `position_filter` was the entire ReferenceSegment, so we need to fix
-    // that:
-    for (auto match_idx = static_cast<ChunkOffset>(num_previous_matches);
-         match_idx < static_cast<ChunkOffset>(num_matches); ++match_idx) {
+    // scan_chunk() is expected to always return a PosList containing positions relative to the input chunk, even when
+    // the input comes from a reference table. For reference segments, _scan_reference_segment() maps the RowIDs from
+    // the referenced table back to positions in the input chunk’s PosList. This enables the TableScan to later reverse
+    // this mapping and create a new PosList with RowIDs pointing to the originally referenced table. While this design
+    // simplifies the interface, it introduces overhead when many tuples are selected.  This could potentially be
+    // optimized in the future.
+    for (auto match_idx = num_previous_matches;
+         match_idx < num_matches; ++match_idx) {
       DebugAssert(sub_pos_list.original_positions.size() > matches[match_idx].chunk_offset,
                   "Missing original_position for match.");
       matches[match_idx].chunk_offset = sub_pos_list.original_positions[matches[match_idx].chunk_offset];

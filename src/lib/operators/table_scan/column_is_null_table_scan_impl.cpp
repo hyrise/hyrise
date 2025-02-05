@@ -146,7 +146,7 @@ void ColumnIsNullTableScanImpl::_scan_non_generic_segment(
     _scan_iterable_for_null_values(NullValueVectorIterable{segment.null_values()}, chunk_id, matches, position_filter);
   } else if constexpr (std::is_same_v<BaseSegmentType, hyrise::BaseDictionarySegment>) {
     DebugAssert(segment.unique_values_count() != 0 && segment.unique_values_count() != segment.size(),
-                "DictionarySegments without or with exclusivly NULLs should have been caught by edge case handling.");
+                "DictionarySegments without or with exclusively NULLs should have been caught by edge case handling.");
     _scan_iterable_for_null_values(create_iterable_from_attribute_vector(segment), chunk_id, matches, position_filter);
   } else {
     const auto& null_values = segment.null_values();
@@ -177,6 +177,8 @@ bool ColumnIsNullTableScanImpl::_matches_all(const BaseDictionarySegment& segmen
       return segment.unique_values_count() == 0;
 
     case PredicateCondition::IsNotNull:
+      // Since DictionarySegments do not use an additional data structure to store their NULL values, we are only sure
+      // it contains no NULLs if it only contains unique. non-NULL values.
       return segment.unique_values_count() == segment.size();
 
     default:
