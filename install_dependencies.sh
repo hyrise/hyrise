@@ -50,15 +50,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
-                if [[ "$(lsb_release -sr)" < "23.10" ]]; then
-                    # The boost versions shipped with Ubuntu before 23.10 do not provide
-                    # boost::unordered_flat_map. Thus, we manually retrieve it.
-                    sudo add-apt-repository -y ppa:mhier/libboost-latest
-                    sudo apt-get update
-                fi
 
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost1.81-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
