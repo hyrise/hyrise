@@ -31,6 +31,14 @@ class Reduce : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
+  void _set_bit(uint32_t hash_22bit);
+
+  // Atomically get the bit
+  bool _get_bit(uint32_t hash_22bit) const;
+
+  // Atomically clear the bit
+  void _clear_bit(uint32_t hash_22bit);
+
   std::shared_ptr<std::vector<std::atomic_uint64_t>> _filter;
 };
 
