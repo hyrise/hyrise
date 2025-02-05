@@ -172,7 +172,7 @@ bool ColumnIsNullTableScanImpl::_matches_all(const BaseDictionarySegment& segmen
 
     case PredicateCondition::IsNotNull:
       // Since DictionarySegments do not use an additional data structure to store their NULL values, we are only sure
-      // it contains no NULLs if it only contains unique. non-NULL values.
+      // it contains no NULLs if it only contains unique, non-NULL values.
       return segment.unique_values_count() == segment.size();
 
     default:
