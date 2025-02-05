@@ -36,16 +36,13 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
                                     const SortMode sorted_by) const;
 
   /**
-   * @defgroup Method used for faster handling of value, dictionary, lz4, and frame_of_reference segments 
+   * @defgroup Methods used for faster handling of value, dictionary, LZ4, and frame-of-reference segments 
    * @{
    */
 
-  template <typename SegmentType>
-  bool _try_non_generic_segment_scan(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                     const std::shared_ptr<const AbstractPosList>& position_filter);
   template <typename BaseSegmentType>
-  void _scan_non_generic_segment(const BaseSegmentType& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                 const std::shared_ptr<const AbstractPosList>& position_filter);
+  void _scan_typed_segment(const BaseSegmentType& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                           const std::shared_ptr<const AbstractPosList>& position_filter);
 
   template <typename BaseIterableType>
   void _scan_iterable_for_null_values(const BaseIterableType& iterable, const ChunkID chunk_id, RowIDPosList& matches,

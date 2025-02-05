@@ -78,8 +78,7 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
     // this mapping and create a new PosList with RowIDs pointing to the originally referenced table. While this design
     // simplifies the interface, it introduces overhead when many tuples are selected.  This could potentially be
     // optimized in the future.
-    for (auto match_idx = num_previous_matches;
-         match_idx < num_matches; ++match_idx) {
+    for (auto match_idx = num_previous_matches; match_idx < num_matches; ++match_idx) {
       DebugAssert(sub_pos_list.original_positions.size() > matches[match_idx].chunk_offset,
                   "Missing original_position for match.");
       matches[match_idx].chunk_offset = sub_pos_list.original_positions[matches[match_idx].chunk_offset];
