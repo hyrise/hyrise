@@ -71,7 +71,7 @@ bool is_index_scan_applicable(const TableIndexStatistics& index_statistics,
   }
 
   const auto row_count_predicate = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
-  const float selectivity = row_count_predicate / row_count_table;
+  const auto selectivity = row_count_predicate / row_count_table;
 
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }

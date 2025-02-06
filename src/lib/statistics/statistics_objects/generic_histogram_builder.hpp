@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "generic_histogram.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -20,7 +21,7 @@ class GenericHistogramBuilder {
   // @return Whether no bins have been added so far
   bool empty() const;
 
-  void add_bin(const T& min, const T& max, float height, float distinct_count);
+  void add_bin(const T& min, const T& max, Cardinality height, DistinctCount distinct_count);
 
   // Add a slice from another histogram's bin. slice_min and slice_max will be capped at the bin boundaries
   void add_sliced_bin(const AbstractHistogram<T>& source, const BinID bin_id, const T& slice_min, const T& slice_max);

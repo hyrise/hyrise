@@ -598,6 +598,7 @@ set(
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
     utils/enum_constant.hpp
+    utils/floating_equal.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp

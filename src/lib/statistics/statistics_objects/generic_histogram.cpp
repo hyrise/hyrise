@@ -10,6 +10,7 @@
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
 #include "utils/assert.hpp"
+#include "utils/floating_equal.hpp"
 
 namespace hyrise {
 
@@ -123,8 +124,7 @@ HistogramCountType GenericHistogram<T>::total_distinct_count() const {
 
 template <typename T>
 bool GenericHistogram<T>::operator==(const GenericHistogram<T>& rhs) const {
-  return _bin_minima == rhs._bin_minima && _bin_maxima == rhs._bin_maxima && _bin_heights == rhs._bin_heights &&
-         _bin_distinct_counts == rhs._bin_distinct_counts;
+  return _bin_minima == rhs._bin_minima && _bin_maxima == rhs._bin_maxima && floating_container_equal(_bin_heights, rhs._bin_heights) && floating_container_equal(_bin_distinct_counts, rhs._bin_distinct_counts);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(GenericHistogram);

@@ -93,18 +93,18 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
 }
 
 template <typename T>
-float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& value) const {
+Selectivity AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& value) const {
   if (value <= bin_minimum(bin_id)) {
-    return 0.0f;
+    return Selectivity{0};
   }
 
   if (value > bin_maximum(bin_id)) {
-    return 1.0f;
+    return Selectivity{1};
   }
 
   if constexpr (!std::is_same_v<T, pmr_string>) {
-    return (static_cast<float>(value) - static_cast<float>(bin_minimum(bin_id))) /
-           static_cast<float>(bin_width(bin_id));
+    return (static_cast<Selectivity>(value) - static_cast<Selectivity>(bin_minimum(bin_id))) /
+           static_cast<Selectivity>(bin_width(bin_id));
   } else {
     /*
     * We need to convert strings to their numerical representation to calculate a share.
@@ -152,20 +152,21 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     const auto value_repr = _domain.string_to_number(in_domain_value);
     const auto min_repr = _domain.string_to_number(bin_min.substr(common_prefix_length));
     const auto max_repr = _domain.string_to_number(bin_max.substr(common_prefix_length));
-    const auto bin_ratio = static_cast<float>(value_repr - min_repr) / static_cast<float>(max_repr - min_repr + 1);
+    const auto bin_ratio =
+        static_cast<Selectivity>(value_repr - min_repr) / static_cast<Selectivity>(max_repr - min_repr + 1);
 
     return bin_ratio;
   }
 }
 
 template <typename T>
-float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const T& value) const {
+Selectivity AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const T& value) const {
   if (value < bin_minimum(bin_id)) {
     return 0.0f;
   }
 
   if (value >= bin_maximum(bin_id)) {
-    return 1.0f;
+    return Selectivity{1};
   }
 
   if constexpr (!std::is_same_v<T, pmr_string>) {
@@ -188,14 +189,15 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
     const auto value_repr = _domain.string_to_number(in_domain_value) + 1;
     const auto min_repr = _domain.string_to_number(bin_min.substr(common_prefix_length));
     const auto max_repr = _domain.string_to_number(bin_max.substr(common_prefix_length));
-    const auto bin_ratio = static_cast<float>(value_repr - min_repr) / static_cast<float>(max_repr - min_repr + 1);
+    const auto bin_ratio =
+        static_cast<Selectivity>(value_repr - min_repr) / static_cast<Selectivity>(max_repr - min_repr + 1);
 
     return bin_ratio;
   }
 }
 
 template <typename T>
-float AbstractHistogram<T>::bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const {
+Selectivity AbstractHistogram<T>::bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const {
   // All values that are less than or equal to the upper boundary minus all values that are smaller than the lower
   // boundary.
   return bin_ratio_less_than_equals(bin_id, value2) - bin_ratio_less_than(bin_id, value);
@@ -334,7 +336,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       DebugAssert(*value >= bin_minimum(BinID{0}), "Value smaller than min of histogram.");
 
       auto cardinality = Cardinality{0};
-      auto distinct_count = 0.f;
+      auto distinct_count = DistinctCount{0};
       auto bin_id = bin_for_value(*value);
 
       if (bin_id == INVALID_BIN_ID) {
@@ -394,7 +396,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       }
 
       if (*value2 < *value) {
-        return {Cardinality{0}, 0.0f};
+        return {Cardinality{0}, DistinctCount{0}};
       }
 
       // Adjust value (lower_bound) and value2 (lower_bin_id) so that both values are contained within a bin.
@@ -430,7 +432,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       cardinality -= bin_height(lower_bin_id) * bin_ratio_less_than_lower_bound;
       distinct_count -= bin_distinct_count(lower_bin_id) * bin_ratio_less_than_lower_bound;
 
-      const auto bin_ratio_greater_than_upper_bound = 1.0f - bin_ratio_less_than_equals(upper_bin_id, upper_bound);
+      const auto bin_ratio_greater_than_upper_bound = 1.0 - bin_ratio_less_than_equals(upper_bin_id, upper_bound);
       cardinality -= bin_height(upper_bin_id) * bin_ratio_greater_than_upper_bound;
       distinct_count -= bin_distinct_count(upper_bin_id) * bin_ratio_greater_than_upper_bound;
 
@@ -718,13 +720,13 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
   // For an up-to-date histogram, the pruning ratio should never exceed 100%. If, however, the histogram is outdated
   // we must make sure that no bin becomes more than empty and that we do not touch the unpruned part of the bin.
-  const auto pruning_ratio = std::min(static_cast<Selectivity>(num_values_pruned) / total_prunable_values, 1.0f);
+  const auto pruning_ratio = std::min(static_cast<Selectivity>(num_values_pruned) / total_prunable_values, 1.0);
 
   auto builder = GenericHistogramBuilder<T>(bin_count(), _domain);
   for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     const auto pruned_height = bin_prunable_height[bin_id] * pruning_ratio;
     const auto new_bin_height = bin_height(bin_id) - pruned_height;
-    if (new_bin_height <= std::numeric_limits<float>::epsilon()) {
+    if (new_bin_height <= std::numeric_limits<HistogramCountType>::epsilon()) {
       continue;
     }
 

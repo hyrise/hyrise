@@ -389,60 +389,60 @@ TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
   const auto total_count = histogram.total_count();
 
   // clang-format off
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1), 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3), 17.0f / 5.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 26), 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 105), 5.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 200), 0.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 2), 0.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 21), 0.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 37), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1), 0.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 3), 17.0 / 5.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 26), 0.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 105), 5.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 200), 0.0);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 2), 0.0);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 21), 0.0);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::Equals, 37), 0.0);
 
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 1), total_count);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotEquals, 21), total_count - 10);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 2), 6.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 21), 6.0f);
-  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 37), 6.0f);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 2), 6.0);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 21), 6.0);
+  EXPECT_EQ(histogram_zeros.estimate_cardinality(PredicateCondition::NotEquals, 37), 6.0);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, -10), 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2), 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 20), 17.0f - 17.0f / 19.0f);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 21), 17.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 40), 17.0f + 30 + 3 * (40.0f / 64.0f));  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, -10), 0.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 2), 0.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 20), 17.0 - 17.0 / 19.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 21), 17.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 40), 17.0 + 30 + 3 * (40.0 / 64.0));
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 105), total_count - 5);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, 1000), total_count);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, -10), 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 2), 17.0f / 19.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 3), 2 * (17.0f / 19.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 20), 17.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 21), 17.0f + (30.0f / 5.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 40), 17.0f + 30 + 4 * (40.0f / 64.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 105), total_count);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 1000), total_count);  // NOLINT
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, -10), 0.0);
+  EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 2), 17.0 / 19.0);
+  EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 3), 2 * (17.0 / 19.0));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 20), 17.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 21), 17.0 + (30.0 / 5.0));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 40), 17.0 + 30 + 4 * (40.0 / 64.0));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 105), total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThanEquals, 1000), total_count);
 
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, -10), total_count);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1), total_count);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 2), total_count - (17.0f / 19.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 20), 76.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 21), 76.0f - (30.0f / 5.0f));  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 105), 0.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1000), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 2), total_count - (17.0 / 19.0));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 20), 76.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 21), 76.0 - (30.0 / 5.0));
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 105), 0.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThan, 1000), 0.0);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, -10), total_count);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1), total_count);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 2), total_count);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 20), 76.0f + 17.0f / 19.0f);  // NOLINT
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 21), 76.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 105), 5.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1000), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, -10), total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1), total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 2), total_count);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 20), 76.0 + 17.0 / 19.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 21), 76.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 105), 5.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::GreaterThanEquals, 1000), 0.0);
 
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 20), 17.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 25), 47.0f);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 26, 27), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 20), 17.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 2, 25), 47.0);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 26, 27), 0.0);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 105, 105), 5);
   EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 105, 106), 5);
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 107, 107), 0.0f);
+  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::BetweenInclusive, 107, 107), 0.0);
   // clang-format on
 }
 
@@ -458,64 +458,64 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   const auto total_count = histogram->total_count();
 
   // clang-format off
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 1.0f), 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 3.0f), 17.f / 5.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 22.5f), 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 31.0f), 7.0f / 2.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, next_value(31.0f)), 7.0f / 2.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 32.0f), 3.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 1.0f), 0.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 3.0f), 17.0 / 5.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 22.5f), 0.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 31.0f), 7.0 / 2.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, next_value(31.0f)), 7.0 / 2.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::Equals, 32.0f), 3.0);
 
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 1.0f), total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 2.0f), total_count - 17.0f / 5.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 31.0f), total_count - 7.0f / 2.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, next_value(31.0f)), total_count - 7.0f / 2.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 2.0f), total_count - 17.0 / 5.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 31.0f), total_count - 7.0 / 2.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, next_value(31.0f)), total_count - 7.0 / 2.0);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::NotEquals, 32.0f), 74);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 2.0f), 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(2.0f)), 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 2.0f), 0.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(2.0f)), 17.0 * ((next_value(2.0f) - 2.0) / 20.0));
   // Floating point quirk: These go to exactly 67, should be slightly below
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 24.5f), 17.0f + 30 * (1.5f / 2.0f)); // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 30.0f), 67.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(30.0f)), 67.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 24.5f), 17.0 + 30 * (1.5 / 2.0));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 30.0f), 67.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(30.0f)), 67.0);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 150.0f), total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 31.0f), 67.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 31.0f), 67.0);
   // Floating point quirk: The bin [31, next_value(31.0f)] is too small to be split at `< next_value(31.0f)`
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(31.0f)), 74.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 32.0f), 74.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(32.0f)), 77.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(31.0f)), 74.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, 32.0f), 74.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThan, next_value(32.0f)), 77.0);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 2.0f), 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, previous_value(24.0f)), 17.0f + 30.0f * 0.5f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 30.0f), 67.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 2.0f), 17.0 * ((next_value(2.0f) - 2.0) / 20.0));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, previous_value(24.0f)), 17.0 + 30.0 * 0.5);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 30.0f), 67.0);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 150.0f), total_count);
   // Floating point quirk: `<= 31.0f` is `< next_value(31.0f)`, which in turn covers the entire bin.
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 31.0f), 74.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(31.0f)), 74.0f);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 31.0f), 74.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(31.0f)), 74.0);
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, 32.0f), total_count);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(32.0f)), total_count);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::LessThanEquals, next_value(32.0f)), total_count);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 2.0f), total_count - 17.0f * ((next_value(2.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 30.0f), 10.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 150.0f), 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 31.0f), 3.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, next_value(31.0f)), 3.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 32.0f), 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, previous_value(32.0f)), 3);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 2.0f), total_count - 17.0 * ((next_value(2.0f) - 2.0) / 20.0));
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 30.0f), 10.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 150.0f), 0.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 31.0f), 3.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, next_value(31.0f)), 3.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, 32.0f), 0.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThan, previous_value(32.0f)), 3);
 
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 2.0f), total_count);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 24.0f), 45.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 30.0f), 10.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 150.0f), 0.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 31.0f), 10.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, next_value(31.0f)), 3.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 32.0f), 3.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, previous_value(32.0f)), 3);  // NOLINT
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 2.0f), total_count);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 24.0f), 45.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 30.0f), 10.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 150.0f), 0.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 31.0f), 10.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, next_value(31.0f)), 3.0f);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, 32.0f), 3.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::GreaterThanEquals, previous_value(32.0f)), 3);
 
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 3.0f),  17.0f * ((next_value(3.0f) - 2.0f) / 20.0f));  // NOLINT
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, next_value(2.0f)), 0.0f);  // NOLINT
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 22.5f), 17.0f);
-  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 30.0f), 67.0f);
-  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, previous_value(2.0f), 2.0f), 0.0f);  // NOLINT
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 3.0f),  17.0 * ((next_value(3.0) - 2.0) / 20.0));
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, next_value(2.0f)), 0.0);
+  EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 22.5f), 17.0);
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 30.0f), 67.0);
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, previous_value(2.0f), 2.0f), 0.0);
   // clang-format on
 }
 
@@ -1097,9 +1097,9 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
 
   const auto expected_minima = std::vector<int32_t>{1, 10, 16, 30, 36, 60, 80};
   const auto expected_maxima = std::vector<int32_t>{9, 15, 25, 35, 50, 75, 100};
-  const auto expected_heights = std::vector<HistogramCountType>{14.4f, 9.6f, 16.0f, 8.57143f, 21.42857f, 20.0f, 10};
+  const auto expected_heights = std::vector<HistogramCountType>{14.4, 9.6, 16.0, 8.57143, 21.42857, 20.0, 10};
   const auto expected_distinct_counts =
-      std::vector<HistogramCountType>{3.6f, 2.4f, 4.0f, 5.7142859f, 14.285714f, 15, 5};
+      std::vector<HistogramCountType>{3.6, 2.4, 4.0, 5.7142859, 14.285714, 15, 5};
 
   const auto new_hist = histogram.split_at_bin_bounds(std::vector<std::pair<int32_t, int32_t>>{{10, 15}, {28, 35}});
 
@@ -1165,32 +1165,32 @@ TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
     std::vector<HistogramCountType>{10, 20, 15, 5});
   // clang-format on
 
-  const auto scaled_statistics_object_05 = histogram->scaled(0.5f);
+  const auto scaled_statistics_object_05 = histogram->scaled(0.5);
   const auto scaled_histogram_05 =
       std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_05);
   ASSERT_TRUE(scaled_histogram_05);
-  EXPECT_FLOAT_EQ(scaled_histogram_05->bin_height(BinID{0}), 20.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_05->bin_distinct_count(BinID{0}), 10.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_05->bin_height(BinID{3}), 5.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_05->bin_distinct_count(BinID{3}), 5.0f);
+  EXPECT_FLOAT_EQ(scaled_histogram_05->bin_height(BinID{0}), 20.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_05->bin_distinct_count(BinID{0}), 10.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_05->bin_height(BinID{3}), 5.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_05->bin_distinct_count(BinID{3}), 5.0);
 
-  const auto scaled_statistics_object_01 = histogram->scaled(0.1f);
+  const auto scaled_statistics_object_01 = histogram->scaled(0.1);
   const auto scaled_histogram_01 =
       std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_01);
   ASSERT_TRUE(scaled_histogram_01);
-  EXPECT_FLOAT_EQ(scaled_histogram_01->bin_height(BinID{0}), 4.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_01->bin_distinct_count(BinID{0}), 4.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_01->bin_height(BinID{3}), 1.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_01->bin_distinct_count(BinID{3}), 1.0f);
+  EXPECT_FLOAT_EQ(scaled_histogram_01->bin_height(BinID{0}), 4.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_01->bin_distinct_count(BinID{0}), 4.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_01->bin_height(BinID{3}), 1.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_01->bin_distinct_count(BinID{3}), 1.0);
 
-  const auto scaled_statistics_object_10 = histogram->scaled(10.0f);
+  const auto scaled_statistics_object_10 = histogram->scaled(10.0);
   const auto scaled_histogram_10 =
       std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_10);
   ASSERT_TRUE(scaled_histogram_10);
-  EXPECT_FLOAT_EQ(scaled_histogram_10->bin_height(BinID{0}), 400.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_10->bin_distinct_count(BinID{0}), 10.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_10->bin_height(BinID{3}), 100.0f);
-  EXPECT_FLOAT_EQ(scaled_histogram_10->bin_distinct_count(BinID{3}), 5.0f);
+  EXPECT_FLOAT_EQ(scaled_histogram_10->bin_height(BinID{0}), 400.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_10->bin_distinct_count(BinID{0}), 10.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_10->bin_height(BinID{3}), 100.0);
+  EXPECT_FLOAT_EQ(scaled_histogram_10->bin_distinct_count(BinID{3}), 5.0);
 }
 
 }  // namespace hyrise
