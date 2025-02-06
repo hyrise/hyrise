@@ -144,7 +144,7 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
   // clang-format off
   const auto input_lqp =
   AggregateNode::make(expression_vector(a_b, add_(a_b, a_a)), expression_vector(sum_(a_a)),
-                      node_a);
+    node_a);
   // clang-format on
 
   const auto input_table_statistics = node_a->table_statistics();
@@ -162,7 +162,6 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
 TEST_F(CardinalityEstimatorTest, AggregateWithoutGroupBy) {
   const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)), node_a);
 
-  const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
   EXPECT_EQ(result_table_statistics->row_count, 1);
