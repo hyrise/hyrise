@@ -1104,7 +1104,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
       //               join.
       const auto left_cardinality = left_input_table_statistics.row_count;
       const auto right_cardinality = right_input_table_statistics.row_count;
-      cardinality = std::max(left_cardinality, std::max(right_cardinality, left_cardinality * right_cardinality));
+      cardinality = std::max({left_cardinality, right_cardinality, left_cardinality * right_cardinality});
     }
 
     const auto left_selectivity = Selectivity{
@@ -1202,10 +1202,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     } else {
       // TODO(anyone): If we do not have histograms on both sides, use some other algorithm/statistics to estimate the
       //               join.
-      const auto left_cardinality = left_input_table_statistics.row_count;
-      const auto right_cardinality = right_input_table_statistics.row_count;
-      cardinality = std::max(left_cardinality, std::max(right_cardinality, left_cardinality * right_cardinality));
-
       cardinality = left_input_table_statistics.row_count;
     }
 
@@ -1267,8 +1263,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
   }
 
   const auto row_count =
-      std::max(Cardinality{left_selectivity},
-               std::max(Cardinality{right_selectivity}, Cardinality{left_selectivity * right_selectivity}));
+      Cardinality{std::max({left_selectivity, right_selectivity, left_selectivity * right_selectivity})};
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
 }

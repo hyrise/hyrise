@@ -460,14 +460,29 @@ TEST_F(CardinalityEstimatorTest, JoinAnti) {
 TEST_F(CardinalityEstimatorTest, JoinWithDummyStatistics) {
   // Joins on projections, aggregates, etc. cannot use histograms. For now, we expect those joins to preserve all tuples
   // in the worst case.
-  for (const auto join_mode : magic_enum::enum_values<JoinMode>()) {
-    const auto right_input = ProjectionNode::make(expression_vector(value_(42)), DummyTableNode::make());
-    const auto join_node =
-        join_mode == JoinMode::Cross ? JoinNode::make(join_mode) : JoinNode::make(join_mode, equals_(a_a, value_(123)));
-    join_node->set_left_input(node_a);
-    join_node->set_right_input(right_input);
+  for (const auto swap_inputs : {true, false}) {
+    for (const auto join_mode : magic_enum::enum_values<JoinMode>()) {
+      // Semi-/anti-joins must have the input to be reduced on the left side.
+      if (is_semi_or_anti_join(join_mode) && swap_inputs) {
+        continue;
+      }
 
-    EXPECT_EQ(estimator.estimate_cardinality(join_node), 100) << " for " << join_mode << " join";
+      auto left_input = static_pointer_cast<AbstractLQPNode>(node_a);
+      // clang-format off
+      auto right_input = static_pointer_cast<AbstractLQPNode>(
+      ProjectionNode::make(expression_vector(value_(123)),
+        DummyTableNode::make()));
+      // clang-format on
+      if (swap_inputs) {
+        std::swap(left_input, right_input);
+      }
+      const auto join_node = join_mode == JoinMode::Cross ? JoinNode::make(join_mode)
+                                                          : JoinNode::make(join_mode, equals_(a_a, value_(123)));
+      join_node->set_left_input(left_input);
+      join_node->set_right_input(right_input);
+
+      EXPECT_EQ(estimator.estimate_cardinality(join_node), 100) << " for " << join_mode << " join";
+    }
   }
 }
 
