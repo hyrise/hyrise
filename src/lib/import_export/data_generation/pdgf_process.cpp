@@ -59,6 +59,12 @@ void PdgfProcess::run() {
   _arguments.emplace_back("/usr/lib/jvm/java-8-openjdk/bin/java");
   _configure_jvm();
   _configure_pdgf_properties();
+  if (!_benchmark_config->pdgf_disable_micro_benchmarks) {
+    std::cout << "ENABLING CPU PROFILING (Java Flight Recorder)!" << std::endl;
+    _arguments.emplace_back("-XX:+UnlockCommercialFeatures");
+    _arguments.emplace_back("-XX:+FlightRecorder");
+    _arguments.emplace_back("-XX:StartFlightRecording=filename=flight.jfr");
+  }
   _arguments.emplace_back("-jar");
   _arguments.emplace_back("pdgf_patched.jar");
   _configure_pdgf_arguments();
