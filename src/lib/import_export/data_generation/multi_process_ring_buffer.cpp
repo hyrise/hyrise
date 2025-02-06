@@ -15,13 +15,15 @@ namespace hyrise {
 template <uint32_t buffer_size>
 MultiProcessRingBuffer<buffer_size>::MultiProcessRingBuffer(int shm_fd, uint32_t workunit_size, uint32_t num_columns,
                                                             const char* data_available_sem_path,
-                                                            const char* data_written_sem_path)
+                                                            const char* data_written_sem_path,
+                                                            bool disable_micro_benchmarks)
     : _workunit_size(workunit_size),
       _num_columns(num_columns),
       _data_available_sem_path(data_available_sem_path),
       _current_read_index(0),
       _data_written_sem_path(data_written_sem_path),
-      _current_write_index(0) {
+      _current_write_index(0),
+      _disable_micro_benchmarks(disable_micro_benchmarks) {
   _ring_buffer = static_cast<RingBuffer<buffer_size>*>(
       mmap(nullptr, sizeof(RingBuffer<buffer_size>), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0));
   if (_ring_buffer == MAP_FAILED) {
@@ -72,7 +74,9 @@ MultiProcessRingBuffer<buffer_size>::~MultiProcessRingBuffer() {
     sem_unlink(_data_written_sem_path);
   }
 
-  _write_semaphore_access_timestamps();
+  if (!_disable_micro_benchmarks) {
+    _write_semaphore_access_timestamps();
+  }
 }
 
 template <uint32_t buffer_size>
@@ -105,7 +109,9 @@ template <uint32_t buffer_size>
 RingBufferCell* MultiProcessRingBuffer<buffer_size>::prepare_retrieval() {
   sem_wait(_data_available_semaphore);
   _read_access_semaphore.lock();
-  _data_available_semaphore_awaited_times.emplace_back(std::chrono::steady_clock::now().time_since_epoch().count());
+  if (!_disable_micro_benchmarks) {
+    _data_available_semaphore_awaited_times.emplace_back(std::chrono::steady_clock::now().time_since_epoch().count());
+  }
   return &_ring_buffer->cells[_current_read_index % buffer_size];
 }
 
@@ -132,7 +138,9 @@ RingBufferCell* MultiProcessRingBuffer<buffer_size>::prepare_writing() {
 template <uint32_t buffer_size>
 void MultiProcessRingBuffer<buffer_size>::writing_finished() {
   _current_write_index++;
-  _data_written_semaphore_post_times.emplace_back(std::chrono::steady_clock::now().time_since_epoch().count());
+  if (!_disable_micro_benchmarks) {
+    _data_written_semaphore_post_times.emplace_back(std::chrono::steady_clock::now().time_since_epoch().count());
+  }
   _write_access_semaphore.unlock();
   sem_post(_data_written_semaphore);
 }

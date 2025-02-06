@@ -29,7 +29,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
                                  const bool init_cache_binary_tables,
                                  const bool init_enable_pdgf_data_generation, const uint64_t init_pdgf_project_seed,
                                  const uint32_t init_pdgf_num_cores, const int32_t init_pdgf_work_unit_size,
-                                 const ColumnsToGenerate init_columns_to_generate, const bool init_system_metrics,
+                                 const bool init_pdgf_disable_micro_benchmarks, const ColumnsToGenerate init_columns_to_generate,
+                                 const bool init_system_metrics,
                                  const bool init_pipeline_metrics, const std::vector<std::string>& init_plugins)
     : benchmark_mode{init_benchmark_mode},
       chunk_size{init_chunk_size},
@@ -53,6 +54,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       pdgf_num_cores{init_pdgf_num_cores},
       pdgf_project_seed{init_pdgf_project_seed},
       pdgf_work_unit_size{init_pdgf_work_unit_size},
+      pdgf_disable_micro_benchmarks{init_pdgf_disable_micro_benchmarks},
       columns_to_generate{init_columns_to_generate},
       cache_binary_tables{init_cache_binary_tables},
       system_metrics{init_system_metrics},

@@ -619,6 +619,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("pdgf_project_seed", "Global seed used by PDGF for the project to generate", cxxopts::value<uint64_t>()->default_value("123456789"))
     ("pdgf_num_cores", "Number of cores (workers) used by PDGF.", cxxopts::value<uint32_t>()->default_value("64"))
     ("pdgf_work_unit_size", "Number of rows to generate in one workunit with PDGF", cxxopts::value<int>()->default_value("128"))
+    ("pdgf_disable_micro_benchmarks", "Whether to disable the micro benchmark reported by PDGF to avoid any potential performance hit.", cxxopts::value<bool>()->default_value("false"))
     ("only_generate_used_columns", "Determine and only generate columns used by the specified queries.", cxxopts::value<bool>()->default_value("false"))
     ("only_generate_used_tables", "Determine and only generate complete tables used by the specified queries.", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
   // clang-format on

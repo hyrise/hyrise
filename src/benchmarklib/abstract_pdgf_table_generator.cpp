@@ -46,8 +46,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
 
   std::cerr << "Setting up shared memory (" << _pdgf_buffer_columns() << " buffer columns).\n";
   const auto reader = create_shared_memory_reader(
-    _benchmark_config->pdgf_work_unit_size, _pdgf_buffer_columns(), _benchmark_config->chunk_size,
-    SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
+    _benchmark_config, _pdgf_buffer_columns(), SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
   auto timer = Timer{};
 
@@ -58,8 +57,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   if (Hyrise::get().storage_manager.tables().empty()) {
     std::cerr << "Receiving table schemas from PDGF!\n";
     auto pdgf_schema = PdgfProcess::for_schema_generation(
-      _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
-      _benchmark_config->pdgf_project_seed, _benchmark_config->pdgf_work_unit_size, _benchmark_config->pdgf_num_cores,
+      _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT, _benchmark_config,
       _pdgf_buffer_columns(), _scale_factor);
     pdgf_schema.run();
     while (reader->has_next_table()) {
@@ -107,15 +105,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
     std::cerr << "Generating tables with PDGF\n";
     auto pdgf_data = PdgfProcess::for_data_generation(
       _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
-      _benchmark_config->pdgf_project_seed, _benchmark_config->pdgf_work_unit_size, _benchmark_config->pdgf_num_cores,
-      _pdgf_buffer_columns(), _scale_factor);
+      _benchmark_config, _pdgf_buffer_columns(), _scale_factor);
     if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
       pdgf_data.set_column_filter(_columns_to_generate);
     }
     pdgf_data.run();
     auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
     while (reader->has_next_table()) {
-      table_builders.emplace_back(reader->read_next_table(_benchmark_config->encoding_config, _benchmark_config->data_preparation_cores));
+      table_builders.emplace_back(reader->read_next_table());
     }
     std::cerr << "Awaiting PDGF teardown\n";
     pdgf_data.await_teardown();

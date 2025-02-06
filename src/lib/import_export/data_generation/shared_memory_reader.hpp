@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "benchmark_config.hpp"
 #include "encoding_config.hpp"
 #include "multi_process_ring_buffer.hpp"
 #include "pdgf_table_builder.hpp"
@@ -16,12 +17,12 @@ class BaseSharedMemoryReader : Noncopyable {
 
   virtual bool has_next_table() const = 0;
   virtual std::unique_ptr<BasePDGFTableSchemaBuilder> read_next_schema() = 0;
-  virtual std::shared_ptr<BasePDGFTableBuilder> read_next_table(const EncodingConfig& encoding_config, uint32_t num_workers) = 0;
+  virtual std::shared_ptr<BasePDGFTableBuilder> read_next_table() = 0;
   virtual void reset() = 0;
 };
 
 std::shared_ptr<BaseSharedMemoryReader> create_shared_memory_reader(
- uint32_t work_unit_size, uint32_t reader_num_columns, ChunkOffset hyrise_table_chunk_size,
+ const std::shared_ptr<BenchmarkConfig>& benchmark_config, uint32_t reader_num_columns,
  const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem);
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -29,19 +30,19 @@ class SharedMemoryReader : public BaseSharedMemoryReader {
  public:
   static const uint32_t buffer_size = SHARED_MEMORY_DATA_SLOTS / work_unit_size / num_columns;
 
-  explicit SharedMemoryReader(ChunkOffset hyrise_table_chunk_size, const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem);
+  explicit SharedMemoryReader(const std::shared_ptr<BenchmarkConfig>& benchmark_config, const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem);
   ~SharedMemoryReader() override;
 
   bool has_next_table() const override;
   std::unique_ptr<BasePDGFTableSchemaBuilder> read_next_schema() override;
-  std::shared_ptr<BasePDGFTableBuilder> read_next_table(const EncodingConfig& encoding_config, uint32_t num_workers) override;
+  std::shared_ptr<BasePDGFTableBuilder> read_next_table() override;
   void reset() override;
 
  protected:
   void _return_data_slot(uint32_t buffer_offset);
   void _worker_read_data(uint32_t reader_index, std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>>& table_builder);
 
-  ChunkOffset _hyrise_table_chunk_size;
+  const std::shared_ptr<BenchmarkConfig> _benchmark_config;
   const char* _shared_memory_file_name;
   int _shm_fd;
   DataBuffer<buffer_size, work_unit_size, num_columns>* _data_buffer;

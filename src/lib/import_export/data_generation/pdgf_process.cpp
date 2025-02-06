@@ -1,3 +1,4 @@
+#include <memory>
 #include <utility>
 #include <string>
 
@@ -11,29 +12,24 @@
 namespace hyrise {
 
 PdgfProcess PdgfProcess::for_schema_generation(std::string schema_config_file, std::string schema_generation_file, std::string pdgf_directory_root,
-                                               uint64_t project_seed, uint32_t work_unit_size, uint32_t pdgf_num_cores, uint32_t shared_memory_columns, float scale_factor) {
-  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), project_seed, work_unit_size, pdgf_num_cores, shared_memory_columns, "-writeTableSchemas", scale_factor);
+                                               const std::shared_ptr<BenchmarkConfig>& benchmark_config, uint32_t shared_memory_columns, float scale_factor) {
+  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), benchmark_config, shared_memory_columns, "-writeTableSchemas", scale_factor);
 }
 
 PdgfProcess PdgfProcess::for_data_generation(std::string schema_config_file, std::string schema_generation_file, std::string pdgf_directory_root,
-                                             uint64_t project_seed, uint32_t work_unit_size, uint32_t pdgf_num_cores, uint32_t shared_memory_columns, float scale_factor) {
-  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), project_seed, work_unit_size, pdgf_num_cores, shared_memory_columns,  "-start", scale_factor);
+                                             const std::shared_ptr<BenchmarkConfig>& benchmark_config, uint32_t shared_memory_columns, float scale_factor) {
+  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), benchmark_config, shared_memory_columns,  "-start", scale_factor);
 }
 
 PdgfProcess::PdgfProcess(std::string schema_config_file, std::string schema_generation_file, std::string pdgf_directory_root,
-                         uint64_t project_seed, uint32_t work_unit_size, uint32_t pdgf_num_cores, uint32_t shared_memory_columns, std::string pdgf_command, float scale_factor) :
+                         const std::shared_ptr<BenchmarkConfig>& benchmark_config, uint32_t shared_memory_columns, std::string pdgf_command, float scale_factor) :
   _schema_config_file(std::move(schema_config_file)),
   _schema_generation_file(std::move(schema_generation_file)),
   _pdgf_directory_root(std::move(pdgf_directory_root)),
-  _pdgf_work_unit_size(work_unit_size),
-  _pdgf_num_cores(pdgf_num_cores),
-  _pdgf_command(std::move(pdgf_command)),
+  _benchmark_config(benchmark_config),
   _shared_memory_columns(shared_memory_columns),
-  _project_seed(project_seed),
+  _pdgf_command(std::move(pdgf_command)),
   _scale_factor(scale_factor) {
-  if (_pdgf_num_cores == 0) {
-    _pdgf_num_cores = 1;
-  }
 }
 
 PdgfProcess::~PdgfProcess() {
@@ -151,9 +147,9 @@ void PdgfProcess::_configure_pdgf_properties() {
   auto properties = std::vector<std::string>{
     "java.library.path", "extlib/",
     "bankmark.pdgf.log.folder", "/scratch/jan-eric.hellenberg",
-    "CONCURRENT_SCHED_DEFAULT_WORKUNIT_SIZE", std::to_string(_pdgf_work_unit_size),
-    "SHM_BUFFER_CONTAINED_WORK_UNITS", std::to_string(8388608 / _pdgf_work_unit_size / _shared_memory_columns),
-    "MICRO_BENCHMARK_GENERATION", "SINGLE_WORKER",
+    "CONCURRENT_SCHED_DEFAULT_WORKUNIT_SIZE", std::to_string(_benchmark_config->pdgf_work_unit_size),
+    "SHM_BUFFER_CONTAINED_WORK_UNITS", std::to_string(8388608 / _benchmark_config->pdgf_work_unit_size / _shared_memory_columns),
+    "MICRO_BENCHMARK_GENERATION", _benchmark_config->pdgf_disable_micro_benchmarks ? "DISABLE" : "SINGLE_WORKER",
     "MEMORY_CHECK_RESTART_PROMT_ENABLED", "0",
     "PDGF_REFERENCE_DEFENSIVE_FIELDVALUE_CLONING", "0"
   };
@@ -174,9 +170,9 @@ void PdgfProcess::_configure_pdgf_arguments() {
                                           "-load", _schema_config_file,
                                           "-load", _schema_generation_file,
                                           "-noShell", "-closeWhenDone",
-                                          "-seed", std::to_string(_project_seed),
+                                          "-seed", std::to_string(_benchmark_config->pdgf_project_seed),
                                           "-sf", std::to_string(_scale_factor),
-                                          "-workers", std::to_string(_pdgf_num_cores),
+                                          "-workers", std::to_string(_benchmark_config->pdgf_num_cores),
                                           _pdgf_command
                                       });
 }

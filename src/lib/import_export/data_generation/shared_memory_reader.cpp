@@ -18,38 +18,37 @@
 namespace hyrise {
 template <uint32_t reader_num_columns>
 std::shared_ptr<BaseSharedMemoryReader> create_shared_memory_reader(
-  uint32_t work_unit_size, ChunkOffset hyrise_table_chunk_size,
-  const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem) {
-  switch (work_unit_size) {
-    case    8u: return std::make_shared<SharedMemoryReader<   8u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case   16u: return std::make_shared<SharedMemoryReader<  16u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case   32u: return std::make_shared<SharedMemoryReader<  32u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case   64u: return std::make_shared<SharedMemoryReader<  64u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case  128u: return std::make_shared<SharedMemoryReader< 128u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case  256u: return std::make_shared<SharedMemoryReader< 256u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case  512u: return std::make_shared<SharedMemoryReader< 512u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 1024u: return std::make_shared<SharedMemoryReader<1024u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 2048u: return std::make_shared<SharedMemoryReader<2048u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 4096u: return std::make_shared<SharedMemoryReader<4096u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 8192u: return std::make_shared<SharedMemoryReader<8192u, reader_num_columns>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+  const std::shared_ptr<BenchmarkConfig>& benchmark_config, const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem) {
+  switch (benchmark_config->pdgf_work_unit_size) {
+    case    8u: return std::make_shared<SharedMemoryReader<   8u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   16u: return std::make_shared<SharedMemoryReader<  16u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   32u: return std::make_shared<SharedMemoryReader<  32u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   64u: return std::make_shared<SharedMemoryReader<  64u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  128u: return std::make_shared<SharedMemoryReader< 128u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  256u: return std::make_shared<SharedMemoryReader< 256u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  512u: return std::make_shared<SharedMemoryReader< 512u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 1024u: return std::make_shared<SharedMemoryReader<1024u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 2048u: return std::make_shared<SharedMemoryReader<2048u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 4096u: return std::make_shared<SharedMemoryReader<4096u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 8192u: return std::make_shared<SharedMemoryReader<8192u, reader_num_columns>>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
     default: throw std::runtime_error("Unknown work unit size for shared memory reader!");
   }
 }
 
 std::shared_ptr<BaseSharedMemoryReader> create_shared_memory_reader(
-uint32_t work_unit_size, uint32_t reader_num_columns, ChunkOffset hyrise_table_chunk_size,
+const std::shared_ptr<BenchmarkConfig>& benchmark_config, uint32_t reader_num_columns,
 const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem) {
   switch (reader_num_columns) {
-    case 16u: return create_shared_memory_reader<16u>(work_unit_size, hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
-    case 32u: return create_shared_memory_reader<32u>(work_unit_size, hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 16u: return create_shared_memory_reader<16u>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 32u: return create_shared_memory_reader<32u>(benchmark_config, shared_memory_name, data_ready_sem, buffer_free_sem);
     default: throw std::runtime_error("Invalid number of buffer columns for shared memory reader!");
   }
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 SharedMemoryReader<work_unit_size, num_columns>::SharedMemoryReader(
-    ChunkOffset hyrise_table_chunk_size, const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem)
-    : _hyrise_table_chunk_size(hyrise_table_chunk_size), _shared_memory_file_name(shared_memory_name) {
+    const std::shared_ptr<BenchmarkConfig>& benchmark_config, const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem)
+    : _benchmark_config(benchmark_config), _shared_memory_file_name(shared_memory_name) {
   // Maximum size: HEADER + 2 ** 30.5
   // BUFFER_SIZE (2 ** x) * WORK_UNIT_SIZE (2 ** 7) * TABLE_FIELDS (2 ** 4) * SHARED_MEMORY_FIELD_SIZE (3 * 64 ~ 2 ** 8.5)
 
@@ -80,7 +79,7 @@ SharedMemoryReader<work_unit_size, num_columns>::SharedMemoryReader(
   }
 
   _ring_buffer = std::make_shared<MultiProcessRingBuffer<buffer_size>>(_shm_fd, work_unit_size, num_columns,
-                                                                       data_ready_sem, buffer_free_sem);
+                                                                       data_ready_sem, buffer_free_sem, _benchmark_config->pdgf_disable_micro_benchmarks);
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -113,7 +112,7 @@ std::unique_ptr<BasePDGFTableSchemaBuilder> SharedMemoryReader<work_unit_size, n
   // Table schema
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableSchema, "First information received by PDGF should be table schema, was " + std::to_string(ring_cell->cell_type));
-  auto table_schema_builder = std::make_unique<PDGFTableSchemaBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _hyrise_table_chunk_size);
+  auto table_schema_builder = std::make_unique<PDGFTableSchemaBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _benchmark_config->chunk_size);
 
   auto data_slot = ring_cell->data_buffer_offset;
   auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
@@ -127,23 +126,23 @@ std::unique_ptr<BasePDGFTableSchemaBuilder> SharedMemoryReader<work_unit_size, n
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-std::shared_ptr<BasePDGFTableBuilder> SharedMemoryReader<work_unit_size, num_columns>::read_next_table(const EncodingConfig& encoding_config, uint32_t num_workers) {
+std::shared_ptr<BasePDGFTableBuilder> SharedMemoryReader<work_unit_size, num_columns>::read_next_table() {
   // Generation info
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableGenerationInfo, "Did not receive table generation info, was " + std::to_string(ring_cell->cell_type));
-  auto table_builder = std::make_shared<PDGFTableBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _hyrise_table_chunk_size);
+  auto table_builder = std::make_shared<PDGFTableBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _benchmark_config->chunk_size);
   auto data_slot = ring_cell->data_buffer_offset;
   auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
   _ring_buffer->retrieval_finished();
   _num_tables_to_read = * reinterpret_cast<uint32_t*>(addressed_data->data[0][0]);
-  table_builder->read_generation_info(addressed_data, encoding_config);
+  table_builder->read_generation_info(addressed_data, _benchmark_config->encoding_config);
   _return_data_slot(data_slot);
 
   // TODO(JEH): parallelize. adaptively use different number of workers here (only use a large number if table actually has a lot of chunks)
   if (table_builder->reading_should_be_parallelized()) {
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-    tasks.reserve(num_workers);
-    for (auto worker_index = uint32_t{0}; worker_index < num_workers; ++worker_index) {
+    tasks.reserve(_benchmark_config->data_preparation_cores);
+    for (auto worker_index = uint32_t{0}; worker_index < _benchmark_config->data_preparation_cores; ++worker_index) {
       tasks.emplace_back(std::make_shared<JobTask>([this, &table_builder, worker_index] {
         _worker_read_data(worker_index, table_builder);
       }));

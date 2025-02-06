@@ -13,7 +13,7 @@ template <uint32_t buffer_size>
 class MultiProcessRingBuffer : Noncopyable {
  public:
   explicit MultiProcessRingBuffer(int shared_memory_fd, uint32_t workunit_size, uint32_t num_columns,
-                                  const char* data_available_sem_path, const char* data_written_sem_path);
+                                  const char* data_available_sem_path, const char* data_written_sem_path, bool disable_micro_benchmarks);
   ~MultiProcessRingBuffer();
 
   void reset();
@@ -32,6 +32,7 @@ class MultiProcessRingBuffer : Noncopyable {
 
   uint32_t _workunit_size;
   uint32_t _num_columns;
+  bool _disable_micro_benchmarks;
 
   const char* _data_available_sem_path;
   sem_t* _data_available_semaphore;
