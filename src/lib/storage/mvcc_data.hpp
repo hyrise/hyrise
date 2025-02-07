@@ -25,6 +25,8 @@ struct MvccData {
   std::atomic<CommitID> max_begin_cid{MAX_COMMIT_ID};
   std::atomic<CommitID> max_end_cid{MAX_COMMIT_ID};
 
+  size_t size() const;
+
   // Creates MVCC data that supports a maximum of `size` rows. If the underlying chunk has less rows, the extra rows
   // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
   explicit MvccData(const size_t size, CommitID begin_commit_id);

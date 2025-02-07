@@ -105,6 +105,10 @@ bool Chunk::has_mvcc_data() const {
   return _mvcc_data != nullptr;
 }
 
+void Chunk::set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data) {
+  _mvcc_data = mvcc_data;
+}
+
 std::shared_ptr<MvccData> Chunk::mvcc_data() const {
   return _mvcc_data;
 }

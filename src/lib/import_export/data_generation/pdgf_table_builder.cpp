@@ -61,19 +61,35 @@ std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_tabl
     return table;
   }
 
+  table->set_use_mvcc(UseMvcc::Yes);
+
   // Assemble table data
   // Note that we have already generated empty chunks when loading the schema, so we just replace the segments now
   // instead of creating new ones.
-  auto num_chunks = _generated_columns[0]->num_segments();
-  for (auto chunk_index = ChunkID{0}; chunk_index < num_chunks; chunk_index++) {
-    auto chunk = table->get_chunk(chunk_index);
-    for (auto i = size_t{0}; i < _num_generated_columns; ++i) {
-      auto& column = _generated_columns[i];
-      auto table_column_index = _generated_column_mappings[i];
-      Assert(column->num_segments() == num_chunks, "All table columns should have the same number of segments!");
-      chunk->put_segment(table_column_index, column->obtain_segment(chunk_index));
-    }
+  auto next_chunk_index = std::atomic_int64_t{_generated_columns[0]->num_segments() - 1};
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto num_tasks = Hyrise::get().scheduler()->num_workers(); // this is a bit of a abstraction breaker, but it should do for now
+  for (auto worker_index = uint32_t{0}; worker_index < num_tasks; worker_index++) {
+    tasks.emplace_back(std::make_shared<JobTask>([this, &table, &next_chunk_index] {
+      int64_t numeric_chunk_index;
+      while ((numeric_chunk_index = next_chunk_index.fetch_sub(1)) >= 0) {
+        auto chunk_index = static_cast<ChunkID>(numeric_chunk_index);
+        auto chunk = table->get_chunk(chunk_index);
+        if (!chunk->has_mvcc_data() || chunk->mvcc_data()->size() != chunk->size()) {
+          auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+          chunk->set_mvcc_data(mvcc_data);
+        }
+        for (auto i = size_t{0}; i < _num_generated_columns; ++i) {
+          auto& column = _generated_columns[i];
+          auto table_column_index = _generated_column_mappings[i];
+          Assert(column->num_segments() > chunk_index, "All table columns should have the same number of segments!");
+          chunk->put_segment(table_column_index, column->obtain_segment(chunk_index));
+        }
+      }
+    }));
   }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
   for (auto i = size_t{0}; i < _num_generated_columns; ++i) {
     auto table_column_index = _generated_column_mappings[i];
     table->column_definitions()[table_column_index].loaded = true;

@@ -72,7 +72,12 @@ std::shared_ptr<Table> PDGFTableSchemaBuilder<work_unit_size, num_columns>::_ass
     table_column_definitions.emplace_back(column->name(), column->type(), false, false);
   }
 
-  return std::make_shared<Table>(table_column_definitions, TableType::Data, _hyrise_table_chunk_size, UseMvcc::Yes);
+  return std::make_shared<Table>(
+    table_column_definitions, TableType::Data, _hyrise_table_chunk_size,
+    // No MVCC for the time being, because this allows us to pass nullptr MVCCs into the chunks
+    // Once the table actually receives data in the real table builder, we will update that to YES.
+    UseMvcc::No
+  );
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -91,10 +96,9 @@ void PDGFTableSchemaBuilder<work_unit_size, num_columns>::_construct_table_chunk
         for (auto& column : _table_columns) {
           segments.emplace_back(column->build_segment(_hyrise_table_chunk_size));
         }
-        auto mvcc_data = std::make_shared<MvccData>(_hyrise_table_chunk_size, CommitID{0});
 
         table_access_mutex.lock();
-        table->append_chunk(segments, mvcc_data);
+        table->append_chunk(segments, nullptr);
         table_access_mutex.unlock();
       }
     }));
@@ -106,8 +110,7 @@ void PDGFTableSchemaBuilder<work_unit_size, num_columns>::_construct_table_chunk
     for (auto& column : _table_columns) {
       segments.emplace_back(column->build_segment(static_cast<ChunkOffset>(req_chunks.rem)));
     }
-    auto mvcc_data = std::make_shared<MvccData>(_hyrise_table_chunk_size, CommitID{0});
-    table->append_chunk(segments, mvcc_data);
+    table->append_chunk(segments, nullptr);
   }
 }
 

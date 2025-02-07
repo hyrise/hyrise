@@ -19,6 +19,10 @@ MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
   _tids.resize(size, copyable_atomic<TransactionID>{INVALID_TRANSACTION_ID});
 }
 
+size_t MvccData::size() const {
+  return _begin_cids.size();
+}
+
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   stream << "TIDs: ";
   for (const auto& tid : mvcc_data._tids) {

@@ -85,7 +85,7 @@ class Chunk : private Noncopyable {
   void put_segment(ColumnID column_id, std::shared_ptr<AbstractSegment> segment);
 
   bool has_mvcc_data() const;
-
+  void set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data);
   std::shared_ptr<MvccData> mvcc_data() const;
 
   std::vector<std::shared_ptr<AbstractChunkIndex>> get_indexes(

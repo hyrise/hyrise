@@ -142,6 +142,10 @@ TableType Table::type() const {
   return _type;
 }
 
+void Table::set_use_mvcc(UseMvcc use_mvcc) {
+  _use_mvcc = use_mvcc;
+}
+
 UseMvcc Table::uses_mvcc() const {
   return _use_mvcc;
 }

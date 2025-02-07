@@ -78,6 +78,7 @@ class Table : private Noncopyable {
 
   TableType type() const;
 
+  void set_use_mvcc(UseMvcc use_mvcc);
   UseMvcc uses_mvcc() const;
 
   // For data tables, returns the target chunk size (i.e., the number of rows pre-allocated in the ValueSegment).
