@@ -121,7 +121,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
      * by calculating the distance between the first and the last corresponding row (+1) in the table.
      * This results in a runtime of O(output rows) rather than O(input rows), which can be quite significant.
      */
-    auto current_group_begin_pointer = RowID{ChunkID{0u}, ChunkOffset{0}};
+    auto current_group_begin_pointer = RowID{ChunkID{0}, ChunkOffset{0}};
     for (const auto& group_boundary : group_boundaries) {
       if (current_group_begin_pointer.chunk_id == group_boundary.chunk_id) {
         // Group is located within a single chunk
