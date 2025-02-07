@@ -48,15 +48,20 @@ int main(int argc, char* argv[]) {
   const auto scheduler = std::make_shared<NodeQueueScheduler>(num_cores);
   Hyrise::get().set_scheduler(scheduler);
 
+  auto benchmark_config = std::make_shared<BenchmarkConfig>(Chunk::DEFAULT_SIZE);
+  benchmark_config->pdgf_work_unit_size = work_unit_size;
+  benchmark_config->pdgf_project_seed = 123456789;
+  benchmark_config->data_preparation_cores = num_cores;
+  benchmark_config->pdgf_num_cores = pdgf_num_cores;
+
   // Run
-  auto reader = create_shared_memory_reader(work_unit_size, shm_buffer_num_columns, Chunk::DEFAULT_SIZE, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
+  auto reader = create_shared_memory_reader(benchmark_config, shm_buffer_num_columns, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
 
   auto timer = Timer{};
   std::cerr << "Receiving table schemas from PDGF!\n";
   auto pdgf_schema = PdgfProcess::for_schema_generation(
     "pdgf-core_config_tpc-h-schema.xml", "default-shm-reflective-generation.xml", PDGF_DIRECTORY_ROOT,
-    123456789, work_unit_size, pdgf_num_cores, shm_buffer_num_columns,
-    scale);
+    benchmark_config, shm_buffer_num_columns, scale);
   pdgf_schema.run();
   while (reader->has_next_table()) {
     auto schema_builder = reader->read_next_schema();
@@ -73,14 +78,13 @@ int main(int argc, char* argv[]) {
   // IMPORTANT: reset reader between invocations
   reader->reset();
 
-  auto pdgf_data = PdgfProcess::for_data_generation("pdgf-core_config_tpc-h-schema.xml", "default-shm-reflective-generation.xml", PDGF_DIRECTORY_ROOT, 123456789, work_unit_size, pdgf_num_cores, shm_buffer_num_columns, scale);
+  auto pdgf_data = PdgfProcess::for_data_generation("pdgf-core_config_tpc-h-schema.xml", "default-shm-reflective-generation.xml", PDGF_DIRECTORY_ROOT, benchmark_config, shm_buffer_num_columns, scale);
   auto column_filter = std::make_shared<std::set<std::string>>(columns.begin(), columns.end());
   pdgf_data.set_column_filter(column_filter);
   pdgf_data.run();
-  auto encoding_config = EncodingConfig();
   auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
   while (reader->has_next_table()) {
-    table_builders.emplace_back(reader->read_next_table(encoding_config, num_cores));
+    table_builders.emplace_back(reader->read_next_table());
   }
   auto time = timer.lap();
   std::cerr << "Awaiting PDGF teardown\n";
