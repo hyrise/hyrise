@@ -23,7 +23,7 @@ class DummySegment : public AbstractSegment {
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override;
 
-  ValueSegment<T> empty_value_segment;
+  static inline const ValueSegment<T> empty_value_segment = ValueSegment<T>(false, ChunkOffset{0});
 
  protected:
   ChunkOffset _alleged_size;

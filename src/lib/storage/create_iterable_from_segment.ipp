@@ -21,7 +21,7 @@ auto create_iterable_from_segment(const ValueSegment<T>& segment) {
 
 template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const DummySegment<T>& segment) {
-  return create_iterable_from_segment(segment.empty_value_segment);
+  return create_iterable_from_segment(DummySegment<T>::empty_value_segment);
 }
 
 template <typename T, bool EraseSegmentType>
