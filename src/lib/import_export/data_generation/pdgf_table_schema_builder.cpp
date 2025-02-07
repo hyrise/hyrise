@@ -18,6 +18,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/dummy_segment.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 
 namespace hyrise {
@@ -56,8 +57,11 @@ void PDGFTableSchemaBuilder<work_unit_size, num_columns>::read_schema(SharedMemo
 template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<Table> PDGFTableSchemaBuilder<work_unit_size, num_columns>::build_table() {
   Assert(!_table_columns.empty(), "Table schema should have at least one column!");
+  std::cerr << "Creating empty table " << _table_name << "\n";
+  auto timer = Timer{};
   auto table = _assemble_table_metadata();
   _construct_table_chunks(table);
+  std::cerr << "Creating empty table " << _table_name << " done (" << timer.lap_formatted() << ")\n";
   return table;
 }
 

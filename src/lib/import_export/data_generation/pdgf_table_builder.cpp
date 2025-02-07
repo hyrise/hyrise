@@ -22,6 +22,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 
 namespace hyrise {
@@ -52,6 +53,8 @@ template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_table() {
   // Table schema has already been generated. Just add the data here.
   auto table = Hyrise::get().storage_manager.get_table(_table_name);
+  std::cerr << "Building table " << _table_name << "...\n";
+  auto timer = Timer{};
 
   if (_num_generated_columns == 0) {
     std::cerr << "Warning: Building table without a generated column!\n";
@@ -76,6 +79,7 @@ std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_tabl
     table->column_definitions()[table_column_index].loaded = true;
   }
 
+  std::cerr << "Building table " << _table_name << " done (" << timer.lap_formatted() << ")\n";
   return table;
 }
 

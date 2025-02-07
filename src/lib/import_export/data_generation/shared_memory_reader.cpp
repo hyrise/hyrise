@@ -127,6 +127,8 @@ std::unique_ptr<BasePDGFTableSchemaBuilder> SharedMemoryReader<work_unit_size, n
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<BasePDGFTableBuilder> SharedMemoryReader<work_unit_size, num_columns>::read_next_table() {
+  auto timer = Timer{};
+
   // Generation info
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableGenerationInfo, "Did not receive table generation info, was " + std::to_string(ring_cell->cell_type));
@@ -160,7 +162,7 @@ std::shared_ptr<BasePDGFTableBuilder> SharedMemoryReader<work_unit_size, num_col
   _ring_buffer->retrieval_finished();
   _return_data_slot(ring_cell->data_buffer_offset);
 
-  std::cerr << "Finished reading table.\n";
+  std::cerr << "Finished reading table " << table_builder->table_name() << " (" << timer.lap_formatted() << ").\n";
   return table_builder;
 }
 
