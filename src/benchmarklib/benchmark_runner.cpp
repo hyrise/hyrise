@@ -280,9 +280,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
-  _state = BenchmarkState{_config.max_duration};
-  while (_state.keep_running() && (_config.max_runs < 0 || _total_finished_runs.load(std::memory_order_relaxed) <
-                                                               static_cast<size_t>(_config.max_runs))) {
+  _state = BenchmarkState{_config.max_duration, _config.max_runs};
+  while (_state.keep_running()) {
     if (item_id_counter == benchmark_item_count) {
       std::shuffle(item_ids.begin(), item_ids.end(), random_generator);
       item_id_counter = 0;
@@ -292,11 +291,15 @@ void BenchmarkRunner::_benchmark_shuffled() {
     _schedule_item_run(item_id);
     ++item_id_counter;
   }
-  _state.set_done();
+
+  auto benchmark_duration = Duration{0};
+  for (const auto& result : _results) {
+    benchmark_duration = std::max(benchmark_duration, _calculate_item_duration(result));
+  }
 
   for (auto& result : _results) {
     // As the execution of benchmark items is intermingled, we use the total duration for all items.
-    result.duration = _state.benchmark_duration;
+    result.duration = benchmark_duration;
   }
 
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results.
@@ -327,13 +330,10 @@ void BenchmarkRunner::_benchmark_ordered() {
       _running_clients_semaphore.signal(_config.clients);
     }
 
-    _state = BenchmarkState{_config.max_duration};
-    while (_state.keep_running() &&
-           (_config.max_runs < 0 || (result.successful_runs.size() + result.unsuccessful_runs.size()) <
-                                        static_cast<size_t>(_config.max_runs))) {
+    _state = BenchmarkState{_config.max_duration, _config.max_runs};
+    while (_state.keep_running()) {
       _schedule_item_run(item_id);
     }
-    _state.set_done();
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results.
     if (_currently_running_clients > 0) {
@@ -343,9 +343,9 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
-    result.duration = _state.benchmark_duration;
+    result.duration = _calculate_item_duration(result);
     // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
-    const auto duration_seconds = std::chrono::duration<double>{_state.benchmark_duration}.count();
+    const auto duration_seconds = std::chrono::duration<double>{result.duration}.count();
     const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
     // Compute mean by using accumulators.
@@ -391,13 +391,12 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
         --_currently_running_clients;
         _running_clients_semaphore.signal();
-        ++_total_finished_runs;
 
-        // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
+        // If `result.verification_passed` was previously unset, set it; otherwise only invalidate it if the run failed.
         result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
         // Prevent items from adding their result after the time is up.
-        if (!_state.is_done()) {
+        if (run_end <= _state.benchmark_begin + _state.max_duration) {
           if (!_config.pipeline_metrics) {
             metrics.clear();
           }
@@ -425,7 +424,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
-  _state = BenchmarkState{_config.warmup_duration};
+  _state = BenchmarkState{_config.warmup_duration, -1};
 
   while (_state.keep_running()) {
     _schedule_item_run(item_id);
@@ -435,8 +434,6 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   _results[item_id].successful_runs = {};
   _results[item_id].unsuccessful_runs = {};
   _results[item_id].duration = {};
-
-  _state.set_done();
 
   // Wait for the rest of the tasks that didn't make it in time.
   Hyrise::get().scheduler()->wait_for_all_tasks();
@@ -684,6 +681,32 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
               << ", * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'";
 
   SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+}
+
+Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& result) const {
+  // Our scripts use the overall item time only to calculate the throughput (overall time / successful runs). Latencies
+  // are calculated from the individual runs. Thus, we use the available time limit if we reached it.
+  // We cannot simply use `_state.scheduled_runs` because some of the runs might not have finished in time. Thus, we
+  // check how many runs were actually reported.
+  const auto executed_runs = result.successful_runs.size() + result.unsuccessful_runs.size();
+  if (_state.max_runs > 0 && static_cast<int64_t>(executed_runs) < _state.max_runs) {
+    return _state.max_duration;
+  }
+
+  // If we stopped because of the run limit, we calculate the time frome the item's benchmark start until the last run
+  // finished.
+  const auto last_run_duration = [&](const auto& runs) {
+    auto max_duration = Duration{0};
+    for (const auto& run : runs) {
+      // The run's begin is relative to the overall benchmark start. Thus, we have to substract the period from the
+      // benchmark start to the start of the item.
+      const auto run_duration = run.begin + run.duration - (_state.benchmark_begin - _benchmark_start);
+      max_duration = std::max(max_duration, run_duration);
+    }
+    return max_duration;
+  };
+
+  return std::max(last_run_duration(result.successful_runs), last_run_duration(result.unsuccessful_runs));
 }
 
 }  // namespace hyrise
