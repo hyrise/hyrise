@@ -615,6 +615,10 @@ std::vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes(const Co
 }
 
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
+  return memory_usage(mode, false);
+}
+
+size_t Table::memory_usage(const MemoryUsageCalculationMode mode, bool without_data) const {
   auto bytes = size_t{sizeof(*this)};
 
   const auto chunk_count = _chunks.size();
@@ -624,7 +628,7 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
       continue;
     }
 
-    bytes += chunk->memory_usage(mode);
+    bytes += chunk->memory_usage(mode, without_data);
   }
 
   for (const auto& column_definition : _column_definitions) {

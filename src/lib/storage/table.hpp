@@ -235,6 +235,7 @@ class Table : private Noncopyable {
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode, bool without_data) const;
 
   /**
    * Tables may be clustered by one or more columns. Each value within such a column will occur in exactly one chunk.

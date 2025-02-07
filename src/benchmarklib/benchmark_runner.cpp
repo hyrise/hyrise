@@ -532,11 +532,19 @@ nlohmann::json BenchmarkRunner::_create_report() const {
 
   // Gather information on the table size.
   auto table_size = size_t{0};
-  for (const auto& [_, table] : Hyrise::get().storage_manager.tables()) {
-    table_size += table->memory_usage(MemoryUsageCalculationMode::Full);
+  auto skeleton_size = size_t{0};
+  for (const auto& [name, table] : Hyrise::get().storage_manager.tables()) {
+    auto this_table_size = table->memory_usage(MemoryUsageCalculationMode::Full, false);
+    auto this_table_skeleton_size = table->memory_usage(MemoryUsageCalculationMode::Full, true);
+
+    std::cout << "--> table " << name << " had data size " << (this_table_size - this_table_skeleton_size) / 1024 / 1024 << " MiB";
+    std::cout << " (+ " << this_table_skeleton_size / 1024 / 1024 << " MiB skeleton)\n";
+
+    table_size += this_table_size;
+    skeleton_size += this_table_skeleton_size;
   }
 
-  auto summary = nlohmann::json{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
+  auto summary = nlohmann::json{{"table_size_in_bytes", table_size}, {"table_skeleton_size_in_bytes", skeleton_size}, {"total_duration", total_duration.count()}};
 
   // To get timestamps relative to the benchmark start, we substract the benchmark start timepoint.
   // We have to use system_clock here, as the LogManager uses it to provide human-readable timestamps.

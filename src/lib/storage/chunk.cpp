@@ -213,10 +213,16 @@ const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const {
 }
 
 size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
+  return memory_usage(mode, false);
+}
+
+size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode, bool without_data) const {
   auto bytes = size_t{sizeof(*this)};
 
-  for (const auto& segment : _segments) {
-    bytes += segment->memory_usage(mode);
+  if (!without_data) {
+    for (const auto& segment : _segments) {
+      bytes += segment->memory_usage(mode);
+    }
   }
 
   // TODO(anybody) Index memory usage missing

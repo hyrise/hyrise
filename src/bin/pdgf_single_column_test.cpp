@@ -92,11 +92,20 @@ int main(int argc, char* argv[]) {
   std::cerr << "- Hyrise PDGF: Generating tables done (" << format_duration(time) << ")\n";
 
   auto table_size = size_t{0};
+  auto table_skeleton_size = size_t{0};
   for (const auto& builder : table_builders) {
     auto table = builder->build_table();
-    table_size += table->memory_usage(MemoryUsageCalculationMode::Full);
+    auto this_table_size = table->memory_usage(MemoryUsageCalculationMode::Full, false);
+    auto this_table_skeleton_size = table->memory_usage(MemoryUsageCalculationMode::Full, true);
+
+    std::cerr << "- Hyrise " << builder->table_name() << " table data size " << (this_table_size - this_table_skeleton_size) / 1024 / 1024 << " MiB";
+    std::cerr << " (+ " << this_table_skeleton_size / 1024 / 1024 << " MiB skeleton)\n";
+
+    table_size += this_table_size;
+    table_skeleton_size += this_table_skeleton_size;
   }
   std::cerr << "- Hyrise total table size is: " << table_size << "\n";
+  std::cerr << "- Hyrise total table skeleton size is: " << table_skeleton_size << "\n";
 
   // This next line is solely to ensure the memory of the unfinished tables within the table builders is not deallocated early,
   // which might cause problems with the PDGF liveness watcher (because the pdgf_data.await_teardown() call might be done
