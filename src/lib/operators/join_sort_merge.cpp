@@ -316,10 +316,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // Emits a combination of a left row id and a right row id to the join output.
   void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
-    if (_output_pos_lists_left[output_cluster].back().size() >= Chunk::DEFAULT_SIZE ||
-        _output_pos_lists_right[output_cluster].back().size() >= Chunk::DEFAULT_SIZE == 0) {
-      _output_pos_lists_left.emplace_back();
-      _output_pos_lists_right.emplace_back();
+    if (_output_pos_lists_left[output_cluster].back().size() >= Chunk::DEFAULT_SIZE) {
+      _output_pos_lists_left[output_cluster].emplace_back();
+      _output_pos_lists_right[output_cluster].emplace_back();
     }
     _output_pos_lists_left[output_cluster].back().push_back(left_row_id);
     _output_pos_lists_right[output_cluster].back().push_back(right_row_id);
