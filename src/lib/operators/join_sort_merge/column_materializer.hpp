@@ -53,12 +53,13 @@ struct Subsample {
 template <typename T>
 class ColumnMaterializer {
  public:
-  explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
+  explicit ColumnMaterializer(const bool sort, const bool materialize_null, const size_t target_chunk_size)
+      : _sort{sort}, _materialize_null{materialize_null}, _target_chunk_size{target_chunk_size} {}
 
  public:
   // For sufficiently large chunks (number of rows > JOB_SPAWN_THRESHOLD), the materialization is parallelized. Returns
   // the materialized segments and a list of null row ids if _materialize_null is true.
-  std::tuple<MaterializedSegmentList<T>, RowIDPosList, std::vector<T>> materialize(
+  std::tuple<MaterializedSegmentList<T>, std::deque<RowIDPosList>, std::vector<T>> materialize(
       const std::shared_ptr<const Table>& input, const ColumnID column_id) {
     constexpr auto SAMPLES_PER_CHUNK = ChunkOffset{10};
     const auto chunk_count = input->chunk_count();
@@ -96,12 +97,23 @@ class ColumnMaterializer {
     for (const auto& null_rows : null_rows_per_chunk) {
       null_row_count += null_rows.size();
     }
-    auto null_rows = RowIDPosList{};
-    null_rows.reserve(null_row_count);
+    auto null_rows = std::deque<RowIDPosList>{};
+
+    const auto append_nulls = [&]() {
+      null_rows.emplace_back();
+      null_rows.back().reserve(std::min(null_row_count, _target_chunk_size));
+    };
 
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& chunk_null_rows = null_rows_per_chunk[chunk_id];
-      null_rows.insert(null_rows.end(), chunk_null_rows.begin(), chunk_null_rows.end());
+      const auto chunk_null_rows_count = chunk_null_rows.size();
+      const auto pos_list_size = chunk_id == ChunkID{0} ? 0 : null_rows.back().size();
+      if (chunk_id == ChunkID{0} || (chunk_null_rows_count > _target_chunk_size && pos_list_size > 0) ||
+          (pos_list_size + chunk_null_rows_count >= _target_chunk_size)) {
+        append_nulls();
+      }
+      null_rows.back().insert(null_rows.back().end(), chunk_null_rows.begin(), chunk_null_rows.end());
+      null_row_count -= chunk_null_rows.size();
     }
 
     auto gathered_samples = std::vector<T>{};
@@ -167,8 +179,9 @@ class ColumnMaterializer {
   }
 
  private:
-  bool _sort;
-  bool _materialize_null;
+  const bool _sort;
+  const bool _materialize_null;
+  const size_t _target_chunk_size;
 };
 
 }  // namespace hyrise

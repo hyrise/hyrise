@@ -1,7 +1,9 @@
 #include "join_output_writing.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
+#include <deque>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -93,7 +95,8 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
  * @param pos_list contains the positions of rows to use from the input table
  */
 void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                           const PosListsByColumn& input_pos_lists_by_column, std::shared_ptr<RowIDPosList>& pos_list) {
+                           const PosListsByColumn& input_pos_lists_by_column,
+                           const std::shared_ptr<RowIDPosList>& pos_list) {
   auto output_pos_list_cache = std::unordered_map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>>{};
 
   auto dummy_table = std::shared_ptr<Table>{};
@@ -203,7 +206,7 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
 namespace hyrise {
 
 std::vector<std::shared_ptr<Chunk>> write_output_chunks(
-    std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
+    std::vector<std::deque<RowIDPosList>>& pos_lists_left, std::vector<std::deque<RowIDPosList>>& pos_lists_right,
     const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
     bool create_left_side_pos_lists_by_column, bool create_right_side_pos_lists_by_column,
     OutputColumnOrder output_column_order, bool allow_partition_merge) {
@@ -229,6 +232,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   }
 
   const auto pos_lists_left_size = pos_lists_left.size();
+  const auto pos_lists_right_size = pos_lists_right.size();
   auto expected_output_chunk_count = size_t{0};
   for (auto partition_id = size_t{0}; partition_id < pos_lists_left_size; ++partition_id) {
     if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
@@ -236,23 +240,28 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     }
   }
 
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>(expected_output_chunk_count);
+  auto output_chunks_per_partition = std::vector<std::vector<std::shared_ptr<Chunk>>>(expected_output_chunk_count);
   auto write_output_segments_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
   // For every partition, create a reference segment.
   auto partition_id = size_t{0};
   auto chunk_input_position = size_t{0};
 
+  auto output_chunk_count = std::atomic<size_t>{0};
+
   while (partition_id < pos_lists_left_size) {
     // Moving the values into a shared PosList saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.
-    auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_left[partition_id]));
-    auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_right[partition_id]));
-
-    if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
+    const auto left_partition_empty = pos_lists_left[partition_id].empty();
+    const auto left_is_empty = left_partition_empty || pos_lists_left[partition_id].back().empty();
+    const auto right_is_empty = pos_lists_right[partition_id].empty() || pos_lists_right[partition_id].back().empty();
+    if (left_is_empty && right_is_empty) {
       ++partition_id;
       continue;
     }
+
+    auto& last_right_side_pos_list = pos_lists_right[partition_id].back();
+    const auto partition_pos_lists_right_size = pos_lists_right[partition_id].size();
 
     // If the input is heavily pre-filtered or the join results in very few matches, we might end up with a high
     // number of chunks that contain only few rows. If a PosList is smaller than MIN_SIZE, we merge it with the
@@ -262,59 +271,85 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
     constexpr auto MIN_SIZE = 500;
     constexpr auto MAX_SIZE = MIN_SIZE * 2;
-    left_side_pos_list->reserve(MAX_SIZE);
-    right_side_pos_list->reserve(MAX_SIZE);
+    if (!left_partition_empty) {
+      pos_lists_left[partition_id].back().reserve(MAX_SIZE);
+    }
+    last_right_side_pos_list.reserve(MAX_SIZE);
 
     if (allow_partition_merge) {
       // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same size
       // or are empty (in case of semi/anti joins).
-      while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
-             right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
-        // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
+      // We only write multiple PosLists per partition if we have more than Chunk::DEFAULT_SIZE values. Only the last
+      // PosList might be small.
+      auto merge_partition_id = partition_id + 1;
+      while (merge_partition_id < pos_lists_right_size && last_right_side_pos_list.size() < MIN_SIZE) {
+        if (pos_lists_right[merge_partition_id].empty() ||
+            last_right_side_pos_list.size() + pos_lists_right[merge_partition_id].back().size() > MAX_SIZE) {
+          ++merge_partition_id;
+          continue;
+        }
+        // Copy entries from following PosList into the current working set (last_left_side_pos_list) and free the memory
         // used for the merged PosList.
-        std::copy(pos_lists_left[partition_id + 1].begin(), pos_lists_left[partition_id + 1].end(),
-                  std::back_inserter(*left_side_pos_list));
-        pos_lists_left[partition_id + 1] = {};
+        if (!left_partition_empty) {
+          std::copy(pos_lists_left[merge_partition_id].back().begin(), pos_lists_left[merge_partition_id].back().end(),
+                    std::back_inserter(pos_lists_left[partition_id].back()));
+          pos_lists_left[merge_partition_id].back() = {};
+        }
 
-        std::copy(pos_lists_right[partition_id + 1].begin(), pos_lists_right[partition_id + 1].end(),
-                  std::back_inserter(*right_side_pos_list));
-        pos_lists_right[partition_id + 1] = {};
+        std::copy(pos_lists_right[merge_partition_id].back().begin(), pos_lists_right[merge_partition_id].back().end(),
+                  std::back_inserter(last_right_side_pos_list));
+        pos_lists_right[merge_partition_id].back() = {};
 
-        ++partition_id;
+        ++merge_partition_id;
       }
     }
 
     // We need to pass the position lists as parameters to ensure the shared_ptr is copied (capturing by value would
     // result in const shared_ptrs and write_output_segments expects non-const).
-    auto write_output_segments_task = [&, chunk_input_position](auto left_side_pos_list, auto right_side_pos_list) {
-      auto output_segments = Segments{};
+    auto write_output_segments_task = [&, chunk_input_position, left_partition_empty](auto write_partition_id) {
+      output_chunks_per_partition[chunk_input_position].reserve(partition_pos_lists_right_size);
+      auto added_chunks_count = size_t{0};
+      for (auto pos_list_id = size_t{0}; pos_list_id < partition_pos_lists_right_size; ++pos_list_id) {
+        const auto left_side_pos_list =
+            left_partition_empty
+                ? std::make_shared<RowIDPosList>()
+                : std::make_shared<RowIDPosList>(std::move(pos_lists_left[write_partition_id][pos_list_id]));
+        const auto right_side_pos_list =
+            std::make_shared<RowIDPosList>(std::move(pos_lists_right[write_partition_id][pos_list_id]));
+        if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
+          continue;
+        }
+        ++added_chunks_count;
+        auto output_segments = Segments{};
 
-      // Swap back the inputs, so that the order of the output columns is not changed.
-      switch (output_column_order) {
-        case OutputColumnOrder::LeftFirstRightSecond:
-          write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
-                                right_side_pos_list);
-          break;
+        // Swap back the inputs, so that the order of the output columns is not changed.
+        switch (output_column_order) {
+          case OutputColumnOrder::LeftFirstRightSecond:
+            write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
+            write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
+                                  right_side_pos_list);
+            break;
 
-        case OutputColumnOrder::RightFirstLeftSecond:
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
-                                right_side_pos_list);
-          write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
-          break;
+          case OutputColumnOrder::RightFirstLeftSecond:
+            write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
+                                  right_side_pos_list);
+            write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
+            break;
 
-        case OutputColumnOrder::RightOnly:
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
-                                right_side_pos_list);
-          break;
+          case OutputColumnOrder::RightOnly:
+            write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
+                                  right_side_pos_list);
+            break;
+        }
+
+        output_chunks_per_partition[chunk_input_position].emplace_back(
+            std::make_shared<Chunk>(std::move(output_segments)));
       }
-
-      output_chunks[chunk_input_position] = std::make_shared<Chunk>(std::move(output_segments));
+      output_chunk_count.fetch_add(added_chunks_count);
     };
 
     // Bind parameters to lambda before passing it to constructor of JobTask.
-    auto write_output_segments_task_params =
-        std::bind(write_output_segments_task, left_side_pos_list, right_side_pos_list);
+    auto write_output_segments_task_params = std::bind(write_output_segments_task, partition_id);
     write_output_segments_tasks.emplace_back(std::make_shared<JobTask>(write_output_segments_task_params));
     write_output_segments_tasks.back()->schedule();
 
@@ -324,7 +359,15 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
   Hyrise::get().scheduler()->wait_for_tasks(write_output_segments_tasks);
 
-  output_chunks.resize(chunk_input_position);
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
+  output_chunks.reserve(output_chunk_count);
+  for (const auto& chunks : output_chunks_per_partition) {
+    for (const auto& chunk : chunks) {
+      output_chunks.emplace_back(chunk);
+    }
+  }
+
   return output_chunks;
 }
+
 }  // namespace hyrise

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <deque>
 #include <map>
 #include <memory>
 #include <string>
@@ -22,8 +23,8 @@ template <typename T>
 struct RadixClusterOutput {
   MaterializedSegmentList<T> clusters_left;
   MaterializedSegmentList<T> clusters_right;
-  RowIDPosList null_rows_left;
-  RowIDPosList null_rows_right;
+  std::deque<RowIDPosList> null_rows_left;
+  std::deque<RowIDPosList> null_rows_right;
 };
 
 // Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis of the least
@@ -49,7 +50,7 @@ class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
                    const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
-                   const bool materialize_null_right, size_t cluster_count,
+                   const bool materialize_null_right, size_t cluster_count, size_t target_chunk_size,
                    OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _performance{performance_data},
         _left_input_table{left},
@@ -59,7 +60,8 @@ class RadixClusterSort {
         _equi_case{equi_case},
         _cluster_count{cluster_count},
         _materialize_null_left{materialize_null_left},
-        _materialize_null_right{materialize_null_right} {
+        _materialize_null_right{materialize_null_right},
+        _target_chunk_size{target_chunk_size} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0.");
     DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two.");
     DebugAssert(left, "left input operator is null.");
@@ -125,6 +127,8 @@ class RadixClusterSort {
 
   bool _materialize_null_left;
   bool _materialize_null_right;
+
+  size_t _target_chunk_size;
 
   // Determines the total size of a materialized segment list.
   static size_t _materialized_table_size(const MaterializedSegmentList<T>& table) {
@@ -323,13 +327,15 @@ class RadixClusterSort {
 
     // Sort the chunks of the input tables iff join is non-equi and when clustering.
     const auto sort_materialized_chunks = !_equi_case && _cluster_count > 1;
-    auto left_column_materializer = ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_left);
+    auto left_column_materializer =
+        ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_left, _target_chunk_size);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
     output.null_rows_left = std::move(null_rows_left);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
 
-    auto right_column_materializer = ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_right);
+    auto right_column_materializer =
+        ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_right, _target_chunk_size);
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
     output.null_rows_right = std::move(null_rows_right);

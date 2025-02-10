@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -140,8 +141,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   MaterializedSegmentList<T> _sorted_right_table;
 
   // Contains the null value row ids if a join column is an outer join column.
-  RowIDPosList _null_rows_left;
-  RowIDPosList _null_rows_right;
+  std::deque<RowIDPosList> _null_rows_left;
+  std::deque<RowIDPosList> _null_rows_right;
 
   const ColumnID _primary_left_column_id;
   const ColumnID _primary_right_column_id;
@@ -156,8 +157,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   size_t _cluster_count;
 
   // Contains the output row ids for each cluster.
-  std::vector<RowIDPosList> _output_pos_lists_left;
-  std::vector<RowIDPosList> _output_pos_lists_right;
+  std::vector<std::deque<RowIDPosList>> _output_pos_lists_left;
+  std::vector<std::deque<RowIDPosList>> _output_pos_lists_right;
 
   struct RowHasher {
     size_t operator()(const RowID& row) const {
@@ -315,8 +316,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // Emits a combination of a left row id and a right row id to the join output.
   void _emit_combination(size_t output_cluster, RowID left_row_id, RowID right_row_id) {
-    _output_pos_lists_left[output_cluster].push_back(left_row_id);
-    _output_pos_lists_right[output_cluster].push_back(right_row_id);
+    if (_output_pos_lists_left[output_cluster].back().size() >= Chunk::DEFAULT_SIZE ||
+        _output_pos_lists_right[output_cluster].back().size() >= Chunk::DEFAULT_SIZE == 0) {
+      _output_pos_lists_left.emplace_back();
+      _output_pos_lists_right.emplace_back();
+    }
+    _output_pos_lists_left[output_cluster].back().push_back(left_row_id);
+    _output_pos_lists_right[output_cluster].back().push_back(right_row_id);
   }
 
   // Emits all the combinations of row ids from the left table range and the right table range to the join output
@@ -825,8 +831,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Parallel join for each cluster
     for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
       // Create output position lists
-      _output_pos_lists_left[cluster_id] = RowIDPosList{};
-      _output_pos_lists_right[cluster_id] = RowIDPosList{};
+      _output_pos_lists_left[cluster_id].emplace_back();
+      _output_pos_lists_right[cluster_id].emplace_back();
 
       // Avoid empty jobs for inner equi joins
       if (_mode == JoinMode::Inner && _primary_predicate_condition == PredicateCondition::Equals) {
@@ -886,7 +892,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     auto radix_clusterer = RadixClusterSort<T>(
         _sort_merge_join.left_input_table(), _sort_merge_join.right_input_table(),
         _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
-        include_null_left, include_null_right, _cluster_count, _performance);
+        include_null_left, include_null_right, _cluster_count, Chunk::DEFAULT_SIZE, _performance);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
@@ -901,17 +907,21 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _perform_join();
 
     if (include_null_left || include_null_right) {
-      auto null_output_left = RowIDPosList();
-      auto null_output_right = RowIDPosList();
+      auto null_output_left = std::deque<RowIDPosList>{};
+      auto null_output_right = std::deque<RowIDPosList>{};
 
       // Add the outer join rows which had a null value in their join column.
       if (include_null_left) {
-        null_output_left.insert(null_output_left.end(), _null_rows_left.begin(), _null_rows_left.end());
-        null_output_right.insert(null_output_right.end(), _null_rows_left.size(), NULL_ROW_ID);
+        for (const auto& pos_list : _null_rows_left) {
+          null_output_left.emplace_back(pos_list.begin(), pos_list.end());
+          null_output_right.emplace_back(pos_list.size(), NULL_ROW_ID);
+        }
       }
       if (include_null_right) {
-        null_output_left.insert(null_output_left.end(), _null_rows_right.size(), NULL_ROW_ID);
-        null_output_right.insert(null_output_right.end(), _null_rows_right.begin(), _null_rows_right.end());
+        for (const auto& pos_list : _null_rows_right) {
+          null_output_left.emplace_back(pos_list.size(), NULL_ROW_ID);
+          null_output_right.emplace_back(pos_list.begin(), pos_list.end());
+        }
       }
 
       DebugAssert(null_output_left.size() == null_output_right.size(),
