@@ -70,8 +70,9 @@ void PdgfProcess::run() {
   _configure_pdgf_arguments();
 
   // Argument info
-  std::cout << "Executing PDGF!\n";
-  std::cout << "/usr/bin/numactl ";
+  const auto *numactl_path = "/opt/numactl-2.0.19/numactl";
+  std::cout << numactl_path << "\n";
+  std::cout << "/opt/numactl ";
   for (const auto& arg: _arguments) {
     std::cout << arg << " ";
   }
@@ -93,7 +94,7 @@ void PdgfProcess::run() {
 
   // Run
   _child = boost::process::child(
-      "/usr/bin/numactl",
+      numactl_path,
       boost::process::args(_arguments),
       boost::process::start_dir(_pdgf_directory_root),
       boost::process::std_out > _child_out,
