@@ -58,7 +58,9 @@ void PDGFColumn<T>::initialize_segment(ChunkID chunk_id, bool should_try_continu
       lock->lock();
     }
     if (_data_segments[chunk_id].size() == 0) {
-      _data_segments[chunk_id].resize(std::min(static_cast<int64_t>(_chunk_size), _num_rows - chunk_id * _chunk_size));
+      _data_segments[chunk_id].resize(std::min(
+        static_cast<int64_t>(_chunk_size),
+        _num_rows - static_cast<int64_t>(chunk_id) * static_cast<int64_t>(_chunk_size)));
     }
     _segment_initialized[chunk_id] = true;
     lock->unlock();
@@ -91,7 +93,9 @@ void PDGFColumn<pmr_string>::virtual_add(int64_t row, char* data) {
 template<typename T>
 void PDGFColumn<T>::values_added(int64_t start_row, size_t num_values) {
   const auto segment_index = start_row / _chunk_size;
-  const auto this_segment_values = std::min(static_cast<long>(num_values), (segment_index + 1) * _chunk_size - start_row);
+  const auto this_segment_values = std::min(
+    static_cast<int64_t>(num_values),
+    (segment_index + 1) * static_cast<int64_t>(_chunk_size) - start_row);
   const auto next_segment_values = num_values - this_segment_values;
 
   auto this_segment_fullness = _segment_fullness[segment_index]->fetch_add(this_segment_values, std::memory_order_relaxed); // TODO(JEH): does relaxed memory order matter here performance-wise?
@@ -121,6 +125,9 @@ void PDGFColumn<T>::build_segment(ChunkID segment_index) {
   Assert(segment_index < _finished_segments.size(), "Accessed segment out of range!");
   Assert(!_finished_segments[segment_index], "Segment already finished!");
   // _encoding_tasks[segment_index] = std::make_shared<JobTask>([this, segment_index] {
+  DebugAssert(
+    _data_segments[segment_index].size() == _segment_fullness[segment_index]->load(),
+    "Actual amount of data contained in segment is different from calculated theoretical amount calculated when initializing it!");
   auto segment = std::make_shared<ValueSegment<T>>(std::move(_data_segments[segment_index]));
   _finished_segments[segment_index] = ChunkEncoder::encode_segment(segment, _data_type, _encoding_spec);
   // });
