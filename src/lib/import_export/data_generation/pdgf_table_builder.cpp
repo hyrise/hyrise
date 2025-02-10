@@ -66,18 +66,17 @@ std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_tabl
   // Assemble table data
   // Note that we have already generated empty chunks when loading the schema, so we just replace the segments now
   // instead of creating new ones.
-  auto next_chunk_index = std::atomic_int64_t{_generated_columns[0]->num_segments() - 1};
+  auto total_segments = _generated_columns[0]->num_segments();
+  auto next_chunk_index = std::atomic_uint32_t{0};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   auto num_tasks = Hyrise::get().scheduler()->num_workers(); // this is a bit of a abstraction breaker, but it should do for now
   for (auto worker_index = uint32_t{0}; worker_index < num_tasks; worker_index++) {
-    tasks.emplace_back(std::make_shared<JobTask>([this, &table, &next_chunk_index] {
-      int64_t numeric_chunk_index;
-      while ((numeric_chunk_index = next_chunk_index.fetch_sub(1)) >= 0) {
-        auto chunk_index = static_cast<ChunkID>(numeric_chunk_index);
+    tasks.emplace_back(std::make_shared<JobTask>([this, &table, &next_chunk_index, &total_segments] {
+      ChunkID chunk_index;
+      while ((chunk_index = static_cast<ChunkID>(next_chunk_index.fetch_add(1))) < total_segments) {
         auto chunk = table->get_chunk(chunk_index);
         if (!chunk->has_mvcc_data() || chunk->mvcc_data()->size() != chunk->size()) {
-          auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
-          chunk->set_mvcc_data(mvcc_data);
+          chunk->set_mvcc_data(std::make_shared<MvccData>(chunk->size(), CommitID{0}));
         }
         for (auto i = size_t{0}; i < _num_generated_columns; ++i) {
           auto& column = _generated_columns[i];
