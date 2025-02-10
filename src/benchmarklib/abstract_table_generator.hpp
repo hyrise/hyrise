@@ -44,6 +44,7 @@ struct TableGenerationMetrics {
   std::chrono::nanoseconds generation_duration{};
   std::chrono::nanoseconds encoding_duration{};
   std::chrono::nanoseconds binary_caching_duration{};
+  std::chrono::nanoseconds marking_as_immutable_duration{};
   std::chrono::nanoseconds sort_duration{};
   std::chrono::nanoseconds store_duration{};
   std::chrono::nanoseconds chunk_index_duration{};

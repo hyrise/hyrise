@@ -41,6 +41,7 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
   json = {{"generation_duration", metrics.generation_duration.count()},
           {"encoding_duration", metrics.encoding_duration.count()},
           {"binary_caching_duration", metrics.binary_caching_duration.count()},
+          {"marking_as_immutable_duration", metrics.marking_as_immutable_duration.count()},
           {"sort_duration", metrics.sort_duration.count()},
           {"store_duration", metrics.store_duration.count()},
           {"chunk_index_duration", metrics.chunk_index_duration.count()},
@@ -71,9 +72,11 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Mark all chunks of the table as immutable.
    */
+  std::cout << "- Marking chunks as immutable\n";
   for (auto& [table_name, table_info] : table_info_by_name) {
     auto& table = table_info_by_name[table_name].table;
     const auto chunk_count = table->chunk_count();
+    std::cout << "- Marking " << table_name << " chunks (" << chunk_count << " chunks) as immutable.\n";
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk->is_mutable()) {
@@ -81,6 +84,8 @@ void AbstractTableGenerator::generate_and_store() {
       }
     }
   }
+  metrics.marking_as_immutable_duration = timer.lap();
+  std::cout << "- Marking chunks as immutable done (" << format_duration(metrics.marking_as_immutable_duration) << ")\n" << std::flush;
 
   /**
    * Sort tables if a sort order was defined by the benchmark
