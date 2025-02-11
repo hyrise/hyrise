@@ -42,33 +42,35 @@ PDGFColumn<T>::PDGFColumn(DataType data_type, SegmentEncodingSpec encoding_spec,
 }
 
 template<typename T>
-void PDGFColumn<T>::initialize_segment(ChunkID chunk_id, bool should_try_continue_initialization) {
-  // If the lock is gone, we know that the segment is already initialized.
-  if (!_segment_initialized[chunk_id]) { // no need for locking anymore once we have initialized the vector.
+void PDGFColumn<T>::initialize_segment_if_necessary(ChunkID chunk_id, bool should_try_continue_initialization) {
+  // This method turns into a NOOP once the segment is initialized.
+  if (!_segment_initialized[chunk_id]) {
     const auto lock = _segment_initialization_locks[chunk_id];
     auto locked = lock->try_lock();
-    if (!locked) {
+    if (!locked) { // Another thread is already initializing the segment right now.
       if (chunk_id + 1 < _data_segments.size()) {
-        // when multiple workers use this point at once and would have to stall, might as well already do useful work
-        // and initialize next segment.
-        initialize_segment(ChunkID{chunk_id + 1}, true);
+        // Instead of just waiting for the other thread to finish initialization of this segment,
+        // might as well already do useful work and initialize next segment.
+        initialize_segment_if_necessary(ChunkID{chunk_id + 1}, true);
       }
       // Now that we have spent our stalling time initializing a segment of ourselves (or not finding one to do so),
       // let's now wait for access to the segment we were intending to access.
       lock->lock();
     }
-    if (_data_segments[chunk_id].size() == 0) {
+    // Is this thread the first one to reach this point?
+    if (_data_segments[chunk_id].empty()) {
       _data_segments[chunk_id].resize(std::min(
         static_cast<int64_t>(_chunk_size),
         _num_rows - static_cast<int64_t>(chunk_id) * static_cast<int64_t>(_chunk_size)));
+      _segment_initialized[chunk_id] = true;
     }
-    _segment_initialized[chunk_id] = true;
     lock->unlock();
   } else if (should_try_continue_initialization && chunk_id + 1 < _data_segments.size()) {
-    // We are in a stall situation; other threads were as well, apparently, and already initialized the current segment.
-    // However, since this does not change the fact that we are stalling, might as well continue searching for a segment
-    // for us to initialize.
-    initialize_segment(ChunkID{chunk_id + 1}, true);
+    // We are in a stall situation; other threads were as well, apparently,
+    // and already initialized the current segment.
+    // However, since this does not change the fact that we are stalling, might as well continue
+    // searching for a segment for us to initialize.
+    initialize_segment_if_necessary(ChunkID{chunk_id + 1}, true);
   }
 }
 
@@ -77,7 +79,7 @@ template <typename T>
 void PDGFColumn<T>::virtual_add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
-  initialize_segment(static_cast<ChunkID>(segment_index), false);
+  initialize_segment_if_necessary(static_cast<ChunkID>(segment_index), false);
   auto val = * reinterpret_cast<T*>(data);
   _data_segments[segment_index][segment_position] = val;
 }
@@ -86,7 +88,7 @@ template<>
 void PDGFColumn<pmr_string>::virtual_add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
-  initialize_segment(static_cast<ChunkID>(segment_index), false);
+  initialize_segment_if_necessary(static_cast<ChunkID>(segment_index), false);
   _data_segments[segment_index][segment_position] = pmr_string(data);
 }
 
