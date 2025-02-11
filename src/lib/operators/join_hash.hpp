@@ -58,8 +58,11 @@ class JoinHash : public AbstractJoinOperator {
     // Due to the used Bloom filters, the number of actually joined tuples can significantly differ from the sizes of
     // the input tables. To enable analyses of the Bloom filter efficiency, we store the number of values that were
     // eventually materialized; i.e., "input_row_count - filtered_values_by_Bloom_filter".
-    size_t build_side_materialized_value_count{0};
-    size_t probe_side_materialized_value_count{0};
+    std::atomic<size_t> build_side_materialized_value_count{0};
+    std::atomic<size_t> probe_side_materialized_value_count{0};
+
+    size_t input_build_side_value_count{0};
+    size_t input_probe_side_value_count{0};
 
     // In build(), the Bloom filter potentially reduces the distinct values in the hash table (i.e., the size of the
     // hash table) and the number of rows (in case of non-semi/anti* joins).

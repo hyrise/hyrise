@@ -48,8 +48,8 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
   EXPECT_TRUE(table_scan->executed());
   auto& performance_data = table_scan->performance_data;
   EXPECT_TRUE(performance_data->has_output);
-  EXPECT_GT(performance_data->walltime.count(), 0ul);
-  EXPECT_EQ(performance_data->output_row_count, 2ul);
+  EXPECT_GT(performance_data->walltime.count(), 0);
+  EXPECT_EQ(performance_data->output_row_count, 2);
 }
 
 // Check for correct counting of skipped chunks/segment (this is different to chunk pruning, which happens within the
@@ -79,10 +79,10 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     table_scan->execute();
 
     auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
-    EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 1ul);
-    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
+    EXPECT_GT(performance_data.walltime.count(), 0);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 1);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0);
   }
 
   {
@@ -90,10 +90,10 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
-    EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 3ul);
-    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
+    EXPECT_GT(performance_data.walltime.count(), 0);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 3);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0);
   }
 
   // Check counters for sorted segment scanning (value scan)
@@ -105,10 +105,10 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
-    EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 1ul);
-    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 2ul);
+    EXPECT_GT(performance_data.walltime.count(), 0);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 1);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 2);
   }
 
   // Between scan
@@ -117,10 +117,10 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
-    EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 2ul);
-    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 1ul);
+    EXPECT_GT(performance_data.walltime.count(), 0);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 2);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 1);
   }
 
   // Test that nullable columns do not contribute all-rows-matching shortcuts
@@ -146,10 +146,10 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
-    EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
+    EXPECT_GT(performance_data.walltime.count(), 0);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0);
   }
 
   // Between scan on nullable columns
@@ -159,10 +159,10 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
-    EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
+    EXPECT_GT(performance_data.walltime.count(), 0);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0);
   }
 }
 
@@ -177,10 +177,10 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStepRuntimes) {
   for (const auto step : magic_enum::enum_values<JoinHash::OperatorSteps>()) {
     if (step == JoinHash::OperatorSteps::Clustering) {
       // Clustering step (i.e., radix partitioning) is not executed for small joins.
-      EXPECT_EQ(perf.get_step_runtime(step).count(), 0ul);
+      EXPECT_EQ(perf.get_step_runtime(step).count(), 0);
       continue;
     }
-    EXPECT_GT(perf.get_step_runtime(step).count(), 0ul);
+    EXPECT_GT(perf.get_step_runtime(step).count(), 0);
   }
 }
 
@@ -209,10 +209,10 @@ TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
   inner_join->execute();
 
   const auto& inner_perf = dynamic_cast<JoinHash::PerformanceData&>(*inner_join->performance_data);
-  EXPECT_EQ(inner_perf.build_side_materialized_value_count, 4ul);  // matching values 2,6,2
-  EXPECT_EQ(inner_perf.probe_side_materialized_value_count, 4ul);  // matching values 2,6,2
-  EXPECT_EQ(inner_perf.hash_tables_distinct_value_count, 2ul);     // values 2,6
-  EXPECT_EQ(inner_perf.hash_tables_position_count, 3ul);           // positions 1,2,3
+  EXPECT_EQ(inner_perf.build_side_materialized_value_count, 4);  // matching values 2,6,2
+  EXPECT_EQ(inner_perf.probe_side_materialized_value_count, 4);  // matching values 2,6,2
+  EXPECT_EQ(inner_perf.hash_tables_distinct_value_count, 2);     // values 2,6
+  EXPECT_EQ(inner_perf.hash_tables_position_count, 3);           // positions 1,2,3
   EXPECT_TRUE(inner_perf.left_input_is_build_side);
 
   // Semi join case: We check that no positions are stored (see explanation for "AllPositions" mode in hash map).
@@ -225,9 +225,9 @@ TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
   semi_join->execute();
 
   const auto& semi_perf = dynamic_cast<JoinHash::PerformanceData&>(*semi_join->performance_data);
-  EXPECT_EQ(semi_perf.build_side_materialized_value_count, 4ul);
+  EXPECT_EQ(semi_perf.build_side_materialized_value_count, 4);
   EXPECT_EQ(semi_perf.probe_side_materialized_value_count, table_a->row_count());
-  EXPECT_EQ(semi_perf.hash_tables_distinct_value_count, 2ul);
+  EXPECT_EQ(semi_perf.hash_tables_distinct_value_count, 2);
   EXPECT_FALSE(semi_perf.hash_tables_position_count);
   EXPECT_FALSE(semi_perf.left_input_is_build_side);
 }

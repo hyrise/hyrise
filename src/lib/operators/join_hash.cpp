@@ -87,7 +87,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
       other join operators might be more efficient. We emit performance warning in this case. In the future, the
       optimizer could identify these cases of potentially inefficient hash joins and switch to other join algorithms.
     */
-    PerformanceWarning("Build side larger than probe side in hash join");
+    PerformanceWarning("Build side larger than probe side in hash join.");
   }
 
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
@@ -212,7 +212,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
             _primary_predicate.predicate_condition, output_column_order, *_radix_bits, join_hash_performance_data,
             adjusted_secondary_predicates);
       } else {
-        Fail("Cannot join String with non-String column");
+        Fail("Cannot join String with non-String column.");
       }
     });
   });
@@ -220,6 +220,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   Assert(_radix_bits, "Radix bits are not set.");
   join_hash_performance_data.radix_bits = *_radix_bits;
   join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
+  join_hash_performance_data.input_build_side_value_count = build_input_table->row_count();
+  join_hash_performance_data.input_probe_side_value_count = probe_input_table->row_count();
 
   return _impl->_on_execute();
 }
@@ -336,12 +338,12 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     const auto materialize_build_side = [&](const auto& input_bloom_filter) {
       if (keep_nulls_build_column) {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
-            input_bloom_filter);
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits,
+            _performance_data.build_side_materialized_value_count, build_side_bloom_filter, input_bloom_filter);
       } else {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
-            input_bloom_filter);
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits,
+            _performance_data.build_side_materialized_value_count, build_side_bloom_filter, input_bloom_filter);
       }
     };
 
@@ -352,12 +354,12 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     const auto materialize_probe_side = [&](const auto& input_bloom_filter) {
       if (keep_nulls_probe_column) {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
-            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-            input_bloom_filter);
+            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits,
+            _performance_data.probe_side_materialized_value_count, probe_side_bloom_filter, input_bloom_filter);
       } else {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
-            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-            input_bloom_filter);
+            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits,
+            _performance_data.probe_side_materialized_value_count, probe_side_bloom_filter, input_bloom_filter);
       }
     };
 
@@ -382,12 +384,12 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // Store the number of materialized values. Depending on the order of materialization (which depends on the input
     // sizes), each side might or might not be filtered by the Bloom filter.
-    for (const auto& partition : materialized_build_column) {
-      _performance_data.build_side_materialized_value_count += partition.elements.size();
-    }
-    for (const auto& partition : materialized_probe_column) {
-      _performance_data.probe_side_materialized_value_count += partition.elements.size();
-    }
+    // for (const auto& partition : materialized_build_column) {
+    //   _performance_data.build_side_materialized_value_count += partition.elements.size();
+    // }
+    // for (const auto& partition : materialized_probe_column) {
+    //   _performance_data.probe_side_materialized_value_count += partition.elements.size();
+    // }
 
     /**
      * 2. Perform radix partitioning for build and probe sides. The Bloom filters are not used in this step. Future work
@@ -546,7 +548,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         break;
 
       default:
-        Fail("JoinMode not supported by JoinHash");
+        Fail("JoinMode not supported by JoinHash.");
     }
     _performance_data.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
 
@@ -589,6 +591,27 @@ void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, Descripti
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   stream << separator << "Radix bits: " << radix_bits << ".";
   stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
+
+  const auto input_build_side_value_count_d = static_cast<double>(input_build_side_value_count);
+  const auto input_probe_side_value_count_d = static_cast<double>(input_probe_side_value_count);
+  const auto bloom_filtering_rate_build_side =
+      input_build_side_value_count == 0
+          ? 0.0
+          : ((input_build_side_value_count_d - static_cast<double>(build_side_materialized_value_count)) /
+             input_build_side_value_count_d) *
+                100.0;
+  const auto bloom_filtering_rate_probe_side =
+      input_probe_side_value_count == 0
+          ? 0.0
+          : ((input_probe_side_value_count_d - static_cast<double>(probe_side_materialized_value_count)) /
+             input_probe_side_value_count_d) *
+                100.0;
+
+  stream << separator << "Bloom filtering: build " << bloom_filtering_rate_build_side << " %, ";
+  stream << "probe " << bloom_filtering_rate_probe_side << " %.";
+
+  stream << separator << "Materialized tuples: build " << build_side_materialized_value_count.load() << ", ";
+  stream << "probe " << probe_side_materialized_value_count.load() << ".";
 }
 
 }  // namespace hyrise

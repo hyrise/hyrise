@@ -271,7 +271,7 @@ static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                    BloomFilter& output_bloom_filter,
+                                    std::atomic<size_t>& value_count, BloomFilter& output_bloom_filter,
                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
@@ -362,12 +362,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
             auto skip = false;
             if (!value.is_null() && !input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !keep_null_values) {
-              // Value in not present in input bloom filter and can be skipped
+              // Value in not present in input bloom filter and can be skipped.
               skip = true;
             }
 
             if (!skip) {
-              // Fill the corresponding slot in the bloom filter
+              // Fill the corresponding slot in the bloom filter.
               used_output_bloom_filter.get()[hashed_value & BLOOM_FILTER_MASK] = true;
 
               /*
@@ -408,8 +408,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
       // elements was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize the
       // vector to the number of values actually written.
-      elements.resize(std::distance(elements.begin(), elements_iter));
+      const auto written_element_count = std::distance(elements.begin(), elements_iter);
+      elements.resize(written_element_count);
       null_values.resize(std::distance(null_values.begin(), null_values_iter));
+
+      value_count += written_element_count;
 
       histograms[chunk_id] = std::move(histogram);
 
