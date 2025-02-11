@@ -1854,7 +1854,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
   if (export_statement.encoding) {
-    AssertInput(false, "Encoding '" + export_statement.encoding +
+    AssertInput(false, "Encoding '" + std::string{export_statement.encoding} +
                            "' was specified"
                            " but a set output encoding is not yet supported."
                            "To achieve the same result, export the table once, "
