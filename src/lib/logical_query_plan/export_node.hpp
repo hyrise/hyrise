@@ -6,6 +6,7 @@
 
 #include "abstract_non_query_node.hpp"
 #include "import_export/file_type.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace hyrise {
 
