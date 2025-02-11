@@ -13,7 +13,7 @@ namespace hyrise {
 
 PdgfProcess PdgfProcess::for_schema_generation(std::string schema_config_file, std::string schema_generation_file, std::string pdgf_directory_root,
                                                const std::shared_ptr<BenchmarkConfig>& benchmark_config, uint32_t shared_memory_columns, float scale_factor) {
-  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), benchmark_config, shared_memory_columns, "-writeTableSchemas", scale_factor);
+  return PdgfProcess(std::move(schema_config_file), std::move(schema_generation_file), std::move(pdgf_directory_root), benchmark_config, shared_memory_columns, "-writeTableSchemata", scale_factor);
 }
 
 PdgfProcess PdgfProcess::for_data_generation(std::string schema_config_file, std::string schema_generation_file, std::string pdgf_directory_root,
