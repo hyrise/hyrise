@@ -2,15 +2,19 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/container_hash/hash.hpp>
 
+#include "magic_enum.hpp"
+
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace hyrise {
 
