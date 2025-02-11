@@ -57,7 +57,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
       }
     }
   } else {
-    segment_with_iterators<T>(*source_abstract_segment, [&](const auto source_begin, const auto /*source_end*/) {
+    segment_with_iterators<T>(*source_abstract_segment, [&](const auto& source_begin, const auto& /*source_end*/) {
       auto source_iter = source_begin + source_begin_offset;
       auto target_iter = target_values.begin() + target_begin_offset;
 
