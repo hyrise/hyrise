@@ -2,7 +2,6 @@
 #include "expression/expression_utils.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/export_node.hpp"
-#include "storage/encoding_type.hpp"
 
 namespace hyrise {
 
@@ -12,7 +11,7 @@ class ExportNodeTest : public BaseTest {
     _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
-    _export_node = ExportNode::make("file_name", FileType::Csv, EncodingType::Unencoded, _mock_node);
+    _export_node = ExportNode::make("file_name", FileType::Csv, _mock_node);
   }
 
   std::shared_ptr<ExportNode> _export_node;
@@ -20,11 +19,11 @@ class ExportNodeTest : public BaseTest {
 };
 
 TEST_F(ExportNodeTest, Description) {
-  EXPECT_EQ(_export_node->description(), "[Export] to 'file_name' (csv) with encoding (unencoded)");
+  EXPECT_EQ(_export_node->description(), "[Export] to 'file_name' (csv)");
 }
 
 TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
-  const auto another_export_node = ExportNode::make("file_name", FileType::Csv, EncodingType::Unencoded, _mock_node);
+  const auto another_export_node = ExportNode::make("file_name", FileType::Csv, _mock_node);
   EXPECT_EQ(*_export_node, *another_export_node);
 
   EXPECT_EQ(_export_node->hash(), another_export_node->hash());

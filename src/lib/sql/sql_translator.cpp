@@ -1853,13 +1853,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  if (export_statement.encoding) {
-    AssertInput(false, "Encoding '" + std::string{export_statement.encoding} +
-                           "' was specified"
-                           " but a set output encoding is not yet supported."
-                           "To achieve the same result, export the table once, "
-                           "then load using the wished encoding and export again.");
-  }
+  AssertInput(!export_statement.encoding, "Encoding '" + std::string{export_statement.encoding} +
+                                              "' was specified. But an encoding for a table export is not supported. "
+                                              "You can choose an encoding when importing tables.");
 
   if (export_statement.select) {
     lqp = _translate_select_statement(*export_statement.select);
