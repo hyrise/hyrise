@@ -69,6 +69,12 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportEncodingAndFileType) {
   if (encoding) {
     const auto encoding_spec = SegmentEncodingSpec{*encoding};
     ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+  } else if (file_type != FileType::Binary) {
+    // If no encoding is specified we want to check if the defaults are as expected.
+    // The binary file is unencoded so we do not have to change the encoding of `expected_table`.
+    // For `.csv` and `.tbl` the default encoding should be `EncodingType::Dictionary`.
+    const auto encoding_spec = SegmentEncodingSpec{EncodingType::Dictionary};
+    ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
   }
 
   const auto reference_filename =
@@ -90,10 +96,16 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportEncodingAndFileType) {
 
 class OperatorsImportFileTypesTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
 
-INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportFileTypesTest,
-                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary));
+std::string file_types_name_generator(const ::testing::TestParamInfo<FileType>& info) {
+  const auto& file_type = info.param;
 
-TEST_P(OperatorsImportFileTypesTest, ImportWithoutFileType) {
+  return std::string{magic_enum::enum_name(file_type)};
+}
+
+INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportFileTypesTest,
+                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), file_types_name_generator);
+
+TEST_P(OperatorsImportFileTypesTest, ImportWithoutFileTypeAndEncoding) {
   auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({1.1f});
@@ -107,7 +119,10 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithoutFileType) {
   }
 
   const auto& file_type = GetParam();
-  const auto encoding = std::optional<EncodingType>{EncodingType::Dictionary};
+  // For the `.csv` and `.tbl` files we expect a default encoding of `Dictionary`.
+  // The `.bin` file we load is stored and therefore expected to be `Unencoded`.
+  const auto encoding = (file_type == FileType::Binary) ? std::optional<EncodingType>{EncodingType::Unencoded}
+                                                        : std::optional<EncodingType>{EncodingType::Dictionary};
 
   // Apply the encoding to the table.
   if (encoding) {
@@ -119,7 +134,8 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithoutFileType) {
       reference_filepath + reference_filenames.at(file_type) + file_extensions.at(file_type);
 
   // Instead of using the provided `file_type` for the Importer we use the default `FileType::Auto` here.
-  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, FileType::Auto, encoding);
+  auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, FileType::Auto,
+                                           std::optional<EncodingType>{});
   importer->execute();
   auto table = Hyrise::get().storage_manager.get_table("a");
 
