@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <sstream>
 
 #include <boost/container_hash/hash.hpp>
 
