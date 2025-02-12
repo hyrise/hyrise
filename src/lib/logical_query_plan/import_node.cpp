@@ -5,7 +5,6 @@
 #include <optional>
 #include <string>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/container_hash/hash.hpp>
 
 #include "magic_enum.hpp"
@@ -18,7 +17,7 @@
 namespace hyrise {
 
 ImportNode::ImportNode(const std::string& init_table_name, const std::string& init_file_name,
-                       const FileType init_file_type, const std::optional<EncodingType> init_table_encoding)
+                       const FileType init_file_type, const std::optional<EncodingType>& init_table_encoding)
     : AbstractNonQueryNode(LQPNodeType::Import),
       table_name(init_table_name),
       file_name(init_file_name),
@@ -27,16 +26,16 @@ ImportNode::ImportNode(const std::string& init_table_name, const std::string& in
 
 std::string ImportNode::description(const DescriptionMode /*mode*/) const {
   auto file_type_str = std::string{magic_enum::enum_name(file_type)};
-  boost::algorithm::to_lower(file_type_str);
+
+  std::ostringstream stream;
+  stream << "[Import] Name: '" << table_name << "' (file type " << file_type_str;
 
   if (table_encoding) {
-    auto file_encoding_str = std::string{magic_enum::enum_name(*table_encoding)};
-    boost::algorithm::to_lower(file_encoding_str);
-    return "[Import] Name: '" + table_name + "' from '" + file_name + "' (" + file_type_str + ") using encoding (" +
-           file_encoding_str + ")";
+    stream << ", encoding " << std::string{magic_enum::enum_name(*table_encoding)};
   }
+  stream << ")";
 
-  return "[Import] Name: '" + table_name + "' from '" + file_name + "' (" + file_type_str + ")";
+  return stream.str();
 }
 
 size_t ImportNode::_on_shallow_hash() const {

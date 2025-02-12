@@ -1836,16 +1836,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   // whole table when translating the SQL statement.
   AssertInput(!import_statement.whereClause, "Predicates on imported files are not supported.");
 
-  if (!import_statement.encoding) {
-    return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                            import_type_to_file_type(import_statement.type));
+  auto encoding = std::optional<EncodingType>{};
+  if (import_statement.encoding) {
+    auto file_encoding =
+        magic_enum::enum_cast<EncodingType>(std::string{import_statement.encoding}, magic_enum::case_insensitive);
+    AssertInput(file_encoding.has_value(), "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
+    encoding = file_encoding.value();
   }
 
-  auto file_encoding =
-      magic_enum::enum_cast<EncodingType>(std::string{import_statement.encoding}, magic_enum::case_insensitive);
-  AssertInput(file_encoding.has_value(), "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                          import_type_to_file_type(import_statement.type), file_encoding.value());
+                          import_type_to_file_type(import_statement.type), encoding);
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.

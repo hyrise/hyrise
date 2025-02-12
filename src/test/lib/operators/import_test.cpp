@@ -88,7 +88,12 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportEncodingAndFileType) {
   });
 }
 
-TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportEncodingWithAutoFileType) {
+class OperatorsImportFileTypesTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
+
+INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportFileTypesTest,
+                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary));
+
+TEST_P(OperatorsImportFileTypesTest, ImportWithoutFileType) {
   auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({1.1f});
@@ -101,7 +106,8 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportEncodingWithAutoFileTy
     expected_table->get_chunk(chunk_id)->set_immutable();
   }
 
-  const auto& [file_type, encoding] = GetParam();
+  const auto& file_type = GetParam();
+  const auto encoding = std::optional<EncodingType>{EncodingType::Dictionary};
 
   // Apply the encoding to the table.
   if (encoding) {
