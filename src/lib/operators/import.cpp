@@ -73,8 +73,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
   // If a table encoding is specified, encode the table accordingly.
   if (_table_encoding) {
     const auto chunk_encoding_spec =
-        ChunkEncodingSpec(table->column_count(), SegmentEncodingSpec(_table_encoding.value()));
-    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table(_tablename), chunk_encoding_spec);
+        ChunkEncodingSpec(table->column_count(), SegmentEncodingSpec(*_table_encoding));
+    ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
   // We must match ImportNode::output_expressions.
   return nullptr;

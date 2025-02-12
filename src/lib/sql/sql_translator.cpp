@@ -1841,7 +1841,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
     auto file_encoding =
         magic_enum::enum_cast<EncodingType>(std::string{import_statement.encoding}, magic_enum::case_insensitive);
     AssertInput(file_encoding.has_value(), "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
-    encoding = file_encoding.value();
+    encoding = *file_encoding;
   }
 
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
