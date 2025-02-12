@@ -862,8 +862,8 @@ void AbstractHistogram<T>::_assert_bin_validity() {
     }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
-      Assert(_domain.contains(bin_minimum(bin_id)), "Invalid string bin minimum");
-      Assert(_domain.contains(bin_maximum(bin_id)), "Invalid string bin maximum");
+      Assert(_domain.contains(bin_minimum(bin_id)), "Invalid string bin minimum.");
+      Assert(_domain.contains(bin_maximum(bin_id)), "Invalid string bin maximum.");
     }
   }
 }

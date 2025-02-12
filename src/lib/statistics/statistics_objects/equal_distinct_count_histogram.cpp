@@ -26,10 +26,10 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{1'000};
-constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10000000};
+constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10'000'000};
 
 // Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
 // defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
@@ -40,14 +40,53 @@ template <typename T>
 using ValueDistributionType = std::conditional_t<std::is_same_v<T, pmr_string>, std::string_view, T>;
  
 template <typename T>
-using ValueDistributionMap = boost::unordered_flat_map<ValueDistributionType<T>, HistogramCountType>;
+using ValueDistributionMap = boost::unordered_flat_map<ValueDistributionType<T>, size_t>;
 
 template <typename T>
-using ValueDistributionVector = std::vector<std::pair<ValueDistributionType<T>, HistogramCountType>>;
+using ValueDistributionVector = std::vector<std::pair<ValueDistributionType<T>, size_t>>;
+
+template <typename T, typename DictionarySegmentType, typename DictionaryType>
+void process_dictionary_segment(const DictionarySegmentType& segment, const DictionaryType& dictionary, ValueDistributionVector<T>& value_distribution_vector, StringHeap& string_heap, const HistogramDomain<T>& domain) {
+  const auto dictionary_size = dictionary.size();
+  value_distribution_vector.resize(dictionary_size);
+
+  for (auto dictionary_offset = size_t{0}; dictionary_offset < dictionary_size; ++dictionary_offset) {
+    if constexpr (std::is_same_v<T, pmr_string>) {
+      auto initial_string = std::string_view{};
+      if constexpr (std::is_same_v<std::decay_t<DictionaryType>, FixedStringVector>) {
+        initial_string = dictionary.template get_string_at<std::string_view>(dictionary_offset);
+      } else {
+        initial_string = dictionary[dictionary_offset];
+      }
+
+      const auto adapted_string = domain.string_to_domain(initial_string);
+      if (initial_string == adapted_string) {
+        value_distribution_vector[dictionary_offset] = {initial_string, 0};
+      } else {
+        const auto heap_string_view = string_heap.add_string(adapted_string);
+        value_distribution_vector[dictionary_offset] = {heap_string_view, 0};
+        std::cerr << "Changed '" << initial_string << "' to '" << heap_string_view << "'\n";
+      }
+    } else {
+      value_distribution_vector[dictionary_offset] = {dictionary[dictionary_offset], 0};
+    }
+  }
+
+  const auto attribute_vector = segment.attribute_vector();
+  const auto null_value_id = segment.null_value_id();
+  resolve_compressed_vector_type(*segment.attribute_vector(), [&](const auto& attribute_vector) {
+    for (const auto& value_id : attribute_vector) {
+      if (value_id < null_value_id) {
+        ++value_distribution_vector[value_id].second;
+      }
+    }
+  });
+}
 
 template <typename T>
-void process_segment_unspecialized(AbstractSegment& segment, ValueDistributionMap<T>& value_distribution_map, StringHeap& string_heap, const HistogramDomain<T>& domain) {
-  // segment_with_iterators<T>(abstract_segment, functor);
+void process_any_unspecialized(AbstractSegment& segment, ValueDistributionVector<T>& value_distribution_vector, StringHeap& string_heap, const HistogramDomain<T>& domain) {
+  auto value_distribution_map = ValueDistributionMap<T>{};  
+  value_distribution_map.reserve(segment.size());
 
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) {
@@ -60,12 +99,14 @@ void process_segment_unspecialized(AbstractSegment& segment, ValueDistributionMa
       if (domain.contains(current_string)) {
         ++value_distribution_map[current_string];
       } else {
-        ++value_distribution_map[domain.string_to_domain(current_string)];
+        ++value_distribution_map[string_heap.add_string(domain.string_to_domain(current_string))];
       }
     } else {
       ++value_distribution_map[iterator_value.value()];
     }
   });
+
+  value_distribution_vector.insert(value_distribution_vector.begin(), value_distribution_map.cbegin(), value_distribution_map.cend());
 }
 
 template <typename T>
@@ -73,47 +114,51 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(std::vector<std::u
                                                                                             auto segment_iterator_begin, auto segment_iterator_end,
                                                                                             const HistogramDomain<T>& domain) {
   DebugAssert(segment_iterator_begin != segment_iterator_end, "Wrong call");
-  // std::cout << "called with " << std::distance(segment_iterator_begin, segment_iterator_end) << std::endl;
   if (std::distance(segment_iterator_begin, segment_iterator_end) == 1) {
     const auto [chunk_id, segment] = *segment_iterator_begin;
 
     string_heaps[chunk_id] = std::make_unique<StringHeap>();
     auto& string_heap = *string_heaps[chunk_id];
 
-    auto value_distribution_map = ValueDistributionMap<T>{};
+    
+    auto value_distribution_vector = ValueDistributionVector<T>{};
 
+    // We specialize for dictionaries, as they are used for string columns (which are expensive in histogram creation).
+    // We can string_view strings. We could do the same for Unencoded, but this is currently not implemented as they are
+    // barely used for strings.
     resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
       using SegmentType = std::decay_t<decltype(typed_segment)>;
       if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
         Fail("Unexpected reference segment.");
-      } else if (std::is_same_v<SegmentType, ReferenceSegment>) {
-
+      } else if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) {
+        process_dictionary_segment<T>(typed_segment, *typed_segment.dictionary(), value_distribution_vector, string_heap, domain);
+      } else if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) {
+        process_dictionary_segment<T>(typed_segment, *typed_segment.fixed_string_dictionary(), value_distribution_vector, string_heap, domain);
+      } else {
+        process_any_unspecialized<T>(*segment, value_distribution_vector, string_heap, domain);  
       }
-
-      process_segment_unspecialized<T>(*segment, value_distribution_map, string_heap, domain);
     });
 
-    auto result = ValueDistributionVector<T>(value_distribution_map.cbegin(), value_distribution_map.cend());
-    std::ranges::sort(result, [](const auto& lhs, const auto& rhs) {
+    std::ranges::sort(value_distribution_vector, [](const auto& lhs, const auto& rhs) {
       return lhs.first < rhs.first;
     });
 
-    return result;
+    return value_distribution_vector;
   }
 
   auto left = ValueDistributionVector<T>{};
   auto right = ValueDistributionVector<T>{};
 
   auto middle = segment_iterator_begin + (std::distance(segment_iterator_begin, segment_iterator_end) / 2);
-  // auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  // tasks.emplace_back(std::make_shared<JobTask>([&]() {
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
     left = add_segment_to_value_distribution2(string_heaps, segment_iterator_begin, middle, domain);
-  // }));
-  // tasks.emplace_back(std::make_shared<JobTask>([&]() {
+  }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
     right = add_segment_to_value_distribution2(string_heaps, middle, segment_iterator_end, domain);
-  // }));
+  }));
 
-  // Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   // std::cout << "left size " << left.size() << " and right size " << right.size() << std::endl;
 
@@ -170,7 +215,18 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(std::vector<std::u
   // ss << "\n\n" << std::endl;
   // std::cout << ss.str();
 
-  // DebugAssert(std::is_sorted(result.begin(), result.end()), "Not sorted.");
+  // if (!std::is_sorted(result.begin(), result.end())) {
+  //   auto ss = std::stringstream{};
+  //   ss << "\n\n\nMerging:\n";
+  //   for (auto el : left) { ss << " | " << el.first << ":" << el.second; }
+  //   ss << "\nand\n";
+  //   for (auto el : right) { ss << " | " << el.first << ":" << el.second; }
+  //   ss << "\ninto\n";
+  //   for (auto el : result) { ss << " | " << el.first << ":" << el.second; }
+  //   ss << "\n\n" << std::endl;
+  //   std::cout << ss.str();
+  // }
+  DebugAssert(std::is_sorted(result.begin(), result.end()), "Not sorted.");
   return result;
 }
 
@@ -204,13 +260,13 @@ std::pair<std::vector<std::unique_ptr<StringHeap>>,
           ValueDistributionVector<T>> value_distribution_from_column(const Table& table,
                                                                      const ColumnID column_id,
                                                                      const HistogramDomain<T>& domain) {
-  auto value_distribution_map = ValueDistributionMap<T>{};
+  // auto value_distribution_map = ValueDistributionMap<T>{};
   const auto chunk_count = table.chunk_count();
   auto segments_to_process = std::vector<std::pair<ChunkID, std::shared_ptr<AbstractSegment>>>{};
   segments_to_process.reserve(MIN_CHUNK_COUNT_TO_INCLUDE);
 
   // In average, we sample every 2.5th segment. Previous analyses of Hyrise histograms showed that the accuracy of
-  // sample histograms quickly deteriogates when sampling below 33 %. We thus choose a safer rate of ~50%.
+  // sample histograms quickly deteriogates with sampling rates below 33 %. We thus choose a safer rate of ~40%.
   auto random_engine = std::ranlux24_base{17};  // Fast random engine. Sufficient for our case.
   auto skip_lengths = std::uniform_int_distribution<>{0, 4};
 
@@ -366,7 +422,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
         std::accumulate(value_distribution.cbegin() + min_value_idx, value_distribution.cbegin() + max_value_idx + 1,
                         HistogramCountType{0},
                         [](HistogramCountType bin_height, const auto& value_and_count) {
-                          return bin_height + value_and_count.second;
+                          return bin_height + static_cast<HistogramCountType>(value_and_count.second);
                         });
 
     min_value_idx = max_value_idx + 1;

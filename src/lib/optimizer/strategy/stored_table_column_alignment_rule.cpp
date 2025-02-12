@@ -20,7 +20,7 @@
 #include "utils/assert.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Modified hash code generation for StoredTableNodes where column pruning information is omitted. Struct is used to
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.

@@ -27,7 +27,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 void __attribute__((noinline))
 process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {

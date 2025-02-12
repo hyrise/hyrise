@@ -53,7 +53,7 @@ std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOff
   if (value_id == _dictionary->size()) {
     return std::nullopt;
   }
-  return _dictionary->get_string_at(value_id);
+  return _dictionary->get_string_at<T>(value_id);
 }
 
 template <typename T>
@@ -124,7 +124,7 @@ ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value
 template <typename T>
 AllTypeVariant FixedStringDictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
   DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
-  return _dictionary->get_string_at(value_id);
+  return _dictionary->get_string_at<T>(value_id);
 }
 
 template <typename T>

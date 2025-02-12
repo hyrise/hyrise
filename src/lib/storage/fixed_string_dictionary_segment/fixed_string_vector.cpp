@@ -63,26 +63,11 @@ ReverseIterator FixedStringVector::rend() noexcept {
 }
 
 FixedString FixedStringVector::operator[](const size_t pos) {
-  PerformanceWarning("operator[] used");
   return {&_chars[pos * _string_length], _string_length};
 }
 
 FixedString FixedStringVector::at(const size_t pos) {
   return {&_chars.at(pos * _string_length), _string_length};
-}
-
-pmr_string FixedStringVector::get_string_at(const size_t pos) const {
-  const auto* const string_start = &_chars[pos * _string_length];
-  // String end checks if the string length is zero to avoid reading the data directly "in front" of `chars`.
-  // If the string length is > 0, it is the position of the last char.
-  const auto string_end = _string_length == 0 ? 0 : _string_length - 1;
-
-  if (*(string_start + string_end) == '\0') {
-    // The string is zero-padded - the pmr_string constructor takes care of finding the correct length
-    return {string_start};
-  }
-
-  return {string_start, _string_length};
 }
 
 const char* FixedStringVector::data() const {

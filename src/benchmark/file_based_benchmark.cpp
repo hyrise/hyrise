@@ -11,7 +11,7 @@
 #include "hyrise.hpp"
 #include "utils/performance_warning.hpp"
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");

@@ -5,11 +5,11 @@ namespace hyrise {
 
 class StringHistogramDomainTest : public BaseTest {
  public:
-  StringHistogramDomain domain_a{'a', 'z', 4u};
+  StringHistogramDomain domain_a{'a', 'z', 4};
 };
 
 TEST_F(StringHistogramDomainTest, StringToDomain) {
-  StringHistogramDomain domain_a{'a', 'd', 2u};
+  StringHistogramDomain domain_a{'a', 'd', 2};
 
   EXPECT_EQ(domain_a.string_to_domain(""), "");
   EXPECT_EQ(domain_a.string_to_domain("a"), "a");
@@ -48,56 +48,56 @@ TEST_F(StringHistogramDomainTest, NextValueThrowsOnInvalidInput) {
 }
 
 TEST_F(StringHistogramDomainTest, StringToNumber) {
-  EXPECT_EQ(domain_a.string_to_number(""), 0ul);
+  EXPECT_EQ(domain_a.string_to_number(""), 0);
 
   // 0 * 26^3 + 1
-  EXPECT_EQ(domain_a.string_to_number("a"), 1ul);
+  EXPECT_EQ(domain_a.string_to_number("a"), 1);
 
   // 0 * (26^3 + 26^2 + 26^1 + 26^0) + 1 +
   // 0 * (26^2 + 26^1 + 26^0) + 1
-  EXPECT_EQ(domain_a.string_to_number("aa"), 2ul);
+  EXPECT_EQ(domain_a.string_to_number("aa"), 2);
 
   // 0 * (26^3 + 26^2 + 26^1 + 26^0) + 1 +
   // 0 * (26^2 + 26^1 + 26^0) + 1 +
   // 0 * (26^1 + 26^0) + 1 +
   // 0 * 26^0 + 1
-  EXPECT_EQ(domain_a.string_to_number("aaaa"), 4ul);
+  EXPECT_EQ(domain_a.string_to_number("aaaa"), 4);
 
   // 0 * (26^3 + 26^2 + 26^1 + 26^0) + 1 +
   // 0 * (26^2 + 26^1 + 26^0) + 1 +
   // 0 * (26^1 + 26^0) + 1 +
   // 1 * 26^0 + 1
-  EXPECT_EQ(domain_a.string_to_number("aaab"), 5ul);
+  EXPECT_EQ(domain_a.string_to_number("aaab"), 5);
 
   // 0 * (26^3 + 26^2 + 26^1 + 26^0) + 1 +
   // 25 * (26^2 + 26^1 + 26^0) + 1 +
   // 25 * (26^1 + 26^0) + 1 +
   // 25 * 26^0 + 1
-  EXPECT_EQ(domain_a.string_to_number("azzz"), 18'279ul);
+  EXPECT_EQ(domain_a.string_to_number("azzz"), 18'279);
 
   // 1 * (26^3 + 26^2 + 26^1 + 26^0) + 1
-  EXPECT_EQ(domain_a.string_to_number("b"), 18'280ul);
+  EXPECT_EQ(domain_a.string_to_number("b"), 18'280);
 
   // 1 * (26^3 + 26^2 + 26^1 + 26^0) + 1 +
   // 0 * (26^2 + 26^1 + 26^0) + 1
-  EXPECT_EQ(domain_a.string_to_number("ba"), 18'281ul);
+  EXPECT_EQ(domain_a.string_to_number("ba"), 18'281);
 
   // 1 * (26^3 + 26^2 + 26^1 + 26^0) + 1 +
   // 7 * (26^2 + 26^1 + 26^0) + 1 +
   // 9 * (26^1 + 26^0) + 1 +
   // 0 * 26^0 + 1
-  EXPECT_EQ(domain_a.string_to_number("bhja"), 23'447ul);
+  EXPECT_EQ(domain_a.string_to_number("bhja"), 23'447);
 
   // 2 * (26^3 + 26^2 + 26^1 + 26^0) + 1 +
   // 3 * (26^2 + 26^1 + 26^0) + 1 +
   // 4 * (26^1 + 26^0) + 1
-  EXPECT_EQ(domain_a.string_to_number("cde"), 38'778ul);
+  EXPECT_EQ(domain_a.string_to_number("cde"), 38'778);
 
   // 25 * (26^3 + 26^2 + 26^1 + 26^0) + 1 +
   // 25 * (26^2 + 26^1 + 26^0) + 1 +
   // 25 * (26^1 + 26^0) + 1 +
   // 25 * 26^0 + 1
-  EXPECT_EQ(domain_a.string_to_number("zzzz"), 475'254ul);
+  EXPECT_EQ(domain_a.string_to_number("zzzz"), 475'254);
 
   EXPECT_EQ(domain_a.string_to_number("A"), 1);
   EXPECT_EQ(domain_a.string_to_number("B"), 1);
@@ -107,7 +107,7 @@ TEST_F(StringHistogramDomainTest, StringToNumber) {
 }
 
 TEST_F(StringHistogramDomainTest, Contains) {
-  StringHistogramDomain domain{'a', 'd', 3u};
+  StringHistogramDomain domain{'a', 'd', 3};
 
   EXPECT_TRUE(domain.contains(""));
   EXPECT_TRUE(domain.contains("a"));

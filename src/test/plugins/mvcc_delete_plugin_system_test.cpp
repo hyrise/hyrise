@@ -20,7 +20,7 @@
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 class MvccDeletePluginSystemTest : public BaseTest {
  public:

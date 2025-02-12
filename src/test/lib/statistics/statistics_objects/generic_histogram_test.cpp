@@ -18,7 +18,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 struct Predicate {
   PredicateCondition predicate_condition;
