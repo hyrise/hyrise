@@ -126,7 +126,7 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(std::vector<std::u
     // We specialize for dictionaries, as they are used for string columns (which are expensive in histogram creation).
     // We can string_view strings. We could do the same for Unencoded, but this is currently not implemented as they are
     // barely used for strings.
-    resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
+    resolve_segment_type<T>(*segment, [&, segment=segment](const auto& typed_segment) {
       using SegmentType = std::decay_t<decltype(typed_segment)>;
       if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
         Fail("Unexpected reference segment.");
