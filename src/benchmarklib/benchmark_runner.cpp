@@ -64,6 +64,18 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
+  if (config.enable_hyrise_liveliness_timer) {
+    _time_logging_task = std::make_shared<std::thread>([this] {
+      auto total_runtime = int32_t{0};
+      while (!_time_logging_finished) {
+        auto message = "[HYRISE LIFELINESS TIMER] Running since " + std::to_string(total_runtime) + "s\n";
+        std::cout << message << std::flush;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        total_runtime += 1;
+      }
+    });
+  }
+
   // Enable caching only if no metrics are requested. When metrics are desired, we want to explicitly measure
   // translation and optimization runtimes for each SQL statement. These stages are skipped for cached plans, making it
   // hard to interpret the measurements.
@@ -266,6 +278,11 @@ void BenchmarkRunner::run() {
   }
 
   std::cout << "- Hyrise Benchmark done at " << std::chrono::steady_clock::now().time_since_epoch().count() << "\n";
+
+  if (_time_logging_task) {
+    _time_logging_finished = true;
+    _time_logging_task->join();
+  }
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -599,6 +616,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   cli_options.add_options()
     ("help", "print a summary of CLI options")
     ("full_help", "print more detailed information about configuration options")
+    ("enable_hyrise_liveliness_timer", "Whether to print Hyrise uptime duration every second", cxxopts::value<bool>()->default_value("false"))
     ("separate_benchmark_cycle_per_query", "Whether to execute a full benchmark cycle for each query, instead of only one cycle for all queries", cxxopts::value<bool>()->default_value("false"))
     ("r,runs", "Maximum number of runs per item, negative values mean infinity", cxxopts::value<int64_t>()->default_value("-1"))  // NOLINT(whitespace/line_length)
     ("c,chunk_size", "Chunk size", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE)))

@@ -31,6 +31,11 @@ namespace hyrise {
 std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& parse_result) {
   const auto default_config = BenchmarkConfig{};
 
+  auto enable_hyrise_liveliness_timer = parse_result["enable_hyrise_liveliness_timer"].as<bool>();
+  if (enable_hyrise_liveliness_timer) {
+   std::cout << "- Enabling Hyrise liveliness timer\n";
+  }
+
   // Display info about output destination.
   auto output_file_path = std::optional<std::string>{};
   const auto output_file_string = parse_result["output"].as<std::string>();
@@ -218,7 +223,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   }
 
   return std::make_shared<BenchmarkConfig>(
-      benchmark_mode, chunk_size, *encoding_config, dont_generate_table_statistics, chunk_indexes, table_indexes, only_load_data, separate_benchmark_cycle_per_query, max_runs, timeout_duration,
+      enable_hyrise_liveliness_timer, benchmark_mode, chunk_size, *encoding_config, dont_generate_table_statistics, chunk_indexes, table_indexes, only_load_data, separate_benchmark_cycle_per_query, max_runs, timeout_duration,
       warmup_duration, output_file_path, enable_scheduler, cores, data_preparation_cores, clients, enable_visualization,
       verify, cache_binary_tables, pdgf_data_gen, pdgf_project_seed, pdgf_num_cores, pdgf_work_unit_size, pdgf_disable_micro_benchmarks, columns_to_generate, system_metrics, pipeline_metrics, plugins);
 }

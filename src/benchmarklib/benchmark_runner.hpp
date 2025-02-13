@@ -122,6 +122,9 @@ class BenchmarkRunner : public Noncopyable {
   int _snapshot_id{0};
 
   std::vector<std::string> _loaded_plugins{};
+
+  bool _time_logging_finished{false};
+  std::shared_ptr<std::thread> _time_logging_task;
 };
 
 }  // namespace hyrise

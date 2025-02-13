@@ -32,7 +32,8 @@ class BenchmarkConfig {
 
   BenchmarkConfig(const ChunkOffset init_chunk_size, const bool init_cache_binary_tables);
 
-  BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
+  BenchmarkConfig(const bool init_enable_hyrise_liveliness_timer,
+                  const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
                   const EncodingConfig& init_encoding_config,
                   const bool init_dont_generate_table_statistics, const bool init_chunk_indexes,
                   const bool init_table_indexes, const bool init_only_load_data,
@@ -48,6 +49,7 @@ class BenchmarkConfig {
                   const bool init_system_metrics, const bool init_pipeline_metrics,
                   const std::vector<std::string>& init_plugins);
 
+  bool enable_hyrise_liveliness_timer{false};
   BenchmarkMode benchmark_mode{BenchmarkMode::Ordered};
   ChunkOffset chunk_size{Chunk::DEFAULT_SIZE};
   EncodingConfig encoding_config{};

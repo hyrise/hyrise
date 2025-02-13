@@ -15,7 +15,8 @@ BenchmarkConfig::BenchmarkConfig(const ChunkOffset init_chunk_size) : chunk_size
 BenchmarkConfig::BenchmarkConfig(const ChunkOffset init_chunk_size, const bool init_cache_binary_tables)
     : chunk_size{init_chunk_size}, cache_binary_tables{init_cache_binary_tables} {}
 
-BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
+BenchmarkConfig::BenchmarkConfig(const bool init_enable_hyrise_liveliness_timer,
+                                 const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
                                  const EncodingConfig& init_encoding_config,
                                  const bool init_dont_generate_table_statistics, const bool init_chunk_indexes,
                                  const bool init_table_indexes, const bool init_only_load_data,
@@ -32,7 +33,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
                                  const bool init_pdgf_disable_micro_benchmarks, const ColumnsToGenerate init_columns_to_generate,
                                  const bool init_system_metrics,
                                  const bool init_pipeline_metrics, const std::vector<std::string>& init_plugins)
-    : benchmark_mode{init_benchmark_mode},
+    : enable_hyrise_liveliness_timer{init_enable_hyrise_liveliness_timer},
+      benchmark_mode{init_benchmark_mode},
       chunk_size{init_chunk_size},
       encoding_config{init_encoding_config},
       dont_generate_table_statistics{init_dont_generate_table_statistics},
