@@ -528,7 +528,6 @@ bool Table::constraint_guaranteed_to_be_valid(const TableKeyConstraint& table_ke
   return true;
 }
 
-
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
   Assert(foreign_key_constraint.foreign_key_table().get() == this, "ForeignKeyConstraint is added to the wrong table.");
 

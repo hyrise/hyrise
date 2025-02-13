@@ -15,6 +15,8 @@
 #include <boost/container_hash/hash.hpp>
 
 // NOLINTNEXTLINE(misc-include-cleaner): We access methods of AbstractBenchmarkItemRunner in `pre_benchmark_hook()`.
+#include "magic_enum.hpp"
+
 #include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -27,7 +29,6 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "magic_enum.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
 #include "resolve_type.hpp"

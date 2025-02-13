@@ -14,11 +14,14 @@
 
 namespace hyrise {
 
-TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type, const CommitID last_validated_on)
-    : AbstractTableConstraint(TableConstraintType::Key), _columns{std::move(columns)}, _key_type{key_type}, _last_validated_on(last_validated_on) {
+TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
+                                       const CommitID last_validated_on)
+    : AbstractTableConstraint(TableConstraintType::Key),
+      _columns{std::move(columns)},
+      _key_type{key_type},
+      _last_validated_on(last_validated_on) {
   Assert(!_columns.empty(), "Did not expect useless constraint.");
 }
-
 
 const std::set<ColumnID>& TableKeyConstraint::columns() const {
   return _columns;
