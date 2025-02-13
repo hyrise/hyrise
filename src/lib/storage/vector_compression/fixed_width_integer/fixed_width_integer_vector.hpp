@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>

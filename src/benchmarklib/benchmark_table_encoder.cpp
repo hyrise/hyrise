@@ -1,18 +1,23 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
-#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
-#include "storage/abstract_encoded_segment.hpp"
-#include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -102,7 +107,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
       output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
       output << column_data_type << " cannot be encoded as ";
       output << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      output << "left Unencoded." << std::endl;
+      output << "left Unencoded.\n";
       std::cout << output.str();
       chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
@@ -131,6 +136,11 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
+  // Note: Chunk pruning statistics might have already been generated during chunk encoding above, in which case this
+  // call is (almost) a NoOp. However, encoding might not happen when loading binary table data, because that data is
+  // written after encoding, thus skipping statistic generation. Re-encoding will only be necessary in case different
+  // encoding schemes are requested by the user and might only affect certain chunks then. If no re-encoding happened,
+  // we still need to generate chunk pruning statistics, because those are not cached as part of the binary table data.
   generate_chunk_pruning_statistics(table);
 
   return encoding_performed;

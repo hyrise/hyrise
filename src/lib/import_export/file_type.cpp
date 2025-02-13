@@ -1,6 +1,11 @@
 #include "file_type.hpp"
 
+#include <filesystem>
+#include <string>
+
 #include <boost/algorithm/string/case_conv.hpp>
+
+#include "sql/ImportStatement.h"
 
 #include "utils/assert.hpp"
 

@@ -1,12 +1,13 @@
 #include "fixed_string_vector.hpp"
 
-#include <limits>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <utility>
+#include <cstddef>
+#include <iterator>
 #include <vector>
 
+#include "fixed_string.hpp"
+#include "fixed_string_vector_iterator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace hyrise {
@@ -51,7 +52,7 @@ FixedStringIterator<true> FixedStringVector::cend() const noexcept {
   return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
 }
 
-using ReverseIterator = boost::reverse_iterator<FixedStringIterator<false>>;
+using ReverseIterator = std::reverse_iterator<FixedStringIterator<false>>;
 
 ReverseIterator FixedStringVector::rbegin() noexcept {
   return ReverseIterator(end());

@@ -1,5 +1,7 @@
 #include "shutdown_task.hpp"
 
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 void ShutdownTask::_on_execute() {

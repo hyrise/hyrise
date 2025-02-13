@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "storage/value_segment.hpp"
 
 namespace hyrise {

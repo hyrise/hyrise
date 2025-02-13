@@ -175,6 +175,7 @@ SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed AS t2 ON t1.id >= t2.b WHERE t1.id > 90;
+SELECT * FROM id_int_int_int_100 AS t1 INNER JOIN (SELECT a AS id FROM id_int_int_int_100) t2 USING (id) 
 
 -- Join multiple predicates
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
@@ -232,6 +233,14 @@ SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_i
 SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
 -- exists to semi join reformulation: query not rewriteable
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20
+
+-- Join on constant
+SELECT * FROM int_date NATURAL JOIN (SELECT 3 AS a) foo;
+SELECT * FROM int_date INNER JOIN (SELECT 3 AS c) foo ON (a = c);
+SELECT * FROM int_date INNER JOIN (SELECT 3 AS c) foo ON (a < c);
+SELECT a FROM int_date NATURAL JOIN (SELECT 3 AS a) foo;
+SELECT a FROM int_date INNER JOIN (SELECT 3 AS c) foo ON (a = c);
+SELECT a FROM int_date INNER JOIN (SELECT 3 AS c) foo ON (a < c);
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
@@ -419,6 +428,17 @@ SELECT CASE WHEN id + 3.4 < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao
 SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_column FROM mixed;
 SELECT a, CASE WHEN a IS NULL THEN 1 ELSE 2 END FROM mixed_null GROUP BY a
 
+-- COALESCE
+SELECT COALESCE(d, '') d_not_null FROM mixed_null;
+SELECT COALESCE(b, -1) AS b_not_null, COALESCE(c, 0.0) c_not_null FROM mixed_null;
+SELECT COALESCE(b, 1-1) b_not_null, COALESCE(c, 3.0/-4.0) c_not_null FROM mixed_null;
+SELECT COALESCE(c, CAST(COALESCE(b, 0) AS FLOAT)) c_not_null FROM mixed_null;
+SELECT COALESCE(b, CAST(c AS INT), 0) b_not_null FROM mixed_null;
+SELECT COALESCE(b, 0) + COALESCE(c, 0.0) sum_not_null FROM mixed_null;
+-- COALESCE returns the first argument when it is not NULL, else the provided alternative.
+SELECT COALESCE(c, 0.0) = (CASE WHEN c is NULL THEN 0.0 ELSE c END) coalesce_eq FROM mixed_null;
+SELECT COALESCE(NULL, b, NULL) b FROM mixed_null; -- This is just b.
+
 -- IN
 SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)
 SELECT * FROM id_int_int_int_100 WHERE a IN (b - 48, b + 1)
@@ -443,6 +463,14 @@ SELECT SUBSTR('migz', -18, 19) AS s;
 SELECT SUBSTR('HELLO', 5000, 20) AS s;
 SELECT SUBSTR(d, id - 10, b) AS s FROM mixed ORDER BY id;
 SELECT SUBSTR(d, b / 10, b / 20) AS s FROM mixed_null;
+
+-- ABS
+SELECT ABS(id - b) FROM mixed;
+SELECT ABS(b - c) FROM mixed_null;
+SELECT ABS(CASE b WHEN id % 2 = 0 THEN b ELSE b * -1 END) = b AS abs_equal from mixed;
+SELECT ABS(CASE c WHEN id % 2 = 0 THEN c ELSE c * -1.0 END) = c AS abs_equal from mixed;
+SELECT ABS(CASE b WHEN a = 'a' THEN b ELSE b * -1 END) = b AS abs_b from mixed_null;
+SELECT ABS(CASE c WHEN a = 'a' THEN c ELSE c * -1.0 END) = c AS abs_c from mixed_null;
 
 -- LIKE
 SELECT * FROM mixed WHERE d LIKE '%a%b%';

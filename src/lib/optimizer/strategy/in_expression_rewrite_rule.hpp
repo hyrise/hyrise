@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "abstract_rule.hpp"
 
 namespace hyrise {
@@ -40,10 +43,6 @@ class InExpressionRewriteRule : public AbstractRule {
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
-
-  std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator() const;
-
-  mutable std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator_internal;
 };
 
 }  // namespace hyrise

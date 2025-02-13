@@ -1,11 +1,15 @@
 #include "transaction_context.hpp"
 
+#include <functional>
 #include <future>
 #include <memory>
+#include <mutex>
+#include <ostream>
 
-#include "commit_context.hpp"
+#include "commit_context.hpp"  // IWYU pragma: keep
 #include "hyrise.hpp"
 #include "operators/abstract_read_write_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -45,7 +49,7 @@ TransactionContext::~TransactionContext() {
                 // Note: When thrown during stack unwinding, this exception might hide previous exceptions. If you are
                 // seeing this, either use a debugger and break on exceptions or disable this exception as a trial.
               }()),
-              "Has registered operators but has neither been committed nor rolled back (see comment in code!).");
+              "Has registered operators but has neither been committed nor rolled back (see comment in code).");
 
   /**
    * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
@@ -86,7 +90,7 @@ void TransactionContext::rollback(RollbackReason rollback_reason) {
     _mark_as_conflicted();
   } else {
     // We directly go to RolledBackByUser, skipping Conflicted
-    Assert(_num_active_operators == 0, "For a user-initiated rollback, no operators should be active");
+    Assert(_num_active_operators == 0, "For a user-initiated rollback, no operators should be active.");
   }
 
   for (const auto& op : _read_write_operators) {
@@ -117,7 +121,9 @@ void TransactionContext::commit() {
 
   auto committed = std::promise<void>{};
   const auto committed_future = committed.get_future();
-  const auto callback = [&committed](TransactionID /*unused*/) { committed.set_value(); };
+  const auto callback = [&committed](TransactionID /*unused*/) {
+    committed.set_value();
+  };
 
   commit_async(callback);
 
@@ -144,7 +150,7 @@ void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
   if (rollback_reason == RollbackReason::User) {
     _transition(TransactionPhase::Active, TransactionPhase::RolledBackByUser);
   } else {
-    DebugAssert(rollback_reason == RollbackReason::Conflict, "Invalid RollbackReason");
+    DebugAssert(rollback_reason == RollbackReason::Conflict, "Invalid RollbackReason.");
     _transition(TransactionPhase::Conflicted, TransactionPhase::RolledBackAfterConflict);
   }
 }
@@ -198,7 +204,7 @@ void TransactionContext::on_operator_started() {
 }
 
 void TransactionContext::on_operator_finished() {
-  DebugAssert((_num_active_operators > 0), "Bug detected");
+  DebugAssert(_num_active_operators > 0, "Unexpected number of active operators.");
   const auto num_before = _num_active_operators--;
 
   if (num_before == 1) {
@@ -215,14 +221,16 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
   if (_num_active_operators == 0) {
     return;
   }
-  _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
+  _active_operators_cv.wait(lock, [&] {
+    return _num_active_operators != 0;
+  });
 }
 
 void TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase) {
   DebugAssert(_is_auto_commit == AutoCommit::No || to_phase != TransactionPhase::RolledBackByUser,
-              "Auto-commit transactions cannot be manually rolled back");
+              "Auto-commit transactions cannot be manually rolled back.");
   const auto success = _phase.compare_exchange_strong(from_phase, to_phase);
-  Assert(success, "Illegal phase transition detected.");
+  Assert(success, "Illegal phase transition.");
 }
 
 std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase) {

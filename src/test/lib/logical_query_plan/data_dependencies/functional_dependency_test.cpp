@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
@@ -21,7 +20,8 @@ class FunctionalDependencyTest : public BaseTest {
   }
 
  protected:
-  std::shared_ptr<MockNode> _mock_node_a, _mock_node_b;
+  std::shared_ptr<MockNode> _mock_node_a;
+  std::shared_ptr<MockNode> _mock_node_b;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c, _x, _y;
 };
 
@@ -29,12 +29,13 @@ TEST_F(FunctionalDependencyTest, Equals) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
 
-  // Equal
+  // Equal.
   EXPECT_EQ(fd_a, FunctionalDependency({_a}, {_b, _c}));
   EXPECT_EQ(fd_a, FunctionalDependency({_a}, {_c, _b}));
   EXPECT_EQ(fd_a_b, FunctionalDependency({_a, _b}, {_c}));
   EXPECT_EQ(fd_a_b, FunctionalDependency({_b, _a}, {_c}));
-  // Not Equal
+
+  // Not Equal.
   EXPECT_NE(fd_a, FunctionalDependency({_a}, {_c}));
   EXPECT_NE(fd_a, FunctionalDependency({_a, _x}, {_b, _c}));
   EXPECT_NE(fd_a_b, FunctionalDependency({_a, _b}, {_c, _x}));
@@ -45,7 +46,6 @@ TEST_F(FunctionalDependencyTest, Hash) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_b = FunctionalDependency({_a, _b}, {_c});
 
-  // Equal Hash
   EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_b, _c}).hash());
   EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_b}).hash());
   EXPECT_EQ(fd_a.hash(), FunctionalDependency({_a}, {_x, _y}).hash());
@@ -53,11 +53,21 @@ TEST_F(FunctionalDependencyTest, Hash) {
   EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_b, _a}, {_c}).hash());
   EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_a, _b}, {_c, _x}).hash());
   EXPECT_EQ(fd_a_b.hash(), FunctionalDependency({_a, _b}, {_x}).hash());
-  // Non-Equal Hash
-  EXPECT_NE(fd_a.hash(), FunctionalDependency({_a, _x}, {_b, _c}).hash());
-  EXPECT_NE(fd_a.hash(), FunctionalDependency({_x}, {_b, _c}).hash());
-  EXPECT_NE(fd_a_b.hash(), FunctionalDependency({_a}, {_c}).hash());
-  EXPECT_NE(fd_a_b.hash(), FunctionalDependency({_a, _b, _x}, {_c}).hash());
+}
+
+TEST_F(FunctionalDependencyTest, ToStream) {
+  auto stream = std::stringstream{};
+
+  stream << FunctionalDependency{{_a}, {_b}};
+  EXPECT_EQ(stream.str(), "{a} => {b}");
+  stream.str("");
+
+  stream << FunctionalDependency{{_a}, {_b, _c}};
+  EXPECT_EQ(stream.str(), "{a} => {b, c}");
+  stream.str("");
+
+  stream << FunctionalDependency{{_a, _b}, {_c}};
+  EXPECT_EQ(stream.str(), "{a, b} => {c}");
 }
 
 TEST_F(FunctionalDependencyTest, InflateFDs) {

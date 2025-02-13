@@ -4,18 +4,21 @@
 #include <string>
 #include <type_traits>
 
-#include "expression/between_expression.hpp"
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
+#include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "sorted_segment_search.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
-
-#include "utils/assert.hpp"
-
-#include "resolve_type.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -112,12 +115,13 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
   /**
    * Early out: All entries (possibly except NULLs) match
    */
-  // NOLINTNEXTLINE - cpplint is drunk
   if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
     if (_column_is_nullable) {
       // We still have to check for NULLs
       attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-        static const auto always_true = [](const auto&) { return true; };
+        static const auto always_true = [](const auto&) {
+          return true;
+        };
         _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
       });
     } else {

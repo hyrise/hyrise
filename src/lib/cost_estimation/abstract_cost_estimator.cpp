@@ -1,16 +1,19 @@
 #include "abstract_cost_estimator.hpp"
 
+#include <memory>
+#include <optional>
 #include <queue>
 #include <unordered_set>
+#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-AbstractCostEstimator::AbstractCostEstimator(
-    const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator)
+AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<CardinalityEstimator>& init_cardinality_estimator)
     : cardinality_estimator(init_cardinality_estimator) {}
 
 Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {

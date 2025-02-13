@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"

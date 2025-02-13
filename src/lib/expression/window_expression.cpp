@@ -1,10 +1,25 @@
 #include "window_expression.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
 
+#include "magic_enum.hpp"
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -16,8 +31,9 @@ std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_
   }
 
   auto type_str = std::string{magic_enum::enum_name(frame_bound_type)};
-  std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(),
-                 [](const auto character) { return std::toupper(character); });
+  std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(), [](const auto character) {
+    return std::toupper(character);
+  });
   stream << type_str;
   return stream;
 }
@@ -30,9 +46,10 @@ bool FrameBound::operator==(const FrameBound& rhs) const {
 }
 
 size_t FrameBound::hash() const {
-  auto hash_value = offset;
-  boost::hash_combine(hash_value, static_cast<size_t>(type));
-  boost::hash_combine(hash_value, boost::hash_value(unbounded));
+  auto hash_value = size_t{0};
+  boost::hash_combine(hash_value, offset);
+  boost::hash_combine(hash_value, type);
+  boost::hash_combine(hash_value, unbounded);
   return hash_value;
 }
 
@@ -59,8 +76,9 @@ std::ostream& operator<<(std::ostream& stream, const FrameBound& frame_bound) {
 
 std::ostream& operator<<(std::ostream& stream, const FrameType frame_type) {
   auto type_str = std::string{magic_enum::enum_name(frame_type)};
-  std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(),
-                 [](const auto character) { return std::toupper(character); });
+  std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(), [](const auto character) {
+    return std::toupper(character);
+  });
   stream << type_str;
   return stream;
 }
@@ -79,7 +97,8 @@ std::string FrameDescription::description() const {
 }
 
 size_t FrameDescription::hash() const {
-  auto hash_value = static_cast<size_t>(type);
+  auto hash_value = size_t{0};
+  boost::hash_combine(hash_value, type);
   boost::hash_combine(hash_value, start.hash());
   boost::hash_combine(hash_value, end.hash());
   return hash_value;
@@ -90,11 +109,12 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
   return stream;
 }
 
-WindowExpression::WindowExpression(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
-                                   std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
-                                   std::vector<SortMode>&& init_sort_modes, FrameDescription&& init_frame_description)
+WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
+                                   const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
+                                   std::vector<SortMode>&& init_sort_modes,
+                                   const FrameDescription init_frame_description)
     : AbstractExpression{ExpressionType::Window, {/* Expressions added below. */}},
-      sort_modes{init_sort_modes},
+      sort_modes{std::move(init_sort_modes)},
       frame_description{init_frame_description},
       order_by_expressions_begin_idx{partition_by_expressions.size()} {
   const auto order_by_expression_count = order_by_expressions.size();
@@ -103,7 +123,7 @@ WindowExpression::WindowExpression(std::vector<std::shared_ptr<AbstractExpressio
   arguments.resize(order_by_expressions_begin_idx + order_by_expression_count);
   std::copy(partition_by_expressions.begin(), partition_by_expressions.end(), arguments.begin());
   std::copy(order_by_expressions.begin(), order_by_expressions.end(),
-            arguments.begin() + order_by_expressions_begin_idx);
+            arguments.begin() + static_cast<int64_t>(order_by_expressions_begin_idx));
 }
 
 std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
@@ -125,7 +145,7 @@ std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
   auto sort_modes_copy = sort_modes;
 
   return std::make_shared<WindowExpression>(std::move(partition_by_expressions), std::move(order_by_expressions),
-                                            std::move(sort_modes_copy), std::move(frame_description_copy));
+                                            std::move(sort_modes_copy), frame_description_copy);
 }
 
 std::string WindowExpression::description(const DescriptionMode mode) const {
@@ -169,9 +189,10 @@ bool WindowExpression::_shallow_equals(const AbstractExpression& expression) con
 }
 
 size_t WindowExpression::_shallow_hash() const {
-  auto hash_value = sort_modes.size();
+  auto hash_value = size_t{0};
+  boost::hash_combine(hash_value, sort_modes.size());
   for (const auto sort_mode : sort_modes) {
-    boost::hash_combine(hash_value, static_cast<size_t>(sort_mode));
+    boost::hash_combine(hash_value, sort_mode);
   }
   boost::hash_combine(hash_value, frame_description.hash());
   return hash_value;

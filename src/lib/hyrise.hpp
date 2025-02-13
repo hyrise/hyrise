@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/container/pmr/memory_resource.hpp>
+#include <memory>
 
 #include "concurrency/transaction_manager.hpp"
-#include "scheduler/immediate_execution_scheduler.hpp"
+#include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
@@ -15,7 +15,6 @@
 
 namespace hyrise {
 
-class AbstractScheduler;
 class BenchmarkRunner;
 
 // This should be the only singleton in the src/lib world. It provides a unified way of accessing components like the

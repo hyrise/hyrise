@@ -1,29 +1,39 @@
 #include "tpch_table_generator.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 extern "C" {
-#include <dss.h>
-#include <dsstypes.h>
-#include <rnd.h>
+#include "dss.h"
+#include "dsstypes.h"
+#include "tpch_dbgen.h"
 }
 
-#include <filesystem>
-#include <utility>
-
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "storage/chunk.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "table_builder.hpp"
-#include "utils/timer.hpp"
+#include "tpch/tpch_constants.hpp"
+#include "tpch_constants.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 extern const char** asc_date;  // NOLINT
 extern seed_t seed[];          // NOLINT
 
-#pragma clang diagnostic ignored "-Wshorten-64-to-32"
-#pragma clang diagnostic ignored "-Wfloat-conversion"
-
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // clang-format off
 const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();  // NOLINT
@@ -80,7 +90,7 @@ float convert_money(DSS_HUGE cents) {
 }
 
 /**
- * Call this after using dbgen to avoid memory leaks
+ * Call this after using dbgen to avoid memory leaks.
  */
 void dbgen_cleanup() {
   for (auto* distribution : {&nations,     &regions,        &o_priority_set, &l_instruct_set,
@@ -89,15 +99,20 @@ void dbgen_cleanup() {
                              &nouns,       &adjectives,     &adverbs,        &prepositions,
                              &verbs,       &terminators,    &auxillaries,    &np,
                              &vp,          &grammar}) {
-    free(distribution->permute);  // NOLINT
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(distribution->permute);
     distribution->permute = nullptr;
   }
 
   if (asc_date) {
     for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
-      free((void*)asc_date[idx]);  // NOLINT
+      // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc)
+      // NOLINTBEGIN(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      std::free(const_cast<char*>(asc_date[idx]));
+      // NOLINTEND(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc)
     }
-    free(asc_date);  // NOLINT
+    std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
   asc_date = nullptr;
 }
@@ -113,7 +128,7 @@ const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
+    : TPCHTableGenerator(scale_factor, clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
@@ -210,7 +225,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
       {
         // Make sure we do not generate non-unique combinations (see above)
         if (partsupp.partkey != last_partkey) {
-          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order");
+          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order.");
           last_partkey = partsupp.partkey;
           suppkeys.clear();
         }
@@ -325,46 +340,57 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
 
 void TPCHTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_key_constraint(
-      {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (Reision 3.0.1, 1.4.2. Constraints, p.
+  // 18).
 
-  const auto& orders_table = table_info_by_name.at("orders").table;
-  const auto orders_pk_constraint =
-      TableKeyConstraint{{orders_table->column_id_by_name("o_orderkey")}, KeyConstraintType::PRIMARY_KEY};
-  orders_table->add_soft_key_constraint(orders_pk_constraint);
-
-  const auto& lineitem_table = table_info_by_name.at("lineitem").table;
-  const auto lineitem_pk_constraint = TableKeyConstraint{
-      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
-      KeyConstraintType::PRIMARY_KEY};
-  lineitem_table->add_soft_key_constraint(lineitem_pk_constraint);
-
+  // Get all tables.
   const auto& part_table = table_info_by_name.at("part").table;
-  const auto part_table_pk_constraint =
-      TableKeyConstraint{{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY};
-  part_table->add_soft_key_constraint(part_table_pk_constraint);
-
-  const auto& partsupp_table = table_info_by_name.at("partsupp").table;
-  const auto partsupp_pk_constraint = TableKeyConstraint{
-      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
-      KeyConstraintType::PRIMARY_KEY};
-  partsupp_table->add_soft_key_constraint(partsupp_pk_constraint);
-
   const auto& supplier_table = table_info_by_name.at("supplier").table;
-  const auto supplier_pk_constraint =
-      TableKeyConstraint{{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY};
-  supplier_table->add_soft_key_constraint(supplier_pk_constraint);
-
+  const auto& partsupp_table = table_info_by_name.at("partsupp").table;
+  const auto& customer_table = table_info_by_name.at("customer").table;
+  const auto& orders_table = table_info_by_name.at("orders").table;
+  const auto& lineitem_table = table_info_by_name.at("lineitem").table;
   const auto& nation_table = table_info_by_name.at("nation").table;
-  const auto nation_pk_constraint =
-      TableKeyConstraint{{nation_table->column_id_by_name("n_nationkey")}, KeyConstraintType::PRIMARY_KEY};
-  nation_table->add_soft_key_constraint(nation_pk_constraint);
-
   const auto& region_table = table_info_by_name.at("region").table;
-  const auto region_pk_constraint =
-      TableKeyConstraint{{region_table->column_id_by_name("r_regionkey")}, KeyConstraintType::PRIMARY_KEY};
-  region_table->add_soft_key_constraint(region_pk_constraint);
+
+  // Set constraints.
+
+  // part - 1 PK.
+  primary_key_constraint(part_table, {"p_partkey"});
+
+  // supplier - 1 PK, 1 FK.
+  primary_key_constraint(supplier_table, {"s_suppkey"});
+  // The FK to n_nationkey is not listed in the list of FKs in 1.4.2, but in the part table layout in 1.4.1, p. 15.
+  foreign_key_constraint(supplier_table, {"s_nationkey"}, nation_table, {"n_nationkey"});
+
+  // partsupp - 1 composite PK, 2 FKs.
+  primary_key_constraint(partsupp_table, {"ps_partkey", "ps_suppkey"});
+  foreign_key_constraint(partsupp_table, {"ps_partkey"}, part_table, {"p_partkey"});
+  foreign_key_constraint(partsupp_table, {"ps_suppkey"}, supplier_table, {"s_suppkey"});
+
+  // customer - 1 PK, 1 FK.
+  primary_key_constraint(customer_table, {"c_custkey"});
+  foreign_key_constraint(customer_table, {"c_nationkey"}, nation_table, {"n_nationkey"});
+
+  // orders - 1 PK, 1 FK.
+  primary_key_constraint(orders_table, {"o_orderkey"});
+  foreign_key_constraint(orders_table, {"o_custkey"}, customer_table, {"c_custkey"});
+
+  // lineitem - 1 composite PK, 4 FKs.
+  primary_key_constraint(lineitem_table, {"l_orderkey", "l_linenumber"});
+  foreign_key_constraint(lineitem_table, {"l_orderkey"}, orders_table, {"o_orderkey"});
+  // The specification explicitly allows to set the FKs of l_partkey and s_suppkey as a compound FK to partsupp and
+  // directly to part/supplier.
+  foreign_key_constraint(lineitem_table, {"l_partkey", "l_suppkey"}, partsupp_table, {"ps_partkey", "ps_suppkey"});
+  foreign_key_constraint(lineitem_table, {"l_partkey"}, part_table, {"p_partkey"});
+  foreign_key_constraint(lineitem_table, {"l_suppkey"}, supplier_table, {"s_suppkey"});
+
+  // nation - 1 PK, 1 FK.
+  primary_key_constraint(nation_table, {"n_nationkey"});
+  foreign_key_constraint(nation_table, {"n_regionkey"}, region_table, {"r_regionkey"});
+
+  // region - 1 PK.
+  primary_key_constraint(region_table, {"r_regionkey"});
 }
 
 }  // namespace hyrise

@@ -1,15 +1,29 @@
 #include "table_order_constraint.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <utility>
+#include <vector>
+
 #include <boost/container_hash/hash.hpp>
+
+#include "storage/constraints/abstract_table_constraint.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
-TableOrderConstraint::TableOrderConstraint(const std::vector<ColumnID>& ordering_columns,
-                                           const std::vector<ColumnID>& ordered_columns)
-    : _ordering_columns(ordering_columns), _ordered_columns(ordered_columns) {
+TableOrderConstraint::TableOrderConstraint(std::vector<ColumnID>&& ordering_columns,
+                                           std::vector<ColumnID>&& ordered_columns)
+    : AbstractTableConstraint{TableConstraintType::Order},
+      _ordering_columns{std::move(ordering_columns)},
+      _ordered_columns{std::move(ordered_columns)} {
+  Assert(!_ordered_columns.empty(), "Did not expect useless constraint.");
+  Assert(!_ordering_columns.empty(), "Constant columns are currently not considered.");
   if constexpr (HYRISE_DEBUG) {
-    for (const auto column : ordering_columns) {
-      Assert(std::find(ordered_columns.begin(), ordered_columns.end(), column) == ordered_columns.end(),
+    for (const auto column : _ordering_columns) {
+      Assert(std::find(_ordered_columns.begin(), _ordered_columns.end(), column) == _ordered_columns.end(),
              "Ordering and ordered columns must be disjoint.");
     }
   }
@@ -24,7 +38,8 @@ const std::vector<ColumnID>& TableOrderConstraint::ordered_columns() const {
 }
 
 size_t TableOrderConstraint::hash() const {
-  auto hash = boost::hash_value(_ordering_columns);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, _ordering_columns);
   boost::hash_combine(hash, _ordered_columns);
   return hash;
 }

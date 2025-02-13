@@ -1,10 +1,8 @@
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
@@ -277,6 +275,56 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
       ExpressionUnorderedSet{_aggregate_expressions.cbegin(), _aggregate_expressions.cend()};
   EXPECT_EQ(fd.determinants, expected_determinants);
   EXPECT_EQ(fd.dependents, expected_dependents);
+}
+
+TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_aggregate_node->order_dependencies().empty());
+
+  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
+  const auto od_a_to_b_c = OrderDependency{{_a}, {_b, _c}};
+  const auto od_a_b_to_c = OrderDependency{{_a, _b}, {_c}};
+  const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_b_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}, ColumnID{2}}};
+  const auto order_constraint_a_b_to_c = TableOrderConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{2}}};
+  _mock_node->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_b_c, order_constraint_a_b_to_c});
+  EXPECT_EQ(_mock_node->order_dependencies().size(), 3);
+
+  {
+    // All expressions are either grouped or have an ANY aggregate. All ODs should remain valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(_a, _b), expression_vector(any_(_c)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 3);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
+    EXPECT_TRUE(order_dependencies.contains(od_a_b_to_c));
+  }
+  {
+    // All expressions are either grouped or have an ANY aggregate. All ODs should remain valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(_a, _c), expression_vector(any_(_b)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 3);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
+    EXPECT_TRUE(order_dependencies.contains(od_a_b_to_c));
+  }
+  {
+    // All columns are aggregated, no ODs remain valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(), expression_vector(sum_(_a), max_(_b), min_(_c)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_TRUE(order_dependencies.empty());
+  }
+  {
+    // c is aggregated, a is the group key, b has an ANY aggregate. Only the first OD remains valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(_a), expression_vector(any_(_b), avg_(_c)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 1);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+  }
 }
 
 }  // namespace hyrise

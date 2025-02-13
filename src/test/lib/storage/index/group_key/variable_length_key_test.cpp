@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "storage/index/group_key/variable_length_key.hpp"
 
 namespace hyrise {

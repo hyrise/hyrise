@@ -1,15 +1,26 @@
 #include "limit.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "resolve_type.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -47,15 +58,15 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     if constexpr (std::is_integral_v<LimitDataType>) {
       const auto num_rows_expression_result =
           ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*_row_count_expression);
-      Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
-      Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+      Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for LIMIT.");
+      Assert(!num_rows_expression_result->is_null(0), "Expected non-NULL for LIMIT,");
 
       const auto signed_num_rows = num_rows_expression_result->value(0);
-      Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+      Assert(signed_num_rows >= 0, "Cannot limit to a negative number of rows.");
 
       num_rows = static_cast<size_t>(signed_num_rows);
     } else {
-      Fail("Non-integral types not allowed in Limit");
+      Fail("Non-integral types not allowed in LIMIT.");
     }
   });
 
@@ -102,7 +113,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
     index += output_chunk_row_count;
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
-    output_chunk->finalize();
+    output_chunk->set_immutable();
     // The limit operator does not affect sorted_by property. If a chunk was sorted before, it still is after the limit
     // operator.
     const auto& sorted_by = input_chunk->individually_sorted_by();

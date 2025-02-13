@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "operators/join_hash.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
@@ -110,7 +109,7 @@ TEST_P(SortTest, UnchangedNullability) {
 inline std::string sort_test_formatter(const testing::TestParamInfo<SortTestParam>& param_info) {
   const auto& param = param_info.param;
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   if (param.input_is_empty) {
     stream << "Empty";
   }

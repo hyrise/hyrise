@@ -1,0 +1,6 @@
+a|b|c|d|e|f
+int|int_null|long_null|float_null|double_null|string
+1|1|33|1.23|1234.5|1
+-2|-2|null|-2.34|-2345.6|2
+3|3|-1234|123.4|3456.7|3
+-4|null|null|null|null|4

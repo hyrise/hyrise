@@ -1,5 +1,11 @@
 #include "row_id_pos_list.hpp"
 
+#include <algorithm>
+#include <cstddef>
+
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 void RowIDPosList::guarantee_single_chunk() {
@@ -18,7 +24,7 @@ bool RowIDPosList::references_single_chunk() const {
             return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
           });
         }(),
-        "RowIDPosList was marked as referencing a single chunk, but references more");
+        "RowIDPosList was marked as referencing a single chunk, but references more.");
   }
   return _references_single_chunk;
 }
