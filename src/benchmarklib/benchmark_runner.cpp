@@ -140,6 +140,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 void BenchmarkRunner::run() {
   if (!_config.only_load_data) {
     std::cout << "- Starting Benchmark...\n";
+    auto timer = Timer{};
 
     _benchmark_start = std::chrono::steady_clock::now();
     _benchmark_wall_clock_start = std::chrono::system_clock::now();
@@ -194,6 +195,7 @@ void BenchmarkRunner::run() {
       Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, *_benchmark_item_runner);
     }
 
+
     switch (_config.benchmark_mode) {
       case BenchmarkMode::Ordered: {
         _benchmark_ordered();
@@ -236,6 +238,8 @@ void BenchmarkRunner::run() {
     // Stop the thread that tracks the system utilization.
     track_system_utilization = false;
     system_utilization_tracker.join();
+
+    std::cout << "- Running all benchmarks done (" << timer.lap_formatted() << ")\n";
   } else {
     std::cout << "Skipped running queries because benchmark was configured to only load data!\n";
   }
