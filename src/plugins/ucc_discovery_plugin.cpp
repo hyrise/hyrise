@@ -35,14 +35,14 @@
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/mvcc_data.hpp"
+// #include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
+// #include "utils/format_duration.hpp"
 #include "utils/log_manager.hpp"
 #include "utils/timer.hpp"
 
@@ -240,7 +240,7 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shar
 
 template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
-    const std::shared_ptr<const Table>& table, const std::string table_name, const ColumnID column_id,
+    const std::shared_ptr<const Table>& table, const std::string& table_name, const ColumnID column_id,
     const std::shared_ptr<TransactionContext>& transaction_context) {
   // `distinct_values_across_segments` collects the segment values from all chunks.
   auto distinct_values_across_segments = std::unordered_set<ColumnDataType>{};
