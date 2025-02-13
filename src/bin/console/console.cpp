@@ -540,7 +540,7 @@ int Console::_generate_tpch(const std::string& args) {
 
   out("Generating all TPCH tables (this might take a while) ...\n");
   const auto config = std::make_shared<BenchmarkConfig>(chunk_size, _binary_caching);
-  TPCHTableGenerator{scale_factor, ClusteringConfiguration::None, config}.generate_and_store();
+  TPCHTableGenerator{scale_factor, "tpch_cache_tables", ClusteringConfiguration::None, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
