@@ -49,10 +49,12 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
-
+            
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all valgrind; then
+                    echo "Error during apt-get installations."
+                    exit 1
+                fi
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
@@ -61,13 +63,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
 
                 if ! pip3 install --break-system-packages -r requirements.txt; then
                     echo "Error during installation of python requirements."
-                    exit 1
-                fi
-
-                wait $!
-                apt=$?
-                if [ $apt -ne 0 ]; then
-                    echo "Error during apt-get installations."
                     exit 1
                 fi
 
@@ -87,4 +82,5 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     fi
 fi
 
+echo "Dependencies installed successfully."
 exit 0
