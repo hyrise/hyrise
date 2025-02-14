@@ -51,14 +51,14 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             if sudo apt-get update >/dev/null; then
                 # Packages added here should also be added to the Dockerfile
                 # Some packages are not installed in the background since they are required for this script to complete
-                
+
                 if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip; then
-                    echo "Error during git fetching submodules."
+                    echo "Error during apt-get."
                     exit 1
                 fi
 
                 if ! sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all valgrind & then
-                    echo "Error during git fetching submodules."
+                    echo "Error during apt-get."
                     exit 1
                 fi
 
@@ -95,4 +95,5 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     fi
 fi
 
+echo "Dependencies installed successfully."
 exit 0
