@@ -45,7 +45,7 @@ class FixedSizeHeap : public Noncopyable {
   };
 
   std::optional<T> next() {
-    std::pop_heap(_heap.begin(), _heap.end(), Comp{});
+    std::ranges::pop_heap(_heap, Comp{});
     const auto [value, leaf_index] = _heap.back();
 
     if (leaf_index < 0) {
@@ -58,7 +58,7 @@ class FixedSizeHeap : public Noncopyable {
     } else {
       _heap.back() = {T{}, -1};
     }
-    std::push_heap(_heap.begin(), _heap.end(), Comp{});
+    std::ranges::push_heap(_heap, Comp{});
 
     return value;
   }

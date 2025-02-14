@@ -159,12 +159,12 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
   };
 
   if (level < max_parallel_level) {
-    std::cerr << std::format("level {}, spawning jobs.\n", level);
+    // std::cerr << std::format("level {}, spawning jobs.\n", level);
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>(left_task),
                                                             std::make_shared<JobTask>(right_task)};
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   } else {
-    std::cerr << std::format("level {}, NOT spawning jobs.\n", level);
+    // std::cerr << std::format("level {}, NOT spawning jobs.\n", level);
     left_task();
     right_task();
   }
