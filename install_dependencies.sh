@@ -52,10 +52,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
-
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y git python3 python3-pip
+                # Some packages are not installed in the background since they are required for this script to complete
+                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip
                 sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
