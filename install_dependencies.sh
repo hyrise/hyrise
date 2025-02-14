@@ -1,8 +1,5 @@
 #!/bin/bash
 
-set -e
-set -x
-
 if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
     read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
@@ -56,7 +53,13 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
 
                 # Packages added here should also be added to the Dockerfile
                 sudo apt-get install --no-install-recommends -y git python3 python3-pip
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all valgrind &
+
+                if ! sudo apt-get install --no-install-recommends -y autoconf bash-completionnn bc; then
+                    echo "Error during apt."
+                    exit 1
+                fi
+
+                sudo apt-get install --no-install-recommends -y clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
