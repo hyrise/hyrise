@@ -223,6 +223,7 @@ set(
     lib/utils/check_table_equal_test.cpp
     lib/utils/pruning_utils_test.cpp
     lib/utils/date_time_utils_test.cpp
+    lib/utils/fixed_size_heap_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
     lib/utils/list_directory_test.cpp

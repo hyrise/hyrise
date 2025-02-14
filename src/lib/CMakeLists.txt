@@ -602,6 +602,7 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
+    utils/fixed_size_heap.hpp
     utils/invalid_input_exception.hpp
     utils/list_directory.cpp
     utils/list_directory.hpp

@@ -35,8 +35,8 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   jobs.reserve(column_count);
 
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    const auto generate_column_statistics = [&, column_id]() {
-      const auto column_data_type = table.column_data_type(column_id);
+    const auto column_data_type = table.column_data_type(column_id);
+    const auto generate_column_statistics = [&, column_id, column_data_type]() {
       resolve_data_type(column_data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
 
@@ -64,7 +64,14 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
         column_statistics[column_id] = output_column_statistics;
       });
     };
-    jobs.emplace_back(std::make_shared<JobTask>(generate_column_statistics));
+
+    //////////////// To lower the memory usage when creating statistics, we first process all string columns sequentially before
+    //////////////// processing all other columns. This reduces the RSS from 25 GB (SF 10) to 13 GB.
+    if (column_data_type == DataType::String) {
+      generate_column_statistics();
+    } else {
+      jobs.emplace_back(std::make_shared<JobTask>(generate_column_statistics));
+    }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 

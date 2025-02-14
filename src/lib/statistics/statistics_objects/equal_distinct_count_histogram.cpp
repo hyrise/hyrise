@@ -61,11 +61,11 @@ void process_dictionary_segment(const DictionarySegmentType& segment, const Dict
 
       const auto adapted_string = domain.string_to_domain(initial_string);
       if (initial_string == adapted_string) {
+        // std::cerr << "Unchanged '" << initial_string << "' and '" << adapted_string << "'\n";
         value_distribution_vector[dictionary_offset] = {initial_string, 0};
       } else {
         const auto heap_string_view = string_heap.add_string(adapted_string);
         value_distribution_vector[dictionary_offset] = {heap_string_view, 0};
-        std::cerr << "Changed '" << initial_string << "' to '" << heap_string_view << "'\n";
       }
     } else {
       value_distribution_vector[dictionary_offset] = {dictionary[dictionary_offset], 0};
@@ -110,9 +110,9 @@ void process_any_unspecialized(AbstractSegment& segment, ValueDistributionVector
 }
 
 template <typename T>
-ValueDistributionVector<T> add_segment_to_value_distribution2(std::vector<std::unique_ptr<StringHeap>>& string_heaps,
-                                                                                            auto segment_iterator_begin, auto segment_iterator_end,
-                                                                                            const HistogramDomain<T>& domain) {
+ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_parallel_level, const size_t level, std::vector<std::unique_ptr<StringHeap>>& string_heaps,
+                                                              auto segment_iterator_begin, auto segment_iterator_end,
+                                                              const HistogramDomain<T>& domain) {
   DebugAssert(segment_iterator_begin != segment_iterator_end, "Wrong call");
   if (std::distance(segment_iterator_begin, segment_iterator_end) == 1) {
     const auto [chunk_id, segment] = *segment_iterator_begin;
@@ -150,15 +150,24 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(std::vector<std::u
   auto right = ValueDistributionVector<T>{};
 
   auto middle = segment_iterator_begin + (std::distance(segment_iterator_begin, segment_iterator_end) / 2);
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  tasks.emplace_back(std::make_shared<JobTask>([&]() {
-    left = add_segment_to_value_distribution2(string_heaps, segment_iterator_begin, middle, domain);
-  }));
-  tasks.emplace_back(std::make_shared<JobTask>([&]() {
-    right = add_segment_to_value_distribution2(string_heaps, middle, segment_iterator_end, domain);
-  }));
+  
+  auto left_task = [&]() {
+    left = add_segment_to_value_distribution2(max_parallel_level, level + 1, string_heaps, segment_iterator_begin, middle, domain);
+  };
+  auto right_task = [&]() {
+    right = add_segment_to_value_distribution2(max_parallel_level, level + 1, string_heaps, middle, segment_iterator_end, domain);
+  };
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  if (level < max_parallel_level) {
+    std::cerr << std::format("level {}, spawning jobs.\n", level);
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>(left_task),
+                                                            std::make_shared<JobTask>(right_task)};
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  } else {
+    std::cerr << std::format("level {}, NOT spawning jobs.\n", level);
+    left_task();
+    right_task();
+  }
 
   // std::cout << "left size " << left.size() << " and right size " << right.size() << std::endl;
 
@@ -296,7 +305,10 @@ std::pair<std::vector<std::unique_ptr<StringHeap>>,
 
   auto result = ValueDistributionVector<T>{};
   if (chunk_count > 0) {
-    result = add_segment_to_value_distribution2<T>(string_heaps, segments_to_process.begin(), segments_to_process.end(), domain);
+    // const auto parallel_levels_chunks = static_cast<size_t>(std::ceil(std::log2(static_cast<double>(chunk_count)))) + 1;
+    const auto parallel_levels_cpus = static_cast<size_t>(std::ceil(std::log2(Hyrise::get().topology.num_cpus()))) + 1;
+    // std::cerr << std::format("I have {} levels for {} chunks and {} for {} CPUs ...\n", parallel_levels_chunks, static_cast<size_t>(chunk_count), parallel_levels_cpus, Hyrise::get().topology.num_cpus());
+    result = add_segment_to_value_distribution2<T>(parallel_levels_cpus, 0, string_heaps, segments_to_process.begin(), segments_to_process.end(), domain);
   }
 
   // auto string_heaps2 = std::vector<std::unique_ptr<StringHeap>>{};
