@@ -120,7 +120,6 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
     string_heaps[chunk_id] = std::make_unique<StringHeap>();
     auto& string_heap = *string_heaps[chunk_id];
 
-    
     auto value_distribution_vector = ValueDistributionVector<T>{};
 
     // We specialize for dictionaries, as they are used for string columns (which are expensive in histogram creation).
@@ -139,7 +138,11 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
       }
     });
 
-    std::ranges::sort(value_distribution_vector, [](const auto& lhs, const auto& rhs) {
+    // std::ranges::sort(value_distribution_vector, [](const auto& lhs, const auto& rhs) {
+    //   return lhs.first < rhs.first;
+    // });
+
+    boost::sort::pdqsort(value_distribution_vector.begin(), value_distribution_vector.end(), [&](const auto& lhs, const auto& rhs) {
       return lhs.first < rhs.first;
     });
 
@@ -150,7 +153,7 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
   auto right = ValueDistributionVector<T>{};
 
   auto middle = segment_iterator_begin + (std::distance(segment_iterator_begin, segment_iterator_end) / 2);
-  
+
   auto left_task = [&]() {
     left = add_segment_to_value_distribution2(max_parallel_level, level + 1, string_heaps, segment_iterator_begin, middle, domain);
   };
@@ -159,38 +162,20 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
   };
 
   if (level < max_parallel_level) {
-    // std::cerr << std::format("level {}, spawning jobs.\n", level);
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>(left_task),
                                                             std::make_shared<JobTask>(right_task)};
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   } else {
-    // std::cerr << std::format("level {}, NOT spawning jobs.\n", level);
     left_task();
     right_task();
   }
-
-  // std::cout << "left size " << left.size() << " and right size " << right.size() << std::endl;
-
   auto result = ValueDistributionVector<T>{};
-  result.reserve(left.size());
+  result.reserve(left.size() + right.size());  
 
   auto left_iter = left.begin();
   auto right_iter = right.begin();
-  // if (left_iter == left.end()) {
-  //   while (right_iter != right.end()) {
-  //     result.emplace_back(*right_iter);
-  //     ++right_iter;
-  //   }
-
-  // } else if (right_iter == right.end()) {
-  //   while (left_iter != left.end()) {
-  //     result.emplace_back(*left_iter);
-  //     ++left_iter;
-  //   }
-  // }
 
   while (left_iter != left.end() || right_iter != right.end()) {
-    // std::cout << ".";
     if (left_iter == left.end()) {
       result.emplace_back(*right_iter);
       ++right_iter;
@@ -214,55 +199,9 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
     }
   }
 
-  // auto ss = std::stringstream{};
-  // ss << "\n\n\nMerging:\n";
-  // for (auto el : left) { ss << " | " << el.first << ":" << el.second; }
-  // ss << "\nand\n";
-  // for (auto el : right) { ss << " | " << el.first << ":" << el.second; }
-  // ss << "\ninto\n";
-  // for (auto el : result) { ss << " | " << el.first << ":" << el.second; }
-  // ss << "\n\n" << std::endl;
-  // std::cout << ss.str();
-
-  // if (!std::is_sorted(result.begin(), result.end())) {
-  //   auto ss = std::stringstream{};
-  //   ss << "\n\n\nMerging:\n";
-  //   for (auto el : left) { ss << " | " << el.first << ":" << el.second; }
-  //   ss << "\nand\n";
-  //   for (auto el : right) { ss << " | " << el.first << ":" << el.second; }
-  //   ss << "\ninto\n";
-  //   for (auto el : result) { ss << " | " << el.first << ":" << el.second; }
-  //   ss << "\n\n" << std::endl;
-  //   std::cout << ss.str();
-  // }
   DebugAssert(std::is_sorted(result.begin(), result.end()), "Not sorted.");
   return result;
 }
-
-// template <typename T>
-// void add_segment_to_value_distribution(std::vector<std::unique_ptr<StringHeap>>& string_heaps, const ChunkID chunk_id, const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
-//                                        const HistogramDomain<T>& domain) {
-//   string_heaps[chunk_id] = std::make_unique<StringHeap>();
-//   auto& string_heap = *string_heaps[chunk_id];
-
-//   segment_iterate<T>(segment, [&](const auto& iterator_value) {
-//     if (iterator_value.is_null()) {
-//       return;
-//     }
-
-//     if constexpr (std::is_same_v<T, pmr_string>) {
-//       const auto current_string = string_heap.add_string(iterator_value.value());
-//       // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-//       if (domain.contains(current_string)) {
-//         ++value_distribution[current_string];
-//       } else {
-//         ++value_distribution[domain.string_to_domain(current_string)];
-//       }
-//     } else {
-//       ++value_distribution[iterator_value.value()];
-//     }
-//   });
-// }
 
 template <typename T>
 std::pair<std::vector<std::unique_ptr<StringHeap>>,
@@ -299,73 +238,13 @@ std::pair<std::vector<std::unique_ptr<StringHeap>>,
   auto string_heaps = std::vector<std::unique_ptr<StringHeap>>{};
   string_heaps.resize(chunk_count);
 
-  if (segments_to_process.size() > 100) {
-    // std::cout << "For column with " << chunk_count << " segments, we are sampling " << segments_to_process.size() << std::endl;  
-  }
-
   auto result = ValueDistributionVector<T>{};
   if (chunk_count > 0) {
-    // const auto parallel_levels_chunks = static_cast<size_t>(std::ceil(std::log2(static_cast<double>(chunk_count)))) + 1;
     const auto parallel_levels_cpus = static_cast<size_t>(std::ceil(std::log2(Hyrise::get().topology.num_cpus()))) + 1;
-    // std::cerr << std::format("I have {} levels for {} chunks and {} for {} CPUs ...\n", parallel_levels_chunks, static_cast<size_t>(chunk_count), parallel_levels_cpus, Hyrise::get().topology.num_cpus());
     result = add_segment_to_value_distribution2<T>(parallel_levels_cpus, 0, string_heaps, segments_to_process.begin(), segments_to_process.end(), domain);
   }
 
-  // auto string_heaps2 = std::vector<std::unique_ptr<StringHeap>>{};
-  // string_heaps2.resize(chunk_count);
-
-  // for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-  //   const auto chunk = table.get_chunk(chunk_id);
-  //   if (!chunk) {
-  //     continue;
-  //   }
-
-  //   add_segment_to_value_distribution<T>(string_heaps2, chunk_id, *chunk->get_segment(column_id), value_distribution_map, domain);
-  // }
-
-  // auto value_distribution =
-  //     std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-  // value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
-  // boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
-  //   return lhs.first < rhs.first;
-  // });
-
-  // std::stringstream ss;
-  // // ss << "Column ID " << column_id << "(" << table.column_data_type(column_id) << ", table_size: " << table.row_count() << "): uniques " << value_distribution.size() << "\n\n";
-
-  // auto differ = false;
-  // differ = result.size() != value_distribution.size();
-  // if (!differ) {
-  //   for (auto i = size_t{0}; i < result.size(); ++i) {
-  //     if (result[i].first != value_distribution[i].first || float(result[i].second) != value_distribution[i].second) {
-  //       differ = true;
-  //       break;
-  //     }
-  //   }
-  // }
-
-  // if (differ) {
-  //   auto sum = double{};
-  //   ss << "new >>> (table size: " << table.row_count() << ")" << std::endl;
-  //   for (const auto el : result) {
-  //     ss << "|" << el.first << ":" << el.second;
-  //     sum += static_cast<double>(el.second);
-  //   }
-  //   ss << "\nsum:" << sum << "\nold >>>" << std::endl;
-  //   sum = 0.0;
-  //   for (const auto el : value_distribution) {
-  //     ss << "|" << el.first << ":" << el.second;
-  //     sum += el.second;
-  //   }
-  //   ss << "\nsum: " << sum << "\n\n";
-  // }
-  
-  // if(differ) { ss << "OH SHIT\n\n"; }
-  // std::cout << ss.str();
-
-  // auto ret = std::vector<std::pair<T, HistogramCountType>>(result.begin(), result.end());
   return {std::move(string_heaps), std::move(result)};
-  // return value_distribution;
 }
 }  // namespace
 
