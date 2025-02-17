@@ -138,10 +138,6 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
       }
     });
 
-    // std::ranges::sort(value_distribution_vector, [](const auto& lhs, const auto& rhs) {
-    //   return lhs.first < rhs.first;
-    // });
-
     boost::sort::pdqsort(value_distribution_vector.begin(), value_distribution_vector.end(), [&](const auto& lhs, const auto& rhs) {
       return lhs.first < rhs.first;
     });
@@ -211,7 +207,7 @@ std::pair<std::vector<std::unique_ptr<StringHeap>>,
   // auto value_distribution_map = ValueDistributionMap<T>{};
   const auto chunk_count = table.chunk_count();
   auto segments_to_process = std::vector<std::pair<ChunkID, std::shared_ptr<AbstractSegment>>>{};
-  segments_to_process.reserve(MIN_CHUNK_COUNT_TO_INCLUDE);
+  segments_to_process.reserve(std::min(chunk_count, MIN_CHUNK_COUNT_TO_INCLUDE));
 
   // In average, we sample every 2.5th segment. Previous analyses of Hyrise histograms showed that the accuracy of
   // sample histograms quickly deteriogates with sampling rates below 33 %. We thus choose a safer rate of ~40%.

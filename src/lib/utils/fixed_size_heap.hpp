@@ -22,6 +22,7 @@ class FixedSizeHeap : public Noncopyable {
       if (_begins[index] != _ends[index]) {
         _heap[index] = {*_begins[index], index};
         ++_begins[index];
+        ++_active_leaves_count;
       } else {
         _heap[index] = {T{}, -1};
       }
@@ -45,25 +46,33 @@ class FixedSizeHeap : public Noncopyable {
   };
 
   std::optional<T> next() {
-    std::ranges::pop_heap(_heap, Comp{});
-    const auto [value, leaf_index] = _heap.back();
+    auto heap_end = _heap.begin() + std::max(size_t{1}, _active_leaves_count);
+    auto heap_back = heap_end - 1;
+
+    std::ranges::pop_heap(_heap.begin(), heap_end, Comp{});
+    const auto [value, leaf_index] = *heap_back;
 
     if (leaf_index < 0) {
       return std::nullopt;
     }
 
     if (_begins[leaf_index] != _ends[leaf_index]) {
-      _heap.back() = {*_begins[leaf_index], leaf_index};
+      *heap_back = {*_begins[leaf_index], leaf_index};
       ++_begins[leaf_index];
+      std::ranges::push_heap(_heap.begin(), heap_end, Comp{});
     } else {
-      _heap.back() = {T{}, -1};
+      *heap_back = {T{}, -1};
+      --_active_leaves_count;
+      std::ranges::push_heap(_heap.begin(), heap_back, Comp{});
     }
-    std::ranges::push_heap(_heap, Comp{});
 
     return value;
   }
 
  private:
+  // Store the number of leaves we can still pull from. When several leaves are already emptied, we can avoid 
+  size_t _active_leaves_count{0};
+
   std::array<Iterator, Size> _begins;
   std::array<Iterator, Size> _ends;
   std::array<std::pair<T, int8_t>, Size> _heap;

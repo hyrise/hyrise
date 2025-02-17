@@ -323,12 +323,13 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
     using ColumnDataType = typename decltype(type)::type;
     for (auto _ : state) {
       const auto histogram = EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(lineitem_table->row_count()));
-      std::cout << histogram->description() << std::endl;
+      // std::cout << histogram->description() << std::endl;
     }
   });
 }
 
 constexpr auto LINEITEM_COLUMN_COUNT = 15;
-BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, LINEITEM_COLUMN_COUNT);
+// BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, LINEITEM_COLUMN_COUNT);
+BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(LINEITEM_COLUMN_COUNT, LINEITEM_COLUMN_COUNT);
 
 }  // namespace hyrise
