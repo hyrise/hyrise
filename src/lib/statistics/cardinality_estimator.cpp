@@ -410,7 +410,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
     }
   }
 
-  return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
+  // AggregateNodes without GROUP BY columns always return a single row.
+  const auto cardinality =
+      aggregate_node.aggregate_expressions_begin_idx == 0 ? Cardinality{1} : input_table_statistics->row_count;
+
+  return std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
@@ -1088,8 +1092,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     auto cardinality = Cardinality{0};
     auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-    auto left_histogram = left_input_column_statistics->histogram;
-    auto right_histogram = right_input_column_statistics->histogram;
+    auto left_histogram = left_input_column_statistics ? left_input_column_statistics->histogram : nullptr;
+    auto right_histogram = right_input_column_statistics ? right_input_column_statistics->histogram : nullptr;
 
     if (left_histogram && right_histogram) {
       // If we have histograms, we use the principle of inclusion to determine the number of matches between two bins.
@@ -1098,7 +1102,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     } else {
       // TODO(anyone): If we do hot have histograms on both sides, use some other algorithm/statistics to estimate the
       //               join.
-      cardinality = left_input_table_statistics.row_count * right_input_table_statistics.row_count;
+      const auto left_cardinality = left_input_table_statistics.row_count;
+      const auto right_cardinality = right_input_table_statistics.row_count;
+      cardinality = std::max({left_cardinality, right_cardinality, left_cardinality * right_cardinality});
     }
 
     const auto left_selectivity = Selectivity{
@@ -1234,13 +1240,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
     const TableStatistics& left_input_table_statistics, const TableStatistics& right_input_table_statistics) {
-  // Every tuple from the left side gets emitted once for each tuple on the right side - and vice versa
+  // Every tuple from the left side gets emitted once for each tuple on the right side - and vice versa.
   const auto left_selectivity = Selectivity{right_input_table_statistics.row_count};
   const auto right_selectivity = Selectivity{left_input_table_statistics.row_count};
 
   /**
    * Scale up the input AttributeStatistics with the selectivities specified above and write them to the output
-   * TableStatistics
+   * TableStatistics.
    */
   std::vector<std::shared_ptr<const BaseAttributeStatistics>> column_statistics{
       left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
@@ -1256,7 +1262,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
         right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
   }
 
-  const auto row_count = Cardinality{left_selectivity * right_selectivity};
+  const auto row_count =
+      Cardinality{std::max({left_selectivity, right_selectivity, left_selectivity * right_selectivity})};
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
 }
