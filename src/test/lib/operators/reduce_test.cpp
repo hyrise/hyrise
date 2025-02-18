@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <bitset>
 #include <memory>
 #include <string>
 #include <utility>
@@ -21,15 +22,15 @@ class OperatorsReduceTest : public BaseTest {
     _int_int->execute();
   }
 
-  void create_hashes() {
-    auto reduce = std::make_shared<Reduce>(_int_int);
+  void create_hashes(std::shared_ptr<Reduce> reduce) {
+    // auto reduce = std::make_shared<Reduce>(_int_int);
     reduce->_create_filter(ColumnID{0}, 65536);
     auto filter = reduce->export_filter();
     (void)filter;
     for (auto& i : *filter) {
-      std::cout << static_cast<uint64_t>(i);
+      if (true) std::cout << std::bitset<32>(static_cast<uint64_t>(i)) << "\n";
     }
-    std::cout << std::endl;
+    std::cout << "\n";
   }
 
  protected:
@@ -39,9 +40,10 @@ class OperatorsReduceTest : public BaseTest {
 TEST_F(OperatorsReduceTest, DoubleScan) {
   const auto expected = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
   auto reduce = std::make_shared<Reduce>(_int_int);
-  reduce->execute();
-  EXPECT_TABLE_EQ_UNORDERED(reduce->get_output(), expected);
-  create_hashes();
+  // reduce->execute();
+  // EXPECT_TABLE_EQ_UNORDERED(reduce->get_output(), expected);
+  create_hashes(reduce);
+  EXPECT_TABLE_EQ_UNORDERED(reduce->_execute_filter(ColumnID{0}), expected);
 }
 
 }  // namespace hyrise

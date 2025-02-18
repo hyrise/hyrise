@@ -19,10 +19,12 @@ class Reduce : public AbstractReadOnlyOperator {
 
   const std::shared_ptr<std::vector<std::atomic_uint64_t>>& export_filter() const;
 
- protected:
+//  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
   void _create_filter(const ColumnID column_id, const uint32_t filter_size);
+
+  std::shared_ptr<Table> _execute_filter(const ColumnID column_id);
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
@@ -33,11 +35,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
   void _set_bit(uint32_t hash_22bit);
 
-  // Atomically get the bit
   bool _get_bit(uint32_t hash_22bit) const;
-
-  // Atomically clear the bit
-  void _clear_bit(uint32_t hash_22bit);
 
   std::shared_ptr<std::vector<std::atomic_uint64_t>> _filter;
 };
