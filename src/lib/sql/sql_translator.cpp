@@ -1838,10 +1838,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
 
   auto encoding = std::optional<EncodingType>{};
   if (import_statement.encoding) {
-    auto file_encoding =
-        magic_enum::enum_cast<EncodingType>(std::string{import_statement.encoding}, magic_enum::case_insensitive);
-    AssertInput(file_encoding.has_value(), "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
-    encoding = *file_encoding;
+    encoding = magic_enum::enum_cast<EncodingType>(import_statement.encoding);
+    AssertInput(encoding, "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
   }
 
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
@@ -1853,9 +1851,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  AssertInput(!export_statement.encoding, "Encoding '" + std::string{export_statement.encoding} +
-                                              "' was specified. But an encoding for a table export is not supported. "
-                                              "You can choose an encoding when importing tables.");
+  AssertInput(!export_statement.encoding,
+              "Encoding for a table export is not supported. You can choose an encoding when importing tables.");
 
   if (export_statement.select) {
     lqp = _translate_select_statement(*export_statement.select);

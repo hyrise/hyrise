@@ -23,14 +23,14 @@
 namespace hyrise {
 
 Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
-               const FileType file_type, const std::optional<EncodingType> table_encoding,
+               const FileType file_type, const std::optional<EncodingType> target_encoding,
                const std::optional<CsvMeta>& csv_meta)
     : AbstractReadOnlyOperator(OperatorType::Import),
       filename(init_filename),
       _tablename(tablename),
       _chunk_size(chunk_size),
       _file_type(file_type),
-      _table_encoding(table_encoding),
+      _target_encoding(target_encoding),
       _csv_meta(csv_meta) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
@@ -70,16 +70,13 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   Hyrise::get().storage_manager.add_table(_tablename, table);
 
-  // If a table encoding is specified, encode the table accordingly.
-  // The default encoding is `EncodingType::Dictionary` except for binary files.
-  // For binary files the default is the encoding of the file.
-  auto encoding_to_apply =
-      (_file_type != FileType::Binary && !_table_encoding) ? EncodingType::Dictionary : _table_encoding;
-
-  if (encoding_to_apply) {
-    const auto chunk_encoding_spec = ChunkEncodingSpec(table->column_count(), SegmentEncodingSpec(*encoding_to_apply));
-    ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
+  // If a table encoding is specified, encode the table accordingly. The default encoding is
+  // `EncodingType::Dictionary`, except for binary files. For binary files, the default is the encoding of the file.
+  if (_target_encoding || _file_type != FileType::Binary) {
+    const auto encoding_spec = _target_encoding ? SegmentEncodingSpec{*_target_encoding} : SegmentEncodingSpec{};
+    ChunkEncoder::encode_all_chunks(table, encoding_spec);
   }
+
   // We must match ImportNode::output_expressions.
   return nullptr;
 }
@@ -88,7 +85,7 @@ std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _table_encoding, _csv_meta);
+  return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _target_encoding, _csv_meta);
 }
 
 void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

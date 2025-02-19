@@ -23,7 +23,7 @@ class ImportNode : public EnableMakeForLQPNode<ImportNode>, public AbstractNonQu
   const std::string table_name;
   const std::string file_name;
   const FileType file_type;
-  const std::optional<EncodingType> table_encoding;
+  const std::optional<EncodingType> target_encoding;
 
  protected:
   size_t _on_shallow_hash() const override;

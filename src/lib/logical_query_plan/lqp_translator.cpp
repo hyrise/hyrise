@@ -580,7 +580,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
   return std::make_shared<Import>(import_node->file_name, import_node->table_name, Chunk::DEFAULT_SIZE,
-                                  import_node->file_type, import_node->table_encoding);
+                                  import_node->file_type, import_node->target_encoding);
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
