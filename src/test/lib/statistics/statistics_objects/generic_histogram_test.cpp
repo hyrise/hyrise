@@ -229,9 +229,9 @@ TEST_F(GenericHistogramTest, StringLessThan) {
   constexpr auto bin_4_count = 3.0;
   constexpr auto total_count = bin_1_count + bin_2_count + bin_3_count + bin_4_count;
 
-  EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "aaaa"), 0.f);
+  EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "aaaa"), 0.0);
 
-  EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcd"), 0.f);
+  EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcd"), 0.0);
 
   EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abce"), 1 / bin_1_width * bin_1_count);
 
@@ -382,8 +382,8 @@ TEST_F(GenericHistogramTest, StringLikeEstimation) {
       GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 40, StringHistogramDomain{'a', 'z', 4});
 
   // (NOT) LIKE is not estimated and has a selectivity of 1
-  EXPECT_DOUBLE_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "aa_zz%"), 100.f);
-  EXPECT_DOUBLE_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "aa_zz%"), 100.f);
+  EXPECT_DOUBLE_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "aa_zz%"), 100.0);
+  EXPECT_DOUBLE_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "aa_zz%"), 100.0);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
@@ -1122,8 +1122,8 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
   for (auto bin_id = BinID{0}; bin_id < expected_minima.size(); bin_id++) {
     EXPECT_EQ(new_hist->bin_minimum(bin_id), expected_minima[bin_id]);
     EXPECT_EQ(new_hist->bin_maximum(bin_id), expected_maxima[bin_id]);
-    EXPECT_NEAR(new_hist->bin_height(bin_id), expected_heights[bin_id], 0.00001);
-    EXPECT_NEAR(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id], 0.00001);
+    EXPECT_NEAR(new_hist->bin_height(bin_id), expected_heights[bin_id], TOLERANCE);
+    EXPECT_NEAR(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id], TOLERANCE);
   }
 }
 

@@ -670,14 +670,14 @@ TEST_F(CardinalityEstimatorTest, PredicateMultiple) {
 
   // Cardinality = (values below predicate) / bin width * rows = (500 - 100) / (1099 - 100 + 1) * 100 = 40.
   EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()->left_input()),
-                   40);
+                   40.0);
 
   // Cardinality = rows - (values below predicate) / bin width * rows = 40 - (90 - 10) / (109 - 10 + 1) * 40 = 8.
-  // New dictinct count is 20 - (90 - 10) / (109 - 10 + 1) * 20 = 4.
-  EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()), 8);
+  // New distinct count is 20 - (90 - 10) / (109 - 10 + 1) * 20 = 4.
+  EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()), 8.0);
 
   // Column b's lowest value is  50, predicate does not filter anything.
-  EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 8);
+  EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 8.0);
 
   // Cardinality = rows - (values below/equals predicate) / bin width * rows = 8 - (56 - 50) / (59 - 50 + 1) * 8 = 3.2.
   EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 3.2);

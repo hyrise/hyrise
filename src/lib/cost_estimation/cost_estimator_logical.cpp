@@ -63,7 +63,7 @@ Cardinality expression_cost_multiplier(const std::shared_ptr<AbstractExpression>
     return ExpressionVisitation::VisitArguments;
   });
 
-  return std::max(1.0, multiplier);
+  return std::max(Cardinality{1}, multiplier);
 }
 
 }  // namespace
