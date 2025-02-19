@@ -20,13 +20,13 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-Cardinality expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
-  auto multiplier = Cardinality{0};
+Cost expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
+  auto multiplier = Cost{0};
 
   // Determine the number of columns accessed by the predicate to factor in expression complexity. Also add a factor for
   // correlated subqueries as we have to evaluate the subquery for each tuple again.
   // We start with a factor of 0 and continuously add 1 for each column to ease, e.g., the estimation of column vs.
-  // column predicates of nested predicates ('SELECT ... WHERE column_a = column_b OR column_c = 4` needs to evaluate
+  // column predicates or nested predicates ('SELECT ... WHERE column_a = column_b OR column_c = 4` needs to evaluate
   // three columns).
   // Returning the maximum of `multiplier` and 1 accounts for tautologies (`SELECT ... WHERE 1 = 1`), which we currently
   // do not optimize and pass to the ExpressionEvaluator.
@@ -63,7 +63,7 @@ Cardinality expression_cost_multiplier(const std::shared_ptr<AbstractExpression>
     return ExpressionVisitation::VisitArguments;
   });
 
-  return std::max(Cardinality{1}, multiplier);
+  return std::max(Cost{1}, multiplier);
 }
 
 }  // namespace
