@@ -1,13 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
-#include <cmath>
 
 #include "histogram_domain.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"

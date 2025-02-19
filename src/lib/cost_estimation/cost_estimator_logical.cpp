@@ -20,8 +20,8 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
-  auto multiplier = 0.0f;
+Cardinality expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
+  auto multiplier = Cardinality{0};
 
   // Determine the number of columns accessed by the predicate to factor in expression complexity. Also add a factor for
   // correlated subqueries as we have to evaluate the subquery for each tuple again.
@@ -40,7 +40,7 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
     if (sub_expression->type == ExpressionType::LQPColumn ||
         (sub_expression->type == ExpressionType::LQPSubquery &&
          static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated())) {
-      multiplier += 1.0f;
+      multiplier += 1.0;
       // We do not return here. Thus, we continue to add a penalty for each parameter of a correlated subquery. We tried
       // adding the subplan cost here, as well as ignoring the number of parameters. Both approaches did not yield
       // satisfactory benchmark performance, see #2590.
@@ -63,7 +63,7 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
     return ExpressionVisitation::VisitArguments;
   });
 
-  return std::max(1.0f, multiplier);
+  return std::max(1.0, multiplier);
 }
 
 }  // namespace
@@ -78,9 +78,9 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
                                               const bool cacheable) const {
   const auto output_row_count = cardinality_estimator->estimate_cardinality(node, cacheable);
   const auto left_input_row_count =
-      node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input(), cacheable) : 0.0f;
+      node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input(), cacheable) : 0.0;
   const auto right_input_row_count =
-      node->right_input() ? cardinality_estimator->estimate_cardinality(node->right_input(), cacheable) : 0.0f;
+      node->right_input() ? cardinality_estimator->estimate_cardinality(node->right_input(), cacheable) : 0.0;
 
   switch (node->type) {
     case LQPNodeType::Join:
@@ -102,7 +102,7 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
                  right_input_row_count * std::log(right_input_row_count) + output_row_count;
         case SetOperationMode::All:
           // UnionAll simply appends its two inputs and does not touch the actual data.
-          return 0.0f;
+          return 0.0;
         case SetOperationMode::Unique:
           Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
       }

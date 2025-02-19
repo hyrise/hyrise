@@ -162,7 +162,7 @@ Selectivity AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const 
 template <typename T>
 Selectivity AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const T& value) const {
   if (value < bin_minimum(bin_id)) {
-    return 0.0f;
+    return Selectivity{0};
   }
 
   if (value >= bin_maximum(bin_id)) {
@@ -300,7 +300,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
     const std::optional<AllTypeVariant>& variant_value2) const {
   auto value = lossy_variant_cast<T>(variant_value);
   if (!value) {
-    return {static_cast<Cardinality>(total_count()), static_cast<float>(total_distinct_count())};
+    return {total_count(), total_distinct_count()};
   }
 
   if constexpr (std::is_same_v<T, pmr_string>) {
@@ -308,7 +308,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
   }
 
   if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
-    return {Cardinality{0}, 0.0f};
+    return {Cardinality{0}, DistinctCount{0}};
   }
 
   switch (predicate_condition) {
@@ -317,11 +317,11 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       const auto bin_distinct_count = this->bin_distinct_count(bin_id);
 
       if (bin_distinct_count == 0) {
-        return {Cardinality{0.0f}, 0.0f};
+        return {Cardinality{0}, DistinctCount{0}};
       }
 
       const auto cardinality = Cardinality{bin_height(bin_id) / bin_distinct_count};
-      return {cardinality, std::min(bin_distinct_count, HistogramCountType{1.0f})};
+      return {cardinality, std::min(bin_distinct_count, DistinctCount{1})};
     }
 
     case PredicateCondition::NotEquals:
@@ -329,7 +329,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
 
     case PredicateCondition::LessThan: {
       if (*value > bin_maximum(bin_count() - 1)) {
-        return {static_cast<Cardinality>(total_count()), static_cast<float>(total_distinct_count())};
+        return {total_count(), total_distinct_count()};
       }
 
       // This should never be false because does_not_contain should have been true further up if this was the case.
@@ -373,7 +373,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
        * Therefore, if we calculate the share of the last bin based on _count_per_bin
        * we might end up with an estimate higher than total_count(), which is then capped.
        */
-      return {std::min(cardinality, static_cast<Cardinality>(total_count())), distinct_count};
+      return {std::min(cardinality, total_count()), distinct_count};
     }
     case PredicateCondition::LessThanEquals:
       return estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, _domain.next_value_clamped(*value));
@@ -648,7 +648,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
         if (bin_contains(bin_id, *value)) {
           bin_prunable_height[bin_id] = bin_height(bin_id) / bin_distinct_count(bin_id);
         } else {
-          bin_prunable_height[bin_id] = 0.0f;
+          bin_prunable_height[bin_id] = 0.0;
         }
       }
     } break;
@@ -657,14 +657,14 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
       // For bins that are completely less than/equal to the value, bin_ratio_less_than_equals is 100% and no values
       // are prunable. After that, the inverse bin_ratio_less_than_equals is prunable.
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than_equals(bin_id, *value));
+        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0 - bin_ratio_less_than_equals(bin_id, *value));
       }
     } break;
 
     case PredicateCondition::LessThan: {
       // Analogous to LessThanEquals.
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than(bin_id, *value));
+        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0 - bin_ratio_less_than(bin_id, *value));
       }
     } break;
 
@@ -692,7 +692,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
       DebugAssert(value2, "pruned() cannot be called with NULL");
 
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_between(bin_id, *value, *value2));
+        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0 - bin_ratio_between(bin_id, *value, *value2));
       }
     } break;
 
