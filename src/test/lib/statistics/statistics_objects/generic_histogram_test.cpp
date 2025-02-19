@@ -39,6 +39,10 @@ namespace hyrise {
 
 class GenericHistogramTest : public BaseTest {
  public:
+  // When we calculate floating-point values, we might still be out of the acceptable range for `EXPECT_DOUBLE_EQ`, but
+  // within a negligible tolerance.
+  static constexpr auto TOLERANCE = Cardinality{1.0 / 100'000.0};
+
   std::string predicate_to_string(const Predicate& predicate) {
     std::ostringstream stream;
     stream << predicate.predicate_condition << " " << predicate.value;
@@ -66,17 +70,13 @@ class GenericHistogramTest : public BaseTest {
         if (const auto sliced_histogram =
                 std::dynamic_pointer_cast<const AbstractHistogram<T>>(sliced_statistics_object)) {
           SCOPED_TRACE(sliced_histogram->description());
-          EXPECT_NEAR(sliced_histogram->total_count(), cardinality, 0.005);
+          EXPECT_NEAR(sliced_histogram->total_count(), cardinality, TOLERANCE);
         } else {
           EXPECT_EQ(cardinality, 0.0);
         }
       }
     }
   }
-
-  // When we calculate floating-point values, we might still be out of the acceptable range for `EXPECT_DOUBLE_EQ`, but
-  // within a negligible tolerance.
-  static constexpr auto TOLERANCE = Cardinality{0.00001};
 };
 
 TEST_F(GenericHistogramTest, Name) {
@@ -1112,8 +1112,10 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
 
   const auto expected_minima = std::vector<int32_t>{1, 10, 16, 30, 36, 60, 80};
   const auto expected_maxima = std::vector<int32_t>{9, 15, 25, 35, 50, 75, 100};
-  const auto expected_heights = std::vector<HistogramCountType>{14.4, 9.6, 16.0, 8.57143, 21.42857, 20.0, 10};
-  const auto expected_distinct_counts = std::vector<HistogramCountType>{3.6, 2.4, 4.0, 5.7142859, 14.285714, 15, 5};
+  const auto expected_heights =
+      std::vector<HistogramCountType>{14.4, 9.6, 16.0, 6.0 / 21.0 * 30.0, 30.0 - 6.0 / 21.0 * 30.0, 20.0, 10};
+  const auto expected_distinct_counts =
+      std::vector<HistogramCountType>{3.6, 2.4, 4.0, 6.0 / 21.0 * 20.0, 20.0 - 6.0 / 21.0 * 20.0, 15, 5};
 
   const auto new_hist = histogram.split_at_bin_bounds(std::vector<std::pair<int32_t, int32_t>>{{10, 15}, {28, 35}});
 
@@ -1122,8 +1124,8 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
   for (auto bin_id = BinID{0}; bin_id < expected_minima.size(); bin_id++) {
     EXPECT_EQ(new_hist->bin_minimum(bin_id), expected_minima[bin_id]);
     EXPECT_EQ(new_hist->bin_maximum(bin_id), expected_maxima[bin_id]);
-    EXPECT_NEAR(new_hist->bin_height(bin_id), expected_heights[bin_id], TOLERANCE);
-    EXPECT_NEAR(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id], TOLERANCE);
+    EXPECT_DOUBLE_EQ(new_hist->bin_height(bin_id), expected_heights[bin_id]);
+    EXPECT_DOUBLE_EQ(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id]);
   }
 }
 
