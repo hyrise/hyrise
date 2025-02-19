@@ -75,7 +75,8 @@ std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRun
     const BenchmarkItemID item_id) {
   auto visualize_prefix = std::optional<std::string>{};
   if (_config->enable_visualization) {
-    auto name = item_name(item_id);
+    const auto dir = "/scratch/jan-eric.hellenberg/";
+    auto name = dir + item_name(item_id);
     boost::replace_all(name, " ", "_");
     visualize_prefix = std::move(name);
   }
