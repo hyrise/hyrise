@@ -12,8 +12,7 @@ class Reduce : public AbstractReadOnlyOperator {
   friend class OperatorsReduceTest;
 
  public:
-  explicit Reduce(const std::shared_ptr<const AbstractOperator>& input_relation,
-                  const std::shared_ptr<const AbstractOperator>& input_filter = nullptr);
+  explicit Reduce(const std::shared_ptr<const AbstractOperator>& input_relation, const ColumnID column_id);
 
   const std::string& name() const override;
 
@@ -24,9 +23,9 @@ class Reduce : public AbstractReadOnlyOperator {
 //  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
-  void _create_filter(const ColumnID column_id, const uint32_t filter_size);
+  void _create_filter();
 
-  std::shared_ptr<Table> _execute_filter(const ColumnID column_id);
+  std::shared_ptr<Table> _execute_filter();
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
@@ -40,6 +39,9 @@ class Reduce : public AbstractReadOnlyOperator {
   bool _get_bit(uint32_t hash_22bit) const;
 
   std::shared_ptr<std::vector<std::atomic_uint64_t>> _filter;
+  ColumnID _column_id;
+
+  const uint32_t _filter_size = 65536;
 };
 
 }  // namespace hyrise

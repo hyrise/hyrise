@@ -61,23 +61,22 @@ class Hasher {
 
 namespace hyrise {
 
-Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& input_relation,
-               const std::shared_ptr<const AbstractOperator>& input_filter)
-    : AbstractReadOnlyOperator{OperatorType::Reduce, input_relation, input_filter} {}
+Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& input_relation, const ColumnID column_id)
+    : AbstractReadOnlyOperator{OperatorType::Reduce, input_relation}, _column_id{column_id} {}
 
-void Reduce::_create_filter(const ColumnID column_id, const uint32_t filter_size) {
-  Assert(filter_size % 64 == 0, "Filter size must be a multiple of 64.");
-  _filter = std::make_shared<std::vector<std::atomic_uint64_t>>(filter_size / 64);
+void Reduce::_create_filter() {
+  Assert(_filter_size % 64 == 0, "Filter size must be a multiple of 64.");
+  _filter = std::make_shared<std::vector<std::atomic_uint64_t>>(_filter_size / 64);
 
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
 
-  resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
+  resolve_data_type(input_table->column_data_type(_column_id), [&](const auto column_data_type) {
     using ColumnDataType = typename decltype(column_data_type)::type;
     auto hasher = Hasher<ColumnDataType>{};
 
     for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
-      const auto& segment = input_table->get_chunk(chunk_index)->get_segment(column_id);
+      const auto& segment = input_table->get_chunk(chunk_index)->get_segment(_column_id);
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
         if (!position.is_null()) {
@@ -94,11 +93,8 @@ void Reduce::_create_filter(const ColumnID column_id, const uint32_t filter_size
   });
 }
 
-std::shared_ptr<Table> Reduce::_execute_filter(const ColumnID column_id) {
-  if (_filter == nullptr) {
-    Fail("Can not filter without filter.");
-  }
-  // Assert(_filter, "Can not filter without filter.");
+std::shared_ptr<Table> Reduce::_execute_filter() {
+  Assert(_filter, "Can not filter without filter.");
 
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
@@ -106,13 +102,13 @@ std::shared_ptr<Table> Reduce::_execute_filter(const ColumnID column_id) {
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
   output_chunks.reserve(chunk_count);
 
-  resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
+  resolve_data_type(input_table->column_data_type(_column_id), [&](const auto column_data_type) {
     using ColumnDataType = typename decltype(column_data_type)::type;
     auto hasher = Hasher<ColumnDataType>{};
 
     for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
       const auto& chunk = input_table->get_chunk(chunk_index);
-      const auto& segment = chunk->get_segment(column_id);
+      const auto& segment = chunk->get_segment(_column_id);
       auto matches = std::make_shared<RowIDPosList>();
       matches->guarantee_single_chunk();
 
@@ -156,6 +152,7 @@ const std::string& Reduce::name() const {
 }
 
 const std::shared_ptr<std::vector<std::atomic_uint64_t>>& Reduce::export_filter() const {
+  Assert(_filter, "Filter must exist.");
   return _filter;
 }
 

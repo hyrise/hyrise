@@ -35,7 +35,7 @@ class OperatorsReduceTest : public BaseTest {
   }
 
   void create_hashes(std::shared_ptr<Reduce> reduce) {
-    reduce->_create_filter(ColumnID{0}, 65536);
+    reduce->_create_filter();
   }
 
  protected:
@@ -46,20 +46,20 @@ class OperatorsReduceTest : public BaseTest {
 
 TEST_F(OperatorsReduceTest, ScanTableWithFilterCreatedOnItself) {
   const auto expected = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
-  auto reduce = std::make_shared<Reduce>(_int_int);
+  auto reduce = std::make_shared<Reduce>(_int_int, ColumnID{0});
   create_hashes(reduce);
-  EXPECT_TABLE_EQ_UNORDERED(reduce->_execute_filter(ColumnID{0}), expected);
+  EXPECT_TABLE_EQ_UNORDERED(reduce->_execute_filter(), expected);
 }
 
 TEST_F(OperatorsReduceTest, SimpleFilterTest) {
-  auto reduce0 = std::make_shared<Reduce>(_int_int);
+  auto reduce0 = std::make_shared<Reduce>(_int_int, ColumnID{0});
   create_hashes(reduce0);
 
-  auto reduce1 = std::make_shared<Reduce>(_int_int_extended);
+  auto reduce1 = std::make_shared<Reduce>(_int_int_extended, ColumnID{0});
   reduce1->import_filter(reduce0->export_filter());
 
   const auto expected = load_table("resources/test_data/tbl/int_int_shuffled_3_res.tbl", ChunkOffset{7});
-  auto output = reduce1->_execute_filter(ColumnID{0});
+  auto output = reduce1->_execute_filter();
   EXPECT_TABLE_EQ_UNORDERED(output, expected);
 }
 
