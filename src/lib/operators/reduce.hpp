@@ -19,6 +19,8 @@ class Reduce : public AbstractReadOnlyOperator {
 
   const std::shared_ptr<std::vector<std::atomic_uint64_t>>& export_filter() const;
 
+  void import_filter(const std::shared_ptr<std::vector<std::atomic_uint64_t>>& filter);
+
 //  protected:
   std::shared_ptr<const Table> _on_execute() override;
 

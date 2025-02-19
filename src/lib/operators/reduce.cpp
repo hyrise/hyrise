@@ -84,7 +84,7 @@ void Reduce::_create_filter(const ColumnID column_id, const uint32_t filter_size
           const auto hash0 = hasher.hash0(position.value());
           const auto hash1 = hasher.hash1(position.value());
           const auto hash2 = hasher.hash2(position.value());
-          std::cout << position.value() << " : " << hash0 << " " << hash1 << " " << hash2 << std::endl;
+          // std::cout << position.value() << " : " << hash0 << " " << hash1 << " " << hash2 << std::endl;
           _set_bit(hash0);
           _set_bit(hash1);
           _set_bit(hash2);
@@ -157,6 +157,11 @@ const std::string& Reduce::name() const {
 
 const std::shared_ptr<std::vector<std::atomic_uint64_t>>& Reduce::export_filter() const {
   return _filter;
+}
+
+void Reduce::import_filter(const std::shared_ptr<std::vector<std::atomic_uint64_t>>& filter) {
+  Assert(!_filter, "Filter must not exist.");
+  _filter = filter;
 }
 
 std::shared_ptr<const Table> Reduce::_on_execute() {
