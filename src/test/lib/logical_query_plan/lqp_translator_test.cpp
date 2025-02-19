@@ -1,3 +1,5 @@
+#include <optional>
+
 #include "base_test.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -1147,7 +1149,7 @@ TEST_F(LQPTranslatorTest, Export) {
 }
 
 TEST_F(LQPTranslatorTest, Import) {
-  const auto lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto, std::optional<EncodingType>{});
+  const auto lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto, std::nullopt);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
   const auto importer = std::dynamic_pointer_cast<Import>(pqp);
