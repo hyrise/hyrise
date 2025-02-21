@@ -267,6 +267,7 @@ set (
     benchmarklib/tpch/tpch_table_generator_test.cpp
     gtest_main.cpp
     lib/concurrency/stress_test.cpp
+    lib/statistics/large_statistics_test.cpp
     lib/server/server_test_runner.cpp
     lib/sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
     lib/utils/plugin_test_utils.cpp
