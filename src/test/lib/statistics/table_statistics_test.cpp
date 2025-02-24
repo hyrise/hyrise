@@ -25,8 +25,8 @@ TEST_F(TableStatisticsTest, FromTable) {
   ASSERT_TRUE(histogram_a);
 
   // The 24 NULL values should be represented in the compact statistics as well.
-  EXPECT_FLOAT_EQ(histogram_a->total_count(), 200 - 27);
-  EXPECT_FLOAT_EQ(histogram_a->total_distinct_count(), 10);
+  EXPECT_DOUBLE_EQ(histogram_a->total_count(), 200 - 27);
+  EXPECT_DOUBLE_EQ(histogram_a->total_distinct_count(), 10);
 
   const auto column_statistics_b =
       std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(table_statistics->column_statistics.at(1));
@@ -36,8 +36,8 @@ TEST_F(TableStatisticsTest, FromTable) {
   ASSERT_TRUE(histogram_b);
 
   // The 24 NULL values should be represented in the compact statistics as well.
-  EXPECT_FLOAT_EQ(histogram_b->total_count(), 200 - 9);
-  EXPECT_FLOAT_EQ(histogram_b->total_distinct_count(), 190);
+  EXPECT_DOUBLE_EQ(histogram_b->total_count(), 200 - 9);
+  EXPECT_DOUBLE_EQ(histogram_b->total_distinct_count(), 190);
 }
 
 }  // namespace hyrise

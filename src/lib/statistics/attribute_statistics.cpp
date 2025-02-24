@@ -56,7 +56,7 @@ void AttributeStatistics<T>::set_statistics_object(
 template <typename T>
 std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
   // We do not create adapted versions of the underlying statistics objects if the selectivity is 1.0 (+/- uncertainty).
-  if (std::fabs(1.0f - selectivity) <= std::numeric_limits<Selectivity>::epsilon()) {
+  if (std::abs(1.0 - selectivity) <= std::numeric_limits<Selectivity>::epsilon()) {
     return this->shared_from_this();
   }
 
