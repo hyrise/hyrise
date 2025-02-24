@@ -177,6 +177,7 @@ Contact: firstname.lastname@hpi.de
 -   Lawrence  Benson
 -   Jasper    Blum
 -   Lukas     Budach
+-   Margarete Dippel
 -   Timo      Djürken
 -   Alexander Dubrawski
 -   Fabian    Dumke
@@ -233,6 +234,7 @@ Contact: firstname.lastname@hpi.de
 -   Daniel    Stolpe
 -   Jonathan  Striebel
 -   Nils      Thamm
+-   Kathrin   Thenhausen
 -   Hendrik   Tjabben
 -   Justin    Trautmann
 -   Carsten   Walther
