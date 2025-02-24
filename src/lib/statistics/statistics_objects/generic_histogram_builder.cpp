@@ -8,7 +8,6 @@
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
