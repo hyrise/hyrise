@@ -61,12 +61,12 @@ class Hasher {
 
 namespace hyrise {
 
-Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& input_relation, const ColumnID column_id)
-    : AbstractReadOnlyOperator{OperatorType::Reduce, input_relation}, _column_id{column_id} {}
+Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& left_input, const std::shared_ptr<const AbstractOperator>& right_input, const ColumnID column_id)
+    : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _column_id{column_id} {}
 
 void Reduce::_create_filter() {
-  Assert(_filter_size % 64 == 0, "Filter size must be a multiple of 64.");
-  _filter = std::make_shared<std::vector<std::atomic_uint64_t>>(_filter_size / 64);
+  Assert(FILTER_SIZE % 64 == 0, "Filter size must be a multiple of 64.");
+  _filter = std::make_shared<std::vector<std::atomic_uint64_t>>(FILTER_SIZE / 64);
 
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
@@ -162,7 +162,11 @@ void Reduce::import_filter(const std::shared_ptr<std::vector<std::atomic_uint64_
 }
 
 std::shared_ptr<const Table> Reduce::_on_execute() {
-  return left_input_table();
+  if (!_filter) {
+    _create_filter();
+    return left_input_table();
+  }
+  return _execute_filter();
 }
 
 void Reduce::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
