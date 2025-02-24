@@ -40,7 +40,7 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const Abstrac
     if (row_id.is_null()) {
       // If include_null_row_ids is false, NULL_ROW_IDs are skipped. If it is true, they are appended to a separate
       // SubPosList at the end of pos_lists_by_chunk_id.
-      if (include_null_row_ids) {
+      if constexpr (include_null_row_ids) {
         auto& mapping = pos_lists_by_chunk_id[number_of_chunks - 1];
         mapping.row_ids->emplace_back(ChunkID{0}, ChunkOffset{original_position});
       }

@@ -46,7 +46,7 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
     return;
   }
 
-  // Slow path - we are looking at multiple referenced chunks and need to split the pos list first
+  // Slow path - we are looking at multiple referenced chunks and need to split the pos list first.
   const auto referenced_chunk_count = segment.referenced_table()->chunk_count();
   auto chunk_offsets_by_chunk_id = PosListsByChunkID{};
   if (predicate_condition == PredicateCondition::IsNull) {
@@ -72,12 +72,12 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
 
     const auto num_matches = static_cast<ChunkOffset>(matches.size());
 
-    // scan_chunk() is expected to always return a PosList containing positions relative to the input chunk, even when
-    // the input comes from a reference table. For reference segments, _scan_reference_segment() maps the RowIDs from
-    // the referenced table back to positions in the input chunk’s PosList. This enables the TableScan to later reverse
-    // this mapping and create a new PosList with RowIDs pointing to the originally referenced table. While this design
-    // simplifies the interface, it introduces overhead when many tuples are selected.  This could potentially be
-    // optimized in the future.
+    // `scan_chunk()` is expected to always return a PosList containing positions relative to the input chunk, even
+    // when the input comes from a reference table. For reference segments, `_scan_reference_segment()` maps the RowIDs
+    // from the referenced table back to positions in the input chunk’s PosList. This enables the TableScan to later
+    // reverse this mapping and create a new PosList with RowIDs pointing to the originally referenced table. While
+    // this design simplifies the interface, it introduces overhead when many tuples are selected. This could
+    // potentially be optimized in the future. See issue #2689 for more details.
     for (auto match_idx = num_previous_matches; match_idx < num_matches; ++match_idx) {
       DebugAssert(sub_pos_list.original_positions.size() > matches[match_idx].chunk_offset,
                   "Missing original_position for match.");
