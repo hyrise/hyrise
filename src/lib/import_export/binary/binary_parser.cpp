@@ -26,6 +26,7 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
@@ -175,6 +176,8 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
       } else {
         Fail("Unsupported data type for FixedStringDictionary encoding");
       }
+    case EncodingType::VariableStringDictionary:
+      return _import_variable_string_length_segment<pmr_string>(file, row_count);
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
     case EncodingType::FrameOfReference:
@@ -217,6 +220,24 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
   auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
 
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
+}
+
+template <typename T>
+std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variable_string_length_segment(
+    std::ifstream& file, ChunkOffset row_count) {
+  // Read attribute vector compression type and use it to decompress.
+  const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
+  const auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
+
+  // Read offset vector.
+  const auto offset_vector_size = _read_value<uint32_t>(file);
+  const auto offset_vector = std::make_shared<pmr_vector<uint32_t>>(_read_values<uint32_t>(file, offset_vector_size));
+
+  // Read dictionary.
+  const auto dictionary_size = _read_value<uint32_t>(file);
+  const auto dictionary = std::make_shared<pmr_vector<char>>(_read_values<char>(file, dictionary_size));
+
+  return std::make_shared<VariableStringDictionarySegment<pmr_string>>(dictionary, attribute_vector, offset_vector);
 }
 
 std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(
