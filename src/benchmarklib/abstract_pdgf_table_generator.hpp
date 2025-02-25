@@ -38,6 +38,7 @@ class AbstractPDGFTableGenerator : public AbstractTableGenerator {
    return 32u;
   }
 
+  void _collect_all_missing_columns();
   void _collect_columns(const std::string& sql);
 
   float _scale_factor;

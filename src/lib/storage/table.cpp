@@ -187,6 +187,11 @@ bool Table::column_is_nullable(const ColumnID column_id) const {
   return _column_definitions[column_id].nullable;
 }
 
+bool Table::column_is_loaded(const ColumnID column_id) const {
+  Assert(column_id < _column_definitions.size(), "ColumnID out of range.");
+  return _column_definitions[column_id].loaded;
+}
+
 std::vector<bool> Table::columns_are_nullable() const {
   auto nullable = std::vector<bool>(column_count());
   for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {

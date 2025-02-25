@@ -91,8 +91,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   /**
    * Collect columns to generate
    */
-  // TODO: even if ALL is set, generate fewer columns if we already have some loaded!
-  if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
+  if (_benchmark_config->columns_to_generate == ColumnsToGenerate::All) {
+    _collect_all_missing_columns();
+  } else {
     if (single_query_string) {
       _collect_columns(single_query_string.value());
     } else {
@@ -110,9 +111,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
     auto pdgf_data = PdgfProcess::for_data_generation(
       _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
       _benchmark_config, _pdgf_buffer_columns(), _scale_factor);
-    if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
-      pdgf_data.set_column_filter(_columns_to_generate);
-    }
+    pdgf_data.set_column_filter(_columns_to_generate);
     pdgf_data.run();
     auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
     while (reader->has_next_table()) {
@@ -144,6 +143,16 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   }
 
   return table_info_by_name;
+}
+
+void AbstractPDGFTableGenerator::_collect_all_missing_columns() {
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+    for (const auto& column : table->column_definitions()) {
+      if (!column.loaded) {
+        _columns_to_generate->insert(table_name + ":" + column.name);
+      }
+    }
+  }
 }
 
 void AbstractPDGFTableGenerator::_collect_columns(const std::string& sql) {

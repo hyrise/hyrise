@@ -108,13 +108,14 @@ std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstr
   const auto column_count = _read_value<ColumnID>(file);
   const auto column_data_types = _read_values<pmr_string>(file, column_count);
   const auto column_nullables = _read_values<bool>(file, column_count);
+  const auto column_loadeds = _read_values<bool>(file, column_count);
   const auto column_names = _read_string_values(file, column_count);
 
   auto output_column_definitions = TableColumnDefinitions{};
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto data_type = data_type_to_string.right.at(std::string{column_data_types[column_id]});
     output_column_definitions.emplace_back(std::string{column_names[column_id]}, data_type,
-                                           column_nullables[column_id]);
+                                           column_nullables[column_id], column_loadeds[column_id]);
   }
 
   auto table = std::make_shared<Table>(output_column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);

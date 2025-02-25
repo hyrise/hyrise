@@ -33,6 +33,7 @@ class BinaryWriter {
    * Column count                | ColumnID                            | 2
    * Column types                | TypeID array                        | Column Count * 1
    * Column nullable             | bool (stored as BoolAsByteType)     | Column Count * 1
+   * Column loaded               | bool (stored as BoolAsByteType)     | Column Count * 1
    * Column name lengths         | size_t array                        | Column Count * 1
    * Column names                | std::string array                   | Sum of lengths of all names
    */
