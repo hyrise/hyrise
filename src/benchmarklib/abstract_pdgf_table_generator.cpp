@@ -42,7 +42,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::_generate(std::optional<std::string> single_query_string) {
-  Assert(!_benchmark_config->cache_binary_tables, "Caching of half-empty tables containing dummy segments is currently not supported");
+  const auto cache_directory = _benchmark_config->binary_tables_cache_directory + "/" + _benchmark_name_short()+ "/sf-" + std::to_string(_scale_factor) + "-partial";  // NOLINT
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    return _load_binary_tables_from_path(cache_directory);
+  }
 
   std::cerr << "Setting up shared memory (" << _pdgf_buffer_columns() << " buffer columns).\n";
   const auto reader = create_shared_memory_reader(
@@ -88,6 +91,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   /**
    * Collect columns to generate
    */
+  // TODO: even if ALL is set, generate fewer columns if we already have some loaded!
   if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
     if (single_query_string) {
       _collect_columns(single_query_string.value());
@@ -130,6 +134,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
     _columns_to_generate->clear();
   } else {
     std::cerr << "Not invoking PDGF, all required columns already present!\n";
+  }
+
+  if (_benchmark_config->cache_binary_tables) {
+    std::filesystem::create_directories(cache_directory);
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+    }
   }
 
   return table_info_by_name;

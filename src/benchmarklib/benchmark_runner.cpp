@@ -640,6 +640,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
+    ("binary_tables_cache_directory", "Base directory to write cached tables to", cxxopts::value<std::string>()->default_value("cached_tables"))
     ("system_metrics", "Track system metrics (system utilization, segment accesses, etc.) and add them to the output JSON (see -o).", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("pipeline_metrics", "Track SQL pipeline metrics (runtime of steps in SQL pipeline, optimizer rule durations) and add them to the output JSON (see -o). Tracking pipeline metrics switches off plan caching.", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.

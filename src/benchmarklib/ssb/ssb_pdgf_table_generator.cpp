@@ -18,6 +18,11 @@ const auto ssb_table_names = std::vector<std::string>{"part", "customer", "suppl
 SSBPDGFTableGenerator::SSBPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::pair<BenchmarkItemID, std::string>> queries_to_run)
     : AbstractPDGFTableGenerator(scale_factor, benchmark_config, queries_to_run) {}
 
+std::string SSBPDGFTableGenerator::_benchmark_name_short() const {
+  return "ssb";
+}
+
+
 std::string SSBPDGFTableGenerator::_pdgf_schema_config_file() const {
   return "ssb-schema-non-duplicated-fields.xml";
 }

@@ -44,10 +44,6 @@ void run_benchmark(char* argv[], const cxxopts::ParseResult& cli_parse_result, s
   auto use_prepared_statements = false;
   auto jcch = false;
   auto jcch_skewed = false;
-  auto cache_directory = std::string{};
-
-  cache_directory = cli_parse_result["tpch_cache_directory"].as<std::string>();
-  std::cout << "- Cache directory is " << cache_directory << "\n";
 
   scale_factor = cli_parse_result["scale"].as<float>();
 
@@ -137,7 +133,7 @@ void run_benchmark(char* argv[], const cxxopts::ParseResult& cli_parse_result, s
 
     // Create the jcch_data directory (if needed) and generate the jcch_data/sf-... path
     auto jcch_data_path_str = std::ostringstream{};
-    jcch_data_path_str << cache_directory << "/";
+    jcch_data_path_str << config->binary_tables_cache_directory << "/";
     jcch_data_path_str << "jcch_data/sf-" << std::noshowpoint << scale_factor;
     std::filesystem::create_directories(jcch_data_path_str.str());
     // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths:
@@ -157,7 +153,7 @@ void run_benchmark(char* argv[], const cxxopts::ParseResult& cli_parse_result, s
   } else {
     item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
                                                             clustering_configuration, item_ids);
-    table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, cache_directory, clustering_configuration,  config);
+    table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, clustering_configuration, config);
   }
 
   auto benchmark_runner =
@@ -186,8 +182,7 @@ int main(int argc, char* argv[]) {
     ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
                    "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
                    "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
-                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")) // NOLINT
-    ("tpch_cache_directory", "Base directory to write cached tables to", cxxopts::value<std::string>()->default_value("tpch_cached_tables")); // NOLINT
+                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")); // NOLINT
   // clang-format on
 
   // Parse command line args

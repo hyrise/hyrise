@@ -29,6 +29,7 @@ class AbstractPDGFTableGenerator : public AbstractTableGenerator {
   std::unordered_map<std::string, BenchmarkTableInfo> _generate(std::optional<std::string> single_query_string);
 
  protected:
+  virtual std::string _benchmark_name_short() const = 0;
   virtual std::string _pdgf_schema_config_file() const = 0;
   virtual std::string _pdgf_schema_generation_file() const {
    return "default-shm-reflective-generation.xml";

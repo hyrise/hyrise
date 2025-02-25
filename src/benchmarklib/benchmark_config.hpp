@@ -42,7 +42,8 @@ class BenchmarkConfig {
                   const Duration& init_warmup_duration, const std::optional<std::string>& init_output_file_path,
                   const bool init_enable_scheduler, const uint32_t init_cores,
                   const uint32_t init_data_preparation_cores, const uint32_t init_clients,
-                  const bool init_enable_visualization, const bool init_verify, const bool init_cache_binary_tables,
+                  const bool init_enable_visualization, const bool init_verify,
+                  const bool init_cache_binary_tables, const std::string init_binary_tables_cache_directory,
                   const bool init_enable_pdgf_data_generation, const uint64_t pdgf_project_seed,
                   const uint32_t pdgf_num_cores, const int32_t pdgf_work_unit_size,
                   const bool init_pdgf_disable_micro_benchmarks, const ColumnsToGenerate init_columns_to_generate,
@@ -77,6 +78,7 @@ class BenchmarkConfig {
   // Defaults to false for internal use. Benchmark, console, and server binaries set caching of benchmark data using
   // binary files to true by default.
   bool cache_binary_tables{false};
+  std::string binary_tables_cache_directory;
   bool system_metrics{false};
   bool pipeline_metrics{false};
   std::vector<std::string> plugins{};

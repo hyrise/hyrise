@@ -193,8 +193,10 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   }
 
   const auto cache_binary_tables = !parse_result["dont_cache_binary_tables"].as<bool>();
+  const auto binary_tables_cache_directory = parse_result["binary_tables_cache_directory"].as<std::string>();
   if (cache_binary_tables) {
     std::cout << "- Caching tables as binary files\n";
+    std::cout << "- Cache directory is " << binary_tables_cache_directory << "\n";
   } else {
     std::cout << "- Not caching tables as binary files\n";
   }
@@ -225,7 +227,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   return std::make_shared<BenchmarkConfig>(
       enable_hyrise_liveliness_timer, benchmark_mode, chunk_size, *encoding_config, dont_generate_table_statistics, chunk_indexes, table_indexes, only_load_data, separate_benchmark_cycle_per_query, max_runs, timeout_duration,
       warmup_duration, output_file_path, enable_scheduler, cores, data_preparation_cores, clients, enable_visualization,
-      verify, cache_binary_tables, pdgf_data_gen, pdgf_project_seed, pdgf_num_cores, pdgf_work_unit_size, pdgf_disable_micro_benchmarks, columns_to_generate, system_metrics, pipeline_metrics, plugins);
+      verify, cache_binary_tables, binary_tables_cache_directory, pdgf_data_gen, pdgf_project_seed, pdgf_num_cores, pdgf_work_unit_size, pdgf_disable_micro_benchmarks, columns_to_generate, system_metrics, pipeline_metrics, plugins);
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

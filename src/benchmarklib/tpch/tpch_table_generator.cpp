@@ -128,20 +128,19 @@ const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHTableGenerator(scale_factor, "tpch_cached_tables", clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size)) {}
+    : TPCHTableGenerator(scale_factor, clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size)) {}
 
-TPCHTableGenerator::TPCHTableGenerator(float scale_factor, std::string cache_directory, ClusteringConfiguration clustering_configuration,
+TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config),
       _scale_factor(scale_factor),
-      _clustering_configuration(clustering_configuration),
-      _cache_directory(std::move(cache_directory)) {}
+      _clustering_configuration(clustering_configuration) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
 
-  const auto cache_directory = _cache_directory + "/sf-" + std::to_string(_scale_factor);  // NOLINT
+  const auto cache_directory = _benchmark_config->binary_tables_cache_directory + "/tpch_data/sf-" + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     return _load_binary_tables_from_path(cache_directory);
   }
