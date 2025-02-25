@@ -16,6 +16,7 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/dummy_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
@@ -166,6 +167,8 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
   switch (column_type) {
     case EncodingType::Unencoded:
       return _import_value_segment<ColumnDataType>(file, row_count, column_is_nullable);
+    case EncodingType::Empty:
+      return _import_dummy_segment<ColumnDataType>(row_count);
     case EncodingType::Dictionary:
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
     case EncodingType::FixedStringDictionary:
@@ -205,6 +208,11 @@ std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstre
 
   auto values = _read_values<T>(file, row_count);
   return std::make_shared<ValueSegment<T>>(std::move(values));
+}
+
+template <typename T>
+std::shared_ptr<DummySegment<T>> BinaryParser::_import_dummy_segment(ChunkOffset row_count) {
+  return std::make_shared<DummySegment<T>>(row_count);
 }
 
 template <typename T>

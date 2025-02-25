@@ -77,7 +77,10 @@ class BinaryWriter {
   static void _write_segment(const ValueSegment<T>& value_segment, bool column_is_nullable, std::ofstream& ofstream);
 
   /**
-   * TODO
+   * DummySegments are dumped with the following layout:
+   * Description                 | Type                                | Size in bytes
+   * --------------------------------------------------------------------------------------------------------
+   * Encoding Type               | EncodingType                        | 1
    */
   template <typename T>
   static void _write_segment(const DummySegment<T>& value_segment, bool column_is_nullable, std::ofstream& ofstream);
@@ -98,7 +101,7 @@ class BinaryWriter {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    */
-  static void _write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,
+  static void _write_segment(const ReferenceSegment& reference_segment, bool /*column_is_nullable*/,
                              std::ofstream& ofstream);
 
   /**

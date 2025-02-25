@@ -23,7 +23,7 @@ namespace hyrise {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4 };
+enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4, Empty };
 
 std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type);
 

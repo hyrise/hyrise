@@ -189,8 +189,8 @@ void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, bool col
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const DummySegment<T>& dummy_segment, bool column_is_nullable, std::ofstream& ofstream) {
-  throw std::runtime_error("Currently, we cannot write dummy segments."); // TODO(JEH)
+void BinaryWriter::_write_segment(const DummySegment<T>& /*dummy_segment*/, bool /*column_is_nullable*/, std::ofstream& ofstream) {
+  export_value(ofstream, EncodingType::Empty);
 }
 
 void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,
