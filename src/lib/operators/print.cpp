@@ -234,6 +234,7 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
     segment_type += "ReferS";
   } else if (const auto& encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
     switch (encoded_segment->encoding_type()) {
+      case EncodingType::Empty:
       case EncodingType::Unencoded: {
         Fail("An actual segment should never have this type");
       }

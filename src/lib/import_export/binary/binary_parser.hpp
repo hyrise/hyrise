@@ -9,6 +9,7 @@
 
 #include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/dummy_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"

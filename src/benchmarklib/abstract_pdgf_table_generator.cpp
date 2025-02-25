@@ -43,14 +43,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
 
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::_generate(std::optional<std::string> single_query_string) {
   const auto cache_directory = _benchmark_config->binary_tables_cache_directory + "/" + _benchmark_name_short()+ "/sf-" + std::to_string(_scale_factor) + "-partial";  // NOLINT
+  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    return _load_binary_tables_from_path(cache_directory);
+    table_info_by_name = _load_binary_tables_from_path(cache_directory);
+    for (const auto& [table_name, table]: table_info_by_name) {
+      Hyrise::get().storage_manager.add_table(table_name, table.table);
+    }
   }
 
   std::cerr << "Setting up shared memory (" << _pdgf_buffer_columns() << " buffer columns).\n";
   const auto reader = create_shared_memory_reader(
     _benchmark_config, _pdgf_buffer_columns(), SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
-  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
   auto timer = Timer{};
 
   /**
@@ -106,8 +109,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   /**
    * Generate tables
    */
-  if (_benchmark_config->columns_to_generate == ColumnsToGenerate::All || !_columns_to_generate->empty()) {
+  if (!_columns_to_generate->empty()) {
     std::cerr << "Generating tables with PDGF\n";
+    std::cerr << "Generating columns ";
+    for (const auto& column : *_columns_to_generate) {
+      std::cerr << column << " ";
+    }
+    std::cerr << "\n";
     auto pdgf_data = PdgfProcess::for_data_generation(
       _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
       _benchmark_config, _pdgf_buffer_columns(), _scale_factor);
@@ -135,6 +143,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
     std::cerr << "Not invoking PDGF, all required columns already present!\n";
   }
 
+  // TODO: should not always export the tables, only when data changed!
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
     for (auto& [table_name, table_info] : table_info_by_name) {

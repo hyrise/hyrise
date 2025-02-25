@@ -27,7 +27,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
     return AbstractPDGFTableGenerator::generate();
 }
 
-std::string TPCHPDGFTableGenerator::_benchmark_name_short() const override {
+std::string TPCHPDGFTableGenerator::_benchmark_name_short() const {
   return "tpch";
 }
 
