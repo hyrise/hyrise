@@ -40,12 +40,34 @@ TEST_F(OperatorsReduceTest, ScanTableWithFilterCreatedOnItself) {
   EXPECT_TABLE_EQ_UNORDERED(reduce->get_output(), expected);
 }
 
-TEST_F(OperatorsReduceTest, SimpleFilterTest) {
+TEST_F(OperatorsReduceTest, SimpleFilter) {
   auto reduce = std::make_shared<Reduce>(_int_int_extended, _int_int, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
 
   const auto expected = load_table("resources/test_data/tbl/int_int_shuffled_3_res.tbl", ChunkOffset{7});
   reduce->execute();
   EXPECT_TABLE_EQ_UNORDERED(reduce->get_output(), expected);
+}
+
+TEST_F(OperatorsReduceTest, TwoReduces) {
+  auto reduce0 = std::make_shared<Reduce>(_int_int_extended, _int_int, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, true);
+  auto reduce1 = std::make_shared<Reduce>(_int_int, reduce0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+
+  reduce0->execute();
+  reduce1->execute();
+
+  const auto expected = load_table("resources/test_data/tbl/int_int_shuffled_3_res.tbl", ChunkOffset{7});
+  EXPECT_TABLE_EQ_UNORDERED(reduce1->get_output(), expected);
+}
+
+TEST_F(OperatorsReduceTest, TwoReducesWithoutFilterUpdate) {
+  auto reduce0 = std::make_shared<Reduce>(_int_int_extended, _int_int, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+  auto reduce1 = std::make_shared<Reduce>(_int_int, reduce0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+
+  reduce0->execute();
+  reduce1->execute();
+
+  const auto expected = load_table("resources/test_data/tbl/int_int_shuffled_3_res.tbl", ChunkOffset{7});
+  EXPECT_TABLE_EQ_UNORDERED(reduce1->get_output(), expected);
 }
 
 }  // namespace hyrise
