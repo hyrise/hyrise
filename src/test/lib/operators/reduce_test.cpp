@@ -66,7 +66,7 @@ TEST_F(OperatorsReduceTest, TwoReducesWithoutFilterUpdate) {
   reduce0->execute();
   reduce1->execute();
 
-  const auto expected = load_table("resources/test_data/tbl/int_int_shuffled_3_res.tbl", ChunkOffset{7});
+  const auto expected = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
   EXPECT_TABLE_EQ_UNORDERED(reduce1->get_output(), expected);
 }
 
