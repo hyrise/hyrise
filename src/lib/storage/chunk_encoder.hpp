@@ -27,16 +27,16 @@ class AbstractSegment;
  */
 class ChunkEncoder {
  public:
-  static std::shared_ptr<AbstractSegment> encode_segment(const std::shared_ptr<AbstractSegment>& segment,
-                                                         const DataType data_type,
-                                                         const SegmentEncodingSpec& encoding_spec);
+  static std::pair<std::shared_ptr<AbstractSegment>, EncodingChanged> encode_segment(const std::shared_ptr<AbstractSegment>& segment,
+                                                                                     const DataType data_type,
+                                                                                     const SegmentEncodingSpec& encoding_spec);
 
   /**
    * @brief Encodes a chunk
    *
    * Encodes a chunk using the passed encoding specifications. Reduces also the fragmentation of the chunk’s MVCC data.
    */
-  static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
+  static EncodingChanged encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                            const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**

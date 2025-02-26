@@ -135,6 +135,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
     std::cerr << "Finalizing generated tables\n";
     for (auto& table_builder: table_builders) {
       table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
+      // We added some extra data for that table, have to reexport it.
+      table_info_by_name[table_builder->table_name()].binary_file_out_of_date = true;
     }
 
     // Required in case we are doing multiple single-query generations

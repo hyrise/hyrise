@@ -27,9 +27,9 @@ namespace hyrise {
  * an encoded segment is being recreated as an uncompressed segment (created on the fly via
  * an AnySegmentIterable) or that another encoding is applied (via the segment encoding utils).
  */
-std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_ptr<AbstractSegment>& segment,
-                                                              const DataType data_type,
-                                                              const SegmentEncodingSpec& encoding_spec) {
+std::pair<std::shared_ptr<AbstractSegment>, EncodingChanged> ChunkEncoder::encode_segment(const std::shared_ptr<AbstractSegment>& segment,
+                                                                                          const DataType data_type,
+                                                                                          const SegmentEncodingSpec& encoding_spec) {
   Assert(!std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Reference segments cannot be encoded.");
 
   // If a segment does not support reencoding (like, for example, the DummySegment, which does not hold any actual data),
@@ -37,10 +37,11 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
   // Emitting a warning here does not really make sense because this might apply to all segments of a column, leading to a
   // flood of warnings.
   if (!segment->supports_reencoding()) {
-    return segment;
+    return {segment, EncodingChanged::No};
   }
 
   std::shared_ptr<AbstractSegment> result;
+  EncodingChanged encoding_changed = EncodingChanged::Yes;
   resolve_data_type(data_type, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
@@ -55,6 +56,7 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
         (!encoding_spec.vector_compression_type &&
          current_segment_encoding_spec.encoding_type == encoding_spec.encoding_type)) {
       result = segment;
+      encoding_changed = EncodingChanged::No;
       return;
     }
 
@@ -98,11 +100,11 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
       result = encoder->encode(segment, data_type);
     }
   });
-  return result;
+  return {result, encoding_changed};
 }
 
-void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
-                                const ChunkEncodingSpec& chunk_encoding_spec) {
+EncodingChanged ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
+                                           const ChunkEncodingSpec& chunk_encoding_spec) {
   const auto column_count = chunk->column_count();
   Assert(column_data_types.size() == static_cast<size_t>(column_count),
          "Number of column types must match the chunk’s column count.");
@@ -110,19 +112,25 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
          "Number of column encoding specs must match the chunk’s column count.");
   Assert(!chunk->is_mutable(), "Only immutable chunks can be encoded.");
 
+  EncodingChanged encoding_changed = EncodingChanged::No;
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
     const auto data_type = column_data_types[column_id];
     const auto abstract_segment = chunk->get_segment(column_id);
 
-    const auto encoded_segment = encode_segment(abstract_segment, data_type, spec);
+    const auto [encoded_segment, segment_encoding_changed] = encode_segment(abstract_segment, data_type, spec);
     chunk->replace_segment(column_id, encoded_segment);
+    if (segment_encoding_changed == EncodingChanged::Yes) {
+      encoding_changed = EncodingChanged::Yes;
+    }
   }
 
   if (is_immutable_chunk_without_pruning_statistics(chunk)) {
     generate_chunk_pruning_statistics(chunk);
   }
+
+  return encoding_changed;
 }
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,

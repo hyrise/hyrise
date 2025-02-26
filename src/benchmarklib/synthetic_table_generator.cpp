@@ -185,7 +185,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           } else {
             segments[column_index] =
                 ChunkEncoder::encode_segment(value_segment, column_specifications[column_index].data_type,
-                                             *column_specifications[column_index].segment_encoding_spec);
+                                             *column_specifications[column_index].segment_encoding_spec).first;
           }
         });
       }));

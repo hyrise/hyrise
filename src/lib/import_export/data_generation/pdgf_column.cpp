@@ -131,7 +131,7 @@ void PDGFColumn<T>::build_segment(ChunkID segment_index) {
     _data_segments[segment_index].size() == _segment_fullness[segment_index]->load(),
     "Actual amount of data contained in segment is different from calculated theoretical amount calculated when initializing it!");
   auto segment = std::make_shared<ValueSegment<T>>(std::move(_data_segments[segment_index]));
-  _finished_segments[segment_index] = ChunkEncoder::encode_segment(segment, _data_type, _encoding_spec);
+  _finished_segments[segment_index] = ChunkEncoder::encode_segment(segment, _data_type, _encoding_spec).first;
   // });
   // _encoding_tasks[segment_index]->schedule();
 }
