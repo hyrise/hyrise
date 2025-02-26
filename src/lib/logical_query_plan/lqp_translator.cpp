@@ -56,6 +56,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
+#include "operators/reduce.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -379,6 +380,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto& primary_join_predicate = join_predicates.front();
   auto secondary_join_predicates =
       std::vector<OperatorJoinPredicate>(join_predicates.cbegin() + 1, join_predicates.cend());
+
+  if (join_node->join_mode == JoinMode::Semi && join_node->is_semi_reduction()) {
+    return std::make_shared<Reduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
+  }
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};
 
