@@ -118,7 +118,9 @@ std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstr
                                            column_nullables[column_id], column_loadeds[column_id]);
   }
 
-  auto table = std::make_shared<Table>(output_column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
+  auto no_column_loaded = std::none_of(column_loadeds.begin(), column_loadeds.end(), [](const bool v) { return v; });
+  auto use_mvcc = no_column_loaded ? UseMvcc::No : UseMvcc::Yes;
+  auto table = std::make_shared<Table>(output_column_definitions, TableType::Data, chunk_size, use_mvcc);
 
   return std::make_pair(table, chunk_count);
 }
@@ -141,8 +143,12 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
         _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
 
-  const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
-  table->append_chunk(output_segments, mvcc_data);
+  if (table->uses_mvcc() == UseMvcc::Yes) {
+    const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
+    table->append_chunk(output_segments, mvcc_data);
+  } else {
+    table->append_chunk(output_segments, nullptr);
+  }
   table->last_chunk()->set_immutable();
   if (num_sorted_columns > 0) {
     table->last_chunk()->set_individually_sorted_by(sorted_columns);
