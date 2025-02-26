@@ -129,7 +129,7 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           std::cout << "A" << std::endl;
           const auto ref_segment_out = std::make_shared<ReferenceSegment>(input_table, column_id, matches);
-          std::cout << "A" << std::endl;
+          std::cout << "B" << std::endl;
           out_segments.push_back(ref_segment_out);
         }
 
