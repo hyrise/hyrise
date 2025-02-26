@@ -43,18 +43,21 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
 
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::_generate(std::optional<std::string> single_query_string) {
   const auto cache_directory = _benchmark_config->binary_tables_cache_directory + "/" + _benchmark_name_short()+ "/sf-" + std::to_string(_scale_factor) + "-partial";  // NOLINT
+  auto timer = Timer{};
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     table_info_by_name = _load_binary_tables_from_path(cache_directory);
     for (const auto& [table_name, table]: table_info_by_name) {
+      timer.lap();
       Hyrise::get().storage_manager.add_table(table_name, table.table);
+      std::cout << "-  Added table '" << table_name << "' to storage manager, generating table statistics for already present columns (" << timer.lap_formatted() << ")\n";
     }
   }
 
   std::cerr << "Setting up shared memory (" << _pdgf_buffer_columns() << " buffer columns).\n";
   const auto reader = create_shared_memory_reader(
     _benchmark_config, _pdgf_buffer_columns(), SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
-  auto timer = Timer{};
+  timer.lap();
 
   /**
    * Read schema. Note that the SharedMemoryReader MUST be created first as it will create the shared resources PDGF will
