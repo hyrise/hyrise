@@ -65,7 +65,7 @@ Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
                const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate, const bool update_filter)
     : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _predicate(predicate), _update_filter(update_filter) {}
 
-void Reduce::_create_filter(const std::shared_ptr<Table>& table, const ColumnID column_id) {
+void Reduce::_create_filter(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
   Assert(FILTER_SIZE % 64 == 0, "Filter size must be a multiple of 64.");
   _filter = std::make_shared<std::vector<std::atomic_uint64_t>>(FILTER_SIZE / 64);
 
