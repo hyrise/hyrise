@@ -62,32 +62,27 @@ class Hasher {
 namespace hyrise {
 
 Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
-               const std::shared_ptr<const AbstractOperator>& right_input, const ColumnID column_id)
-    : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _column_id{column_id} {}
+               const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate, const bool update_filter)
+    : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _predicate(predicate), _update_filter(update_filter) {}
 
-void Reduce::_create_filter() {
+void Reduce::_create_filter(const std::shared_ptr<Table>& table, const ColumnID column_id) {
   Assert(FILTER_SIZE % 64 == 0, "Filter size must be a multiple of 64.");
   _filter = std::make_shared<std::vector<std::atomic_uint64_t>>(FILTER_SIZE / 64);
 
-  const auto input_table = left_input_table();
-  const auto chunk_count = input_table->chunk_count();
+  const auto chunk_count = table->chunk_count();
 
-  resolve_data_type(input_table->column_data_type(_column_id), [&](const auto column_data_type) {
+  resolve_data_type(table->column_data_type(column_id), [&](const auto column_data_type) {
     using ColumnDataType = typename decltype(column_data_type)::type;
     auto hasher = Hasher<ColumnDataType>{};
 
     for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
-      const auto& segment = input_table->get_chunk(chunk_index)->get_segment(_column_id);
+      const auto& segment = table->get_chunk(chunk_index)->get_segment(column_id);
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
         if (!position.is_null()) {
-          const auto hash0 = hasher.hash0(position.value());
-          const auto hash1 = hasher.hash1(position.value());
-          const auto hash2 = hasher.hash2(position.value());
-          // std::cout << position.value() << " : " << hash0 << " " << hash1 << " " << hash2 << std::endl;
-          _set_bit(hash0);
-          _set_bit(hash1);
-          _set_bit(hash2);
+          _set_bit(hasher.hash0(position.value()));
+          _set_bit(hasher.hash1(position.value()));
+          _set_bit(hasher.hash2(position.value()));
         }
       });
     }
@@ -99,17 +94,18 @@ std::shared_ptr<Table> Reduce::_execute_filter() {
 
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
+  const auto column_id = _predicate.column_ids.first;
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
   output_chunks.reserve(chunk_count);
 
-  resolve_data_type(input_table->column_data_type(_column_id), [&](const auto column_data_type) {
+  resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
     using ColumnDataType = typename decltype(column_data_type)::type;
     auto hasher = Hasher<ColumnDataType>{};
 
     for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
       const auto& chunk = input_table->get_chunk(chunk_index);
-      const auto& segment = chunk->get_segment(_column_id);
+      const auto& segment = chunk->get_segment(column_id);
       auto matches = std::make_shared<RowIDPosList>();
       matches->guarantee_single_chunk();
 
@@ -152,21 +148,16 @@ const std::string& Reduce::name() const {
 }
 
 const std::shared_ptr<std::vector<std::atomic_uint64_t>>& Reduce::export_filter() const {
-  Assert(_filter, "Filter must exist.");
+  Assert(_filter, "Filter is not set, reducer was probably not executed.");
   return _filter;
-}
-
-void Reduce::import_filter(const std::shared_ptr<std::vector<std::atomic_uint64_t>>& filter) {
-  Assert(!_filter, "Filter must not exist.");
-  _filter = filter;
 }
 
 std::shared_ptr<const Table> Reduce::_on_execute() {
   if (_right_input->type() == OperatorType::Reduce) {
-    const auto input_reducer = std::static_pointer_cast<Reduce>(_right_input);
+    const auto input_reducer = std::static_pointer_cast<const Reduce>(_right_input);
     _filter = input_reducer->export_filter();
   } else {
-    _create_filter();
+    _create_filter(_right_input->get_output(), _predicate.column_ids.second);
   }
   return _execute_filter();
 }
