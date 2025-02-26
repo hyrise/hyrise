@@ -25,7 +25,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
   void _create_filter(const std::shared_ptr<const Table>& table, const ColumnID column_id);
 
-  std::shared_ptr<Table> _execute_filter();
+  std::shared_ptr<Table> _create_reduced_table();
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 

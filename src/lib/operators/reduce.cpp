@@ -89,7 +89,7 @@ void Reduce::_create_filter(const std::shared_ptr<const Table>& table, const Col
   });
 }
 
-std::shared_ptr<Table> Reduce::_execute_filter() {
+std::shared_ptr<Table> Reduce::_create_reduced_table() {
   Assert(_filter, "Can not filter without filter.");
 
   const auto input_table = left_input_table();
@@ -159,7 +159,14 @@ std::shared_ptr<const Table> Reduce::_on_execute() {
   } else {
     _create_filter(_right_input->get_output(), _predicate.column_ids.second);
   }
-  return _execute_filter();
+  const auto output_table = _create_reduced_table();
+
+  if (_update_filter) {
+    _filter = nullptr;
+    _create_filter(output_table, _predicate.column_ids.first);
+  }
+
+  return output_table;
 }
 
 void Reduce::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
