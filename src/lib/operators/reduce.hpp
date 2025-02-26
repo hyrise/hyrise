@@ -12,7 +12,8 @@ class Reduce : public AbstractReadOnlyOperator {
   friend class OperatorsReduceTest;
 
  public:
-  explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input, const std::shared_ptr<const AbstractOperator>& right_input, const ColumnID column_id);
+  explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
+                  const std::shared_ptr<const AbstractOperator>& right_input, const ColumnID column_id);
 
   const std::string& name() const override;
 

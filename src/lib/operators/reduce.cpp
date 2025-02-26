@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "operators/abstract_operator.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 
@@ -18,7 +19,7 @@ class Hasher {
 
   uint32_t hash0(const Ty& key) {
     uint32_t knuth = 596572387u;  // Peter 1
-    
+
     uint32_t casted_key = 0;
     if constexpr (std::is_same_v<Ty, int32_t>) {
       casted_key = static_cast<uint32_t>(key) + 1;
@@ -31,7 +32,7 @@ class Hasher {
 
   uint32_t hash1(const Ty& key) {
     uint32_t knuth = 370248451u;  // Peter 1
-    
+
     uint32_t casted_key = 0;
     if constexpr (std::is_same_v<Ty, int32_t>) {
       casted_key = static_cast<uint32_t>(key) + 1;
@@ -44,7 +45,7 @@ class Hasher {
 
   uint32_t hash2(const Ty& key) {
     uint32_t knuth = 2654435769u;  // Peter 1
-    
+
     uint32_t casted_key = 0;
     if constexpr (std::is_same_v<Ty, int32_t>) {
       casted_key = static_cast<uint32_t>(key) + 1;
@@ -54,14 +55,14 @@ class Hasher {
 
     return (casted_key * knuth) >> (32 - p);
   }
-
 };
 
 }  // namespace
 
 namespace hyrise {
 
-Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& left_input, const std::shared_ptr<const AbstractOperator>& right_input, const ColumnID column_id)
+Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
+               const std::shared_ptr<const AbstractOperator>& right_input, const ColumnID column_id)
     : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _column_id{column_id} {}
 
 void Reduce::_create_filter() {
@@ -117,7 +118,7 @@ std::shared_ptr<Table> Reduce::_execute_filter() {
           const auto hash0 = hasher.hash0(position.value());
           const auto hash1 = hasher.hash1(position.value());
           const auto hash2 = hasher.hash2(position.value());
-          
+
           if (_get_bit(hash0) && _get_bit(hash1) && _get_bit(hash2)) {
             matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
           }
@@ -139,7 +140,6 @@ std::shared_ptr<Table> Reduce::_execute_filter() {
 
         output_chunks.emplace_back(output_chunk);
       }
-
     }
   });
 
@@ -162,9 +162,11 @@ void Reduce::import_filter(const std::shared_ptr<std::vector<std::atomic_uint64_
 }
 
 std::shared_ptr<const Table> Reduce::_on_execute() {
-  if (!_filter) {
+  if (_right_input->type() == OperatorType::Reduce) {
+    const auto input_reducer = std::static_pointer_cast<Reduce>(_right_input);
+    _filter = input_reducer->export_filter();
+  } else {
     _create_filter();
-    return left_input_table();
   }
   return _execute_filter();
 }
