@@ -379,6 +379,18 @@ void AbstractTableGenerator::_create_chunk_indexes(
       std::cout << "] " << std::flush;
       auto per_index_timer = Timer{};
 
+      auto all_loaded = true;
+      for (const auto column_id : column_ids) {
+        if (!table->column_is_loaded(column_id)) {
+          std::cout << "[WARNING] Skipped creating that index because column " << table->column_name(column_id) << " is not loaded!\n";
+          all_loaded = false;
+          break;
+        }
+      }
+      if (!all_loaded) {
+        continue;
+      }
+
       if (column_ids.size() == 1) {
         table->create_chunk_index<GroupKeyIndex>(column_ids);
       } else {
@@ -413,9 +425,14 @@ void AbstractTableGenerator::_create_table_indexes(
 
       for (const auto& column_name : index_column_names) {
         std::cout << "-  Creating index on '" << table_name << "." << column_name << "'" << std::flush;
+        auto column_id = table->column_id_by_name(column_name);
+        if (!table->column_is_loaded(column_id)) {
+          std::cout << " [WARNING] Skipped creating that index because column " << table->column_name(column_id) << " is not loaded!\n";
+          continue;
+        }
 
         auto per_table_index_timer = Timer{};
-        table->create_partial_hash_index(table->column_id_by_name(column_name), chunk_ids);
+        table->create_partial_hash_index(column_id, chunk_ids);
 
         std::cout << " (" << per_table_index_timer.lap_formatted() << ")\n";
       }
