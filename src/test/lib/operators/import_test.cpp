@@ -100,7 +100,7 @@ class OperatorsImportFileTypesTest : public OperatorsImportTest, public ::testin
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportFileTypesTest,
                          ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), enum_formatter<FileType>);
 
-TEST_P(OperatorsImportFileTypesTest, ImportWithoutFileTypeAndEncoding) {
+TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
   const auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({1.1f});
