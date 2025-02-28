@@ -1,6 +1,6 @@
 #pragma once
 
-#include <experimental/functional>
+#include <functional>
 #include <optional>
 #include <regex>
 #include <string>
@@ -20,12 +20,8 @@ namespace hyrise {
  * check.
  */
 class LikeMatcher {
-  // A faster search algorithm than the typical byte-wise search if we can reuse the searcher
-#ifdef __GLIBCXX__
-  using Searcher = std::boyer_moore_searcher<pmr_string::const_iterator>;
-#else
-  using Searcher = std::experimental::boyer_moore_searcher<pmr_string::const_iterator>;
-#endif
+// A faster search algorithm than the typical byte-wise search if we can reuse the searcher
+using Searcher = std::boyer_moore_searcher<pmr_string::const_iterator>;
 
  public:
   /**
