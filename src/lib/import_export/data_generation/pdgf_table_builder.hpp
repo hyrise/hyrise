@@ -39,6 +39,7 @@ class PDGFTableBuilder : public BasePDGFTableBuilder {
 
   void read_generation_info(SharedMemoryDataCell<work_unit_size, num_columns>* info_cell, const EncodingConfig &encoding_config);
   void read_data(uint32_t table_id, int64_t sorting_id, SharedMemoryDataCell<work_unit_size, num_columns>* data_cell, uint32_t num_contained_rows);
+  void declare_values_added(int64_t sorting_id, uint32_t num_rows);
 
  protected:
   void _new_column_with_data_type(uint8_t target_index, SegmentEncodingSpec segment_encoding_spec, DataType data_type);

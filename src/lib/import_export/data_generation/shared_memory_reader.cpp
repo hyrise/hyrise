@@ -180,6 +180,7 @@ void SharedMemoryReader<work_unit_size, num_columns>::_worker_read_data(uint32_t
   long num_processed = 0;
   long waiting_time = 0;
   long appending_time = 0;
+  long encoding_time = 0;
   while (table_builder->reader_should_handle_another_work_unit()) {
     num_processed++;
     timer.lap();
@@ -196,12 +197,15 @@ void SharedMemoryReader<work_unit_size, num_columns>::_worker_read_data(uint32_t
     table_builder->read_data(table_id, sorting_id, addressed_data, contained_rows);
     appending_time += timer.lap().count();
     _return_data_slot(data_slot);
+    // In order to start encoding only after we have returned the data slot, only declare that we have successfully added some values to the segments now.
+    table_builder->declare_values_added(sorting_id, contained_rows);
+    encoding_time += timer.lap().count();
   }
   if (num_processed == 0) {
     auto out = table_builder->table_name() + ": Worker " + std::to_string(reader_index) + " had no work units!\n";
     std::cerr << out;
   } else {
-    auto out = table_builder->table_name() + ": Worker " + std::to_string(reader_index) + " read " + std::to_string(num_processed) + " work units, waited " + std::to_string(waiting_time / num_processed) + " and read data " + std::to_string(appending_time / num_processed) + "\n";
+    auto out = table_builder->table_name() + ": Worker " + std::to_string(reader_index) + " read " + std::to_string(num_processed) + " work units, waited " + std::to_string(waiting_time / num_processed) + " and read data " + std::to_string(appending_time / num_processed) + " and encoded " + std::to_string(encoding_time / num_processed) + "\n";
     std::cerr << out;
   }
 }

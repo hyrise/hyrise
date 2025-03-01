@@ -138,7 +138,7 @@ template <uint32_t work_unit_size, uint32_t num_columns>
 void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id, int64_t sorting_id,
                                               SharedMemoryDataCell<work_unit_size, num_columns>* data_cell, uint32_t num_contained_rows) {
   DebugAssert(table_id == _table_id, "Trying to append data to a table it does not belong to!");
-  DebugAssert(num_contained_rows <= work_unit_size, "Reported cells in rows is too large!");
+  DebugAssert(num_contained_rows <= work_unit_size, "Reported rows in cell is too large!");
   // When have originally assigned the work unit, we assumed it was full
   // Now, we might have to update our calculation.
   // Note that this might lead workers to terminate early, as they might have seen no rows remaining when asking
@@ -151,8 +151,13 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id,
       _generated_columns[col]->virtual_add((sorting_id * work_unit_size) + row, data_cell->data[row][col]);
     }
   }
+}
+
+template<uint32_t work_unit_size, uint32_t num_columns>
+void PDGFTableBuilder<work_unit_size, num_columns>::declare_values_added(int64_t sorting_id, uint32_t num_rows) {
+  DebugAssert(num_rows <= work_unit_size, "Reported rows in cell is too large!");
   for (auto col = uint8_t{0}; col < _num_generated_columns; ++col) {
-    _generated_columns[col]->values_added(sorting_id * work_unit_size, num_contained_rows);
+    _generated_columns[col]->values_added(sorting_id * work_unit_size, num_rows);
   }
 }
 
