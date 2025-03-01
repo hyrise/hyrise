@@ -14,17 +14,35 @@
 
 namespace hyrise {
 
-TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type)
-    : AbstractTableConstraint(TableConstraintType::Key), _key_type{key_type}, _columns{std::move(columns)} {
+TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
+                                       const CommitID last_validated_on)
+    : AbstractTableConstraint(TableConstraintType::Key),
+      _columns{std::move(columns)},
+      _key_type{key_type},
+      _last_validated_on(last_validated_on) {
   Assert(!_columns.empty(), "Did not expect useless constraint.");
+}
+
+const std::set<ColumnID>& TableKeyConstraint::columns() const {
+  return _columns;
 }
 
 KeyConstraintType TableKeyConstraint::key_type() const {
   return _key_type;
 }
 
-const std::set<ColumnID>& TableKeyConstraint::columns() const {
-  return _columns;
+bool TableKeyConstraint::can_become_invalid() const {
+  return _last_validated_on != INVALID_COMMIT_ID;
+}
+
+CommitID TableKeyConstraint::last_validated_on() const {
+  return _last_validated_on;
+}
+
+void TableKeyConstraint::revalidated_on(const CommitID revalidation_commit_id) const {
+  DebugAssert(revalidation_commit_id >= _last_validated_on,
+              "Key constraint was already validated for larger commit id.");
+  _last_validated_on = revalidation_commit_id;
 }
 
 size_t TableKeyConstraint::hash() const {
