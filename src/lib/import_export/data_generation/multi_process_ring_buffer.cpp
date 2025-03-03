@@ -30,6 +30,12 @@ MultiProcessRingBuffer<buffer_size>::MultiProcessRingBuffer(int shm_fd, uint32_t
     throw std::runtime_error("Ring buffer memory mapping failed");
   }
 
+  // Remove semaphore timestamps, ignoring errors if file does not exist
+  std::filesystem::remove("/scratch/jan-eric.hellenberg/data_ready_semaphore_awaited_timestamps.txt");
+  std::filesystem::remove("/scratch/jan-eric.hellenberg/data_ready_semaphore_post_timestamps.txt");
+  std::filesystem::remove("/scratch/jan-eric.hellenberg/buffer_free_semaphore_awaited_timestamps.txt");
+  std::filesystem::remove("/scratch/jan-eric.hellenberg/buffer_free_semaphore_post_timestamps.txt");
+
   // Remove existing ones just in case so that we have a fresh state
   // We don't care about errors (such as the semaphore not existing) here
   sem_unlink(_data_available_sem_path);
@@ -50,9 +56,6 @@ void MultiProcessRingBuffer<buffer_size>::reset() {
   // PDGF expects to start reading form index 0 in the buffer
   _current_read_index = 0;
   _current_write_index = 0;
-  // Clear that so that the schema-loading pass is not included
-  _data_available_semaphore_awaited_times.clear();
-  _data_written_semaphore_post_times.clear();
 }
 
 template <uint32_t buffer_size>
