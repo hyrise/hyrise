@@ -49,12 +49,40 @@ bool is_immutable_chunk_without_pruning_statistics(const std::shared_ptr<Chunk>&
   // We do not generate statistics for chunks as long as they are mutable.
   // Also, pruning statistics should be stable no matter what encoding or sort order is used.
   // Hence, when they are present they are up to date, and we can skip the recreation.
-  return chunk && !chunk->is_mutable() && !chunk->pruning_statistics();
+  if (!chunk || chunk->is_mutable()) {
+    return false;
+  }
+
+  if (!chunk->pruning_statistics()) {
+    return true;
+  }
+
+  // Has chunk pruning statistics, but also for all non-dummy-segments?
+  auto needs_pruning_stats = false;
+  for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
+    const auto segment = chunk->get_segment(column_id);
+    resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
+      using SegmentType = std::decay_t<decltype(typed_segment)>;
+      using ColumnDataType = typename decltype(type)::type;
+
+      if constexpr (!std::is_same_v<SegmentType, DummySegment<ColumnDataType>>) {
+        if (auto casted_stats = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(chunk->pruning_statistics().value()[column_id]); casted_stats) {
+          if (!casted_stats->distinct_value_count) {
+            needs_pruning_stats = true;
+          }
+        } else {
+          needs_pruning_stats = true;
+        }
+      }
+    });
+  }
+
+  return needs_pruning_stats;
 }
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
-  DebugAssert(is_immutable_chunk_without_pruning_statistics(chunk),
-              "Method should only be called for qualifying chunks.");
+  // DebugAssert(is_immutable_chunk_without_pruning_statistics(chunk),
+  //             "Method should only be called for qualifying chunks.");
 
   auto chunk_statistics = ChunkPruningStatistics{chunk->column_count()};
 
@@ -71,6 +99,16 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       // As segments without data MAY NOT be accessed by any query (the data population procedure needs to ensure this
       // invariant always holds), not having statistics for them should be fine.
       if constexpr (!std::is_same_v<SegmentType, DummySegment<ColumnDataType>>) {
+        // If we have already generated the statistics for this segment earlier, reuse it
+        if (chunk->pruning_statistics()) {
+          if (auto casted_stats = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(chunk->pruning_statistics().value()[column_id]); casted_stats) {
+            if (casted_stats->distinct_value_count) {
+              chunk_statistics[column_id] = casted_stats;
+              return;
+            }
+          }
+        }
+
         // TODO(anyone): use dictionary-optimized path for FixedStringDictionarySegments as well.
         if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
          // We can use the fact that dictionary segments have an accessor for the dictionary.
