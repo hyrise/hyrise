@@ -30,15 +30,16 @@ AbstractPDGFTableGenerator::AbstractPDGFTableGenerator(float scale_factor, const
 
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::generate() {
   std::unordered_map<std::string, BenchmarkTableInfo> benchmark_tables;
-  if (_benchmark_config->separate_benchmark_cycle_per_query) {
-    for (const auto& query: _queries_to_run) {
-      std::cerr << "Generating ONLY data for query with ID " << query.first << " (note: off-by-one for TPC-H, etc.)\n";
-      benchmark_tables = _generate(std::optional{query.second});
-    }
-  } else {
-    benchmark_tables = _generate(std::nullopt);
-  }
-  return benchmark_tables;
+  // if (_benchmark_config->separate_benchmark_cycle_per_query) {
+  //   for (const auto& query: _queries_to_run) {
+  //     std::cerr << "Generating ONLY data for query with ID " << query.first << " (note: off-by-one for TPC-H, etc.)\n";
+  //     benchmark_tables = _generate(std::optional{query.second});
+  //   }
+  // } else {
+  //   benchmark_tables = _generate(std::nullopt);
+  // }
+  // return benchmark_tables;
+  return _generate(std::nullopt);
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::_generate(std::optional<std::string> single_query_string) {
