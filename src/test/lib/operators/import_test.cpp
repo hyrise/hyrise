@@ -26,7 +26,7 @@ class OperatorsImportTest : public BaseTest {
  protected:
   const std::string reference_filepath = "resources/test_data/";
   const std::map<FileType, std::string> reference_filenames{
-      {FileType::Binary, "bin/float"}, {FileType::Tbl, "tbl/float"}, {FileType::Csv, "csv/float"}};
+      {FileType::Binary, "bin/int_string2"}, {FileType::Tbl, "tbl/int_string2"}, {FileType::Csv, "csv/int_string2"}};
   const std::map<FileType, std::string> file_extensions{
       {FileType::Binary, ".bin"}, {FileType::Tbl, ".tbl"}, {FileType::Csv, ".csv"}};
 };
@@ -50,16 +50,26 @@ INSTANTIATE_TEST_SUITE_P(FileTypesAndEncodings, OperatorsImportMultiFileTypeAndE
                          ::testing::Combine(::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary),
                                             ::testing::Values(std::nullopt, EncodingType::Unencoded,
                                                               EncodingType::Dictionary, EncodingType::RunLength,
-                                                              EncodingType::LZ4)),
+                                                              EncodingType::FixedStringDictionary,
+                                                              EncodingType::FrameOfReference, EncodingType::LZ4)),
                          file_types_and_encodings_name_generator);
 
 TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileType) {
+  /*
+    int_string2.tbl (also for .bin and .csv)
+    a|b
+    int|string
+    123|A
+    1234|B
+    12345|C
+  */
+
   const auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
-  expected_table->append({1.1f});
-  expected_table->append({2.2f});
-  expected_table->append({3.3f});
-  expected_table->append({4.4f});
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::String, false}},
+                              TableType::Data, ChunkOffset{4});
+  expected_table->append({123, "A"});
+  expected_table->append({1234, "B"});
+  expected_table->append({12345, "C"});
 
   // The table contains a single chunk. Make it immutable to allow its encoding.
   expected_table->get_chunk(ChunkID{0})->set_immutable();
@@ -68,8 +78,13 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
 
   // Apply the encoding to the table.
   if (encoding) {
-    const auto encoding_spec = SegmentEncodingSpec{*encoding};
-    ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+    const auto segment_encoding_spec_col1 =
+        SegmentEncodingSpec{*encoding != EncodingType::FixedStringDictionary ? *encoding : EncodingType::Dictionary};
+    const auto segment_encoding_spec_col2 =
+        SegmentEncodingSpec{*encoding != EncodingType::FrameOfReference ? *encoding : EncodingType::Dictionary};
+
+    const auto chunk_encoding_spec = ChunkEncodingSpec{segment_encoding_spec_col1, segment_encoding_spec_col2};
+    ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
   } else if (file_type != FileType::Binary) {
     // If no encoding is specified, we want to check if the defaults are as expected. The binary file is unencoded, so
     // we do not have to change the encoding of `expected_table`. For `.csv` and `.tbl`, the default encoding should be
@@ -85,13 +100,24 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 
-  const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
-  const auto expected_segment = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  // Check Segment 1 / Column 1
+  const auto segment_1 = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  const auto expected_segment_1 = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
 
   // Check if the imported segment has the same type as the manually encoded one.
-  resolve_segment_type<float>(*expected_segment, [&](const auto& expected_segment) {
+  resolve_segment_type<int>(*expected_segment_1, [&](const auto& expected_segment) {
     using EncodedSegmentType = std::remove_reference_t<decltype(expected_segment)>;
-    EXPECT_TRUE(std::dynamic_pointer_cast<EncodedSegmentType>(segment));
+    EXPECT_TRUE(std::dynamic_pointer_cast<EncodedSegmentType>(segment_1));
+  });
+
+  // Check Segment 2 / Column 2
+  const auto segment_2 = table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
+  const auto expected_segment_2 = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
+
+  // Check if the imported segment has the same type as the manually encoded one.
+  resolve_segment_type<pmr_string>(*expected_segment_2, [&](const auto& expected_segment) {
+    using EncodedSegmentType = std::remove_reference_t<decltype(expected_segment)>;
+    EXPECT_TRUE(std::dynamic_pointer_cast<EncodedSegmentType>(segment_2));
   });
 }
 
@@ -102,11 +128,11 @@ INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportFileTypesTest,
 
 TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
   const auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
-  expected_table->append({1.1f});
-  expected_table->append({2.2f});
-  expected_table->append({3.3f});
-  expected_table->append({4.4f});
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::String, false}},
+                              TableType::Data, ChunkOffset{4});
+  expected_table->append({123, "A"});
+  expected_table->append({1234, "B"});
+  expected_table->append({12345, "C"});
 
   // The table contains a single chunk. Make it immutable to allow its encoding.
   expected_table->get_chunk(ChunkID{0})->set_immutable();
@@ -131,13 +157,24 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 
-  const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
-  const auto expected_segment = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  // Check Segment 1.
+  const auto segment_1 = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  const auto expected_segment_1 = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
 
   // Check if the imported segment has the same type as the manually encoded one.
-  resolve_segment_type<float>(*expected_segment, [&](const auto& expected_segment) {
+  resolve_segment_type<int>(*expected_segment_1, [&](const auto& expected_segment) {
     using EncodedSegmentType = std::remove_reference_t<decltype(expected_segment)>;
-    EXPECT_TRUE(std::dynamic_pointer_cast<EncodedSegmentType>(segment));
+    EXPECT_TRUE(std::dynamic_pointer_cast<EncodedSegmentType>(segment_1));
+  });
+
+  // Check Segment 2.
+  const auto segment_2 = table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
+  const auto expected_segment_2 = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
+
+  // Check if the imported segment has the same type as the manually encoded one.
+  resolve_segment_type<pmr_string>(*expected_segment_2, [&](const auto& expected_segment) {
+    using EncodedSegmentType = std::remove_reference_t<decltype(expected_segment)>;
+    EXPECT_TRUE(std::dynamic_pointer_cast<EncodedSegmentType>(segment_2));
   });
 }
 
@@ -154,63 +191,6 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, HasCorrectMvccData) {
   EXPECT_EQ(table->uses_mvcc(), UseMvcc::Yes);
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->has_mvcc_data());
   EXPECT_EQ(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.load(), CommitID{0});
-}
-
-TEST_F(OperatorsImportTest, EncodeImportWithFrameOfReference) {
-  const auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data, ChunkOffset{4});
-
-  expected_table->append({123});
-  expected_table->append({1234});
-  expected_table->append({12345});
-  expected_table->get_chunk(ChunkID{0})->set_immutable();
-
-  // Encode the expected table with FrameOfReference.
-  const auto encoding_spec = SegmentEncodingSpec{EncodingType::FrameOfReference};
-  ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
-
-  const auto filename = std::string{"resources/test_data/tbl/int.tbl"};
-  const auto importer =
-      std::make_shared<Import>(filename, "a", Chunk::DEFAULT_SIZE, FileType::Tbl, EncodingType::FrameOfReference);
-  importer->execute();
-
-  const auto table = Hyrise::get().storage_manager.get_table("a");
-
-  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
-
-  const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
-  // Check if the imported segment has the expected type (FrameOfReferenceSegment<int32_t>).
-  EXPECT_TRUE(std::dynamic_pointer_cast<FrameOfReferenceSegment<int32_t>>(segment));
-}
-
-TEST_F(OperatorsImportTest, EncodeImportWithFixedStringDictionary) {
-  const auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String, false}}, TableType::Data, ChunkOffset{6});
-
-  expected_table->append({"xxx"});
-  expected_table->append({"www"});
-  expected_table->append({"yyy"});
-  expected_table->append({"uuu"});
-  expected_table->append({"ttt"});
-  expected_table->append({"zzz"});
-  expected_table->get_chunk(ChunkID{0})->set_immutable();
-
-  // Encode the expected table with FrameOfReference.
-  const auto encoding_spec = SegmentEncodingSpec{EncodingType::FixedStringDictionary};
-  ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
-
-  const auto filename = std::string{"resources/test_data/tbl/string.tbl"};
-  const auto importer =
-      std::make_shared<Import>(filename, "a", Chunk::DEFAULT_SIZE, FileType::Tbl, EncodingType::FixedStringDictionary);
-  importer->execute();
-
-  const auto table = Hyrise::get().storage_manager.get_table("a");
-
-  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
-
-  const auto segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
-
-  EXPECT_TRUE(std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment));
 }
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {

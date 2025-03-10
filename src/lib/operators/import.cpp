@@ -73,8 +73,22 @@ std::shared_ptr<const Table> Import::_on_execute() {
   // If a table encoding is specified, encode the table accordingly. The default encoding is
   // `EncodingType::Dictionary`, except for binary files. For binary files, the default is the encoding of the file.
   if (_target_encoding || _file_type != FileType::Binary) {
-    const auto encoding_spec = _target_encoding ? SegmentEncodingSpec{*_target_encoding} : SegmentEncodingSpec{};
-    ChunkEncoder::encode_all_chunks(table, encoding_spec);
+    auto chunk_encoding_spec = ChunkEncodingSpec{};
+
+    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+      // If a target encoding is specified, use it. Otherwise, use the default encoding: Dictionary.
+      const auto resolved_encoding = _target_encoding.value_or(EncodingType::Dictionary);
+
+      const auto& column_data_type = table->column_data_type(column_id);
+      if (encoding_supports_data_type(resolved_encoding, column_data_type)) {
+        // The column type can be encoded with the target encoding.
+        chunk_encoding_spec.emplace_back(resolved_encoding);
+      } else {
+        // The column type cannot be encoded with the target encoding. Use Dictionary instead.
+        chunk_encoding_spec.emplace_back(EncodingType::Dictionary);
+      }
+    }
+    ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
   // We must match ImportNode::output_expressions.
