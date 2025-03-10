@@ -34,6 +34,8 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
 
   OrderDependencies order_dependencies() const override;
 
+  InclusionDependencies inclusion_dependencies() const override;
+
   // Implementation is limited to SetOperationMode::Positions only. Passes FDs from the left input node.
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 

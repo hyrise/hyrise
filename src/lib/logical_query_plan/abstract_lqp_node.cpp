@@ -13,12 +13,16 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
+#include "storage/storage_manager.hpp"
 #include "types.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
@@ -276,7 +280,7 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
 }
 
 bool AbstractLQPNode::has_output_expressions(const ExpressionUnorderedSet& expressions) const {
-  const auto& output_expressions = this->output_expressions();
+  const auto output_expressions = this->output_expressions();
   return contains_all_expressions(expressions, output_expressions);
 }
 
@@ -292,7 +296,7 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
-  const auto& unique_column_combinations = this->unique_column_combinations();
+  const auto unique_column_combinations = this->unique_column_combinations();
   if (unique_column_combinations.empty()) {
     return false;
   }
@@ -310,7 +314,7 @@ bool AbstractLQPNode::has_matching_od(
   DebugAssert(has_output_expressions({ordered_expressions.cbegin(), ordered_expressions.cend()}),
               "The given ordered expressions are not a subset of the LQP's output expressions.");
 
-  const auto& order_dependencies = this->order_dependencies();
+  const auto order_dependencies = this->order_dependencies();
   if (order_dependencies.empty()) {
     return false;
   }
@@ -335,6 +339,87 @@ bool AbstractLQPNode::has_matching_od(
     // Found matching OD if the requested ordered expressions are the first of the OD's ordered expressions. Totally
     // fine if the OD orders more expressions that requested.
     if (expression_list_is_prefix(ordered_expressions, od.ordered_expressions)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<AbstractExpression>>& foreign_key_expressions,
+                                       const std::vector<std::shared_ptr<AbstractExpression>>& key_expressions) const {
+  const auto ind_size = key_expressions.size();
+  Assert(ind_size > 0, "Invalid input. Set of expressions should not be empty.");
+  DebugAssert(ind_size == foreign_key_expressions.size(), "Invlid IND requested.");
+  DebugAssert(has_output_expressions({key_expressions.cbegin(), key_expressions.cend()}),
+              "The given expressions are not a subset of the LQP's output expressions.");
+
+  // Gather valid INDs for current node.
+  const auto inclusion_dependencies = this->inclusion_dependencies();
+  if (inclusion_dependencies.empty()) {
+    return false;
+  }
+
+  // Translate required `foreign_key_expressions` to ColumnIDs of the actual stored table.
+  auto required_table = std::shared_ptr<Table>{};
+  auto required_column_id_for_expression = std::vector<std::pair<ColumnID, std::shared_ptr<AbstractExpression>>>{};
+  required_column_id_for_expression.reserve(ind_size);
+
+  for (auto expression_idx = ColumnID{0}; expression_idx < ind_size; ++expression_idx) {
+    const auto& expression = foreign_key_expressions[expression_idx];
+    DebugAssert(expression->type == ExpressionType::LQPColumn, "Expected column expression.");
+    const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*expression);
+    const auto original_node = lqp_column_expression.original_node.lock();
+    Assert(original_node, "Could not resolve original node. LQP is invalid.");
+    if (original_node->type != LQPNodeType::StoredTable) {
+      return false;
+    }
+
+    const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
+    const auto table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
+    if (!required_table) {
+      required_table = table;
+    } else {
+      // Columns must come from a single table.
+      Assert(required_table == table, "Invalid IND requested.");
+    }
+    required_column_id_for_expression.emplace_back(lqp_column_expression.original_column_id,
+                                                   key_expressions[expression_idx]);
+  }
+  // INDs can be equivalent, e.g., [A.a, A.b] in [B.x, B.y] is the same as [A.b, A.a] in [B.y, B.x]. Thus, we sort
+  // persisted ForeignKeyConstraints by the foreign key's ColumnIDs. We do the same here to compare with the valid INDs
+  // of the current node.
+  std::ranges::sort(required_column_id_for_expression, [](const auto& lhs, const auto& rhs) {
+    return lhs.first < rhs.first;
+  });
+
+  // Look for an inclusion dependency that is based on the given expressions.
+  for (const auto& ind : inclusion_dependencies) {
+    if (required_table != ind.included_table) {
+      continue;
+    }
+    // IND references the same included table. Now, check that it also has the required columns in the correct order.
+    auto required_columns_it = required_column_id_for_expression.cbegin();
+    auto matches = true;
+    const auto found_ind_size = ind.expressions.size();
+    for (auto expression_idx = ColumnID{0}; expression_idx < found_ind_size; ++expression_idx) {
+      // Did not reach current required ColumnID yet.
+      if (required_columns_it->first > ind.included_column_ids[expression_idx]) {
+        continue;
+      }
+
+      // IND does not match if the current ColumnID is missing there or it references the wrong column.
+      if (required_columns_it->first < ind.included_column_ids[expression_idx] ||
+          *required_columns_it->second != *ind.expressions[expression_idx]) {
+        matches = false;
+        break;
+      }
+
+      // Current required ColumnID is present and the referenced columns match. Continue with the next one.
+      ++required_columns_it;
+    }
+    // IND matches if all CloumnID-Expression-pairs match.
+    if (matches && required_columns_it == required_column_id_for_expression.cend()) {
       return true;
     }
   }
@@ -477,12 +562,13 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
 
 UniqueColumnCombinations AbstractLQPNode::_forward_left_unique_column_combinations() const {
   Assert(left_input(), "Cannot forward unique column combinations without an input node.");
-  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto input_unique_column_combinations = left_input()->unique_column_combinations();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing.
+    const auto output_expressions = this->output_expressions();
     for (const auto& ucc : input_unique_column_combinations) {
-      Assert(has_output_expressions(ucc.expressions),
+      Assert(contains_all_expressions(ucc.expressions, output_expressions),
              "Forwarding of UCC is illegal because node misses output expressions.");
     }
   }
@@ -491,11 +577,11 @@ UniqueColumnCombinations AbstractLQPNode::_forward_left_unique_column_combinatio
 
 OrderDependencies AbstractLQPNode::_forward_left_order_dependencies() const {
   Assert(left_input(), "Cannot forward order dependencies without an input node.");
-  const auto& input_order_dependencies = left_input()->order_dependencies();
+  const auto input_order_dependencies = left_input()->order_dependencies();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing.
-    const auto& output_expressions = this->output_expressions();
+    const auto output_expressions = this->output_expressions();
     for (const auto& od : input_order_dependencies) {
       Assert(contains_all_expressions(od.ordering_expressions, output_expressions) &&
                  contains_all_expressions(od.ordered_expressions, output_expressions),
@@ -503,6 +589,21 @@ OrderDependencies AbstractLQPNode::_forward_left_order_dependencies() const {
     }
   }
   return input_order_dependencies;
+}
+
+InclusionDependencies AbstractLQPNode::_forward_left_inclusion_dependencies() const {
+  Assert(left_input(), "Cannot forward inclusion dependencies without an input node.");
+  const auto input_inclusion_dependencies = left_input()->inclusion_dependencies();
+
+  if constexpr (HYRISE_DEBUG) {
+    // Check whether output expressions are missing.
+    const auto output_expressions = this->output_expressions();
+    for (const auto& ind : input_inclusion_dependencies) {
+      Assert(contains_all_expressions(ind.expressions, output_expressions),
+             "Forwarding of IND is illegal because node misses output expressions.");
+    }
+  }
+  return input_inclusion_dependencies;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

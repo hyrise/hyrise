@@ -30,14 +30,6 @@ std::shared_ptr<AbstractLQPNode> UpdateNode::_on_shallow_copy(LQPNodeMapping& /*
   return UpdateNode::make(table_name);
 }
 
-bool UpdateNode::is_column_nullable(const ColumnID /*column_id*/) const {
-  Fail("Update does not output any columns.");
-}
-
-std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::output_expressions() const {
-  return {};
-}
-
 size_t UpdateNode::_on_shallow_hash() const {
   return std::hash<std::string>{}(table_name);
 }

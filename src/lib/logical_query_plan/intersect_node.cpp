@@ -53,6 +53,12 @@ OrderDependencies IntersectNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
+InclusionDependencies IntersectNode::inclusion_dependencies() const {
+  // INTERSECT filters the left input table, do it does not guarantee that all values referenced by a foreign key are
+  // still present.
+  return InclusionDependencies{};
+}
+
 FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() const {
   Fail("Merging of FDs is not implemented.");
 }

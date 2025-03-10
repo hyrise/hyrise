@@ -170,6 +170,25 @@ OrderDependencies MockNode::order_dependencies() const {
   return order_dependencies;
 }
 
+void MockNode::set_foreign_key_constraints(const ForeignKeyConstraints& foreign_key_constraints) {
+  _foreign_key_constraints = foreign_key_constraints;
+}
+
+InclusionDependencies MockNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
+  for (const auto& foreign_key_constraint : _foreign_key_constraints) {
+    const auto& table = foreign_key_constraint.foreign_key_table();
+    const auto& columns = foreign_key_constraint.primary_key_columns();
+    auto included_columns = foreign_key_constraint.foreign_key_columns();
+    if (contains_any_column(_pruned_column_ids, columns)) {
+      continue;
+    }
+
+    inclusion_dependencies.emplace(get_expressions_for_column_ids(*this, columns), std::move(included_columns), table);
+  }
+  return inclusion_dependencies;
+}
+
 const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {
   return _table_statistics;
 }

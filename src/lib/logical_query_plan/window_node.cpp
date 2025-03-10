@@ -70,6 +70,10 @@ OrderDependencies WindowNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
+InclusionDependencies WindowNode::inclusion_dependencies() const {
+  return _forward_left_inclusion_dependencies();
+}
+
 size_t WindowNode::_on_shallow_hash() const {
   // The WindowFunctionExpression contains everything that is required for the hash. Its hash is combined with the
   // WindowNode's hash in AbstractLQPNode::hash().

@@ -81,6 +81,10 @@ OrderDependencies StaticTableNode::order_dependencies() const {
   return OrderDependencies{};
 }
 
+InclusionDependencies StaticTableNode::inclusion_dependencies() const {
+  return InclusionDependencies{};
+}
+
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }

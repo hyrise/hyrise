@@ -54,7 +54,7 @@ UniqueColumnCombinations UnionNode::unique_column_combinations() const {
        * PredicateSplitUpRule), the UCCs have remained the same on the left and right sides. This is not necessarily
        * true in the future. We assert this behaviour so that we are aware if this ever changes.
        */
-      const auto& left_unique_column_combinations = _forward_left_unique_column_combinations();
+      const auto left_unique_column_combinations = _forward_left_unique_column_combinations();
       Assert(left_unique_column_combinations == right_input()->unique_column_combinations(),
              "Input tables should have the same unique column combinations.");
       return left_unique_column_combinations;
@@ -80,7 +80,7 @@ OrderDependencies UnionNode::order_dependencies() const {
       // We can only forward ODs if the two input nodes come from the same table, i.e., they have the same output
       // expressions. This is the case when, e.g., the results of two predicates combined with logical or are merged.
       // Currently, Hyrise does not allow unions of different tables.
-      const auto& left_order_dependencies = _forward_left_order_dependencies();
+      const auto left_order_dependencies = _forward_left_order_dependencies();
       Assert(left_order_dependencies == right_input()->order_dependencies(),
              "Input tables should have the same order depedencies.");
       return left_order_dependencies;
@@ -89,6 +89,26 @@ OrderDependencies UnionNode::order_dependencies() const {
       Fail("ToDo, see discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
   }
   Fail("Unhandled UnionMode.");
+}
+
+InclusionDependencies UnionNode::inclusion_dependencies() const {
+  switch (set_operation_mode) {
+    case SetOperationMode::Positions: {
+      const auto left_inclusion_dependencies = left_input()->inclusion_dependencies();
+      Assert(left_inclusion_dependencies == right_input()->inclusion_dependencies(),
+             "Input tables should have the same inclusion dependencies.");
+      return left_inclusion_dependencies;
+    }
+    case SetOperationMode::All: {
+      auto left_inclusion_dependencies = left_input()->inclusion_dependencies();
+      const auto right_inclusion_dependencies = right_input()->inclusion_dependencies();
+      left_inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
+      return left_inclusion_dependencies;
+    }
+    case SetOperationMode::Unique:
+      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+  }
+  Fail("Unhandled UnionMode");
 }
 
 FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {

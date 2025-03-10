@@ -46,6 +46,12 @@ OrderDependencies ExceptNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
+InclusionDependencies ExceptNode::inclusion_dependencies() const {
+  // EXCEPT filters the left input table, do it does not guarantee that all values referenced by a foreign key are still
+  // present.
+  return InclusionDependencies{};
+}
+
 FunctionalDependencies ExceptNode::non_trivial_functional_dependencies() const {
   // The right input node is used for filtering only. It does not contribute any FDs.
   return left_input()->non_trivial_functional_dependencies();
