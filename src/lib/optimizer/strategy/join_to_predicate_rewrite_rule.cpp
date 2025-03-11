@@ -24,7 +24,7 @@ using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 void gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
-    std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables) {
+    std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>, bool>>& rewritables) {
   const auto prunable_side = join_node->prunable_input_side();
   if (!prunable_side) {
     return;
@@ -40,7 +40,8 @@ void gather_rewrite_info(
 
   const auto& join_predicates = join_node->join_predicates();
 
-  auto removable_subtree = join_node->input(*prunable_side);
+  const auto& removable_subtree = join_node->input(*prunable_side);
+  const auto& used_subtree = *prunable_side == LQPInputSide::Left ? join_node->right_input() : join_node->left_input();
   const auto predicate_count = join_predicates.size();
   auto exchangeable_column_expressions = std::vector<std::shared_ptr<AbstractExpression>>(predicate_count);
   auto join_expressions = std::vector<std::shared_ptr<AbstractExpression>>(predicate_count);
@@ -69,7 +70,18 @@ void gather_rewrite_info(
   }
 
   if (removable_subtree->has_matching_ind(join_expressions, exchangeable_column_expressions)) {
-    rewritables.emplace_back(join_node, *prunable_side, nullptr);
+    auto predicate = std::shared_ptr<AbstractExpression>{};
+    for (const auto& expression : join_expressions) {
+      if (expression->is_nullable_on_lqp(*used_subtree)) {
+        if (predicate) {
+          predicate = and_(predicate, is_not_null_(expression));
+        } else {
+          predicate = is_not_null_(expression);
+        }
+      }
+    }
+    const auto predicate_node = predicate ? PredicateNode::make(predicate) : std::shared_ptr<PredicateNode>{};
+    rewritables.emplace_back(join_node, *prunable_side, predicate_node, true);
     return;
   }
 
@@ -132,19 +144,23 @@ void gather_rewrite_info(
   });
 
   if (rewrite_predicate) {
-    rewritables.emplace_back(join_node, *prunable_side, rewrite_predicate);
+    rewritables.emplace_back(join_node, *prunable_side, rewrite_predicate, false);
   }
 }
 
 void perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInputSide prunable_side,
-                     const std::shared_ptr<PredicateNode>& rewrite_predicate) {
+                     const std::shared_ptr<PredicateNode>& rewrite_predicate, const bool remove_join) {
   if (prunable_side == LQPInputSide::Left) {
     join_node->set_left_input(join_node->right_input());
   }
   join_node->set_right_input(nullptr);
 
-  if (!rewrite_predicate) {
-    lqp_remove_node(join_node);
+  if (remove_join) {
+    if (!rewrite_predicate) {
+      lqp_remove_node(join_node);
+    } else {
+      lqp_replace_node(join_node, rewrite_predicate);
+    }
     return;
   }
 
@@ -187,7 +203,7 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // `rewritables finally contains all rewritable join nodes, their unused input side, and the predicates to be used for
   // the rewrites.
-  auto rewritables = std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>{};
+  auto rewritables = std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>, bool>>{};
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
@@ -196,8 +212,8 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
     return LQPVisitation::VisitInputs;
   });
 
-  for (const auto& [join_node, prunable_side, rewrite_predicate] : rewritables) {
-    perform_rewrite(join_node, prunable_side, rewrite_predicate);
+  for (const auto& [join_node, prunable_side, rewrite_predicate, remove_join] : rewritables) {
+    perform_rewrite(join_node, prunable_side, rewrite_predicate, remove_join);
   }
 }
 
