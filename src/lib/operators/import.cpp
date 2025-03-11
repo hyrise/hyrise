@@ -79,7 +79,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
       // If a target encoding is specified, use it. Otherwise, use the default encoding: Dictionary.
       const auto resolved_encoding = _target_encoding.value_or(EncodingType::Dictionary);
 
-      const auto& column_data_type = table->column_data_type(column_id);
+      const auto column_data_type = table->column_data_type(column_id);
       if (encoding_supports_data_type(resolved_encoding, column_data_type)) {
         // The column type can be encoded with the target encoding.
         chunk_encoding_spec.emplace_back(resolved_encoding);

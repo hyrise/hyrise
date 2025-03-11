@@ -55,15 +55,6 @@ INSTANTIATE_TEST_SUITE_P(FileTypesAndEncodings, OperatorsImportMultiFileTypeAndE
                          file_types_and_encodings_name_generator);
 
 TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileType) {
-  /*
-    int_string2.tbl (also for .bin and .csv)
-    a|b
-    int|string
-    123|A
-    1234|B
-    12345|C
-  */
-
   const auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::String, false}},
                               TableType::Data, ChunkOffset{4});
@@ -100,17 +91,17 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 
-  // Check Segment 1 / Column 1
+  // Check Segment 1 / Column 1.
   const auto segment_1 = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
   const auto expected_segment_1 = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
 
   // Check if the imported segment has the same type as the manually encoded one.
-  resolve_segment_type<int>(*expected_segment_1, [&](const auto& expected_segment) {
+  resolve_segment_type<int32_t>(*expected_segment_1, [&](const auto& expected_segment) {
     using EncodedSegmentType = std::remove_reference_t<decltype(expected_segment)>;
     EXPECT_TRUE(std::dynamic_pointer_cast<EncodedSegmentType>(segment_1));
   });
 
-  // Check Segment 2 / Column 2
+  // Check Segment 2 / Column 2.
   const auto segment_2 = table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
   const auto expected_segment_2 = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
 
@@ -162,7 +153,7 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
   const auto expected_segment_1 = expected_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
 
   // Check if the imported segment has the same type as the manually encoded one.
-  resolve_segment_type<int>(*expected_segment_1, [&](const auto& expected_segment) {
+  resolve_segment_type<int32_t>(*expected_segment_1, [&](const auto& expected_segment) {
     using EncodedSegmentType = std::remove_reference_t<decltype(expected_segment)>;
     EXPECT_TRUE(std::dynamic_pointer_cast<EncodedSegmentType>(segment_1));
   });
