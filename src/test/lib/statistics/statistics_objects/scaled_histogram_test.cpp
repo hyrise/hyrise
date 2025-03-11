@@ -44,16 +44,16 @@ INSTANTIATE_TEST_SUITE_P(ScaledHistogramTestDataType, ScaledHistogramTest,
                          enum_formatter<DataType>);
 
 TEST_F(ScaledHistogramTest, Name) {
-  const auto histogram = ScaledHistogram<int32_t>{*_referenced_histogram, 0.5f};
+  const auto histogram = ScaledHistogram<int32_t>{*_referenced_histogram, 0.5};
   EXPECT_EQ(histogram.name(), "Scaled");
 }
 
 TEST_F(ScaledHistogramTest, FromReferencedHistogram) {
-  const auto scaled_histogram = ScaledHistogram<int32_t>::from_referenced_histogram(*_referenced_histogram, 0.2f);
+  const auto scaled_histogram = ScaledHistogram<int32_t>::from_referenced_histogram(*_referenced_histogram, 0.2);
 
   const auto bin_count = scaled_histogram->bin_count();
   EXPECT_EQ(bin_count, _referenced_histogram->bin_count());
-  EXPECT_FLOAT_EQ(scaled_histogram->total_count(), _referenced_histogram->total_count() * 0.2f);
+  EXPECT_DOUBLE_EQ(scaled_histogram->total_count(), _referenced_histogram->total_count() * 0.2);
 
   auto expected_distinct_count = HistogramCountType{0};
   for (auto bin_id = BinID{0}; bin_id < bin_count; ++bin_id) {
@@ -61,11 +61,11 @@ TEST_F(ScaledHistogramTest, FromReferencedHistogram) {
     EXPECT_EQ(scaled_histogram->bin_maximum(bin_id), _referenced_histogram->bin_maximum(bin_id));
 
     const auto bin_height = scaled_histogram->bin_height(bin_id);
-    EXPECT_FLOAT_EQ(bin_height, _referenced_histogram->bin_height(bin_id) * 0.2f);
+    EXPECT_DOUBLE_EQ(bin_height, _referenced_histogram->bin_height(bin_id) * 0.2);
 
     const auto expected_bin_distinct_count = std::min(_referenced_histogram->bin_distinct_count(bin_id), bin_height);
     expected_distinct_count += expected_bin_distinct_count;
-    EXPECT_FLOAT_EQ(scaled_histogram->bin_distinct_count(bin_id), expected_bin_distinct_count);
+    EXPECT_DOUBLE_EQ(scaled_histogram->bin_distinct_count(bin_id), expected_bin_distinct_count);
     EXPECT_LE(scaled_histogram->bin_distinct_count(bin_id), bin_height);
   }
 
@@ -74,30 +74,30 @@ TEST_F(ScaledHistogramTest, FromReferencedHistogram) {
     EXPECT_EQ(scaled_histogram->next_bin_for_value(value), _referenced_histogram->next_bin_for_value(value));
   }
 
-  EXPECT_FLOAT_EQ(scaled_histogram->total_distinct_count(), expected_distinct_count);
+  EXPECT_DOUBLE_EQ(scaled_histogram->total_distinct_count(), expected_distinct_count);
 }
 
 TEST_F(ScaledHistogramTest, FromScaling) {
   const auto scaled_histogram =
-      std::dynamic_pointer_cast<const ScaledHistogram<int32_t>>(_referenced_histogram->scaled(0.5f));
+      std::dynamic_pointer_cast<const ScaledHistogram<int32_t>>(_referenced_histogram->scaled(0.5));
   ASSERT_TRUE(scaled_histogram);
   EXPECT_EQ(referenced_histogram(*scaled_histogram), _referenced_histogram);
-  EXPECT_FLOAT_EQ(selectivity(*scaled_histogram), 0.5f);
+  EXPECT_DOUBLE_EQ(selectivity(*scaled_histogram), 0.5);
 }
 
 TEST_F(ScaledHistogramTest, SingleIndirection) {
   const auto scaled_histogram_a =
-      std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(_referenced_histogram->scaled(0.4f));
-  const auto scaled_histogram_b = ScaledHistogram<int32_t>::from_referenced_histogram(*scaled_histogram_a, 0.25f);
+      std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(_referenced_histogram->scaled(0.4));
+  const auto scaled_histogram_b = ScaledHistogram<int32_t>::from_referenced_histogram(*scaled_histogram_a, 0.25);
 
   EXPECT_EQ(referenced_histogram(*scaled_histogram_b), _referenced_histogram);
-  EXPECT_FLOAT_EQ(selectivity(*scaled_histogram_b), 0.1f);
+  EXPECT_DOUBLE_EQ(selectivity(*scaled_histogram_b), 0.1);
 }
 
 TEST_F(ScaledHistogramTest, CopiesDomain) {
   const auto domain = StringHistogramDomain{'a', 'y', 3};
   const auto generic_histogram = GenericHistogram<pmr_string>::with_single_bin("giraffe", "platypus", 10, 5, domain);
-  const auto scaled_histogram = ScaledHistogram<pmr_string>::from_referenced_histogram(*generic_histogram, 0.5f);
+  const auto scaled_histogram = ScaledHistogram<pmr_string>::from_referenced_histogram(*generic_histogram, 0.5);
 
   const auto actual_domain = static_cast<const StringHistogramDomain&>(scaled_histogram->domain());
   const auto expected_domain = static_cast<const StringHistogramDomain&>(generic_histogram->domain());
@@ -108,7 +108,7 @@ TEST_F(ScaledHistogramTest, CopiesDomain) {
 TEST_F(ScaledHistogramTest, BinHeightAndDistinctCount) {
   // The distinct count of a bin can usually not be adjusted by scaling and remains the same. However, it must not be
   // higher than the bin height, i.e., the total number of elements in the bin.
-  const auto scaled_histogram = ScaledHistogram<int32_t>::from_referenced_histogram(*_referenced_histogram, 0.1f);
+  const auto scaled_histogram = ScaledHistogram<int32_t>::from_referenced_histogram(*_referenced_histogram, 0.1);
 
   //   BinID                |  0   |  1   |  2
   //  ----------------------+------+------+------
@@ -117,12 +117,12 @@ TEST_F(ScaledHistogramTest, BinHeightAndDistinctCount) {
   //   scaled height        |  1.3 |  1.2 |  6.5
   //   scaled dist. count   |  1.3 |  1.2 |  5
 
-  EXPECT_FLOAT_EQ(scaled_histogram->bin_height(BinID{0}), 1.3f);
-  EXPECT_FLOAT_EQ(scaled_histogram->bin_distinct_count(BinID{0}), 1.3f);
-  EXPECT_FLOAT_EQ(scaled_histogram->bin_height(BinID{1}), 1.2f);
-  EXPECT_FLOAT_EQ(scaled_histogram->bin_distinct_count(BinID{1}), 1.2f);
-  EXPECT_FLOAT_EQ(scaled_histogram->bin_height(BinID{2}), 6.5f);
-  EXPECT_FLOAT_EQ(scaled_histogram->bin_distinct_count(BinID{2}), 5.0f);
+  EXPECT_DOUBLE_EQ(scaled_histogram->bin_height(BinID{0}), 1.3);
+  EXPECT_DOUBLE_EQ(scaled_histogram->bin_distinct_count(BinID{0}), 1.3);
+  EXPECT_DOUBLE_EQ(scaled_histogram->bin_height(BinID{1}), 1.2);
+  EXPECT_DOUBLE_EQ(scaled_histogram->bin_distinct_count(BinID{1}), 1.2);
+  EXPECT_DOUBLE_EQ(scaled_histogram->bin_height(BinID{2}), 6.5);
+  EXPECT_DOUBLE_EQ(scaled_histogram->bin_distinct_count(BinID{2}), 5.0);
 }
 
 TEST_P(ScaledHistogramTest, ReferencesGenericHistogram) {
@@ -133,9 +133,9 @@ TEST_P(ScaledHistogramTest, ReferencesGenericHistogram) {
     const auto max = HistogramDataType{80};
     const auto generic_histogram = GenericHistogram<HistogramDataType>::with_single_bin(min, max, 10, 5);
 
-    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*generic_histogram, 0.5f};
+    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*generic_histogram, 0.5};
     EXPECT_EQ(referenced_histogram(scaled_histogram), generic_histogram);
-    EXPECT_EQ(selectivity(scaled_histogram), 0.5f);
+    EXPECT_EQ(selectivity(scaled_histogram), 0.5);
   });
 }
 
@@ -149,9 +149,9 @@ TEST_P(ScaledHistogramTest, ReferencesEqualDistinctCountHistogram) {
     const auto equal_distinct_count_histogram = std::make_shared<EqualDistinctCountHistogram<HistogramDataType>>(
         std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), 5, BinID{0});
 
-    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*equal_distinct_count_histogram, 0.5f};
+    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*equal_distinct_count_histogram, 0.5};
     EXPECT_EQ(referenced_histogram(scaled_histogram), equal_distinct_count_histogram);
-    EXPECT_EQ(selectivity(scaled_histogram), 0.5f);
+    EXPECT_EQ(selectivity(scaled_histogram), 0.5);
   });
 }
 
