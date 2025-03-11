@@ -46,11 +46,14 @@ void gather_rewrite_info(
   auto removable_subtree = join_node->input(*prunable_side);
   auto rewrite_predicate = std::shared_ptr<PredicateNode>{};
   auto exchangeable_column_expression = std::shared_ptr<AbstractExpression>{};
+  auto other_expression = std::shared_ptr<AbstractExpression>{};
 
   if (expression_evaluable_on_lqp(join_predicate->left_operand(), *removable_subtree)) {
     exchangeable_column_expression = join_predicate->left_operand();
+    other_expression = join_predicate->right_operand();
   } else if (expression_evaluable_on_lqp(join_predicate->right_operand(), *removable_subtree)) {
     exchangeable_column_expression = join_predicate->right_operand();
+    other_expression = join_predicate->left_operand();
   }
 
   Assert(exchangeable_column_expression,
@@ -58,6 +61,11 @@ void gather_rewrite_info(
 
   // Check for uniqueness.
   if (!removable_subtree->has_matching_ucc({exchangeable_column_expression})) {
+    return;
+  }
+
+  if (removable_subtree->has_matching_ind({other_expression}, {exchangeable_column_expression})) {
+    rewritables.emplace_back(join_node, *prunable_side, nullptr);
     return;
   }
 
@@ -125,6 +133,11 @@ void perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInputS
     join_node->set_left_input(join_node->right_input());
   }
   join_node->set_right_input(nullptr);
+
+  if (!rewrite_predicate) {
+    lqp_remove_node(join_node);
+    return;
+  }
 
   // Get the join predicate, as we need to extract which column to filter on. We ensured before that there is exactly
   // one predicate for the current join.
