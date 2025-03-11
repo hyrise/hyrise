@@ -189,13 +189,12 @@ InclusionDependencies StoredTableNode::inclusion_dependencies() const {
   const auto& foreign_key_constraints = table->referenced_foreign_key_constraints();
 
   for (const auto& foreign_key_constraint : foreign_key_constraints) {
-    const auto& referenced_table = foreign_key_constraint.foreign_key_table();
+    const auto referenced_table = foreign_key_constraint.foreign_key_table();
     if (!referenced_table) {
       // Referenced table was deleted, IND is useless.
       continue;
     }
 
-    // Discard inclusion constraints that involve pruned ColumnIDs.
     // Remove pruned columns from the IND.
     auto pruned_columns_it = _pruned_column_ids.cbegin();
     auto pk_column_ids = std::vector<ColumnID>{};

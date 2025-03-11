@@ -12,11 +12,10 @@ class LogicalPlanRootNodeTest : public BaseTest {
   std::shared_ptr<LogicalPlanRootNode> _logical_plan_root_node;
 };
 
-TEST_F(LogicalPlanRootNodeTest, UniqueColumnCombinations) {
+TEST_F(LogicalPlanRootNodeTest, NoDataDependencies) {
   EXPECT_THROW(_logical_plan_root_node->unique_column_combinations(), std::logic_error);
-}
-
-TEST_F(LogicalPlanRootNodeTest, NonTrivialFunctionalDependencies) {
+  EXPECT_THROW(_logical_plan_root_node->order_dependencies(), std::logic_error);
+  EXPECT_THROW(_logical_plan_root_node->inclusion_dependencies(), std::logic_error);
   EXPECT_THROW(_logical_plan_root_node->non_trivial_functional_dependencies(), std::logic_error);
 }
 

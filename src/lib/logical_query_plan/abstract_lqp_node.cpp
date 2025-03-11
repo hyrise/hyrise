@@ -400,7 +400,7 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
     }
     // IND references the same included table. Now, check that it also has the required columns in the correct order.
     auto required_columns_it = required_column_id_for_expression.cbegin();
-    auto matches = true;
+    // auto matches = true;
     const auto found_ind_size = ind.expressions.size();
     for (auto expression_idx = ColumnID{0}; expression_idx < found_ind_size; ++expression_idx) {
       // Did not reach current required ColumnID yet.
@@ -411,7 +411,7 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
       // IND does not match if the current ColumnID is missing there or it references the wrong column.
       if (required_columns_it->first < ind.included_column_ids[expression_idx] ||
           *required_columns_it->second != *ind.expressions[expression_idx]) {
-        matches = false;
+        // matches = false;
         break;
       }
 
@@ -419,7 +419,7 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
       ++required_columns_it;
     }
     // IND matches if all CloumnID-Expression-pairs match.
-    if (matches && required_columns_it == required_column_id_for_expression.cend()) {
+    if (required_columns_it == required_column_id_for_expression.cend()) {
       return true;
     }
   }

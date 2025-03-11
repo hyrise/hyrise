@@ -69,7 +69,7 @@ TEST_F(SortNodeTest, Copy) {
 }
 
 TEST_F(SortNodeTest, NodeExpressions) {
-  ASSERT_EQ(_sort_node->node_expressions.size(), 1u);
+  ASSERT_EQ(_sort_node->node_expressions.size(), 1);
   EXPECT_EQ(*_sort_node->node_expressions.at(0), *_a_i);
 }
 
@@ -82,7 +82,7 @@ TEST_F(SortNodeTest, ForwardUniqueColumnCombinations) {
   EXPECT_EQ(_table_node->unique_column_combinations().size(), 1);
   EXPECT_TRUE(_table_node->unique_column_combinations().contains(ucc));
 
-  const auto& unique_column_combinations = _sort_node->unique_column_combinations();
+  const auto unique_column_combinations = _sort_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 1);
   EXPECT_TRUE(unique_column_combinations.contains(ucc));
 }
@@ -96,9 +96,25 @@ TEST_F(SortNodeTest, ForwardOrderDependencies) {
   EXPECT_EQ(_table_node->order_dependencies().size(), 1);
   EXPECT_TRUE(_table_node->order_dependencies().contains(od));
 
-  const auto& order_dependencies = _sort_node->order_dependencies();
+  const auto order_dependencies = _sort_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od));
+}
+
+TEST_F(SortNodeTest, ForwardInclusionDependencies) {
+  EXPECT_TRUE(_table_node->inclusion_dependencies().empty());
+  EXPECT_TRUE(_sort_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  dummy_table->add_soft_constraint(ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, _table_a});
+
+  const auto ind = InclusionDependency{{_a_i}, {ColumnID{0}}, dummy_table};
+  EXPECT_EQ(_table_node->inclusion_dependencies().size(), 1);
+  EXPECT_TRUE(_table_node->inclusion_dependencies().contains(ind));
+
+  const auto inclusion_dependencies = _sort_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 1);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind));
 }
 
 }  // namespace hyrise

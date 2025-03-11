@@ -57,7 +57,7 @@ TEST_F(ProjectionNodeTest, Copy) {
 }
 
 TEST_F(ProjectionNodeTest, NodeExpressions) {
-  ASSERT_EQ(_projection_node->node_expressions.size(), 5u);
+  ASSERT_EQ(_projection_node->node_expressions.size(), 5);
   EXPECT_EQ(*_projection_node->node_expressions.at(0), *_c);
   EXPECT_EQ(*_projection_node->node_expressions.at(1), *_a);
   EXPECT_EQ(*_projection_node->node_expressions.at(2), *_b);
@@ -80,7 +80,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsReorderedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check.
-    const auto& unique_column_combinations = _projection_node->unique_column_combinations();
+    const auto unique_column_combinations = _projection_node->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 2);
     // In-depth check.
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a_b_pk, unique_column_combinations));
@@ -92,7 +92,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsReorderedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check.
-    const auto& unique_column_combinations = _projection_node->unique_column_combinations();
+    const auto unique_column_combinations = _projection_node->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 2);
     // In-depth check.
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a_b_pk, unique_column_combinations));
@@ -118,7 +118,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsRemovedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
 
     // Basic check.
-    const auto& unique_column_combinations = _projection_node->unique_column_combinations();
+    const auto unique_column_combinations = _projection_node->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 2);
     // In-depth check
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a_b_pk, unique_column_combinations));
@@ -130,7 +130,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsRemovedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_b), _mock_node);
 
     // Basic check.
-    const auto& unique_column_combinations = _projection_node->unique_column_combinations();
+    const auto unique_column_combinations = _projection_node->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     // In-depth check.
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b, unique_column_combinations));
@@ -147,18 +147,18 @@ TEST_F(ProjectionNodeTest, FunctionalDependenciesForwarding) {
 
   // Tests
   // FDs without dependents are discarded.
-  const auto& projection_node_1 = ProjectionNode::make(expression_vector(_a, add_(_b, _c)), _mock_node);
+  const auto projection_node_1 = ProjectionNode::make(expression_vector(_a, add_(_b, _c)), _mock_node);
   EXPECT_TRUE(projection_node_1->functional_dependencies().empty());
-  const auto& projection_node_2 = ProjectionNode::make(expression_vector(_b, sub_(_b, _c)), _mock_node);
+  const auto projection_node_2 = ProjectionNode::make(expression_vector(_b, sub_(_b, _c)), _mock_node);
   EXPECT_TRUE(projection_node_2->functional_dependencies().empty());
 
   // Missing determinants lead to FD removal.
-  const auto& projection_node_3 = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
+  const auto projection_node_3 = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
   EXPECT_EQ(projection_node_3->functional_dependencies().size(), 1);
   EXPECT_TRUE(projection_node_3->functional_dependencies().contains(fd_a));
 
   // FDs are adjusted if some, but not all dependents are missing.
-  const auto& projection_node_4 = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
+  const auto projection_node_4 = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
   EXPECT_EQ(projection_node_4->functional_dependencies().size(), 1);
   const auto expected_fd = FunctionalDependency{{_b}, {_a}};
   EXPECT_TRUE(projection_node_4->functional_dependencies().contains(expected_fd));
@@ -177,7 +177,7 @@ TEST_F(ProjectionNodeTest, ForwardOrderDependencies) {
 
   // Case (i): ODs are on "forwarded" projections. Forward ODs.
   {
-    const auto& order_dependencies = _projection_node->order_dependencies();
+    const auto order_dependencies = _projection_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 2);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
     EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
@@ -186,7 +186,7 @@ TEST_F(ProjectionNodeTest, ForwardOrderDependencies) {
   // Case (ii): A column of one OD is not in the projection. Do not forward this OD.
   {
     const auto projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
-    const auto& order_dependencies = projection_node->order_dependencies();
+    const auto order_dependencies = projection_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 1);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
   }
@@ -194,8 +194,45 @@ TEST_F(ProjectionNodeTest, ForwardOrderDependencies) {
   // Case (iii): Projections modify the values. Do not forward affected ODs.
   {
     const auto projection_node = ProjectionNode::make(expression_vector(_a, add_(_b, _a), sub_(_c, _b)), _mock_node);
-    const auto& order_dependencies = projection_node->order_dependencies();
+    const auto order_dependencies = projection_node->order_dependencies();
     EXPECT_TRUE(order_dependencies.empty());
+  }
+}
+
+TEST_F(ProjectionNodeTest, ForwardInclusionDependencies) {
+  EXPECT_TRUE(_mock_node->inclusion_dependencies().empty());
+  EXPECT_TRUE(_projection_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  const auto ind_a_b = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
+  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
+  const auto foreign_key_constraint_a_b =
+      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, dummy_table, {ColumnID{0}, ColumnID{1}}, nullptr};
+  _mock_node->set_foreign_key_constraints({foreign_key_constraint_a, foreign_key_constraint_a_b});
+  EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 2);
+
+  // Case (i): INDs are on "forwarded" projections. Forward INDs.
+  {
+    const auto inclusion_dependencies = _projection_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 2);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
+  }
+
+  // Case (ii): A column of one IND is not in the projection. Do not forward this IND.
+  {
+    const auto projection_node = ProjectionNode::make(expression_vector(_a), _mock_node);
+    const auto inclusion_dependencies = projection_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+  }
+
+  // Case (iii): Projections modify the values. Do not forward affected ODs.
+  {
+    const auto projection_node = ProjectionNode::make(expression_vector(add_(_a, value_(1))), _mock_node);
+    const auto inclusion_dependencies = projection_node->inclusion_dependencies();
+    EXPECT_TRUE(inclusion_dependencies.empty());
   }
 }
 

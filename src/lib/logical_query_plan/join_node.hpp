@@ -101,13 +101,13 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   mutable std::weak_ptr<JoinNode> _reduced_join_node;
 
   /**
-   * The following flag is set by the ColumnPruningRule. It indicates whether and which input side
-   * of a join is no longer needed in the LQP tree above the join and could therefore be removed
-   * during optimization by other rules, such as the JoinToSemiJoinRule and the JoinToPredicateRewriteRule.
+   * The following flag is set by the ColumnPruningRule. It indicates whether and which input side of a join is no
+   * longer needed in the LQP tree above the join and could therefore be removed during optimization by other rules,
+   * such as the JoinToSemiJoinRule and the JoinToPredicateRewriteRule.
    * 
    * Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
-   * In this target query, the table nation is purely used for filtering out tuples from the customer table. All
-   * attributes of the nation table are completely projected away afterwards.
+   *          In this target query, the table nation is purely used for filtering out tuples from the customer table.
+   *          All attributes of the nation table are completely projected away afterwards.
    * 
    * nullopt if both sides are used further up in the LQP
    */

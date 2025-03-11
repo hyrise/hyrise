@@ -37,12 +37,10 @@ TEST_F(ImportNodeTest, Copy) {
   EXPECT_EQ(*_import_node, *_import_node->deep_copy());
 }
 
-TEST_F(ImportNodeTest, NoUniqueColumnCombinations) {
+TEST_F(ImportNodeTest, NoDataDependencies) {
   EXPECT_THROW(_import_node->unique_column_combinations(), std::logic_error);
-}
-
-TEST_F(ImportNodeTest, NoOrderDependencies) {
   EXPECT_THROW(_import_node->order_dependencies(), std::logic_error);
+  EXPECT_THROW(_import_node->inclusion_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

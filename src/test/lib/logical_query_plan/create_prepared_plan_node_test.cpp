@@ -52,15 +52,13 @@ TEST_F(CreatePreparedPlanNodeTest, Copy) {
 }
 
 TEST_F(CreatePreparedPlanNodeTest, NodeExpressions) {
-  ASSERT_EQ(create_prepared_plan_node->node_expressions.size(), 0u);
+  ASSERT_EQ(create_prepared_plan_node->node_expressions.size(), 0);
 }
 
-TEST_F(CreatePreparedPlanNodeTest, NoUniqueColumnCombinations) {
+TEST_F(CreatePreparedPlanNodeTest, NoDataDependencies) {
   EXPECT_THROW(create_prepared_plan_node->unique_column_combinations(), std::logic_error);
-}
-
-TEST_F(CreatePreparedPlanNodeTest, NoOrderDependencies) {
   EXPECT_THROW(create_prepared_plan_node->order_dependencies(), std::logic_error);
+  EXPECT_THROW(create_prepared_plan_node->inclusion_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

@@ -32,7 +32,7 @@ TEST_F(StaticTableNodeTest, Description) {
 }
 
 TEST_F(StaticTableNodeTest, NodeExpressions) {
-  ASSERT_EQ(static_table_node->node_expressions.size(), 0u);
+  ASSERT_EQ(static_table_node->node_expressions.size(), 0);
 }
 
 TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
@@ -92,7 +92,7 @@ TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
   dummy_table->add_soft_constraint(key_constraint_b);
 
   // Basic check.
-  const auto& unique_column_combinations = static_table_node->unique_column_combinations();
+  const auto unique_column_combinations = static_table_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 2);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
@@ -101,6 +101,10 @@ TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
 
 TEST_F(StaticTableNodeTest, NoOrderDependencies) {
   EXPECT_TRUE(static_table_node->order_dependencies().empty());
+}
+
+TEST_F(StaticTableNodeTest, NoInclusionDependencies) {
+  EXPECT_TRUE(static_table_node->inclusion_dependencies().empty());
 }
 
 }  // namespace hyrise
