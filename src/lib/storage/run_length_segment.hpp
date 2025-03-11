@@ -37,7 +37,7 @@ class BaseCompressedVector;
  * Actually stored data:
  *  values:          1 2 2 3  (note, repeating values)
  *  null values:     0 0 1 0
- *  end positions:   2 4 6 8
+ *  end positions:   2 4 7 8
  */
 template <typename T>
 class RunLengthSegment : public AbstractEncodedSegment {

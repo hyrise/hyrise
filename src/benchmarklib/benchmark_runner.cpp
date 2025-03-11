@@ -168,7 +168,7 @@ void BenchmarkRunner::run() {
   // Retrieve the items to be executed and prepare the result vector.
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
-    _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
+    _results = std::vector<BenchmarkItemResult>(*std::ranges::max_element(items) + 1);
   }
 
   // Execute pre-benchmark hooks of plugins required by the user.
