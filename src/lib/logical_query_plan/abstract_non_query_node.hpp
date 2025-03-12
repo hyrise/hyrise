@@ -23,7 +23,7 @@ class AbstractNonQueryNode : public AbstractLQPNode {
 
   OrderDependencies order_dependencies() const final;
 
-  InclusionDependencies inclusion_dependencies() const override;
+  InclusionDependencies inclusion_dependencies() const final;
 
   FunctionalDependencies non_trivial_functional_dependencies() const final;
 

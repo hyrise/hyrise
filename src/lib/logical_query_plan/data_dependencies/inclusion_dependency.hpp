@@ -20,7 +20,7 @@ class Table;
  * Inclusion dependencies involve two relations. We only propagate them from the including side. For example, we
  * consider the IND nation.n_regionkey in region.r_regionkey using a StoredTableNode for nation and a table for region.
  * The IND of this looks like this:
- *     InclusionDependency{{nation->get_column("n_regionkey")}, {nation->get_column_id_by_name("r_regionkey")}, region}
+ *     InclusionDependency{{nation->get_column("n_regionkey")}, {region->get_column_id_by_name("r_regionkey")}, region}
  *
  * NOTE: Inclusion dependencies (INDs) are only valid for LQP nodes that contain no invalidated rows (i.e., where there
  *       has been a ValidateNode before or where MVCC is disabled).

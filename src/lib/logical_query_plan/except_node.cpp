@@ -47,7 +47,7 @@ OrderDependencies ExceptNode::order_dependencies() const {
 }
 
 InclusionDependencies ExceptNode::inclusion_dependencies() const {
-  // EXCEPT filters the left input table, do it does not guarantee that all values referenced by a foreign key are still
+  // EXCEPT filters the left input table, so it does not guarantee that all values referenced by a foreign key are still
   // present.
   return InclusionDependencies{};
 }

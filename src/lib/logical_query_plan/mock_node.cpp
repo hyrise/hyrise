@@ -179,12 +179,13 @@ InclusionDependencies MockNode::inclusion_dependencies() const {
   for (const auto& foreign_key_constraint : _foreign_key_constraints) {
     const auto& table = foreign_key_constraint.foreign_key_table();
     const auto& columns = foreign_key_constraint.primary_key_columns();
-    auto included_columns = foreign_key_constraint.foreign_key_columns();
+    // As we only use this node in tests, we ignore that INDs with pruned columns could be adjusted. Fir instance,
+    // [a, b] in [x, y] could be transformed to [a] in [x] if y is pruned.
     if (contains_any_column(_pruned_column_ids, columns)) {
       continue;
     }
 
-    inclusion_dependencies.emplace(get_expressions_for_column_ids(*this, columns), std::move(included_columns), table);
+    inclusion_dependencies.emplace(get_expressions_for_column_ids(*this, columns), foreign_key_constraint.foreign_key_columns(), table);
   }
   return inclusion_dependencies;
 }

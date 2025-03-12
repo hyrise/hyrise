@@ -153,7 +153,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
   /**
-   * @return True, if the given set/vector of expressions is a subset of the node's output expressions. False otherwise.
+   * @return True, if the given set of expressions is a subset of the node's output expressions. False otherwise.
    */
   bool has_output_expressions(const ExpressionUnorderedSet& expressions) const;
 
@@ -236,8 +236,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual InclusionDependencies inclusion_dependencies() const = 0;
 
   /**
-   * @return True if there is an inclusion dependency (IND) matching the given subset of output expressions whose
-   *         included columns are also part of @param included_node's output expressions.
+   * @return True if there is an inclusion dependency (IND) matching the given list of output expressions and the given
+   *         list of expressions to be included from another input.
    */
   bool has_matching_ind(const std::vector<std::shared_ptr<AbstractExpression>>& foreign_key_expressions,
                         const std::vector<std::shared_ptr<AbstractExpression>>& key_expressions) const;

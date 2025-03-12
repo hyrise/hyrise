@@ -77,7 +77,7 @@ TEST_F(MockNodeTest, Copy) {
 }
 
 TEST_F(MockNodeTest, NodeExpressions) {
-  ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u);
+  ASSERT_EQ(_mock_node_a->node_expressions.size(), 0);
 }
 
 TEST_F(MockNodeTest, UniqueColumnCombinations) {
@@ -166,7 +166,7 @@ TEST_F(MockNodeTest, InclusionDependencies) {
 
   // Forward INDs.
   {
-    const auto& inclusion_dependencies = _mock_node_a->inclusion_dependencies();
+    const auto inclusion_dependencies = _mock_node_a->inclusion_dependencies();
     EXPECT_EQ(inclusion_dependencies.size(), 2);
     EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
     EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
@@ -175,7 +175,7 @@ TEST_F(MockNodeTest, InclusionDependencies) {
   // Discard INDs that involve pruned columns.
   {
     _mock_node_a->set_pruned_column_ids({ColumnID{1}});
-    const auto& inclusion_dependencies = _mock_node_a->inclusion_dependencies();
+    const auto inclusion_dependencies = _mock_node_a->inclusion_dependencies();
     EXPECT_EQ(inclusion_dependencies.size(), 1);
     EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
   }

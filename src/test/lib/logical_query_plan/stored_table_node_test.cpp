@@ -668,7 +668,7 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   EXPECT_FALSE(stored_table_d->has_matching_ind({c_a, c_b, c_c, c_d}, {d_a, d_b, d_c, d_d}));
 
   if constexpr (HYRISE_DEBUG) {
-    // Columns are not part of output_expressions() (i.e., pruned).
+    // Columns are not part of output expressions (i.e., pruned).
     _stored_table_node->set_pruned_column_ids({ColumnID{0}});
     EXPECT_THROW(_stored_table_node->has_matching_ind({b_a}, {_a}), std::logic_error);
   }

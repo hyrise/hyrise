@@ -54,7 +54,7 @@ OrderDependencies IntersectNode::order_dependencies() const {
 }
 
 InclusionDependencies IntersectNode::inclusion_dependencies() const {
-  // INTERSECT filters the left input table, do it does not guarantee that all values referenced by a foreign key are
+  // INTERSECT filters the left input table, so it does not guarantee that all values referenced by a foreign key are
   // still present.
   return InclusionDependencies{};
 }

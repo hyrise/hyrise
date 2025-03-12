@@ -210,12 +210,10 @@ InclusionDependencies JoinNode::inclusion_dependencies() const {
     case JoinMode::FullOuter: {
       // These joins preserve all tuples from the inputs. All values survive and we can forward all INDs of the left and
       // right input.
-      const auto left_inclusion_dependencies = left_input()->inclusion_dependencies();
+      auto left_inclusion_dependencies = left_input()->inclusion_dependencies();
       const auto right_inclusion_dependencies = right_input()->inclusion_dependencies();
-      auto inclusion_dependencies =
-          InclusionDependencies{left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend()};
-      inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
-      return inclusion_dependencies;
+      left_inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
+      return left_inclusion_dependencies;
     }
 
     // Anti-joins filter the left input. No INDs remain valid.
