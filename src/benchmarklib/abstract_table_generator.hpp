@@ -2,7 +2,11 @@
 
 #include <chrono>
 #include <filesystem>
+#include <map>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "encoding_config.hpp"
 #include "storage/chunk.hpp"
@@ -61,8 +65,6 @@ class AbstractTableGenerator {
   virtual std::unordered_map<std::string, BenchmarkTableInfo> generate() = 0;
 
   TableGenerationMetrics metrics;
-
-  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(ChunkOffset chunk_size);
 
  protected:
   // Creates chunk indexes. Expects the table to have been added to the StorageManager and, if requested, encoded.

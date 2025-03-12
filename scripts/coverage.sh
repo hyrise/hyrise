@@ -33,16 +33,14 @@ fi
 mkdir -p build-coverage
 cd build-coverage
 
-# We use clang 11 for the coverage check as clang 14 (the default clang version for Ubuntu 22.04) has an unresolved
-# issue (see https://github.com/llvm/llvm-project/issues/54907).
 path_to_compiler=''
-c_compiler='clang-11'
-cxx_compiler='clang++-11'
+c_compiler='clang'
+cxx_compiler='clang++'
 
 unamestr=$(uname)
 if [[ "$unamestr" == 'Darwin' ]]; then
    # Use homebrew clang for OS X
-   path_to_compiler="$(brew --prefix llvm@11)/bin/"
+   path_to_compiler="$(brew --prefix llvm)/bin/"
    c_compiler='clang'
    cxx_compiler='clang++'
 fi
@@ -50,7 +48,7 @@ fi
 cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}${c_compiler} -DCMAKE_CXX_COMPILER=${path_to_compiler}${cxx_compiler} -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
-make hyriseTest -j $((cores / 10))
+make hyriseTest -j $((cores / 20))
 cd -
 
 rm -fr coverage; mkdir coverage
@@ -67,7 +65,8 @@ echo Coverage Information is in ./coverage/index.html
 # Continuing only if diff output is needed with Linux/gcc
 if [ "true" == "$generate_badge" ]; then
 
-  ${path_to_compiler}llvm-cov report -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.txt
+  # Make sure to only print function and line coverage (line coverage is at the end) to get the right metric.
+  ${path_to_compiler}llvm-cov report -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/  -show-branch-summary=false  -show-region-summary=false > coverage.txt
 
   # coverage badge generation
   coverage_percent=$(tail -c 7 coverage.txt)

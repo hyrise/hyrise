@@ -5,7 +5,7 @@
 
 namespace hyrise {
 
-class AbstractCardinalityEstimator;
+class CardinalityEstimator;
 class AbstractCostEstimator;
 class AbstractLQPNode;
 class LogicalPlanRootNode;

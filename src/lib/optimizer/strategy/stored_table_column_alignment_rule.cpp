@@ -1,15 +1,23 @@
 #include "optimizer/strategy/stored_table_column_alignment_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
+
+#include <boost/container_hash/hash.hpp>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 using namespace hyrise;  // NOLINT
@@ -18,10 +26,10 @@ using namespace hyrise;  // NOLINT
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrHash final {
   size_t operator()(const std::shared_ptr<StoredTableNode>& node) const {
-    size_t hash{0};
+    auto hash = size_t{0};
     boost::hash_combine(hash, node->table_name);
     for (const auto& pruned_chunk_id : node->pruned_chunk_ids()) {
-      boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
+      boost::hash_combine(hash, pruned_chunk_id);
     }
     return hash;
   }
@@ -30,7 +38,7 @@ struct StoredTableNodeSharedPtrHash final {
 // Modified equals evaluation code for StoredTableNodes where column pruning information is omitted. Struct is used to
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrEqual final {
-  size_t operator()(const std::shared_ptr<StoredTableNode>& lhs, const std::shared_ptr<StoredTableNode>& rhs) const {
+  bool operator()(const std::shared_ptr<StoredTableNode>& lhs, const std::shared_ptr<StoredTableNode>& rhs) const {
     DebugAssert(std::is_sorted(lhs->pruned_chunk_ids().cbegin(), lhs->pruned_chunk_ids().cend()),
                 "Expected sorted vector of ChunkIDs");
     DebugAssert(std::is_sorted(rhs->pruned_chunk_ids().cbegin(), rhs->pruned_chunk_ids().cend()),

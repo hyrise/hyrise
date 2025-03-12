@@ -2,20 +2,20 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
-#include "abstract_read_write_operator.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
-#include "utils/assert.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_write_operator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
 class TransactionContext;
 
 /**
- * Operator that inserts a number of rows from one table into another.
- * Expects the table name of the table to insert into as a string and
- * the values to insert in a separate table using the same column layout.
+ * Operator that inserts a number of rows from one table into another. Expects the table name of the table to insert
+ * into as a string and the values to insert in a separate table using the same column layout.
  *
  * Assumption: The input has been validated before.
  */
@@ -39,7 +39,7 @@ class Insert : public AbstractReadWriteOperator {
  private:
   const std::string _target_table_name;
 
-  // Ranges of rows to which the inserted values are written
+  // Ranges of rows to which the inserted values are written.
   struct ChunkRange {
     ChunkID chunk_id{};
     ChunkOffset begin_chunk_offset{};

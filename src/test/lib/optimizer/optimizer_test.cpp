@@ -1,6 +1,6 @@
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
+#include "expression/in_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -14,6 +14,10 @@
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "optimizer/strategy/join_to_semi_join_rule.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "statistics/join_graph_statistics_cache.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 
 namespace hyrise {
 
@@ -276,10 +280,9 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    * 2. Optimize the LQP with a telemetric Rule
    */
 
-  // A "rule" that counts how often it was `apply_to()`ed. We use this
-  // to check whether SubqueryExpressions pointing to the same LQP before optimization still point to the same (though
-  // deep_copy()ed) LQP afterwards
-  size_t counter{0};
+  // A "rule" that counts how often it was `apply_to()`ed. We use this to check whether SubqueryExpressions pointing to
+  // the same LQP before optimization still point to the same (though `deep_copy()`ed) LQP afterwards.
+  auto counter = size_t{0};
 
   class MockRule : public AbstractRule {
    public:
@@ -300,20 +303,20 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
 
   auto rule = std::make_unique<MockRule>(counter);
 
-  Optimizer optimizer{};
+  auto optimizer = Optimizer{};
   optimizer.add_rule(std::move(rule));
 
   const auto optimized_lqp = optimizer.optimize(std::move(lqp)).logical_query_plan;
   lqp = nullptr;
 
   /**
-   * 3. Check that the rule was invoked 3 times. Once for the main LQP, once for subquery_a and once for subquery_b
+   * 3. Check that the rule was invoked 3 times. Once for the main LQP, once for subquery_a and once for subquery_b.
    */
-  EXPECT_EQ(counter, 3u);
+  EXPECT_EQ(counter, 3);
 
   /**
    * 4. Check that now - after optimizing - both SubqueryExpressions using subquery_lqp_a point to the same LQP object
-   * again
+   *    again.
    */
   {
     auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(optimized_lqp);
@@ -343,7 +346,7 @@ TEST_F(OptimizerTest, CheckTrueCacheablility) {
   auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
                                   PredicateNode::make(greater_than_(a, subquery_b), node_a));
   const auto optimize_results = optimizer->optimize(std::move(lqp));
-  EXPECT_EQ(optimize_results.cacheable, true);
+  EXPECT_TRUE(optimize_results.cacheable);
 }
 
 TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
@@ -358,7 +361,7 @@ TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
   sm.add_table("table", table);
 
   // Non-permanent UCC
-  table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
 
   const auto stored_table_node = StoredTableNode::make("table");
   const auto column0 = stored_table_node->get_column("column0");
@@ -374,6 +377,61 @@ TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
   static_cast<JoinNode&>(*lqp1->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto optimize_results1 = optimizer.optimize(std::move(lqp1));
 
-  EXPECT_EQ(optimize_results1.cacheable, false);
+  EXPECT_FALSE(optimize_results1.cacheable);
 }
+
+TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  // If the caches of the CardinalityEstimator are filled after applying a rule, later estimations might be incorrect.
+  const auto cardinality_estimator = std::make_shared<CardinalityEstimator>();
+  auto optimizer = Optimizer{std::make_shared<CostEstimatorLogical>(cardinality_estimator)};
+
+  class MockRule : public AbstractRule {
+   public:
+    std::string name() const override {
+      return "MockRule";
+    }
+
+   protected:
+    IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+      return IsCacheable::Yes;
+    }
+  };
+
+  optimizer.add_rule(std::make_unique<MockRule>());
+
+  // All caches are empty, nothing happens.
+  {
+    auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    optimizer.optimize(std::move(lqp));
+  }
+
+  // Unempty `join_graph_statistics_cache`.
+  auto& estimation_cache = cardinality_estimator->cardinality_estimation_cache;
+  auto vertex_indices = JoinGraphStatisticsCache::VertexIndexMap{};
+  auto predicate_indices = JoinGraphStatisticsCache::PredicateIndexMap{};
+  estimation_cache.join_graph_statistics_cache.emplace(std::move(vertex_indices), std::move(predicate_indices));
+  {
+    auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
+  }
+
+  // All caches are empty again, nothing happens.
+  estimation_cache.join_graph_statistics_cache.reset();
+  {
+    auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    optimizer.optimize(std::move(lqp));
+  }
+
+  // Unempty `statistics_by_lqp`.
+  estimation_cache.statistics_by_lqp.emplace();
+  {
+    auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
+  }
+}
+
 }  // namespace hyrise

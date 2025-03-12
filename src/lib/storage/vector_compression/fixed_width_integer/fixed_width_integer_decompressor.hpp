@@ -1,7 +1,6 @@
 #pragma once
 
 #include "storage/vector_compression/base_vector_decompressor.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {
@@ -15,12 +14,12 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
   FixedWidthIntegerDecompressor(FixedWidthIntegerDecompressor&&) = default;
 
   FixedWidthIntegerDecompressor& operator=(const FixedWidthIntegerDecompressor& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor.");
     return *this;
   }
 
   FixedWidthIntegerDecompressor& operator=(FixedWidthIntegerDecompressor&& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor.");
     return *this;
   }
 

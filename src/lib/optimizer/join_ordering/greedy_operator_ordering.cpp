@@ -1,19 +1,25 @@
 #include "greedy_operator_ordering.hpp"
 
-#include <numeric>
-#include <unordered_map>
-#include <unordered_set>
+#include <algorithm>
+#include <cstddef>
+#include <map>
+#include <memory>
+#include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "join_graph.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "optimizer/join_ordering/join_graph_edge.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
 std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
     const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
-  DebugAssert(!join_graph.vertices.empty(), "Code below relies on there being at least one vertex");
+  DebugAssert(!join_graph.vertices.empty(), "Code below relies on there being at least one vertex.");
 
   /**
    * 1. Initialize
@@ -75,8 +81,9 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
     /**
      * 2.1 Find the edge with the lowest cardinality and remove it from "remaining_edge_indices"
      */
-    std::sort(remaining_edge_indices.begin(), remaining_edge_indices.end(),
-              [&](const auto& lhs, const auto& rhs) { return plan_by_edge[lhs].second > plan_by_edge[rhs].second; });
+    std::sort(remaining_edge_indices.begin(), remaining_edge_indices.end(), [&](const auto& lhs, const auto& rhs) {
+      return plan_by_edge[lhs].second > plan_by_edge[rhs].second;
+    });
 
     const auto lowest_cardinality_edge_idx = remaining_edge_indices.back();
     remaining_edge_indices.pop_back();
@@ -136,7 +143,7 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
   }
 
   DebugAssert(!joined_clusters.empty(),
-              "Edge appearing passed to this function should reference at least one vertex cluster");
+              "Edge appearing passed to this function should reference at least one vertex cluster.");
 
   const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
 

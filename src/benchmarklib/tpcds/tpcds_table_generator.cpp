@@ -1,47 +1,69 @@
 #include "tpcds_table_generator.hpp"
 
-extern "C" {
-#include <tpcds-kit/tools/dbgen_version.h>
-#include <tpcds-kit/tools/decimal.h>
-#include <tpcds-kit/tools/genrand.h>
-#include <tpcds-kit/tools/nulls.h>
-#include <tpcds-kit/tools/parallel.h>
-#include <tpcds-kit/tools/r_params.h>
-#include <tpcds-kit/tools/tables.h>
-#include <tpcds-kit/tools/tdefs.h>
+#include <algorithm>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <tpcds-kit/tools/w_call_center.h>
-#include <tpcds-kit/tools/w_catalog_page.h>
-#include <tpcds-kit/tools/w_catalog_returns.h>
-#include <tpcds-kit/tools/w_catalog_sales.h>
-#include <tpcds-kit/tools/w_customer.h>
-#include <tpcds-kit/tools/w_customer_address.h>
-#include <tpcds-kit/tools/w_customer_demographics.h>
-#include <tpcds-kit/tools/w_datetbl.h>
-#include <tpcds-kit/tools/w_household_demographics.h>
-#include <tpcds-kit/tools/w_income_band.h>
-#include <tpcds-kit/tools/w_inventory.h>
-#include <tpcds-kit/tools/w_item.h>
-#include <tpcds-kit/tools/w_promotion.h>
-#include <tpcds-kit/tools/w_reason.h>
-#include <tpcds-kit/tools/w_ship_mode.h>
-#include <tpcds-kit/tools/w_store.h>
-#include <tpcds-kit/tools/w_store_returns.h>
-#include <tpcds-kit/tools/w_store_sales.h>
-#include <tpcds-kit/tools/w_timetbl.h>
-#include <tpcds-kit/tools/w_warehouse.h>
-#include <tpcds-kit/tools/w_web_page.h>
-#include <tpcds-kit/tools/w_web_returns.h>
-#include <tpcds-kit/tools/w_web_sales.h>
-#include <tpcds-kit/tools/w_web_site.h>
+extern "C" {
+#include "tpcds-kit/tools/address.h"
+#include "tpcds-kit/tools/columns.h"
+#include "tpcds-kit/tools/date.h"
+#include "tpcds-kit/tools/decimal.h"
+#include "tpcds-kit/tools/dist.h"
+#include "tpcds-kit/tools/genrand.h"
+#include "tpcds-kit/tools/nulls.h"
+#include "tpcds-kit/tools/parallel.h"
+#include "tpcds-kit/tools/porting.h"
+#include "tpcds-kit/tools/r_params.h"
+#include "tpcds-kit/tools/tables.h"
+#include "tpcds-kit/tools/tdefs.h"
+#include "tpcds-kit/tools/w_call_center.h"
+#include "tpcds-kit/tools/w_catalog_page.h"
+#include "tpcds-kit/tools/w_catalog_returns.h"
+#include "tpcds-kit/tools/w_catalog_sales.h"
+#include "tpcds-kit/tools/w_customer.h"
+#include "tpcds-kit/tools/w_customer_address.h"
+#include "tpcds-kit/tools/w_customer_demographics.h"
+#include "tpcds-kit/tools/w_datetbl.h"
+#include "tpcds-kit/tools/w_household_demographics.h"
+#include "tpcds-kit/tools/w_income_band.h"
+#include "tpcds-kit/tools/w_inventory.h"
+#include "tpcds-kit/tools/w_item.h"
+#include "tpcds-kit/tools/w_promotion.h"
+#include "tpcds-kit/tools/w_reason.h"
+#include "tpcds-kit/tools/w_ship_mode.h"
+#include "tpcds-kit/tools/w_store.h"
+#include "tpcds-kit/tools/w_store_returns.h"
+#include "tpcds-kit/tools/w_store_sales.h"
+#include "tpcds-kit/tools/w_timetbl.h"
+#include "tpcds-kit/tools/w_warehouse.h"
+#include "tpcds-kit/tools/w_web_page.h"
+#include "tpcds-kit/tools/w_web_returns.h"
+#include "tpcds-kit/tools/w_web_sales.h"
+#include "tpcds-kit/tools/w_web_site.h"
 }
 
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/table.hpp"
 #include "table_builder.hpp"
-#include "utils/timer.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT
+
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 using tpcds_key_t = int32_t;
 
@@ -131,7 +153,7 @@ pmr_string zip_to_string(int32_t zip) {
 
 // dsdgen deliberately creates NULL values if nullCheck(column_id) is true, resolve functions mimic that
 std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
-  if (nullCheck(column_id) || date_id <= 0) {
+  if (nullCheck(column_id) != 0 || date_id <= 0) {
     return std::nullopt;
   }
 
@@ -149,30 +171,30 @@ std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
 }
 
 std::optional<tpcds_key_t> resolve_key(int column_id, ds_key_t key) {
-  return nullCheck(column_id) || key == -1 ? std::nullopt : std::optional{static_cast<tpcds_key_t>(key)};
+  return nullCheck(column_id) != 0 || key == -1 ? std::nullopt : std::optional{static_cast<tpcds_key_t>(key)};
 }
 
 std::optional<pmr_string> resolve_string(int column_id, pmr_string string) {
-  return nullCheck(column_id) || string.empty() ? std::nullopt : std::optional{std::move(string)};
+  return nullCheck(column_id) != 0 || string.empty() ? std::nullopt : std::optional{std::move(string)};
 }
 
 std::optional<int32_t> resolve_integer(int column_id, int value) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{int32_t{value}};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{int32_t{value}};
 }
 
 std::optional<float> resolve_decimal(int column_id, decimal_t decimal) {
   auto result = 0.0;
   dectof(&result, &decimal);
   // we have to divide by 10 after dectof to get the expected result
-  return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(result / 10)};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{static_cast<float>(result / 10)};
 }
 
 std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(gmt_offset)};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{static_cast<float>(gmt_offset)};
 }
 
 std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
-  return nullCheck(column_id) ? std::nullopt
+  return nullCheck(column_id) != 0 ? std::nullopt
          : address.street_name2 == nullptr
              ? std::optional{pmr_string{address.street_name1}}
              : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
@@ -265,7 +287,7 @@ const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_
 namespace hyrise {
 
 TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
-    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor{scale_factor} {
+    : AbstractTableGenerator(std::make_shared<BenchmarkConfig>(chunk_size)), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
@@ -613,7 +635,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer(ds_key_t max_rows)
         resolve_integer(C_FIRST_SALES_DATE_ID, customer.c_first_sales_date_id),
         resolve_string(C_SALUTATION, customer.c_salutation), resolve_string(C_FIRST_NAME, customer.c_first_name),
         resolve_string(C_LAST_NAME, customer.c_last_name),
-        resolve_string(C_PREFERRED_CUST_FLAG, boolean_to_string(customer.c_preferred_cust_flag)),
+        resolve_string(C_PREFERRED_CUST_FLAG, boolean_to_string(customer.c_preferred_cust_flag != 0)),
         resolve_integer(C_BIRTH_DAY, customer.c_birth_day), resolve_integer(C_BIRTH_MONTH, customer.c_birth_month),
         resolve_integer(C_BIRTH_YEAR, customer.c_birth_year), resolve_string(C_BIRTH_COUNTRY, customer.c_birth_country),
         resolve_string(C_LOGIN, customer.c_login), resolve_string(C_EMAIL_ADDRESS, customer.c_email_address),
@@ -673,16 +695,16 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows)
         resolve_integer(D_FY_YEAR, date.d_fy_year), resolve_integer(D_FY_QUARTER_SEQ, date.d_fy_quarter_seq),
         resolve_integer(D_FY_WEEK_SEQ, date.d_fy_week_seq), resolve_string(D_DAY_NAME, date.d_day_name),
         resolve_string(D_QUARTER_NAME, std::move(quarter_name)),
-        resolve_string(D_HOLIDAY, boolean_to_string(date.d_holiday)),
-        resolve_string(D_WEEKEND, boolean_to_string(date.d_weekend)),
-        resolve_string(D_FOLLOWING_HOLIDAY, boolean_to_string(date.d_following_holiday)),
+        resolve_string(D_HOLIDAY, boolean_to_string(date.d_holiday != 0)),
+        resolve_string(D_WEEKEND, boolean_to_string(date.d_weekend != 0)),
+        resolve_string(D_FOLLOWING_HOLIDAY, boolean_to_string(date.d_following_holiday != 0)),
         resolve_integer(D_FIRST_DOM, date.d_first_dom), resolve_integer(D_LAST_DOM, date.d_last_dom),
         resolve_integer(D_SAME_DAY_LY, date.d_same_day_ly), resolve_integer(D_SAME_DAY_LQ, date.d_same_day_lq),
-        resolve_string(D_CURRENT_DAY, boolean_to_string(date.d_current_day)),
-        resolve_string(D_CURRENT_WEEK, boolean_to_string(date.d_current_week)),
-        resolve_string(D_CURRENT_MONTH, boolean_to_string(date.d_current_month)),
-        resolve_string(D_CURRENT_QUARTER, boolean_to_string(date.d_current_quarter)),
-        resolve_string(D_CURRENT_YEAR, boolean_to_string(date.d_current_year)));
+        resolve_string(D_CURRENT_DAY, boolean_to_string(date.d_current_day != 0)),
+        resolve_string(D_CURRENT_WEEK, boolean_to_string(date.d_current_week != 0)),
+        resolve_string(D_CURRENT_MONTH, boolean_to_string(date.d_current_month != 0)),
+        resolve_string(D_CURRENT_QUARTER, boolean_to_string(date.d_current_quarter != 0)),
+        resolve_string(D_CURRENT_YEAR, boolean_to_string(date.d_current_year != 0)));
   }
 
   return date_builder.finish_table();
@@ -794,16 +816,16 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_promotion(ds_key_t max_rows
         resolve_key(P_END_DATE_ID, promotion.p_end_date_id), resolve_key(P_ITEM_SK, promotion.p_item_sk),
         resolve_decimal(P_COST, promotion.p_cost), resolve_integer(P_RESPONSE_TARGET, promotion.p_response_target),
         resolve_string(P_PROMO_NAME, promotion.p_promo_name),
-        resolve_string(P_CHANNEL_DMAIL, boolean_to_string(promotion.p_channel_dmail)),
-        resolve_string(P_CHANNEL_EMAIL, boolean_to_string(promotion.p_channel_email)),
-        resolve_string(P_CHANNEL_CATALOG, boolean_to_string(promotion.p_channel_catalog)),
-        resolve_string(P_CHANNEL_TV, boolean_to_string(promotion.p_channel_tv)),
-        resolve_string(P_CHANNEL_RADIO, boolean_to_string(promotion.p_channel_radio)),
-        resolve_string(P_CHANNEL_PRESS, boolean_to_string(promotion.p_channel_press)),
-        resolve_string(P_CHANNEL_EVENT, boolean_to_string(promotion.p_channel_event)),
-        resolve_string(P_CHANNEL_DEMO, boolean_to_string(promotion.p_channel_demo)),
+        resolve_string(P_CHANNEL_DMAIL, boolean_to_string(promotion.p_channel_dmail != 0)),
+        resolve_string(P_CHANNEL_EMAIL, boolean_to_string(promotion.p_channel_email != 0)),
+        resolve_string(P_CHANNEL_CATALOG, boolean_to_string(promotion.p_channel_catalog != 0)),
+        resolve_string(P_CHANNEL_TV, boolean_to_string(promotion.p_channel_tv != 0)),
+        resolve_string(P_CHANNEL_RADIO, boolean_to_string(promotion.p_channel_radio != 0)),
+        resolve_string(P_CHANNEL_PRESS, boolean_to_string(promotion.p_channel_press != 0)),
+        resolve_string(P_CHANNEL_EVENT, boolean_to_string(promotion.p_channel_event != 0)),
+        resolve_string(P_CHANNEL_DEMO, boolean_to_string(promotion.p_channel_demo != 0)),
         resolve_string(P_CHANNEL_DETAILS, promotion.p_channel_details), resolve_string(P_PURPOSE, promotion.p_purpose),
-        resolve_string(P_DISCOUNT_ACTIVE, boolean_to_string(promotion.p_discount_active)));
+        resolve_string(P_DISCOUNT_ACTIVE, boolean_to_string(promotion.p_discount_active != 0)));
   }
 
   return promotion_builder.finish_table();
@@ -1035,7 +1057,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_page(ds_key_t max_rows)
         resolve_date_id(WP_REC_END_DATE_ID, web_page.wp_rec_end_date_id),
         resolve_key(WP_CREATION_DATE_SK, web_page.wp_creation_date_sk),
         resolve_key(WP_ACCESS_DATE_SK, web_page.wp_access_date_sk),
-        resolve_string(WP_AUTOGEN_FLAG, boolean_to_string(web_page.wp_autogen_flag)),
+        resolve_string(WP_AUTOGEN_FLAG, boolean_to_string(web_page.wp_autogen_flag != 0)),
         resolve_key(WP_CUSTOMER_SK, web_page.wp_customer_sk), resolve_string(WP_URL, web_page.wp_url),
         resolve_string(WP_TYPE, web_page.wp_type), resolve_integer(WP_CHAR_COUNT, web_page.wp_char_count),
         resolve_integer(WP_LINK_COUNT, web_page.wp_link_count),
@@ -1218,115 +1240,229 @@ AbstractTableGenerator::IndexesByTable TPCDSTableGenerator::_indexes_by_table() 
 
 void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  /**
-   * Adds all PRIMARY KEY key constraints as described in the official TPC-DS specification.
-   * (Section 2: Logical Database Design)
-   */
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (Version 3.2.0, 2 Logical Database
+  // Design, p. 23-35).
+  // The standard specifies composite PKs for [store|catalog|web]_returns, were both PK columns are also foreign keys to
+  // the respective (composite) PK column in [store|catalog|web]_sales. These FKs are not set in the TPC-DS tools.
+  // However, we stick to the specification and interpret it in a sensible way by setting a composite FK (rather than
+  // none or individual ones).
 
-  // Fact Tables (7)
+  // Get all tables.
+  // Fact Tables (7).
   const auto& store_sales_table = table_info_by_name.at("store_sales").table;
-  store_sales_table->add_soft_key_constraint(
-      {{store_sales_table->column_id_by_name("ss_item_sk"), store_sales_table->column_id_by_name("ss_ticket_number")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& store_returns_table = table_info_by_name.at("store_returns").table;
-  store_returns_table->add_soft_key_constraint({{store_returns_table->column_id_by_name("sr_item_sk"),
-                                                 store_returns_table->column_id_by_name("sr_ticket_number")},
-                                                KeyConstraintType::PRIMARY_KEY});
-
   const auto& catalog_sales_table = table_info_by_name.at("catalog_sales").table;
-  catalog_sales_table->add_soft_key_constraint({{catalog_sales_table->column_id_by_name("cs_item_sk"),
-                                                 catalog_sales_table->column_id_by_name("cs_order_number")},
-                                                KeyConstraintType::PRIMARY_KEY});
-
   const auto& catalog_returns_table = table_info_by_name.at("catalog_returns").table;
-  catalog_returns_table->add_soft_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk"),
-                                                   catalog_returns_table->column_id_by_name("cr_order_number")},
-                                                  KeyConstraintType::PRIMARY_KEY});
-
   const auto& web_sales_table = table_info_by_name.at("web_sales").table;
-  web_sales_table->add_soft_key_constraint(
-      {{web_sales_table->column_id_by_name("ws_item_sk"), web_sales_table->column_id_by_name("ws_order_number")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& web_returns_table = table_info_by_name.at("web_returns").table;
-  web_returns_table->add_soft_key_constraint(
-      {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& inventory_table = table_info_by_name.at("inventory").table;
-  inventory_table->add_soft_key_constraint(
-      {{inventory_table->column_id_by_name("inv_date_sk"), inventory_table->column_id_by_name("inv_item_sk"),
-        inventory_table->column_id_by_name("inv_warehouse_sk")},
-       KeyConstraintType::PRIMARY_KEY});
-
-  // Dimension Tables (17)
+  // Dimension Tables (17).
   const auto& store_table = table_info_by_name.at("store").table;
-  store_table->add_soft_key_constraint(
-      {{store_table->column_id_by_name("s_store_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& call_center_table = table_info_by_name.at("call_center").table;
-  call_center_table->add_soft_key_constraint(
-      {{call_center_table->column_id_by_name("cc_call_center_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& catalog_page_table = table_info_by_name.at("catalog_page").table;
-  catalog_page_table->add_soft_key_constraint(
-      {{catalog_page_table->column_id_by_name("cp_catalog_page_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& web_site_table = table_info_by_name.at("web_site").table;
-  web_site_table->add_soft_key_constraint(
-      {{web_site_table->column_id_by_name("web_site_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& web_page_table = table_info_by_name.at("web_page").table;
-  web_page_table->add_soft_key_constraint(
-      {{web_page_table->column_id_by_name("wp_web_page_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& warehouse_table = table_info_by_name.at("warehouse").table;
-  warehouse_table->add_soft_key_constraint(
-      {{warehouse_table->column_id_by_name("w_warehouse_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_key_constraint(
-      {{customer_table->column_id_by_name("c_customer_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& customer_address_table = table_info_by_name.at("customer_address").table;
-  customer_address_table->add_soft_key_constraint(
-      {{customer_address_table->column_id_by_name("ca_address_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& customer_demographics_table = table_info_by_name.at("customer_demographics").table;
-  customer_demographics_table->add_soft_key_constraint(
-      {{customer_demographics_table->column_id_by_name("cd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& date_dim_table = table_info_by_name.at("date_dim").table;
-  date_dim_table->add_soft_key_constraint(
-      {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& household_demographics_table = table_info_by_name.at("household_demographics").table;
-  household_demographics_table->add_soft_key_constraint(
-      {{household_demographics_table->column_id_by_name("hd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& item_table = table_info_by_name.at("item").table;
-  item_table->add_soft_key_constraint({{item_table->column_id_by_name("i_item_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& income_band_table = table_info_by_name.at("income_band").table;
-  income_band_table->add_soft_key_constraint(
-      {{income_band_table->column_id_by_name("ib_income_band_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& promotion_table = table_info_by_name.at("promotion").table;
-  promotion_table->add_soft_key_constraint(
-      {{promotion_table->column_id_by_name("p_promo_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& reason_table = table_info_by_name.at("reason").table;
-  reason_table->add_soft_key_constraint(
-      {{reason_table->column_id_by_name("r_reason_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& ship_mode_table = table_info_by_name.at("ship_mode").table;
-  ship_mode_table->add_soft_key_constraint(
-      {{ship_mode_table->column_id_by_name("sm_ship_mode_sk")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& time_dim_table = table_info_by_name.at("time_dim").table;
-  time_dim_table->add_soft_key_constraint(
-      {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // store_sales - 1 composite PK, 9 FKs.
+  primary_key_constraint(store_sales_table, {"ss_item_sk", "ss_ticket_number"});
+  foreign_key_constraint(store_sales_table, {"ss_sold_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_sold_time_sk"}, time_dim_table, {"t_time_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_store_sk"}, store_table, {"s_store_sk"});
+  foreign_key_constraint(store_sales_table, {"ss_promo_sk"}, promotion_table, {"p_promo_sk"});
+
+  // store_returns - 1 composite PK, 10 FKs.
+  primary_key_constraint(store_returns_table, {"sr_item_sk", "sr_ticket_number"});
+  foreign_key_constraint(store_returns_table, {"sr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_return_time_sk"}, time_dim_table, {"t_time_sk"});
+  // The specification explicitly mentions the FK of sr_item_sk, sr_ticket_number as composite key to store_sales and as
+  // an FK to i_item_sk directly.
+  foreign_key_constraint(store_returns_table, {"sr_item_sk", "sr_ticket_number"}, store_sales_table,
+                         {"ss_item_sk", "ss_ticket_number"});
+  foreign_key_constraint(store_returns_table, {"sr_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_store_sk"}, store_table, {"s_store_sk"});
+  foreign_key_constraint(store_returns_table, {"sr_reason_sk"}, reason_table, {"r_reason_sk"});
+
+  // catalog_sales - 1 composite PK, 17 FKs.
+  primary_key_constraint(catalog_sales_table, {"cs_item_sk", "cs_order_number"});
+  foreign_key_constraint(catalog_sales_table, {"cs_sold_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_sold_time_sk"}, time_dim_table, {"t_time_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_bill_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_bill_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_bill_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_bill_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_call_center_sk"}, call_center_table, {"cc_call_center_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_catalog_page_sk"}, catalog_page_table, {"cp_catalog_page_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_ship_mode_sk"}, ship_mode_table, {"sm_ship_mode_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_warehouse_sk"}, warehouse_table, {"w_warehouse_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(catalog_sales_table, {"cs_promo_sk"}, promotion_table, {"p_promo_sk"});
+
+  // catalog_returns - 1 composite PK, 17 FKs.
+  primary_key_constraint(catalog_returns_table, {"cr_item_sk", "cr_order_number"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returned_time_sk"}, time_dim_table, {"t_time_sk"});
+  // The specification explicitly mentions the FK of cr_item_sk, cr_order_number as composite key to catalog_sales and
+  // as an FK to i_item_sk directly.
+  foreign_key_constraint(catalog_returns_table, {"cr_item_sk", "cr_order_number"}, catalog_sales_table,
+                         {"cs_item_sk", "cs_order_number"});
+  foreign_key_constraint(catalog_returns_table, {"cr_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_refunded_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_refunded_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_refunded_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_refunded_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returning_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returning_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returning_hdemo_sk"}, household_demographics_table,
+                         {"hd_demo_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_returning_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_call_center_sk"}, call_center_table, {"cc_call_center_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_catalog_page_sk"}, catalog_page_table, {"cp_catalog_page_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_ship_mode_sk"}, ship_mode_table, {"sm_ship_mode_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_warehouse_sk"}, warehouse_table, {"w_warehouse_sk"});
+  foreign_key_constraint(catalog_returns_table, {"cr_reason_sk"}, reason_table, {"r_reason_sk"});
+
+  // web_sales - 1 composite PK, 17 FKs.
+  primary_key_constraint(web_sales_table, {"ws_item_sk", "ws_order_number"});
+  foreign_key_constraint(web_sales_table, {"ws_sold_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_sold_time_sk"}, time_dim_table, {"t_time_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_bill_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_bill_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_bill_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_bill_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_web_page_sk"}, web_page_table, {"wp_web_page_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_web_site_sk"}, web_site_table, {"web_site_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_ship_mode_sk"}, ship_mode_table, {"sm_ship_mode_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_warehouse_sk"}, warehouse_table, {"w_warehouse_sk"});
+  foreign_key_constraint(web_sales_table, {"ws_promo_sk"}, promotion_table, {"p_promo_sk"});
+
+  // web_returns - 1 composite PK, 14 FKs.
+  primary_key_constraint(web_returns_table, {"wr_item_sk", "wr_order_number"});
+  foreign_key_constraint(web_returns_table, {"wr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returned_time_sk"}, time_dim_table, {"t_time_sk"});
+  // The specification explicitly mentions the FK of wr_item_sk, wr_order_number as composite key to web_sales and as an
+  // FK to i_item_sk directly.
+  foreign_key_constraint(web_returns_table, {"wr_item_sk", "wr_order_number"}, web_sales_table,
+                         {"ws_item_sk", "ws_order_number"});
+  foreign_key_constraint(web_returns_table, {"wr_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_refunded_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_refunded_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_refunded_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_refunded_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returning_customer_sk"}, customer_table, {"c_customer_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returning_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returning_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_returning_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_web_page_sk"}, web_page_table, {"wp_web_page_sk"});
+  foreign_key_constraint(web_returns_table, {"wr_reason_sk"}, reason_table, {"r_reason_sk"});
+
+  // inventory - 1 composite PK, 3 FKs.
+  primary_key_constraint(inventory_table, {"inv_date_sk", "inv_item_sk", "inv_warehouse_sk"});
+  foreign_key_constraint(inventory_table, {"inv_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(inventory_table, {"inv_item_sk"}, item_table, {"i_item_sk"});
+  foreign_key_constraint(inventory_table, {"inv_warehouse_sk"}, warehouse_table, {"w_warehouse_sk"});
+
+  // store - 1 PK, 1 FK.
+  primary_key_constraint(store_table, {"s_store_sk"});
+  foreign_key_constraint(store_table, {"s_closed_date_sk"}, date_dim_table, {"d_date_sk"});
+
+  // call_center - 1 PK, 2 FKs.
+  primary_key_constraint(call_center_table, {"cc_call_center_sk"});
+  foreign_key_constraint(call_center_table, {"cc_closed_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(call_center_table, {"cc_open_date_sk"}, date_dim_table, {"d_date_sk"});
+
+  // catalog_page - 1 PK, 2 FKs.
+  primary_key_constraint(catalog_page_table, {"cp_catalog_page_sk"});
+  foreign_key_constraint(catalog_page_table, {"cp_start_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(catalog_page_table, {"cp_end_date_sk"}, date_dim_table, {"d_date_sk"});
+
+  // web_site - 1 PK, 2 FKs.
+  primary_key_constraint(web_site_table, {"web_site_sk"});
+  foreign_key_constraint(web_site_table, {"web_open_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_site_table, {"web_close_date_sk"}, date_dim_table, {"d_date_sk"});
+
+  // web_page - 1 PK, 3 FKs.
+  primary_key_constraint(web_page_table, {"wp_web_page_sk"});
+  foreign_key_constraint(web_page_table, {"wp_creation_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_page_table, {"wp_access_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(web_page_table, {"wp_customer_sk"}, customer_table, {"c_customer_sk"});
+
+  // warehouse - 1 PK.
+  primary_key_constraint(warehouse_table, {"w_warehouse_sk"});
+
+  // customer - 1 PK, 6 FKs.
+  primary_key_constraint(customer_table, {"c_customer_sk"});
+  foreign_key_constraint(customer_table, {"c_current_cdemo_sk"}, customer_demographics_table, {"cd_demo_sk"});
+  foreign_key_constraint(customer_table, {"c_current_hdemo_sk"}, household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(customer_table, {"c_current_addr_sk"}, customer_address_table, {"ca_address_sk"});
+  foreign_key_constraint(customer_table, {"c_first_shipto_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(customer_table, {"c_first_sales_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(customer_table, {"c_last_review_date"}, date_dim_table, {"d_date_sk"});
+
+  // customer_address - 1 PK.
+  primary_key_constraint(customer_address_table, {"ca_address_sk"});
+
+  // customer_demographics - 1 PK.
+  primary_key_constraint(customer_demographics_table, {"cd_demo_sk"});
+
+  // date_dim - 1 PK.
+  primary_key_constraint(date_dim_table, {"d_date_sk"});
+
+  // household_demographics - 1 PK, 1 FK.
+  primary_key_constraint(household_demographics_table, {"hd_demo_sk"});
+  foreign_key_constraint(household_demographics_table, {"hd_income_band_sk"}, income_band_table, {"ib_income_band_sk"});
+
+  // item - 1 PK.
+  primary_key_constraint(item_table, {"i_item_sk"});
+
+  // income_band - 1 PK.
+  primary_key_constraint(income_band_table, {"ib_income_band_sk"});
+
+  // promotion - 1 PK, 3 FKs.
+  primary_key_constraint(promotion_table, {"p_promo_sk"});
+  foreign_key_constraint(promotion_table, {"p_start_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(promotion_table, {"p_end_date_sk"}, date_dim_table, {"d_date_sk"});
+  foreign_key_constraint(promotion_table, {"p_item_sk"}, item_table, {"i_item_sk"});
+
+  // reason - 1 PK.
+  primary_key_constraint(reason_table, {"r_reason_sk"});
+
+  // ship_mode - 1 PK.
+  primary_key_constraint(ship_mode_table, {"sm_ship_mode_sk"});
+
+  // time_dim - 1 PK.
+  primary_key_constraint(time_dim_table, {"t_time_sk"});
 }
 
 }  // namespace hyrise

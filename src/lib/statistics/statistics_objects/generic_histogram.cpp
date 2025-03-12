@@ -6,6 +6,11 @@
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 template <typename T>
@@ -60,7 +65,7 @@ BinID GenericHistogram<T>::bin_count() const {
 }
 
 template <typename T>
-BinID GenericHistogram<T>::_bin_for_value(const T& value) const {
+BinID GenericHistogram<T>::bin_for_value(const T& value) const {
   const auto iter = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
   const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), iter));
 
@@ -72,7 +77,7 @@ BinID GenericHistogram<T>::_bin_for_value(const T& value) const {
 }
 
 template <typename T>
-BinID GenericHistogram<T>::_next_bin_for_value(const T& value) const {
+BinID GenericHistogram<T>::next_bin_for_value(const T& value) const {
   const auto iter = std::upper_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
 
   if (iter == _bin_maxima.cend()) {

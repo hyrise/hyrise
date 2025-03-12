@@ -1,19 +1,26 @@
 #include "union_positions.hpp"
 
 #include <algorithm>
-#include <chrono>
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <numeric>
 #include <string>
-#include <utility>
+#include <unordered_map>
 #include <vector>
 
 #include <boost/sort/sort.hpp>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 /**
  * ### UnionPositions implementation
@@ -127,7 +134,9 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   auto out_table = std::make_shared<Table>(left_in_table.column_definitions(), TableType::References);
 
   std::vector<std::shared_ptr<RowIDPosList>> pos_lists(reference_matrix_left.size());
-  std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
+  std::generate(pos_lists.begin(), pos_lists.end(), [&] {
+    return std::make_shared<RowIDPosList>();
+  });
 
   // Adds the row `row_idx` from `reference_matrix` to the pos_lists we're currently building
   const auto emit_row = [&](const ReferenceMatrix& reference_matrix, size_t row_idx) {
@@ -199,7 +208,9 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
       emit_chunk();
 
       chunk_row_idx = 0;
-      std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
+      std::generate(pos_lists.begin(), pos_lists.end(), [&] {
+        return std::make_shared<RowIDPosList>();
+      });
     }
   }
 
@@ -212,7 +223,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
 std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   Assert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
-         "Input tables don't have the same layout");
+         "Input tables do not have the same layout.");
 
   // Later code relies on input tables containing columns. This is guaranteed by the AbstractOperator.
 
@@ -232,7 +243,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Both tables must contain only ReferenceSegments
    */
   Assert(left_input_table()->type() == TableType::References && right_input_table()->type() == TableType::References,
-         "UnionPositions doesn't support non-reference tables yet");
+         "UnionPositions does not support non-reference tables yet.");
 
   /**
    * Identify the ColumnClusters (verification that this is the same for all chunks happens in the #if HYRISE_DEBUG block
@@ -308,14 +319,14 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
           Assert(ref_segment->referenced_table() == _referenced_tables[next_cluster_id - 1],
                  "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
                      ") "
-                     "doesn't reference the same table as the segment at the same index in the first chunk "
-                     "of the left input table does");
+                     "does not reference the same table as the segment at the same index in the first chunk "
+                     "of the left input table does.");
           Assert(ref_segment->referenced_column_id() == _referenced_column_ids[column_id],
                  "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
                      ")"
-                     " doesn't reference the same column as the segment at the same index in the first chunk "
-                     "of the left input table does");
-          Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster");
+                     " does not reference the same column as the segment at the same index in the first chunk "
+                     "of the left input table does.");
+          Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster.");
         }
       }
     };

@@ -1,12 +1,28 @@
 #include "check_table_equal.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <iomanip>
-#include <iostream>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/variant/get.hpp>
 
+#include "all_type_variant.hpp"
 #include "lossless_cast.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 static constexpr auto ANSI_COLOR_RED = "\x1B[31m";
 static constexpr auto ANSI_COLOR_GREEN = "\x1B[32m";
@@ -44,17 +60,18 @@ Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
 
 std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells,
                              const std::string& highlight_color, const std::string& highlight_color_bg) {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   bool previous_row_highlighted = false;
 
   for (auto row_id = size_t{0}; row_id < matrix.size(); ++row_id) {
     auto highlight = false;
-    auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(),
-                           [&](const auto& element) { return element.first == row_id; });
+    auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(), [&](const auto& element) {
+      return element.first == row_id;
+    });
     if (it != highlight_cells.end()) {
       highlight = true;
       if (!previous_row_highlighted) {
-        stream << "<<<<<" << std::endl;
+        stream << "<<<<<\n";
         previous_row_highlighted = true;
       }
     } else {
@@ -82,7 +99,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
       }
       stream << coloring << std::setw(8) << cell << ANSI_COLOR_RESET << " ";
     }
-    stream << std::endl;
+    stream << '\n';
   }
   return stream.str();
 }
@@ -159,16 +176,16 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
 
   const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
                                           const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
-    stream << "===================== Tables are not equal =====================" << std::endl;
-    stream << "------------------------- Actual Result ------------------------" << std::endl;
+    stream << "===================== Tables are not equal =====================\n";
+    stream << "------------------------- Actual Result ------------------------\n";
     stream << matrix_to_string(actual_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
-    stream << "----------------------------------------------------------------" << std::endl << std::endl;
-    stream << "------------------------ Expected Result -----------------------" << std::endl;
+    stream << "----------------------------------------------------------------\n\n";
+    stream << "------------------------ Expected Result -----------------------\n";
     stream << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
-    stream << "----------------------------------------------------------------" << std::endl;
-    stream << "Type of error: " << error_type << std::endl;
-    stream << "================================================================" << std::endl << std::endl;
-    stream << error_msg << std::endl << std::endl;
+    stream << "----------------------------------------------------------------\n";
+    stream << "Type of error: " << error_type << '\n';
+    stream << "================================================================\n\n";
+    stream << error_msg << "\n\n";
   };
 
   // compare schema of tables
@@ -284,13 +301,13 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
       } else if (actual_table->column_data_type(column_id) == DataType::Float) {
         auto left_val = static_cast<double>(boost::get<float>(actual_matrix[row_id][column_id]));
         auto right_val = lossless_variant_cast<double>(expected_matrix[row_id][column_id]);
-        Assert(right_val, "Expected double or float in expected_matrix");
+        Assert(right_val, "Expected double or float in expected_matrix.");
 
         highlight_if(!almost_equals(left_val, *right_val, float_comparison_mode), row_id, column_id);
       } else if (actual_table->column_data_type(column_id) == DataType::Double) {
         auto left_val = boost::get<double>(actual_matrix[row_id][column_id]);
         auto right_val = lossless_variant_cast<double>(expected_matrix[row_id][column_id]);
-        Assert(right_val, "Expected double or float in expected_matrix");
+        Assert(right_val, "Expected double or float in expected_matrix.");
 
         highlight_if(!almost_equals(left_val, *right_val, float_comparison_mode), row_id, column_id);
       } else {
@@ -298,7 +315,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
                                                       actual_table->column_data_type(column_id) == DataType::Long)) {
           auto left_val = lossless_variant_cast<int64_t>(actual_matrix[row_id][column_id]);
           auto right_val = lossless_variant_cast<int64_t>(expected_matrix[row_id][column_id]);
-          Assert(left_val && right_val, "Expected int or long in actual_matrix and expected_matrix");
+          Assert(left_val && right_val, "Expected int or long in actual_matrix and expected_matrix.");
 
           highlight_if(*left_val != *right_val, row_id, column_id);
         } else {

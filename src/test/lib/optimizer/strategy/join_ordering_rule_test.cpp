@@ -1,6 +1,6 @@
-#include "strategy_base_test.hpp"
-
+#include <memory>
 #include "cost_estimation/cost_estimator_logical.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -9,12 +9,12 @@
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "strategy_base_test.hpp"
 
 /**
- * We can't actually test much about the JoinOrderingRule, since it is highly dependent on the underlying algorithms
- * which are separately tested.
+ * We cannot actually test much about the JoinOrderingRule because it is highly dependent on the underlying algorithms,
+ * which are tested separately.
  */
-
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
@@ -46,11 +46,11 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
-  // Test that the JoinOrderingRule works when there are multiple parts in the plan that need isolated optimization
-  // e.g., when there is a barrier in the form of an outer join
+  // Test that the JoinOrderingRule works when there are multiple parts in the plan that need isolated optimization,
+  // e.g., when there is a barrier in the form of an outer join.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
     PredicateNode::make(equals_(a_a, b_b),
       JoinNode::make(JoinMode::Cross,
@@ -62,7 +62,7 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
               node_d,
               node_c))))));
 
-  const auto actual_lqp = apply_rule(rule, input_lqp);
+  _apply_rule(rule, _lqp);
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
@@ -75,22 +75,21 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
       node_a));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinOrderingRuleTest, CheckCacheability) {
-  const auto input_lqp = AggregateNode::make(
+  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(AggregateNode::make(
       expression_vector(a_a), expression_vector(),
       PredicateNode::make(
           equals_(a_a, b_b),
           JoinNode::make(JoinMode::Cross, node_a,
                          JoinNode::make(JoinMode::Left, equals_(b_b, d_d), node_b,
                                         PredicateNode::make(equals_(d_d, c_c),
-                                                            JoinNode::make(JoinMode::Cross, node_d, node_c))))));
-
-  const auto lqp_result = StrategyBaseTest::apply_rule_with_cacheability_check(rule, input_lqp);
-  const auto cacheable = lqp_result.cacheable;
-  EXPECT_EQ(cacheable, true);
+                                                            JoinNode::make(JoinMode::Cross, node_d, node_c)))))));
+  
+  const auto is_cacheable = StrategyBaseTest::_apply_rule(rule, input_lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise

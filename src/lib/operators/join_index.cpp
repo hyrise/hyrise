@@ -1,20 +1,32 @@
 #include "join_index.hpp"
 
-#include <map>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <ios>
+#include <iterator>
 #include <memory>
-#include <numeric>
-#include <set>
+#include <ostream>
+#include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
-#include "resolve_type.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_performance_data.hpp"
+#include "storage/chunk.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
@@ -88,7 +100,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                 left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                 right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                 !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type(), _index_side}),
-      "JoinIndex doesn't support these parameters");
+      "JoinIndex does not support these parameters.");
 
   if (_index_side == IndexSide::Left) {
     _probe_input_table = right_input_table();

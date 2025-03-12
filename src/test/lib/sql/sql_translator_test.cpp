@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -88,7 +87,7 @@ class SQLTranslatorTest : public BaseTest {
     const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
     const auto lqps = translation_result.lqp_nodes;
 
-    Assert(lqps.size() == 1, "Expected just one LQP");
+    Assert(lqps.size() == 1, "Expected just one LQP.");
     return {lqps.at(0), translation_result.translation_info};
   }
 
@@ -263,6 +262,32 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
   const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, Coalesce) {
+  // Coalesce is just syntactic sugar for a nested CASE WHEN expression IS NOT NULL THEN expression ...
+  const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT COALESCE(a, a + 1, 1) FROM int_float;");
+
+  // clang-format off
+  const auto expression = case_(is_not_null_(int_float_a),
+                                int_float_a,
+                                case_(is_not_null_(add_(int_float_a, 1)),
+                                      add_(int_float_a, 1),
+                                      1));
+  // clang-format on
+
+  const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+
+  // COALESCE list must not be empty.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE();"), InvalidInputException);
+
+  // All arguments must have the compatible data types: either all strings, all integral, or all floating-point.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, 0.0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, 0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, '0') FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, '0') FROM int_float;"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, SelectListAlias) {
@@ -1438,12 +1463,7 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
   // Test that predicates in the JOIN condition that reference only the null-supplying side are pushed down
 
   const auto [actual_lqp_left, translation_info_1] = sql_to_lqp_helper(
-      "SELECT"
-      "  * "
-      "FROM "
-      "  int_float AS a LEFT JOIN int_float2 AS b "
-      "    ON b.a > 5 AND a.a = b.a "
-      "WHERE b.b < 2;");
+      "SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a WHERE b.b < 2;");
 
   // clang-format off
 
@@ -1458,12 +1478,7 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
   EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
 
   const auto [actual_lqp_right, translation_info_2] = sql_to_lqp_helper(
-      "SELECT"
-      "  * "
-      "FROM "
-      "  int_float AS a RIGHT JOIN int_float2 AS b "
-      "    ON a.a > 5 AND a.a = b.a "
-      "WHERE b.b < 2;");
+      "SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a WHERE b.b < 2;");
 
   // clang-format off
 
@@ -1497,13 +1512,8 @@ TEST_F(SQLTranslatorTest, JoinOuterPredicatesForNullPreservingSide) {
 TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
   // Also test that columns can be referenced after a natural join
 
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      "  * "
-      "FROM "
-      "  int_float AS a NATURAL JOIN int_float2 AS b "
-      "WHERE "
-      "  a.b > 10 AND a.a > 5");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT  * FROM int_float AS a NATURAL JOIN int_float2 AS b WHERE a.b > 10 AND a.a > 5");
 
   // clang-format off
   const auto expected_lqp =
@@ -1522,11 +1532,8 @@ TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
 TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   // Test that the Natural join can work with column aliases and that the output columns have the correct name
 
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      "  * "
-      "FROM "
-      "  int_float AS a NATURAL JOIN (SELECT a AS d, b AS a, c FROM int_int_int) AS b");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS a NATURAL JOIN (SELECT a AS d, b AS a, c FROM int_int_int) AS b");
 
   const auto aliases = std::vector<std::string>{{"a", "b", "d", "c"}};
   const auto subquery_aliases = std::vector<std::string>{{"d", "a", "c"}};
@@ -1544,6 +1551,28 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, JoinNaturalSelectedConstant) {
+  // Test that the natural join can work with selected constants.
+
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float NATURAL JOIN (SELECT 123 as a) bar;");
+
+  // clang-format off
+  const auto derived_table_node =
+  AliasNode::make(expression_vector(123), std::vector<std::string>({"a"}),
+    ProjectionNode::make(expression_vector(123),
+      DummyTableNode::make()));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_a, 123),
+      stored_table_node_int_float,
+      derived_table_node));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM int_float JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;");
@@ -1556,6 +1585,102 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
     JoinNode::make(JoinMode::Cross,
       stored_table_node_int_float,
       stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsSimple) {
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float INNER JOIN int_float2 USING (a)");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
+      stored_table_node_int_float,
+      stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsColumnAlias) {
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+    std::vector<std::string>({"c", "d", "b"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+      JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
+        stored_table_node_int_float,
+        stored_table_node_int_float2)));
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsBadNamedColumn) {
+  // `int_float2` alias `(c,b)` does not contain a column named `d`.
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (d)"),
+      InvalidInputException);
+
+  // `int_float2` alias `(c,c)` is ambiguous.
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,c) USING (c)"),
+      InvalidInputException);
+
+  // `int_float` alias `(c,c)` is ambiguous.
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,c) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)"),
+      InvalidInputException);
+
+  // `int_float` alias `(c,b)` does not contain a column named `d`.
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,b) INNER JOIN int_float2 AS intfloat2(c,d) USING (d)"),
+      InvalidInputException);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsMultipleColumns) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,d) USING (c,d)");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b), std::vector<std::string>({"c", "d"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+      JoinNode::make(JoinMode::Inner,
+        std::vector<std::shared_ptr<AbstractExpression>>{
+          equals_(int_float_a, int_float2_a),
+          equals_(int_float_b, int_float2_b)
+        },
+        stored_table_node_int_float,
+        stored_table_node_int_float2)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsNested) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT * FROM int_float JOIN "
+      "(SELECT a, int_float2.b, int_float5.d FROM int_float2 JOIN int_float5 USING (a))"
+      "AS int_float_comb(a, c, d) USING (a)");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b, int_float2_b, int_float5_d),
+    std::vector<std::string>({"a", "b", "c", "d"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b, int_float5_d),
+      JoinNode::make(
+        JoinMode::Inner,
+        equals_(int_float_a, int_float2_a), stored_table_node_int_float,
+        ProjectionNode::make(expression_vector(int_float2_a, int_float2_b, int_float5_d),
+          JoinNode::make(JoinMode::Inner, equals_(int_float2_a, int_float5_a),
+            stored_table_node_int_float2,
+            stored_table_node_int_float5)))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1700,15 +1825,14 @@ TEST_F(SQLTranslatorTest, LimitExpression) {
 }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  std::vector<DatetimeComponent> components{DatetimeComponent::Year,   DatetimeComponent::Month,
-                                            DatetimeComponent::Day,    DatetimeComponent::Hour,
-                                            DatetimeComponent::Minute, DatetimeComponent::Second};
+  const auto components = std::vector{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
+                                      DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
 
-  std::shared_ptr<AbstractLQPNode> actual_lqp;
-  std::shared_ptr<AbstractLQPNode> expected_lqp;
+  auto actual_lqp = std::shared_ptr<AbstractLQPNode>{};
+  auto expected_lqp = std::shared_ptr<AbstractLQPNode>{};
 
   for (const auto& component : components) {
-    std::stringstream query_str;
+    auto query_str = std::stringstream{};
     query_str << "SELECT EXTRACT(" << component << " FROM '1993-08-01');";
 
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query_str.str());
@@ -1877,7 +2001,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
 TEST_F(SQLTranslatorTest, UseMvcc) {
   const auto query = "SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b";
 
-  hsql::SQLParserResult parser_result;
+  auto parser_result = hsql::SQLParserResult{};
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
@@ -1902,6 +2026,27 @@ TEST_F(SQLTranslatorTest, Substr) {
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_c, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, Abs) {
+  const auto actual_lqp_a = sql_to_lqp_helper("SELECT ABS(-1.2)").first;
+  const auto actual_lqp_b = sql_to_lqp_helper("SELECT ABS(a - b) FROM int_float").first;
+
+  // clang-format off
+  const auto expected_lqp_a =
+  ProjectionNode::make(expression_vector(abs_(unary_minus_(1.2))),
+    DummyTableNode::make());
+
+  const auto expected_lqp_b =
+  ProjectionNode::make(expression_vector(abs_(sub_(int_float_a, int_float_b))),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
+
+  // The absolute value of strings is undefined.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT ABS(b) FROM int_string"), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, Exists) {
@@ -2181,7 +2326,6 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
   // clang-format off
   const auto expected_lqp =
   ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Insert,
-    DummyTableNode::make(),
     ProjectionNode::make(expression_vector("foo"),
       DummyTableNode::make()));
   // clang-format on
@@ -2232,8 +2376,7 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
   const auto expected_lqp =
    ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
     PredicateNode::make(equals_(lqp_column_(select_node, meta_table->column_id_by_name("name")), "foo"),
-                        select_node),
-    DummyTableNode::make());
+                        select_node));
   // clang-format on
 
   EXPECT_FALSE(translation_info.cacheable);
@@ -2446,8 +2589,9 @@ TEST_F(SQLTranslatorTest, CreateTable) {
                              {"a_datetime", DataType::String, true}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  static_table_node->table->add_soft_key_constraint({{ColumnID{3}}, KeyConstraintType::UNIQUE});
-  static_table_node->table->add_soft_key_constraint({{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
+  static_table_node->table->add_soft_constraint(TableKeyConstraint{{ColumnID{3}}, KeyConstraintType::UNIQUE});
+  static_table_node->table->add_soft_constraint(
+      TableKeyConstraint{{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

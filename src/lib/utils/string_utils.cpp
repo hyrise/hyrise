@@ -1,7 +1,12 @@
 #include "string_utils.hpp"
 
+#include <filesystem>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <vector>
 
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
 

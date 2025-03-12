@@ -1,13 +1,24 @@
 #include "jcch_table_generator.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "abstract_table_generator.hpp"
+#include "benchmark_config.hpp"
 #include "external_dbgen_utils.hpp"
+#include "file_based_table_generator.hpp"
+#include "tpch/tpch_constants.hpp"
+#include "tpch/tpch_table_generator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
 JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
                                        ClusteringConfiguration clustering_configuration, ChunkOffset chunk_size)
     : JCCHTableGenerator(dbgen_path, data_path, scale_factor, clustering_configuration,
-                         create_benchmark_config_with_chunk_size(chunk_size)) {}
+                         std::make_shared<BenchmarkConfig>(chunk_size)) {}
 
 JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
                                        ClusteringConfiguration clustering_configuration,

@@ -1,8 +1,9 @@
 #include <memory>
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+
 #include "expression/expression_functional.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"

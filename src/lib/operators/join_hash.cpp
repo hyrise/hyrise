@@ -1,23 +1,36 @@
 #include "join_hash.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <memory>
-#include <numeric>
+#include <optional>
+#include <ostream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "bytell_hash_map.hpp"
-
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "join_helper/join_output_writing.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_performance_data.hpp"
+#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "type_comparison.hpp"
-#include "utils/format_duration.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
@@ -49,7 +62,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                    _secondary_predicates, _radix_bits);
+                                    _secondary_predicates);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -82,11 +95,9 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   constexpr auto L2_CACHE_SIZE = 1'024'000;                   // bytes
   constexpr auto L2_CACHE_MAX_USABLE = L2_CACHE_SIZE * 0.75;  // use 75% of the L2 cache size
 
-  // For information about the sizing of the bytell hash map, see the comments:
-  // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
-  // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the number of distinct values in
-  // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
-  // slightly skewed data distributions and aim for a fill level of 80%.
+  // Since it is hard to estimate the number of distinct values in a radix partition (and, thus, the size of each hash
+  // table), we accomodate a little bit extra space for slightly skewed data distributions and aim for a fill level of
+  // 80%.
   const auto complete_hash_map_size =
       // number of items in map
       static_cast<double>(build_side_size) *
@@ -107,7 +118,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
-         "JoinHash doesn't support these parameters");
+         "JoinHash does not support these parameters.");
 
   auto build_input_table = std::shared_ptr<const Table>{};
   auto probe_input_table = std::shared_ptr<const Table>{};
@@ -226,31 +237,32 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                const OutputColumnOrder output_column_order, const size_t radix_bits,
                JoinHash::PerformanceData& performance_data, std::vector<OperatorJoinPredicate>& secondary_predicates)
       : _join_hash(join_hash),
+        _secondary_predicates(secondary_predicates),
+        _performance_data(performance_data),
         _build_input_table(build_input_table),
         _probe_input_table(probe_input_table),
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _performance_data(performance_data),
         _output_column_order(output_column_order),
-        _secondary_predicates(secondary_predicates),
         _radix_bits(radix_bits) {}
 
  protected:
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members): const members and references are problematic with
+  // copying/moving, but this class will not be copied or moved
+  // (see https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-constref).
   const JoinHash& _join_hash;
-  const std::shared_ptr<const Table> _build_input_table, _probe_input_table;
-  const JoinMode _mode;
-  const ColumnIDPair _column_ids;
-  const PredicateCondition _predicate_condition;
+  std::vector<OperatorJoinPredicate>& _secondary_predicates;
   JoinHash::PerformanceData& _performance_data;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 
+  std::shared_ptr<const Table> _build_input_table, _probe_input_table;
+  JoinMode _mode;
+  ColumnIDPair _column_ids;
+  PredicateCondition _predicate_condition;
   OutputColumnOrder _output_column_order;
-
-  const std::vector<OperatorJoinPredicate>& _secondary_predicates;
-
   std::shared_ptr<Table> _output_table;
-
-  const size_t _radix_bits;
+  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
@@ -500,7 +512,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
     }
 
-    Timer timer_probing;
+    auto timer_probing = Timer{};
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
@@ -551,7 +563,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * probe_side_pos_lists[p][r].
      */
 
-    Timer timer_output_writing;
+    auto timer_output_writing = Timer{};
 
     const auto create_left_side_pos_lists_by_segment =
         (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);

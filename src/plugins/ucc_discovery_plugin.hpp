@@ -1,5 +1,12 @@
 #pragma once
 
+#include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include "concurrency/transaction_context.hpp"
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -81,8 +88,8 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    * there must be a duplicate and return false. Otherwise, returns true.
    */
   template <typename ColumnDataType>
-  static bool _uniqueness_holds_across_segments(const std::shared_ptr<const Table>& table, const std::string table_name,
-                                                const ColumnID column_id,
+  static bool _uniqueness_holds_across_segments(const std::shared_ptr<const Table>& table,
+                                                const std::string& table_name, const ColumnID column_id,
                                                 const std::shared_ptr<TransactionContext>& transaction_context);
 
   /**

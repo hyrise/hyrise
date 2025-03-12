@@ -1,7 +1,5 @@
 #include "index_scan_rule.hpp"
 
-#include <algorithm>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -14,6 +12,8 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "storage/index/table_index_statistics.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "abstract_expression.hpp"
 #include "all_type_variant.hpp"
 #include "types.hpp"

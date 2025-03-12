@@ -1,11 +1,14 @@
 #include "limit_node.hpp"
 
+#include <memory>
 #include <sstream>
 #include <string>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "utils/assert.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 
 namespace hyrise {
 
@@ -15,13 +18,17 @@ LimitNode::LimitNode(const std::shared_ptr<AbstractExpression>& num_rows_express
 std::string LimitNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "[Limit] " << num_rows_expression()->description(expression_mode);
   return stream.str();
 }
 
 UniqueColumnCombinations LimitNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
+}
+
+OrderDependencies LimitNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
 }
 
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const {

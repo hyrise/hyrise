@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_set>
+
 #include "expression/abstract_expression.hpp"
 #include "types.hpp"
 
@@ -19,8 +21,7 @@ namespace hyrise {
  * not cacheable.
  */
 struct UniqueColumnCombination final {
-  explicit UniqueColumnCombination(ExpressionUnorderedSet init_expressions);
-  explicit UniqueColumnCombination(ExpressionUnorderedSet init_expressions, bool is_permanent);
+  explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_permanent = true);
 
   bool is_permanent() const;
 

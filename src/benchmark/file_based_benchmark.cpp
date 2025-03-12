@@ -1,6 +1,7 @@
 #include <filesystem>
 
 #include <boost/algorithm/string.hpp>
+
 #include "cxxopts.hpp"
 
 #include "benchmark_runner.hpp"
@@ -22,11 +23,11 @@ int main(int argc, char* argv[]) {
       ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
-  std::shared_ptr<BenchmarkConfig> benchmark_config;
-  std::string query_path;
-  std::string table_path;
+  auto benchmark_config = std::shared_ptr<BenchmarkConfig>{};
+  auto query_path = std::string{};
+  auto table_path = std::string{};
   // Comma-separated query names or "all"
-  std::string queries_str;
+  auto queries_str = std::string{};
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -39,23 +40,23 @@ int main(int argc, char* argv[]) {
   table_path = cli_parse_result["table_path"].as<std::string>();
   queries_str = cli_parse_result["queries"].as<std::string>();
 
-  benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+  benchmark_config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
   // Check that the options "query_path" and "table_path" were specified
   if (query_path.empty() || table_path.empty()) {
-    std::cerr << "Need to specify --query_path=path/to/queries and --table_path=path/to/table_files" << std::endl;
-    std::cerr << cli_options.help({}) << std::endl;
+    std::cerr << "Need to specify --query_path=path/to/queries and --table_path=path/to/table_files\n";
+    std::cerr << cli_options.help({}) << '\n';
     return 1;
   }
 
-  std::cout << "- Benchmarking queries from " << query_path << std::endl;
-  std::cout << "- Running on tables from " << table_path << std::endl;
+  std::cout << "- Benchmarking queries from " << query_path << '\n';
+  std::cout << "- Running on tables from " << table_path << '\n';
 
   std::optional<std::unordered_set<std::string>> query_subset;
   if (queries_str == "all") {
-    std::cout << "- Running all queries from specified path" << std::endl;
+    std::cout << "- Running all queries from specified path\n";
   } else {
-    std::cout << "- Running subset of queries: " << queries_str << std::endl;
+    std::cout << "- Running subset of queries: " << queries_str << '\n';
 
     // "a, b, c, d" -> ["a", " b", " c", " d"]
     auto query_subset_untrimmed = std::vector<std::string>{};

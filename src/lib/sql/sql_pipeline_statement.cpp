@@ -1,13 +1,23 @@
 #include "sql_pipeline_statement.hpp"
 
+#include <chrono>
 #include <fstream>
 #include <iomanip>
+#include <memory>
+#include <string>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
+
+#include "concurrency/transaction_context.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -15,9 +25,11 @@
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -234,11 +246,15 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
     case hsql::kCommitTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
                   "Cannot commit since there is no active transaction.");
-      return {std::make_shared<JobTask>([this] { _transaction_context->commit(); })};
+      return {std::make_shared<JobTask>([this] {
+        _transaction_context->commit();
+      })};
     case hsql::kRollbackTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
                   "Cannot rollback since there is no active transaction.");
-      return {std::make_shared<JobTask>([this] { _transaction_context->rollback(RollbackReason::User); })};
+      return {std::make_shared<JobTask>([this] {
+        _transaction_context->rollback(RollbackReason::User);
+      })};
     default:
       Fail("Unexpected transaction command!");
   }

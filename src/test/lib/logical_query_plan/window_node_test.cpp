@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -123,6 +122,20 @@ TEST_F(WindowNodeTest, UniqueColumnCombinationsForwarding) {
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
+}
+
+TEST_F(WindowNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_window_node->order_dependencies().empty());
+
+  _mock_node->set_order_constraints({{{ColumnID{0}}, {ColumnID{1}}}});
+  const auto od = OrderDependency{{_a}, {_b}};
+  EXPECT_EQ(_mock_node->order_dependencies().size(), 1);
+  EXPECT_TRUE(_mock_node->order_dependencies().contains(od));
+
+  const auto& order_dependencies = _window_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise

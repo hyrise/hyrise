@@ -1,6 +1,10 @@
+#include "commit_context.hpp"
+
+#include <atomic>
+#include <functional>
 #include <memory>
 
-#include "commit_context.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -18,7 +22,9 @@ bool CommitContext::is_pending() const {
 void CommitContext::make_pending(const TransactionID transaction_id,
                                  const std::function<void(TransactionID)>& callback) {
   if (callback) {
-    _callback = [callback, transaction_id]() { callback(transaction_id); };
+    _callback = [callback, transaction_id]() {
+      callback(transaction_id);
+    };
   }
 
   // This line MUST be AFTER setting the callback. Otherwise we run into a race condition while committing, because this

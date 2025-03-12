@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_set>
+
 #include "expression/abstract_expression.hpp"
 
 namespace hyrise {
@@ -33,9 +35,7 @@ namespace hyrise {
  * not cacheable.
  */
 struct FunctionalDependency {
-  FunctionalDependency(ExpressionUnorderedSet init_determinants, ExpressionUnorderedSet init_dependents);
-  FunctionalDependency(ExpressionUnorderedSet init_determinants, ExpressionUnorderedSet init_dependents,
-                       bool permanent);
+  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents, bool is_permanent = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -49,7 +49,7 @@ struct FunctionalDependency {
   bool permanent;
 };
 
-std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
+std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
 
 using FunctionalDependencies = std::unordered_set<FunctionalDependency>;
 

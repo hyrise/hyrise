@@ -2,7 +2,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate_hash.hpp"

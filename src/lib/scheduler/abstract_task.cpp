@@ -1,15 +1,17 @@
 #include "abstract_task.hpp"
 
+#include <algorithm>
+#include <atomic>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
-#include <utility>
 #include <vector>
 
-#include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
-#include "worker.hpp"
-
+#include "types.hpp"
 #include "utils/assert.hpp"
+#include "worker.hpp"
 
 namespace hyrise {
 
@@ -90,7 +92,7 @@ bool AbstractTask::try_mark_as_assigned_to_worker() {
 }
 
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
-  DebugAssert(!is_scheduled(), "Possible race: Don't set callback after the Task was scheduled");
+  DebugAssert(!is_scheduled(), "Possible race: Don't set callback after the Task was scheduled.");
 
   _done_callback = done_callback;
 }
@@ -118,8 +120,10 @@ void AbstractTask::_join() {
     return;
   }
 
-  DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
-  _done_condition_variable.wait(lock, [&]() { return is_done(); });
+  DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for.");
+  _done_condition_variable.wait(lock, [&]() {
+    return is_done();
+  });
 }
 
 void AbstractTask::execute() {
@@ -127,7 +131,7 @@ void AbstractTask::execute() {
     const auto success_started = _try_transition_to(TaskState::Started);
     Assert(success_started, "Expected successful transition to TaskState::Started.");
   }
-  DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
+  DebugAssert(is_ready(), "Task must not be executed before its dependencies are done.");
 
   std::atomic_thread_fence(std::memory_order_seq_cst);  // See documentation in AbstractTask::schedule
 
@@ -162,10 +166,10 @@ TaskState AbstractTask::state() const {
 }
 
 void AbstractTask::_on_predecessor_done() {
-  Assert(_pending_predecessors > 0, "The count of pending predecessors equals zero and cannot be decremented.");
-  auto new_predecessor_count = --_pending_predecessors;  // atomically decrement
-  if (new_predecessor_count == 0) {
-    auto current_worker = Worker::get_this_thread_worker();
+  const auto previous_predecessor_count = _pending_predecessors--;
+  Assert(previous_predecessor_count > 0, "Cannot decrement pending predecessors when no predecessors are left.");
+  if (previous_predecessor_count == 1) {
+    const auto current_worker = Worker::get_this_thread_worker();
 
     if (current_worker) {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
@@ -217,21 +221,21 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
       if (_state >= TaskState::Enqueued) {
         return false;
       }
-      Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued");
+      Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued.");
       break;
     case TaskState::AssignedToWorker:
       if (_state >= TaskState::AssignedToWorker) {
         return false;
       }
       Assert(_state == TaskState::Scheduled || _state == TaskState::Enqueued,
-             "Illegal state transition to TaskState::AssignedToWorker");
+             "Illegal state transition to TaskState::AssignedToWorker.");
       break;
     case TaskState::Started:
       Assert(_state == TaskState::Scheduled || _state == TaskState::AssignedToWorker,
              "Illegal state transition to TaskState::Started: Task should have been scheduled before being executed.");
       break;
     case TaskState::Done:
-      Assert(_state == TaskState::Started, "Illegal state transition to TaskState::Done");
+      Assert(_state == TaskState::Started, "Illegal state transition to TaskState::Done.");
       break;
     default:
       Fail("Unexpected target state in AbstractTask.");

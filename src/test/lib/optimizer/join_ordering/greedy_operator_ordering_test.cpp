@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -45,7 +44,7 @@ class GreedyOperatorOrderingTest : public BaseTest {
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
   std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, c_a, d_a;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
-  std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
+  std::shared_ptr<CardinalityEstimator> cardinality_estimator;
 };
 
 TEST_F(GreedyOperatorOrderingTest, NoEdges) {

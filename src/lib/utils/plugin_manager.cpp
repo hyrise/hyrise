@@ -1,12 +1,28 @@
+#include "plugin_manager.hpp"
+
 #include <dlfcn.h>
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include <boost/container_hash/hash.hpp>
+
+#include "nlohmann/json.hpp"
+
+#include "abstract_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-
-#include "plugin_manager.hpp"
+#include "utils/log_manager.hpp"
+#include "utils/string_utils.hpp"
 
 namespace hyrise {
 
@@ -23,7 +39,7 @@ bool PluginManager::_is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin)
 }
 
 std::vector<PluginName> PluginManager::loaded_plugins() const {
-  std::vector<std::string> plugin_names;
+  auto plugin_names = std::vector<std::string>{};
   plugin_names.reserve(_plugins.size());
 
   for (const auto& [plugin_name, _] : _plugins) {
@@ -35,7 +51,7 @@ std::vector<PluginName> PluginManager::loaded_plugins() const {
   return plugin_names;
 }
 
-std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>
+std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, PluginNameFunctionNameHash>
 PluginManager::user_executable_functions() const {
   return _user_executable_functions;
 }
@@ -51,15 +67,15 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   auto lock = std::lock_guard<std::mutex>{dl_mutex};
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
-  // NOLINTNEXTLINE(concurrency-mt-unsafe) - dlerror is not thread-safe, but it's guarded by dl_mutex.
+  // NOLINTNEXTLINE(concurrency-mt-unsafe): dlerror is not thread-safe, but it is guarded by dl_mutex.
   Assert(plugin_handle, std::string{"Loading plugin failed: "} + dlerror());
 
   // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
   // factory method. See the sources of AbstractPlugin and TestPlugin for further details.
   void* factory = dlsym(plugin_handle, "factory");
   Assert(factory,
-         "Instantiating plugin failed: Use the EXPORT_PLUGIN (abstract_plugin.hpp) macro to export a factory method "
-         "for your plugin!");
+         "Instantiating plugin failed: Use the EXPORT_PLUGIN (see abstract_plugin.hpp) macro to export a factory "
+         "method for your plugin.");
 
   using PluginGetter = AbstractPlugin* (*)();
   auto plugin_get = reinterpret_cast<PluginGetter>(factory);
@@ -176,6 +192,14 @@ void PluginManager::_clean_up() {
 
 PluginManager::~PluginManager() {
   _clean_up();
+}
+
+size_t PluginNameFunctionNameHash::operator()(
+    const std::pair<PluginName, PluginFunctionName>& exec_function_identifier) const {
+  auto hash = size_t{0};
+  boost::hash_combine(hash, exec_function_identifier.first);
+  boost::hash_combine(hash, exec_function_identifier.second);
+  return hash;
 }
 
 }  // namespace hyrise

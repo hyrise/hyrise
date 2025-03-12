@@ -1,25 +1,29 @@
 #include "column_pruning_rule.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
-#include "logical_query_plan/window_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -35,8 +39,9 @@ void gather_expressions_not_computed_by_expression_evaluator(
   // required_expressions, as it is not a top-level expression.
 
   // If an expression that is not a top-level expression is already an input, we require it
-  if (std::find_if(input_expressions.begin(), input_expressions.end(),
-                   [&expression](const auto& other) { return *expression == *other; }) != input_expressions.end()) {
+  if (std::find_if(input_expressions.begin(), input_expressions.end(), [&expression](const auto& other) {
+        return *expression == *other;
+      }) != input_expressions.end()) {
     if (!top_level) {
       required_expressions.emplace(expression);
     }
@@ -97,7 +102,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           locally_required_expressions.emplace(expression);
         } else {
           // We need the arguments of all aggregate functions
-          DebugAssert(expression->type == ExpressionType::WindowFunction, "Expected WindowFunctionExpression");
+          DebugAssert(expression->type == ExpressionType::WindowFunction, "Expected WindowFunctionExpression.");
           if (!WindowFunctionExpression::is_count_star(*expression)) {
             locally_required_expressions.emplace(expression->arguments[0]);
           } else {
@@ -145,7 +150,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       const auto& join_node = static_cast<JoinNode&>(*node);
       for (const auto& predicate : join_node.join_predicates()) {
         DebugAssert(predicate->type == ExpressionType::Predicate && predicate->arguments.size() == 2,
-                    "Expected binary predicate for join");
+                    "Expected binary predicate for join.");
         locally_required_expressions.emplace(predicate->arguments[0]);
         locally_required_expressions.emplace(predicate->arguments[1]);
       }
@@ -165,12 +170,12 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           // PredicateSplitUpRule). Once we have a union operator that merges data from different tables, we have to
           // look into this more deeply.
           Assert(union_node.left_input()->output_expressions() == union_node.right_input()->output_expressions(),
-                 "Can only handle SetOperationMode::All if both inputs have the same expressions");
+                 "Can only handle SetOperationMode::All if both inputs have the same expressions.");
         } break;
 
         case SetOperationMode::Unique: {
           // This probably needs all expressions, as all of them are used to establish uniqueness
-          Fail("SetOperationMode::Unique is not supported yet");
+          Fail("SetOperationMode::Unique is not supported yet.");
         }
       }
     } break;
@@ -192,7 +197,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
 
     case LQPNodeType::Intersect:
     case LQPNodeType::Except: {
-      Fail("Intersect and Except are not supported yet");
+      Fail("Intersect and Except are not supported yet.");
       // Not sure what needs to happen here. That partially depends on how intersect and except are finally implemented.
     } break;
 
@@ -327,7 +332,7 @@ IsCacheable ColumnPruningRule::_apply_to_plan_without_subqueries(
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its
   // successors (i.e., nodes to which this node is an input). After collecting this information, we walk through all
   // identified nodes and perform the pruning.
-  std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
+  auto required_expressions_by_node = std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>{};
 
   // Add top-level columns that need to be included as they are the actual output
   const auto output_expressions = lqp_root->output_expressions();
@@ -337,7 +342,7 @@ IsCacheable ColumnPruningRule::_apply_to_plan_without_subqueries(
   // The right side of a diamond might require additional columns - if we only visited each node once, we might miss
   // those. However, we track how many of a node's outputs we have already visited and recurse only once we have seen
   // all of them. That way, the performance should be similar to that of visit_lqp.
-  std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> outputs_visited_by_node;
+  auto outputs_visited_by_node = std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t>{};
   recursively_gather_required_expressions(lqp_root, required_expressions_by_node, outputs_visited_by_node);
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
@@ -367,10 +372,10 @@ IsCacheable ColumnPruningRule::_apply_to_plan_without_subqueries(
         }
 
         if (auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node)) {
-          DebugAssert(stored_table_node->pruned_column_ids().empty(), "Node pruned twice");
+          DebugAssert(stored_table_node->pruned_column_ids().empty(), "Node pruned twice.");
           stored_table_node->set_pruned_column_ids(pruned_column_ids);
         } else if (auto mock_node = std::dynamic_pointer_cast<MockNode>(node)) {
-          DebugAssert(mock_node->pruned_column_ids().empty(), "Node pruned twice");
+          DebugAssert(mock_node->pruned_column_ids().empty(), "Node pruned twice.");
           mock_node->set_pruned_column_ids(pruned_column_ids);
         }
       } break;

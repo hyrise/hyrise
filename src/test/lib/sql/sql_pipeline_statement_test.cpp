@@ -1,11 +1,10 @@
 #include <memory>
 #include <string>
 
-#include "base_test.hpp"
-
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+#include "base_test.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
@@ -39,7 +38,7 @@ class SQLPipelineStatementTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-    _table_a->add_soft_key_constraint({{_table_a->column_id_by_name("a")}, KeyConstraintType::UNIQUE, CommitID{0}});
+    _table_a->add_soft_constraint(TableKeyConstraint{{_table_a->column_id_by_name("a")}, KeyConstraintType::UNIQUE, CommitID{0}});
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});

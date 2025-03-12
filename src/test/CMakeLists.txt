@@ -22,6 +22,7 @@ set(
     lib/concurrency/transaction_context_test.cpp
     lib/concurrency/transaction_manager_test.cpp
     lib/cost_estimation/abstract_cost_estimator_test.cpp
+    lib/cost_estimation/cost_estimator_logical_test.cpp
     lib/expression/evaluation/expression_result_test.cpp
     lib/expression/evaluation/like_matcher_test.cpp
     lib/expression/expression_evaluator_to_pos_list_test.cpp
@@ -43,6 +44,7 @@ set(
     lib/logical_query_plan/create_table_node_test.cpp
     lib/logical_query_plan/create_view_node_test.cpp
     lib/logical_query_plan/data_dependencies/functional_dependency_test.cpp
+    lib/logical_query_plan/data_dependencies/order_dependency_test.cpp
     lib/logical_query_plan/data_dependencies/unique_column_combination_test.cpp
     lib/logical_query_plan/delete_node_test.cpp
     lib/logical_query_plan/drop_table_node_test.cpp
@@ -173,12 +175,16 @@ set(
     lib/statistics/statistics_objects/generic_histogram_test.cpp
     lib/statistics/statistics_objects/min_max_filter_test.cpp
     lib/statistics/statistics_objects/range_filter_test.cpp
+    lib/statistics/statistics_objects/scaled_histogram_test.cpp
     lib/statistics/statistics_objects/string_histogram_domain_test.cpp
     lib/statistics/table_statistics_test.cpp
     lib/storage/any_segment_iterable_test.cpp
+    lib/storage/buffer/page_id_test.cpp
+    lib/storage/buffer/frame_test.cpp
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
+    lib/storage/constraints/constraint_utils_test.cpp
     lib/storage/constraints/foreign_key_constraint_test.cpp
     lib/storage/constraints/table_key_constraint_test.cpp
     lib/storage/constraints/table_order_constraint_test.cpp
@@ -190,7 +196,6 @@ set(
     lib/storage/fixed_string_dictionary_segment/fixed_string_vector_test.cpp
     lib/storage/fixed_string_dictionary_segment_test.cpp
     lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index_test.cpp
-    lib/storage/index/b_tree/b_tree_index_test.cpp
     lib/storage/index/group_key/composite_group_key_index_test.cpp
     lib/storage/index/group_key/group_key_index_test.cpp
     lib/storage/index/group_key/variable_length_key_base_test.cpp
@@ -202,6 +207,7 @@ set(
     lib/storage/iterables_test.cpp
     lib/storage/lz4_segment_test.cpp
     lib/storage/materialize_test.cpp
+    lib/storage/mvcc_data_test.cpp
     lib/storage/pos_lists/entire_chunk_pos_list_test.cpp
     lib/storage/prepared_plan_test.cpp
     lib/storage/reference_segment_test.cpp
@@ -254,10 +260,11 @@ set(
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
+    benchmarklib/ssb/ssb_table_generator_test.cpp
     benchmarklib/synthetic_table_generator_test.cpp
     benchmarklib/tpcc/tpcc_test.cpp
-    benchmarklib/tpcds/tpcds_db_generator_test.cpp
-    benchmarklib/tpch/tpch_db_generator_test.cpp
+    benchmarklib/tpcds/tpcds_table_generator_test.cpp
+    benchmarklib/tpch/tpch_table_generator_test.cpp
     gtest_main.cpp
     lib/concurrency/stress_test.cpp
     lib/server/server_test_runner.cpp
@@ -276,8 +283,6 @@ set(
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
-    # Required for testing plugin benchmark hooks
-    hyriseBenchmarkLib
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -295,6 +300,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries(hyriseTest hyriseBenchmarkLib)  # See special handling below for hyriseSystemTest.
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
@@ -307,8 +313,10 @@ target_precompile_headers(hyriseTest PRIVATE
     [["types.hpp"]]
 )
 
-# Configure hyriseSystemTest
+# Configure hyriseSystemTest. With LLVM18+ and macOS, we need to ensure that the entire hyriseBenchmarkLib (required for
+# testing plugin benchmark hooks) is exported. For some reason, some symbols are missing if we do not use whole archive.
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest PUBLIC hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries(hyriseSystemTest PUBLIC hyrise ${LIBRARIES})
+target_link_libraries(hyriseSystemTest PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,hyriseBenchmarkLib>")
 target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

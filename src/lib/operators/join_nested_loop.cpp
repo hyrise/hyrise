@@ -1,15 +1,27 @@
 #include "join_nested_loop.hpp"
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
+#include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -104,9 +116,9 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
                    left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
-         "JoinNestedLoop doesn't support these parameters");
+         "JoinNestedLoop does not support these parameters.");
 
-  PerformanceWarning("Nested Loop Join used");
+  PerformanceWarning("Nested Loop Join used.");
 
   auto left_table = left_input_table();
   auto right_table = right_input_table();

@@ -13,14 +13,15 @@ class EntireChunkPosList : public AbstractPosList {
   // condition of an element being added in between doing the checks and getting the size.
   explicit EntireChunkPosList(const ChunkID common_chunk_id, const ChunkOffset common_chunk_size)
       : _common_chunk_id(common_chunk_id), _common_chunk_size(common_chunk_size) {
-    DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "Cannot create EntireChunkPosList for INVALID_CHUNK_ID");
+    DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "Cannot create EntireChunkPosList for INVALID_CHUNK_ID.");
   }
 
   bool references_single_chunk() const final;
   ChunkID common_chunk_id() const final;
 
-  // Implemented in hpp for performance reasons (to allow inlining)
+  // Implemented in hpp for performance reasons (to allow inlining).
   RowID operator[](const size_t index) const final {
+    DebugAssert(index < _common_chunk_size, "Invalid position accessed.");
     return RowID{_common_chunk_id, ChunkOffset{static_cast<ChunkOffset::base_type>(index)}};
   }
 
