@@ -706,6 +706,9 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   EXPECT_TRUE(stored_table_d->has_matching_ind({c_b, c_a}, {d_b, d_a}));
   EXPECT_TRUE(stored_table_d->has_matching_ind({c_d, c_a}, {d_d, d_a}));
   EXPECT_TRUE(stored_table_d->has_matching_ind({c_d, c_b}, {d_d, d_b}));
+
+  // Requested columns come from different tables.
+  EXPECT_THROW(_stored_table_node->has_matching_ind({b_a, c_a}, {_a, _a}), std::logic_error);
 }
 
 }  // namespace hyrise
