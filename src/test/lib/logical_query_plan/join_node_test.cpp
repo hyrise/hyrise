@@ -2,12 +2,17 @@
 #include <vector>
 
 #include "base_test.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "storage/chunk.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
@@ -33,6 +38,21 @@ class JoinNodeTest : public BaseTest {
     _t_c_v = _mock_node_c->get_column("v");
     _t_c_w = _mock_node_c->get_column("w");
 
+    const auto column_definitions =
+        TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
+    _table_d = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+    _table_e = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+    Hyrise::get().storage_manager.add_table("d", _table_d);
+    Hyrise::get().storage_manager.add_table("e", _table_e);
+    _stored_table_d = StoredTableNode::make("d");
+    _t_d_a = _stored_table_d->get_column("a");
+    _t_d_b = _stored_table_d->get_column("b");
+    _t_d_c = _stored_table_d->get_column("c");
+    _stored_table_e = StoredTableNode::make("e");
+    _t_e_x = _stored_table_e->get_column("a");
+    _t_e_y = _stored_table_e->get_column("b");
+    _t_e_z = _stored_table_e->get_column("c");
+
     _cross_join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
@@ -51,8 +71,13 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node_a, _mock_node_b, _mock_node_c;
   std::shared_ptr<JoinNode> _inner_join_node, _semi_join_node, _semi_join_reduction_node, _anti_join_node,
       _cross_join_node;
-  std::shared_ptr<LQPColumnExpression> _t_a_a, _t_a_b, _t_a_c, _t_b_x, _t_b_y, _t_b_z, _t_c_u, _t_c_v, _t_c_w;
+  std::shared_ptr<LQPColumnExpression> _t_a_a, _t_a_b, _t_a_c, _t_b_x, _t_b_y, _t_b_z, _t_c_u, _t_c_v, _t_c_w, _t_d_a,
+      _t_d_b, _t_d_c, _t_e_x, _t_e_y, _t_e_z;
   std::optional<TableKeyConstraint> _key_constraint_a, _key_constraint_b_c, _key_constraint_x, _key_constraint_y;
+  std::shared_ptr<Table> _table_d;
+  std::shared_ptr<Table> _table_e;
+  std::shared_ptr<StoredTableNode> _stored_table_d;
+  std::shared_ptr<StoredTableNode> _stored_table_e;
 };
 
 class JoinNodeMultiJoinModeTest : public JoinNodeTest, public ::testing::WithParamInterface<JoinMode> {};
@@ -874,74 +899,220 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
   }
 }
 
-TEST_F(JoinNodeTest, InclusionDependenciesCrossAndFullOuterJoin) {
-  // Cross and full outer joins should forward INDs from both inputs.
+TEST_P(JoinNodeMultiJoinModeTest, InclusionDependenciesEquiJoin) {
+  const auto join_mode = GetParam();
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{_t_a_a}, {ColumnID{0}}, dummy_table};
-  const auto ind_x = InclusionDependency{{_t_b_x}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
 
-  _mock_node_a->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node_a->inclusion_dependencies().size(), 1);
-  _mock_node_b->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
+  const auto ind_a = InclusionDependency{{_t_d_a}, {ColumnID{0}}, dummy_table};
+  const auto ind_b = InclusionDependency{{_t_d_b}, {ColumnID{1}}, _table_e};
+  const auto ind_x = InclusionDependency{{_t_e_x}, {ColumnID{0}}, dummy_table};
+  const auto ind_y = InclusionDependency{{_t_e_y}, {ColumnID{1}}, _table_d};
 
-  {
-    const auto inclusion_dependencies = _cross_join_node->inclusion_dependencies();
+  foreign_key_constraint(dummy_table, {"a"}, _table_d, {"a"});
+  EXPECT_EQ(_stored_table_d->inclusion_dependencies().size(), 1);
+  foreign_key_constraint(dummy_table, {"a"}, _table_e, {"a"});
+  EXPECT_EQ(_stored_table_e->inclusion_dependencies().size(), 1);
+
+  const auto join_node =
+      join_mode == JoinMode::Cross ? JoinNode::make(join_mode) : JoinNode::make(join_mode, equals_(_t_d_b, _t_e_y));
+  join_node->set_left_input(_stored_table_d);
+  join_node->set_right_input(_stored_table_e);
+
+  // Cross and outer joins forward all INDs both inputs.
+  if (join_mode == JoinMode::Cross || join_mode == JoinMode::FullOuter) {
+    const auto inclusion_dependencies = join_node->inclusion_dependencies();
     EXPECT_EQ(inclusion_dependencies.size(), 2);
     EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
     EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+    return;
   }
 
-  // clang-format off
-  const auto outer_join_node =
-  JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
-    _mock_node_a,
-    _mock_node_b);
-  // clang-format on
-
-  const auto& inclusion_dependencies = outer_join_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 2);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
-}
-
-TEST_F(JoinNodeTest, InclusionDependenciesOuterJoin) {
-  // Left and right outer joins should forward INDs from the "outer" input.
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{_t_a_a}, {ColumnID{0}}, dummy_table};
-  const auto ind_x = InclusionDependency{{_t_b_x}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
-
-  _mock_node_a->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node_a->inclusion_dependencies().size(), 1);
-  _mock_node_b->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
-
-  {
-    // clang-format off
-    const auto join_node =
-    JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
-      _mock_node_a,
-      _mock_node_b);
-    // clang-format on
-
+  // Left and right outer joins forward all INDs from the "outer" input.
+  if (join_mode == JoinMode::Left) {
     const auto inclusion_dependencies = join_node->inclusion_dependencies();
     EXPECT_EQ(inclusion_dependencies.size(), 1);
     EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
   }
-
-  {
-    // clang-format off
-    const auto join_node =
-    JoinNode::make(JoinMode::Right, equals_(_t_a_a, _t_b_x),
-      _mock_node_a,
-      _mock_node_b);
-    // clang-format on
-
+  if (join_mode == JoinMode::Right) {
     const auto inclusion_dependencies = join_node->inclusion_dependencies();
     EXPECT_EQ(inclusion_dependencies.size(), 1);
     EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+  }
+
+  // Inner, semi- and anti-joins should not forward any IND without more information.
+  if (join_mode == JoinMode::Inner || is_semi_or_anti_join(join_mode)) {
+    EXPECT_TRUE(join_node->inclusion_dependencies().empty());
+  }
+
+  // Case i: Join column of right input includes all values from left input. INDs from left side are preserved.
+  {
+    foreign_key_constraint(_table_d, {"b"}, _table_e, {"b"});
+    const auto inclusion_dependencies = join_node->inclusion_dependencies();
+    // Anti-joins remove matching tuples, so they do not preserve INDs.
+    if (join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+      EXPECT_TRUE(inclusion_dependencies.empty());
+    } else {
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    }
+  }
+
+  // Case ii: Join column of left input includes all values from right input. INDs from right side are also preserved.
+  {
+    foreign_key_constraint(_table_e, {"b"}, _table_d, {"b"});
+    const auto inclusion_dependencies = join_node->inclusion_dependencies();
+    // Semi- and anti-joins do not forward anything from the right input.
+    if (join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+      EXPECT_TRUE(inclusion_dependencies.empty());
+    } else if (join_mode == JoinMode::Semi) {
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    } else {
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_b));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+    }
+  }
+}
+
+TEST_P(JoinNodeMultiJoinModeTest, InclusionDependenciesThetaJoin) {
+  const auto join_mode = GetParam();
+
+  const auto ind_b = InclusionDependency{{_t_d_b}, {ColumnID{1}}, _table_e};
+  const auto ind_y = InclusionDependency{{_t_e_y}, {ColumnID{1}}, _table_d};
+
+  foreign_key_constraint(_table_e, {"b"}, _table_d, {"b"});
+  EXPECT_EQ(_stored_table_d->inclusion_dependencies().size(), 1);
+  foreign_key_constraint(_table_d, {"b"}, _table_e, {"b"});
+  EXPECT_EQ(_stored_table_e->inclusion_dependencies().size(), 1);
+
+  const auto join_node =
+      join_mode == JoinMode::Cross ? JoinNode::make(join_mode) : JoinNode::make(join_mode, less_than_(_t_d_b, _t_e_y));
+  join_node->set_left_input(_stored_table_d);
+  join_node->set_right_input(_stored_table_e);
+
+  // Cross and outer joins forward all INDs both inputs.
+  const auto inclusion_dependencies = join_node->inclusion_dependencies();
+  if (join_mode == JoinMode::Cross || join_mode == JoinMode::FullOuter) {
+    EXPECT_EQ(inclusion_dependencies.size(), 2);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_b));
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_y));
+    return;
+  }
+
+  // Left and right outer joins forward all INDs from the "outer" input.
+  if (join_mode == JoinMode::Left) {
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_b));
+    return;
+  }
+  if (join_mode == JoinMode::Right) {
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_y));
+    return;
+  }
+
+  // Other joins do not forward INDs.
+  EXPECT_TRUE(inclusion_dependencies.empty());
+}
+
+TEST_P(JoinNodeMultiJoinModeTest, InclusionDependenciesMultiPredicateJoin) {
+  const auto join_mode = GetParam();
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+
+  const auto ind_a = InclusionDependency{{_t_d_a}, {ColumnID{0}}, dummy_table};
+  const auto ind_b_c = InclusionDependency{{_t_d_b, _t_d_c}, {ColumnID{1}, ColumnID{2}}, _table_e};
+  const auto ind_x = InclusionDependency{{_t_e_x}, {ColumnID{0}}, dummy_table};
+  const auto ind_y_z = InclusionDependency{{_t_e_y, _t_e_z}, {ColumnID{1}, ColumnID{2}}, _table_d};
+
+  foreign_key_constraint(dummy_table, {"a"}, _table_d, {"a"});
+  EXPECT_EQ(_stored_table_d->inclusion_dependencies().size(), 1);
+  foreign_key_constraint(dummy_table, {"a"}, _table_e, {"a"});
+  EXPECT_EQ(_stored_table_e->inclusion_dependencies().size(), 1);
+
+  const auto join_node =
+      join_mode == JoinMode::Cross
+          ? JoinNode::make(join_mode)
+          : JoinNode::make(join_mode, expression_vector(equals_(_t_d_b, _t_e_y), equals_(_t_d_c, _t_e_z)));
+  join_node->set_left_input(_stored_table_d);
+  join_node->set_right_input(_stored_table_e);
+
+  // Cross and outer joins forward all INDs both inputs.
+  if (join_mode == JoinMode::Cross || join_mode == JoinMode::FullOuter) {
+    const auto inclusion_dependencies = join_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 2);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+    return;
+  }
+
+  // Case i: Multi-predicate join with equality predicates, but no IND covering both join columns. INDs are not
+  //           preserved.
+  {
+    // Left / right outer joins still forward INDs from "outer" side.
+    const auto inclusion_dependencies = join_node->inclusion_dependencies();
+    if (join_mode == JoinMode::Left) {
+      EXPECT_EQ(inclusion_dependencies.size(), 1);
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    } else if (join_mode == JoinMode::Right) {
+      EXPECT_EQ(inclusion_dependencies.size(), 1);
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+    } else {
+      EXPECT_TRUE(inclusion_dependencies.empty());
+    }
+  }
+
+  // Case ii: Multi-predicate join with equality predicates and join attributes of right input contain all values from
+  //          left input. INDs from left input are preserved.
+  {
+    foreign_key_constraint(_table_d, {"b", "c"}, _table_e, {"b", "c"});
+    const auto inclusion_dependencies = join_node->inclusion_dependencies();
+    if (join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+      EXPECT_TRUE(inclusion_dependencies.empty());
+    } else {
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    }
+
+    // Right outer join also preserves IND from right input.
+    if (join_mode == JoinMode::Right) {
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_y_z));
+    }
+  }
+
+  // Case iii: Multi-predicate join with equality predicates and join attributes of left input also contain all values
+  //           from right input. INDs from right input are preserved.
+  {
+    foreign_key_constraint(_table_e, {"b", "c"}, _table_d, {"b", "c"});
+    const auto inclusion_dependencies = join_node->inclusion_dependencies();
+    if (join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+      EXPECT_TRUE(inclusion_dependencies.empty());
+    } else if (join_mode == JoinMode::Semi) {
+      EXPECT_EQ(inclusion_dependencies.size(), 2);
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_b_c));
+    } else {
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_b_c));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_y_z));
+    }
+  }
+
+  // Case iv: INDs are still valid, but second join predicate is not equality. INDs are not preserved.
+  {
+    join_node->node_expressions[1] = not_equals_(_t_d_c, _t_e_z);
+    const auto inclusion_dependencies = join_node->inclusion_dependencies();
+    // Left / right outer joins still preserve INDs from "outer" side.
+    if (join_mode == JoinMode::Left) {
+      EXPECT_EQ(inclusion_dependencies.size(), 2);
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_b_c));
+    } else if (join_mode == JoinMode::Right) {
+      EXPECT_EQ(inclusion_dependencies.size(), 2);
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+      EXPECT_TRUE(inclusion_dependencies.contains(ind_y_z));
+    } else {
+      EXPECT_TRUE(inclusion_dependencies.empty());
+    }
   }
 }
 

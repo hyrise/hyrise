@@ -184,7 +184,7 @@ OrderDependencies StoredTableNode::order_dependencies() const {
 InclusionDependencies StoredTableNode::inclusion_dependencies() const {
   auto inclusion_dependencies = InclusionDependencies{};
 
-  // We create inclusion dependencies from foreign constraints.
+  // We create inclusion dependencies from foreign key constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& foreign_key_constraints = table->referenced_foreign_key_constraints();
 

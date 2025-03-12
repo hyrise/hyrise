@@ -105,7 +105,7 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
     return UniqueColumnCombinations{};
   }
 
-  const auto predicates = join_predicates();
+  const auto& predicates = join_predicates();
   if (predicates.empty() || predicates.size() > 1) {
     // No guarantees implemented yet for Cross Joins and multi-predicate joins.
     return UniqueColumnCombinations{};
@@ -167,7 +167,7 @@ OrderDependencies JoinNode::order_dependencies() const {
   // nodes have the ODs A.a |-> A.b, and B.x |-> B.y. In this case, the two additional ODs A.a |-> B.x and A.a |-> B.y
   // occur. For now, we limit the transitive closure of ODs to joins with a single equals predicate. Otherwise, we would
   // have to add all permutations of the predicates as ODs.
-  const auto predicates = join_predicates();
+  const auto& predicates = join_predicates();
   if (join_mode != JoinMode::Inner || predicates.size() != 1) {
     return order_dependencies;
   }
@@ -241,7 +241,6 @@ InclusionDependencies JoinNode::inclusion_dependencies() const {
 }
 
 InclusionDependencies JoinNode::_output_inclusion_dependencies(
-    // TODO: test!
     const InclusionDependencies& left_inclusion_dependencies,
     const InclusionDependencies& right_inclusion_dependencies) const {
   // Check if there are any INDs that might be forwarded.
@@ -258,7 +257,7 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
   }
 
   // Check that all join predicates are equals_() predicates and map the join keys to the input nodes.
-  const auto join_predicates = this->join_predicates();
+  const auto& join_predicates = this->join_predicates();
   auto left_input_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto right_input_join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   const auto left_expressions = left_input()->output_expressions();
@@ -266,7 +265,9 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
   for (const auto& expression : join_predicates) {
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(expression);
     if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
-      return InclusionDependencies{};
+      return join_mode == JoinMode::Left    ? left_inclusion_dependencies
+             : join_mode == JoinMode::Right ? right_inclusion_dependencies
+                                            : InclusionDependencies{};
     }
 
     if (find_expression_idx(*predicate->left_operand(), left_expressions)) {
