@@ -214,7 +214,7 @@ InclusionDependencies StoredTableNode::inclusion_dependencies() const {
         continue;
       }
 
-      // Look at the next pruned column for pruned columns.
+      // Look at the next pruned column.
       ++pruned_columns_it;
     }
 

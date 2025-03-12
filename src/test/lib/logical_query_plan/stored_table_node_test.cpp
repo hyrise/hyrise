@@ -572,18 +572,26 @@ TEST_F(StoredTableNodeTest, InclusionDependenciesSimple) {
 
 TEST_F(StoredTableNodeTest, InclusionDependenciesPrunedColumns) {
   // Case i: IND conists only of pruned columns. Discard it.
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}, {"b", DataType::Int, false}});
+  const auto dummy_table = Table::create_dummy_table(
+      {{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Float, false}});
   dummy_table->add_soft_constraint(ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, _table_a});
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
   EXPECT_TRUE(_stored_table_node->inclusion_dependencies().empty());
 
-  // Case ii: IND has more columns. Remove pruned column from IND.
+  // Case ii: INDs have more columns. Remove pruned column from INDs.
   dummy_table->add_soft_constraint(
       ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, dummy_table, {ColumnID{0}, ColumnID{1}}, _table_a});
+  dummy_table->add_soft_constraint(
+      ForeignKeyConstraint{{ColumnID{0}, ColumnID{2}}, dummy_table, {ColumnID{0}, ColumnID{2}}, _table_a});
+  dummy_table->add_soft_constraint(ForeignKeyConstraint{
+      {ColumnID{0}, ColumnID{1}, ColumnID{2}}, dummy_table, {ColumnID{0}, ColumnID{1}, ColumnID{2}}, _table_a});
+  dummy_table->add_soft_constraint(ForeignKeyConstraint{{ColumnID{2}}, dummy_table, {ColumnID{2}}, _table_a});
   const auto inclusion_dependencies = _stored_table_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 1);
+  EXPECT_EQ(inclusion_dependencies.size(), 3);
   EXPECT_TRUE(inclusion_dependencies.contains(InclusionDependency{{_b}, {ColumnID{1}}, dummy_table}));
+  EXPECT_TRUE(inclusion_dependencies.contains(InclusionDependency{{_c}, {ColumnID{2}}, dummy_table}));
+  EXPECT_TRUE(inclusion_dependencies.contains(InclusionDependency{{_b, _c}, {ColumnID{1}, ColumnID{2}}, dummy_table}));
 }
 
 TEST_F(StoredTableNodeTest, InclusionDependenciesTableDeleted) {

@@ -185,7 +185,9 @@ InclusionDependencies MockNode::inclusion_dependencies() const {
       continue;
     }
 
-    inclusion_dependencies.emplace(get_expressions_for_column_ids(*this, columns), foreign_key_constraint.foreign_key_columns(), table);
+    auto foreign_key_columns = foreign_key_constraint.foreign_key_columns();
+    inclusion_dependencies.emplace(get_expressions_for_column_ids(*this, columns), std::move(foreign_key_columns),
+                                   table);
   }
   return inclusion_dependencies;
 }
