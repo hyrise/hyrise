@@ -33,14 +33,12 @@
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
-// #include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-// #include "utils/format_duration.hpp"
 #include "utils/log_manager.hpp"
 #include "utils/timer.hpp"
 
@@ -137,7 +135,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     const auto& soft_key_constraints = table->soft_key_constraints();
 
     // Find UCC matching the candidate, if it already exists on the table.
-    const auto& existing_ucc = std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
+    const auto existing_ucc = std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
                                             [&column_id](const auto& key_constraint) {
                                               const auto& columns = key_constraint.columns();
 
@@ -214,7 +212,7 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shar
       continue;
     }
 
-    if (source_chunk->invalid_row_count() != 0 || source_chunk->is_mutable()) {
+    if (source_chunk->invalid_row_count() != 0) {
       // The segment might have been modified. Because the modification might consist of deleting a duplicate value,
       // we can't be sure that the segment still has duplicates using the heuristic employed below.
       return false;
@@ -300,12 +298,11 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
   validate_table_operator->execute();
   const auto& table_view = validate_table_operator->get_output();
 
-  // Check all chunks for duplicates that we haven't yet in the first loop above.
-  // Note that the loop below will only contain these chunks, as we have excluded the others when executing the GetTable
-  // operator.
+  // Check all chunks that we could not exclude for duplicates. Note that the loop below will only contain these chunks,
+  // as we have excluded the others when executing the GetTable operator.
   const auto validated_chunk_count = table_view->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < validated_chunk_count; ++chunk_id) {
-    // No need to do null checks here as we already did so above
+    // No need to check for `nullptr` here as we already did so above.
     const auto source_chunk = table_view->get_chunk(chunk_id);
     const auto source_segment = source_chunk->get_segment(column_id);
 

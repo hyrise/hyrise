@@ -77,7 +77,7 @@ class UccDiscoveryPluginTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
-  void _duplicate_table(const std::string table_name) {
+  void _duplicate_table(const std::string& table_name) {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto get_table = std::make_shared<GetTable>(table_name);
     get_table->execute();
@@ -289,12 +289,12 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
   // Delete row of _table_A that had a duplicate value regarding column 1 such that column 1 is unique afterwards.
   _delete_row(_table_A, 3);
 
-  // We are only interested in column 1, since it was not unique before the deletion but should be now
+  // We are only interested in column 1, since it was not unique before the deletion but should be now.
   const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
-  // Collect constraints known for the tables
+  // Collect constraints known for the tables.
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 1);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
@@ -303,15 +303,15 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
 TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimestamp) {
   _encode_table(_table_A, GetParam());
 
-  // We are only interested in column 1, since it was not unique before the deletion but should be now
+  // We are only interested in column 1, since it was not unique before the deletion but should be now.
   const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
-  // Perform a transaction that does not affect table A but increments the global Commit ID
+  // Perform a transaction that does not affect table A but increments the global Commit ID.
   _delete_row(_table_B, 0);
 
-  // Collect constraints known for the tables
+  // Collect constraints known for the tables.
   const auto& constraints_A = _table_A->soft_key_constraints();
   const auto column_1_constraint = constraints_A.find({{ColumnID{0}}, KeyConstraintType::UNIQUE});
   EXPECT_EQ(constraints_A.size(), 1);
@@ -325,16 +325,16 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
 TEST_P(UccDiscoveryPluginMultiEncodingTest, DeletionOfModifiedUCC) {
   _encode_table(_table_A, GetParam());
 
-  // Insert unique column as candidate
+  // Insert unique column as candidate.
   auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
-  // Collect constraints known for the tables
+  // Collect constraints known for the tables.
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
 
-  // Insert table data into the table again -> creates duplicate for every row
+  // Insert table data into the table again. -> Creates duplicate for every row.
   _duplicate_table(_table_name_A);
 
   _validate_ucc_candidates(ucc_candidates);
