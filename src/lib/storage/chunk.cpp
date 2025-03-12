@@ -120,7 +120,7 @@ void Chunk::set_immutable() {
   DebugAssert(success, "Value exchanged but value was actually false.");
 
   // Only perform the `max_begin_cid` check if it has not already been set.
-  if (has_mvcc_data() && _mvcc_data->max_begin_cid.load() == MvccData::MAX_COMMIT_ID) {
+  if (has_mvcc_data() && _mvcc_data->max_begin_cid.load() == MAX_COMMIT_ID) {
     const auto chunk_size = size();
     Assert(chunk_size > 0, "`set_immutable()` should not be called on an empty chunk.");
     auto max_begin_cid = CommitID{0};
@@ -129,7 +129,7 @@ void Chunk::set_immutable() {
     }
     set_atomic_max(_mvcc_data->max_begin_cid, max_begin_cid);
 
-    Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
+    Assert(_mvcc_data->max_begin_cid != MAX_COMMIT_ID,
            "`max_begin_cid` should not be MAX_COMMIT_ID when marking a chunk as immutable.");
   }
 }

@@ -82,7 +82,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
         const auto chunk_size = chunk->size();
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
           const auto commit_id = chunk->mvcc_data()->get_end_cid(chunk_offset);
-          if (commit_id != MvccData::MAX_COMMIT_ID && commit_id > highest_end_commit_id) {
+          if (commit_id != MAX_COMMIT_ID && commit_id > highest_end_commit_id) {
             highest_end_commit_id = commit_id;
           }
         }

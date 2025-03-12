@@ -144,8 +144,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         const auto transaction_id = context->transaction_id();
         const auto end_offset = target_chunk->size() + num_rows_for_target_chunk;
         for (auto target_chunk_offset = target_chunk->size(); target_chunk_offset < end_offset; ++target_chunk_offset) {
-          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid begin CID.");
-          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid end CID.");
+          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MAX_COMMIT_ID, "Invalid begin CID.");
+          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MAX_COMMIT_ID, "Invalid end CID.");
           mvcc_data->set_tid(target_chunk_offset, transaction_id, std::memory_order_relaxed);
         }
       }
