@@ -227,7 +227,7 @@ void Table::append_mutable_chunk() {
 
   auto mvcc_data = std::shared_ptr<MvccData>{};
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
+    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MAX_COMMIT_ID);
   }
 
   append_chunk(segments, mvcc_data);
@@ -519,7 +519,7 @@ bool Table::constraint_guaranteed_to_be_valid(const TableKeyConstraint& table_ke
   // Subtract 1 from the chunk_id only inside the loop to avoid underflows.
   for (auto chunk_id = chunk_count; chunk_id > 0; --chunk_id) {
     const auto source_chunk = get_chunk(ChunkID{chunk_id - 1});
-    if (source_chunk->mvcc_data()->max_begin_cid != MvccData::MAX_COMMIT_ID &&
+    if (source_chunk->mvcc_data()->max_begin_cid != MAX_COMMIT_ID &&
         source_chunk->mvcc_data()->max_begin_cid > table_key_constraint.last_validated_on()) {
       return false;
     }
