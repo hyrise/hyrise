@@ -34,7 +34,9 @@ class OperatorsReduceTest : public BaseTest {
 };
 
 TEST_F(OperatorsReduceTest, ReduceTableWithFilterCreatedOnItself) {
-  auto reduce = std::make_shared<Reduce>(_int_int_0, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+  auto reduce = std::make_shared<Reduce>(
+      _int_int_0, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+      false);
   reduce->execute();
 
   const auto expected = load_table("resources/test_data/tbl/reduce/int_int_shuffled.tbl", ChunkOffset{7});
@@ -42,7 +44,9 @@ TEST_F(OperatorsReduceTest, ReduceTableWithFilterCreatedOnItself) {
 }
 
 TEST_F(OperatorsReduceTest, SimpleFilter) {
-  auto reduce = std::make_shared<Reduce>(_int_int_1, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+  auto reduce = std::make_shared<Reduce>(
+      _int_int_1, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+      false);
   reduce->execute();
 
   const auto expected = load_table("resources/test_data/tbl/reduce/int_int_shuffled_3_res.tbl", ChunkOffset{7});
@@ -50,8 +54,12 @@ TEST_F(OperatorsReduceTest, SimpleFilter) {
 }
 
 TEST_F(OperatorsReduceTest, TwoReduces) {
-  auto reduce_0 = std::make_shared<Reduce>(_int_int_1, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, true);
-  auto reduce_1 = std::make_shared<Reduce>(_int_int_0, reduce_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+  auto reduce_0 = std::make_shared<Reduce>(
+      _int_int_1, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+      true);
+  auto reduce_1 = std::make_shared<Reduce>(
+      _int_int_0, reduce_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+      false);
 
   reduce_0->execute();
   reduce_1->execute();
@@ -61,8 +69,12 @@ TEST_F(OperatorsReduceTest, TwoReduces) {
 }
 
 TEST_F(OperatorsReduceTest, TwoReducesWithoutFilterUpdate) {
-  auto reduce_0 = std::make_shared<Reduce>(_int_int_1, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-  auto reduce_1 = std::make_shared<Reduce>(_int_int_0, reduce_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+  auto reduce_0 = std::make_shared<Reduce>(
+      _int_int_1, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+      false);
+  auto reduce_1 = std::make_shared<Reduce>(
+      _int_int_0, reduce_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+      false);
 
   reduce_0->execute();
   reduce_1->execute();

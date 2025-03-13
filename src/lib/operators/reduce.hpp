@@ -14,7 +14,8 @@ class Reduce : public AbstractReadOnlyOperator {
 
  public:
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
-                  const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate, const bool update_filter);
+                  const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate,
+                  const bool update_filter);
 
   const std::string& name() const override;
 
