@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/chunk.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
@@ -76,6 +77,26 @@ void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std
   auto ordered_column_ids = column_ids_by_name(table, ordered_columns);
 
   table->add_soft_constraint(TableOrderConstraint{std::move(ordering_column_ids), std::move(ordered_column_ids)});
+}
+
+bool constraint_guaranteed_to_be_valid(const std::shared_ptr<Table>& table,
+                                       const TableKeyConstraint& table_key_constraint) {
+  if (!table_key_constraint.can_become_invalid()) {
+    return true;
+  }
+
+  const auto chunk_count = table->chunk_count();
+  // Iterate through the chunks backwards as inserts are more likely to happen in later chunks, potentially enabling us
+  // to return faster. We need to use `prev_chunk_id = chunk_id - 1`
+  for (auto prev_chunk_id = chunk_count; prev_chunk_id > 0; --prev_chunk_id) {
+    const auto source_chunk = table->get_chunk(ChunkID{prev_chunk_id - 1});
+    if (source_chunk->mvcc_data()->max_begin_cid != MAX_COMMIT_ID &&
+        source_chunk->mvcc_data()->max_begin_cid > table_key_constraint.last_validated_on()) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace hyrise

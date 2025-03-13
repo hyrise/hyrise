@@ -34,9 +34,9 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   CommitID last_validated_on() const;
 
   /**
-   * Whether this key constraint can become invalid if the table data changes.
-   * This is false for constraints specified by the table schema, but true for the "incidental" uniqueness of columns
-   * in any table state as adding duplicates would make them no longer unique.
+   * Whether this key constraint can become invalid if the table data changes. This is false for constraints specified
+   * by the table schema, but true for the "incidental" uniqueness of columns in any table state as adding duplicates
+   * would make them no longer unique.
    */
   bool can_become_invalid() const;
   void revalidated_on(const CommitID revalidation_commit_id) const;
@@ -62,8 +62,8 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType _key_type;
 
   /**
-   * Commit ID during which this constraint was last validated. Note that the constraint will still be valid during
-   * transactions with larger commit IDs if the table this constraint belongs to has not been modified since.
+   * Commit ID of the snapshot this constraint was last validated on. Note that the constraint will still be valid
+   * during transactions with larger commit IDs if the table this constraint belongs to has not been modified since.
    */
   mutable CommitID _last_validated_on;
 };

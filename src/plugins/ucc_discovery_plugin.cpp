@@ -30,6 +30,7 @@
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
@@ -136,19 +137,25 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
     // Find UCC matching the candidate, if it already exists on the table.
     const auto existing_ucc = std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
-                                            [&column_id](const auto& key_constraint) {
-                                              const auto& columns = key_constraint.columns();
+                                           [&column_id](const auto& key_constraint) {
+                                             const auto& columns = key_constraint.columns();
 
-                                              return columns.size() == 1 && *columns.cbegin() == column_id;
-                                            });
+                                             return columns.size() == 1 && *columns.cbegin() == column_id;
+                                           });
 
     // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid.
     // If it is, we can skip the expensive revalidation of the UCC.
-    if (existing_ucc != soft_key_constraints.cend() && table->constraint_guaranteed_to_be_valid(*existing_ucc)) {
+    if (existing_ucc != soft_key_constraints.cend() && constraint_guaranteed_to_be_valid(table, *existing_ucc)) {
       message << " [skipped (already known and guaranteed to be still valid) in " << candidate_timer.lap_formatted()
               << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      existing_ucc->revalidated_on(transaction_context->snapshot_commit_id());
+
+      // Update the validation commit ID of UCCs that are not permanent.
+      const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
+      if (existing_ucc->last_validated_on() < snapshot_commit_id) {
+        existing_ucc->revalidated_on(snapshot_commit_id);
+      }
+
       continue;
     }
 
@@ -291,12 +298,12 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
 
   // Using the validate operator, get a view of the current content of the table, filtering out overwritten and deleted
   // values.
-  const auto logical_table = std::make_shared<GetTable>(table_name, unmodified_chunks, std::vector<ColumnID>());
-  logical_table->execute();
-  const auto validate_table_operator = std::make_shared<Validate>(logical_table);
-  validate_table_operator->set_transaction_context(transaction_context);
-  validate_table_operator->execute();
-  const auto& table_view = validate_table_operator->get_output();
+  const auto get_table = std::make_shared<GetTable>(table_name, unmodified_chunks, std::vector<ColumnID>());
+  get_table->execute();
+  const auto validate_table = std::make_shared<Validate>(get_table);
+  validate_table->set_transaction_context(transaction_context);
+  validate_table->execute();
+  const auto& table_view = validate_table->get_output();
 
   // Check all chunks that we could not exclude for duplicates. Note that the loop below will only contain these chunks,
   // as we have excluded the others when executing the GetTable operator.
