@@ -215,6 +215,7 @@ class Table : private Noncopyable {
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
   const TableKeyConstraints& soft_key_constraints() const;
+  void delete_key_constraint(const TableKeyConstraint& constraint);
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
   const ForeignKeyConstraints& referenced_foreign_key_constraints() const;
