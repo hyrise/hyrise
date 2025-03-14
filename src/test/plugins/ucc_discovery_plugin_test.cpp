@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <cstddef>
 #include <limits>
 #include <memory>
@@ -32,6 +34,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -138,9 +141,10 @@ class UccDiscoveryPluginTest : public BaseTest {
     return transaction_context;
   }
 
-  std::shared_ptr<TransactionContext> _update_row_table_a(const std::vector<AllTypeVariant>& row, const AllTypeVariant& row_index,
-                                                  const std::shared_ptr<PQPColumnExpression>& index_column,
-                                                  const bool commit_transaction = true) {
+  std::shared_ptr<TransactionContext> _update_row_table_a(const std::vector<AllTypeVariant>& row,
+                                                          const AllTypeVariant& row_index,
+                                                          const std::shared_ptr<PQPColumnExpression>& index_column,
+                                                          const bool commit_transaction = true) {
     // TODO(rob2u)
     // where_scan -> (greater_than_(column_a, 1000),
     // updated_values_projection -> expression_vector(column_a, cast_(add_(column_a, 100), DataType::Float)),)
@@ -160,9 +164,8 @@ class UccDiscoveryPluginTest : public BaseTest {
     where->set_transaction_context(transaction_context);
     where->execute();
 
-    auto table = Table::create_dummy_table({
-      {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}
-    });
+    auto table = Table::create_dummy_table(
+        {{"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}});
     table->append(row);
 
     auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -515,27 +518,35 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
 TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimestamp) {
   _encode_table(_table_A, GetParam());
 
-  // We are only interested in column 1, since it was not unique before the deletion but should be now.
-  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
+  // Add permanent UCC to table A.
+  _table_A->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  _delete_row(_table_A, 3);
 
+  const auto ucc_candidates =
+      UccCandidates{{"uniquenessTestTableA", ColumnID{0}}, {"uniquenessTestTableA", ColumnID{1}}};
   _validate_ucc_candidates(ucc_candidates);
 
-  // Perform a transaction that does not affect table A but increments the global Commit ID.
+  // Perform a transaction that does not affect table A but increments the global CommitID.
   _delete_row(_table_B, 0);
 
   // Collect constraints known for the tables.
   const auto& constraints_A = _table_A->soft_key_constraints();
-  const auto column_1_constraint = constraints_A.find({{ColumnID{0}}, KeyConstraintType::UNIQUE});
-  EXPECT_EQ(constraints_A.size(), 1);
+
+  const auto column_0_constraint = constraints_A.find({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  const auto column_1_constraint = constraints_A.find({{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  EXPECT_EQ(constraints_A.size(), 2);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
+  EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  // The permanent UCC should remain permanent.
+  EXPECT_EQ(column_0_constraint->last_validated_on(), MAX_COMMIT_ID);
+
+  // The non-permanent UCC should have been revalidated.
   const auto first_validation_timestamp = column_1_constraint->last_validated_on();
 
   _validate_ucc_candidates(ucc_candidates);
   EXPECT_GT(column_1_constraint->last_validated_on(), first_validation_timestamp);
 }
-
-// TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationIgnoresPermanentUCC) {
-// }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, DeletionOfModifiedUCC) {
   _encode_table(_table_A, GetParam());
