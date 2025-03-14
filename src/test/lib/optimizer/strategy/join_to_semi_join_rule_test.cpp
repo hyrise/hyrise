@@ -1,3 +1,4 @@
+#include <gtest/gtest.h>
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
@@ -15,6 +16,7 @@
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_semi_join_rule.hpp"
 #include "strategy_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -53,7 +55,8 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    // Non-permanent UCC
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -76,8 +79,9 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
   // clang-format on
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  _apply_rule(rule, _lqp);
+  const auto is_cacheable = _apply_rule(rule, _lqp);
 
+  EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not permanent
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -93,7 +97,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -117,7 +121,9 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
   // clang-format on
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  _apply_rule(rule, _lqp);
+  const auto is_cacheable = _apply_rule(rule, _lqp);
+
+  EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not permanent
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -137,7 +143,8 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    // Non-permanent UCC
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -161,8 +168,10 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
   // clang-format on
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  _apply_rule(rule, _lqp);
+  const auto is_cacheable = _apply_rule(rule, _lqp);
+  
 
+  EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not permanent
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -192,8 +201,9 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp);
+  const auto is_cacheable = _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -222,8 +232,9 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp);
+  const auto is_cacheable = _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -262,8 +273,9 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp);
+  const auto is_cacheable = _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -294,8 +306,9 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp);
+  const auto is_cacheable = _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

@@ -24,7 +24,8 @@ using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 void gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
-    std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables) {
+    std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables,
+    bool& non_permanent_ucc_was_used) {
   const auto prunable_side = join_node->prunable_input_side();
   if (!prunable_side) {
     return;
@@ -65,7 +66,8 @@ void gather_rewrite_info(
   // predicate that filters on a UCC, a maximum of one tuple remains in the result relation. Since at this point, we al-
   // ready know the candidate join is basically a semi join, we can further transform the join to a single predicate
   // node filtering the join column for the value of the remaining tuple's join attribute.
-  visit_lqp(removable_subtree, [&removable_subtree, &rewrite_predicate](auto& current_node) {
+  visit_lqp(removable_subtree, [&removable_subtree, &rewrite_predicate,
+                                &non_permanent_ucc_was_used](const auto& current_node) {
     if (current_node->type == LQPNodeType::Union) {
       return LQPVisitation::DoNotVisitInputs;
     }
@@ -80,10 +82,11 @@ void gather_rewrite_info(
       return LQPVisitation::VisitInputs;
     }
 
-    // Only predicates in the form `column = value` are useful to our optimization. These conditions have the potential
-    // (given filtered column is a UCC) to emit at most one result tuple.
-    if (candidate_expression->predicate_condition != PredicateCondition::Equals)
+    // Only predicates in the form `column = value` are useful to our optimization. These conditions have the
+    // potential (given filtered column is a UCC) to emit at most one result tuple.
+    if (candidate_expression->predicate_condition != PredicateCondition::Equals) {
       return LQPVisitation::VisitInputs;
+    }
 
     auto candidate_column_expression = std::shared_ptr<AbstractExpression>{};
     auto candidate_value_expression = std::shared_ptr<AbstractExpression>{};
@@ -103,14 +106,18 @@ void gather_rewrite_info(
     }
 
     // Check whether the referenced column is available for the subtree root node and unique. Checking whether the
-    // column is unique on the current node is not sufficient. There could be unions or joins in between the subtree
+    // column is unique on the current node is not sufficient. There could be unions or joins between the subtree
     // root and the current node, invalidating the unique column combination.
-    if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree) ||
-        !removable_subtree->has_matching_ucc({candidate_column_expression})) {
+    if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
+      return LQPVisitation::VisitInputs;
+    }
+    const auto matching_ucc = removable_subtree->get_matching_ucc({candidate_column_expression});
+    if (!matching_ucc.has_value()) {
       return LQPVisitation::VisitInputs;
     }
 
     rewrite_predicate = candidate;
+    non_permanent_ucc_was_used |= !matching_ucc->is_permanent();
     return LQPVisitation::DoNotVisitInputs;
   });
 
@@ -161,15 +168,16 @@ std::string JoinToPredicateRewriteRule::name() const {
   return name;
 }
 
-void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
+IsCacheable JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // `rewritables finally contains all rewritable join nodes, their unused input side, and the predicates to be used for
   // the rewrites.
   auto rewritables = std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>{};
+  auto rule_was_applied_using_non_permanent_ucc = false;
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
-      gather_rewrite_info(join_node, rewritables);
+      gather_rewrite_info(join_node, rewritables, rule_was_applied_using_non_permanent_ucc);
     }
     return LQPVisitation::VisitInputs;
   });
@@ -177,6 +185,8 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
   for (const auto& [join_node, prunable_side, rewrite_predicate] : rewritables) {
     perform_rewrite(join_node, prunable_side, rewrite_predicate);
   }
+
+  return rule_was_applied_using_non_permanent_ucc ? IsCacheable::No : IsCacheable::Yes;
 }
 
 }  // namespace hyrise

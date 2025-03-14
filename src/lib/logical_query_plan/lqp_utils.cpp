@@ -570,7 +570,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                return (fd.determinants == determinants) && (fd.dependents == dependents);
                              }) == fds.cend(),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(std::move(determinants), std::move(dependents));
+    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_permanent());
   }
   return fds;
 }

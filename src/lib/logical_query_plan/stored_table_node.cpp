@@ -140,13 +140,19 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
       continue;
     }
 
+    // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
+    // otherwise these optimizations could produce invalid query results.
+    if (!table->constraint_guaranteed_to_be_valid(table_key_constraint)) {
+      continue;
+    }
+
     // Search for expressions representing the key constraint's ColumnIDs.
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(std::move(column_expressions));
+    unique_column_combinations.emplace(std::move(column_expressions), !table_key_constraint.can_become_invalid());
   }
 
   return unique_column_combinations;

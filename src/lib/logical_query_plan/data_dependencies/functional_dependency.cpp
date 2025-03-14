@@ -14,8 +14,8 @@
 namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
-                                           ExpressionUnorderedSet&& init_dependents)
-    : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)) {
+                                           ExpressionUnorderedSet&& init_dependents, bool is_permanent)
+    : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)), permanent(is_permanent) {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
@@ -59,6 +59,10 @@ size_t FunctionalDependency::hash() const {
   return std::hash<size_t>{}(hash - determinants.size());
 }
 
+bool FunctionalDependency::is_permanent() const {
+  return permanent;
+}
+
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd) {
   stream << "{";
   print_expressions(fd.determinants, stream);
@@ -82,7 +86,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
     } else {
       for (const auto& dependent : fd.dependents) {
         auto determinants = fd.determinants;
-        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent});
+        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent}, fd.is_permanent());
       }
     }
   }
@@ -96,14 +100,14 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
   }
 
   // We cannot use a set here as we want to add dependents to existing FDs and objects in sets are immutable.
-  auto existing_fds = std::vector<std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>>{};
+  auto existing_fds = std::vector<std::tuple<ExpressionUnorderedSet, ExpressionUnorderedSet, bool>>{};
   existing_fds.reserve(fds.size());
 
   for (const auto& fd_to_add : fds) {
     // Check if we have seen an FD with the same determinants.
     auto existing_fd = std::find_if(existing_fds.begin(), existing_fds.end(), [&](const auto& fd) {
       // Quick check for cardinality.
-      const auto& determinants = fd.first;
+      const auto& determinants = std::get<0>(fd);
       if (determinants.size() != fd_to_add.determinants.size()) {
         return false;
       }
@@ -120,15 +124,18 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
 
     // If we have found an FD with same determinants, add the dependents. Otherwise, add a new FD.
     if (existing_fd != existing_fds.end()) {
-      existing_fd->second.insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
+      std::get<1>(*existing_fd).insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
+      if (!fd_to_add.is_permanent()) {
+        std::get<2>(*existing_fd) = false;
+      }
     } else {
-      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents);
+      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents, fd_to_add.is_permanent());
     }
   }
 
   auto deflated_fds = FunctionalDependencies(fds.size());
-  for (auto [determinants, dependents] : existing_fds) {
-    deflated_fds.emplace(std::move(determinants), std::move(dependents));
+  for (auto [determinants, dependents, is_permanent] : existing_fds) {
+    deflated_fds.emplace(std::move(determinants), std::move(dependents), is_permanent);
   }
 
   return deflated_fds;
