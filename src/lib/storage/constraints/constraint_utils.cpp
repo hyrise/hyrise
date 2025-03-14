@@ -6,7 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "storage/chunk.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
