@@ -19,6 +19,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -142,7 +143,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 
     // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
     // otherwise these optimizations could produce invalid query results.
-    if (!table->constraint_guaranteed_to_be_valid(table_key_constraint)) {
+    if (!constraint_guaranteed_to_be_valid(table, table_key_constraint)) {
       continue;
     }
 
