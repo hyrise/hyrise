@@ -216,12 +216,6 @@ class Table : private Noncopyable {
 
   const TableKeyConstraints& soft_key_constraints() const;
   void delete_key_constraint(const TableKeyConstraint& constraint);
-  /**
-   * Check if MVCC data tells us that the existing UCC is guaranteed to be still valid.
-   * To do this, we can simply check if the table chunks have seen any inserts/deletions since the last validation
-   * of the UCC. This information is contained in the MVCC data of the chunks.
-   */
-  bool constraint_guaranteed_to_be_valid(const TableKeyConstraint& table_key_constraint) const;
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
   const ForeignKeyConstraints& referenced_foreign_key_constraints() const;

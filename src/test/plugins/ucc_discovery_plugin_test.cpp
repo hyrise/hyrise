@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <limits>
 #include <memory>
 #include <string>
@@ -6,8 +8,11 @@
 #include "nlohmann/json.hpp"
 
 #include "../../plugins/ucc_discovery_plugin.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "lib/storage/encoding_test.hpp"
@@ -26,10 +31,14 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
+#include "utils/template_type.hpp"
 
 namespace hyrise {
 
@@ -77,27 +86,94 @@ class UccDiscoveryPluginTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
-  void _duplicate_table(const std::string table_name) {
-    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  void _duplicate_table(const std::string& table_name) {
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto get_table = std::make_shared<GetTable>(table_name);
     get_table->execute();
-    auto insert_op = std::make_shared<Insert>(table_name, get_table);
+    const auto insert_op = std::make_shared<Insert>(table_name, get_table);
     insert_op->set_transaction_context(transaction_context);
     insert_op->execute();
     transaction_context->commit();
   }
 
-  void _delete_row(const std::shared_ptr<Table> table, const size_t row_index) {
+  std::shared_ptr<TransactionContext> _insert_row(const std::string& table_name,
+                                                  const TableColumnDefinitions& column_definitions,
+                                                  const std::vector<AllTypeVariant>& values,
+                                                  const bool commit_transaction = true) {
+    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+    const auto table = Table::create_dummy_table(column_definitions);
+    table->append(values);
+
+    const auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    const auto insert_op = std::make_shared<Insert>(table_name, table_wrapper);
+    insert_op->set_transaction_context(transaction_context);
+    insert_op->execute();
+
+    if (commit_transaction) {
+      transaction_context->commit();
+    }
+
+    return transaction_context;
+  }
+
+  std::shared_ptr<TransactionContext> _delete_row(const std::shared_ptr<Table> table, const size_t row_index,
+                                                  const bool commit_transaction = true) {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
+
     const auto table_scan =
         create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::Equals, table->get_row(row_index).at(0));
     table_scan->execute();
-    auto delete_op = std::make_shared<Delete>(table_scan);
+
+    const auto delete_op = std::make_shared<Delete>(table_scan);
     delete_op->set_transaction_context(transaction_context);
     delete_op->execute();
-    transaction_context->commit();
+
+    if (commit_transaction) {
+      transaction_context->commit();
+    }
+
+    return transaction_context;
+  }
+
+  std::shared_ptr<TransactionContext> _update_row_table_a(const size_t row_index,
+                                                          const std::vector<AllTypeVariant>& row,
+                                                          const bool commit_transaction = true) {
+    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+    const auto get_table = std::make_shared<GetTable>("uniquenessTestTableA");
+    get_table->set_transaction_context(transaction_context);
+    get_table->execute();
+
+    const auto validate = std::make_shared<Validate>(get_table);
+    validate->set_transaction_context(transaction_context);
+    validate->execute();
+
+    const auto table_scan = create_table_scan(validate, ColumnID{0}, PredicateCondition::Equals,
+                                              validate->get_output()->get_row(row_index).at(0));
+    table_scan->execute();
+
+    auto table = Table::create_dummy_table(
+        {{"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}});
+    table->append(row);
+
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->set_transaction_context(transaction_context);
+    table_wrapper->execute();
+
+    auto update_op = std::make_shared<Update>("uniquenessTestTableA", table_scan, table_wrapper);
+    update_op->set_transaction_context(transaction_context);
+    update_op->execute();
+
+    if (commit_transaction) {
+      transaction_context->commit();
+    }
+
+    return transaction_context;
   }
 
   const std::string _table_name_A{"uniquenessTestTableA"};
@@ -289,33 +365,174 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
   // Delete row of _table_A that had a duplicate value regarding column 1 such that column 1 is unique afterwards.
   _delete_row(_table_A, 3);
 
-  // We are only interested in column 1, since it was not unique before the deletion but should be now
+  // We are only interested in column 1, since it was not unique before the deletion but should be now.
   const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
-  // Collect constraints known for the tables
+  // Collect constraints known for the tables.
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 1);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  // Delete another row. This should have no effect on the previously discovered UCC.
+  auto transaction_context = _delete_row(_table_A, 2, false);
+
+  const auto& constraints_A_2 = _table_A->soft_key_constraints();
+  EXPECT_EQ(constraints_A_2.size(), 1);
+  EXPECT_TRUE(constraints_A_2.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  transaction_context->commit();
+
+  const auto& constraints_A_3 = _table_A->soft_key_constraints();
+  EXPECT_EQ(constraints_A_3.size(), 1);
+  EXPECT_TRUE(constraints_A_3.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+}
+
+TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterInsertion) {
+  _encode_table(_table_A, GetParam());
+
+  // Delete row of _table_A that had a duplicate value regarding column 1 such that column 1 is unique afterwards.
+  _delete_row(_table_A, 3);
+
+  // We are only interested in column 1, since it was not unique before the deletion but should be now.
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
+
+  _validate_ucc_candidates(ucc_candidates);
+
+  // Collect constraints known for the tables.
+  const auto& constraints_A = _table_A->soft_key_constraints();
+  EXPECT_EQ(constraints_A.size(), 1);
+  EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  // Insert a row that does not affect UCC.
+  auto transaction_context =
+      _insert_row(_table_name_A,
+                  TableColumnDefinitions{
+                      {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}},
+                  {2, 4, "fine"}, false);
+
+  // Re-validate UCCs.
+  _validate_ucc_candidates(ucc_candidates);
+  const auto& constraints_A_2 = _table_A->soft_key_constraints();
+
+  EXPECT_EQ(constraints_A_2.size(), 1);
+  EXPECT_TRUE(constraints_A_2.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  // Commit transaction and re-validate UCCs.
+  transaction_context->commit();
+
+  // Validate for a second time after the commit.
+  _validate_ucc_candidates(ucc_candidates);
+  const auto& constraints_A_3 = _table_A->soft_key_constraints();
+
+  EXPECT_EQ(constraints_A_3.size(), 1);
+  EXPECT_TRUE(constraints_A_3.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+}
+
+TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateInsertion) {
+  _encode_table(_table_A, GetParam());
+
+  // Delete row of _table_A that had a duplicate value regarding column 1 such that column 1 is unique afterwards.
+  _delete_row(_table_A, 3);
+
+  // We are only interested in column 1, since it was not unique before the deletion but should be now.
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
+
+  _validate_ucc_candidates(ucc_candidates);
+
+  // Collect constraints known for the tables.
+  const auto& constraints_A = _table_A->soft_key_constraints();
+  EXPECT_EQ(constraints_A.size(), 1);
+  EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  // Insert single row into table A that has a duplicate value regarding column 1. Do not commit to first test that UCC
+  // stays valid.
+  auto transaction_context =
+      _insert_row(_table_name_A,
+                  TableColumnDefinitions{
+                      {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}},
+                  {2, 3, "dublicate"}, false);
+
+  // Re-validate UCCs.
+  _validate_ucc_candidates(ucc_candidates);
+  const auto& constraints_A_2 = _table_A->soft_key_constraints();
+
+  EXPECT_EQ(constraints_A_2.size(), 1);
+  EXPECT_TRUE(constraints_A_2.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  // Commit transaction and re-validate UCCs.
+  transaction_context->commit();
+
+  // Validate for a second time. This time the UCC should be invalid.
+  _validate_ucc_candidates(ucc_candidates);
+  const auto& constraints_A_3 = _table_A->soft_key_constraints();
+
+  EXPECT_EQ(constraints_A_3.size(), 0);
+}
+
+TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
+  _encode_table(_table_A, GetParam());
+
+  // Delete row of _table_A that had a duplicate value regarding column 1 such that column 1 is unique afterwards.
+  _delete_row(_table_A, 3);
+
+  // We are only interested in column 1, since it was not unique before the deletion but should be now.
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
+
+  _validate_ucc_candidates(ucc_candidates);
+
+  // Collect constraints known for the tables.
+  const auto& constraints_A = _table_A->soft_key_constraints();
+  EXPECT_EQ(constraints_A.size(), 1);
+  EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  auto transaction_context = _update_row_table_a(0, {2, 3, "dublicate"}, false);
+
+  // Re-validate UCCs.
+  _validate_ucc_candidates(ucc_candidates);
+  const auto& constraints_A_2 = _table_A->soft_key_constraints();
+
+  EXPECT_EQ(constraints_A_2.size(), 1);
+  EXPECT_TRUE(constraints_A_2.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  // Commit transaction and re-validate UCCs.
+  transaction_context->commit();
+
+  // Validate for a second time. This time the UCC should be invalid.
+  _validate_ucc_candidates(ucc_candidates);
+  const auto& constraints_A_3 = _table_A->soft_key_constraints();
+
+  EXPECT_EQ(constraints_A_3.size(), 0);
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimestamp) {
   _encode_table(_table_A, GetParam());
 
-  // We are only interested in column 1, since it was not unique before the deletion but should be now
-  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
+  // Add permanent UCC to table A.
+  _table_A->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  _delete_row(_table_A, 3);
 
+  const auto ucc_candidates =
+      UccCandidates{{"uniquenessTestTableA", ColumnID{0}}, {"uniquenessTestTableA", ColumnID{1}}};
   _validate_ucc_candidates(ucc_candidates);
 
-  // Perform a transaction that does not affect table A but increments the global Commit ID
+  // Perform a transaction that does not affect table A but increments the global CommitID.
   _delete_row(_table_B, 0);
 
-  // Collect constraints known for the tables
+  // Collect constraints known for the tables.
   const auto& constraints_A = _table_A->soft_key_constraints();
-  const auto column_1_constraint = constraints_A.find({{ColumnID{0}}, KeyConstraintType::UNIQUE});
-  EXPECT_EQ(constraints_A.size(), 1);
+
+  const auto column_0_constraint = constraints_A.find({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  const auto column_1_constraint = constraints_A.find({{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  EXPECT_EQ(constraints_A.size(), 2);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
+  EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+
+  // The permanent UCC should remain permanent.
+  EXPECT_EQ(column_0_constraint->last_validated_on(), MAX_COMMIT_ID);
+
+  // The non-permanent UCC should have been revalidated.
   const auto first_validation_timestamp = column_1_constraint->last_validated_on();
 
   _validate_ucc_candidates(ucc_candidates);
@@ -325,16 +542,16 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
 TEST_P(UccDiscoveryPluginMultiEncodingTest, DeletionOfModifiedUCC) {
   _encode_table(_table_A, GetParam());
 
-  // Insert unique column as candidate
-  auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
+  // Insert unique column as candidate.
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
-  // Collect constraints known for the tables
+  // Collect constraints known for the tables.
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
 
-  // Insert table data into the table again -> creates duplicate for every row
+  // Insert table data into the table again. -> Creates duplicate for every row.
   _duplicate_table(_table_name_A);
 
   _validate_ucc_candidates(ucc_candidates);

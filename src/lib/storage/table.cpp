@@ -227,7 +227,7 @@ void Table::append_mutable_chunk() {
 
   auto mvcc_data = std::shared_ptr<MvccData>{};
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
+    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MAX_COMMIT_ID);
   }
 
   append_chunk(segments, mvcc_data);
@@ -506,26 +506,6 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
 
 void Table::delete_key_constraint(const TableKeyConstraint& constraint) {
   _table_key_constraints.erase(constraint);
-}
-
-bool Table::constraint_guaranteed_to_be_valid(const TableKeyConstraint& table_key_constraint) const {
-  if (!table_key_constraint.can_become_invalid()) {
-    return true;
-  }
-
-  const auto chunk_count = this->chunk_count();
-  // Iterate through the chunks backwards as inserts are more likely to happen in later chunks, potentially enabling us
-  // to return faster.
-  // Subtract 1 from the chunk_id only inside the loop to avoid underflows.
-  for (auto chunk_id = chunk_count; chunk_id > 0; --chunk_id) {
-    const auto source_chunk = get_chunk(ChunkID{chunk_id - 1});
-    if (source_chunk->mvcc_data()->max_begin_cid != MvccData::MAX_COMMIT_ID &&
-        source_chunk->mvcc_data()->max_begin_cid > table_key_constraint.last_validated_on()) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {

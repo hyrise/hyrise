@@ -30,17 +30,16 @@
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
-// #include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-// #include "utils/format_duration.hpp"
 #include "utils/log_manager.hpp"
 #include "utils/timer.hpp"
 
@@ -137,20 +136,26 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     const auto& soft_key_constraints = table->soft_key_constraints();
 
     // Find UCC matching the candidate, if it already exists on the table.
-    const auto& existing_ucc = std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
-                                            [&column_id](const auto& key_constraint) {
-                                              const auto& columns = key_constraint.columns();
+    const auto existing_ucc = std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
+                                           [&column_id](const auto& key_constraint) {
+                                             const auto& columns = key_constraint.columns();
 
-                                              return columns.size() == 1 && *columns.cbegin() == column_id;
-                                            });
+                                             return columns.size() == 1 && *columns.cbegin() == column_id;
+                                           });
 
-    // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid.
-    // If it is, we can skip the expensive revalidation of the UCC.
-    if (existing_ucc != soft_key_constraints.cend() && table->constraint_guaranteed_to_be_valid(*existing_ucc)) {
+    // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. If it is, we can skip the
+    // expensive revalidation of the UCC.
+    if (existing_ucc != soft_key_constraints.cend() && constraint_guaranteed_to_be_valid(table, *existing_ucc)) {
       message << " [skipped (already known and guaranteed to be still valid) in " << candidate_timer.lap_formatted()
               << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      existing_ucc->revalidated_on(transaction_context->snapshot_commit_id());
+
+      // Update the validation commit ID of UCCs that are not permanent.
+      const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
+      if (existing_ucc->last_validated_on() < snapshot_commit_id) {
+        existing_ucc->revalidated_on(snapshot_commit_id);
+      }
+
       continue;
     }
 
@@ -214,7 +219,7 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shar
       continue;
     }
 
-    if (source_chunk->invalid_row_count() != 0 || source_chunk->is_mutable()) {
+    if (source_chunk->invalid_row_count() != 0) {
       // The segment might have been modified. Because the modification might consist of deleting a duplicate value,
       // we can't be sure that the segment still has duplicates using the heuristic employed below.
       return false;
@@ -293,19 +298,18 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
 
   // Using the validate operator, get a view of the current content of the table, filtering out overwritten and deleted
   // values.
-  const auto logical_table = std::make_shared<GetTable>(table_name, unmodified_chunks, std::vector<ColumnID>());
-  logical_table->execute();
-  const auto validate_table_operator = std::make_shared<Validate>(logical_table);
-  validate_table_operator->set_transaction_context(transaction_context);
-  validate_table_operator->execute();
-  const auto& table_view = validate_table_operator->get_output();
+  const auto get_table = std::make_shared<GetTable>(table_name, unmodified_chunks, std::vector<ColumnID>());
+  get_table->execute();
+  const auto validate_table = std::make_shared<Validate>(get_table);
+  validate_table->set_transaction_context(transaction_context);
+  validate_table->execute();
+  const auto& table_view = validate_table->get_output();
 
-  // Check all chunks for duplicates that we haven't yet in the first loop above.
-  // Note that the loop below will only contain these chunks, as we have excluded the others when executing the GetTable
-  // operator.
+  // Check all chunks that we could not exclude for duplicates. Note that the loop below will only contain these chunks,
+  // as we have excluded the others when executing the GetTable operator.
   const auto validated_chunk_count = table_view->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < validated_chunk_count; ++chunk_id) {
-    // No need to do null checks here as we already did so above
+    // No need to check for `nullptr` here as we already did so above.
     const auto source_chunk = table_view->get_chunk(chunk_id);
     const auto source_segment = source_chunk->get_segment(column_id);
 
@@ -325,7 +329,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
       }
     });
 
-    // See explanation on the expected_distinct_value_count in the first loop.
+    // See explanation on the `expected_distinct_value_count` in the first loop.
     if (distinct_values_across_segments.size() != expected_distinct_value_count) {
       return false;
     }

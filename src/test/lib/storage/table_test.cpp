@@ -7,6 +7,7 @@
 #include "base_test.hpp"
 #include "memory/zero_allocator.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
@@ -142,7 +143,7 @@ TEST_F(StorageTableTest, FillingUpAChunkSetImmutable) {
   const auto chunk = table->get_chunk(ChunkID{0});
   const auto mvcc_data = chunk->mvcc_data();
   ASSERT_TRUE(mvcc_data);
-  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MAX_COMMIT_ID);
   EXPECT_TRUE(chunk->is_mutable());
 
   table->append({6, "world"});
@@ -345,9 +346,9 @@ TEST_F(StorageTableTest, TableKeyConstraintGuaranteedToBeStillValid) {
   // Manually modify the max_begin_cid of the chunk to simulate an insert to the table.
   table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid = CommitID{1};
 
-  EXPECT_TRUE(table->constraint_guaranteed_to_be_valid({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
-  EXPECT_FALSE(table->constraint_guaranteed_to_be_valid({{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}}));
-  EXPECT_TRUE(table->constraint_guaranteed_to_be_valid({{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{1}}));
+  EXPECT_TRUE(constraint_guaranteed_to_be_valid(table, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
+  EXPECT_FALSE(constraint_guaranteed_to_be_valid(table, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}}));
+  EXPECT_TRUE(constraint_guaranteed_to_be_valid(table, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{1}}));
 }
 
 }  // namespace hyrise
