@@ -1,9 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <cstddef>
 #include <limits>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -22,7 +20,6 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -90,10 +87,10 @@ class UccDiscoveryPluginTest : public BaseTest {
   }
 
   void _duplicate_table(const std::string& table_name) {
-    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto get_table = std::make_shared<GetTable>(table_name);
     get_table->execute();
-    auto insert_op = std::make_shared<Insert>(table_name, get_table);
+    const auto insert_op = std::make_shared<Insert>(table_name, get_table);
     insert_op->set_transaction_context(transaction_context);
     insert_op->execute();
     transaction_context->commit();
@@ -105,13 +102,13 @@ class UccDiscoveryPluginTest : public BaseTest {
                                                   const bool commit_transaction = true) {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-    auto table = Table::create_dummy_table(column_definitions);
+    const auto table = Table::create_dummy_table(column_definitions);
     table->append(values);
 
-    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
 
-    auto insert_op = std::make_shared<Insert>(table_name, table_wrapper);
+    const auto insert_op = std::make_shared<Insert>(table_name, table_wrapper);
     insert_op->set_transaction_context(transaction_context);
     insert_op->execute();
 
@@ -127,10 +124,12 @@ class UccDiscoveryPluginTest : public BaseTest {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
+
     const auto table_scan =
         create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::Equals, table->get_row(row_index).at(0));
     table_scan->execute();
-    auto delete_op = std::make_shared<Delete>(table_scan);
+
+    const auto delete_op = std::make_shared<Delete>(table_scan);
     delete_op->set_transaction_context(transaction_context);
     delete_op->execute();
 
@@ -141,14 +140,9 @@ class UccDiscoveryPluginTest : public BaseTest {
     return transaction_context;
   }
 
-  std::shared_ptr<TransactionContext> _update_row_table_a(const std::vector<AllTypeVariant>& row,
-                                                          const AllTypeVariant& row_index,
-                                                          const std::shared_ptr<PQPColumnExpression>& index_column,
+  std::shared_ptr<TransactionContext> _update_row_table_a(const size_t row_index,
+                                                          const std::vector<AllTypeVariant>& row,
                                                           const bool commit_transaction = true) {
-    // TODO(rob2u)
-    // where_scan -> (greater_than_(column_a, 1000),
-    // updated_values_projection -> expression_vector(column_a, cast_(add_(column_a, 100), DataType::Float)),)
-    // std::make_shared<Update>(table_to_update_name, where_scan, updated_values_projection);
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
     const auto get_table = std::make_shared<GetTable>("uniquenessTestTableA");
@@ -159,10 +153,9 @@ class UccDiscoveryPluginTest : public BaseTest {
     validate->set_transaction_context(transaction_context);
     validate->execute();
 
-    const auto expr = equals_(index_column, row_index);
-    const auto where = std::make_shared<TableScan>(validate, expr);
-    where->set_transaction_context(transaction_context);
-    where->execute();
+    const auto table_scan = create_table_scan(validate, ColumnID{0}, PredicateCondition::Equals,
+                                              validate->get_output()->get_row(row_index).at(0));
+    table_scan->execute();
 
     auto table = Table::create_dummy_table(
         {{"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}});
@@ -172,7 +165,7 @@ class UccDiscoveryPluginTest : public BaseTest {
     table_wrapper->set_transaction_context(transaction_context);
     table_wrapper->execute();
 
-    auto update_op = std::make_shared<Update>("uniquenessTestTableA", where, table_wrapper);
+    auto update_op = std::make_shared<Update>("uniquenessTestTableA", table_scan, table_wrapper);
     update_op->set_transaction_context(transaction_context);
     update_op->execute();
 
@@ -494,9 +487,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
   EXPECT_EQ(constraints_A.size(), 1);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
 
-  const auto index_column = pqp_column_(ColumnID{1}, DataType::Int, false, "b");
-
-  auto transaction_context = _update_row_table_a({2, 3, "dublicate"}, 10, index_column, false);
+  auto transaction_context = _update_row_table_a(0, {2, 3, "dublicate"}, false);
 
   // Re-validate UCCs.
   _validate_ucc_candidates(ucc_candidates);
@@ -552,7 +543,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, DeletionOfModifiedUCC) {
   _encode_table(_table_A, GetParam());
 
   // Insert unique column as candidate.
-  auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
 
   _validate_ucc_candidates(ucc_candidates);
 

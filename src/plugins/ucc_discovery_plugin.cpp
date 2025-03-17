@@ -143,8 +143,8 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
                                              return columns.size() == 1 && *columns.cbegin() == column_id;
                                            });
 
-    // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid.
-    // If it is, we can skip the expensive revalidation of the UCC.
+    // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. If it is, we can skip the
+    // expensive revalidation of the UCC.
     if (existing_ucc != soft_key_constraints.cend() && constraint_guaranteed_to_be_valid(table, *existing_ucc)) {
       message << " [skipped (already known and guaranteed to be still valid) in " << candidate_timer.lap_formatted()
               << "]";
@@ -329,7 +329,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
       }
     });
 
-    // See explanation on the expected_distinct_value_count in the first loop.
+    // See explanation on the `expected_distinct_value_count` in the first loop.
     if (distinct_values_across_segments.size() != expected_distinct_value_count) {
       return false;
     }
