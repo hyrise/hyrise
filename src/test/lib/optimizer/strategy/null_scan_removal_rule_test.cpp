@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
+
 #include <memory>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -107,7 +109,8 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
 }
 
 TEST_F(NullScanRemovalRuleTest, CheckCacheability) {
-  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(is_not_null_(table_node_column), table_node));
+  auto input_lqp =
+      std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(is_not_null_(table_node_column), table_node));
   const auto is_cacheable = StrategyBaseTest::_apply_rule(rule, input_lqp);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }

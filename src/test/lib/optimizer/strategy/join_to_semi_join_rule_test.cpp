@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
@@ -169,7 +170,6 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto is_cacheable = _apply_rule(rule, _lqp);
-  
 
   EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not permanent
   EXPECT_LQP_EQ(_lqp, expected_lqp);

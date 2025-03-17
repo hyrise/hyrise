@@ -1,4 +1,5 @@
 #include <memory>
+
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -87,7 +88,7 @@ TEST_F(JoinOrderingRuleTest, CheckCacheability) {
                          JoinNode::make(JoinMode::Left, equals_(b_b, d_d), node_b,
                                         PredicateNode::make(equals_(d_d, c_c),
                                                             JoinNode::make(JoinMode::Cross, node_d, node_c)))))));
-  
+
   const auto is_cacheable = StrategyBaseTest::_apply_rule(rule, input_lqp);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }

@@ -1,4 +1,5 @@
 #include <memory>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -456,7 +457,8 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
 }
 
 TEST_F(ColumnPruningRuleTest, CheckCacheability) {
-  auto lqp = std::dynamic_pointer_cast<AbstractLQPNode>(ExportNode::make("dummy.csv", FileType::Auto, PredicateNode::make(greater_than_(a, 5), node_abc)));
+  auto lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      ExportNode::make("dummy.csv", FileType::Auto, PredicateNode::make(greater_than_(a, 5), node_abc)));
 
   const auto is_cacheable = _apply_rule(rule, lqp);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));

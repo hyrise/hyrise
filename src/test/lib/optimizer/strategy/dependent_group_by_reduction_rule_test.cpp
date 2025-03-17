@@ -329,9 +329,8 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
       stored_table_node_e));
   // clang-format on
 
-
   const auto is_cacheable = _apply_rule(rule, _lqp);
-  
+
   EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because used FD was derived from permanent UCC.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -363,9 +362,9 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   // clang-format on
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
-  
+
   EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because FD was explicitly constructed to be permanent in
-                                               // this test.
+                                                 // this test.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

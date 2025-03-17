@@ -11,7 +11,8 @@
 
 namespace hyrise {
 
-IsCacheable StrategyBaseTest::_apply_rule(const std::shared_ptr<AbstractRule>& rule, std::shared_ptr<AbstractLQPNode>& input) {
+IsCacheable StrategyBaseTest::_apply_rule(const std::shared_ptr<AbstractRule>& rule,
+                                          std::shared_ptr<AbstractLQPNode>& input) {
   // Make sure there is no reference to the input as an uncopied expected plan.
   Assert(input.use_count() == 1, "LQP is referenced multiple times. Did you mean to make a deep copy?");
 

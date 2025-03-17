@@ -35,7 +35,8 @@ namespace hyrise {
  * not cacheable.
  */
 struct FunctionalDependency {
-  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents, bool is_permanent = true);
+  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
+                       bool is_permanent = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;

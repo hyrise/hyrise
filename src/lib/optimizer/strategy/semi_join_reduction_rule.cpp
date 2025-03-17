@@ -22,7 +22,8 @@ std::string SemiJoinReductionRule::name() const {
   return name;
 }
 
-IsCacheable SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable SemiJoinReductionRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto.");
 
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the

@@ -300,7 +300,8 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
   return contains_matching_unique_column_combination(unique_column_combinations, expressions);
 }
 
-std::optional<UniqueColumnCombination> AbstractLQPNode::get_matching_ucc(const ExpressionUnorderedSet& expressions) const {
+std::optional<UniqueColumnCombination> AbstractLQPNode::get_matching_ucc(
+    const ExpressionUnorderedSet& expressions) const {
   Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");

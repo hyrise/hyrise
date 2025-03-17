@@ -197,13 +197,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::optional<UniqueColumnCombination> get_matching_ucc(const ExpressionUnorderedSet& expressions) const;
 
-    /**
+  /**
    * @return Searchs for a unique column combination (UCC) matching the given subset of output expressions (i.e.,
    *         the rows are guaranteed to be unique). This is preferred over calling
    *         contains_matching_unique_column_combination(unique_column_combinations(), ...) as it performs additional
    *         sanity checks.
    */
-   bool has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
+  bool has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.

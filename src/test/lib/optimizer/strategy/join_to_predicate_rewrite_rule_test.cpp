@@ -86,7 +86,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   }
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  // The rule should only rewrite inner and semi joins. The UCC is not permanent therefore the result should not be 
+  // The rule should only rewrite inner and semi joins. The UCC is not permanent therefore the result should not be
   // cacheable in this case.
   EXPECT_TRUE((GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) || !static_cast<bool>(is_cacheable));
   EXPECT_LQP_EQ(_lqp, expected_lqp);

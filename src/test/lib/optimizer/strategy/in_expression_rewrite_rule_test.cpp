@@ -1,4 +1,5 @@
 #include <memory>
+
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"

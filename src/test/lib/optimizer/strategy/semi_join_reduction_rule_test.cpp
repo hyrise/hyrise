@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
+
 #include <memory>
+
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
@@ -228,7 +230,8 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForAntiJoin) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, CheckCacheability) {
-  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_a_a, _b_a), _node_a, _node_b));
+  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_a_a, _b_a), _node_a, _node_b));
   const auto is_cacheable = StrategyBaseTest::_apply_rule(_rule, input_lqp);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
