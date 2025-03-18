@@ -9,6 +9,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -77,9 +78,10 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
 
       // Determine which node to use for Semi-Join-filtering and check for the required uniqueness guarantees.
       if (*join_node->prunable_input_side() == LQPInputSide::Left) {
-        const auto matching_ucc = join_node->left_input()->get_matching_ucc(equals_predicate_expressions_left);
-        if (matching_ucc.has_value()) {
-          rule_was_applied_using_non_permanent_ucc = !matching_ucc->is_permanent();
+        const auto opt_matching_ucc_cacheable =
+            join_node->left_input()->find_ucc_cacheability(equals_predicate_expressions_left);
+        if (opt_matching_ucc_cacheable) {
+          rule_was_applied_using_non_permanent_ucc = *opt_matching_ucc_cacheable == IsCacheable::No;
 
           join_node->join_mode = JoinMode::Semi;
           const auto temp = join_node->left_input();
@@ -87,9 +89,10 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
           join_node->set_right_input(temp);
         }
       } else if (*join_node->prunable_input_side() == LQPInputSide::Right) {
-        const auto matching_ucc = join_node->right_input()->get_matching_ucc(equals_predicate_expressions_right);
-        if (matching_ucc.has_value()) {
-          rule_was_applied_using_non_permanent_ucc = !matching_ucc->is_permanent();
+        const auto opt_matching_ucc_cacheable =
+            join_node->right_input()->find_ucc_cacheability(equals_predicate_expressions_right);
+        if (opt_matching_ucc_cacheable) {
+          rule_was_applied_using_non_permanent_ucc = *opt_matching_ucc_cacheable == IsCacheable::No;
 
           join_node->join_mode = JoinMode::Semi;
         }

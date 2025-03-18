@@ -16,7 +16,7 @@ namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
                                            ExpressionUnorderedSet&& init_dependents, bool is_permanent)
-    : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)), permanent(is_permanent) {
+    : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)), _is_permanent(is_permanent) {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
@@ -50,6 +50,10 @@ bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
   return !(other == *this);
 }
 
+bool FunctionalDependency::is_permanent() const {
+  return _is_permanent;
+}
+
 size_t FunctionalDependency::hash() const {
   auto hash = size_t{0};
   for (const auto& expression : determinants) {
@@ -58,10 +62,6 @@ size_t FunctionalDependency::hash() const {
   }
 
   return std::hash<size_t>{}(hash - determinants.size());
-}
-
-bool FunctionalDependency::is_permanent() const {
-  return permanent;
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd) {

@@ -106,9 +106,9 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     // AggregateNode does not have more node expressions than the single GROUP BY column and the input (StoredTableNode
     // in this case) has a UCC for { n_nationkey }.
     if (group_by_columns.size() == node->node_expressions.size()) {
-      auto matching_ucc = node->left_input()->get_matching_ucc(group_by_columns);
-      if (matching_ucc.has_value()) {
-        rule_was_applied_using_non_permanent_ucc = !matching_ucc->is_permanent();
+      auto opt_matching_ucc_cacheable = node->left_input()->find_ucc_cacheability(group_by_columns);
+      if (opt_matching_ucc_cacheable) {
+        rule_was_applied_using_non_permanent_ucc = !static_cast<bool>(*opt_matching_ucc_cacheable);
 
         const auto& output_expressions = aggregate_node.output_expressions();
         // Remove the AggregateNode if it does not limit or reorder the output expressions.

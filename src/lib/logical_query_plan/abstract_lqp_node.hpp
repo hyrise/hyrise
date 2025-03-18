@@ -12,6 +12,7 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 
 namespace hyrise {
 
@@ -188,22 +189,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *         documentation.
    */
   virtual UniqueColumnCombinations unique_column_combinations() const = 0;
-
   /**
    * @return Searchs for a unique column combination (UCC) matching the given subset of output expressions (i.e.,
    *         the rows are guaranteed to be unique). This is preferred over calling
-   *         contains_matching_unique_column_combination(unique_column_combinations(), ...) as it performs additional
-   *         sanity checks.
+   *         `ucc_cacheability_if_exists(unique_column_combinations(), ...)` as it performs additional
+   *         sanity checks. Returns `std::nullopt` if no matching UCC is found.
    */
-  std::optional<UniqueColumnCombination> get_matching_ucc(const ExpressionUnorderedSet& expressions) const;
-
-  /**
-   * @return Searchs for a unique column combination (UCC) matching the given subset of output expressions (i.e.,
-   *         the rows are guaranteed to be unique). This is preferred over calling
-   *         contains_matching_unique_column_combination(unique_column_combinations(), ...) as it performs additional
-   *         sanity checks.
-   */
-  bool has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
+  std::optional<IsCacheable> find_ucc_cacheability(const ExpressionUnorderedSet& expressions) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.

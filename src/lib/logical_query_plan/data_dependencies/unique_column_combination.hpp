@@ -23,14 +23,18 @@ namespace hyrise {
 struct UniqueColumnCombination final {
   explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_permanent = true);
 
-  bool is_permanent() const;
-
   bool operator==(const UniqueColumnCombination& rhs) const;
   bool operator!=(const UniqueColumnCombination& rhs) const;
-  size_t hash() const;
+  UniqueColumnCombination(const UniqueColumnCombination& rhs) = default;
+  UniqueColumnCombination(UniqueColumnCombination&& rhs) = default;
 
+  size_t hash() const;
   ExpressionUnorderedSet expressions;
-  bool permanent;
+
+  bool is_permanent() const;
+
+ private:
+  bool _is_permanent;
 };
 
 std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc);

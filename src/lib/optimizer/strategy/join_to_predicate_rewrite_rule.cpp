@@ -14,6 +14,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -58,7 +59,7 @@ void gather_rewrite_info(
          "Neither column of the join predicate could be evaluated on the removable input.");
 
   // Check for uniqueness.
-  if (!removable_subtree->has_matching_ucc({exchangeable_column_expression})) {
+  if (!removable_subtree->find_ucc_cacheability({exchangeable_column_expression})) {
     return;
   }
 
@@ -111,13 +112,13 @@ void gather_rewrite_info(
     if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
       return LQPVisitation::VisitInputs;
     }
-    const auto matching_ucc = removable_subtree->get_matching_ucc({candidate_column_expression});
-    if (!matching_ucc.has_value()) {
+    const auto opt_matching_ucc_cacheable = removable_subtree->find_ucc_cacheability({candidate_column_expression});
+    if (!opt_matching_ucc_cacheable) {
       return LQPVisitation::VisitInputs;
     }
 
     rewrite_predicate = candidate;
-    non_permanent_ucc_was_used |= !matching_ucc->is_permanent();
+    non_permanent_ucc_was_used |= *opt_matching_ucc_cacheable == IsCacheable::No;
     return LQPVisitation::DoNotVisitInputs;
   });
 

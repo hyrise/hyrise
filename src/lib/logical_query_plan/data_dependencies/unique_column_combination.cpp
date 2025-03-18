@@ -13,12 +13,8 @@
 namespace hyrise {
 
 UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_permanent)
-    : expressions(std::move(init_expressions)), permanent(is_permanent) {
+    : expressions(std::move(init_expressions)), _is_permanent(is_permanent) {
   Assert(!expressions.empty(), "UniqueColumnCombination cannot be empty.");
-}
-
-bool UniqueColumnCombination::is_permanent() const {
-  return permanent;
 }
 
 bool UniqueColumnCombination::operator==(const UniqueColumnCombination& rhs) const {
@@ -32,6 +28,10 @@ bool UniqueColumnCombination::operator==(const UniqueColumnCombination& rhs) con
 
 bool UniqueColumnCombination::operator!=(const UniqueColumnCombination& rhs) const {
   return !(rhs == *this);
+}
+
+bool UniqueColumnCombination::is_permanent() const {
+  return _is_permanent;
 }
 
 size_t UniqueColumnCombination::hash() const {

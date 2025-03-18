@@ -26,6 +26,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -508,8 +509,8 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
   return column_expressions;
 }
 
-bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
-                                                 const ExpressionUnorderedSet& expressions) {
+std::optional<IsCacheable> ucc_cacheability_if_exists(const UniqueColumnCombinations& unique_column_combinations,
+                                                      const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
@@ -520,11 +521,11 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
           return expressions.contains(ucc_expression);
         })) {
       // Found a matching UCC.
-      return true;
+      return ucc.is_permanent() ? IsCacheable::Yes : IsCacheable::No;
     }
   }
   // Did not find a UCC for the given expressions.
-  return false;
+  return {};
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,

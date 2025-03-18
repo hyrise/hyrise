@@ -465,26 +465,26 @@ TEST_F(StoredTableNodeTest, GetMatchingUniqueColumnCombination) {
 
   // Negative test.
   // Columns are empty.
-  EXPECT_THROW(_stored_table_node->has_matching_ucc({}), std::logic_error);
+  EXPECT_THROW(_stored_table_node->find_ucc_cacheability({}), std::logic_error);
 
   // There is no matching UCC.
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b}));
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_c}));
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b, _c}));
+  EXPECT_FALSE(_stored_table_node->find_ucc_cacheability({_b}));
+  EXPECT_FALSE(_stored_table_node->find_ucc_cacheability({_c}));
+  EXPECT_FALSE(_stored_table_node->find_ucc_cacheability({_b, _c}));
 
   if constexpr (HYRISE_DEBUG) {
     // Columns are not part of output_expressions() (i.e., pruned).
     _stored_table_node->set_pruned_column_ids({ColumnID{0}});
-    EXPECT_THROW(_stored_table_node->has_matching_ucc({_a}), std::logic_error);
+    EXPECT_THROW(_stored_table_node->find_ucc_cacheability({_a}), std::logic_error);
   }
 
   // Test exact match.
   _stored_table_node->set_pruned_column_ids({});
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a}));
+  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a}));
 
   // Test superset of column ids.
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _b}));
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _c}));
+  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a, _b}));
+  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a, _c}));
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {

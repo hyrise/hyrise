@@ -187,7 +187,12 @@ const TableKeyConstraints& MockNode::key_constraints() const {
 }
 
 void MockNode::set_non_trivial_functional_dependencies(const FunctionalDependencies& fds) {
-  _functional_dependencies = fds;
+  // _functional_dependencies = fds;
+  _functional_dependencies.clear();
+
+  for (const auto& fd : fds) {
+    _functional_dependencies.emplace(fd);
+  }
 }
 
 FunctionalDependencies MockNode::non_trivial_functional_dependencies() const {

@@ -38,16 +38,20 @@ struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
                        bool is_permanent = true);
 
+  FunctionalDependency(const FunctionalDependency& rhs) = default;
+  FunctionalDependency(FunctionalDependency&& rhs) = default;
+
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
   size_t hash() const;
 
-  bool is_permanent() const;
-
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
 
-  bool permanent;
+  bool is_permanent() const;
+
+ private:
+  bool _is_permanent;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);

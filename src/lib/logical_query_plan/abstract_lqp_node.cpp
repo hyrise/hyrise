@@ -18,6 +18,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "predicate_node.hpp"
 #include "types.hpp"
 #include "update_node.hpp"
@@ -287,21 +288,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
-  Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
-  DebugAssert(has_output_expressions(expressions),
-              "The given expressions are not a subset of the LQP's output expressions.");
-
-  const auto& unique_column_combinations = this->unique_column_combinations();
-  if (unique_column_combinations.empty()) {
-    return false;
-  }
-
-  return contains_matching_unique_column_combination(unique_column_combinations, expressions);
-}
-
-std::optional<UniqueColumnCombination> AbstractLQPNode::get_matching_ucc(
-    const ExpressionUnorderedSet& expressions) const {
+std::optional<IsCacheable> AbstractLQPNode::find_ucc_cacheability(const ExpressionUnorderedSet& expressions) const {
   Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
@@ -311,21 +298,7 @@ std::optional<UniqueColumnCombination> AbstractLQPNode::get_matching_ucc(
     return std::nullopt;
   }
 
-  DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
-  DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
-
-  // Look for a unique column combination that is based on a subset of the given expressions.
-  for (const auto& ucc : unique_column_combinations) {
-    if (ucc.expressions.size() <= expressions.size() &&
-        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
-          return expressions.contains(ucc_expression);
-        })) {
-      // Found a matching UCC.
-      return ucc;
-    }
-  }
-  // Did not find a UCC for the given expressions.
-  return std::nullopt;
+  return ucc_cacheability_if_exists(unique_column_combinations, expressions);
 }
 
 bool AbstractLQPNode::has_matching_od(
