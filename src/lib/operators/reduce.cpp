@@ -210,23 +210,6 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
           out_chunk->set_individually_sorted_by(chunk->individually_sorted_by());
         }
         output_chunks.emplace_back(out_chunk);
-
-        /*
-        const auto column_count = input_table->column_count();
-        auto out_segments = Segments{};
-        out_segments.reserve(column_count);
-
-        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-          std::cout << "A" << std::endl;
-          const auto ref_segment_out = std::make_shared<ReferenceSegment>(input_table, column_id, matches);
-          std::cout << "B" << std::endl;
-          out_segments.push_back(ref_segment_out);
-        }
-
-        const auto output_chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk->get_allocator());
-        output_chunk->set_immutable();
-
-        output_chunks.emplace_back(output_chunk);*/
       }
     }
   });
