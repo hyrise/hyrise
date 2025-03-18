@@ -99,6 +99,8 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
   const auto chunk_count = input_table->chunk_count();
   const auto column_id = _predicate.column_ids.first;
 
+  std::cout << "Input row count: " << input_table->row_count() << std::endl;
+
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
   output_chunks.reserve(chunk_count);
 
@@ -229,7 +231,10 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
     }
   });
 
-  return std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
+
+  const auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
+  std::cout << "Output row count: " << output_table->row_count() << std::endl;
+  return output_table;
 }
 
 const std::string& Reduce::name() const {
