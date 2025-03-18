@@ -243,6 +243,7 @@ const std::shared_ptr<std::vector<std::atomic_uint64_t>>& Reduce::export_filter(
 }
 
 std::shared_ptr<const Table> Reduce::_on_execute() {
+  std::cout << "Executed Reducer" << std::endl;
   if (_right_input->type() == OperatorType::Reduce) {
     const auto input_reducer = std::static_pointer_cast<const Reduce>(_right_input);
     _filter = input_reducer->export_filter();
