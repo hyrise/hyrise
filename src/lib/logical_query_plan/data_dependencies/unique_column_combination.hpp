@@ -28,9 +28,8 @@ struct UniqueColumnCombination final {
 
   bool is_permanent() const;
   size_t hash() const;
-  
-  ExpressionUnorderedSet expressions;
 
+  ExpressionUnorderedSet expressions;
 
  private:
   bool _is_permanent;

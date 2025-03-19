@@ -207,7 +207,8 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   }
 
   // Cache newly created plan for the according sql statement (only if not already cached)
-  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable && (_optimized_logical_plan.first && static_cast<bool>(_optimized_logical_plan.second))) {
+  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable &&
+      (_optimized_logical_plan.first && static_cast<bool>(_optimized_logical_plan.second))) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
