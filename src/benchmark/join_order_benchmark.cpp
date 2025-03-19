@@ -16,6 +16,7 @@
 #include "storage/constraints/constraint_utils.hpp"
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
+#include "hyrise.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
 /**

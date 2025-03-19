@@ -7,6 +7,7 @@
 #include "operators/abstract_operator.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
+#include "hyrise.hpp"
 
 namespace {
 

@@ -6,6 +6,7 @@
 #include "tpcc/constants.hpp"
 #include "tpcc/tpcc_benchmark_item_runner.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "hyrise.hpp"
 
 using namespace hyrise;  // NOLINT
 
