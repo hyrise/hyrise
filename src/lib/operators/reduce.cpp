@@ -252,9 +252,9 @@ void Reduce::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVar
 
 std::shared_ptr<AbstractOperator> Reduce::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return nullptr;
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>&  /*copied_ops*/) const {
+  return std::make_shared<Reduce>(copied_left_input, copied_right_input, _predicate, _update_filter);
 }
 
 void Reduce::_set_bit(const uint32_t hash_22bit) {
