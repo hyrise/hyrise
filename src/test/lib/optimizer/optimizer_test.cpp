@@ -340,7 +340,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   }
 }
 
-TEST_F(OptimizerTest, CheckTrueCacheablility) {
+TEST_F(OptimizerTest, OptimizationWithoutKeyConstraintCacheable) {
+  // The resulting optimized LQP should be cacheable if no KeyConstraints or FunctionalDependencies are used.
   auto optimizer = Optimizer::create_default_optimizer();
 
   auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
@@ -349,7 +350,8 @@ TEST_F(OptimizerTest, CheckTrueCacheablility) {
   EXPECT_TRUE(static_cast<bool>(cacheable));
 }
 
-TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
+TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
+  // The optimiation uses a `TableKeyConstraint` valid for commit 0. This should lead to the plan being not cacheable.
   auto optimizer = Optimizer{};
   optimizer.add_rule(std::make_unique<JoinToSemiJoinRule>());
 
@@ -357,8 +359,7 @@ TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
   column_definitions.emplace_back("column0", DataType::Int, false);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-  auto& sm = Hyrise::get().storage_manager;
-  sm.add_table("table", table);
+  Hyrise::get().storage_manager.add_table("table", table);
 
   // Non-permanent UCC
   table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});

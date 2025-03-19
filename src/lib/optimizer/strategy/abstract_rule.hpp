@@ -44,7 +44,8 @@ class AbstractRule {
    * StoredTableColumnAlignmentRule.
    *
    * @return Whether the resulting optimized LQP can be cached by the optimizer. A plan may only be cached if the root
-   *    LQP and all subquery LQPs are cacheable.
+   *    LQP and all subquery LQPs are cacheable. An optimized plan might be not cacheable for example if we used a UCC
+   *    for optimization of which we cannot be sure that it will still be valid the next time the same query occurs.
    */
   virtual IsCacheable apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const;
 

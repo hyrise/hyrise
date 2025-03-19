@@ -15,8 +15,10 @@
 namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
-                                           ExpressionUnorderedSet&& init_dependents, bool is_permanent)
-    : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)), _is_permanent(is_permanent) {
+                                           ExpressionUnorderedSet&& init_dependents, bool is_time_independent)
+    : determinants(std::move(init_determinants)),
+      dependents(std::move(init_dependents)),
+      _is_time_independent(is_time_independent) {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
@@ -50,8 +52,8 @@ bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
   return !(other == *this);
 }
 
-bool FunctionalDependency::is_permanent() const {
-  return _is_permanent;
+bool FunctionalDependency::is_time_independent() const {
+  return _is_time_independent;
 }
 
 size_t FunctionalDependency::hash() const {
@@ -87,7 +89,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
     } else {
       for (const auto& dependent : fd.dependents) {
         auto determinants = fd.determinants;
-        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent}, fd.is_permanent());
+        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent}, fd.is_time_independent());
       }
     }
   }
@@ -126,17 +128,17 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     // If we have found an FD with same determinants, add the dependents. Otherwise, add a new FD.
     if (existing_fd != existing_fds.end()) {
       std::get<1>(*existing_fd).insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
-      if (!fd_to_add.is_permanent()) {
+      if (!fd_to_add.is_time_independent()) {
         std::get<2>(*existing_fd) = false;
       }
     } else {
-      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents, fd_to_add.is_permanent());
+      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents, fd_to_add.is_time_independent());
     }
   }
 
   auto deflated_fds = FunctionalDependencies(fds.size());
-  for (auto [determinants, dependents, is_permanent] : existing_fds) {
-    deflated_fds.emplace(std::move(determinants), std::move(dependents), is_permanent);
+  for (auto [determinants, dependents, is_time_independent] : existing_fds) {
+    deflated_fds.emplace(std::move(determinants), std::move(dependents), is_time_independent);
   }
 
   return deflated_fds;

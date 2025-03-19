@@ -36,7 +36,7 @@ namespace hyrise {
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
-                       bool is_permanent = true);
+                       bool is_time_independent = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -45,10 +45,10 @@ struct FunctionalDependency {
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
 
-  bool is_permanent() const;
+  bool is_time_independent() const;
 
  private:
-  bool _is_permanent;
+  bool _is_time_independent;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);

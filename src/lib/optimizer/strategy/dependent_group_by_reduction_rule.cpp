@@ -80,7 +80,7 @@ std::string DependentGroupByReductionRule::name() const {
 
 IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  auto rule_was_applied_using_non_permanent_ucc = false;
+  auto cacheable = true;
 
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
@@ -108,7 +108,7 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     if (group_by_columns.size() == node->node_expressions.size()) {
       auto opt_matching_ucc_cacheable = node->left_input()->find_ucc_cacheability(group_by_columns);
       if (opt_matching_ucc_cacheable) {
-        rule_was_applied_using_non_permanent_ucc |= !static_cast<bool>(*opt_matching_ucc_cacheable);
+        cacheable &= static_cast<bool>(*opt_matching_ucc_cacheable);
 
         const auto& output_expressions = aggregate_node.output_expressions();
         // Remove the AggregateNode if it does not limit or reorder the output expressions.
@@ -181,7 +181,7 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       if (success) {
         // Functional dependencies are derived from UCCs. In case we encounter a non-permanent FD,
         // this means we encountered an underlying non-permanent UCC as well.
-        rule_was_applied_using_non_permanent_ucc |= !fd.is_permanent();
+        cacheable &= fd.is_time_independent();
 
         // Refresh data structures correspondingly.
         group_by_list_changed = true;
@@ -204,7 +204,7 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     return LQPVisitation::VisitInputs;
   });
 
-  return rule_was_applied_using_non_permanent_ucc ? IsCacheable::No : IsCacheable::Yes;
+  return cacheable ? IsCacheable::Yes : IsCacheable::No;
 }
 
 }  // namespace hyrise

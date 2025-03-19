@@ -357,7 +357,7 @@ TEST_F(SQLPipelineStatementTest, OptimizedQPCachedWhenUsingCacheableOptimization
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
   // We need to call this method to generate and cache the PQP.
   validated_statement->get_physical_plan();
-  // Expect cache to still not contain validated LQP as we ran a query that used a non-cacheable optimization.
+  // Expect cache to validated LQP as we ran a query that used a cacheable optimization.
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
   EXPECT_TRUE(_pqp_cache->has(_select_query_a));
 }
