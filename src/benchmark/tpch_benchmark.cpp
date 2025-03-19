@@ -121,6 +121,8 @@ int main(int argc, char* argv[]) {
     });
   }
 
+  Hyrise::get().benchmark_name = "tpch";
+
   std::cout << "- Benchmarking Queries: [ ";
   auto printable_item_ids = std::vector<std::string>();
   std::for_each(item_ids.begin(), item_ids.end(), [&printable_item_ids](auto& id) {

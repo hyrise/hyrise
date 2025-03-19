@@ -38,6 +38,7 @@ const std::unordered_set<std::string> filename_blacklist() {
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  Hyrise::get().benchmark_name = "tpcds";
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-DS Benchmark");
 
   // clang-format off

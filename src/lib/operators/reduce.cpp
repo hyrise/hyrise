@@ -99,7 +99,7 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
   const auto chunk_count = input_table->chunk_count();
   const auto column_id = _predicate.column_ids.first;
 
-  std::cout << "Input row count: " << input_table->row_count() << std::endl;
+  // std::cout << "Input row count: " << input_table->row_count() << std::endl;
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
   output_chunks.reserve(chunk_count);
@@ -216,7 +216,7 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
 
 
   const auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
-  std::cout << "Output row count: " << output_table->row_count() << std::endl;
+  // std::cout << "Output row count: " << output_table->row_count() << std::endl;
   return output_table;
 }
 
@@ -231,7 +231,6 @@ const std::shared_ptr<std::vector<std::atomic_uint64_t>>& Reduce::export_filter(
 }
 
 std::shared_ptr<const Table> Reduce::_on_execute() {
-  std::cout << "Executed Reducer" << std::endl;
   if (_right_input->type() == OperatorType::Reduce) {
     const auto input_reducer = std::static_pointer_cast<const Reduce>(_right_input);
     _filter = input_reducer->export_filter();

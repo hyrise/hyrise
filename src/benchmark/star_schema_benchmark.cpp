@@ -21,6 +21,7 @@
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main(int argc, char* argv[]) {
+  Hyrise::get().benchmark_name = "starschema";
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Star Schema Benchmark");
 
   // clang-format off

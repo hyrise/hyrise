@@ -47,6 +47,9 @@ class Hyrise : public Singleton<Hyrise> {
   LogManager log_manager;
   Topology topology;
 
+  std::string benchmark_name;
+  std::string query_name;
+
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
   std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
