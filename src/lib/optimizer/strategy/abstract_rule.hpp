@@ -12,8 +12,10 @@ class LogicalPlanRootNode;
 class LQPSubqueryExpression;
 
 enum class IsCacheable : bool { Yes = true, No = false };
-IsCacheable operator&(IsCacheable lhs, IsCacheable rhs);
-IsCacheable& operator&=(IsCacheable& lhs, IsCacheable rhs);
+
+constexpr IsCacheable operator&&(IsCacheable lhs, IsCacheable rhs) {
+  return lhs == IsCacheable::Yes && rhs == IsCacheable::Yes ? IsCacheable::Yes : IsCacheable::No;
+}
 
 class AbstractRule {
  public:

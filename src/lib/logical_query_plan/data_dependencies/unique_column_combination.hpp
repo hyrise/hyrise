@@ -25,8 +25,6 @@ struct UniqueColumnCombination final {
 
   bool operator==(const UniqueColumnCombination& rhs) const;
   bool operator!=(const UniqueColumnCombination& rhs) const;
-  UniqueColumnCombination(const UniqueColumnCombination& rhs) = default;
-  UniqueColumnCombination(UniqueColumnCombination&& rhs) = default;
 
   size_t hash() const;
   ExpressionUnorderedSet expressions;

@@ -38,9 +38,6 @@ struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
                        bool is_permanent = true);
 
-  FunctionalDependency(const FunctionalDependency& rhs) = default;
-  FunctionalDependency(FunctionalDependency&& rhs) = default;
-
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
   size_t hash() const;

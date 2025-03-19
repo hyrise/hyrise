@@ -306,7 +306,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   auto optimizer = Optimizer{};
   optimizer.add_rule(std::move(rule));
 
-  const auto optimized_lqp = optimizer.optimize(std::move(lqp)).logical_query_plan;
+  const auto optimized_lqp = std::get<0>(optimizer.optimize(std::move(lqp)));
   lqp = nullptr;
 
   /**
@@ -345,8 +345,8 @@ TEST_F(OptimizerTest, CheckTrueCacheablility) {
 
   auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
                                   PredicateNode::make(greater_than_(a, subquery_b), node_a));
-  const auto optimize_results = optimizer->optimize(std::move(lqp));
-  EXPECT_TRUE(optimize_results.cacheable);
+  const auto [_, cacheable] = optimizer->optimize(std::move(lqp));
+  EXPECT_TRUE(static_cast<bool>(cacheable));
 }
 
 TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
@@ -377,7 +377,7 @@ TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
   static_cast<JoinNode&>(*lqp1->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto optimize_results1 = optimizer.optimize(std::move(lqp1));
 
-  EXPECT_FALSE(optimize_results1.cacheable);
+  EXPECT_FALSE(static_cast<bool>(std::get<1>(optimize_results1)));
 }
 
 TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {

@@ -9,14 +9,6 @@
 
 namespace hyrise {
 
-IsCacheable operator&(IsCacheable lhs, IsCacheable rhs) {
-  return static_cast<IsCacheable>(static_cast<bool>(lhs) & static_cast<bool>(rhs));
-}
-
-IsCacheable& operator&=(IsCacheable& lhs, const IsCacheable rhs) {
-  return lhs = lhs & rhs;
-}
-
 IsCacheable AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const {
   // (1) Optimize root LQP.
   auto cacheable = _apply_to_plan_without_subqueries(lqp_root);
@@ -32,7 +24,7 @@ IsCacheable AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
 
     // (2.1) Optimize subplan.
     const auto local_lqp_root = LogicalPlanRootNode::make(lqp);
-    cacheable &= _apply_to_plan_without_subqueries(local_lqp_root);
+    cacheable = cacheable && _apply_to_plan_without_subqueries(local_lqp_root);
 
     // (2.2) Assign optimized subplan to all corresponding SubqueryExpressions.
     for (const auto& subquery_expression : subquery_expressions) {

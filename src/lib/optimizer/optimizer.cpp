@@ -279,7 +279,7 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
   _rules.emplace_back(std::move(rule));
 }
 
-OptimizedLogicalQueryPlan Optimizer::optimize(
+std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable> Optimizer::optimize(
     std::shared_ptr<AbstractLQPNode> input,
     const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
@@ -296,10 +296,10 @@ OptimizedLogicalQueryPlan Optimizer::optimize(
   if constexpr (HYRISE_DEBUG) {
     validate_lqp(root_node);
   }
-  auto cachable = IsCacheable::Yes;
+  auto cacheable = IsCacheable::Yes;
   for (const auto& rule : _rules) {
     auto rule_timer = Timer{};
-    cachable &= rule->apply_to_plan(root_node);
+    cacheable = cacheable && rule->apply_to_plan(root_node);
 
     if (rule_durations) {
       rule_durations->emplace_back(rule->name(), rule_timer.lap());
@@ -319,7 +319,7 @@ OptimizedLogicalQueryPlan Optimizer::optimize(
   auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
-  return {static_cast<bool>(cachable), optimized_node};
+  return {optimized_node, cacheable};
 }
 
 void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) {
