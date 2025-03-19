@@ -89,7 +89,7 @@ TEST_F(JoinOrderingRuleTest, CheckCacheability) {
                                         PredicateNode::make(equals_(d_d, c_c),
                                                             JoinNode::make(JoinMode::Cross, node_d, node_c)))))));
 
-  const auto is_cacheable = StrategyBaseTest::_apply_rule(rule, input_lqp);
+  const auto is_cacheable = _apply_rule(rule, input_lqp);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 

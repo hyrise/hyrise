@@ -482,11 +482,14 @@ TEST_F(StoredTableNodeTest, GetMatchingUniqueColumnCombination) {
 
   // Test exact match.
   _stored_table_node->set_pruned_column_ids({});
-  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a}));
+  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a}) &&
+              static_cast<bool>(_stored_table_node->find_ucc_cacheability({_a})));
 
   // Test superset of column ids.
-  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a, _b}));
-  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a, _c}));
+  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a, _b}) &&
+              static_cast<bool>(_stored_table_node->find_ucc_cacheability({_a, _b})));
+  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a, _c}) &&
+              static_cast<bool>(_stored_table_node->find_ucc_cacheability({_a, _c})));
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {

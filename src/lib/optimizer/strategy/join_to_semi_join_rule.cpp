@@ -21,7 +21,7 @@ std::string JoinToSemiJoinRule::name() const {
 
 IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  auto used_non_permanent_ucc = false;
+  auto cacheable = IsCacheable::Yes;
   visit_lqp(lqp_root, [&](const auto& node) {
     // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
     // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
@@ -81,7 +81,7 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
         const auto opt_matching_ucc_cacheable =
             join_node->left_input()->find_ucc_cacheability(equals_predicate_expressions_left);
         if (opt_matching_ucc_cacheable) {
-          used_non_permanent_ucc = used_non_permanent_ucc || !static_cast<bool>(*opt_matching_ucc_cacheable);
+          cacheable = cacheable && *opt_matching_ucc_cacheable;
 
           join_node->join_mode = JoinMode::Semi;
           const auto temp = join_node->left_input();
@@ -92,7 +92,7 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
         const auto opt_matching_ucc_cacheable =
             join_node->right_input()->find_ucc_cacheability(equals_predicate_expressions_right);
         if (opt_matching_ucc_cacheable) {
-          used_non_permanent_ucc = used_non_permanent_ucc || !static_cast<bool>(*opt_matching_ucc_cacheable);
+          cacheable = cacheable && *opt_matching_ucc_cacheable;
 
           join_node->join_mode = JoinMode::Semi;
         }
@@ -102,7 +102,7 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
     return LQPVisitation::VisitInputs;
   });
 
-  return used_non_permanent_ucc ? IsCacheable::No : IsCacheable::Yes;
+  return cacheable;
 }
 
 }  // namespace hyrise

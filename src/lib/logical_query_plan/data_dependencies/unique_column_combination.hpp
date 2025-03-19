@@ -26,10 +26,11 @@ struct UniqueColumnCombination final {
   bool operator==(const UniqueColumnCombination& rhs) const;
   bool operator!=(const UniqueColumnCombination& rhs) const;
 
+  bool is_permanent() const;
   size_t hash() const;
+  
   ExpressionUnorderedSet expressions;
 
-  bool is_permanent() const;
 
  private:
   bool _is_permanent;

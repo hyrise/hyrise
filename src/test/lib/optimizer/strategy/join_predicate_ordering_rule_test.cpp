@@ -134,7 +134,7 @@ TEST_F(JoinPredicateOrderingRuleTest, CheckCacheability) {
 
   auto input_lqp =
       std::dynamic_pointer_cast<AbstractLQPNode>(JoinNode::make(JoinMode::Inner, predicates, node_a, node_b));
-  const auto is_cacheable = StrategyBaseTest::_apply_rule(_rule, input_lqp);
+  const auto is_cacheable = _apply_rule(_rule, input_lqp);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 

@@ -306,7 +306,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   auto optimizer = Optimizer{};
   optimizer.add_rule(std::move(rule));
 
-  const auto optimized_lqp = std::get<0>(optimizer.optimize(std::move(lqp)));
+  const auto optimized_lqp = optimizer.optimize(std::move(lqp)).first;
   lqp = nullptr;
 
   /**
@@ -378,7 +378,7 @@ TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
   static_cast<JoinNode&>(*lqp1->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto optimize_results1 = optimizer.optimize(std::move(lqp1));
 
-  EXPECT_FALSE(static_cast<bool>(std::get<1>(optimize_results1)));
+  EXPECT_FALSE(static_cast<bool>(optimize_results1.second));
 }
 
 TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {

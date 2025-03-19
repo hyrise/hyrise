@@ -5,6 +5,7 @@
 #include <tuple>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -26,7 +27,7 @@ using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 void gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
     std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables,
-    bool& non_permanent_ucc_was_used) {
+    IsCacheable& cacheable) {
   const auto prunable_side = join_node->prunable_input_side();
   if (!prunable_side) {
     return;
@@ -117,7 +118,7 @@ void gather_rewrite_info(
     }
 
     rewrite_predicate = candidate;
-    non_permanent_ucc_was_used |= *opt_matching_ucc_cacheable == IsCacheable::No;
+    cacheable = cacheable && *opt_matching_ucc_cacheable;
     return LQPVisitation::DoNotVisitInputs;
   });
 
@@ -173,11 +174,11 @@ IsCacheable JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
   // `rewritables finally contains all rewritable join nodes, their unused input side, and the predicates to be used for
   // the rewrites.
   auto rewritables = std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>{};
-  auto used_non_permanent_ucc = false;
+  auto cacheable = IsCacheable::Yes;
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
-      gather_rewrite_info(join_node, rewritables, used_non_permanent_ucc);
+      gather_rewrite_info(join_node, rewritables, cacheable);
     }
     return LQPVisitation::VisitInputs;
   });
@@ -186,7 +187,7 @@ IsCacheable JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
     perform_rewrite(join_node, prunable_side, rewrite_predicate);
   }
 
-  return used_non_permanent_ucc ? IsCacheable::No : IsCacheable::Yes;
+  return cacheable;
 }
 
 }  // namespace hyrise

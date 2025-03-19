@@ -193,7 +193,7 @@ TEST_F(IndexScanRuleTest, CheckCacheability) {
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(std::dynamic_pointer_cast<PredicateNode>(predicate_node_0)->scan_type, ScanType::TableScan);
-  const auto is_cacheable = StrategyBaseTest::_apply_rule(rule, predicate_node_0);
+  const auto is_cacheable = _apply_rule(rule, predicate_node_0);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 

@@ -400,7 +400,7 @@ TEST_F(InExpressionRewriteRuleTest, CheckCacheability) {
   auto rule = std::make_shared<InExpressionRewriteRule>();
   rule->strategy = InExpressionRewriteRule::Strategy::ExpressionEvaluator;
   auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(single_element_in_expression, node));
-  const auto is_cacheable = StrategyBaseTest::_apply_rule(rule, input_lqp);
+  const auto is_cacheable = _apply_rule(rule, input_lqp);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 }  // namespace hyrise

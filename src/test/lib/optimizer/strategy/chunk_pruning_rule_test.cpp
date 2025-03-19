@@ -468,7 +468,7 @@ TEST_F(ChunkPruningRuleTest, CheckCacheability) {
       PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz")));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto is_cacheable = StrategyBaseTest::_apply_rule(_rule, predicate_node);
+  const auto is_cacheable = _apply_rule(_rule, predicate_node);
   EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 

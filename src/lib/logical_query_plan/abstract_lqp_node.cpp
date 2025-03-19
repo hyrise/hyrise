@@ -295,7 +295,7 @@ std::optional<IsCacheable> AbstractLQPNode::find_ucc_cacheability(const Expressi
 
   const auto& unique_column_combinations = this->unique_column_combinations();
   if (unique_column_combinations.empty()) {
-    return std::nullopt;
+    return {};
   }
 
   return ucc_cacheability_if_exists(unique_column_combinations, expressions);

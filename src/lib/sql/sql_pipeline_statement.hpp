@@ -78,7 +78,7 @@ class SQLPipelineStatement : public Noncopyable {
   const SQLTranslationInfo& get_sql_translation_info();
 
   // Returns the optimized LQP for this statement. TODO: make const
-  std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable> get_optimized_logical_plan();
+  std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable>& get_optimized_logical_plan();
 
   // Returns the PQP for this statement.
   // The physical plan is either retrieved from the SQLPhysicalPlanCache or, if unavailable, translated from the
