@@ -86,9 +86,12 @@ bool constraint_guaranteed_to_be_valid(const std::shared_ptr<Table>& table,
 
   const auto chunk_count = table->chunk_count();
   // Iterate through the chunks backwards as inserts are more likely to happen in later chunks, potentially enabling us
-  // to return faster. We need to use `prev_chunk_id = chunk_id - 1`
+  // to return faster. We need to use `prev_chunk_id = chunk_id - 1`.
   for (auto prev_chunk_id = chunk_count; prev_chunk_id > 0; --prev_chunk_id) {
     const auto source_chunk = table->get_chunk(ChunkID{prev_chunk_id - 1});
+
+    // We use `max_begin_cid` here. This can lead to overly pessimistic results, but as of right now we don't have a
+    // better way to determine the last valid commit id here.
     if (source_chunk->mvcc_data()->max_begin_cid != MAX_COMMIT_ID &&
         source_chunk->mvcc_data()->max_begin_cid > table_key_constraint.last_validated_on()) {
       return false;

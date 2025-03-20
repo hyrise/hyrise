@@ -1,3 +1,8 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
 #include "strategy_base_test.hpp"
@@ -222,6 +227,13 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForAntiJoin) {
 
   _apply_rule(_rule, _lqp);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(SemiJoinReductionRuleTest, CheckCacheability) {
+  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_a_a, _b_a), _node_a, _node_b));
+  const auto is_cacheable = _apply_rule(_rule, input_lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise

@@ -1,5 +1,6 @@
 #include <memory>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -367,6 +368,21 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   _apply_rule(rule, _lqp);
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(ExpressionReductionRuleTest, CheckCacheability) {
+  const auto table_definition = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, true}};
+  const auto table = Table::create_dummy_table(table_definition);
+  Hyrise::get().storage_manager.add_table("agg_table", table);
+  const auto stored_table_node = StoredTableNode::make("agg_table");
+
+  const auto col_a = lqp_column_(stored_table_node, ColumnID{0});
+  const auto col_b = lqp_column_(stored_table_node, ColumnID{1});
+  auto lqp = std::dynamic_pointer_cast<AbstractLQPNode>(AggregateNode::make(
+      expression_vector(), expression_vector(sum_(col_b), count_star_(stored_table_node), avg_(col_b)),  // NOLINT
+      stored_table_node));
+  const auto is_cacheable = _apply_rule(rule, lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise

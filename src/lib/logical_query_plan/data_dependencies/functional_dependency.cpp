@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <ostream>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -14,8 +15,10 @@
 namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
-                                           ExpressionUnorderedSet&& init_dependents)
-    : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)) {
+                                           ExpressionUnorderedSet&& init_dependents, bool is_time_independent)
+    : determinants(std::move(init_determinants)),
+      dependents(std::move(init_dependents)),
+      _is_time_independent(is_time_independent) {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
@@ -47,6 +50,10 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
 
 bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
   return !(other == *this);
+}
+
+bool FunctionalDependency::is_time_independent() const {
+  return _is_time_independent;
 }
 
 size_t FunctionalDependency::hash() const {
@@ -82,7 +89,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
     } else {
       for (const auto& dependent : fd.dependents) {
         auto determinants = fd.determinants;
-        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent});
+        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent}, fd.is_time_independent());
       }
     }
   }
@@ -96,14 +103,14 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
   }
 
   // We cannot use a set here as we want to add dependents to existing FDs and objects in sets are immutable.
-  auto existing_fds = std::vector<std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>>{};
+  auto existing_fds = std::vector<std::tuple<ExpressionUnorderedSet, ExpressionUnorderedSet, bool>>{};
   existing_fds.reserve(fds.size());
 
   for (const auto& fd_to_add : fds) {
     // Check if we have seen an FD with the same determinants.
     auto existing_fd = std::find_if(existing_fds.begin(), existing_fds.end(), [&](const auto& fd) {
       // Quick check for cardinality.
-      const auto& determinants = fd.first;
+      const auto& determinants = std::get<0>(fd);
       if (determinants.size() != fd_to_add.determinants.size()) {
         return false;
       }
@@ -118,17 +125,18 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
       return true;
     });
 
-    // If we have found an FD with same determinants, add the dependents. Otherwise, add a new FD.
-    if (existing_fd != existing_fds.end()) {
-      existing_fd->second.insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
+    // If we have found an FD with same determinants and the same time dependence, add the dependents. Otherwise, add a
+    // new FD.
+    if (existing_fd != existing_fds.end() && std::get<2>(*existing_fd) == fd_to_add.is_time_independent()) {
+      std::get<1>(*existing_fd).insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
     } else {
-      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents);
+      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents, fd_to_add.is_time_independent());
     }
   }
 
   auto deflated_fds = FunctionalDependencies(fds.size());
-  for (auto [determinants, dependents] : existing_fds) {
-    deflated_fds.emplace(std::move(determinants), std::move(dependents));
+  for (auto [determinants, dependents, is_time_independent] : existing_fds) {
+    deflated_fds.emplace(std::move(determinants), std::move(dependents), is_time_independent);
   }
 
   return deflated_fds;

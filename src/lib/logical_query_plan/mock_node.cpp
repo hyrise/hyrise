@@ -143,7 +143,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(std::move(column_expressions));
+    unique_column_combinations.emplace(std::move(column_expressions), !table_key_constraint.can_become_invalid());
   }
 
   return unique_column_combinations;
@@ -187,7 +187,12 @@ const TableKeyConstraints& MockNode::key_constraints() const {
 }
 
 void MockNode::set_non_trivial_functional_dependencies(const FunctionalDependencies& fds) {
-  _functional_dependencies = fds;
+  // _functional_dependencies = fds;
+  _functional_dependencies.clear();
+
+  for (const auto& fd : fds) {
+    _functional_dependencies.emplace(fd);
+  }
 }
 
 FunctionalDependencies MockNode::non_trivial_functional_dependencies() const {

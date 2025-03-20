@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -85,7 +86,8 @@ std::string JoinOrderingRule::name() const {
   return name;
 }
 
-void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable JoinOrderingRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set.");
 
   /**
@@ -105,6 +107,8 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
 
   lqp_root->set_left_input(result_lqp);
+
+  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

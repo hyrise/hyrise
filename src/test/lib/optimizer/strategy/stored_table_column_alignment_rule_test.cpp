@@ -1,3 +1,6 @@
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -106,6 +109,12 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), pruned_column_set_a);
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), pruned_column_set_a);
   EXPECT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a);
+}
+
+TEST_F(StoredTableColumnAlignmentRuleTest, CheckCacheability) {
+  auto _union_node_abstract = _union_node->deep_copy();
+  const auto is_cacheable = _apply_rule(_rule, _union_node_abstract);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise

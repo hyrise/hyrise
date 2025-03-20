@@ -1,3 +1,8 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -101,6 +106,13 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
   _apply_rule(rule, _lqp);
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(NullScanRemovalRuleTest, CheckCacheability) {
+  auto input_lqp =
+      std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(is_not_null_(table_node_column), table_node));
+  const auto is_cacheable = _apply_rule(rule, input_lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise
