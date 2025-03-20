@@ -313,6 +313,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     _warmup(item_id);
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
+    Hyrise::get().query_name = name;
     std::cout << "- Benchmarking " << name << '\n' << std::flush;
 
     auto& result = _results[item_id];

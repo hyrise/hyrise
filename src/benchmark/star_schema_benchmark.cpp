@@ -7,6 +7,7 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
 #include "ssb/ssb_table_generator.hpp"
+#include "hyrise.hpp"
 
 /**
  * The Star Schema Benchmark was introduced by O'Neil et al. "The Star Schema Benchmark and Augmented Fact Table
@@ -21,6 +22,7 @@
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main(int argc, char* argv[]) {
+  Hyrise::get().benchmark_name = "starschema";
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Star Schema Benchmark");
 
   // clang-format off

@@ -19,6 +19,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
+#include "hyrise.hpp"
 
 using namespace hyrise;  // NOLINT
 
@@ -38,6 +39,7 @@ using namespace hyrise;  // NOLINT
  */
 
 int main(int argc, char* argv[]) {
+  Hyrise::get().benchmark_name = "tpch";
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
 
   // clang-format off

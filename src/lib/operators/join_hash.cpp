@@ -13,6 +13,9 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <iostream>
+#include <fstream>
+#include <filesystem>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -221,7 +224,23 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   join_hash_performance_data.radix_bits = *_radix_bits;
   join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
 
-  return _impl->_on_execute();
+  auto output_table = _impl->_on_execute();
+
+  auto file_exists = std::filesystem::exists("semi_stats.csv");
+  std::ofstream output_file;
+  output_file.open("semi_stats.csv", std::ios_base::app);
+
+  if (!file_exists) {
+        output_file << "benchmark,query,input_count,output_count\n";
+  }
+  output_file  << Hyrise::get().benchmark_name << ","
+              << Hyrise::get().query_name << ","
+              << probe_input_table->row_count() << ","
+              << output_table->row_count() << "\n";
+
+  return output_table;  
+
+  return output_table;
 }
 
 void JoinHash::_on_cleanup() {
