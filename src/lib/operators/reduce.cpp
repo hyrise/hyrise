@@ -3,6 +3,8 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include <sstream>
+#include <string>
 
 #include "operators/abstract_operator.hpp"
 #include "storage/segment_iterate.hpp"
