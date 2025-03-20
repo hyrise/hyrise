@@ -238,8 +238,6 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
               << probe_input_table->row_count() << ","
               << output_table->row_count() << "\n";
 
-  return output_table;  
-
   return output_table;
 }
 
