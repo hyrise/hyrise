@@ -226,8 +226,9 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
 
   auto output_table = _impl->_on_execute();
+  if (!lqp_node) return output_table;
 
-  const auto join_node = std::static_pointer_cast<JoinNode>(lqp_node);
+  const auto join_node = std::static_pointer_cast<const JoinNode>(lqp_node);
   if (!join_node->is_semi_reduction()) return output_table;
 
   auto file_exists = std::filesystem::exists("semi_stats.csv");
