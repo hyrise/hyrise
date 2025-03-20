@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

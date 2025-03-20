@@ -125,12 +125,10 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
       return true;
     });
 
-    // If we have found an FD with same determinants, add the dependents. Otherwise, add a new FD.
-    if (existing_fd != existing_fds.end()) {
+    // If we have found an FD with same determinants and the same time dependence, add the dependents. Otherwise, add a
+    // new FD.
+    if (existing_fd != existing_fds.end() && std::get<2>(*existing_fd) == fd_to_add.is_time_independent()) {
       std::get<1>(*existing_fd).insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
-      if (!fd_to_add.is_time_independent()) {
-        std::get<2>(*existing_fd) = false;
-      }
     } else {
       existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents, fd_to_add.is_time_independent());
     }

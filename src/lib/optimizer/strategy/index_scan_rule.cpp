@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "all_parameter_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

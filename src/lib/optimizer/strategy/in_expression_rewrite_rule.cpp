@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "all_type_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_expression.hpp"

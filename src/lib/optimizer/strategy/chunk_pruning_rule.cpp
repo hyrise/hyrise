@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"

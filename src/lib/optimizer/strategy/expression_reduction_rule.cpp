@@ -9,6 +9,7 @@
 
 #include <boost/variant/get.hpp>
 
+#include "abstract_rule.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"

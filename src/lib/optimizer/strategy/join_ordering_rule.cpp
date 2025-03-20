@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

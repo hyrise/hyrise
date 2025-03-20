@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/lqp_column_expression.hpp"

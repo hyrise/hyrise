@@ -7,6 +7,7 @@
 
 #include <boost/variant/apply_visitor.hpp>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"

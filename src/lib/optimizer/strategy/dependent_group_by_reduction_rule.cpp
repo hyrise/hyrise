@@ -165,6 +165,11 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       // library implementation details). Thus, we compare the ColumnIDs of the determinants.
       const auto& left_column_ids = get_column_ids(fd_left.determinants);
       const auto& right_column_ids = get_column_ids(fd_right.determinants);
+
+      if (fd_left.is_time_independent() != fd_right.is_time_independent()) {
+        return fd_left.is_time_independent();
+      }
+
       return left_column_ids < right_column_ids;
     });
 

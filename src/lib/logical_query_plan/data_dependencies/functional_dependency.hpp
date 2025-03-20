@@ -67,7 +67,8 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
- *         As a result, FDs become deflated as follows:
+ *         Note that FDs that do not share the same time dependence are not merged. As a result, FDs become deflated as
+ *          follows (assuming all FDs are time-independent):
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}
