@@ -3,8 +3,10 @@
 #include <atomic>
 #include <memory>
 #include <vector>
-#include <sstream>
+#include <iostream>
+#include <fstream>
 #include <string>
+#include <filesystem>
 
 #include "operators/abstract_operator.hpp"
 #include "storage/segment_iterate.hpp"
@@ -227,7 +229,7 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
   if (!std::filesystem::exists("reduce_stats.csv")) {
         output_file << "benchmark,query,input_count,output_count\n";
   }
-  outputFile  << Hyrise::get().benchmark_name << ","
+  output_file  << Hyrise::get().benchmark_name << ","
               << Hyrise::get().query_name << ","
               << input_table->row_count() << ","
               << output_table->row_count() << "\n";
