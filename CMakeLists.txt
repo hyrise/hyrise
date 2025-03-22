@@ -55,18 +55,6 @@ else()
     compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID}). Compilation has only been tested with Clang (Linux + macOS) and GCC (Linux).")
 endif()
 
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
-     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20.0)
-         # Clang 18/19 warn when switch statements do not have a default case even when the entire enum is covered (see
-         # https://github.com/llvm/llvm-project/blob/7d9634e527fe52bf20a9036be6e5771f8fc4de17/clang/test/Sema/switch-default.cpp#L19).
-         # As clang also (correctly) complains when not all enum cases are handled, we disable the 'switch-default'
-         # warning. We disable it only for Clang 18/19 at the moment to ensure that this change is re-evaluated with the
-         # next major clang version as we would like to have as few exceptions as possible from using -Weverything.
-         message(WARNING "Disable warning 'switch-default' for Clang version ${CMAKE_CXX_COMPILER_VERSION}.")
-         add_compile_options(-Wno-switch-default)
-     endif()
- endif()
-
 # Starting with GCC 14's libstdc++, std::atomic_load for shared pointers is deprecated (as part of C++20). However, as
 # of LLVM 19, libc++ has not implemented std::atomic<std::shared_ptr> (see P0718R2,
 # https://en.cppreference.com/w/cpp/compiler_support). As we use libstdc++ when compiling with clang on Linux, we
