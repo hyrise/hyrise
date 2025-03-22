@@ -51,6 +51,8 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         add_compile_options(-Wshadow-all -Wno-pass-failed)
+    else()
+        add_compile_options(-Wshadow=global)
     endif()
 else()
     message(WARNING "Hyrise will be built with most compiler warnings deactivated. This is fine if you want to test Hyrise but will become an issue when you want to contribute code.")
