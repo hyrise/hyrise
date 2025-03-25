@@ -21,6 +21,22 @@ let "exitcode |= $?"
 #             |      Runs the following in parallel
 #             Finds all .cpp and .hpp files, separated by \0
 
+# In addition to cpplint, we also run clang-format.
+# The output if clang-format is usually not very helpful, but in most cases running ./scripts/format.sh will solve it.
+unamestr=$(uname)
+if [[ "$unamestr" == 'Darwin' ]]; then
+    clang_format="$(brew --prefix llvm)/bin/clang-format"
+    format_cmd="$clang_format -style=file"
+elif [[ "$unamestr" == 'Linux' ]]; then
+  format_cmd="clang-format -style=file"
+fi
+
+for file in $(find src \( -iname "*.cpp" -o -iname "*.hpp" \))
+do
+    $format_cmd --dry-run --Werror $file
+    let "exitcode |= $?"
+done
+
 # All disabled tests should have an issue number
 output=$(grep -rHn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/')
 if [ ! -z "$output" ]; then
