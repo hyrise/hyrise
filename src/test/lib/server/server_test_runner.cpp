@@ -341,13 +341,13 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
 
   const auto param = 1234u;
-  const auto result1 = transaction.exec(prepared_name, param);
+  const auto result1 = transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param});
   EXPECT_EQ(result1.size(), 1u);
-  const auto result2 = transaction.exec(prepared_name, 123);
+  const auto result2 = exec(pqxx::prepped{prepared_name}, pqxx::params{123});
   EXPECT_EQ(result2.size(), 2u);
 
   transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
-  const auto result3 = transaction.exec(prepared_name, param);
+  const auto result3 = exec(pqxx::prepped{prepared_name}, pqxx::params{param});
   EXPECT_EQ(result3.size(), 2u);
 }
 
@@ -359,12 +359,12 @@ TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
 
   const auto param = 1234u;
-  const auto result1 = transaction.exec(prepared_name, param);
+  const auto result1 = transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param});
   EXPECT_EQ(result1.size(), 1u);
 
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a <= ?");
 
-  const auto result2 = transaction.exec(prepared_name, param);
+  const auto result2 = transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param});
   EXPECT_EQ(result2.size(), 2u);
 }
 
@@ -383,11 +383,11 @@ TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
 
   // Wrong number of parameters
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ? and a > ?");
-  EXPECT_ANY_THROW(transaction.exec(prepared_name, param));
+  EXPECT_ANY_THROW(transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param});
 
   // Check whether server is still running and connection established
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
-  const auto result = transaction.exec(prepared_name, param);
+  const auto result = transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param});
   EXPECT_EQ(result.size(), 1u);
 }
 
