@@ -383,7 +383,7 @@ TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
 
   // Wrong number of parameters
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ? and a > ?");
-  EXPECT_ANY_THROW(transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param});
+  EXPECT_ANY_THROW(transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param}));
 
   // Check whether server is still running and connection established
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
