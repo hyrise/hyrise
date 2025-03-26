@@ -343,11 +343,11 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
   const auto param = 1234u;
   const auto result1 = transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param});
   EXPECT_EQ(result1.size(), 1u);
-  const auto result2 = exec(pqxx::prepped{prepared_name}, pqxx::params{123});
+  const auto result2 = transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{123});
   EXPECT_EQ(result2.size(), 2u);
 
   transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
-  const auto result3 = exec(pqxx::prepped{prepared_name}, pqxx::params{param});
+  const auto result3 = transaction.exec(pqxx::prepped{prepared_name}, pqxx::params{param});
   EXPECT_EQ(result3.size(), 2u);
 }
 
