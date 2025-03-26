@@ -227,7 +227,7 @@ void Table::append_mutable_chunk() {
 
   auto mvcc_data = std::shared_ptr<MvccData>{};
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
+    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MAX_COMMIT_ID);
   }
 
   append_chunk(segments, mvcc_data);
@@ -502,6 +502,10 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
   }
 
   _table_key_constraints.insert(table_key_constraint);
+}
+
+void Table::delete_key_constraint(const TableKeyConstraint& constraint) {
+  _table_key_constraints.erase(constraint);
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
