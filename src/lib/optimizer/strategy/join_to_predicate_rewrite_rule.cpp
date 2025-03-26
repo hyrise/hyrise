@@ -82,8 +82,9 @@ void gather_rewrite_info(
 
     // Only predicates in the form `column = value` are useful to our optimization. These conditions have the potential
     // (given filtered column is a UCC) to emit at most one result tuple.
-    if (candidate_expression->predicate_condition != PredicateCondition::Equals)
+    if (candidate_expression->predicate_condition != PredicateCondition::Equals) {
       return LQPVisitation::VisitInputs;
+    }
 
     auto candidate_column_expression = std::shared_ptr<AbstractExpression>{};
     auto candidate_value_expression = std::shared_ptr<AbstractExpression>{};

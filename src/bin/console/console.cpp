@@ -764,7 +764,12 @@ int Console::_visualize(const std::string& input) {
   }
 
   // Determine the plan type to visualize.
-  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
+  enum class PlanType {
+    LQP,
+    UnoptLQP,
+    PQP,
+    Joins
+  };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
   if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||

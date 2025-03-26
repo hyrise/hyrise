@@ -11,7 +11,10 @@ namespace hyrise {
 
 class Table;
 
-enum class SetLastChunkImmutable : bool { Yes = true, No = false };
+enum class SetLastChunkImmutable : bool {
+  Yes = true,
+  No = false
+};
 
 std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                   SetLastChunkImmutable mark_last_chunk_immutable = SetLastChunkImmutable::Yes);

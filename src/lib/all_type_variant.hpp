@@ -48,7 +48,10 @@ namespace detail {
 #define DATA_TYPE_ENUM_VALUES BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 1, DATA_TYPE_INFO)
 #define DATA_TYPE_STRINGS BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 2, DATA_TYPE_INFO)
 
-enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES) };
+enum class DataType : uint8_t {
+  Null,
+  BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES)
+};
 
 static constexpr auto data_types = hana::to_tuple(hana::tuple_t<BOOST_PP_SEQ_ENUM(DATA_TYPES)>);
 static constexpr auto data_type_enum_values =

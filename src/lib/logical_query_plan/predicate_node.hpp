@@ -10,7 +10,10 @@ namespace hyrise {
 
 class AbstractExpression;
 
-enum class ScanType { TableScan, IndexScan };
+enum class ScanType {
+  TableScan,
+  IndexScan
+};
 
 /**
  * This node type represents a filter.

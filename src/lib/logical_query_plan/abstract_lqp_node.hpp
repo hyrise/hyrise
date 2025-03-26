@@ -46,7 +46,10 @@ enum class LQPNodeType {
   Mock
 };
 
-enum class LQPInputSide { Left, Right };
+enum class LQPInputSide {
+  Left,
+  Right
+};
 
 // Describes the output of a Node and which of the output's inputs this Node is
 struct LQPOutputRelation {
@@ -67,7 +70,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return a string describing this node, but nothing about its inputs.
    */
-  enum class DescriptionMode { Short, Detailed };
+  enum class DescriptionMode {
+    Short,
+    Detailed
+  };
   virtual std::string description(const DescriptionMode mode = DescriptionMode::Short) const = 0;
 
   /**
@@ -156,7 +162,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   bool has_output_expressions(const ExpressionUnorderedSet& expressions) const;
 
-  enum class ExpressionIteration { Continue, Break };
+  enum class ExpressionIteration {
+    Continue,
+    Break
+  };
 
   /**
    * Calls the passed @param visitor on each of the output expressions.

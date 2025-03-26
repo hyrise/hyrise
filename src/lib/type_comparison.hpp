@@ -14,7 +14,11 @@ namespace hyrise {
 // source: http://stackoverflow.com/questions/16893992/check-if-type-can-be-explicitly-converted
 template <class From, class To>
 struct is_explicitly_convertible {
-  enum { value = std::is_constructible_v<To, From> && !std::is_convertible_v<From, To> };
+  enum {
+    value = std::is_constructible_v < To,
+    From > &&!std::is_convertible_v < From,
+    To >
+  };
 };
 
 // source: http://stackoverflow.com/questions/27709461/check-if-type-can-be-an-argument-to-boostlexical-caststring

@@ -6,7 +6,12 @@
 
 namespace hyrise {
 
-enum class FileType { Csv, Tbl, Binary, Auto };
+enum class FileType {
+  Csv,
+  Tbl,
+  Binary,
+  Auto
+};
 
 FileType import_type_to_file_type(const hsql::ImportType import_type);
 

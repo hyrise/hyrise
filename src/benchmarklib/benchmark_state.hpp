@@ -11,7 +11,11 @@ namespace hyrise {
  * keep_running() returns false once enough iterations or time has passed.
  */
 struct BenchmarkState {
-  enum class State { NotStarted, Running, Over };
+  enum class State {
+    NotStarted,
+    Running,
+    Over
+  };
 
   explicit BenchmarkState(const Duration max_duration);
   BenchmarkState& operator=(const BenchmarkState& other);

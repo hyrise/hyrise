@@ -6,4 +6,7 @@
  *     used.
  *   - "Pruning" is a clustering that improves the pruning rates in TPC-H.
  */
-enum class ClusteringConfiguration { None, Pruning };
+enum class ClusteringConfiguration {
+  None,
+  Pruning
+};

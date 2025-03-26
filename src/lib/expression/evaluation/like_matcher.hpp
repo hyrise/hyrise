@@ -36,7 +36,10 @@ class LikeMatcher {
 
   explicit LikeMatcher(const pmr_string& pattern);
 
-  enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
+  enum class Wildcard {
+    SingleChar /* '_' */,
+    AnyChars /* '%' */
+  };
   using PatternToken = std::variant<pmr_string, Wildcard>;  // Keep type order, users rely on which()
   using PatternTokens = std::vector<PatternToken>;
 

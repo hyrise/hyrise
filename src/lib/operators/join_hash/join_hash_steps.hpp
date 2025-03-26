@@ -39,7 +39,10 @@ namespace hyrise {
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
 // in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
 // track all occurrences of a value as that first position might be disqualified later.
-enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
+enum class JoinHashBuildMode {
+  AllPositions,
+  ExistenceOnly
+};
 
 using Hash = size_t;
 

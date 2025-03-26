@@ -80,7 +80,10 @@ class AbstractVisualizer {
   static const uint8_t MAX_LABEL_WIDTH = 50;
 
  public:
-  enum class InputSide { Left, Right };
+  enum class InputSide {
+    Left,
+    Right
+  };
 
   AbstractVisualizer() : AbstractVisualizer(GraphvizConfig{}, VizGraphInfo{}, VizVertexInfo{}, VizEdgeInfo{}) {}
 
@@ -200,7 +203,10 @@ class AbstractVisualizer {
     return reinterpret_cast<uintptr_t>(v.get());
   }
 
-  enum class WrapLabel { On, Off };
+  enum class WrapLabel {
+    On,
+    Off
+  };
 
   template <typename T>
   void _add_vertex(const T& vertex, const std::string& label = "", const WrapLabel wrap_label = WrapLabel::On) {

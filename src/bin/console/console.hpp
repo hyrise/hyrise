@@ -25,7 +25,12 @@ class Console : public Singleton<Console> {
   using CommandFunction = std::function<int(const std::string&)>;
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
-  enum ReturnCode { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
+  enum ReturnCode {
+    Multiline = -2,
+    Quit = -1,
+    Ok = 0,
+    Error = 1
+  };
 
   /*
    * Prompts user for one line of input, evaluates the given input, and prints out the result.

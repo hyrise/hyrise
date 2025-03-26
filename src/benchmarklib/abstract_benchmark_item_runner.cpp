@@ -37,8 +37,7 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
 
   _dedicated_expected_results.resize(items().size());
 
-  std::cout << "- Loading expected result tables"
-            << "\n";
+  std::cout << "- Loading expected result tables\n";
 
   for (const auto& entry : list_directory(expected_results_directory_path)) {
     if (is_tbl_file(entry)) {

@@ -42,8 +42,7 @@ std::string create_sql_parser_error_message(const std::string& sql, const hsql::
     }
   }
 
-  error_msg << "=========="
-            << "\nError line: " << result.errorLine() << "\nError column: " << result.errorColumn()
+  error_msg << "==========\nError line: " << result.errorLine() << "\nError column: " << result.errorColumn()
             << "\nError message: " << result.errorMsg();
 
   return error_msg.str();

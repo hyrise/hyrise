@@ -8,7 +8,11 @@
 
 namespace hyrise {
 
-enum class FrameBoundType { Preceding, Following, CurrentRow };
+enum class FrameBoundType {
+  Preceding,
+  Following,
+  CurrentRow
+};
 std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_type);
 
 struct FrameBound {
@@ -27,7 +31,11 @@ struct FrameBound {
 
 std::ostream& operator<<(std::ostream& stream, const FrameBound& frame_bound);
 
-enum class FrameType { Rows, Range, Groups };
+enum class FrameType {
+  Rows,
+  Range,
+  Groups
+};
 std::ostream& operator<<(std::ostream& stream, const FrameType frame_type);
 
 struct FrameDescription {

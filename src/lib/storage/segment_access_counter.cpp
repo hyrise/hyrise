@@ -80,7 +80,13 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const Abstrac
 // acts as the transition function.
 SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const AbstractPosList& positions) {
   // There are five possible inputs
-  enum class Input { Zero, One, Positive, NegativeOne, Negative };
+  enum class Input {
+    Zero,
+    One,
+    Positive,
+    NegativeOne,
+    Negative
+  };
 
   // clang-format off
   constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS{{

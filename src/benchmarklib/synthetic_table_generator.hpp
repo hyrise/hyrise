@@ -14,7 +14,11 @@ namespace hyrise {
 
 class Table;
 
-enum class DataDistributionType { Uniform, NormalSkewed, Pareto };
+enum class DataDistributionType {
+  Uniform,
+  NormalSkewed,
+  Pareto
+};
 
 struct ColumnDataDistribution {
   static ColumnDataDistribution make_uniform_config(const double min, const double max) {

@@ -204,41 +204,92 @@ PredicateCondition conditions_to_between(PredicateCondition lower, PredicateCond
 //                      dropped. This behavior mirrors NOT IN.
 // AntiNullAsFalse:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
 //                      dropped. This behavior mirrors NOT EXISTS
-enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
+enum class JoinMode {
+  Inner,
+  Left,
+  Right,
+  FullOuter,
+  Cross,
+  Semi,
+  AntiNullAsTrue,
+  AntiNullAsFalse
+};
 
 bool is_semi_or_anti_join(JoinMode join_mode);
 
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,
 // see union_positions.hpp for details.
-enum class SetOperationMode { Unique, All, Positions };
+enum class SetOperationMode {
+  Unique,
+  All,
+  Positions
+};
 
 // According to the SQL standard, the position of NULLs is implementation-defined. In Hyrise, NULLs come before all
 // values, both for ascending and descending sorts. See sort.cpp for details.
-enum class SortMode { Ascending, Descending };
+enum class SortMode {
+  Ascending,
+  Descending
+};
 
-enum class TableType { References, Data };
+enum class TableType {
+  References,
+  Data
+};
 
-enum class DescriptionMode { SingleLine, MultiLine };
+enum class DescriptionMode {
+  SingleLine,
+  MultiLine
+};
 
-enum class UseMvcc : bool { Yes = true, No = false };
+enum class UseMvcc : bool {
+  Yes = true,
+  No = false
+};
 
-enum class RollbackReason : bool { User, Conflict };
+enum class RollbackReason : bool {
+  User,
+  Conflict
+};
 
-enum class MemoryUsageCalculationMode { Sampled, Full };
+enum class MemoryUsageCalculationMode {
+  Sampled,
+  Full
+};
 
-enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
+enum class EraseReferencedSegmentType : bool {
+  Yes = true,
+  No = false
+};
 
-enum class MetaTableChangeType { Insert, Delete, Update };
+enum class MetaTableChangeType {
+  Insert,
+  Delete,
+  Update
+};
 
-enum class AutoCommit : bool { Yes = true, No = false };
+enum class AutoCommit : bool {
+  Yes = true,
+  No = false
+};
 
-enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
+enum class DatetimeComponent {
+  Year,
+  Month,
+  Day,
+  Hour,
+  Minute,
+  Second
+};
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
 // AnySegmentIterators that use virtual method calls.
-enum class EraseTypes { OnlyInDebugBuild, Always };
+enum class EraseTypes {
+  OnlyInDebugBuild,
+  Always
+};
 
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
