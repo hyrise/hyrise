@@ -386,11 +386,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     const char* env = std::getenv("REDUCER");
     if (env) {
       const auto env_string = std::string{env};
-      if (env_string == "PROTOTYPE") {
+      if (env_string == "prototype") {
         return std::make_shared<Reduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
-      } else if (env_string == "LEGACY") {
+      } else if (env_string == "legacy") {
         return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
-      } else {
+      } else if (env_string != "semi") {
         Fail("Unsupported reducer type.");
       }
     }

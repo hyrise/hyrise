@@ -43,7 +43,7 @@ class Reduce : public AbstractReadOnlyOperator {
   const OperatorJoinPredicate _predicate;
   const bool _update_filter = true;
 
-  const uint32_t FILTER_SIZE = 65536;
+  const uint32_t FILTER_SIZE = 262144;
 };
 
 }  // namespace hyrise
