@@ -39,8 +39,7 @@ Checks: '
          -readability-use-anyofallof,
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
-         -bugprone-suspicious-include,
-         -bugprone-unchecked-optional-access
+         -bugprone-suspicious-include
          '
 
 WarningsAsErrors: '*'
@@ -87,7 +86,6 @@ WarningsAsErrors: '*'
 #   - bugprone-suspicious-include                               Unity builds use `#include`s for cpp files. However, unity builds significantly improve the runtime of clang-tidy,
 #                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for 
 #                                                                these includes as well.
-#   - bugprone-unchecked-optional-access                        Too many false positives (with clang-tidy 14/15). TODO(anyone): Re-evaluate for future clang versions.
 
 
 CheckOptions:

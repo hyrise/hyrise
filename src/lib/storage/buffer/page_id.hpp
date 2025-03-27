@@ -19,9 +19,29 @@ constexpr uint64_t OS_PAGE_SIZE = 4096;
 // Page sizes are always a multiple of the OS page size and increase by powers of two.
 // The smallest page size is 16 KiB on Mac OS and 4 KiB on Linux.
 #ifdef __APPLE__
-enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
+enum class PageSizeType {
+  KiB16,
+  KiB32,
+  KiB64,
+  KiB128,
+  KiB256,
+  KiB512,
+  MiB1,
+  MiB2
+};
 #elif __linux__
-enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
+enum class PageSizeType {
+  KiB4,
+  KiB8,
+  KiB16,
+  KiB32,
+  KiB64,
+  KiB128,
+  KiB256,
+  KiB512,
+  MiB1,
+  MiB2
+};
 #endif
 
 // Get the number of bytes for a given PageSizeType.

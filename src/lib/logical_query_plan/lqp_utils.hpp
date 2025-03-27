@@ -90,7 +90,10 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
  * allow_right_input is set, the node must not have a right input. If allow_right_input is set, the caller has to
  * retie that right input of the node (or reinsert the node at a different position where the right input is valid).
  */
-enum class AllowRightInput { No, Yes };
+enum class AllowRightInput {
+  No,
+  Yes
+};
 void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
@@ -146,7 +149,10 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
     const std::shared_ptr<AbstractLQPNode>& begin,
     const std::optional<const std::shared_ptr<AbstractLQPNode>>& end = std::nullopt);
 
-enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
+enum class LQPVisitation {
+  VisitInputs,
+  DoNotVisitInputs
+};
 
 /**
  * Calls the passed @param visitor on @param lqp and recursively on its INPUTS. This will NOT visit subqueries. The
@@ -183,7 +189,10 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
   }
 }
 
-enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
+enum class LQPUpwardVisitation {
+  VisitOutputs,
+  DoNotVisitOutputs
+};
 
 /**
  * Calls the passed @param visitor on @param lqp and recursively on each node that uses it as an OUTPUT. If the LQP is

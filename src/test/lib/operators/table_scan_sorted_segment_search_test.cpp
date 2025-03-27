@@ -14,7 +14,11 @@ struct TestData {
   std::vector<int32_t> expected;
 };
 
-enum class NullValueUsage { WithNulls, WithoutNulls, OnlyNulls };
+enum class NullValueUsage {
+  WithNulls,
+  WithoutNulls,
+  OnlyNulls
+};
 
 using Params = std::tuple<TestData, hyrise::SortMode, NullValueUsage>;
 
