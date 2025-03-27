@@ -383,7 +383,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
       std::vector<OperatorJoinPredicate>(join_predicates.cbegin() + 1, join_predicates.cend());
 
   if (join_node->join_mode == JoinMode::Semi && join_node->is_semi_reduction()) {
-    return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
+    const char* env = std::getenv("REDUCER");
+    if (env) {
+      const auto env_string = std::string{env};
+      if (env_string == "PROTOTYPE") {
+        return std::make_shared<Reduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
+      } else if (env_string == "LEGACY") {
+        return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
+      } else {
+        Fail("Unsupported reducer type.");
+      }
+    }
   }
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};

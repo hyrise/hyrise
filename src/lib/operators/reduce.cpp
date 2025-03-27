@@ -224,14 +224,15 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
   // std::cout << "Output row count: " << output_table->row_count() << std::endl;
   
 
-  auto file_exists = std::filesystem::exists("reduce_stats.csv");
+  auto file_exists = std::filesystem::exists("reduction_stats.csv");
   std::ofstream output_file;
-  output_file.open("reduce_stats.csv", std::ios_base::app);
+  output_file.open("reduction_stats.csv", std::ios_base::app);
 
   if (!file_exists) {
-        output_file << "benchmark,query,input_count,output_count\n";
+        output_file << "reduction_type,benchmark,query,input_count,output_count\n";
   }
-  output_file  << Hyrise::get().benchmark_name << ","
+  output_file << "prototype" << ","
+              << Hyrise::get().benchmark_name << ","
               << Hyrise::get().query_name << ","
               << input_table->row_count() << ","
               << output_table->row_count() << "\n";

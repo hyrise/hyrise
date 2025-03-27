@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <memory>
 #include <boost/dynamic_bitset.hpp>
 
@@ -43,8 +42,6 @@ class LegacyReduce : public AbstractReadOnlyOperator {
   std::shared_ptr<BloomFilter> _filter;
   const OperatorJoinPredicate _predicate;
   const bool _update_filter = true;
-
-  const uint32_t FILTER_SIZE = 65536;
 };
 
 }  // namespace hyrise
