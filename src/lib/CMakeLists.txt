@@ -255,6 +255,8 @@ set(
     operators/projection.hpp
     operators/reduce.cpp
     operators/reduce.hpp
+    operators/legacy_reduce.hpp
+    operators/legacy_reduce.cpp
     operators/sort.cpp
     operators/sort.hpp
     operators/table_scan.cpp

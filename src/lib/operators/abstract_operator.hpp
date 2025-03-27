@@ -44,6 +44,7 @@ enum class OperatorType {
   Product,
   Projection,
   Reduce,
+  LegacyReduce,
   Sort,
   TableScan,
   TableWrapper,
