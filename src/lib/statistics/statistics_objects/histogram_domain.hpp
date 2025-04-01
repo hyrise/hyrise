@@ -4,6 +4,7 @@
 #include <limits>
 #include <string>
 
+#include "utils/small_prefix_string_view.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -82,6 +83,15 @@ class HistogramDomain<pmr_string> {
     requires (std::is_same_v<T, pmr_string> || std::is_same_v<T, std::string_view>)
   bool contains(const T& string_value) const {
     for (const auto char_value : string_value) {
+      if (char_value > max_char || char_value < min_char) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool contains(const SmallPrefixStringView& string_value) const {
+    for (const auto char_value : string_value.get_string_view()) {
       if (char_value > max_char || char_value < min_char) {
         return false;
       }

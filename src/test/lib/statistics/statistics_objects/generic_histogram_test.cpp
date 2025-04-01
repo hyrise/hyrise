@@ -1200,7 +1200,7 @@ TEST_F(GenericHistogramTest, TpchTemporaryTest) {
   const auto benchmark_config = std::make_shared<BenchmarkConfig>();
   benchmark_config->cache_binary_tables = true;
 
-  auto table_generator = TPCHTableGenerator(10.0, ClusteringConfiguration::None, benchmark_config);
+  auto table_generator = TPCHTableGenerator(0.1f, ClusteringConfiguration::None, benchmark_config);
   auto generated_tables = table_generator.generate();
   ASSERT_TRUE(generated_tables.contains("lineitem"));
   const auto& lineitem_table = generated_tables["lineitem"].table;

@@ -5,7 +5,6 @@
 #include <numeric>
 #include <random>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -22,6 +21,7 @@
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/small_prefix_string_view.hpp"
 #include "utils/string_heap.hpp"
 
 namespace {
@@ -37,7 +37,7 @@ constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10'000'000};
 // where hashing is somewhat expensive.
 
 template <typename T>
-using ValueDistributionType = std::conditional_t<std::is_same_v<T, pmr_string>, std::string_view, T>;
+using ValueDistributionType = std::conditional_t<std::is_same_v<T, pmr_string>, SmallPrefixStringView, T>;
  
 template <typename T>
 using ValueDistributionMap = boost::unordered_flat_map<ValueDistributionType<T>, size_t>;
@@ -52,14 +52,14 @@ void process_dictionary_segment(const DictionarySegmentType& segment, const Dict
 
   for (auto dictionary_offset = size_t{0}; dictionary_offset < dictionary_size; ++dictionary_offset) {
     if constexpr (std::is_same_v<T, pmr_string>) {
-      auto initial_string = std::string_view{};
+      auto initial_string = SmallPrefixStringView{};
       if constexpr (std::is_same_v<std::decay_t<DictionaryType>, FixedStringVector>) {
-        initial_string = dictionary.template get_string_at<std::string_view>(dictionary_offset);
+        initial_string = dictionary.template get_string_at<SmallPrefixStringView>(dictionary_offset);
       } else {
-        initial_string = dictionary[dictionary_offset];
+        initial_string = SmallPrefixStringView{dictionary[dictionary_offset]};
       }
 
-      const auto adapted_string = domain.string_to_domain(initial_string);
+      const auto adapted_string = domain.string_to_domain(std::string_view{initial_string.data()});  // TODO
       if (initial_string == adapted_string) {
         // std::cerr << "Unchanged '" << initial_string << "' and '" << adapted_string << "'\n";
         value_distribution_vector[dictionary_offset] = {initial_string, 0};
@@ -94,13 +94,8 @@ void process_any_unspecialized(AbstractSegment& segment, ValueDistributionVector
     }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
-      const auto current_string = string_heap.add_string(iterator_value.value());
-      // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-      if (domain.contains(current_string)) {
-        ++value_distribution_map[current_string];
-      } else {
-        ++value_distribution_map[string_heap.add_string(domain.string_to_domain(current_string))];
-      }
+      const auto current_string = string_heap.add_string(domain.string_to_domain(iterator_value.value()));
+      ++value_distribution_map[current_string];
     } else {
       ++value_distribution_map[iterator_value.value()];
     }
@@ -171,6 +166,8 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
   auto left_iter = left.begin();
   auto right_iter = right.begin();
 
+  std::cerr << "Merge at level " << level << "\n";
+
   while (left_iter != left.end() || right_iter != right.end()) {
     if (left_iter == left.end()) {
       result.emplace_back(*right_iter);
@@ -182,18 +179,44 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
       continue;
     }
 
+    // if constexpr (std::is_same_v<T, pmr_string>) {
+    //   std::cerr << std::boolalpha << "Comparing '" << left_iter->first.data() << "' and '" << right_iter->first.data() << "' \t\t ==? " << (left_iter->first == right_iter->first) << " <? " << (left_iter->first < right_iter->first) << std::endl;
+    // }
+
     if (left_iter->first == right_iter->first) {
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        std::cerr << "Merging " << left_iter->first.data() << " and " << right_iter->first.data() << std::endl;
+      }
       result.emplace_back(left_iter->first, left_iter->second + right_iter->second);
       ++left_iter;
       ++right_iter;
     } else if (left_iter->first < right_iter->first) {
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        std::cerr << "Placing " << left_iter->first.data() << std::endl;
+      }
       result.emplace_back(*left_iter);
       ++left_iter;
     } else {
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        std::cerr << "Placing " << right_iter->first.data() << std::endl;
+      }
       result.emplace_back(*right_iter);
       ++right_iter;
     }
   }
+
+  // if (!std::is_sorted(result.begin(), result.end())) {
+    if constexpr (std::is_same_v<T, pmr_string>) {
+      for (const auto& el : result) {
+        std::cerr << el.first.data() << ":" << el.second << " - ";
+      }
+    } else {
+      for (const auto& el : result) {
+        std::cerr << el.first << ":" << el.second << " - ";
+      }
+    }
+    std::cerr << std::endl;
+  // }
 
   DebugAssert(std::is_sorted(result.begin(), result.end()), "Not sorted.");
   return result;
@@ -238,10 +261,22 @@ std::pair<std::vector<std::unique_ptr<StringHeap>>,
   if (chunk_count > 0) {
     const auto parallel_levels_cpus = static_cast<size_t>(std::ceil(std::log2(Hyrise::get().topology.num_cpus()))) + 1;
     result = add_segment_to_value_distribution2<T>(parallel_levels_cpus, 0, string_heaps, segments_to_process.begin(), segments_to_process.end(), domain);
+
+    // if constexpr (std::is_same_v<T, pmr_string>) {
+    //   for (const auto& el : result) {
+    //     std::cerr << el.first.data() << ":" << el.second << " - ";
+    //   }
+    // } else {
+    //   for (const auto& el : result) {
+    //     std::cerr << el.first << ":" << el.second << " - ";
+    //   }
+    // }
+    // std::cerr << std::endl;
   }
 
   return {std::move(string_heaps), std::move(result)};
 }
+
 }  // namespace
 
 namespace hyrise {
@@ -302,8 +337,15 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
       max_value_idx++;
     }
 
-    bin_minima[bin_idx] = T{value_distribution[min_value_idx].first};
-    bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first};
+    if constexpr (std::is_same_v<T, pmr_string>) {
+      bin_minima[bin_idx] = T{value_distribution[min_value_idx].first.data()};
+      bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first.data()};  
+    } else {
+      bin_minima[bin_idx] = T{value_distribution[min_value_idx].first};
+      bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first};
+    }
+
+    
 
     bin_heights[bin_idx] =
         std::accumulate(value_distribution.cbegin() + min_value_idx, value_distribution.cbegin() + max_value_idx + 1,

@@ -650,6 +650,8 @@ set(
     utils/performance_warning.hpp
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
+    utils/small_prefix_string_view.cpp
+    utils/small_prefix_string_view.hpp
     utils/print_utils.cpp
     utils/print_utils.hpp
     utils/pruning_utils.cpp
