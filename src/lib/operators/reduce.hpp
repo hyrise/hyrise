@@ -43,7 +43,9 @@ class Reduce : public AbstractReadOnlyOperator {
   const OperatorJoinPredicate _predicate;
   const bool _update_filter = true;
 
-  const uint32_t FILTER_SIZE = 262144;
+  // const uint32_t FILTER_SIZE = 262144;
+  std::string _filter_size_string;
+  std::string _hash_count;
 };
 
 }  // namespace hyrise

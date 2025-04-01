@@ -74,6 +74,16 @@ Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
       _update_filter(update_filter) {}
 
 void Reduce::_create_filter(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
+  uint32_t FILTER_SIZE;
+  const char* env = std::getenv("SIZE");
+  if (env) {
+    _filter_size_string = std::string{env};
+    FILTER_SIZE = static_cast<uint32_t>(pow(2u, std::stoi(_filter_size_string)));
+  } else {
+    Fail("Missing filter size.");
+  }
+
+
   Assert(FILTER_SIZE % 64 == 0, "Filter size must be a multiple of 64.");
   _filter = std::make_shared<std::vector<std::atomic_uint64_t>>(FILTER_SIZE / 64);
 
@@ -88,9 +98,25 @@ void Reduce::_create_filter(const std::shared_ptr<const Table>& table, const Col
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
         if (!position.is_null()) {
-          _set_bit(hasher.hash0(position.value()));
-          _set_bit(hasher.hash1(position.value()));
-          _set_bit(hasher.hash2(position.value()));
+
+          const char* env = std::getenv("HASH");
+          if (env) {
+            _hash_count = std::string{env};
+            if (_hash_count == "1") {
+              _set_bit(hasher.hash0(position.value()));
+            } else if (_hash_count == "2") {
+              _set_bit(hasher.hash0(position.value()));
+              _set_bit(hasher.hash1(position.value()));
+            } else if (_hash_count == "3") {
+              _set_bit(hasher.hash0(position.value()));
+              _set_bit(hasher.hash1(position.value()));
+              _set_bit(hasher.hash2(position.value()));
+            } else {
+              Fail("Invalid hash count.");
+            }
+          } else {
+            Fail("Missing hash count.");
+          }
         }
       });
     }
@@ -121,11 +147,22 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
         if (!position.is_null()) {
-          const auto hash0 = hasher.hash0(position.value());
-          const auto hash1 = hasher.hash1(position.value());
-          const auto hash2 = hasher.hash2(position.value());
+          bool true0 = true;
+          bool true1 = true;
+          bool true2 = true;
 
-          if (_get_bit(hash0) && _get_bit(hash1) && _get_bit(hash2)) {
+            if (_hash_count == "1") {
+              true0 = _get_bit(hasher.hash0(position.value()));
+            } else if (_hash_count == "2") {
+              true0 = _get_bit(hasher.hash0(position.value()));
+              true1 = _get_bit(hasher.hash1(position.value()));
+            } else if (_hash_count == "3") {
+              true0 = _get_bit(hasher.hash0(position.value()));
+              true1 = _get_bit(hasher.hash1(position.value()));
+              true2 = _get_bit(hasher.hash2(position.value()));
+            }
+
+          if (true0 && true1 && true2) {
             matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
           }
         }
@@ -229,9 +266,10 @@ std::shared_ptr<Table> Reduce::_create_reduced_table() {
   output_file.open("reduction_stats.csv", std::ios_base::app);
 
   if (!file_exists) {
-        output_file << "reduction_type,benchmark,query,input_count,output_count\n";
+        output_file << "filter_size,hash_count,benchmark,query,input_count,output_count\n";
   }
-  output_file << "prototype" << ","
+  output_file << _filter_size_string << ","
+              << _hash_count << ","
               << Hyrise::get().benchmark_name << ","
               << Hyrise::get().query_name << ","
               << input_table->row_count() << ","
