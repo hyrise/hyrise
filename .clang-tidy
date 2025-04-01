@@ -47,33 +47,33 @@ WarningsAsErrors: '*'
 # Explanation of disabled checks:
 #   - *-default-arguments*                                      We do use default arguments (and like them).
 #   - google-build-using-namespace                              We use `using namespace` a lot (see anonymous namespaces and expression_functional).
-#   - clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls.
-#   - cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast
-#   - modernize-pass-by-value                                   We don't trust people to properly use std::move
+#   - clang-analyzer-security.insecureAPI.rand                  We do not care about cryptographically unsafe rand() calls.
+#   - cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast.
+#   - modernize-pass-by-value                                   We do not trust people to properly use std::move.
 #   - cppcoreguidelines-pro-bounds-constant-array-index         "Do not use array subscript when the index is not an integer constant expression"?!
-#   - cppcoreguidelines-pro-type-static-cast-downcast           We use static downcasts when we can safely obtain the type (e.g., static casts of LQPNodes via node->type)
-#   - cppcoreguidelines-pro-bounds-array-to-pointer-decay       Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
+#   - cppcoreguidelines-pro-type-static-cast-downcast           We use static downcasts when we can safely obtain the type (e.g., static casts of LQPNodes via node->type).
+#   - cppcoreguidelines-pro-bounds-array-to-pointer-decay       Weird stuff - it does not like `description_mode == DescriptionMode::MultiLine`.
 #   - hicpp-no-array-decay                                       (same)
-#   - cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
-#   - modernize-avoid-bind                                      meh, bind isn't thaaaat bad
-#   - cert-env33-c                                              Yes, we do call system()
-#   - misc-macro-parentheses                                    Causes weird problems with BOOST_PP_TUPLE_ELEM
-#   - fuchsia-overloaded-operator                               We are not supposed to overload operator()?!
-#   - cppcoreguidelines-pro-bounds-pointer-arithmetic           Doesn't like DebugAssert
-#   - google-runtime-references                                 Doesn't like mutable references
-#   - cert-err58-cpp                                            We reeeeeally don't care about uncaught exceptions
-#   - llvm-include-order                                        Handled by cpplint.py which is way faster
-#   - clang-analyzer-cplusplus.NewDelete*                       False positives with shared_ptr::operator=
-#   - cert-msc32-c, -cert-msc51-cpp                             Ok, so our generated tables are not cryptographically safe
-#   - fuchsia-statically-constructed-objects                    We have too many static objects
-#   - bugprone-exception-escape                                 We throw exceptions in many places (even destructors) and are completely fine with std::terminate
+#   - cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std.
+#   - modernize-avoid-bind                                      Bind is not that bad.
+#   - cert-env33-c                                              Yes, we do call system().
+#   - misc-macro-parentheses                                    Causes weird problems with BOOST_PP_TUPLE_ELEM.
+#   - fuchsia-overloaded-operator                               We overload operator().
+#   - cppcoreguidelines-pro-bounds-pointer-arithmetic           Does not like DebugAssert.
+#   - google-runtime-references                                 Does not like mutable references.
+#   - cert-err58-cpp                                            We really do not care about uncaught exceptions.
+#   - llvm-include-order                                        Handled by clang-format and cpplint.py.
+#   - clang-analyzer-cplusplus.NewDelete*                       False positives with shared_ptr::operator=.
+#   - cert-msc32-c, -cert-msc51-cpp                             Our generated tables are not cryptographically safe.
+#   - fuchsia-statically-constructed-objects                    We have too many static objects.
+#   - bugprone-exception-escape                                 We throw exceptions in many places (even destructors) and are completely fine with std::terminate.
 #   - *-uppercase-literal-suffix                                We do not really care if it is 1.0f or 1.0F.
 #   - cert-dcl16-c                                               (same)
-#   - *-magic-numbers                                           Too many false positives
-#   - *-non-private-member-variables-in-classes                 We like making things public
-#   - modernize-use-trailing-return-type                        https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-trailing-return-type.html - no that is way too weird
-#   - clang-diagnostic-unknown-warning-option                   Don't complain about gcc warning options
-#   - modernize-use-nodiscard                                   Don't want to tag everything [[nodiscard]]
+#   - *-magic-numbers                                           Too many false positives.
+#   - *-non-private-member-variables-in-classes                 We like making things public.
+#   - modernize-use-trailing-return-type                        https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-trailing-return-type.html - no that is way too weird.
+#   - clang-diagnostic-unknown-warning-option                   Do not complain about gcc warning options.
+#   - modernize-use-nodiscard                                   Do not want to tag everything [[nodiscard]].
 #   - llvmlibc-*                                                LLVM-internal development guidelines.
 #   - altera-*                                                  Checks related to OpenCL programming for FPGAs.
 #   - abseil-*                                                  Checks related to Google's abseil library (not used in Hyrise).
@@ -83,9 +83,9 @@ WarningsAsErrors: '*'
 #   - readability-use-anyofallof                                We prefer `for (auto item : items)` over `std::ranges::all_of()` with a lambda.
 #   - misc-no-recursion                                         Ignore general recommendation to avoid recursion, which we commonly use when working with query plans.
 #   - bugprone-easily-swappable-parameters                      Ignore issues with swappable parameters as we found them to be of no help.
-#   - bugprone-suspicious-include                               Unity builds use `#include`s for cpp files. However, unity builds significantly improve the runtime of clang-tidy,
-#                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for 
-#                                                                these includes as well.
+#   - bugprone-suspicious-include                               Unity builds use `#include`s for cpp files. However, unity builds significantly improve compile times, which is
+#                                                                otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for these
+#                                                                includes as well.
 
 
 CheckOptions:
