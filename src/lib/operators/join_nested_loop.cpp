@@ -29,8 +29,8 @@ namespace {
 
 using namespace hyrise;  // NOLINT
 
-void __attribute__((noinline)) process_match(RowID left_row_id, RowID right_row_id,
-                                             const JoinNestedLoop::JoinParams& params) {
+void __attribute__((noinline))
+process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
   // Write out a pair of matching row_ids - except for Semi/Anti joins, who build their output from params.left_matches
   // after all pairs were compared
   if (params.write_pos_lists) {
@@ -51,11 +51,10 @@ void __attribute__((noinline)) process_match(RowID left_row_id, RowID right_row_
 // __attribute__((noinline)) to reduce compile time. As the hotloop is within this function, no performance
 // loss expected
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-void __attribute__((noinline)) join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it,
-                                                       LeftIterator left_end, RightIterator right_begin,
-                                                       RightIterator right_end, const ChunkID chunk_id_left,
-                                                       const ChunkID chunk_id_right,
-                                                       const JoinNestedLoop::JoinParams& params) {
+void __attribute__((noinline))
+join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+                        RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
+                        const ChunkID chunk_id_right, const JoinNestedLoop::JoinParams& params) {
   for (; left_it != left_end; ++left_it) {
     const auto left_value = *left_it;
 

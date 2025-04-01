@@ -128,8 +128,9 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
 }
 
 template <EraseTypes erase_comparator_type, typename LeftIterable, typename RightIterable>
-std::shared_ptr<RowIDPosList> __attribute__((noinline)) ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterables(
-    ChunkID chunk_id, const LeftIterable& left_iterable, const RightIterable& right_iterable) const {
+std::shared_ptr<RowIDPosList> __attribute__((noinline))
+ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterables(ChunkID chunk_id, const LeftIterable& left_iterable,
+                                                              const RightIterable& right_iterable) const {
   auto matches_out = std::shared_ptr<RowIDPosList>{};
 
   left_iterable.with_iterators([&](auto left_it, const auto left_end) {
@@ -143,9 +144,10 @@ std::shared_ptr<RowIDPosList> __attribute__((noinline)) ColumnVsColumnTableScanI
 }
 
 template <EraseTypes erase_comparator_type, typename LeftIterator, typename RightIterator>
-std::shared_ptr<RowIDPosList> __attribute__((noinline)) ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(
-    ChunkID chunk_id, LeftIterator& left_it, const LeftIterator& left_end, RightIterator& right_it,
-    const RightIterator& right_end) const {
+std::shared_ptr<RowIDPosList> __attribute__((noinline))
+ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, LeftIterator& left_it,
+                                                              const LeftIterator& left_end, RightIterator& right_it,
+                                                              const RightIterator& right_end) const {
   auto matches_out = std::make_shared<RowIDPosList>();
 
   auto condition_was_flipped = false;
