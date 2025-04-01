@@ -238,10 +238,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
-  const char* env = std::getenv("NOSEMI");
-  if (!env || std::string{env} != "true") {
+  // const char* env = std::getenv("NOSEMI");
+  // if (!env || std::string{env} != "true") {
     optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
-  }
+  // }
 
   // Run the PredicatePlacementRule a third time to place semi-joins created by the SemiJoinReductionRule.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
