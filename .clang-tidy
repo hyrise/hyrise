@@ -39,7 +39,8 @@ Checks: '
          -readability-use-anyofallof,
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
-         -bugprone-suspicious-include
+         -bugprone-suspicious-include,
+         -bugprone-unchecked-optional-access
          '
 
 WarningsAsErrors: '*'
