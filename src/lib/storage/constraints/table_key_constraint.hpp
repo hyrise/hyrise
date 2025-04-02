@@ -4,6 +4,7 @@
 #include <unordered_set>
 
 #include "abstract_table_constraint.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -20,12 +21,25 @@ class TableKeyConstraint final : public AbstractTableConstraint {
    * the vector (and equal constraints have equal columns). Thus, we can safely hash and compare key constraints without
    * voilating the set semantics of the constraint.
    */
-  TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type);
+  TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type,
+                     const CommitID last_validated_on = MAX_COMMIT_ID);
+  TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
+                     const CommitID last_validated_on = MAX_COMMIT_ID);
   TableKeyConstraint() = delete;
+
+  const std::set<ColumnID>& columns() const;
 
   KeyConstraintType key_type() const;
 
-  const std::set<ColumnID>& columns() const;
+  CommitID last_validated_on() const;
+
+  /**
+   * Whether this key constraint can become invalid if the table data changes. This is false for constraints specified
+   * by the table schema, but true for the "incidental" uniqueness of columns in any table state as adding duplicates
+   * would make them no longer unique.
+   */
+  bool can_become_invalid() const;
+  void revalidated_on(const CommitID revalidation_commit_id) const;
 
   size_t hash() const override;
 
@@ -39,13 +53,19 @@ class TableKeyConstraint final : public AbstractTableConstraint {
  protected:
   bool _on_equals(const AbstractTableConstraint& table_constraint) const override;
 
-  KeyConstraintType _key_type;
-
   /**
    * A std::set orders the columns ascending out of the box, which is desirable when printing them or comparing key
    * constraints.
    */
   std::set<ColumnID> _columns;
+
+  KeyConstraintType _key_type;
+
+  /**
+   * Commit ID of the snapshot this constraint was last validated on. Note that the constraint will still be valid
+   * during transactions with larger commit IDs if the table this constraint belongs to has not been modified since.
+   */
+  mutable CommitID _last_validated_on;
 };
 
 using TableKeyConstraints = std::unordered_set<TableKeyConstraint>;
