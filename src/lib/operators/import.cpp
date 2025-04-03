@@ -1,5 +1,6 @@
 #include "import.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <optional>
@@ -16,6 +17,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -51,9 +53,37 @@ std::shared_ptr<const Table> Import::_on_execute() {
   auto table = std::shared_ptr<Table>{};
 
   switch (_file_type) {
-    case FileType::Csv:
-      table = CsvParser::parse(filename, _chunk_size, _csv_meta);
+    case FileType::Csv: {
+      if (static_cast<int>(static_cast<bool>(_csv_meta)) +
+              static_cast<int>(Hyrise::get().storage_manager.has_table(_tablename)) +
+              static_cast<int>(std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) >=
+          2) {
+        Fail(
+            "Cannot load table from csv. Table definition source is ambiguous. At least two of the following sources "
+            "gave CsvMeta information: Import; existing table in DBMS; Meta file next to .csv file");
+      }
+
+      CsvMeta csv_meta;
+      if (_csv_meta) {
+        csv_meta = *_csv_meta;
+      } else if (Hyrise::get().storage_manager.has_table(_tablename)) {
+        TableColumnDefinitions column_definitions =
+            Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
+        csv_meta.columns.resize(column_definitions.size());
+        for (TableColumnDefinitions::size_type i = 0; i < column_definitions.size(); i++) {
+          csv_meta.columns[i].name = column_definitions[i].name;
+          csv_meta.columns[i].type = data_type_to_string.left.at(column_definitions[i].data_type);
+          csv_meta.columns[i].nullable = column_definitions[i].nullable;
+        }
+      } else if (std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
+        csv_meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
+      } else {
+        Fail("Cannot load table from csv. No table definition source found.");
+      }
+
+      table = CsvParser::parse(filename, csv_meta, _chunk_size);
       break;
+    }
     case FileType::Tbl:
       table = load_table(filename, _chunk_size);
       break;
