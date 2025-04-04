@@ -1,8 +1,7 @@
 #include "hyrise.hpp"
 
 #include <memory>
-
-#include <boost/container/pmr/global_resource.hpp>
+#include <memory_resource>
 
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/abstract_scheduler.hpp"
@@ -22,7 +21,7 @@ Hyrise::Hyrise() {
   // stored tables to be deconstructed, too. As these might call deallocate on the default_memory_resource, it is
   // important that the resource has not been destructed before. As objects are destructed in the reverse order of their
   // construction, explicitly initializing the resource first means that it is destructed last.
-  boost::container::pmr::get_default_resource();
+  std::pmr::get_default_resource();
 
   storage_manager = StorageManager{};
   plugin_manager = PluginManager{};
