@@ -31,7 +31,7 @@
 /*
   This file includes the functions that cover the main steps of our hash join implementation
   (e.g., build() and probe()). These free functions are put into this header file to separate
-  them from the process flow of the join hash and to make the better testable.
+  them from the process flow of the join hash and to make them better testable.
 */
 namespace hyrise {
 
