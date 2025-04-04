@@ -236,6 +236,7 @@ Contact: firstname.lastname@hpi.de
 -   Hendrik   Tjabben
 -   Justin    Trautmann
 -   Carsten   Walther
+-   Robert    Weeke 
 -   Leo       Wendt
 -   Lukas     Wenzel
 -   Fabian    Wiebe

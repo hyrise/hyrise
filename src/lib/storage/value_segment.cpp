@@ -101,13 +101,12 @@ pmr_vector<T>& ValueSegment<T>::values() {
 
 template <typename T>
 bool ValueSegment<T>::is_nullable() const {
-  return static_cast<bool>(_null_values);
+  return _null_values.has_value();
 }
 
 template <typename T>
 const pmr_vector<bool>& ValueSegment<T>::null_values() const {
   DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
-
   return *_null_values;
 }
 
