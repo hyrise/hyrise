@@ -120,14 +120,8 @@ try {
             // can finish in peace.
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity} .. && make -j \$(nproc) libjemalloc-build"
 
-<<<<<<< HEAD
-            // Configure the rest in parallel. We use unity builds to decrease build times, except for:
-            // - clang tidy as it might otherwise miss issues with unity builds (e.g., missing
-            // includes).
-=======
             // Configure the rest in parallel. We use unity builds to decrease build times. The only exception is the
             // clang-tidy build as it might otherwise miss some issues (e.g., missing includes).
->>>>>>> master
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
@@ -137,11 +131,7 @@ try {
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}           ${ninja} .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           ${ninja} .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} ${no_lto} ${ninja} .. &\
-<<<<<<< HEAD
-            mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}           ${ninja} .. &\
-=======
             mkdir clang-16-debug && cd clang-16-debug &&                                                 ${cmake} ${debug}          ${clang16} ${unity}           ${ninja} .. &\
->>>>>>> master
             mkdir gcc-13-debug && cd gcc-13-debug &&                                                     ${cmake} ${debug}          ${gcc13}   ${unity}           ${ninja} .. &\
             wait"
           }
@@ -164,11 +154,7 @@ try {
             }
           }, gcc13Debug: {
             stage("gcc-13-debug") {
-<<<<<<< HEAD
-              sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 5))"
-=======
               sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 4))"
->>>>>>> master
               sh "cd gcc-13-debug && ./hyriseTest"
             }
           }, lint: {
