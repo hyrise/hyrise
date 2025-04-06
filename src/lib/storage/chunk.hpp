@@ -115,7 +115,7 @@ class Chunk : private Noncopyable {
 
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
-  void migrate(MemoryResource& memory_source);
+  void migrate(MemoryResource* memory_source);
 
   bool references_exactly_one_table() const;
 

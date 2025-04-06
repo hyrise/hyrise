@@ -124,7 +124,7 @@ class CompressedVector : public BaseCompressedVector {
     return _self().on_create_base_decompressor();
   }
 
-  std::unique_ptr<const BaseCompressedVector> copy_using_memory_resource(MemoryResource& memory_resource) const final {
+  std::unique_ptr<const BaseCompressedVector> copy_using_memory_resource(MemoryResource* memory_resource) const final {
     return _self().on_copy_using_memory_resource(memory_resource);
   }
 

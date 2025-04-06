@@ -35,7 +35,7 @@ class BitPackingVector : public CompressedVector<BitPackingVector> {
   BitPackingIterator on_begin() const;
   BitPackingIterator on_end() const;
 
-  std::unique_ptr<const BaseCompressedVector> on_copy_using_memory_resource(MemoryResource& memory_resource) const;
+  std::unique_ptr<const BaseCompressedVector> on_copy_using_memory_resource(MemoryResource* memory_resource) const;
 
  private:
   const pmr_compact_vector _data;

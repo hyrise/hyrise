@@ -72,7 +72,7 @@ class RunLengthSegment : public AbstractEncodedSegment {
 
   ChunkOffset size() const final;
 
-  std::shared_ptr<AbstractSegment> copy_using_memory_resource(MemoryResource& memory_resource) const final;
+  std::shared_ptr<AbstractSegment> copy_using_memory_resource(MemoryResource* memory_resource) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 

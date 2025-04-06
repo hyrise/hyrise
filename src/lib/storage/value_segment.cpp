@@ -135,7 +135,7 @@ void ValueSegment<T>::resize(const size_t size) {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> ValueSegment<T>::copy_using_memory_resource(MemoryResource& memory_resource) const {
+std::shared_ptr<AbstractSegment> ValueSegment<T>::copy_using_memory_resource(MemoryResource* memory_resource) const {
   auto new_values = pmr_vector<T>{_values, &memory_resource};  // NOLINT(cppcoreguidelines-slicing)
   auto copy = std::shared_ptr<AbstractSegment>{};
   if (is_nullable()) {
