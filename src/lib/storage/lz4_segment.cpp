@@ -437,15 +437,15 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
 
 template <typename T>
 std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_memory_resource(MemoryResource* memory_resource) const {
-  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{&memory_resource};
+  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{memory_resource};
   for (const auto& block : _lz4_blocks) {
-    auto block_copy = pmr_vector<char>{block, &memory_resource};
+    auto block_copy = pmr_vector<char>{block, memory_resource};
     new_lz4_blocks.emplace_back(std::move(block_copy));
   }
 
   auto new_null_values =
-      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, &memory_resource}} : std::nullopt;
-  auto new_dictionary = pmr_vector<char>{_dictionary, &memory_resource};
+      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, memory_resource}} : std::nullopt;
+  auto new_dictionary = pmr_vector<char>{_dictionary, memory_resource};
 
   auto copy = std::shared_ptr<LZ4Segment<T>>{};
 
