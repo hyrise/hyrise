@@ -190,7 +190,7 @@ void Chunk::migrate(MemoryResource* memory_source) {
     Fail("Cannot migrate chunk with indexes.");
   }
 
-  Segments new_segments(memory_source);
+  auto new_segments = Segments(memory_source);
   for (const auto& segment : _segments) {
     new_segments.push_back(segment->copy_using_memory_resource(memory_source));
   }
