@@ -44,7 +44,7 @@ STRONG_TYPEDEF(uint32_t, ChunkOffset);
 // std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
 // since 2010 should work fine. For 64-bit atomics on ARM CPUs, the instruction set should be at least ARMv8.1-A.
 // Earlier instruction sets also work, but might yield less efficient code. More information can be found here:
-// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT
+// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT(whitespace/line_length)
 STRONG_TYPEDEF(uint32_t, CommitID);
 STRONG_TYPEDEF(uint32_t, TransactionID);
 
@@ -54,13 +54,14 @@ STRONG_TYPEDEF(uint16_t, ParameterID);
 
 namespace hyrise {
 
-// Float aliases used in cardinality estimations/statistics
+// Floating-point aliases used in cardinality estimations/statistics. Single-precision types (a.k.a, float) should be
+// used carefully because they soon reach a point where additions do not increment the value anymore (see #2676).
 using Cardinality = double;
 using DistinctCount = double;
 using Selectivity = double;
 
 // Cost that an AbstractCostModel assigns to an Operator/LQP node. The unit of the Cost is left to the Cost estimator
-// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common)
+// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common).
 using Cost = double;
 
 // We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from

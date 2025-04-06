@@ -324,7 +324,7 @@ TEST_F(CardinalityEstimatorTest, JoinBinsInnerEqui) {
   EXPECT_DOUBLE_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0, 3.0, 2.0, 7.0).first, 4.0 / 7.0);
   EXPECT_DOUBLE_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0, 3.0, 1.0, 7.0).second, 3.0);
 
-  // Test Heights/Distinct counts < 1
+  // Test Heights/DistinctCounts < 1
   EXPECT_DOUBLE_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0, 0.1, 2.0, 1.0).first, 4.0);
   EXPECT_DOUBLE_EQ(CardinalityEstimator::estimate_inner_equi_join_of_bins(2.0, 0.1, 2.0, 1.0).second, 0.1);
 

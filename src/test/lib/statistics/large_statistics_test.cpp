@@ -1,8 +1,8 @@
+#include <array>
 #include <cmath>
 #include <limits>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include "base_test.hpp"
@@ -30,11 +30,11 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class LargeStatisticsTest : public BaseTest {
  public:
   // The resolution of float is larger than 1 for values greater than 16777216.0f, i.e., incrementing by 1 does not
-  // increase the value anymore. This behavior can cause problemms in statistics generation or cardinality/cost
+  // increase the value anymore. This behavior can cause problems in statistics generation or cardinality/cost
   // estimation.
   // To test these scenarios, we create a table with a single column that has 30 million rows, but only three unique
   // values in the ratio 27:2:1.
-  static constexpr auto VALUE_RATIO = std::make_tuple(27, 2, 1);
+  static constexpr auto VALUE_RATIO = std::array<uint32_t, 3>{27, 2, 1};
   static constexpr auto VALUES_PER_SHARE = 1'000'000;
   static inline std::shared_ptr<Table> table;
 
@@ -42,7 +42,7 @@ class LargeStatisticsTest : public BaseTest {
     // Make sure that we actually hit a point for the most frequent value where the precision of float is larger than 1.
     // To do so, we calculate the difference of that value's frequency and the next smaller float that can be
     // represented.
-    const auto most_frequent_row_count = std::get<0>(VALUE_RATIO) * VALUES_PER_SHARE;
+    const auto most_frequent_row_count = VALUE_RATIO[0] * VALUES_PER_SHARE;
     ASSERT_GT(float{most_frequent_row_count} - std::nextafter(float{most_frequent_row_count}, 0.0f), 1.0f);
 
     // Build a simple table of ValueSegments with the desired characteristics.
@@ -60,14 +60,14 @@ class LargeStatisticsTest : public BaseTest {
 
     auto values_2 = pmr_vector<int32_t>(chunk_size, 2);
     const auto value_segment_2 = std::make_shared<ValueSegment<int32_t>>(std::move(values_2));
-    const auto second_most_frequent_chunk_count = (std::get<1>(VALUE_RATIO) * VALUES_PER_SHARE) / chunk_size;
+    const auto second_most_frequent_chunk_count = (VALUE_RATIO[1] * VALUES_PER_SHARE) / chunk_size;
     for (auto chunk_id = ChunkID{0}; chunk_id < second_most_frequent_chunk_count; ++chunk_id) {
       table->append_chunk({value_segment_2}, mvcc_data);
     }
 
     auto values_3 = pmr_vector<int32_t>(chunk_size, 3);
     const auto value_segment_3 = std::make_shared<ValueSegment<int32_t>>(std::move(values_3));
-    const auto remaining_chunk_count = (std::get<2>(VALUE_RATIO) * VALUES_PER_SHARE) / chunk_size;
+    const auto remaining_chunk_count = (VALUE_RATIO[2] * VALUES_PER_SHARE) / chunk_size;
     for (auto chunk_id = ChunkID{0}; chunk_id < remaining_chunk_count; ++chunk_id) {
       table->append_chunk({value_segment_3}, mvcc_data);
     }
@@ -127,6 +127,8 @@ TEST_F(LargeStatisticsTest, CostAndCardinalityEstimation) {
   EXPECT_EQ(cardinality_estimator->estimate_cardinality(lqp->right_input()->left_input()), 1);
   EXPECT_EQ(cardinality_estimator->estimate_cardinality(lqp), 30'000'001);
 
+  // The cost of the entire plan sums all individual costs. Thus, the overall cost should be higher than the cost of a
+  // single node.
   EXPECT_GT(cost_estimator.estimate_plan_cost(lqp), cost_estimator.estimate_plan_cost(a));
 }
 
