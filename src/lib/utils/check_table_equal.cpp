@@ -41,17 +41,18 @@ constexpr int HEADER_SIZE = 3;
 using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
 Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
-  // initialize matrix with table sizes, including column names/types
-  Matrix header(HEADER_SIZE, std::vector<AllTypeVariant>(table->column_count()));
+  const auto column_count = table->column_count();
+  // Initialize matrix with table sizes, including column names/types.
+  auto header = Matrix(HEADER_SIZE, std::vector<AllTypeVariant>(column_count));
 
-  // set column names/types
-  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+  // Set column names/types.
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     header[0][column_id] = pmr_string{table->column_name(column_id)};
     header[1][column_id] = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
     header[2][column_id] = pmr_string{table->column_is_nullable(column_id) ? "NULL" : "NOT NULL"};
   }
 
-  // set values
+  // Set values.
   auto matrix = table->get_rows();
   matrix.insert(matrix.begin(), header.begin(), header.end());
 
