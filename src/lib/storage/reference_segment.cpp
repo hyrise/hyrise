@@ -63,7 +63,7 @@ ChunkOffset ReferenceSegment::size() const {
 }
 
 std::shared_ptr<AbstractSegment> ReferenceSegment::copy_using_memory_resource(
-    MemoryResource* /*unused*/) const {
+    MemoryResource* /*memory_resource*/) const {
   // ReferenceSegments are considered as intermediate data structures and are
   // therefore not subject to NUMA-aware chunk migrations.
   Fail("Cannot migrate a ReferenceSegment.");
