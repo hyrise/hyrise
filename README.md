@@ -47,7 +47,7 @@ When referencing this version of Hyrise, please use the following bibtex entry:
 </details>
 
 ## Supported Systems
-Hyrise is developed for Linux (preferrably the most current Ubuntu version) and optimized to run on server hardware. We support Mac to facilitate the local development of Hyrise, but do not recommend it for benchmarking.
+Hyrise is developed for Linux (preferrably the most recent Ubuntu LTS version) and optimized to run on server hardware. We support Mac to facilitate the local development of Hyrise, but do not recommend it for benchmarking.
 
 ## Supported Benchmarks
 We support a number of benchmarks out of the box. This makes it easy to generate performance numbers without having to set up the data generation, loading CSVs, and finding a query runner. You can run them using the `./hyriseBenchmark*` binaries.
@@ -73,8 +73,8 @@ You can find definitions of most of the terms and abbreviations used in the code
 The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guide) is a good starting point to get to know Hyrise.
 
 ## Native Setup
-You can install the dependencies on your own or use the `install_dependencies.sh` script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS Monterey (12.4) and Ubuntu 22.04.
+You can install the dependencies on your own or use the `install_dependencies.sh` script which installs all of the therein listed dependencies and submodules.
+The install script was tested under macOS Sequoia (15.3) and Ubuntu 24.04.
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use recent versions of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
@@ -123,7 +123,7 @@ Starting with cmake 3.16, you can use `-DCMAKE_UNITY_BUILD=On` to perform unity 
 For development, you may want to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. On the downside, we have seen random build failures on our CI server, which is why we do not recommend ccache anymore but merely list it as an option. To use ccache, add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call. You will need to [adjust some ccache settings](https://ccache.dev/manual/latest.html#_precompiled_headers) either in your environment variables or in your [ccache config](https://ccache.dev/manual/latest.html#_configuration) so that ccache can handle the precompiled headers. On our CI server, this worked for us: `CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=1`.
 
 ### Build
-Simply call `make -j*`, where `*` denotes the number of threads to use.
+Simply call `make -j*`, where `*` denotes the number of threads to use. We frequently compiling, we recommend using the Ninja generator (`ninja-build` with Ubuntu's apt, to use it append `-G Ninja` to the cmake call).
 
 Usually debug binaries are created.
 To configure a build directory for a release build make sure it is empty and call CMake like `cmake -DCMAKE_BUILD_TYPE=Release`
