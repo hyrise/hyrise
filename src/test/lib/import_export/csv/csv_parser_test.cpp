@@ -6,7 +6,7 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 
-using namespace std::literals::string_literals;
+using std::literals::string_literals::operator""s;
 
 namespace hyrise {
 
