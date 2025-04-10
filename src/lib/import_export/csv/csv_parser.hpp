@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -32,8 +31,8 @@ class CsvParser {
    * @param csv_meta      Custom csv meta information which will be used instead of the default "filename" + ".json" meta.
    * @returns             The table that was created from the csv file.
    */
-  static std::shared_ptr<Table> parse(const std::string& filename, const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
-                                      const std::optional<CsvMeta>& csv_meta = std::nullopt);
+  static std::shared_ptr<Table> parse(const std::string& filename, const CsvMeta& csv_meta,
+                                      const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
   static std::shared_ptr<Table> create_table_from_meta_file(const std::string& filename,
                                                             const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 

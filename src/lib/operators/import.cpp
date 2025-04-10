@@ -1,5 +1,6 @@
 #include "import.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <optional>
@@ -16,6 +17,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -51,17 +53,49 @@ std::shared_ptr<const Table> Import::_on_execute() {
   auto table = std::shared_ptr<Table>{};
 
   switch (_file_type) {
-    case FileType::Csv:
-      table = CsvParser::parse(filename, _chunk_size, _csv_meta);
+    case FileType::Csv: {
+      if (static_cast<int>(static_cast<bool>(_csv_meta)) +
+              static_cast<int>(Hyrise::get().storage_manager.has_table(_tablename)) +
+              static_cast<int>(std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) >=
+          2) {
+        Fail(
+            "Cannot load table from csv. Table definition source is ambiguous. At least two of the following sources "
+            "gave CsvMeta information: Import; existing table in DBMS; Meta file next to .csv file");
+      }
+
+      auto csv_meta = CsvMeta{};
+      if (_csv_meta) {
+        csv_meta = *_csv_meta;
+      } else if (Hyrise::get().storage_manager.has_table(_tablename)) {
+        const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
+        const auto column_count = column_definitions.size();
+
+        csv_meta.columns.resize(column_count);
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          csv_meta.columns[column_id].name = column_definitions[column_id].name;
+          csv_meta.columns[column_id].type = data_type_to_string.left.at(column_definitions[column_id].data_type);
+          csv_meta.columns[column_id].nullable = column_definitions[column_id].nullable;
+        }
+      } else if (std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
+        csv_meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
+      } else {
+        Fail("Cannot load table from csv. No table definition source found.");
+      }
+
+      table = CsvParser::parse(filename, csv_meta, _chunk_size);
       break;
-    case FileType::Tbl:
+    }
+    case FileType::Tbl: {
       table = load_table(filename, _chunk_size);
       break;
-    case FileType::Binary:
+    }
+    case FileType::Binary: {
       table = BinaryParser::parse(filename);
       break;
-    case FileType::Auto:
+    }
+    case FileType::Auto: {
       Fail("File type should have been determined previously.");
+    }
   }
 
   if (Hyrise::get().storage_manager.has_table(_tablename)) {
