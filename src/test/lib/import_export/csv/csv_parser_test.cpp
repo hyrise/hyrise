@@ -302,7 +302,8 @@ TEST_F(CsvParserTest, UnconvertedCharactersThrows) {
 }
 
 TEST_F(CsvParserTest, EmptyTableFromMetaFile) {
-  const auto csv_meta_table = hyrise::CsvParser::create_table_from_meta_file("resources/test_data/csv/float_int.csv.json");
+  const auto csv_meta_table =
+      hyrise::CsvParser::create_table_from_meta_file("resources/test_data/csv/float_int.csv.json");
   const auto expected_table = std::make_shared<Table>(
       TableColumnDefinitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}}, TableType::Data);
 
