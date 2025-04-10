@@ -63,17 +63,17 @@ std::shared_ptr<const Table> Import::_on_execute() {
             "gave CsvMeta information: Import; existing table in DBMS; Meta file next to .csv file");
       }
 
-      CsvMeta csv_meta;
+      auto csv_meta = CsvMeta{};
       if (_csv_meta) {
         csv_meta = *_csv_meta;
       } else if (Hyrise::get().storage_manager.has_table(_tablename)) {
-        TableColumnDefinitions column_definitions =
-            Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
+        const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
         csv_meta.columns.resize(column_definitions.size());
-        for (TableColumnDefinitions::size_type i = 0; i < column_definitions.size(); i++) {
-          csv_meta.columns[i].name = column_definitions[i].name;
-          csv_meta.columns[i].type = data_type_to_string.left.at(column_definitions[i].data_type);
-          csv_meta.columns[i].nullable = column_definitions[i].nullable;
+        const auto column_count = column_definitions.size();
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          csv_meta.columns[column_id].name = column_definitions[column_id].name;
+          csv_meta.columns[column_id].type = data_type_to_string.left.at(column_definitions[column_id].data_type);
+          csv_meta.columns[column_id].nullable = column_definitions[column_id].nullable;
         }
       } else if (std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
         csv_meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
@@ -84,14 +84,17 @@ std::shared_ptr<const Table> Import::_on_execute() {
       table = CsvParser::parse(filename, csv_meta, _chunk_size);
       break;
     }
-    case FileType::Tbl:
+    case FileType::Tbl: {
       table = load_table(filename, _chunk_size);
       break;
-    case FileType::Binary:
+    }
+    case FileType::Binary: {
       table = BinaryParser::parse(filename);
       break;
-    case FileType::Auto:
+    }
+    case FileType::Auto: {
       Fail("File type should have been determined previously.");
+    }
   }
 
   if (Hyrise::get().storage_manager.has_table(_tablename)) {
