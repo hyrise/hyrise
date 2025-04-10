@@ -441,15 +441,15 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
 
   // No row should have been touched
   EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MAX_COMMIT_ID);
 
   EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{1}), TransactionID{17});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MAX_COMMIT_ID);
 
   auto second_chunk_mvcc_data = _table_a->get_chunk(ChunkID{1})->mvcc_data();
 
   EXPECT_EQ(second_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
-  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MAX_COMMIT_ID);
 }
 
 TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
@@ -476,13 +476,13 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
 
   // This row was being modified by a different transaction, so it should not have been touched
   EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{1}), TransactionID{17});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MAX_COMMIT_ID);
 
   // We had to abort before we got to the third statement
   auto second_chunk_mvcc_data = _table_a->get_chunk(ChunkID{1})->mvcc_data();
 
   EXPECT_EQ(second_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
-  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MAX_COMMIT_ID);
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {

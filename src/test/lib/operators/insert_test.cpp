@@ -346,7 +346,7 @@ TEST_F(OperatorsInsertTest, SetMaxBeginCID) {
 
   const auto& chunk = target_table->get_chunk(ChunkID{0});
   ASSERT_TRUE(chunk->mvcc_data());
-  EXPECT_EQ(chunk->mvcc_data()->max_begin_cid.load(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(chunk->mvcc_data()->max_begin_cid.load(), MAX_COMMIT_ID);
 
   context->commit();
 
