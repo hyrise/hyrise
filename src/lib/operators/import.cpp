@@ -68,8 +68,9 @@ std::shared_ptr<const Table> Import::_on_execute() {
         csv_meta = *_csv_meta;
       } else if (Hyrise::get().storage_manager.has_table(_tablename)) {
         const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
-        csv_meta.columns.resize(column_definitions.size());
         const auto column_count = column_definitions.size();
+
+        csv_meta.columns.resize(column_count);
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           csv_meta.columns[column_id].name = column_definitions[column_id].name;
           csv_meta.columns[column_id].type = data_type_to_string.left.at(column_definitions[column_id].data_type);
