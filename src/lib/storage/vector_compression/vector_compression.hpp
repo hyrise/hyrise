@@ -17,7 +17,10 @@ namespace hyrise {
  * Also known as null suppression and
  * zero suppression in the literature.
  */
-enum class VectorCompressionType : uint8_t { FixedWidthInteger, BitPacking };
+enum class VectorCompressionType : uint8_t {
+  FixedWidthInteger,
+  BitPacking
+};
 
 const auto vector_compression_type_to_string = make_bimap<VectorCompressionType, std::string>({
     {VectorCompressionType::FixedWidthInteger, "Fixed-width integer"},

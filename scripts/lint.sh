@@ -7,9 +7,8 @@ exitcode=0
 #  - runtime/references: We prefer references to pointers in most cases.
 #  - build/(c++11|c++17): cpplint complains about headers that are "unapproved" by Google devs (see https://github.com/google/styleguide/issues/194).
 #  - readability/nolint: cpplint complains about excluded clang-tidy categories, which we widely use.
-#  - whitespace/braces: Does not work with {} initialization (see https://github.com/cpplint/cpplint/issues/204#issuecomment-1146769949).
 #  - build/include_subdir: Does not work well with our structure of using lib, test, and third_party directories.
-find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-runtime/references,-build/c++11,-build/c++17,-readability/nolint,-whitespace/braces,-build/include_subdir --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
+find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --tty --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-runtime/references,-build/c++11,-build/c++17,-readability/nolint,-build/include_subdir --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
 let "exitcode |= $?"
 #                             /------------------ runs in parallel -------------------\
 # Conceptual: find | parallel python cpplint \| grep -v \| test \${PIPESTATUS[0]} -eq 0
@@ -20,6 +19,21 @@ let "exitcode |= $?"
 #             |      |        Regular call of cpplint with options
 #             |      Runs the following in parallel
 #             Finds all .cpp and .hpp files, separated by \0
+
+
+# In addition to cpplint, we also run clang-format.
+# The output if clang-format is usually not very helpful, but in most cases running ./scripts/format.sh will solve it.
+unamestr=$(uname)
+if [[ "$unamestr" == 'Darwin' ]]; then
+    clang_format="$(brew --prefix llvm)/bin/clang-format"
+    format_cmd="$clang_format -style=file"
+elif [[ "$unamestr" == 'Linux' ]]; then
+  format_cmd="clang-format -style=file"
+fi
+
+# --tty enables colored output when running commands via parallel.
+find src \( -iname "*.cpp" -o -iname "*.hpp" \) | parallel --tty -j $(nproc) $format_cmd --dry-run --Werror {}
+let "exitcode |= $?"
 
 # All disabled tests should have an issue number
 output=$(grep -rHn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/')

@@ -9,7 +9,13 @@
 
 namespace hyrise {
 
-enum class ArithmeticOperator { Addition, Subtraction, Multiplication, Division, Modulo };
+enum class ArithmeticOperator {
+  Addition,
+  Subtraction,
+  Multiplication,
+  Division,
+  Modulo
+};
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator);
 

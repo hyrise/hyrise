@@ -12,7 +12,10 @@
 
 namespace hyrise {
 
-enum class IndexSide { Left, Right };
+enum class IndexSide {
+  Left,
+  Right
+};
 
 struct JoinConfiguration {
   JoinMode join_mode;

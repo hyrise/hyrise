@@ -8,7 +8,10 @@
 
 namespace hyrise {
 
-enum class PQPVisitation { VisitInputs, DoNotVisitInputs };
+enum class PQPVisitation {
+  VisitInputs,
+  DoNotVisitInputs
+};
 
 /**
  * Calls the passed @param visitor on @param pqp and recursively on its INPUTS. The visitor returns `PQPVisitation`,
