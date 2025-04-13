@@ -3,23 +3,27 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <set>
 #include <utility>
 
 #include <boost/container_hash/hash.hpp>
 
 #include "storage/constraints/abstract_table_constraint.hpp"
+#include "storage/constraints/table_order_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
 TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
-                                       const CommitID last_validated_on)
+                                       const CommitID last_validated_on,
+                                       const std::optional<CommitID> last_invalidated_on)
     : AbstractTableConstraint(TableConstraintType::Key),
       _columns{std::move(columns)},
       _key_type{key_type},
-      _last_validated_on(last_validated_on) {
+      _last_validated_on{last_validated_on},
+      _last_invalidated_on{last_invalidated_on} {
   Assert(!_columns.empty(), "Did not expect useless constraint.");
 }
 
@@ -39,10 +43,21 @@ CommitID TableKeyConstraint::last_validated_on() const {
   return _last_validated_on;
 }
 
+const std::optional<CommitID>& TableKeyConstraint::last_invalidated_on() const {
+  return _last_invalidated_on;
+}
+
 void TableKeyConstraint::revalidated_on(const CommitID revalidation_commit_id) const {
-  DebugAssert(revalidation_commit_id >= _last_validated_on,
-              "Key constraint was already validated for larger commit id.");
+  Assert(revalidation_commit_id >= _last_validated_on, "Key constraint was already validated for larger commit id.");
   _last_validated_on = revalidation_commit_id;
+}
+
+void TableKeyConstraint::invalidated_on(const CommitID invalidation_commit_id) const {
+  Assert(can_become_invalid(), "Cannot invalidate UCC that cannot become invalid.");
+
+  Assert(!_last_invalidated_on || invalidation_commit_id >= *_last_invalidated_on,
+         "Key constraint was already validated for larger commit id.");
+  _last_invalidated_on = invalidation_commit_id;
 }
 
 size_t TableKeyConstraint::hash() const {

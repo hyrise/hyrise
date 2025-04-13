@@ -133,7 +133,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 
   // We create unique column combinations from selected table key constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& table_key_constraints = table->soft_key_constraints();
+  const auto table_key_constraints = table->valid_soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
@@ -143,7 +143,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 
     // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
     // otherwise these optimizations could produce invalid query results.
-    if (!constraint_guaranteed_to_be_valid(table, table_key_constraint)) {
+    if (!is_constraint_confidently_valid(table, table_key_constraint)) {
       continue;
     }
 
@@ -164,7 +164,7 @@ OrderDependencies StoredTableNode::order_dependencies() const {
 
   // We create order dependencies from table order constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& table_order_constraints = table->soft_order_constraints();
+  const auto table_order_constraints = table->soft_order_constraints();
 
   for (const auto& table_order_constraint : table_order_constraints) {
     // Discard order constraints that involve pruned column id(s). [a] |-> [b, c] could be transformed to [a] |-> [b] if

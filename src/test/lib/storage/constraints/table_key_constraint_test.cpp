@@ -181,8 +181,8 @@ TEST_F(TableKeyConstraintTest, CanBecomeInvalid) {
   const auto key_constraint_invalid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}};
   const auto key_constraint_valid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
 
-  EXPECT_EQ(key_constraint_invalid.can_become_invalid(), true);
-  EXPECT_EQ(key_constraint_valid.can_become_invalid(), false);
+  EXPECT_TRUE(key_constraint_invalid.can_become_invalid());
+  EXPECT_FALSE(key_constraint_valid.can_become_invalid());
 }
 
 }  // namespace hyrise
