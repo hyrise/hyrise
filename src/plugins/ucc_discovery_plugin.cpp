@@ -133,6 +133,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     auto message = std::stringstream{};
     message << "Checking candidate " << candidate.table_name << "." << table->column_name(column_id);
 
+    auto table_constraints_modify_lock = table->acquire_constraints_modify_mutex();
     const auto& soft_key_constraints = table->soft_key_constraints();
 
     // Find UCC matching the candidate, if it already exists on the table.
@@ -145,8 +146,8 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
     // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. If it is, we can skip the
     // expensive revalidation of the UCC.
-    if (existing_ucc != soft_key_constraints.cend() && constraint_guaranteed_to_be_valid(table, *existing_ucc)) {
-      message << " [skipped (already known and guaranteed to be still valid) in " << candidate_timer.lap_formatted()
+    if (existing_ucc != soft_key_constraints.cend() && is_constraint_confidently_valid(table, *existing_ucc)) {
+      message << " [skipped (already known and guaranteed to be still VALID) in " << candidate_timer.lap_formatted()
               << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
 
@@ -154,6 +155,18 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
       const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
       if (existing_ucc->last_validated_on() < snapshot_commit_id) {
         existing_ucc->revalidated_on(snapshot_commit_id);
+      }
+
+      continue;
+    }
+
+    if (existing_ucc != soft_key_constraints.cend() && is_constraint_confidently_invalid(table, *existing_ucc)) {
+      message << " [skipped (already known and guaranteed to be INVALID) in " << candidate_timer.lap_formatted() << "]";
+      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+
+      const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
+      if (*existing_ucc->last_invalidated_on() < snapshot_commit_id) {
+        existing_ucc->invalidated_on(snapshot_commit_id);
       }
 
       continue;
@@ -187,12 +200,16 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
         } else {
           // UCC does not exist yet, so we save it directly inside the table so that it can be forwarded to nodes
           // in a query plan.
-          table->add_soft_constraint(
+          table->add_soft_constraint_unsafe(
               TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE, transaction_context->snapshot_commit_id()));
         }
       } else {
         if (existing_ucc != soft_key_constraints.end()) {
-          table->delete_key_constraint(*existing_ucc);
+          existing_ucc->invalidated_on(transaction_context->snapshot_commit_id());
+        } else {
+          // The UCC is invalid and currently not added to the tables key constraints. We add the UCC (as invalidated).
+          table->add_soft_constraint_unsafe(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE, CommitID{0},
+                                                               transaction_context->snapshot_commit_id()));
         }
       }
     });
@@ -258,11 +275,6 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
       continue;
     }
     const auto source_segment = source_chunk->get_segment(column_id);
-    if (!source_segment) {
-      // If this segment does not exist, we do not need to check it with the validate operator later either.
-      unmodified_chunks.push_back(chunk_id);
-      continue;
-    }
 
     if (source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable()) {
       // The set of distinct values across all segments should grow by the number of rows in the segment because,
@@ -270,21 +282,20 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
       // In this case, the UCC is violated.
       const auto expected_distinct_value_count = distinct_values_across_segments.size() + source_segment->size();
 
-      // If we enter this branch, we know that this segment has not been modified since its creation,
-      // so there is no need to use the validate operator indirection to access its values.
-      // We can do so directly on the segment instead.
-      if (const auto& value_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment)) {
-        // Directly insert all values.
-        const auto& values = value_segment->values();
-        distinct_values_across_segments.insert(values.cbegin(), values.cend());
-      } else if (const auto& dictionary_segment =
-                     std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
+      // If we enter this branch, we know that this segment has not been modified since its creation. Therefore we can
+      // directly add all of its values to the set of distinct values.
+      if (const auto& dictionary_segment =
+              std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(source_segment)) {
         // Directly insert dictionary entries.
         const auto& dictionary = dictionary_segment->dictionary();
         distinct_values_across_segments.insert(dictionary->cbegin(), dictionary->cend());
       } else {
-        // We will check this segment later when we do the transaction-safe access to potentially modified chunks.
-        continue;
+        segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto end) {
+          while (it != end) {
+            distinct_values_across_segments.insert(it->value());
+            ++it;
+          }
+        });
       }
 
       if (distinct_values_across_segments.size() != expected_distinct_value_count) {
@@ -296,8 +307,8 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
     }
   }
 
-  // Using the validate operator, get a view of the current content of the table, filtering out overwritten and deleted
-  // values.
+  // Using the validate operator, we get a view of the current content of the table, filtering out overwritten and
+  // deleted values.
   const auto get_table = std::make_shared<GetTable>(table_name, unmodified_chunks, std::vector<ColumnID>());
   get_table->execute();
   const auto validate_table = std::make_shared<Validate>(get_table);
@@ -309,7 +320,6 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
   // as we have excluded the others when executing the GetTable operator.
   const auto validated_chunk_count = table_view->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < validated_chunk_count; ++chunk_id) {
-    // No need to check for `nullptr` here as we already did so above.
     const auto source_chunk = table_view->get_chunk(chunk_id);
     const auto source_segment = source_chunk->get_segment(column_id);
 

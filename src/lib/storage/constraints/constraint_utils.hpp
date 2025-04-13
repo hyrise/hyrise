@@ -44,7 +44,10 @@ void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std
 * if the table chunks have seen any inserts/deletions since the last validation of the UCC. This information is
 * contained in the MVCC data of the chunks.
 */
-bool constraint_guaranteed_to_be_valid(const std::shared_ptr<Table>& table,
+bool is_constraint_confidently_valid(const std::shared_ptr<Table>& table,
+                                     const TableKeyConstraint& table_key_constraint);
+
+bool is_constraint_confidently_invalid(const std::shared_ptr<Table>& table,
                                        const TableKeyConstraint& table_key_constraint);
 
 }  // namespace hyrise

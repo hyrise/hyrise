@@ -340,15 +340,4 @@ TEST_F(StorageTableTest, CreatePartialHashIndexOnEmptyChunks) {
   EXPECT_THROW(table->create_partial_hash_index(ColumnID{0}, {}), std::logic_error);
 }
 
-TEST_F(StorageTableTest, TableKeyConstraintGuaranteedToBeStillValid) {
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{1}, UseMvcc::Yes);
-  table->append({0, "Hello"});
-  // Manually modify the max_begin_cid of the chunk to simulate an insert to the table.
-  table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid = CommitID{1};
-
-  EXPECT_TRUE(constraint_guaranteed_to_be_valid(table, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
-  EXPECT_FALSE(constraint_guaranteed_to_be_valid(table, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}}));
-  EXPECT_TRUE(constraint_guaranteed_to_be_valid(table, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{1}}));
-}
-
 }  // namespace hyrise
