@@ -27,6 +27,6 @@ class DefaultResource : public MemoryResource, public Singleton<DefaultResource>
   }
 };
 
-}  // hyrise
+}  // namespace hyrise
 
 // NOLINTEND(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
