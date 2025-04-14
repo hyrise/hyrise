@@ -10,7 +10,6 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "storage/constraints/abstract_table_constraint.hpp"
-#include "storage/constraints/table_order_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
