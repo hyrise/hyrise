@@ -36,7 +36,6 @@
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
-#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
