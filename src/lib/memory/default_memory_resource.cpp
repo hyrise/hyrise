@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdlib>
 
+#include "types.hpp"
+
 namespace hyrise {
 
 // We discourage manual memory management in Hyrise (such as malloc, or new), but in case of allocator/memory resource
