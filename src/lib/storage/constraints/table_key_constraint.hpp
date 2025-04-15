@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <set>
 #include <unordered_set>
 
@@ -19,12 +20,11 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   /**
    * By requesting a std::set for the constructor, we ensure that the ColumnIDs have a well-defined order when creating
    * the vector (and equal constraints have equal columns). Thus, we can safely hash and compare key constraints without
-   * voilating the set semantics of the constraint.
+   * violating the set semantics of the constraint.
    */
-  TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type,
-                     const CommitID last_validated_on = MAX_COMMIT_ID);
   TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
-                     const CommitID last_validated_on = MAX_COMMIT_ID);
+                     const CommitID last_validated_on = MAX_COMMIT_ID,
+                     const std::optional<CommitID> last_invalidated = {});
   TableKeyConstraint() = delete;
 
   const std::set<ColumnID>& columns() const;
@@ -32,14 +32,16 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType key_type() const;
 
   CommitID last_validated_on() const;
+  const std::optional<CommitID>& last_invalidated_on() const;
 
   /**
-   * Whether this key constraint can become invalid if the table data changes. This is false for constraints specified
-   * by the table schema, but true for the "incidental" uniqueness of columns in any table state as adding duplicates
+   * Returns whether or not this key constraint can become invalid if the table data changes. This is false for constraints specified
+   * by the table schema, but true for the "spurious" uniqueness of columns in any table state as adding duplicates
    * would make them no longer unique.
    */
   bool can_become_invalid() const;
   void revalidated_on(const CommitID revalidation_commit_id) const;
+  void invalidated_on(const CommitID invalidation_commit_id) const;
 
   size_t hash() const override;
 
@@ -66,6 +68,8 @@ class TableKeyConstraint final : public AbstractTableConstraint {
    * during transactions with larger commit IDs if the table this constraint belongs to has not been modified since.
    */
   mutable CommitID _last_validated_on;
+  // The first element indicates if the constraint was invalid before, the second when it was.
+  mutable std::optional<CommitID> _last_invalidated_on;
 };
 
 using TableKeyConstraints = std::unordered_set<TableKeyConstraint>;

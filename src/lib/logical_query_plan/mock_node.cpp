@@ -133,7 +133,9 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids)) {
+    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids) ||
+        (table_key_constraint.last_invalidated_on() &&
+         *table_key_constraint.last_invalidated_on() >= table_key_constraint.last_validated_on())) {
       continue;
     }
 
@@ -143,7 +145,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(std::move(column_expressions));
+    unique_column_combinations.emplace(std::move(column_expressions), !table_key_constraint.can_become_invalid());
   }
 
   return unique_column_combinations;
@@ -187,7 +189,12 @@ const TableKeyConstraints& MockNode::key_constraints() const {
 }
 
 void MockNode::set_non_trivial_functional_dependencies(const FunctionalDependencies& fds) {
-  _functional_dependencies = fds;
+  // _functional_dependencies = fds;
+  _functional_dependencies.clear();
+
+  for (const auto& fd : fds) {
+    _functional_dependencies.emplace(fd);
+  }
 }
 
 FunctionalDependencies MockNode::non_trivial_functional_dependencies() const {
