@@ -475,7 +475,7 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
 }
 
 TableKeyConstraints Table::valid_soft_key_constraints() const {
-  std::shared_lock<std::shared_mutex> key_constraints_read_lock{_constraint_mutex};
+  const std::shared_lock<std::shared_mutex> key_constraints_read_lock{_constraint_mutex};
   auto valid_soft_key_constraints_filter =
       _table_key_constraints | std::views::filter([](const auto& constraint) {
         return (!constraint.last_invalidated_on() ||
