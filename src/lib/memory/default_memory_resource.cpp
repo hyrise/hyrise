@@ -19,7 +19,7 @@ void DefaultResource::do_deallocate(void* pointer, std::size_t /*bytes*/, std::s
   std::free(pointer);
 }
 
-[[nodiscard]] bool DefaultResource::do_is_equal(const memory_resource& other) const noexcept {
+[[nodiscard]] bool DefaultResource::do_is_equal(const MemoryResource& other) const noexcept {
   return &other == this;
 }
 // NOLINTEND(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
