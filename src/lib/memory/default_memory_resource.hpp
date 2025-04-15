@@ -5,10 +5,6 @@
 
 namespace hyrise {
 
-// We discourage manual memory management in Hyrise (such as malloc, or new), but in case of allocator/memory resource
-// implementations, it is fine.
-// NOLINTBEGIN(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
-
 class DefaultResource : public MemoryResource, public Singleton<DefaultResource> {
  public:
   void* do_allocate(std::size_t bytes, std::size_t /*alignment*/) override;
@@ -17,5 +13,3 @@ class DefaultResource : public MemoryResource, public Singleton<DefaultResource>
 };
 
 }  // namespace hyrise
-
-// NOLINTEND(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
