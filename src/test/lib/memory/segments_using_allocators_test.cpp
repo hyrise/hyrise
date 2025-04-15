@@ -9,7 +9,7 @@
 namespace hyrise {
 
 // A simple polymorphic memory resource that tracks how much memory was allocated.
-class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
+class SimpleTrackingMemoryResource : public MemoryResource {
  public:
   size_t allocated{0};
 
@@ -88,8 +88,7 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   }
 
   auto resource = SimpleTrackingMemoryResource{};
-  const auto allocator = PolymorphicAllocator<size_t>(&resource);
-  const auto copied_segment = encoded_segment->copy_using_allocator(allocator);
+  const auto copied_segment = encoded_segment->copy_using_memory_resource(resource);
 
   // The segment control structure (i.e., the object itself) and its members are not stored using PMR. Thus, we
   // retrieve the size of an empty segment for later subtraction.
@@ -131,8 +130,7 @@ TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
   });
 
   auto resource = SimpleTrackingMemoryResource{};
-  const auto allocator = PolymorphicAllocator<size_t>(&resource);
-  const auto copied_segment = encoded_segment->copy_using_allocator(allocator);
+  const auto copied_segment = encoded_segment->copy_using_memory_resource(resource);
 
   const auto& copied_counters = copied_segment->access_counter;
   EXPECT_EQ(copied_counters[SegmentAccessCounter::AccessType::Sequential], 300);
