@@ -19,6 +19,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -132,11 +133,17 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 
   // We create unique column combinations from selected table key constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& table_key_constraints = table->soft_key_constraints();
+  const auto table_key_constraints = table->valid_soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     if (contains_any_column_id(table_key_constraint.columns(), _pruned_column_ids)) {
+      continue;
+    }
+
+    // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
+    // otherwise these optimizations could produce invalid query results.
+    if (!is_constraint_confidently_valid(table, table_key_constraint)) {
       continue;
     }
 

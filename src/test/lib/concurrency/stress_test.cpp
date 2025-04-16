@@ -3,11 +3,15 @@
 #include <cmath>
 #include <future>
 #include <numeric>
+#include <optional>
 #include <thread>
 
+#include "../utils/plugin_test_utils.hpp"
+// #include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "operators/insert.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
@@ -15,11 +19,15 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
+// #include "types.hpp"
+#include "ucc_discovery_plugin.hpp"
 #include "utils/atomic_max.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace hyrise {
 
@@ -693,6 +701,83 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
       thread.join();
     }
   }
+}
+
+/**
+ * Check that adding, deleting and modifying a the TableKeyConstraints of a table concurrently does not lead to 
+ * deadlocks or inconsistencies (e.g. duplicate constraints)
+ */
+TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
+  // Create a table with multiple TableKeyConstraints
+  auto table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}},
+      TableType::Data, std::nullopt, UseMvcc::Yes);
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+
+  table->append({1, 1, 1});
+  table->append({2, 2, 2});
+  table->append({3, 3, 1});
+
+  Hyrise::get().storage_manager.add_table("dummy_table", table);
+
+  // Run multiple modifications, deletions and additions concurrently that require locks:
+  // - `Table::delete_key_constraint`
+  // - `UccDiscoveryPlugin::_validate_ucc_candidates`
+  // - `StaticTableNode::unique_column_combinations`
+  // NOTE: We do not execute `Table::add_soft_constraint` because we do not have the knowledge whether or not the
+  // constraint already exists.
+
+  const auto delete_constraint = [&] {
+    table->delete_key_constraint(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  };
+
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  auto& pm = Hyrise::get().plugin_manager;
+
+  pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+  const auto validate_constraint = [&] {
+    // Populate the plan cache.
+    const std::string sql = "SELECT b,c FROM dummy_table GROUP BY b,c;";
+    auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+    pipeline.get_result_table();
+
+    pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+  };
+
+  const auto static_table_node_constraint_access = [&] {
+    const auto static_table_node = StaticTableNode::make(table);
+    // Simply access the unique column combinations to require a `shared_lock`.
+    static_table_node->unique_column_combinations();
+  };
+
+  // Start running the different modifications in parallel
+  const auto thread_count = 100;
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
+
+  for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
+    switch (thread_id % 2) {
+      case 0:
+        threads.emplace_back(delete_constraint);
+        break;
+      case 1:
+        threads.emplace_back(validate_constraint);
+        break;
+      case 2:
+        threads.emplace_back(static_table_node_constraint_access);
+        break;
+      default:
+        break;
+    }
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  // Check that the set of TableKeyConstraints does not contain any duplicates.
+  ASSERT_LE(table->soft_key_constraints().size(), 3);
 }
 
 }  // namespace hyrise
