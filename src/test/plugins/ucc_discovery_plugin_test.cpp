@@ -675,7 +675,9 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginCompleteScenarioWithInvalidati
   // Check that validity of constraint is not guaranteed anymore.
   EXPECT_FALSE(is_constraint_confidently_valid(_table_A, *_table_A->soft_key_constraints().find(constraint_A_c)));
 
-  // Repopulate the cache.
+  // Flush and repopulate the cache.
+  Hyrise::get().default_pqp_cache->clear();
+  Hyrise::get().default_lqp_cache->clear();
   exec_groupby_statement();
 
   // Check that key constraint is properly invalidated.
