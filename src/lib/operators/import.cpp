@@ -71,9 +71,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   Hyrise::get().storage_manager.add_table(_tablename, table);
 
-  // If a table encoding is specified, encode the table accordingly. The default encoding is
-  // `EncodingType::Dictionary`, except for binary files. For binary files, the default is the encoding of the file.
-  if (_target_encoding || _file_type != FileType::Binary) {
+  // For binary files, the default is the encoding of the file.
+  if (_file_type != FileType::Binary) {
     auto chunk_encoding_spec = ChunkEncodingSpec{};
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
