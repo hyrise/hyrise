@@ -32,9 +32,7 @@ namespace hyrise {
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMeta& csv_meta,
                                         const ChunkOffset chunk_size) {
-  auto escaped_linebreak = std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
-
-  auto table = _create_table_from_meta(chunk_size, csv_meta);
+  const auto table = _create_table_from_meta(chunk_size, csv_meta);
 
   auto csvfile = std::ifstream{filename};
 
@@ -82,6 +80,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
 
     // Remove processed part of the csv content
     content_view = content_view.substr(field_ends.back() + 1);
+
+    const auto escaped_linebreak =
+        std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
 
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>(
