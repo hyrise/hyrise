@@ -16,6 +16,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -76,16 +77,13 @@ std::shared_ptr<const Table> Import::_on_execute() {
     auto chunk_encoding_spec = ChunkEncodingSpec{};
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      // If a target encoding is specified, use it. Otherwise, use the default encoding: Dictionary.
-      const auto resolved_encoding = _target_encoding.value_or(EncodingType::Dictionary);
-
-      const auto column_data_type = table->column_data_type(column_id);
-      if (encoding_supports_data_type(resolved_encoding, column_data_type)) {
-        // The column type can be encoded with the target encoding.
-        chunk_encoding_spec.emplace_back(resolved_encoding);
+      // If a target encoding is specified and supported, use it. Otherwise, select the encoding automatically
+      const auto& column_data_type = table->column_data_type(column_id);
+      if (_target_encoding && encoding_supports_data_type(*_target_encoding, column_data_type)) {
+        chunk_encoding_spec.emplace_back(*_target_encoding);
       } else {
-        // The column type cannot be encoded with the target encoding. Use Dictionary instead.
-        chunk_encoding_spec.emplace_back(EncodingType::Dictionary);
+        const auto column_is_unique = table->column_is_unique(column_id);
+        chunk_encoding_spec.emplace_back(auto_select_segment_encoding_spec(column_data_type, column_is_unique));
       }
     }
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
