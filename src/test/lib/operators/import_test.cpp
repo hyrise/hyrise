@@ -1,3 +1,4 @@
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -6,6 +7,7 @@
 
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_parser.hpp"
 #include "import_export/file_type.hpp"
 #include "operators/import.hpp"
 #include "resolve_type.hpp"
@@ -18,6 +20,7 @@
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -199,6 +202,31 @@ TEST_F(OperatorsImportTest, ReplaceExistingTable) {
 
   auto expected_table = load_table("resources/test_data/tbl/int.tbl");
   auto importer = std::make_shared<Import>("resources/test_data/tbl/int.tbl", "a");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+}
+
+TEST_F(OperatorsImportTest, RetrieveCsvMetaFromEmptyTable) {
+  auto existing_table = CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json");
+
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float_without_json_meta.csv", "a");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+}
+
+TEST_F(OperatorsImportTest, RetrieveCsvMetaFromTable) {
+  auto existing_table = CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json");
+  existing_table->append({10.1f});
+
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float_without_json_meta.csv", "a");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);

@@ -1,5 +1,6 @@
 #include "import.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <optional>
@@ -23,15 +24,13 @@
 namespace hyrise {
 
 Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
-               const FileType file_type, const std::optional<EncodingType> target_encoding,
-               const std::optional<CsvMeta>& csv_meta)
+               const FileType file_type, const std::optional<EncodingType> target_encoding)
     : AbstractReadOnlyOperator(OperatorType::Import),
       filename(init_filename),
       _tablename(tablename),
       _chunk_size(chunk_size),
       _file_type(file_type),
-      _target_encoding(target_encoding),
-      _csv_meta(csv_meta) {
+      _target_encoding(target_encoding) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
   }
@@ -51,24 +50,50 @@ std::shared_ptr<const Table> Import::_on_execute() {
   auto table = std::shared_ptr<Table>{};
 
   switch (_file_type) {
-    case FileType::Csv:
-      table = CsvParser::parse(filename, _chunk_size, _csv_meta);
+    case FileType::Csv: {
+      if (Hyrise::get().storage_manager.has_table(_tablename) &&
+          std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
+        Fail(
+            "Cannot load table from csv, table definition source is ambiguous. The table already exists in DBMS and "
+            "there is a meta file next to .csv file");
+      }
+
+      auto csv_meta = CsvMeta{};
+      if (Hyrise::get().storage_manager.has_table(_tablename)) {
+        const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
+        const auto column_count = column_definitions.size();
+
+        csv_meta.columns.resize(column_count);
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          csv_meta.columns[column_id].name = column_definitions[column_id].name;
+          csv_meta.columns[column_id].type = data_type_to_string.left.at(column_definitions[column_id].data_type);
+          csv_meta.columns[column_id].nullable = column_definitions[column_id].nullable;
+        }
+      } else if (std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
+        csv_meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
+      } else {
+        Fail("Cannot load table from csv. No table definition source found.");
+      }
+
+      table = CsvParser::parse(filename, csv_meta, _chunk_size);
       break;
-    case FileType::Tbl:
+    }
+    case FileType::Tbl: {
       table = load_table(filename, _chunk_size);
       break;
-    case FileType::Binary:
+    }
+    case FileType::Binary: {
       table = BinaryParser::parse(filename);
       break;
-    case FileType::Auto:
+    }
+    case FileType::Auto: {
       Fail("File type should have been determined previously.");
+    }
   }
 
   if (Hyrise::get().storage_manager.has_table(_tablename)) {
     Hyrise::get().storage_manager.drop_table(_tablename);
   }
-
-  Hyrise::get().storage_manager.add_table(_tablename, table);
 
   // If a table encoding is specified, encode the table accordingly. The default encoding is
   // `EncodingType::Dictionary`, except for binary files. For binary files, the default is the encoding of the file.
@@ -91,6 +116,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
+  Hyrise::get().storage_manager.add_table(_tablename, table);
+
   // We must match ImportNode::output_expressions.
   return nullptr;
 }
@@ -99,7 +126,7 @@ std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _target_encoding, _csv_meta);
+  return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _target_encoding);
 }
 
 void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
