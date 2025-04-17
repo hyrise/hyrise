@@ -6,7 +6,6 @@
 
 #include "nlohmann/json_fwd.hpp"
 
-#include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace hyrise {
@@ -20,14 +19,13 @@ using TableSegmentEncodingMapping =
 // View EncodingConfig::description to see format of encoding JSON
 class EncodingConfig {
  public:
-  EncodingConfig();
-  EncodingConfig(const SegmentEncodingSpec& default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
-                 TableSegmentEncodingMapping encoding_mapping);
-  explicit EncodingConfig(const SegmentEncodingSpec& default_encoding_spec);
+  explicit EncodingConfig(const std::optional<SegmentEncodingSpec> default_encoding_spec = std::nullopt,
+                          DataTypeEncodingMapping type_encoding_mapping = {},
+                          TableSegmentEncodingMapping encoding_mapping = {});
 
   static EncodingConfig unencoded();
 
-  SegmentEncodingSpec default_encoding_spec;
+  std::optional<SegmentEncodingSpec> default_encoding_spec;
   DataTypeEncodingMapping type_encoding_mapping;
   TableSegmentEncodingMapping custom_encoding_mapping;
 

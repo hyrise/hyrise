@@ -1,9 +1,7 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
-#include <iostream>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -69,6 +67,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
    */
   const auto& type_mapping = encoding_config.type_encoding_mapping;
   const auto& custom_mapping = encoding_config.custom_encoding_mapping;
+  const auto& default_encoding_spec = encoding_config.default_encoding_spec;
 
   const auto& column_mapping_it = custom_mapping.find(table_name);
   const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
@@ -98,19 +97,13 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     }
 
     // No column-specific or type-specific encoding was specified.
-    // Use default if it is compatible with the column type or leave column Unencoded if it is not.
-    if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
-      chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
-    } else {
-      // Use a stringstream here to bundle all writes into a single one and avoid locking.
-      auto output = std::ostringstream{};
-      output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      output << column_data_type << " cannot be encoded as ";
-      output << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      output << "left Unencoded.\n";
-      std::cout << output.str();
-      chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
+    if (default_encoding_spec && encoding_supports_data_type(default_encoding_spec->encoding_type, column_data_type)) {
+      chunk_encoding_spec.push_back(*default_encoding_spec);
+      continue;
     }
+
+    const auto column_is_unique = table->column_is_unique(column_id);
+    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(column_data_type, column_is_unique));
   }
 
   /**

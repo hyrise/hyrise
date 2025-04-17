@@ -71,6 +71,9 @@ class Table : private Noncopyable {
   bool column_is_nullable(const ColumnID column_id) const;
   std::vector<bool> columns_are_nullable() const;
 
+  bool column_is_unique(const ColumnID column_id) const;
+  std::vector<bool> columns_are_unique() const;
+
   // Fail()s, if there is no column of that name
   ColumnID column_id_by_name(const std::string& column_name) const;
 
@@ -286,8 +289,8 @@ class Table : private Noncopyable {
   ForeignKeyConstraints _referenced_foreign_key_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
-  std::shared_ptr<TableStatistics> _table_statistics{};
-  std::mutex _append_mutex{};
+  std::shared_ptr<TableStatistics> _table_statistics;
+  std::mutex _append_mutex;
   std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
   std::vector<TableIndexStatistics> _table_indexes_statistics;
   pmr_vector<std::shared_ptr<PartialHashIndex>> _table_indexes;
