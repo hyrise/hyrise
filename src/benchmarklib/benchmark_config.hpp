@@ -13,7 +13,7 @@ namespace hyrise {
  * "Ordered" runs each item a number of times and then the next one.
  * "Shuffled" runs the items in a random order.
  */
-enum class BenchmarkMode : std::uint8_t { Ordered, Shuffled };
+enum class BenchmarkMode : uint8_t { Ordered, Shuffled };
 
 using Duration = std::chrono::nanoseconds;
 // `steady_clock` guarantees that the clock is not adjusted while benchmarking.
