@@ -17,7 +17,6 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -25,15 +24,13 @@
 namespace hyrise {
 
 Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
-               const FileType file_type, const std::optional<EncodingType> target_encoding,
-               const std::optional<CsvMeta>& csv_meta)
+               const FileType file_type, const std::optional<EncodingType> target_encoding)
     : AbstractReadOnlyOperator(OperatorType::Import),
       filename(init_filename),
       _tablename(tablename),
       _chunk_size(chunk_size),
       _file_type(file_type),
-      _target_encoding(target_encoding),
-      _csv_meta(csv_meta) {
+      _target_encoding(target_encoding) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
   }
@@ -54,19 +51,15 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   switch (_file_type) {
     case FileType::Csv: {
-      if (static_cast<int>(static_cast<bool>(_csv_meta)) +
-              static_cast<int>(Hyrise::get().storage_manager.has_table(_tablename)) +
-              static_cast<int>(std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) >=
-          2) {
+      if (Hyrise::get().storage_manager.has_table(_tablename) &&
+          std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
         Fail(
-            "Cannot load table from csv. Table definition source is ambiguous. At least two of the following sources "
-            "gave CsvMeta information: Import; existing table in DBMS; Meta file next to .csv file");
+            "Cannot load table from csv, table definition source is ambiguous. The table already exists in DBMS and "
+            "there is a meta file next to .csv file");
       }
 
       auto csv_meta = CsvMeta{};
-      if (_csv_meta) {
-        csv_meta = *_csv_meta;
-      } else if (Hyrise::get().storage_manager.has_table(_tablename)) {
+      if (Hyrise::get().storage_manager.has_table(_tablename)) {
         const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
         const auto column_count = column_definitions.size();
 
@@ -133,7 +126,7 @@ std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _target_encoding, _csv_meta);
+  return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _target_encoding);
 }
 
 void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
