@@ -90,6 +90,8 @@ SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, cons
       }
     case DataType::Null:
       return SegmentEncodingSpec{EncodingType::RunLength};
+    default:
+      Fail("Unknown DataType when trying to select encoding for column");
   }
 }
 
