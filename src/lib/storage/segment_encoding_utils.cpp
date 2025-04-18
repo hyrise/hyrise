@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 
+#include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -72,6 +73,26 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
       return VectorCompressionType::BitPacking;
   }
   Fail("Invalid enum value.");
+}
+
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, const bool is_unique) {
+  switch (type) {
+    case DataType::Int:
+    case DataType::Long:
+      return SegmentEncodingSpec{EncodingType::FrameOfReference};
+    case DataType::String:
+    case DataType::Double:
+    case DataType::Float:
+      if (is_unique) {
+        return SegmentEncodingSpec{EncodingType::Unencoded};
+      } else {
+        return SegmentEncodingSpec{EncodingType::Dictionary};
+      }
+    case DataType::Null:
+      return SegmentEncodingSpec{EncodingType::RunLength};
+    default:
+      Fail("Unknown DataType when trying to select encoding for column");
+  }
 }
 
 }  // namespace hyrise

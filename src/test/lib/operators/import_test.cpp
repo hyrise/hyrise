@@ -1,3 +1,4 @@
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -68,19 +69,21 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
   const auto& [file_type, encoding] = GetParam();
 
   // Apply the encoding to the table.
-  if (encoding) {
-    const auto segment_encoding_spec_col1 =
-        SegmentEncodingSpec{*encoding != EncodingType::FixedStringDictionary ? *encoding : EncodingType::Dictionary};
-    const auto segment_encoding_spec_col2 =
-        SegmentEncodingSpec{*encoding != EncodingType::FrameOfReference ? *encoding : EncodingType::Dictionary};
+  if (file_type != FileType::Binary) {
+    if (encoding) {
+      const auto segment_encoding_spec_col1 = SegmentEncodingSpec{
+          *encoding != EncodingType::FixedStringDictionary ? *encoding : EncodingType::FrameOfReference};
+      const auto segment_encoding_spec_col2 =
+          SegmentEncodingSpec{*encoding != EncodingType::FrameOfReference ? *encoding : EncodingType::Dictionary};
 
-    const auto chunk_encoding_spec = ChunkEncodingSpec{segment_encoding_spec_col1, segment_encoding_spec_col2};
-    ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
-  } else if (file_type != FileType::Binary) {
-    // If no encoding is specified, we want to check if the defaults are as expected. The binary file is unencoded, so
-    // we do not have to change the encoding of `expected_table`. For `.csv` and `.tbl`, the default encoding should be
-    // `EncodingType::Dictionary`.
-    ChunkEncoder::encode_all_chunks(expected_table, SegmentEncodingSpec{});
+      const auto chunk_encoding_spec = ChunkEncodingSpec{segment_encoding_spec_col1, segment_encoding_spec_col2};
+      ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
+    } else {
+      // The binary file is unencoded, so we do not have to change the encoding of `expected_table`.
+      const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::FrameOfReference},
+                                                         SegmentEncodingSpec{EncodingType::Dictionary}};
+      ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
+    }
   }
 
   const auto reference_filename =
@@ -133,8 +136,9 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
   // For the `.csv` and `.tbl` files we expect a default encoding of `Dictionary`. The `.bin` file we load is stored
   // and therefore expected to be `Unencoded`.
   if (file_type != FileType::Binary) {
-    const auto encoding_spec = SegmentEncodingSpec{EncodingType::Dictionary};
-    ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+    const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::FrameOfReference},
+                                                       SegmentEncodingSpec{EncodingType::Dictionary}};
+    ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
   }
 
   const auto reference_filename =
