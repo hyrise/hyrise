@@ -4,6 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include "magic_enum.hpp"
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -145,7 +147,7 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
   // clang-format off
   const auto input_lqp =
   AggregateNode::make(expression_vector(a_b, add_(a_b, a_a)), expression_vector(sum_(a_a)),
-                      node_a);
+    node_a);
   // clang-format on
 
   const auto input_table_statistics = node_a->table_statistics();
@@ -158,6 +160,17 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
       dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(1)));
   EXPECT_TRUE(
       dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
+}
+
+TEST_F(CardinalityEstimatorTest, AggregateWithoutGroupBy) {
+  const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)), node_a);
+
+  const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
+
+  EXPECT_EQ(result_table_statistics->row_count, 1);
+  ASSERT_EQ(result_table_statistics->column_statistics.size(), 1);
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(0)));
 }
 
 TEST_F(CardinalityEstimatorTest, Alias) {
@@ -444,6 +457,35 @@ TEST_F(CardinalityEstimatorTest, JoinAnti) {
 
   const auto anti_null_as_true_join_lqp = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(a_a, b_a), node_a, node_b);
   EXPECT_EQ(estimator.estimate_statistics(anti_null_as_true_join_lqp), node_a->table_statistics());
+}
+
+TEST_F(CardinalityEstimatorTest, JoinWithDummyStatistics) {
+  // Joins on projections, aggregates, etc. cannot use histograms. For now, we expect those joins to preserve all tuples
+  // in the worst case.
+  for (const auto swap_inputs : {true, false}) {
+    for (const auto join_mode : magic_enum::enum_values<JoinMode>()) {
+      // Semi-/anti-joins must have the input to be reduced on the left side.
+      if (is_semi_or_anti_join(join_mode) && swap_inputs) {
+        continue;
+      }
+
+      auto left_input = static_pointer_cast<AbstractLQPNode>(node_a);
+      // clang-format off
+      auto right_input = static_pointer_cast<AbstractLQPNode>(
+      ProjectionNode::make(expression_vector(value_(123)),
+        DummyTableNode::make()));
+      // clang-format on
+      if (swap_inputs) {
+        std::swap(left_input, right_input);
+      }
+      const auto join_node = join_mode == JoinMode::Cross ? JoinNode::make(join_mode)
+                                                          : JoinNode::make(join_mode, equals_(a_a, value_(123)));
+      join_node->set_left_input(left_input);
+      join_node->set_right_input(right_input);
+
+      EXPECT_EQ(estimator.estimate_cardinality(join_node), 100) << " for " << join_mode << " join";
+    }
+  }
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {
