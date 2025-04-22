@@ -41,7 +41,8 @@ class LargeStatisticsTest : public BaseTest {
   static void SetUpTestSuite() {
     // Make sure that we actually hit a point for the most frequent value where the precision of float is larger than 1.
     // To do so, we calculate the difference of that value's frequency and the next smaller float that can be
-    // represented.
+    // represented. This difference must be larger than 1.0, hence `value + 1` cannot be represented and returns
+    // `value`.
     const auto most_frequent_row_count = VALUE_RATIO[0] * VALUES_PER_SHARE;
     ASSERT_GT(float{most_frequent_row_count} - std::nextafter(float{most_frequent_row_count}, 0.0f), 1.0f);
 
