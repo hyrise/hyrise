@@ -123,7 +123,7 @@ Starting with cmake 3.16, you can use `-DCMAKE_UNITY_BUILD=On` to perform unity 
 For development, you may want to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. On the downside, we have seen random build failures on our CI server, which is why we do not recommend ccache anymore but merely list it as an option. To use ccache, add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call. You will need to [adjust some ccache settings](https://ccache.dev/manual/latest.html#_precompiled_headers) either in your environment variables or in your [ccache config](https://ccache.dev/manual/latest.html#_configuration) so that ccache can handle the precompiled headers. On our CI server, this worked for us: `CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=1`.
 
 ### Build
-Simply call `make -j*`, where `*` denotes the number of threads to use. We frequently compiling, we recommend using the Ninja generator (`ninja-build` with Ubuntu's apt, to use it append `-G Ninja` to the cmake call).
+Simply call `make -j*`, where `*` denotes the number of threads to use. When frequently compiling, we recommend using the Ninja generator (`ninja-build` with Ubuntu's apt, to use it append `-G Ninja` to the cmake call).
 
 Usually debug binaries are created.
 To configure a build directory for a release build make sure it is empty and call CMake like `cmake -DCMAKE_BUILD_TYPE=Release`
