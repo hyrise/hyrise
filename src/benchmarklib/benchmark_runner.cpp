@@ -684,29 +684,32 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
 }
 
 Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& result) const {
-  // Our scripts use the overall item time only to calculate the throughput (overall time / successful runs). Latencies
-  // are calculated from the individual runs. Thus, we use the available time limit if we reached it.
-  // We cannot simply use `_state.scheduled_runs` because some of the runs might not have finished in time. Thus, we
-  // check how many runs were actually reported.
+  // Our scripts use the period from the start of the first item run until the end of the last item run only to
+  // calculate the throughput (overall time / successful runs) - latencies are calculated from the individual runs.
+  // We use `max_duration` if we stopped because of hitting the time limit and the actually elapsed time otherwise.
+  // For the number of executed queries, we cannot simply use `_state.scheduled_runs` because some of the runs might not
+  // have finished in time. Thus, we check how many runs were actually reported.
   const auto executed_runs = result.successful_runs.size() + result.unsuccessful_runs.size();
   if (_state.max_runs > 0 && static_cast<int64_t>(executed_runs) < _state.max_runs) {
     return _state.max_duration;
   }
 
-  // If we stopped because of the run limit, we calculate the time frome the item's benchmark start until the last run
+  // If we stopped because of the run limit, we calculate the time from the item's benchmark start until the last run
   // finished.
-  const auto last_run_duration = [&](const auto& runs) {
-    auto max_duration = Duration{0};
+  const auto last_run_end = [&](const auto& runs) {
+    auto run_end = TimePoint{0};
+
     for (const auto& run : runs) {
-      // The run's begin is relative to the overall benchmark start. Thus, we have to substract the period from the
-      // benchmark start to the start of the item.
-      const auto run_duration = run.begin + run.duration - (_state.benchmark_begin - _benchmark_start);
-      max_duration = std::max(max_duration, run_duration);
+      rund_end = std::max(run_end, run.begin + run.duration);
     }
-    return max_duration;
+    return rund_end;
   };
 
-  return std::max(last_run_duration(result.successful_runs), last_run_duration(result.unsuccessful_runs));
+  const auto run_end = std::max(last_run_end(result.successful_runs), last_run_end(result.unsuccessful_runs));
+
+  // `run_end` is relative to the overall benchmark start, but `_state.benchmark_begin` is not. Thus, we have to
+  // substract the time elapsed between the benchmark start and the start of the item.
+  return max_run_end - (_state.benchmark_begin - _benchmark_start);
 }
 
 }  // namespace hyrise
