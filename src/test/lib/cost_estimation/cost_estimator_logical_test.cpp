@@ -7,6 +7,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 
 namespace hyrise {
 

@@ -26,7 +26,7 @@ class JoinOrderingRule : public AbstractRule {
   //     (i) Scaling histograms because we do it very often (thousands of times for some TPC-DS and JOB queries).
   //    (ii) Creating new histograms for joined tables and column vs. column predicates.
   // Before that, we used a threshold of 9. Using GOO for eight vertices also improved execution for some TPC-DS queries
-  // and many JOB qweries, where our cardinality estimations are notoriously bad (skew, many dimension table joins).
+  // and many JOB queries, where our cardinality estimations are notoriously bad (skew, many dimension table joins).
   // Further decreasing this value did not have noticeable positive effects (but some negative ones).
   //
   // TODO(anybody): Revisit and re-evaluate whenever we significantly change something in cardinality estimation.

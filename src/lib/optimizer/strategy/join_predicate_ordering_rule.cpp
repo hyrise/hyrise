@@ -64,6 +64,7 @@ void reorder_join_predicates_recursively(const std::shared_ptr<AbstractLQPNode>&
                  PredicateCondition::Equals;
         });
 
+    // SubqueryToJoinRule and JoinToSemiJoinRule should have taken care of that, so this is really just a safeguard.
     Assert(first_equals_predicate != join_predicates.end(),
            "Semi/anti joins require at least one equals predicate at the moment.");
 
@@ -88,9 +89,11 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
   const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
   caching_cardinality_estimator->guarantee_bottom_up_construction(lqp_root);
 
-  // In theory, the order of join predicates does not make a difference for cardinality estimation, but in fact we are
-  // only using the first (ideally least selective) predicate. Thus, we must actually reorder the predicates bottom-up
-  // to get the best estimations based on possibly reordered multipe-predicate joins below.
+  // In theory, the order of join predicates does not make a difference for cardinality estimation. However, we only use
+  // the first join predicate to estimate cardinalities. To not massively over-estimate (and to push semi/anti joins as
+  // far as possible), the first join predicate should be the one with the smallest selectivity. Because estimations for
+  // join predicates further up in the plan depend on the estimates of the nodes below, we must reorder join predicates
+  // bottom-up.
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   reorder_join_predicates_recursively(lqp_root, caching_cardinality_estimator, visited_nodes);
 }

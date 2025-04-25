@@ -13,12 +13,13 @@ namespace hyrise {
  *
  * Operators such as the hash join operate on the primary predicate, i.e., they hash the two columns that are compared
  * in the first predicate. Secondary predicates are evaluated using accessors, which is significantly more expensive.
- * Thus, a good predicate order is even more important that it is for regular (i.e., non-join) predicates.
+ * Thus, a good predicate order is even more important than it is for regular (i.e., non-join) predicates.
  * Furthermore, the hash join only supports equals predicates, so the most selective equals predicate is moved to the
  * front.
  *
- * For inner joins, this is already done in AbstractJoinOrderingAlgorithm::_add_join_to_plan. However, the selectivities
- * can be different after we transformed the plan, e.g., by different predicate placement or due to pruned chunks.
+ * For inner joins, this is already done in AbstractJoinOrderingAlgorithm::_add_join_to_plan. However, we do it once
+ * more here in this rule because the selectivities can be different after we transformed the plan, e.g., by a different
+ * predicate placement or due to pruned chunks.
  */
 class JoinPredicateOrderingRule : public AbstractRule {
  public:

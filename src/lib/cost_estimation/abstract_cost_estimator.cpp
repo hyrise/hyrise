@@ -27,7 +27,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
     }
   }
 
-  // Breadth-first iteration of plan
+  // Breadth-first iteration of plan.
   auto bfs_queue = std::queue<std::shared_ptr<AbstractLQPNode>>{};
   auto visited = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
 
@@ -80,10 +80,8 @@ void AbstractCostEstimator::guarantee_bottom_up_construction(const std::shared_p
 
 std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
     const std::shared_ptr<AbstractLQPNode>& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited) const {
-  /**
-   * Look up this subplan in cache if a cache is present. Pay special attention to diamond shapes in the LQP to avoid
-   * costing nodes multiple times.
-   */
+  // Look up this subplan in cache if a cache is present. Pay special attention to diamond shapes in the LQP to avoid
+  // performing cost estimation multiple times per node.
   if (!cost_estimation_by_lqp_cache) {
     return std::nullopt;
   }
