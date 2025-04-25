@@ -1029,12 +1029,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
             *bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
         if (!column_vs_column_histogram) {
           // No overlapping bins: No rows selected
-          selectivity = 0.0f;
+          selectivity = 0.0;
           return;
         }
 
         const auto cardinality = column_vs_column_histogram->total_count();
-        selectivity = input_table_statistics->row_count == 0 ? 0.0f : cardinality / input_table_statistics->row_count;
+        selectivity = input_table_statistics->row_count == 0 ? 0.0 : cardinality / input_table_statistics->row_count;
 
         /**
          * Write out the AttributeStatistics of the scanned columns
@@ -1052,14 +1052,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         switch (predicate.predicate_condition) {
           case PredicateCondition::Equals: {
             const auto total_distinct_count =
-                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0f});
-            selectivity = total_distinct_count > 0 ? 1.0f / total_distinct_count : 0.0f;
+                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0});
+            selectivity = total_distinct_count > 0 ? 1.0 / total_distinct_count : 0.0;
           } break;
 
           case PredicateCondition::NotEquals: {
             const auto total_distinct_count =
-                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0f});
-            selectivity = total_distinct_count > 0 ? (total_distinct_count - 1.0f) / total_distinct_count : 0.0f;
+                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0});
+            selectivity = total_distinct_count > 0 ? (total_distinct_count - 1.0) / total_distinct_count : 0.0;
           } break;
 
           case PredicateCondition::LessThan:
@@ -1093,7 +1093,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto value_variant = boost::get<AllTypeVariant>(predicate.value);
         if (variant_is_null(value_variant)) {
           // A predicate `<column> <condition> NULL` always has a selectivity of 0
-          selectivity = 0.0f;
+          selectivity = 0.0;
           return;
         }
 
@@ -1125,7 +1125,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto sliced_statistics_object =
             scan_statistics_object->sliced(predicate.predicate_condition, value_variant, value2_variant);
         if (!sliced_statistics_object) {
-          selectivity = 0.0f;
+          selectivity = 0.0;
           return;
         }
 
@@ -1134,7 +1134,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
             std::dynamic_pointer_cast<const AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         DebugAssert(sliced_histogram, "Expected slicing of a Histogram to return either nullptr or a Histogram");
         if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
-          selectivity = 0.0f;
+          selectivity = 0.0;
         } else {
           selectivity = sliced_histogram->total_count() / input_table_statistics->row_count;
         }
@@ -1205,9 +1205,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     }
 
     const auto left_selectivity = Selectivity{
-        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
+        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0};
     const auto right_selectivity = Selectivity{
-        right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0f};
+        right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0};
 
     /**
      * Write out the AttributeStatistics of all output columns. With no correlation info available, simply scale all
@@ -1303,7 +1303,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     }
 
     const auto left_selectivity = Selectivity{
-        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
+        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0};
 
     /**
      * Write out the AttributeStatistics of all output columns. With no correlation info available, simply scale all
@@ -1329,7 +1329,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
   });
 
-  Assert(output_table_statistics->row_count <= left_input_table_statistics.row_count * 1.01f,
+  Assert(output_table_statistics->row_count <= left_input_table_statistics.row_count * 1.01,
          "Semi join should not increase cardinality");
 
   return output_table_statistics;
