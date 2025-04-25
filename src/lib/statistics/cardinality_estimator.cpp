@@ -46,7 +46,6 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
@@ -1300,10 +1299,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
      * Write out the AttributeStatistics of all output columns. With no correlation info available, simply scale all
      * those that didn't participate in the join predicate
      */
-    std::vector<std::shared_ptr<const BaseAttributeStatistics>> column_statistics{
-        left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
-
     const auto left_column_count = left_input_table_statistics.column_statistics.size();
+    const auto right_column_count = right_input_table_statistics.column_statistics.size();
+    auto column_statistics =
+        std::vector<std::shared_ptr<const BaseAttributeStatistics>>(left_column_count + right_column_count);
 
     const auto join_columns_output_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
     join_columns_output_statistics->histogram = join_column_histogram;
@@ -1317,7 +1316,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
 
       column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
     }
-    const auto right_column_count = right_input_table_statistics.column_statistics.size();
     for (auto column_id = ColumnID{0}; column_id < right_column_count; ++column_id) {
       if (column_statistics[left_column_count + column_id]) {
         continue;
@@ -1389,28 +1387,26 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
       cardinality = left_input_table_statistics.row_count;
     }
 
-    const auto left_selectivity = Selectivity{
+    const auto selectivity = Selectivity{
         left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
 
     /**
      * Write out the AttributeStatistics of all output columns. With no correlation info available, simply scale all
      * those that didn't participate in the join predicate
      */
-    std::vector<std::shared_ptr<const BaseAttributeStatistics>> column_statistics{
-        left_input_table_statistics.column_statistics.size()};
-
-    const auto left_column_count = left_input_table_statistics.column_statistics.size();
+    const auto column_count = left_input_table_statistics.column_statistics.size();
+    auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(column_count);
 
     const auto join_columns_output_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
     join_columns_output_statistics->histogram = join_column_histogram;
     column_statistics[left_column_id] = join_columns_output_statistics;
 
-    for (auto column_id = ColumnID{0}; column_id < left_column_count; ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       if (column_statistics[column_id]) {
         continue;
       }
 
-      column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
+      column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(selectivity);
     }
 
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
@@ -1432,15 +1428,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
    * Scale up the input AttributeStatistics with the selectivities specified above and write them to the output
    * TableStatistics.
    */
-  std::vector<std::shared_ptr<const BaseAttributeStatistics>> column_statistics{
-      left_input_table_statistics.column_statistics.size() + right_input_table_statistics.column_statistics.size()};
-
   const auto left_column_count = left_input_table_statistics.column_statistics.size();
+  const auto right_column_count = right_input_table_statistics.column_statistics.size();
+  auto column_statistics =
+      std::vector<std::shared_ptr<const BaseAttributeStatistics>>(left_column_count + right_column_count);
+
   for (auto column_id = ColumnID{0}; column_id < left_column_count; ++column_id) {
     column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
   }
 
-  const auto right_column_count = right_input_table_statistics.column_statistics.size();
   for (auto column_id = ColumnID{0}; column_id < right_column_count; ++column_id) {
     column_statistics[left_column_count + column_id] =
         right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
@@ -1456,13 +1452,13 @@ template <typename T>
 std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(
     const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
   /**
-     * left_histogram and right_histogram are turned into "unified" histograms by `split_at_bin_bounds`, meaning that
-     * their bins are split so that their bin boundaries match.
-     * E.g., if left_histogram has a single bin [1, 10] and right histogram has a single bin [5, 20] then
-     * unified_left_histogram == {[1, 4], [5, 10]}
-     * unified_right_histogram == {[5, 10], [11, 20]}
-     * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
-     */
+   * left_histogram and right_histogram are turned into "unified" histograms by `split_at_bin_bounds`, meaning that
+   * their bins are split so that their bin boundaries match.
+   * E.g., if left_histogram has a single bin [1, 10] and right histogram has a single bin [5, 20] then
+   * unified_left_histogram == {[1, 4], [5, 10]}
+   * unified_right_histogram == {[5, 10], [11, 20]}
+   * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
+   */
 
   auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
   auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
