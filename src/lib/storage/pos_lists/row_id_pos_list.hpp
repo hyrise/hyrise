@@ -44,7 +44,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
       : Vector(count, alloc) {}
 
   /* (4 ) */ template <class InputIt>
-  RowIDPosList(InputIt first, InputIt last, const allocator_type& alloc = allocator_type())
+  RowIDPosList(InputIt first, InputIt last, const allocator_type& /*alloc*/ = allocator_type())
       : Vector(std::move(first), std::move(last)) {}
 
   /* (5 ) */  // RowIDPosList(const Vector& other) : Vector(other); - Oh no, you don't.

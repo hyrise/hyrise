@@ -40,7 +40,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
   explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
-  void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) final {
+  void set(const Key& key, const Value& value, double /*cost*/ = 1.0, double size = 1.0) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     if (this->_capacity == 0) {
       return;

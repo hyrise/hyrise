@@ -143,7 +143,7 @@ class ColumnMaterializer {
   }
 
   MaterializedSegment<T> _materialize_segment(const std::shared_ptr<AbstractSegment>& segment, const ChunkID chunk_id,
-                                              RowIDPosList& null_rows_output, Subsample<T>& subsample) {
+                                              RowIDPosList& null_rows_output, Subsample<T>& /*subsample*/) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment->size());
 

@@ -203,7 +203,7 @@ class AggregateHash : public AbstractAggregateOperator {
 namespace std {
 template <>
 struct hash<hyrise::EmptyAggregateKey> {
-  size_t operator()(const hyrise::EmptyAggregateKey& key) const {
+  size_t operator()(const hyrise::EmptyAggregateKey& /*key*/) const {
     return 0;
   }
 };

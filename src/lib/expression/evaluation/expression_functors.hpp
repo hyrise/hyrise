@@ -19,7 +19,7 @@ bool to_bool(const bool value) {
   return value;
 }
 
-bool to_bool(const NullValue& value) {
+bool to_bool(const NullValue& /*value*/) {
   return false;
 }
 
@@ -30,7 +30,7 @@ T to_value(const V& v) {
 }
 
 template <typename T>
-T to_value(const NullValue& v) {
+T to_value(const NullValue& /*v*/) {
   return T{};
 }
 
@@ -206,8 +206,8 @@ struct DivisionEvaluator {
 struct CaseEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>)&&(
-        std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
+    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>) &&
+                                  (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
   };
 
   template <typename Result, typename ArgA, typename ArgB>
