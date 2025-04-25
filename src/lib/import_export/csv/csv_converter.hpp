@@ -87,9 +87,8 @@ class CsvConverter : public BaseCsvConverter {
   std::unique_ptr<AbstractSegment> finish() override {
     if (_is_nullable) {
       return std::make_unique<ValueSegment<T>>(std::move(_parsed_values), std::move(_null_values));
-    } else {
-      return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
     }
+    return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
   }
 
  private:

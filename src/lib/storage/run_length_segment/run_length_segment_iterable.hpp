@@ -109,7 +109,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     if (step_size < 0) {
       return std::lower_bound(end_positions->cbegin(), end_positions->cbegin() + previous_end_position_index,
                               new_chunk_offset);
-    } else if (step_size < static_cast<int64_t>(linear_search_threshold)) {
+    }
+
+    if (step_size < static_cast<int64_t>(linear_search_threshold)) {
       const auto less_than_current = [&](const ChunkOffset offset) {
         return offset < new_chunk_offset;
       };
