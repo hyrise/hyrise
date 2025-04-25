@@ -112,7 +112,7 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
 
     case LQPNodeType::StoredTable:
       // Simply forwards segments, does not touch the data.
-      return 0.0f;
+      return 0.0;
 
     case LQPNodeType::Predicate: {
       const auto& predicate = static_cast<const PredicateNode&>(*node).predicate();
