@@ -32,8 +32,27 @@ class LargeStatisticsTest : public BaseTest {
   // The resolution of float is larger than 1 for values greater than 16777216.0f, i.e., incrementing by 1 does not
   // increase the value anymore. This behavior can cause problems in statistics generation or cardinality/cost
   // estimation.
+  //
+  // To understand this behavior, let us dig a bit into floating-points as deined by IEEE 754 (see
+  // https://en.wikipedia.org/wiki/IEEE_754). C++'s float is a single-precision/binary32 type. This means, floats are
+  // encoded as follows:
+  //     sign s (1 bit) | exponent e (8 bits) | mantissa m (23 bits) = 32 bit together.
+  //
+  // Each float value f can be computed as f = (-1)^s * (1 + (m / 2^23)) * 2^e. However, this means that not all
+  // integers larger than 2^23 can be represented anymore.
+  // E.g., with e = 23 and m = 0, f = (1 + 0 / 2^23) * 2^23 = 8'388'608. The next representable number with m = 1 is
+  // f = (1 + 1 / 2^23) * 2^23 = 8'388'609, the next (m = 2) is f = (1 + 2 / 2^23) * 2^23 = 8'388'610, etc.
+  // The difference between two values is exactly 1.0.
+  // With the next higher exponent e = 24, f = (1 + 0 / 2^23) * 2^24 = 16'777'216 for m = 0, and for m = 1,
+  // f = (1 + 1 / 2^22) * 2^24 = 16'777'218. Here, the difference is exactly 2.0 (and thus, incrementing by 1.0 does not
+  // make a difference anymore).
+  //
   // To test these scenarios, we create a table with a single column that has 30 million rows, but only three unique
-  // values in the ratio 27:2:1.
+  // values in the ratio 27:2:1. Thus, we can be sure we hit a platform-independent spot where floats are not precise
+  // enough anymore.
+  //
+  // (In case you wondered: C++ doubles are binary64 types with an exponent of 11 bits and a mantissa of 52 bits. Their
+  // precision is at 1.0 for values larger than 2^52 > 4 * 10^15.)
   static constexpr auto VALUE_RATIO = std::array<uint32_t, 3>{27, 2, 1};
   static constexpr auto VALUES_PER_SHARE = 1'000'000;
   static inline std::shared_ptr<Table> table;
