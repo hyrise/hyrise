@@ -242,7 +242,7 @@ try {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
                 sh "cd clang-debug-tidy-manual && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 5))"
-                sh "find ../src/{benchmark,benchmarklib,bin,lib,plugins} \( -iname \"*.cpp\" -o -iname \"*.hpp\" \) -print0 | parallel --null --no-notice -j 100% --nice 17 clang-tidy --extra-arg-before=--driver-mode=g++ -p . {}"
+                sh "find ../src/{benchmark,benchmarklib,bin,lib,plugins} \\( -iname \"*.cpp\" -o -iname \"*.hpp\" \\) -print0 | parallel --null --no-notice -j 100% --nice 17 clang-tidy --extra-arg-before=--driver-mode=g++ -p . {}"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
