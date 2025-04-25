@@ -83,6 +83,100 @@ std::optional<Selectivity> estimate_null_value_ratio_of_column(const TableStatis
   return std::nullopt;
 }
 
+std::shared_ptr<TableStatistics> rescale_join_with_keys(const std::shared_ptr<TableStatistics>& join_statistics,
+                                                        const JoinNode& join_node,
+                                                        const Cardinality left_input_cardinality,
+                                                        const Cardinality right_input_cardinality,
+                                                        const CardinalityEstimator::StatisticsByLQP& statistics_cache,
+                                                        const CardinalityEstimationCache& cardinality_estimation_cache) {
+  if (join_node.join_mode != JoinMode::Inner && join_node.join_mode != JoinMode::Semi) {
+    return join_statistics;
+  }
+
+  const auto join_predicate = OperatorJoinPredicate::from_expression(*join_node.join_predicates()[0],
+                                                                     *join_node.left_input(), *join_node.right_input());
+  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
+    return join_statistics;
+  }
+
+  const auto left_column = std::dynamic_pointer_cast<const LQPColumnExpression>(
+      join_node.left_input()->output_expressions()[join_predicate->column_ids.first]);
+  const auto right_column = std::dynamic_pointer_cast<const LQPColumnExpression>(
+      join_node.right_input()->output_expressions()[join_predicate->column_ids.second]);
+
+  if (!left_column || !right_column) {
+    return join_statistics;
+  }
+
+  const auto left_stored_table = std::dynamic_pointer_cast<const StoredTableNode>(left_column->original_node.lock());
+  const auto right_stored_table = std::dynamic_pointer_cast<const StoredTableNode>(right_column->original_node.lock());
+  if (!left_stored_table || !right_stored_table) {
+    return join_statistics;
+  }
+  const auto left_table = Hyrise::get().storage_manager.get_table(left_stored_table->table_name);
+  const auto right_table = Hyrise::get().storage_manager.get_table(right_stored_table->table_name);
+  const auto left_column_id = left_column->original_column_id;
+  const auto right_column_id = right_column->original_column_id;
+
+  const auto has_fk = [](const auto& fk_table, const auto fk_column, const auto& pk_table, const auto pk_column) {
+    for (const auto& fk : fk_table->soft_foreign_key_constraints()) {
+      Assert(fk.foreign_key_table() == fk_table, "WTF");
+      if (fk.primary_key_table() != pk_table) {
+        continue;
+      }
+      const auto column_count = fk.foreign_key_columns().size();
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        if (fk.foreign_key_columns()[column_id] == fk_column && fk.primary_key_columns()[column_id] == pk_column) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  const auto left_in_right = has_fk(left_table, left_column_id, right_table, right_column_id);
+  const auto right_in_left = has_fk(right_table, right_column_id, left_table, left_column_id);
+  if (!left_in_right && !right_in_left) {
+    return join_statistics;
+  }
+  Assert(!left_in_right || !right_in_left, "WTF");
+  auto suggested_scale = Selectivity{1};
+  auto actual_scale = Selectivity{1};
+  if (left_in_right) {
+    auto cached_row_count = Cardinality{0};
+    const auto it = statistics_cache.find(right_stored_table);
+    if (it == statistics_cache.end()) {
+      Assert(cardinality_estimation_cache.statistics_by_lqp, "...");
+      cached_row_count = cardinality_estimation_cache.statistics_by_lqp->at(right_stored_table)->row_count;
+    } else {
+      cached_row_count = it->second->row_count;
+    }
+
+    suggested_scale = right_input_cardinality / cached_row_count;
+    actual_scale = join_statistics->row_count / left_input_cardinality;
+  } else {
+    auto cached_row_count = Cardinality{0};
+    const auto it = statistics_cache.find(left_stored_table);
+    if (it == statistics_cache.end()) {
+      Assert(cardinality_estimation_cache.statistics_by_lqp, "...");
+      cached_row_count = cardinality_estimation_cache.statistics_by_lqp->at(left_stored_table)->row_count;
+    } else {
+      cached_row_count = it->second->row_count;
+    }
+    suggested_scale = left_input_cardinality / cached_row_count;
+    actual_scale = join_statistics->row_count / right_input_cardinality;
+  }
+
+  const auto corrector = suggested_scale / actual_scale;
+  auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
+  const auto column_count = join_statistics->column_statistics.size();
+  column_statistics.reserve(column_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    column_statistics.emplace_back(join_statistics->column_statistics[column_id]->scaled(corrector));
+  }
+  return std::make_shared<TableStatistics>(std::move(column_statistics), join_statistics->row_count * corrector);
+}
+
 }  // namespace
 
 CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_type)
@@ -196,6 +290,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       const auto& join_node = static_cast<const JoinNode&>(*lqp);
       output_table_statistics =
           estimate_join_node(join_node, left_input_table_statistics, right_input_table_statistics);
+      output_table_statistics =
+          rescale_join_with_keys(output_table_statistics, join_node, left_input_table_statistics->row_count,
+                                 right_input_table_statistics->row_count, statistics_cache, cardinality_estimation_cache);
     } break;
 
     case LQPNodeType::Limit: {
