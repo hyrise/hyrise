@@ -2,16 +2,12 @@
 
 #include <algorithm>
 #include <numeric>
-#include <random>
-#include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): Identified as C system headers.
 
 #include "random_generator.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -47,7 +43,7 @@ class TPCCRandomGenerator : public RandomGenerator {
    * @return    a string representing the last name
    */
   std::string last_name(size_t i) {
-    const std::string syllables[] = {
+    const std::array syllables = {
         "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
     };
 
@@ -55,7 +51,7 @@ class TPCCRandomGenerator : public RandomGenerator {
       i = nurand(255, 0, 999);
     }
 
-    std::string last_name("");
+    std::string last_name;
     last_name += syllables[(i / 100) % 10];
     last_name += syllables[(i / 10) % 10];
     last_name += syllables[i % 10];

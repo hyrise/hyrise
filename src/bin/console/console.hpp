@@ -9,7 +9,6 @@
 
 #include "operators/print.hpp"
 #include "sql/sql_pipeline.hpp"
-#include "sql/sql_plan_cache.hpp"
 #include "storage/table.hpp"
 #include "utils/singleton.hpp"
 
@@ -151,8 +150,8 @@ class Console : public Singleton<Console> {
   RegisteredCommands _commands;
   std::ostream _out;
   std::ofstream _log;
-  bool _verbose;
-  bool _pagination_active;
+  bool _verbose{};
+  bool _pagination_active{};
   std::string _path;
   bool _binary_caching{true};
 

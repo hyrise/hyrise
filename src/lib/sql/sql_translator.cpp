@@ -705,7 +705,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   for (const auto* update_clause : *update.updates) {
     const auto column_name = std::string{update_clause->column};
-    const auto column_expression = translation_state.sql_identifier_resolver->resolve_identifier_relaxed(column_name);
+    const auto column_expression =
+        translation_state.sql_identifier_resolver->resolve_identifier_relaxed(SQLIdentifier(column_name));
     const auto column_id = selection_lqp->get_column_id(*column_expression);
 
     update_expressions[column_id] =
@@ -1149,7 +1150,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
       const auto right_identifier = right_identifiers.back();
 
       const auto left_expression =
-          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
+          left_sql_identifier_resolver->resolve_identifier_relaxed(SQLIdentifier(right_identifier.column_name));
 
       if (left_expression) {
         // Two columns match, let's join on them.

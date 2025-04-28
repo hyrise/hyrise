@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
@@ -19,7 +18,7 @@ struct JoinConfiguration {
   PredicateCondition predicate_condition;
   DataType left_data_type;
   DataType right_data_type;
-  bool secondary_predicates;
+  bool secondary_predicates{};
   // Only for JoinIndex
   std::optional<TableType> left_table_type{std::nullopt};
   std::optional<TableType> right_table_type{std::nullopt};

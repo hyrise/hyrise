@@ -3,9 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <variant>
 
-#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "postgres_protocol_handler.hpp"
 #include "sql/sql_pipeline.hpp"
@@ -18,7 +16,7 @@ struct ExecutionInformation {
   std::shared_ptr<const Table> result_table;
   // Since the PostgreSQL Wire Protocol requires the query type (such as SELECT, INSERT, UPDATE,...) we need to store
   // the root operator's type.
-  OperatorType root_operator_type;
+  OperatorType root_operator_type{};
   std::string pipeline_metrics;
   ErrorMessages error_messages;
   std::optional<std::string> custom_command_complete_message;

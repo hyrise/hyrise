@@ -1,10 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <limits>
 #include <memory>
-#include <optional>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -20,14 +17,9 @@
 #include "uninitialized_vector.hpp"
 
 #include "abstract_aggregate_operator.hpp"
-#include "abstract_read_only_operator.hpp"
 #include "aggregate/window_function_traits.hpp"
 #include "expression/window_function_expression.hpp"
-#include "resolve_type.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/value_segment.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -65,8 +57,8 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 struct AggregateResult {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
-  using DistinctValues = boost::unordered_flat_set<ColumnDataType, std::hash<ColumnDataType>,
-                                                   std::equal_to<ColumnDataType>, PolymorphicAllocator<ColumnDataType>>;
+  using DistinctValues = boost::unordered_flat_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<>,
+                                                   PolymorphicAllocator<ColumnDataType>>;
 
   // Find the correct accumulator type using nested conditionals.
   using AccumulatorType = std::conditional_t<

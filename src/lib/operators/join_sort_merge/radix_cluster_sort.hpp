@@ -2,17 +2,13 @@
 
 #include <algorithm>
 #include <cstring>
-#include <map>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include <boost/sort/sort.hpp>
 
 #include "column_materializer.hpp"
-#include "hyrise.hpp"
-#include "resolve_type.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
@@ -47,7 +43,7 @@ struct RadixClusterOutput {
 template <typename T>
 class RadixClusterSort {
  public:
-  RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
+  RadixClusterSort(const std::shared_ptr<const Table>& left, const std::shared_ptr<const Table>& right,
                    const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
                    const bool materialize_null_right, size_t cluster_count,
                    OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
@@ -70,7 +66,7 @@ class RadixClusterSort {
 
   template <typename T2>
   static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
-    return static_cast<int64_t>(value) & radix_bitmask;
+    return static_cast<uint64_t>(value) & radix_bitmask;
   }
 
   template <typename T2>
@@ -244,7 +240,7 @@ class RadixClusterSort {
   // distances. Repeated values are not removed. Thereby, they have a higher chance of being picked which should
   // cover skewed inputs. However, the final split values
   // are unique. As a consequence, the split value vector might contain less values than `_cluster_count - 1`.
-  const std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
+  std::vector<T> _pick_split_values(std::vector<T>&& sample_values) const {
     boost::sort::pdqsort(sample_values.begin(), sample_values.end());
 
     if (sample_values.size() <= _cluster_count - 1) {

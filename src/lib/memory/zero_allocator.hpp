@@ -10,7 +10,7 @@ class ZeroAllocator : public tbb::cache_aligned_allocator<ValueType> {
   ZeroAllocator() = default;
 
   template <typename U>
-  explicit ZeroAllocator(const ZeroAllocator<U>&) noexcept {}
+  explicit ZeroAllocator(const ZeroAllocator<U>& /*unused*/) noexcept {}
 
   ValueType* allocate(std::size_t n) {
     ValueType* ptr = tbb::cache_aligned_allocator<ValueType>::allocate(n);

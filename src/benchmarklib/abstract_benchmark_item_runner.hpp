@@ -1,13 +1,12 @@
 #pragma once
 
 #include <filesystem>
-#include <functional>
 #include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
 
-#include "benchmark_item_result.hpp"
+#include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
 #include "strong_typedef.hpp"
 

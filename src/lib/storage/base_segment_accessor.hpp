@@ -1,10 +1,7 @@
 #pragma once
 
-#include <memory>
 #include <optional>
-#include <type_traits>
 
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -15,7 +12,7 @@ class BaseSegmentAccessor {
   BaseSegmentAccessor(const BaseSegmentAccessor&) = default;
   BaseSegmentAccessor(BaseSegmentAccessor&&) = default;
 
-  virtual ~BaseSegmentAccessor() {}
+  virtual ~BaseSegmentAccessor() = default;
 };
 
 /**

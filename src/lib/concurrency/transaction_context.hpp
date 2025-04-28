@@ -123,7 +123,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Add an operator to the list of read-write operators.
    */
-  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) {
+  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator>& op) {
     _read_write_operators.push_back(op);
   }
 

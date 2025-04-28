@@ -1,11 +1,11 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 #include <boost/hana/assert.hpp>
 #include <boost/hana/for_each.hpp>
@@ -207,7 +207,7 @@ class TableBuilder {
   ChunkOffset _estimated_rows_per_chunk;
 
   // _table->row_count() only counts completed chunks but we want the total number of rows added to this table builder
-  size_t _row_count;
+  size_t _row_count{};
 
   boost::hana::tuple<pmr_vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
   boost::hana::tuple<table_builder::OptionalConstexpr<pmr_vector<bool>, (table_builder::is_optional<DataTypes>())>...>

@@ -1,13 +1,10 @@
 #pragma once
 
-#include <cstdint>
 #include <memory>
-#include <vector>
 
 #include "abstract_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "storage/table.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -87,7 +84,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
   void _mark_as_failed();
 
  private:
-  ReadWriteOperatorState _rw_state;
+  ReadWriteOperatorState _rw_state{};
 };
 
 }  // namespace hyrise

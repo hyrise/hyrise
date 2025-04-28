@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <functional>
 #include <optional>
 #include <ostream>
@@ -99,20 +98,21 @@ class LikeMatcher {
   void resolve(const bool invert_results, const Functor& functor) const {
     if (std::holds_alternative<StartsWithPattern>(_pattern_variant)) {
       const auto& prefix = std::get<StartsWithPattern>(_pattern_variant).string;
-      functor([&](const auto& string) -> bool {
+      functor([&](const auto& string) {
         if (string.size() < prefix.size()) {
           return invert_results;
         }
-        return (string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
+        return static_cast<bool>((string.compare(0, prefix.size(), prefix) == 0) ^ invert_results);
       });
 
     } else if (std::holds_alternative<EndsWithPattern>(_pattern_variant)) {
       const auto& suffix = std::get<EndsWithPattern>(_pattern_variant).string;
-      functor([&](const auto& string) -> bool {
+      functor([&](const auto& string) {
         if (string.size() < suffix.size()) {
           return invert_results;
         }
-        return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert_results;
+        return static_cast<bool>((string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^
+                                 invert_results);
       });
 
     } else if (std::holds_alternative<ContainsPattern>(_pattern_variant)) {
@@ -120,7 +120,7 @@ class LikeMatcher {
       // It's really hard to store the searcher in the pattern as it only holds iterators into the string that easily
       // get invalidated when the pattern is passed around.
       const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
-      functor([&](const auto& string) -> bool {
+      functor([&](const auto& string) {
         return (std::search(string.begin(), string.end(), searcher) != string.end()) ^ invert_results;
       });
 
@@ -129,10 +129,10 @@ class LikeMatcher {
       auto searchers = std::vector<Searcher>{};
       searchers.reserve(contains_strs.size());
       for (const auto& contains_str : contains_strs) {
-        searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
+        searchers.emplace_back(contains_str.begin(), contains_str.end());
       }
 
-      functor([&](const auto& string) -> bool {
+      functor([&](const auto& string) {
         auto current_position = string.begin();
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
           current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
@@ -147,7 +147,7 @@ class LikeMatcher {
     } else if (std::holds_alternative<std::regex>(_pattern_variant)) {
       const auto& regex = std::get<std::regex>(_pattern_variant);
 
-      functor([&](const auto& string) -> bool {
+      functor([&](const auto& string) {
         return std::regex_match(string.cbegin(), string.cend(), regex) ^ invert_results;
       });
 
