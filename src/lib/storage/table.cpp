@@ -9,6 +9,7 @@
 #include <mutex>
 #include <optional>
 #include <set>
+#include <shared_mutex>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -411,6 +412,14 @@ std::unique_lock<std::mutex> Table::acquire_append_mutex() {
   return std::unique_lock<std::mutex>(_append_mutex);
 }
 
+std::unique_lock<std::shared_mutex> Table::acquire_constraints_modify_mutex() {
+  return std::unique_lock<std::shared_mutex>(_constraint_mutex);
+}
+
+std::shared_lock<std::shared_mutex> Table::acquire_constraints_read_mutex() const {
+  return std::shared_lock<std::shared_mutex>(_constraint_mutex);
+}
+
 std::shared_ptr<TableStatistics> Table::table_statistics() const {
   return _table_statistics;
 }
@@ -444,7 +453,7 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
   _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
 }
 
-void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint) {
+void Table::add_soft_constraint_unsafe(const AbstractTableConstraint& table_constraint) {
   Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
   switch (table_constraint.type()) {
     case TableConstraintType::Key:
@@ -457,6 +466,11 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
       _add_soft_order_constraint(static_cast<const TableOrderConstraint&>(table_constraint));
       return;
   }
+}
+
+void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint) {
+  const auto table_constraints_modify_lock = acquire_constraints_modify_mutex();
+  add_soft_constraint_unsafe(table_constraint);
 }
 
 const TableKeyConstraints& Table::soft_key_constraints() const {
@@ -486,8 +500,6 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
       Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
     }
   }
-
-  const auto append_lock = acquire_append_mutex();
 
   for (const auto& existing_constraint : _table_key_constraints) {
     // Ensure that no other PRIMARY KEY is defined.
@@ -523,10 +535,9 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
     Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
 
-  const auto append_lock = acquire_append_mutex();
   const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
   Assert(inserted, "ForeignKeyConstraint has already been set.");
-  const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
+  const auto referenced_table_constraints_modify_lock = referenced_table->acquire_constraints_modify_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
@@ -542,7 +553,6 @@ void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_c
     Assert(column_id < column_count, "ColumnID out of range.");
   }
 
-  const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
     // Do not allow intersecting order constraints. Though they can be valid, we are pessimistic for now and notice if
     // we run into intricate cases.
