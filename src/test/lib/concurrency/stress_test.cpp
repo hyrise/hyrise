@@ -7,7 +7,6 @@
 #include <thread>
 
 #include "../utils/plugin_test_utils.hpp"
-// #include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
@@ -24,7 +23,6 @@
 #include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
-// #include "types.hpp"
 #include "ucc_discovery_plugin.hpp"
 #include "utils/atomic_max.hpp"
 #include "utils/plugin_manager.hpp"
@@ -719,14 +717,14 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
   table->append({3, 3, 1});
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
-
-  // Run multiple modifications, deletions and additions concurrently that require locks:
-  // - `Table::delete_key_constraint`
-  // - `UccDiscoveryPlugin::_validate_ucc_candidates`
-  // - `StaticTableNode::unique_column_combinations`
-  // NOTE: We do not execute `Table::add_soft_constraint` because we do not have the knowledge whether or not the
-  // constraint already exists.
-
+  
+  /** Run multiple modifications, deletions and additions concurrently that require locks:
+   * - `Table::delete_key_constraint`
+   * - `UccDiscoveryPlugin::_validate_ucc_candidates`
+   * - `StaticTableNode::unique_column_combinations`
+   * NOTE: We do not execute `Table::add_soft_constraint` because we do not have the knowledge whether or not the
+   * constraint already exists.
+   */
   const auto delete_constraint = [&] {
     table->delete_key_constraint(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
   };
@@ -757,7 +755,7 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
   threads.reserve(thread_count);
 
   for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
-    switch (thread_id % 2) {
+    switch (thread_id % 3) {
       case 0:
         threads.emplace_back(delete_constraint);
         break;
@@ -778,6 +776,7 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
 
   // Check that the set of TableKeyConstraints does not contain any duplicates.
   ASSERT_LE(table->soft_key_constraints().size(), 3);
+  ASSERT_GE(table->soft_key_constraints().size(), 1);
 }
 
 }  // namespace hyrise
