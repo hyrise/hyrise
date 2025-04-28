@@ -133,8 +133,7 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
 
   const auto& file_type = GetParam();
 
-  // For the `.csv` and `.tbl` files we expect a default encoding of `Dictionary`. The `.bin` file we load is stored
-  // and therefore expected to be `Unencoded`.
+  // The `.bin` file we load is stored and therefore expected to be `Unencoded`.
   if (file_type != FileType::Binary) {
     const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::FrameOfReference},
                                                        SegmentEncodingSpec{EncodingType::Dictionary}};
