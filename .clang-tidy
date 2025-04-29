@@ -42,6 +42,8 @@ Checks: '
          -bugprone-easily-swappable-parameters,
          -bugprone-suspicious-include,
          -bugprone-unchecked-optional-access
+         -fuchsia-virtual-inheritance
+         -fuchsia-multiple-inheritance
          '
 
 WarningsAsErrors: '*'
@@ -91,7 +93,8 @@ HeaderFilterRegex: '.*'
 #                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for
 #                                                                these includes as well.
 #   - bugprone-unchecked-optional-access                        Too many false positives (with clang-tidy 14/15). TODO(anyone): Re-evaluate for future clang versions.
-
+#   -fuchsia-virtual-inheritance                                We use multiple and virtual inheritance and keep it for now.
+#   -fuchsia-multiple-inheritance                               We use multiple and virtual inheritance and keep it for now.
 
 CheckOptions:
   - { key: readability-identifier-naming.ClassCase, value: CamelCase }
