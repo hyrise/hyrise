@@ -184,15 +184,15 @@ bool Chunk::references_exactly_one_table() const {
   return true;
 }
 
-void Chunk::migrate(MemoryResource& memory_source) {
+void Chunk::migrate(MemoryResource& memory_resource) {
   // Migrating chunks with indexes is not implemented yet.
   if (!_indexes.empty()) {
     Fail("Cannot migrate chunk with indexes.");
   }
 
-  auto new_segments = Segments(&memory_source);
+  auto new_segments = Segments(&memory_resource);
   for (const auto& segment : _segments) {
-    new_segments.push_back(segment->copy_using_memory_resource(memory_source));
+    new_segments.push_back(segment->copy_using_memory_resource(memory_resource));
   }
   _segments = std::move(new_segments);
 }
