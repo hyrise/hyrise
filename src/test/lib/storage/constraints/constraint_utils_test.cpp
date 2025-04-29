@@ -141,6 +141,7 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeValid) {
   EXPECT_FALSE(is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, {}, CommitID{0}}));
 
   // Manually modify the max_begin_cid of the chunk to simulate an insert to the table.
+  _table_b->append({0, 1});
   _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid = CommitID{1};
 
   // The first constraint is permanent and therefore valid, the second was verified on a previous CommitID so we do not
@@ -158,6 +159,7 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeInvalid) {
   EXPECT_TRUE(is_constraint_confidently_invalid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, {}, CommitID{0}}));
 
   // Manually modify the max_end_cid of the chunk to simulate a delete to the table.
+  _table_b->append({0, 1});
   _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_end_cid = CommitID{1};
 
   // The first constraint is permanent and therefore NOT confidently invalid, the second was never verified but only
