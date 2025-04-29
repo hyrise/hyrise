@@ -105,7 +105,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     // Use a stringstream here to bundle all writes into a single one and avoid locking.
     auto output = std::ostringstream{};
     output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type " << column_data_type
-           << " has no supported encoding specified and its encoding is automatically selected.";
+           << " has no supported encoding specified and its encoding is automatically selected.\n";
     std::cout << output.str();
 
     const auto column_is_unique = table->column_is_unique(column_id);
