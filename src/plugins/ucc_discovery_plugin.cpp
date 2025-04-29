@@ -152,7 +152,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
       // Update the validation commit ID of UCCs that are not permanent.
       const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
-      if (existing_ucc->last_validated_on() < snapshot_commit_id) {
+      if (existing_ucc->last_validated_on() && existing_ucc->last_validated_on() < snapshot_commit_id) {
         existing_ucc->revalidated_on(snapshot_commit_id);
       }
 
@@ -187,24 +187,24 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
             existing_ucc->invalidated_on(transaction_context->snapshot_commit_id());
           }
         } else if (confirmed) {
-          table->add_soft_constraint_unsafe(
-              TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE,
-                  transaction_context->snapshot_commit_id(), {}));
+          table->add_soft_constraint_unsafe(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE,
+                                                               transaction_context->snapshot_commit_id(), {}));
         } else {
-          table->add_soft_constraint_unsafe(
-            TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE,
-                CommitID{0}, transaction_context->snapshot_commit_id()));
+          table->add_soft_constraint_unsafe(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE, CommitID{0},
+                                                               transaction_context->snapshot_commit_id()));
         }
       };
 
       if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id)) {
         message << " [rejected because some chunk contains duplicates in " << candidate_timer.lap_formatted() << "]";
         update_ucc(false);
-      
-      } else if (!_uniqueness_holds_across_segments<ColumnDataType>(table, candidate.table_name, column_id, transaction_context)) {
-        message << " [rejected because the column has cross-segment duplicates in " << candidate_timer.lap_formatted() << "]";
+
+      } else if (!_uniqueness_holds_across_segments<ColumnDataType>(table, candidate.table_name, column_id,
+                                                                    transaction_context)) {
+        message << " [rejected because the column has cross-segment duplicates in " << candidate_timer.lap_formatted()
+                << "]";
         update_ucc(false);
-      
+
       } else {
         message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
         update_ucc(true);

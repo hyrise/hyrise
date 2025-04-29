@@ -717,7 +717,7 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
   table->append({3, 3, 1});
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
-  
+
   /** Run multiple modifications, deletions and additions concurrently that require locks:
    * - `Table::delete_key_constraint`
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`

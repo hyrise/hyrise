@@ -85,8 +85,9 @@ bool is_constraint_confidently_valid(const std::shared_ptr<Table>& table,
     return true;
   }
 
-  if (table_key_constraint.last_invalidated_on() &&
-      table_key_constraint.last_validated_on() < *table_key_constraint.last_invalidated_on()) {
+  if (!table_key_constraint.last_validated_on() ||
+      (table_key_constraint.last_invalidated_on() &&
+       table_key_constraint.last_validated_on() < *table_key_constraint.last_invalidated_on())) {
     return false;
   }
 
