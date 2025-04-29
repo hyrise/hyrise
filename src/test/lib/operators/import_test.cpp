@@ -232,6 +232,17 @@ TEST_F(OperatorsImportTest, RetrieveCsvMetaFromTable) {
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
 }
 
+TEST_F(OperatorsImportTest, ThrowExceptionWithMultipleMetaSources) {
+  auto existing_table = CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json");
+
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
+
+  EXPECT_THROW(importer->execute(), std::exception);
+}
+
 TEST_F(OperatorsImportTest, ChunkSize) {
   auto importer = std::make_shared<Import>("resources/test_data/csv/float_int_large.csv", "a", ChunkOffset{20});
   importer->execute();

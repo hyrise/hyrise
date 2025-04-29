@@ -17,7 +17,7 @@ namespace hyrise {
  * Supported file types are .tbl, .csv and Hyrise .bin files.
  * For .csv files, a CSV config is additionally required (if no table with the same name exists as a template).
  * The operator looks for this content in the file <filename>.json.
- * If a table with this filename already exists, it is dropped. This contradicts the COPY FROM semantic from SQL.
+ * If a table with this filename already exists, it is dropped (not appended as done in Postgres).
  * Documentation of the file formats can be found in BinaryWriter and CsvWriter header files.
  */
 class Import : public AbstractReadOnlyOperator {
