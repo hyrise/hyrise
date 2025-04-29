@@ -1,4 +1,7 @@
+#include <gtest/gtest.h>
+
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -9,7 +12,9 @@
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -23,7 +28,8 @@ class ConstraintUtilsTest : public BaseTest {
                                           {"d", DataType::Int, false},
                                           {"e", DataType::Int, false},
                                           {"f", DataType::Int, false}});
-    _table_b = Table::create_dummy_table({{"x", DataType::Int, false}, {"y", DataType::Int, false}});
+    _table_b = std::make_shared<Table>(TableColumnDefinitions{{"x", DataType::Int, false}, {"y", DataType::Int, false}},
+                                       TableType::Data, std::nullopt, UseMvcc::Yes);
   }
 
   std::shared_ptr<Table> _table_a;
@@ -126,6 +132,42 @@ TEST_F(ConstraintUtilsTest, TableOrderConstraint) {
   EXPECT_THROW(order_constraint(_table_a, {"e", "a"}, {"c", "d"}), std::logic_error);
   EXPECT_THROW(order_constraint(_table_a, {"a", "b"}, {"e", "c"}), std::logic_error);
   EXPECT_THROW(order_constraint(_table_a, {"a", "b"}, {"c", "e"}), std::logic_error);
+}
+
+TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeValid) {
+  EXPECT_TRUE(is_constraint_confidently_valid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
+  EXPECT_TRUE(is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}}));
+
+  EXPECT_FALSE(is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, {}, CommitID{0}}));
+
+  // Manually modify the max_begin_cid of the chunk to simulate an insert to the table.
+  _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid = CommitID{1};
+
+  // The first constraint is permanent and therefore valid, the second was verified on a previous CommitID so we do not
+  // know whether or not it is still valid and the last constraint has a CommmitID that is up-to-date and is therefore
+  // certainly valid.
+  EXPECT_TRUE(is_constraint_confidently_valid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
+  EXPECT_FALSE(is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}}));
+  EXPECT_FALSE(
+      is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}, CommitID{1}}));
+}
+
+TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeInvalid) {
+  EXPECT_FALSE(
+      is_constraint_confidently_invalid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY, CommitID{0}, {}}));
+  EXPECT_TRUE(is_constraint_confidently_invalid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, {}, CommitID{0}}));
+
+  // Manually modify the max_end_cid of the chunk to simulate a delete to the table.
+  _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_end_cid = CommitID{1};
+
+  // The first constraint is permanent and therefore NOT confidently invalid, the second was never verified but only
+  // invalidated on a CommitID prior to the deletion so it is also NOT confidently invalid and the last constraint was
+  // invalidated on a CommitID that is up-to-date and therefore certainly invalid.
+  EXPECT_FALSE(is_constraint_confidently_invalid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
+  EXPECT_FALSE(
+      is_constraint_confidently_invalid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, {}, CommitID{0}}));
+  EXPECT_TRUE(is_constraint_confidently_invalid(_table_b,
+                                                {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}, CommitID{1}}));
 }
 
 }  // namespace hyrise
