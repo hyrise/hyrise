@@ -20,7 +20,8 @@ struct MaterializedValue {
 
   MaterializedValue(RowID row, T value) : row_id{row}, value{value} {}
 
-  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T value) : row_id{chunk_id, chunk_offset}, value{value} {}
+  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T value)
+      : row_id{chunk_id, chunk_offset}, value{value} {}
 
   RowID row_id;
   T value{};

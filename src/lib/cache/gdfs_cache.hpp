@@ -37,7 +37,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
   using CacheMap = typename std::unordered_map<Key, Handle>;
   using SnapshotEntry = typename AbstractCache<Key, Value>::SnapshotEntry;
 
-  explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : AbstractCache<Key, Value>(capacity) {}
 
   void set(const Key& key, const Value& value, double /*cost*/ = 1.0, double size = 1.0) final {
     const std::unique_lock<std::shared_mutex> lock(_mutex);
@@ -69,7 +69,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
     // Insert new item in cache.
     GDFSCacheEntry entry{key, value, 1, size, 0.0};
     entry.priority = _inflation + static_cast<double>(entry.frequency) / entry.size;
-    Handle handle = _queue.push(entry);
+    const Handle handle = _queue.push(entry);
     _map[key] = handle;
   }
 

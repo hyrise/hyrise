@@ -117,10 +117,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       };
       return std::find_if_not(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
                               less_than_current);
-    } else {
-      return std::lower_bound(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
-                              new_chunk_offset);
     }
+    return std::lower_bound(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
+                            new_chunk_offset);
   }
 
  private:
@@ -138,7 +137,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
         : _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
-          _end_positions_it{std::move(end_positions_it)},
+          _end_positions_it{end_positions_it},
           _end_positions_begin_it{_end_positions->cbegin()},
           _linear_search_threshold{determine_linear_search_offset_distance_threshold(_end_positions)},
           _chunk_offset{chunk_offset} {}
@@ -264,7 +263,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     ChunkOffset _linear_search_threshold;
 
     mutable ChunkOffset _prev_chunk_offset;
-    mutable size_t _prev_index;
+    mutable size_t _prev_index{};
   };
 };
 

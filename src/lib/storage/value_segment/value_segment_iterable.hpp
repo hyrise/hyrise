@@ -116,7 +116,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     explicit Iterator(ValueIterator begin_value_it, ValueIterator value_it, NullValueIterator null_value_it)
         : _value_it(std::move(value_it)),
-          _null_value_it{std::move(null_value_it)},
+          _null_value_it{null_value_it},
           _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
 
    private:
@@ -204,7 +204,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                              PosListIteratorType>{std::move(position_filter_begin),
                                                                   std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)},
-          _null_values_begin_it{std::move(null_values_begin_it)} {}
+          _null_values_begin_it{null_values_begin_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

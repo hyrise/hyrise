@@ -27,7 +27,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
     return *this;
   }
 
-  BitPackingIterator& operator=(BitPackingIterator&& other) {
+  BitPackingIterator& operator=(BitPackingIterator&& other) noexcept {
     if (this == &other) {
       return *this;
     }

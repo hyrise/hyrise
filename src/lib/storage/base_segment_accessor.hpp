@@ -22,7 +22,7 @@ class BaseSegmentAccessor {
 template <typename T>
 class AbstractSegmentAccessor : public BaseSegmentAccessor {
  public:
-  virtual const std::optional<T> access(ChunkOffset offset) const = 0;
+  virtual std::optional<T> access(ChunkOffset offset) const = 0;
 };
 
 }  // namespace hyrise

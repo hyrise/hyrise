@@ -28,6 +28,8 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   FixedStringIterator(const FixedStringIterator&) = default;
 
   FixedStringIterator& operator=(const FixedStringIterator& other) {
+    if (this == &other)
+      return *this;
     DebugAssert(_string_length == other._string_length && &_chars == &other._chars,
                 "can't convert pointers from different vectors");
     _pos = other._pos;
@@ -47,7 +49,7 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
     if (_string_length == 0) {
       return 0;
     }
-    return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / std::intptr_t(_string_length);
+    return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / static_cast<std::intptr_t>(_string_length);
   }
 
   void advance(size_t n) {  // NOLINT

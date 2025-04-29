@@ -109,8 +109,9 @@ class PosHashTable {
 
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
       : _mode(mode),
-        _small_pos_lists(mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0,
-                         SmallPosList{SmallPosList::allocator_type(_memory_pool.get())}) {
+        _small_pos_lists(
+            mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0,
+            SmallPosList{SmallPosList::allocator_type(_memory_pool.get())}) {  // NOLINT(google-readability-casting)
     // _small_pos_lists is initialized with an additional element to make the enforcement of the assertions easier. For
     // _JoinHashBuildMode::ExistenceOnly, we do not store positions and thus do not initialize _small_pos_lists.
     _offset_hash_table.reserve(max_size);
@@ -243,7 +244,7 @@ class PosHashTable {
 // Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
 // We did not yet work on this because the Bloom filter was a byproduct of a research project and we have not had the
 // resources to optimize it at the time.
-static constexpr auto BLOOM_FILTER_SIZE = 1u << 20;
+static constexpr auto BLOOM_FILTER_SIZE = 1u << 20u;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is

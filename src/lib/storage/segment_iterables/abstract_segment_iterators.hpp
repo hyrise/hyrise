@@ -70,7 +70,7 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
-  const ChunkOffsetMapping chunk_offsets() const {
+  ChunkOffsetMapping chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
     return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin), _position_filter_it->chunk_offset};

@@ -41,7 +41,7 @@ class PerformanceWarningClass {
   static bool _disabled;
 
   static bool disable() {
-    bool previous = _disabled;
+    const bool previous = _disabled;
     _disabled = true;
     return previous;
   }

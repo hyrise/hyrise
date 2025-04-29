@@ -17,12 +17,12 @@ class Singleton : public Noncopyable {
     return instance;
   }
 
-  virtual ~Singleton() {}
+  virtual ~Singleton() = default;
 
  protected:
   // If you need to overwrite the constructor make sure to friend this Singleton class. Otherwise it cannot call
   // the protected constructor of a derived class.
-  Singleton() {}
+  Singleton() = default;
 
   Singleton& operator=(Singleton&&) = default;
 };

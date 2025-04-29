@@ -14,11 +14,13 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
   FixedWidthIntegerDecompressor(FixedWidthIntegerDecompressor&&) = default;
 
   FixedWidthIntegerDecompressor& operator=(const FixedWidthIntegerDecompressor& other) {
+    if (this == &other)
+      return *this;
     DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor.");
     return *this;
   }
 
-  FixedWidthIntegerDecompressor& operator=(FixedWidthIntegerDecompressor&& other) {
+  FixedWidthIntegerDecompressor& operator=(FixedWidthIntegerDecompressor&& other) noexcept {
     DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor.");
     return *this;
   }

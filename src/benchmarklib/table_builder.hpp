@@ -114,7 +114,7 @@ class TableBuilder {
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
                const ChunkOffset estimated_rows = ChunkOffset{0})
-      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
+      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
