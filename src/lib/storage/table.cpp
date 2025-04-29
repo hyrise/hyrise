@@ -209,22 +209,6 @@ bool Table::column_is_unique(const ColumnID column_id) const {
   return false;
 }
 
-std::vector<bool> Table::columns_are_unique() const {
-  auto unique = std::vector<bool>(column_count(), false);
-  for (const auto& key_constraint : soft_key_constraints()) {
-    const auto key_type = key_constraint.key_type();
-    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
-      continue;
-    }
-
-    for (const auto& column_id : key_constraint.columns()) {
-      unique[column_id] = true;
-    }
-  }
-
-  return unique;
-}
-
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   const auto iter =
       std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {

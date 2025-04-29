@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 
+#include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -74,23 +75,19 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
   Fail("Invalid enum value.");
 }
 
-SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, const bool is_unique) {
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, const bool segment_values_are_unique) {
   switch (type) {
     case DataType::Int:
       return SegmentEncodingSpec{EncodingType::FrameOfReference};
+    case DataType::String:
+      return SegmentEncodingSpec{EncodingType::FixedStringDictionary};
     case DataType::Long:
     case DataType::Double:
     case DataType::Float:
-      if (is_unique) {
+      if (segment_values_are_unique) {
         return SegmentEncodingSpec{EncodingType::Unencoded};
       } else {
         return SegmentEncodingSpec{EncodingType::Dictionary};
-      }
-    case DataType::String:
-      if (is_unique) {
-        return SegmentEncodingSpec{EncodingType::Unencoded};
-      } else {
-        return SegmentEncodingSpec{EncodingType::FixedStringDictionary};
       }
     default:
       Fail("Unknown DataType when trying to select encoding for column");

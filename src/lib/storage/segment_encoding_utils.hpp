@@ -29,6 +29,6 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
  */
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
 
-SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, const bool is_unique = false);
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, const bool segment_values_are_unique = false);
 
 }  // namespace hyrise
