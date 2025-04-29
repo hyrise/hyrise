@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(Hyrise)
 
+enable_testing()
+
 if(APPLE)
     set(CMAKE_EXE_LINKER_FLAGS -Wl,-export_dynamic)
 else()
