@@ -1,5 +1,7 @@
 #include "benchmark_table_encoder.hpp"
 
+#include <iosfwd>
+#include <iostream>
 #include <atomic>
 #include <memory>
 #include <string>
