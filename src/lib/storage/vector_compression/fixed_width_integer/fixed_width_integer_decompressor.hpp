@@ -23,14 +23,14 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
     return *this;
   }
 
-  uint32_t get(size_t i) final {
+  uint32_t get(size_t index) final {
     // GCC warns here: _data may be used uninitialized in this function [-Werror=maybe-uninitialized]
     // Clang does not complain. Also, _data is a reference, so there should be no way of it being uninitialized.
     // Since gcc's uninitialized-detection is known to be buggy, we ignore that.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
-    return _data[i];
+    return _data[index];
 
 #pragma GCC diagnostic pop
   }

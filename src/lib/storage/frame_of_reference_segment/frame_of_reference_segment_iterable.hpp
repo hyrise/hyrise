@@ -87,8 +87,8 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       --_chunk_offset;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _chunk_offset += n;
+    void advance(std::ptrdiff_t distance) {
+      _chunk_offset += distance;
     }
 
     bool equal(const Iterator& other) const {

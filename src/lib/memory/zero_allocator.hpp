@@ -12,9 +12,9 @@ class ZeroAllocator : public tbb::cache_aligned_allocator<ValueType> {
   template <typename U>
   explicit ZeroAllocator(const ZeroAllocator<U>& /*unused*/) noexcept {}
 
-  ValueType* allocate(std::size_t n) {
-    ValueType* ptr = tbb::cache_aligned_allocator<ValueType>::allocate(n);
-    std::memset(static_cast<void*>(ptr), 0, n * sizeof(ValueType));
+  ValueType* allocate(std::size_t size) {
+    ValueType* ptr = tbb::cache_aligned_allocator<ValueType>::allocate(size);
+    std::memset(static_cast<void*>(ptr), 0, size * sizeof(ValueType));
     return ptr;
   }
 };

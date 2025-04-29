@@ -220,8 +220,8 @@ std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... arg
 }
 
 template <typename A, typename B, typename C>
-std::shared_ptr<CaseExpression> case_(const A& a, const B& b, const C& c) {
-  return std::make_shared<CaseExpression>(to_expression(a), to_expression(b), to_expression(c));
+std::shared_ptr<CaseExpression> case_(const A& expr1, const B& expr2, const C& expr3) {
+  return std::make_shared<CaseExpression>(to_expression(expr1), to_expression(expr2), to_expression(expr3));
 }
 
 template <typename String, typename Start, typename Length>
@@ -236,8 +236,8 @@ std::shared_ptr<FunctionExpression> concat_(const Args... args) {
 }
 
 template <typename V>
-std::shared_ptr<FunctionExpression> abs_(const V& v) {
-  return std::make_shared<FunctionExpression>(FunctionType::Absolute, expression_vector(to_expression(v)));
+std::shared_ptr<FunctionExpression> abs_(const V& value) {
+  return std::make_shared<FunctionExpression>(FunctionType::Absolute, expression_vector(to_expression(value)));
 }
 
 template <typename... Args>
@@ -246,13 +246,13 @@ std::shared_ptr<ListExpression> list_(Args&&... args) {
 }
 
 template <typename V, typename S>
-std::shared_ptr<InExpression> in_(const V& v, const S& s) {
-  return std::make_shared<InExpression>(PredicateCondition::In, to_expression(v), to_expression(s));
+std::shared_ptr<InExpression> in_(const V& value, const S& set) {
+  return std::make_shared<InExpression>(PredicateCondition::In, to_expression(value), to_expression(set));
 }
 
 template <typename V, typename S>
-std::shared_ptr<InExpression> not_in_(const V& v, const S& s) {
-  return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(v), to_expression(s));
+std::shared_ptr<InExpression> not_in_(const V& value, const S& set) {
+  return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(value), to_expression(set));
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& subquery_expression);
