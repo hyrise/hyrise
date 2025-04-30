@@ -152,7 +152,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
       // Update the validation commit ID of UCCs that are not permanent.
       const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
-      if (existing_ucc->last_validated_on() < snapshot_commit_id) {
+      if (existing_ucc->last_validated_on() && existing_ucc->last_validated_on() < snapshot_commit_id) {
         existing_ucc->revalidated_on(snapshot_commit_id);
       }
 
@@ -176,40 +176,38 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      auto ucc_is_currently_valid = false;
       // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
       // If that does not allow us to reject the UCC right away, we have to run the more expensive
       // cross-segment duplicate check (next clause of the if-condition).
+      auto update_ucc = [&](bool confirmed) {
+        if (existing_ucc != soft_key_constraints.end()) {
+          if (confirmed) {
+            existing_ucc->revalidated_on(transaction_context->snapshot_commit_id());
+          } else {
+            existing_ucc->invalidated_on(transaction_context->snapshot_commit_id());
+          }
+        } else if (confirmed) {
+          table->add_soft_constraint_unsafe(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE,
+                                                               transaction_context->snapshot_commit_id(), {}));
+        } else {
+          table->add_soft_constraint_unsafe(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE, CommitID{0},
+                                                               transaction_context->snapshot_commit_id()));
+        }
+      };
+
       if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id)) {
         message << " [rejected because some chunk contains duplicates in " << candidate_timer.lap_formatted() << "]";
+        update_ucc(false);
+
       } else if (!_uniqueness_holds_across_segments<ColumnDataType>(table, candidate.table_name, column_id,
                                                                     transaction_context)) {
         message << " [rejected because the column has cross-segment duplicates in " << candidate_timer.lap_formatted()
                 << "]";
-      } else {
-        ucc_is_currently_valid = true;
-        message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
-      }
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+        update_ucc(false);
 
-      if (ucc_is_currently_valid) {
-        if (existing_ucc != soft_key_constraints.end()) {
-          // UCC already exists, we need to update its validation commit ID.
-          existing_ucc->revalidated_on(transaction_context->snapshot_commit_id());
-        } else {
-          // UCC does not exist yet, so we save it directly inside the table so that it can be forwarded to nodes
-          // in a query plan.
-          table->add_soft_constraint_unsafe(
-              TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE, transaction_context->snapshot_commit_id()));
-        }
       } else {
-        if (existing_ucc != soft_key_constraints.end()) {
-          existing_ucc->invalidated_on(transaction_context->snapshot_commit_id());
-        } else {
-          // The UCC is invalid and currently not added to the tables key constraints. We add the UCC (as invalidated).
-          table->add_soft_constraint_unsafe(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE, CommitID{0},
-                                                               transaction_context->snapshot_commit_id()));
-        }
+        message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
+        update_ucc(true);
       }
     });
   }
@@ -319,8 +317,8 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
   // as we have excluded the others when executing the GetTable operator.
   const auto validated_chunk_count = table_view->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < validated_chunk_count; ++chunk_id) {
-    const auto& source_chunk = table_view->get_chunk(chunk_id);
-    const auto& source_segment = source_chunk->get_segment(column_id);
+    const auto source_chunk = table_view->get_chunk(chunk_id);
+    const auto source_segment = source_chunk->get_segment(column_id);
 
     const auto expected_distinct_value_count = distinct_values_across_segments.size() + source_segment->size();
     auto running_distinct_value_count = distinct_values_across_segments.size();

@@ -296,6 +296,9 @@ include_directories(../../third_party/googletest/googletest/)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+# include GoogleTest cmake for test discovery
+include(GoogleTest)
+
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
@@ -312,6 +315,8 @@ target_precompile_headers(hyriseTest PRIVATE
     [["storage/table.hpp"]]
     [["types.hpp"]]
 )
+# Discover tests by running the hyriseTest binary with the --gtest_list_tests flag. Increase the timeout to 30 seconds as the default is not enough.
+gtest_discover_tests(hyriseTest WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} TEST_PREFIX hyriseTest/ DISCOVERY_TIMEOUT 60)
 
 # Configure hyriseSystemTest. With LLVM18+ and macOS, we need to ensure that the entire hyriseBenchmarkLib (required for
 # testing plugin benchmark hooks) is exported. For some reason, some symbols are missing if we do not use whole archive.
@@ -320,3 +325,5 @@ target_link_libraries(hyriseSystemTest PUBLIC hyrise ${LIBRARIES})
 target_link_libraries(hyriseSystemTest PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,hyriseBenchmarkLib>")
 target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)
+# Discover tests by running the hyriseSystemTest binary with the --gtest_list_tests flag. Increase the timeout to 30 seconds as the default is not enough.
+gtest_discover_tests(hyriseSystemTest WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} TEST_PREFIX hyriseSystemTest/ DISCOVERY_TIMEOUT 60)

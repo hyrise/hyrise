@@ -478,8 +478,8 @@ TableKeyConstraints Table::valid_soft_key_constraints() const {
   const std::shared_lock<std::shared_mutex> key_constraints_read_lock{_constraint_mutex};
   auto valid_soft_key_constraints_filter =
       _table_key_constraints | std::views::filter([](const auto& constraint) {
-        return (!constraint.last_invalidated_on() ||
-                *constraint.last_invalidated_on() < constraint.last_validated_on());
+        return (constraint.last_validated_on() && (!constraint.last_invalidated_on() ||
+                                                   *constraint.last_invalidated_on() < constraint.last_validated_on()));
       });
   auto valid_soft_key_constraints =
       TableKeyConstraints{valid_soft_key_constraints_filter.begin(), valid_soft_key_constraints_filter.end()};
