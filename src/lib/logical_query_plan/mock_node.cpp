@@ -146,7 +146,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(std::move(column_expressions));
+    unique_column_combinations.emplace(std::move(column_expressions), !table_key_constraint.can_become_invalid());
   }
 
   return unique_column_combinations;

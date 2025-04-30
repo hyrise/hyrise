@@ -153,7 +153,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(std::move(column_expressions));
+    unique_column_combinations.emplace(std::move(column_expressions), !table_key_constraint.can_become_invalid());
   }
 
   return unique_column_combinations;
@@ -164,7 +164,7 @@ OrderDependencies StoredTableNode::order_dependencies() const {
 
   // We create order dependencies from table order constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& table_order_constraints = table->soft_order_constraints();
+  const auto table_order_constraints = table->soft_order_constraints();
 
   for (const auto& table_order_constraint : table_order_constraints) {
     // Discard order constraints that involve pruned column id(s). [a] |-> [b, c] could be transformed to [a] |-> [b] if

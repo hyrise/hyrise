@@ -124,10 +124,10 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
   // Check uniqueness of join columns.
   const auto left_operand_is_unique =
       !left_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
+      ucc_cacheability_if_exists(left_unique_column_combinations, {join_predicate->left_operand()});
   const auto right_operand_is_unique =
       !right_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
+      ucc_cacheability_if_exists(right_unique_column_combinations, {join_predicate->right_operand()});
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the UCCs of both sides remain valid.

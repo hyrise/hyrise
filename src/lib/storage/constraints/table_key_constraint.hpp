@@ -30,7 +30,6 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   const std::set<ColumnID>& columns() const;
 
   KeyConstraintType key_type() const;
-
   const std::optional<CommitID>& last_validated_on() const;
   const std::optional<CommitID>& last_invalidated_on() const;
 
