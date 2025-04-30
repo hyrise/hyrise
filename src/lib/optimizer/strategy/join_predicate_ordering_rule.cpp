@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -21,7 +22,7 @@ std::string JoinPredicateOrderingRule::name() const {
   return name;
 }
 
-void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
+IsCacheable JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     // Check if this is a multi predicate join.
@@ -72,6 +73,8 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
+
+  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise
