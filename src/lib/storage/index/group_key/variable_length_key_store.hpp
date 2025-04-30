@@ -124,7 +124,8 @@ class VariableLengthKeyStore {
      * This is required since a mutable constructor can be used every time when a const iterator is expected.
      */
     template <typename OtherProxy, typename = std::enable_if_t<std::is_convertible_v<OtherProxy, Proxy>>>
-    explicit IteratorBase(const IteratorBase<OtherProxy>& other)  // NOLINT(runtime/explicit)
+    IteratorBase(  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+        const IteratorBase<OtherProxy>& other)
         : _bytes_per_key(other._bytes_per_key), _key_alignment(other._key_alignment), _data(other._data) {}
 
    private:
