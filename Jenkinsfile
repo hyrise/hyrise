@@ -123,7 +123,6 @@ try {
             // Configure the rest in parallel. We use unity builds to decrease build times. The only exception is the
             // clang-tidy build as it might otherwise miss some issues (e.g., missing includes).
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
-            mkdir clang-debug-tidy-manual && cd clang-debug-tidy-manual &&                               ${cmake} ${debug}          ${clang}                      ${ninja} -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&       ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
@@ -235,16 +234,6 @@ try {
                 sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 5))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
-              }
-            }
-          }, clangDebugTidyManual: {
-            state("clang-debug:tidy-manual") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy-manual && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 5))"
-                sh "find ../src/{benchmark,benchmarklib,bin,lib,plugins} \\( -iname \"*.cpp\" -o -iname \"*.hpp\" \\) -print0 | parallel --null --no-notice -j \$(( \$(nproc) / 5)) --nice 17 clang-tidy --extra-arg-before=--driver-mode=g++ --exclude-header-filter=. -p . {}"
-              } else {
-                Utils.markStageSkippedForConditional("clangDebugTidyManual")
               }
             }
           }, clangDebugDisablePrecompileHeaders: {
