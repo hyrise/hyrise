@@ -725,6 +725,9 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
    * NOTE: We do not execute `Table::add_soft_constraint` because we do not have the knowledge whether or not the
    * constraint already exists.
    */
+  const auto delete_constraint = [&] {
+    table->delete_key_constraint(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  };
 
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
@@ -752,11 +755,14 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
   threads.reserve(thread_count);
 
   for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
-    switch (thread_id % 2) {
+    switch (thread_id % 3) {
       case 0:
-        threads.emplace_back(validate_constraint);
+        threads.emplace_back(delete_constraint);
         break;
       case 1:
+        threads.emplace_back(validate_constraint);
+        break;
+      case 2:
         threads.emplace_back(static_table_node_constraint_access);
         break;
       default:

@@ -94,7 +94,7 @@ size_t StaticTableNode::_on_shallow_hash() const {
   }
 
   const auto constraint_read_lock = table->acquire_constraints_read_mutex();
-  const auto& soft_key_constraints = table->soft_key_constraints();
+  const auto& soft_key_constraints = table->valid_soft_key_constraints();
   for (const auto& table_key_constraint : soft_key_constraints) {
     // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
     hash = hash ^ table_key_constraint.hash();
@@ -114,7 +114,7 @@ bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
   const auto rhs_constraint_read_lock = static_table_node.table->acquire_constraints_read_mutex();
 
   return table->column_definitions() == static_table_node.table->column_definitions() &&
-         table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
+         table->valid_soft_key_constraints() == static_table_node.table->valid_soft_key_constraints();
 }
 
 }  // namespace hyrise

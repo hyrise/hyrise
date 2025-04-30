@@ -57,7 +57,7 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
   }
 
   const auto input_table_constraints_read_lock = input_table->acquire_constraints_read_mutex();
-  if (!input_table->soft_key_constraints().empty()) {
+  if (!input_table->valid_soft_key_constraints().empty()) {
     stream << separator;
     print_table_key_constraints(input_table, stream, separator);
   }

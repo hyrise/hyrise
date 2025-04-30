@@ -8,6 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <ranges>
 #include <set>
 #include <shared_mutex>
 #include <string>
@@ -473,6 +474,19 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
   add_soft_constraint_unsafe(table_constraint);
 }
 
+TableKeyConstraints Table::valid_soft_key_constraints() const {
+  const std::shared_lock<std::shared_mutex> key_constraints_read_lock{_constraint_mutex};
+  auto valid_soft_key_constraints_filter =
+      _table_key_constraints | std::views::filter([](const auto& constraint) {
+        return (constraint.last_validated_on() && (!constraint.last_invalidated_on() ||
+                                                   *constraint.last_invalidated_on() < constraint.last_validated_on()));
+      });
+  auto valid_soft_key_constraints =
+      TableKeyConstraints{valid_soft_key_constraints_filter.begin(), valid_soft_key_constraints_filter.end()};
+
+  return valid_soft_key_constraints;
+}
+
 const TableKeyConstraints& Table::soft_key_constraints() const {
   return _table_key_constraints;
 }
@@ -516,6 +530,11 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
   _table_key_constraints.insert(table_key_constraint);
 }
 
+void Table::delete_key_constraint(const TableKeyConstraint& constraint) {
+  const auto table_constraints_modify_lock = acquire_constraints_modify_mutex();
+  _table_key_constraints.erase(constraint);
+}
+
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
   Assert(foreign_key_constraint.foreign_key_table().get() == this, "ForeignKeyConstraint is added to the wrong table.");
 
@@ -541,7 +560,7 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
-void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
+void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {  // switch to using mutex
   // Check validity of columns.
   const auto column_count = this->column_count();
   for (const auto& column_id : table_order_constraint.ordering_columns()) {
