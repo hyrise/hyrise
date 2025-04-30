@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -148,7 +149,8 @@ std::string ChunkPruningRule::name() const {
   return name;
 }
 
-void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable ChunkPruningRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   auto predicate_pruning_chains_by_stored_table_node =
       std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicatePruningChain>>{};
 
@@ -252,6 +254,8 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
       stored_table_node->set_prunable_subquery_predicates(prunable_subquery_predicates);
     }
   }
+
+  return IsCacheable::Yes;
 }
 
 /**

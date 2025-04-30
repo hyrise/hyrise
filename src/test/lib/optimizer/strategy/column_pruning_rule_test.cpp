@@ -1,3 +1,6 @@
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
@@ -451,6 +454,14 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
       EXPECT_EQ(*join_node->prunable_input_side(), prunable_input_side);
     }
   }
+}
+
+TEST_F(ColumnPruningRuleTest, CheckCacheability) {
+  auto lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      ExportNode::make("dummy.csv", FileType::Auto, PredicateNode::make(greater_than_(a, 5), node_abc)));
+
+  const auto is_cacheable = _apply_rule(rule, lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise

@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -312,6 +314,13 @@ TEST_F(PredicateReorderingTest, PreferPredicatesOverJoins) {
 
   _apply_rule(_rule, _lqp);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(PredicateReorderingTest, CheckCacheability) {
+  auto input_lqp =
+      std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(greater_than_(a, 60), ValidateNode::make(node)));
+  const auto is_cacheable = _apply_rule(_rule, input_lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise

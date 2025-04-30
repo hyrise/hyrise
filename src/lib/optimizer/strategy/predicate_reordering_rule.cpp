@@ -12,6 +12,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 
@@ -176,7 +177,7 @@ std::string PredicateReorderingRule::name() const {
   return name;
 }
 
-void PredicateReorderingRule::_apply_to_plan_without_subqueries(
+IsCacheable PredicateReorderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // We reorder recursively from leaves to root. Thus, the CardinalityEstimator may cache already estimated statistics.
   const auto caching_cost_estimator = cost_estimator->new_instance();
@@ -185,6 +186,8 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
   // We keep track of visited nodes, so that this rule touches nodes once only.
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   reorder_predicates_recursively(lqp_root, caching_cost_estimator, visited_nodes);
+
+  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

@@ -1,4 +1,7 @@
+#include <memory>
+
 #include "cost_estimation/cost_estimator_logical.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -74,6 +77,20 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
   // clang-format on
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(JoinOrderingRuleTest, CheckCacheability) {
+  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(AggregateNode::make(
+      expression_vector(a_a), expression_vector(),
+      PredicateNode::make(
+          equals_(a_a, b_b),
+          JoinNode::make(JoinMode::Cross, node_a,
+                         JoinNode::make(JoinMode::Left, equals_(b_b, d_d), node_b,
+                                        PredicateNode::make(equals_(d_d, c_c),
+                                                            JoinNode::make(JoinMode::Cross, node_d, node_c)))))));
+
+  const auto is_cacheable = _apply_rule(rule, input_lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise

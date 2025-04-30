@@ -41,7 +41,7 @@ class PredicateReorderingRule : public AbstractRule {
   constexpr static auto JOIN_PENALTY = 1.5f;
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace hyrise

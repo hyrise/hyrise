@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "base_test.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 
 namespace hyrise {
 
@@ -25,7 +26,7 @@ class StrategyBaseTest : public BaseTest {
    * Always use `EXPECT_LQP_EQ(...);` rather than `EXPECT_EQ(...);` to compare LQPs: the first macro checks that both
    * LQPs are equivalent, the second macro checks that both point to the same instance.
    */
-  void _apply_rule(const std::shared_ptr<AbstractRule>& rule, std::shared_ptr<AbstractLQPNode>& input);
+  IsCacheable _apply_rule(const std::shared_ptr<AbstractRule>& rule, std::shared_ptr<AbstractLQPNode>& input);
 
   /**
    * We declare a member variable of the abstract class to account for rewrites that replace nodes with nodes of a

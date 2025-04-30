@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -78,8 +79,10 @@ std::string DependentGroupByReductionRule::name() const {
   return name;
 }
 
-void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
+IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  auto cacheable = IsCacheable::Yes;
+
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
@@ -158,6 +161,11 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       // library implementation details). Thus, we compare the ColumnIDs of the determinants.
       const auto& left_column_ids = get_column_ids(fd_left.determinants);
       const auto& right_column_ids = get_column_ids(fd_right.determinants);
+
+      if (fd_left.is_time_independent() != fd_right.is_time_independent()) {
+        return fd_left.is_time_independent();
+      }
+
       return left_column_ids < right_column_ids;
     });
 
@@ -173,6 +181,10 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
       const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
+        // Functional dependencies are derived from UCCs. In case we encounter a non-permanent FD, this means we
+        // encountered an underlying non-permanent UCC as well.
+        cacheable = cacheable && (fd.is_time_independent() ? IsCacheable::Yes : IsCacheable::No);
+
         // Refresh data structures correspondingly.
         group_by_list_changed = true;
         group_by_columns = fetch_group_by_columns();
@@ -193,6 +205,8 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
+
+  return cacheable;
 }
 
 }  // namespace hyrise

@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -446,6 +447,13 @@ TEST_F(BetweenCompositionRuleTest, HandleMultipleEqualExpressions) {
   _apply_rule(_rule, _lqp);
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(BetweenCompositionRuleTest, CheckCacheability) {
+  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      PredicateNode::make(equals_(_a_a, 100), PredicateNode::make(equals_(_a_b, 100), _node_a)));
+  const auto is_cacheable = _apply_rule(_rule, input_lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 }  // namespace hyrise

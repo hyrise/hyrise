@@ -25,7 +25,7 @@ class JoinOrderingRule : public AbstractRule {
   constexpr static auto MIN_VERTICES_FOR_HEURISTIC = size_t{9};
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace hyrise

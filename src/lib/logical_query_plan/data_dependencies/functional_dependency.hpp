@@ -28,9 +28,15 @@ namespace hyrise {
  *
  * Currently, the determinant expressions are required to be non-nullable to be involved in FDs. Combining null values
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
+ *
+ * If the FD may become invalid in the future (because it is not based on a schema constraint, but on the data
+ * incidentally fulfilling the constraint at the moment), the FD is marked as being not permanent.
+ * This information is important because query plans that were optimized using a non-permanent FD are probably
+ * not cacheable.
  */
 struct FunctionalDependency {
-  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents);
+  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
+                       bool is_time_independent = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -38,6 +44,11 @@ struct FunctionalDependency {
 
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
+
+  bool is_time_independent() const;
+
+ private:
+  bool _is_time_independent;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
@@ -56,7 +67,8 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
- *         As a result, FDs become deflated as follows:
+ *         Note that FDs that do not share the same time dependence are not merged. As a result, FDs become deflated as
+ *          follows (assuming all FDs are time-independent):
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}

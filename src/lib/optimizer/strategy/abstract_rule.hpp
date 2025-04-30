@@ -11,10 +11,15 @@ class AbstractLQPNode;
 class LogicalPlanRootNode;
 class LQPSubqueryExpression;
 
+enum class IsCacheable : bool { Yes = true, No = false };
+
+constexpr IsCacheable operator&&(IsCacheable lhs, IsCacheable rhs) {
+  return lhs == IsCacheable::Yes && rhs == IsCacheable::Yes ? IsCacheable::Yes : IsCacheable::No;
+}
+
 class AbstractRule {
  public:
   virtual ~AbstractRule() = default;
-
   /**
    * This function applies the concrete Optimizer Rule to an LQP.
    * The default implementation
@@ -37,8 +42,12 @@ class AbstractRule {
    *
    * Rules can define their own strategy of optimizing subquery LQPs by overriding this function. See, for example, the
    * StoredTableColumnAlignmentRule.
+   *
+   * @return Whether the resulting optimized LQP can be cached by the optimizer. A plan may only be cached if the root
+   *    LQP and all subquery LQPs are cacheable. An optimized plan might be not cacheable for example if we used a UCC
+   *    for optimization of which we cannot be sure that it will still be valid the next time the same query occurs.
    */
-  virtual void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const;
+  virtual IsCacheable apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const;
 
   virtual std::string name() const = 0;
 
@@ -53,8 +62,12 @@ class AbstractRule {
    *  left and the right side of the diamond. On both sides, we would reach the bottom of the diamond. From there, we
    *  would look at each node twice. visit_lqp prevents this by tracking which nodes have already been visited and
    *  avoiding visiting a node twice.
+   *
+   *  @return Whether the resulting optimized LQP can be cached by the optimizer. An optimized plan might be not
+   *    cacheable for example if we used a UCC for optimization of which we cannot be sure that it will still be valid
+   *    the next time the same query comes around.
    */
-  virtual void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const = 0;
+  virtual IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const = 0;
 };
 
 }  // namespace hyrise

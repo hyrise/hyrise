@@ -188,4 +188,13 @@ TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
   EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
+TEST_F(IndexScanRuleTest, CheckCacheability) {
+  auto predicate_node_0 = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(greater_than_(a, 10)));
+  predicate_node_0->set_left_input(stored_table_node);
+
+  EXPECT_EQ(std::dynamic_pointer_cast<PredicateNode>(predicate_node_0)->scan_type, ScanType::TableScan);
+  const auto is_cacheable = _apply_rule(rule, predicate_node_0);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+}
+
 }  // namespace hyrise
