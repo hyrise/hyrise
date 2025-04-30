@@ -26,7 +26,7 @@ using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 void gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
     std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables,
-    IsCacheable& cacheable) { // NOLINT(misc-unused-parameters)
+    IsCacheable& cacheable) {  // NOLINT(misc-unused-parameters)
   const auto prunable_side = join_node->prunable_input_side();
   if (!prunable_side) {
     return;

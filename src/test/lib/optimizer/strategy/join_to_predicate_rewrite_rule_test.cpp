@@ -85,7 +85,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   }
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable)); // Cacheable because rule was not applied.
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

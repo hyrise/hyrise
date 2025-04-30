@@ -1,4 +1,3 @@
-#include <gtest/gtest.h>
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -9,7 +8,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/dependent_group_by_reduction_rule.hpp"
 #include "strategy_base_test.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -311,7 +309,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -330,7 +328,7 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because used FD was derived from permanent UCC.
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -362,8 +360,7 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because FD was explicitly constructed to be permanent in
-                                                 // this test.
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -446,7 +443,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because UCC used is permanent.
+    EXPECT_TRUE(static_cast<bool>(is_cacheable));
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
