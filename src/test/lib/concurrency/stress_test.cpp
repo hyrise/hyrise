@@ -1,19 +1,12 @@
-#include <gtest/gtest.h>
-
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <future>
-#include <memory>
 #include <numeric>
 #include <optional>
 #include <thread>
 
 #include "../utils/plugin_test_utils.hpp"
-<<<<<<< HEAD
-#include "all_type_variant.hpp"
-=======
->>>>>>> j-hellenberg/maintain_data_dependencies
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
@@ -30,10 +23,6 @@
 #include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
-<<<<<<< HEAD
-#include "types.hpp"
-=======
->>>>>>> j-hellenberg/maintain_data_dependencies
 #include "ucc_discovery_plugin.hpp"
 #include "utils/atomic_max.hpp"
 #include "utils/plugin_manager.hpp"
