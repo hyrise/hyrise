@@ -90,7 +90,7 @@ SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, cons
         return SegmentEncodingSpec{EncodingType::Dictionary};
       }
     default:
-      Fail("Unknown DataType when trying to select encoding for column");
+      Fail("Unknown DataType when trying to select encoding for column.");
   }
 }
 
