@@ -87,16 +87,6 @@ class UccDiscoveryPluginTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
-  void _duplicate_table(const std::string& table_name) {
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-    const auto get_table = std::make_shared<GetTable>(table_name);
-    get_table->execute();
-    const auto insert_op = std::make_shared<Insert>(table_name, get_table);
-    insert_op->set_transaction_context(transaction_context);
-    insert_op->execute();
-    transaction_context->commit();
-  }
-
   std::shared_ptr<TransactionContext> _insert_row(const std::string& table_name,
                                                   const TableColumnDefinitions& column_definitions,
                                                   const std::vector<AllTypeVariant>& values,
@@ -133,42 +123,6 @@ class UccDiscoveryPluginTest : public BaseTest {
     const auto delete_op = std::make_shared<Delete>(table_scan);
     delete_op->set_transaction_context(transaction_context);
     delete_op->execute();
-
-    if (commit_transaction) {
-      transaction_context->commit();
-    }
-
-    return transaction_context;
-  }
-
-  std::shared_ptr<TransactionContext> _update_row_table_a(const size_t row_index,
-                                                          const std::vector<AllTypeVariant>& row,
-                                                          const bool commit_transaction = true) {
-    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-
-    const auto get_table = std::make_shared<GetTable>("uniquenessTestTableA");
-    get_table->set_transaction_context(transaction_context);
-    get_table->execute();
-
-    const auto validate = std::make_shared<Validate>(get_table);
-    validate->set_transaction_context(transaction_context);
-    validate->execute();
-
-    const auto table_scan = create_table_scan(validate, ColumnID{0}, PredicateCondition::Equals,
-                                              validate->get_output()->get_row(row_index).at(0));
-    table_scan->execute();
-
-    auto table = Table::create_dummy_table(
-        {{"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}});
-    table->append(row);
-
-    auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->set_transaction_context(transaction_context);
-    table_wrapper->execute();
-
-    auto update_op = std::make_shared<Update>("uniquenessTestTableA", table_scan, table_wrapper);
-    update_op->set_transaction_context(transaction_context);
-    update_op->execute();
 
     if (commit_transaction) {
       transaction_context->commit();
@@ -504,7 +458,14 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
   EXPECT_EQ(constraints_A.size(), 1);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
 
-  auto transaction_context = _update_row_table_a(0, {2, 3, "dublicate"}, false);
+  // Delete and then insert a row. After the delete was committed, the UCC should still be valid but after the insert
+  // it should not.
+  _delete_row(_table_A, 2, true);
+  auto transaction_context =
+      _insert_row(_table_name_A,
+                  TableColumnDefinitions{
+                      {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}},
+                  {2, 3, "dublicate"}, false);
 
   // Re-validate UCCs.
   _validate_ucc_candidates(ucc_candidates);
@@ -575,7 +536,10 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, DeletionOfModifiedUCC) {
   EXPECT_FALSE(constraints_A.find({{ColumnID{0}}, KeyConstraintType::UNIQUE})->last_invalidated_on());
 
   // Insert table data into the table again. -> Creates duplicate for every row.
-  _duplicate_table(_table_name_A);
+  _insert_row(_table_name_A,
+              TableColumnDefinitions{
+                  {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}},
+              {6, 3, "dublicate"}, true);
 
   _validate_ucc_candidates(ucc_candidates);
   const auto& constraints_B = _table_A->soft_key_constraints();
@@ -632,7 +596,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   EXPECT_EQ(Hyrise::get().default_pqp_cache->size(), 0);
 }
 
-TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginCompleteScenarioWithInvalidation) {
+TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidation) {
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
