@@ -27,7 +27,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
     return *this;
   }
 
-  BitPackingIterator& operator=(BitPackingIterator&& other) {
+  BitPackingIterator& operator=(BitPackingIterator&& other) noexcept {
     if (this == &other) {
       return *this;
     }
@@ -50,8 +50,8 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
     --_absolute_index;
   }
 
-  void advance(std::ptrdiff_t n) {
-    _absolute_index += n;
+  void advance(std::ptrdiff_t distance) {
+    _absolute_index += distance;
   }
 
   bool equal(const BitPackingIterator& other) const {

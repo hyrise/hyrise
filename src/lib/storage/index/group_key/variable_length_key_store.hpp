@@ -100,8 +100,8 @@ class VariableLengthKeyStore {
   const_iterator cend() const;
 
  private:
-  CompositeKeyLength _bytes_per_key;
-  CompositeKeyLength _key_alignment;
+  CompositeKeyLength _bytes_per_key{};
+  CompositeKeyLength _key_alignment{};
   std::vector<VariableLengthKeyWord> _data;
 
  private:
@@ -124,7 +124,8 @@ class VariableLengthKeyStore {
      * This is required since a mutable constructor can be used every time when a const iterator is expected.
      */
     template <typename OtherProxy, typename = std::enable_if_t<std::is_convertible_v<OtherProxy, Proxy>>>
-    IteratorBase(const IteratorBase<OtherProxy>& other)  // NOLINT(runtime/explicit)
+    IteratorBase(  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+        const IteratorBase<OtherProxy>& other)
         : _bytes_per_key(other._bytes_per_key), _key_alignment(other._key_alignment), _data(other._data) {}
 
    private:
@@ -143,8 +144,8 @@ class VariableLengthKeyStore {
       _data -= _key_alignment;
     }
 
-    void advance(size_t n) {
-      _data += n * _key_alignment;
+    void advance(size_t distance) {
+      _data += distance * _key_alignment;
     }
 
     Proxy dereference() const {
@@ -168,9 +169,9 @@ class VariableLengthKeyStore {
     }
 
    private:
-    CompositeKeyLength _bytes_per_key;
-    CompositeKeyLength _key_alignment;
-    VariableLengthKeyWord* _data;
+    CompositeKeyLength _bytes_per_key{};
+    CompositeKeyLength _key_alignment{};
+    VariableLengthKeyWord* _data{};
   };
 };
 

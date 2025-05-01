@@ -29,8 +29,8 @@ namespace {
 
 using namespace hyrise;  // NOLINT
 
-void __attribute__((noinline))
-process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
+void __attribute__((noinline)) process_match(RowID left_row_id, RowID right_row_id,
+                                             const JoinNestedLoop::JoinParams& params) {
   // Write out a pair of matching row_ids - except for Semi/Anti joins, who build their output from params.left_matches
   // after all pairs were compared
   if (params.write_pos_lists) {
@@ -51,10 +51,11 @@ process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinP
 // __attribute__((noinline)) to reduce compile time. As the hotloop is within this function, no performance
 // loss expected
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-void __attribute__((noinline))
-join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                        RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                        const ChunkID chunk_id_right, const JoinNestedLoop::JoinParams& params) {
+void __attribute__((noinline)) join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it,
+                                                       LeftIterator left_end, RightIterator right_begin,
+                                                       RightIterator right_end, const ChunkID chunk_id_left,
+                                                       const ChunkID chunk_id_right,
+                                                       const JoinNestedLoop::JoinParams& params) {
   for (; left_it != left_end; ++left_it) {
     const auto left_value = *left_it;
 
@@ -184,16 +185,9 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
       const auto segment_right = chunk_right->get_segment(right_column_id);
 
-      JoinParams params{*pos_list_left,
-                        *pos_list_right,
-                        left_matches,
-                        right_matches_by_chunk[chunk_id_right],
-                        track_left_matches,
-                        track_right_matches,
-                        _mode,
-                        maybe_flipped_predicate_condition,
-                        secondary_predicate_evaluator,
-                        !semi_or_anti_join};
+      JoinParams params(*pos_list_left, *pos_list_right, left_matches, right_matches_by_chunk[chunk_id_right], _mode,
+                        maybe_flipped_predicate_condition, secondary_predicate_evaluator, track_left_matches,
+                        track_right_matches, !semi_or_anti_join);
       _join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right, params);
     }
 

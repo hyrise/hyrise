@@ -36,7 +36,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     // optimizations. For example, we can use a filtered iterator instead of having to create segments accessors
     // and using virtual method calls.
 
-    if (position_filter->references_single_chunk() && position_filter->size() > 0) {
+    if (position_filter->references_single_chunk() && !position_filter->empty()) {
       // If a single chunk is referenced, we use the PosList as a filter for the referenced segment iterable.
       // This assumes that the PosList itself does not contain any NULL values. As NULL-producing operators
       // (Join, Aggregate, Projection) do not emit a PosList with references_single_chunk, we can assume that the
@@ -170,8 +170,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       --_pos_list_it;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _pos_list_it += n;
+    void advance(std::ptrdiff_t distance) {
+      _pos_list_it += distance;
     }
 
     bool equal(const MultipleChunkIterator& other) const {

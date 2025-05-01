@@ -65,7 +65,7 @@ size_t MetaSystemInformationTable::_cpu_count() {
 
     cpu_info_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
+    Fail(std::string{"Failed to read /proc/cpuinfo ("} + fail.what() + ")");
   }
 
   return processors;
@@ -86,7 +86,7 @@ size_t MetaSystemInformationTable::_cpu_count() {
 // Returns the physical memory size
 size_t MetaSystemInformationTable::_ram_size() {
 #ifdef __linux__
-  struct sysinfo memory_info {};  // NOLINT(misc-include-cleaner): sysinfo of sys/sysinfo.h is not recognized.
+  struct sysinfo memory_info{};  // NOLINT(misc-include-cleaner): sysinfo of sys/sysinfo.h is not recognized.
 
   const auto ret = sysinfo(&memory_info);
   Assert(ret == 0, "Failed to get sysinfo");
@@ -122,7 +122,7 @@ std::string MetaSystemInformationTable::_cpu_model() {
       }
     }
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
+    Fail(std::string{"Failed to read /proc/cpuinfo ("} + fail.what() + ")");
   }
 
   Fail("Could not read CPU model.");

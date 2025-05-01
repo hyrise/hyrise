@@ -32,6 +32,8 @@ class AbstractMetaTable : public Noncopyable {
   virtual bool can_update() const;
   virtual bool can_delete() const;
 
+  virtual ~AbstractMetaTable() = default;
+
  protected:
   friend class MetaTableManager;
   friend class MetaTableManagerTest;
@@ -42,8 +44,6 @@ class AbstractMetaTable : public Noncopyable {
   friend class MetaSystemInformationTest;
 
   explicit AbstractMetaTable(const TableColumnDefinitions& column_definitions);
-
-  virtual ~AbstractMetaTable() = default;
 
   /**
    * Generates the meta table on the fly by calling `_on_generate()`. It ensures that all chunks are immutable.

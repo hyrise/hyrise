@@ -30,9 +30,9 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
   EXPECT_TRUE(plugins.contains("hyriseTestPlugin"));
-  EXPECT_EQ(plugins["hyriseTestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
-  EXPECT_NE(plugins["hyriseTestPlugin"].handle, nullptr);
-  EXPECT_NE(plugins["hyriseTestPlugin"].plugin, nullptr);
+  EXPECT_EQ(plugins.at("hyriseTestPlugin").plugin->description(), "This is the Hyrise TestPlugin");
+  EXPECT_NE(plugins.at("hyriseTestPlugin").handle, nullptr);
+  EXPECT_NE(plugins.at("hyriseTestPlugin").plugin, nullptr);
 
   // The test plugin creates a dummy table when it is started
   EXPECT_TRUE(sm.has_table("DummyTable"));
@@ -54,9 +54,9 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
   EXPECT_TRUE(plugins.contains("hyriseTestPlugin"));
-  EXPECT_EQ(plugins["hyriseTestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
-  EXPECT_NE(plugins["hyriseTestPlugin"].handle, nullptr);
-  EXPECT_NE(plugins["hyriseTestPlugin"].plugin, nullptr);
+  EXPECT_EQ(plugins.at("hyriseTestPlugin").plugin->description(), "This is the Hyrise TestPlugin");
+  EXPECT_NE(plugins.at("hyriseTestPlugin").handle, nullptr);
+  EXPECT_NE(plugins.at("hyriseTestPlugin").plugin, nullptr);
 
   // The test plugin creates a dummy table when it is started
   EXPECT_TRUE(sm.has_table("DummyTable"));

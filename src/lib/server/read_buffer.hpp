@@ -5,7 +5,6 @@
 
 #include "ring_buffer_iterator.hpp"
 #include "server_types.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -53,7 +52,7 @@ class ReadBuffer {
  private:
   void _receive_if_necessary(const size_t bytes_required = 1);
 
-  std::array<char, SERVER_BUFFER_SIZE> _data;
+  std::array<char, SERVER_BUFFER_SIZE> _data{};
   // This iterator points to the first element that has not been read yet.
   RingBufferIterator _start_position{_data};
   // This iterator points to the field after the last unread element of the array.

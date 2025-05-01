@@ -3,9 +3,6 @@
 #include <random>
 
 #include "benchmark_sql_executor.hpp"
-#include "concurrency/transaction_context.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/table.hpp"
 #include "tpcc/tpcc_random_generator.hpp"
 
 namespace hyrise {

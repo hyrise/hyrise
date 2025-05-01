@@ -2,16 +2,12 @@
 
 #include <algorithm>
 #include <numeric>
-#include <random>
-#include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): Identified as C system headers.
 
 #include "random_generator.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -31,12 +27,12 @@ class TPCCRandomGenerator : public RandomGenerator {
   /**
    * Generates a non-uniform random number based on a formula defined by TPCC.
    */
-  size_t nurand(size_t a, size_t x, size_t y) {
+  size_t nurand(size_t a, size_t x, size_t y) {  // NOLINT(readability-identifier-length)
     auto c_iter = _nurand_constants_c.find(a);
     if (c_iter == _nurand_constants_c.end()) {
       c_iter = _nurand_constants_c.insert({a, random_number(0, a)}).first;
     }
-    const auto c = c_iter->second;
+    const auto c = c_iter->second;  // NOLINT(readability-identifier-length)
     return (((random_number(0, a) | random_number(x, y)) + c) % (y - x + 1)) + x;
   }
 
@@ -46,19 +42,19 @@ class TPCCRandomGenerator : public RandomGenerator {
    *            than 999, use first create non-uniform random number between 255 and 1000
    * @return    a string representing the last name
    */
-  std::string last_name(size_t i) {
-    const std::string syllables[] = {
+  std::string last_name(size_t index) {
+    const std::array syllables = {
         "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
     };
 
-    if (i >= 1000) {
-      i = nurand(255, 0, 999);
+    if (index >= 1000) {
+      index = nurand(255, 0, 999);
     }
 
-    std::string last_name("");
-    last_name += syllables[(i / 100) % 10];
-    last_name += syllables[(i / 10) % 10];
-    last_name += syllables[i % 10];
+    std::string last_name;
+    last_name += syllables[(index / 100) % 10];
+    last_name += syllables[(index / 10) % 10];
+    last_name += syllables[index % 10];
 
     return last_name;
   }

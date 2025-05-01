@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <limits>
 #include <memory>
 #include <vector>
 
@@ -9,9 +8,6 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
-#include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -47,7 +43,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {
         const auto segment_item = *segment_it;
         if (!segment_item.is_null()) {
-          const auto segment_value = segment_item.value();
+          const auto& segment_value = segment_item.value();
           dense_values.push_back(segment_value);
 
           if constexpr (Encoding == EncodingType::FixedStringDictionary) {

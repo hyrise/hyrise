@@ -34,11 +34,14 @@ class copyable_atomic {
 
   explicit constexpr copyable_atomic(T desired) noexcept : _atomic{desired} {}
 
-  T operator=(T desired) noexcept {
-    return _atomic.operator=(desired);
+  copyable_atomic& operator=(T desired) noexcept {
+    _atomic.operator=(desired);
+    return *this;
   }
 
   copyable_atomic& operator=(const copyable_atomic<T>& other) {
+    if (this == &other)
+      return *this;
     _atomic.store(other._atomic.load());
     return *this;
   }
@@ -47,7 +50,7 @@ class copyable_atomic {
     return _atomic.is_lock_free();
   }
 
-  operator T() const noexcept {
+  explicit operator T() const noexcept {
     return _atomic.load();
   }
 
@@ -61,12 +64,12 @@ class copyable_atomic {
 
   template <typename... Args>
   decltype(auto) operator++(Args&&... args) {
-    return _atomic.operator++(std::forward<Args>(args)...);
+    return static_cast<const T>(_atomic.operator++(std::forward<Args>(args)...));
   }
 
   template <typename... Args>
   decltype(auto) operator--(Args&&... args) {
-    return _atomic.operator--(std::forward<Args>(args)...);
+    return static_cast<const T>(_atomic.operator--(std::forward<Args>(args)...));
   }
 
   template <typename... Args>

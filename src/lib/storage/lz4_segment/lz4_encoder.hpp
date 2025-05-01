@@ -128,7 +128,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                            values.size());
   }
 
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
+  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string>& segment_iterable,
                                                      const PolymorphicAllocator<pmr_string>& allocator) {
     /**
      * First iterate over the values for two reasons.
@@ -193,7 +193,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         offsets[row_index] = offset;
         auto sample_size = size_t{0u};
         if (!contains_null) {
-          const auto value = segment_element.value();
+          const auto& value = segment_element.value();
           const auto string_length = value.size();
           values.insert(values.cend(), value.begin(), value.end());
           Assert(string_length <= std::numeric_limits<uint32_t>::max(),
@@ -291,7 +291,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * every new block that is to be compressed, but the stream returns a raw pointer to an internal structure.
      * The stream memory is freed with another call to a library function after compression is done.
      */
-    auto lz4_stream = LZ4_createStreamHC();
+    auto* lz4_stream = LZ4_createStreamHC();
     // We use the maximum high compression level available in LZ4 for best compression ratios.
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 

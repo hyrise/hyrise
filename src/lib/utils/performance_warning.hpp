@@ -41,7 +41,7 @@ class PerformanceWarningClass {
   static bool _disabled;
 
   static bool disable() {
-    bool previous = _disabled;
+    const bool previous = _disabled;
     _disabled = true;
     return previous;
   }
@@ -66,6 +66,7 @@ class PerformanceWarningDisabler {
   }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define PerformanceWarning(text)                                                                             \
   {                                                                                                          \
     static const PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \

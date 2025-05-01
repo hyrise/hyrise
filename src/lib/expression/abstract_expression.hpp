@@ -173,12 +173,12 @@ struct ExpressionSharedPtrHash final {
 struct ExpressionSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<const AbstractExpression>& expression_a,
                     const std::shared_ptr<const AbstractExpression>& expression_b) const {
-    return *expression_a == *expression_b;
+    return static_cast<size_t>(*expression_a == *expression_b);
   }
 
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression_a,
                     const std::shared_ptr<AbstractExpression>& expression_b) const {
-    return *expression_a == *expression_b;
+    return static_cast<size_t>(*expression_a == *expression_b);
   }
 };
 

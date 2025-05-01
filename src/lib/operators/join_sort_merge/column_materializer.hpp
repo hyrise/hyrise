@@ -2,20 +2,14 @@
 
 #include <algorithm>
 #include <memory>
-#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
 #include <boost/sort/sort.hpp>
 
-#include "hyrise.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -24,12 +18,13 @@ template <typename T>
 struct MaterializedValue {
   MaterializedValue() = default;
 
-  MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
+  MaterializedValue(RowID row, T value) : row_id{row}, value{value} {}
 
-  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T v) : row_id{chunk_id, chunk_offset}, value{v} {}
+  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T value)
+      : row_id{chunk_id, chunk_offset}, value{value} {}
 
   RowID row_id;
-  T value;
+  T value{};
 };
 
 template <typename T>
@@ -143,7 +138,7 @@ class ColumnMaterializer {
   }
 
   MaterializedSegment<T> _materialize_segment(const std::shared_ptr<AbstractSegment>& segment, const ChunkID chunk_id,
-                                              RowIDPosList& null_rows_output, Subsample<T>& subsample) {
+                                              RowIDPosList& null_rows_output, Subsample<T>& /*subsample*/) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment->size());
 

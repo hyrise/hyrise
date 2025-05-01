@@ -34,6 +34,7 @@
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "null_value.hpp"
+#include "operators/abstract_join_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/change_meta_table.hpp"
@@ -399,8 +400,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     // NOLINTBEGIN(bugprone-use-after-move, hicpp-invalid-access-moved)
     // clang-tidy complains about the move in the loop as it does not recognize the early out above.
-    if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
-                                right_data_type, !secondary_join_predicates.empty()})) {
+    if (JoinOperator::supports(JoinConfiguration(join_node->join_mode, primary_join_predicate.predicate_condition,
+                                                 left_data_type, right_data_type,
+                                                 !secondary_join_predicates.empty()))) {
       join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }

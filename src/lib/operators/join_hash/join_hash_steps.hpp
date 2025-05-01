@@ -17,15 +17,12 @@
 
 #include "uninitialized_vector.hpp"
 
-#include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
 #include "types.hpp"
 
 /*
@@ -112,8 +109,9 @@ class PosHashTable {
 
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
       : _mode(mode),
-        _small_pos_lists(mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0,
-                         SmallPosList{SmallPosList::allocator_type(_memory_pool.get())}) {
+        _small_pos_lists(
+            mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0,
+            SmallPosList{SmallPosList::allocator_type(_memory_pool.get())}) {  // NOLINT(google-readability-casting)
     // _small_pos_lists is initialized with an additional element to make the enforcement of the assertions easier. For
     // _JoinHashBuildMode::ExistenceOnly, we do not store positions and thus do not initialize _small_pos_lists.
     _offset_hash_table.reserve(max_size);
@@ -173,7 +171,7 @@ class PosHashTable {
 
   // For a value seen on the probe side, return an iterator pair into the matching positions on the build side
   template <typename InputType>
-  const std::pair<RowIDPosList::const_iterator, RowIDPosList::const_iterator> find(const InputType& value) const {
+  std::pair<RowIDPosList::const_iterator, RowIDPosList::const_iterator> find(const InputType& value) const {
     DebugAssert(_mode == JoinHashBuildMode::AllPositions,
                 "`find()` is invalid for ExistenceOnly mode, use `contains()`.");
     DebugAssert(_unified_pos_list, "_unified_pos_list not set - was `finalize()` called?");
@@ -246,7 +244,7 @@ class PosHashTable {
 // Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
 // We did not yet work on this because the Bloom filter was a byproduct of a research project and we have not had the
 // resources to optimize it at the time.
-static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
+static constexpr auto BLOOM_FILTER_SIZE = 1u << 20u;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
@@ -520,7 +518,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+                                     const BloomFilter& /*input_bloom_filter*/ = ALL_TRUE_BLOOM_FILTER) {
   if (radix_container.empty()) {
     return radix_container;
   }
@@ -686,7 +684,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
         // Simple heuristic to estimate result size: half of the partition's rows will match
         // a more conservative pre-allocation would be the size of the build cluster
-        const size_t expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil(elements.size() / 2)));
+        const auto expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil(elements.size() / 2)));
         pos_list_build_side_local.reserve(static_cast<size_t>(expected_output_size));
         pos_list_probe_side_local.reserve(static_cast<size_t>(expected_output_size));
 

@@ -21,7 +21,7 @@ class AbstractBenchmarkItemRunner;
 #define EXPORT_PLUGIN(PluginName)                           \
   extern "C" AbstractPlugin* factory() {                    \
     /* NOLINTNEXTLINE(cppcoreguidelines-owning-memory) */   \
-    return new PluginName();                                \
+    return new (PluginName)();                                \
   }                                                         \
   static_assert(true, "End call of macro with a semicolon.")
 // clang-format on

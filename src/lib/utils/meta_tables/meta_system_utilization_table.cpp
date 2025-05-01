@@ -116,7 +116,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     std::getline(stat_file, cpu_line);
     stat_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/stat (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/stat ("} + fail.what() + ").");
   }
 
   const auto cpu_ticks = _parse_value_string(cpu_line);
@@ -162,7 +162,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
   // A clock that measures (user and system) CPU time consumed by (all of the threads in) the calling process.
 #ifdef __linux__
-  struct timespec time_spec {};
+  struct timespec time_spec{};
 
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);  // NOLINT(misc-include-cleaner)
   Assert(ret == 0, "Failed in clock_gettime.");
@@ -205,7 +205,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
     }
     meminfo_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/meminfo (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/meminfo ("} + fail.what() + ").");
   }
 
   return memory_usage;
@@ -259,14 +259,14 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 
     self_status_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/self/status (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/self/status ("} + fail.what() + ").");
   }
 
   return memory_usage;
 #endif
 
 #ifdef __APPLE__
-  struct task_basic_info info {};
+  struct task_basic_info info{};
 
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);

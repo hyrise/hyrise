@@ -64,7 +64,7 @@ struct ColumnDataDistribution {
 struct ColumnSpecification {
   ColumnSpecification(const ColumnDataDistribution& init_data_distribution, const DataType& init_data_type,
                       const std::optional<SegmentEncodingSpec> init_segment_encoding_spec = std::nullopt,
-                      const std::optional<std::string> init_name = std::nullopt, const float init_null_ratio = 0.0f)
+                      const std::optional<std::string>& init_name = std::nullopt, const float init_null_ratio = 0.0f)
       : data_distribution{init_data_distribution},
         data_type{init_data_type},
         segment_encoding_spec{init_segment_encoding_spec},

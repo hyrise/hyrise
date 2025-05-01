@@ -10,12 +10,9 @@
 #include <array>
 #include <atomic>
 
-#include "operators/operator_performance_data.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables.hpp"
-#include "storage/segment_iterables/any_segment_iterator.hpp"
 #include "types.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace hyrise {
 
@@ -52,9 +49,9 @@ class AbstractTableScanImpl {
   // This is a function that is critical for our performance. We want the compiler to try its best in optimizing it.
   // Also, we want all functions called inside to be inlined (flattened). GCC seems to like for this to not be inlined
   // itself.
-  static void __attribute__((hot, flatten, noinline))
-  _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, RowIDPosList& matches_out, [[maybe_unused]] RightIterator right_it) {
+  static void __attribute__((hot, flatten, noinline)) _scan_with_iterators(
+      const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end, const ChunkID chunk_id,
+      RowIDPosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
     // For a description of the SIMD code, have a look at the comments in that method.
     // To reduce compile time, SIMD scanning is not used for for ColumnVsColumnScans. Also, string comparisons are more
@@ -142,7 +139,7 @@ class AbstractTableScanImpl {
         const auto& left = *left_it;
 
         if constexpr (std::is_same_v<RightIterator, std::false_type>) {
-          mask |= ((!CheckForNull | !left.is_null()) && func(left)) << index;
+          mask |= static_cast<uint64_t>((!CheckForNull | !left.is_null()) && func(left)) << index;
         } else {
           const auto& right = *right_it;
           mask |= ((!CheckForNull | (!left.is_null() && !right.is_null())) & func(left, right)) << index;
@@ -196,7 +193,7 @@ class AbstractTableScanImpl {
 #ifndef __AVX512VL__
       // "Slow" path for non-AVX512VL systems
       for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
-        if (mask >> index & 1) {
+        if (static_cast<unsigned>(mask) >> index & 1u) {
           matches_out[matches_out_index++].chunk_offset = offsets[index];
         }
       }

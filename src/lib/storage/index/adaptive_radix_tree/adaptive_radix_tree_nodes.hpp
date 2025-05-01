@@ -193,9 +193,9 @@ class Leaf final : public ARTNode {
   explicit Leaf(std::vector<ChunkOffset>::const_iterator& lower, std::vector<ChunkOffset>::const_iterator& upper);
 
   std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/,
-                                                       size_t) const override;
+                                                       size_t /*depth*/) const override;
   std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/,
-                                                       size_t) const override;
+                                                       size_t /*depth*/) const override;
   std::vector<ChunkOffset>::const_iterator begin() const override;
   std::vector<ChunkOffset>::const_iterator end() const override;
 
