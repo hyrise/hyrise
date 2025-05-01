@@ -41,7 +41,7 @@ struct VizGraphInfo {
 };
 
 struct VizVertexInfo {
-  uintptr_t id;
+  uintptr_t id{};
   std::string label;
   std::string tooltip;
   std::string color = "white";

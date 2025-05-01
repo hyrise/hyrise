@@ -233,8 +233,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _null_values{null_values},
           _end_positions{end_positions},
           _linear_search_threshold{determine_linear_search_offset_distance_threshold(_end_positions)},
-          _prev_chunk_offset{0u},
-          _prev_index{0ul} {}
+          _prev_chunk_offset{0u} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

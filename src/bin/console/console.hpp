@@ -86,14 +86,14 @@ class Console : public Singleton<Console> {
    */
   static void handle_signal(int sig);
 
+  friend class Singleton;
+
  protected:
   /*
    * Non-public constructor, since Console is a Singleton.
    */
   Console();
   ~Console() override;
-
-  friend class Singleton;
 
   /*
    * Evaluates given input string. Calls either _eval_command or _eval_sql.

@@ -26,18 +26,33 @@ class JoinNestedLoop : public AbstractJoinOperator {
   const std::string& name() const override;
 
   struct JoinParams {
+    JoinParams(RowIDPosList& pos_list_left, RowIDPosList& pos_list_right, std::vector<bool>& left_matches,
+               std::vector<bool>& right_matches, JoinMode mode, PredicateCondition predicate_condition,
+               MultiPredicateJoinEvaluator& secondary_predicate_evaluator, bool track_left_matches = false,
+               bool track_right_matches = false, bool write_pos_list = false)
+        : pos_list_left(pos_list_left),
+          pos_list_right(pos_list_right),
+          left_matches(left_matches),
+          right_matches(right_matches),
+          track_left_matches(track_left_matches),
+          track_right_matches(track_right_matches),
+          mode(mode),
+          predicate_condition(predicate_condition),
+          secondary_predicate_evaluator(secondary_predicate_evaluator),
+          write_pos_lists(write_pos_list) {}
+
     RowIDPosList& pos_list_left;
     RowIDPosList& pos_list_right;
     std::vector<bool>& left_matches;
     std::vector<bool>& right_matches;
-    bool track_left_matches{};
-    bool track_right_matches{};
+    bool track_left_matches;
+    bool track_right_matches;
     JoinMode mode;
     PredicateCondition predicate_condition;
     MultiPredicateJoinEvaluator& secondary_predicate_evaluator;
 
     // Disable for Semi/Anti
-    bool write_pos_lists{};
+    bool write_pos_lists;
   };
 
  protected:

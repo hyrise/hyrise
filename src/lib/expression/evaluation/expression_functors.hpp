@@ -15,11 +15,11 @@ template <typename T>
 constexpr bool is_logical_operand = std::is_same_v<int32_t, T> || std::is_same_v<NullValue, T>;
 
 // Turn a bool into itself and a NULL into false
-bool to_bool(const bool value) {
+bool to_bool(const bool value) {  // NOLINT(misc-definitions-in-headers)
   return value;
 }
 
-bool to_bool(const NullValue& /*value*/) {
+bool to_bool(const NullValue& /*value*/) {  // NOLINT(misc-definitions-in-headers)
   return false;
 }
 

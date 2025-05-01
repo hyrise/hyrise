@@ -100,8 +100,8 @@ class VariableLengthKeyStore {
   const_iterator cend() const;
 
  private:
-  CompositeKeyLength _bytes_per_key;
-  CompositeKeyLength _key_alignment;
+  CompositeKeyLength _bytes_per_key{};
+  CompositeKeyLength _key_alignment{};
   std::vector<VariableLengthKeyWord> _data;
 
  private:
@@ -169,9 +169,9 @@ class VariableLengthKeyStore {
     }
 
    private:
-    CompositeKeyLength _bytes_per_key;
-    CompositeKeyLength _key_alignment;
-    VariableLengthKeyWord* _data;
+    CompositeKeyLength _bytes_per_key{};
+    CompositeKeyLength _key_alignment{};
+    VariableLengthKeyWord* _data{};
   };
 };
 

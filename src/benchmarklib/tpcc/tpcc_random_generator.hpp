@@ -27,12 +27,12 @@ class TPCCRandomGenerator : public RandomGenerator {
   /**
    * Generates a non-uniform random number based on a formula defined by TPCC.
    */
-  size_t nurand(size_t a, size_t x, size_t y) {
+  size_t nurand(size_t a, size_t x, size_t y) {  // NOLINT(readability-identifier-length)
     auto c_iter = _nurand_constants_c.find(a);
     if (c_iter == _nurand_constants_c.end()) {
       c_iter = _nurand_constants_c.insert({a, random_number(0, a)}).first;
     }
-    const auto c = c_iter->second;
+    const auto c = c_iter->second;  // NOLINT(readability-identifier-length)
     return (((random_number(0, a) | random_number(x, y)) + c) % (y - x + 1)) + x;
   }
 

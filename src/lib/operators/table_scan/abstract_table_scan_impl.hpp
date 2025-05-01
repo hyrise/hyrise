@@ -193,7 +193,7 @@ class AbstractTableScanImpl {
 #ifndef __AVX512VL__
       // "Slow" path for non-AVX512VL systems
       for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
-        if (mask >> index & 1u) {
+        if (static_cast<unsigned>(mask) >> index & 1u) {
           matches_out[matches_out_index++].chunk_offset = offsets[index];
         }
       }

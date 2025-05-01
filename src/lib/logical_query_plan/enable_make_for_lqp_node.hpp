@@ -35,7 +35,7 @@ class EnableMakeForLQPNode {
   template <typename... ArgumentTypes>
   static std::shared_ptr<DerivedNode> make(ArgumentTypes&&... arguments) {
     if constexpr (sizeof...(ArgumentTypes) > 0) {
-      auto arguments_tuple = std::forward_as_tuple(arguments...);
+      auto arguments_tuple = std::forward_as_tuple(std::forward<ArgumentTypes>(arguments)...);
 
       // Check if the last function argument represents an LQP node (that can be set as an input).
       if constexpr (IsLQPNodeArgument<sizeof...(ArgumentTypes) - 1, ArgumentTypes...>::value) {

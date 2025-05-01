@@ -66,6 +66,7 @@ class PerformanceWarningDisabler {
   }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define PerformanceWarning(text)                                                                             \
   {                                                                                                          \
     static const PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \

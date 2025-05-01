@@ -59,6 +59,6 @@ class VariableLengthKey {
 
  private:
   std::vector<VariableLengthKeyWord> _owned_data;
-  VariableLengthKeyBase _impl;
+  VariableLengthKeyBase _impl{};
 };
 }  // namespace hyrise

@@ -26,7 +26,7 @@ class VariableLengthKeyConstProxy {
   /**
    * Implicitly convert proxy into VariableLengthKey in order to allow easy usage of VariableLengthKeyStore.
    */
-  operator VariableLengthKey() const;  // NOLINT(google-explicit-constructor)
+  operator VariableLengthKey() const;  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
   CompositeKeyLength bytes_per_key() const;
 
@@ -43,7 +43,7 @@ class VariableLengthKeyConstProxy {
   explicit VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key);
 
  protected:
-  VariableLengthKeyBase _impl;
+  VariableLengthKeyBase _impl{};
 };
 
 /**

@@ -188,9 +188,9 @@ std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<Abstr
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
     return std::make_shared<LQPSubqueryExpression>(
-        lqp, std::vector<ParameterID>{{std::forward<ParameterID>(parameter_id_expression_pairs.first)...}},
-        std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(
-            std::forward<std::shared_ptr<AbstractExpression>>(parameter_id_expression_pairs.second))...}});
+        lqp, std::vector<ParameterID>{{std::forward<Args>(parameter_id_expression_pairs).first...}},
+        std::vector<std::shared_ptr<AbstractExpression>>{
+            {to_expression(std::forward<Args>(parameter_id_expression_pairs).second)...}});
   } else {
     // Not correlated
     return std::make_shared<LQPSubqueryExpression>(lqp, std::vector<ParameterID>{},
@@ -204,10 +204,10 @@ std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<Abstr
                                                      Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
-    return std::make_shared<PQPSubqueryExpression>(
-        pqp, data_type, nullable,
-        std::vector<std::pair<ParameterID, ColumnID>>{
-            {std::make_pair(parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
+    return std::make_shared<PQPSubqueryExpression>(pqp, data_type, nullable,
+                                                   std::vector<std::pair<ParameterID, ColumnID>>{{std::make_pair(
+                                                       std::forward<Args>(parameter_id_column_id_pairs).first,
+                                                       std::forward<Args>(parameter_id_column_id_pairs).second)...}});
   } else {
     // Not correlated
     return std::make_shared<PQPSubqueryExpression>(pqp, data_type, nullable);
@@ -216,7 +216,7 @@ std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<Abstr
 
 template <typename... Args>
 std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... args) {
-  return std::vector<std::shared_ptr<AbstractExpression>>({to_expression(args)...});
+  return std::vector<std::shared_ptr<AbstractExpression>>({to_expression(std::forward<Args>(args))...});
 }
 
 template <typename A, typename B, typename C>
