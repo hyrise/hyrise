@@ -64,12 +64,12 @@ class copyable_atomic {
 
   template <typename... Args>
   decltype(auto) operator++(Args&&... args) {
-    return _atomic.operator++(std::forward<Args>(args)...);
+    return static_cast<const T>(_atomic.operator++(std::forward<Args>(args)...));
   }
 
   template <typename... Args>
   decltype(auto) operator--(Args&&... args) {
-    return _atomic.operator--(std::forward<Args>(args)...);
+    return static_cast<const T>(_atomic.operator--(std::forward<Args>(args)...));
   }
 
   template <typename... Args>

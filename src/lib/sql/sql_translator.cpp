@@ -1090,8 +1090,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
     const auto* left_table_name = resolve_table_name(*join.left);
     const auto* right_table_name = resolve_table_name(*join.right);
 
-    AssertInput(left_expression, "Could not resolve '" + named_column + "' on '" + left_table_name + "'.");
-    AssertInput(right_expression, "Could not resolve '" + named_column + "' on '" + right_table_name + "'.");
+    AssertInput(left_expression, std::string{"Could not resolve '"} + named_column + "' on '" + left_table_name + "'.");
+    AssertInput(right_expression, std::string{"Could not resolve '"} + named_column + "' on '" + right_table_name + "'.");
 
     // Left and right can resolve the named column. Set the join predicate.
     join_predicates[named_column_idx] = std::shared_ptr<AbstractExpression>(equals_(left_expression, right_expression));
@@ -1752,7 +1752,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
               column_definition.nullable = false;
               AssertInput(
                   !create_statement.columns->at(column_id)->column_constraints->contains(hsql::ConstraintType::Null),
-                  "PRIMARY KEY column " + constraint_column_name + " must not be nullable.");
+                  std::string{"PRIMARY KEY column "} + constraint_column_name + " must not be nullable.");
             }
             break;
           }
