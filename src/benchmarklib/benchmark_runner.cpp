@@ -700,9 +700,9 @@ Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& re
     auto run_end = TimePoint{0};
 
     for (const auto& run : runs) {
-      rund_end = std::max(run_end, run.begin + run.duration);
+      run_end = std::max(run_end, run.begin + run.duration);
     }
-    return rund_end;
+    return run_end;
   };
 
   const auto run_end = std::max(last_run_end(result.successful_runs), last_run_end(result.unsuccessful_runs));

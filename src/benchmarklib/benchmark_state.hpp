@@ -21,6 +21,8 @@ struct BenchmarkState {
 
   std::atomic<State> state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};
+  // No unsigned int type because `max_runs = -1` is the default for unlimited runs, and it its easier to compare that
+  // way (no cast required).
   int64_t scheduled_runs{0};
 
   Duration max_duration;
