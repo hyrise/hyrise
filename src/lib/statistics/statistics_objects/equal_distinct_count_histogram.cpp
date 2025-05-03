@@ -5,7 +5,6 @@
 #include <numeric>
 #include <random>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -54,11 +53,11 @@ void process_dictionary_segment(const DictionarySegmentType& segment, const Dict
 
   for (auto dictionary_offset = size_t{0}; dictionary_offset < dictionary_size; ++dictionary_offset) {
     if constexpr (std::is_same_v<T, pmr_string>) {
-      auto initial_string = std::string_view{};
+      auto initial_string = SmallPrefixStringView{};
       if constexpr (std::is_same_v<std::decay_t<DictionaryType>, FixedStringVector>) {
-        initial_string = dictionary.template get_string_at<std::string_view>(dictionary_offset);
+        initial_string = dictionary.template get_string_at<SmallPrefixStringView>(dictionary_offset);
       } else {
-        initial_string = dictionary[dictionary_offset];
+        initial_string = SmallPrefixStringView{dictionary[dictionary_offset]};
       }
 
       const auto adapted_string = domain.string_to_domain(initial_string.data(), initial_string.size());
@@ -173,7 +172,6 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
   auto left_iter = left.begin();
   auto right_iter = right.begin();
 
-
   while (left_iter != left.end() || right_iter != right.end()) {
     if (left_iter == left.end()) {
       result.emplace_back(*right_iter);
@@ -185,18 +183,32 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
       continue;
     }
 
+    // if constexpr (std::is_same_v<T, pmr_string>) {
+    //   std::cerr << std::boolalpha << "Comparing '" << left_iter->first.data() << "' and '" << right_iter->first.data() << "' \t\t ==? " << (left_iter->first == right_iter->first) << " <? " << (left_iter->first < right_iter->first) << std::endl;
+    // }
+
     if (left_iter->first == right_iter->first) {
+      // if constexpr (std::is_same_v<T, pmr_string>) {
+      //   std::cerr << "Merging " << left_iter->first.data() << " and " << right_iter->first.data() << std::endl;
+      // }
       result.emplace_back(left_iter->first, left_iter->second + right_iter->second);
       ++left_iter;
       ++right_iter;
     } else if (left_iter->first < right_iter->first) {
+      // if constexpr (std::is_same_v<T, pmr_string>) {
+      //   std::cerr << "Placing " << left_iter->first.data() << std::endl;
+      // }
       result.emplace_back(*left_iter);
       ++left_iter;
     } else {
+      // if constexpr (std::is_same_v<T, pmr_string>) {
+      //   std::cerr << "Placing " << right_iter->first.data() << std::endl;
+      // }
       result.emplace_back(*right_iter);
       ++right_iter;
     }
   }
+
 
   std::cerr << std::format("Merging: {} us\n", (std::chrono::duration<double>{std::chrono::steady_clock::now() - start}.count() * 1'000'000));
 
@@ -243,6 +255,17 @@ std::pair<std::vector<std::unique_ptr<StringHeap>>,
   if (chunk_count > 0) {
     const auto parallel_levels_cpus = static_cast<size_t>(std::ceil(std::log2(Hyrise::get().topology.num_cpus()))) + 1;
     result = add_segment_to_value_distribution2<T>(parallel_levels_cpus, 0, string_heaps, segments_to_process.begin(), segments_to_process.end(), domain);
+
+    // if constexpr (std::is_same_v<T, pmr_string>) {
+    //   for (const auto& el : result) {
+    //     std::cerr << el.first.data() << ":" << el.second << " - ";
+    //   }
+    // } else {
+    //   for (const auto& el : result) {
+    //     std::cerr << el.first << ":" << el.second << " - ";
+    //   }
+    // }
+    // std::cerr << std::endl;
   }
 
   return {std::move(string_heaps), std::move(result)};
@@ -310,13 +333,13 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
     if constexpr (std::is_same_v<T, pmr_string>) {
       bin_minima[bin_idx] = T{value_distribution[min_value_idx].first.data()};
-      bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first.data()};  
+      bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first.data()};
     } else {
       bin_minima[bin_idx] = T{value_distribution[min_value_idx].first};
       bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first};
     }
 
-    
+
 
     bin_heights[bin_idx] =
         std::accumulate(value_distribution.cbegin() + min_value_idx, value_distribution.cbegin() + max_value_idx + 1,

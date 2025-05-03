@@ -37,7 +37,7 @@ class StringHeap : public Noncopyable {
     value.copy(heap_string_start, string_size);
     *(heap_string_start + string_size) = '\0';
     _remaining_chars_in_last_block -= (string_size_with_null_byte);
-    DebugAssert(value == std::string_view{heap_string_start}, "Does not compare.");
+    DebugAssert(value == std::string_view{heap_string_start}, "Created heap string is not equal to passed value.");
 
     // std::cerr << "End. _remaining_chars_in_last_block left: " << _remaining_chars_in_last_block << std::endl;
     return SmallPrefixStringView{heap_string_start, string_size};
