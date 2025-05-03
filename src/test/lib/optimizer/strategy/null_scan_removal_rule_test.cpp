@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"

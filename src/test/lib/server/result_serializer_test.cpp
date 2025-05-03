@@ -1,3 +1,6 @@
+#include <memory>
+#include <string>
+
 #include "base_test.hpp"
 #include "mock_socket.hpp"
 #include "server/postgres_protocol_handler.hpp"

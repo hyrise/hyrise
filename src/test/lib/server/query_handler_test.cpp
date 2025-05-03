@@ -1,3 +1,5 @@
+#include <string>
+
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
 #include "server/query_handler.hpp"

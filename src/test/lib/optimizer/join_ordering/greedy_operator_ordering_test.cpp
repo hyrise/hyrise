@@ -1,3 +1,6 @@
+#include <memory>
+#include <vector>
+
 #include "base_test.hpp"
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"

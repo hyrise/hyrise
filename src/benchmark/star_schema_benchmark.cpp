@@ -1,4 +1,9 @@
 #include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
 

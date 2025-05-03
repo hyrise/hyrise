@@ -93,7 +93,10 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
 std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                                     const AbstractExpression::DescriptionMode mode);
 
-enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
+enum class ExpressionVisitation {
+  VisitArguments,
+  DoNotVisitArguments
+};
 
 /**
  * Calls the passed @param visitor on each sub-expression of the @param expression. The visitor returns

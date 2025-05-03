@@ -1,4 +1,6 @@
+#include <memory>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include "magic_enum.hpp"

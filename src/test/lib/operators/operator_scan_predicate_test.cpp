@@ -1,3 +1,7 @@
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"

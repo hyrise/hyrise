@@ -54,7 +54,12 @@ enum class OperatorType {
 };
 
 // The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
-enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
+enum class OperatorState {
+  Created,
+  Running,
+  ExecutedAndAvailable,
+  ExecutedAndCleared
+};
 
 /**
  * AbstractOperator is the abstract super class for all operators. All operators have up to two input tables and one

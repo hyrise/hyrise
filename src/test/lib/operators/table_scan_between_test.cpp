@@ -1,5 +1,9 @@
+#include <algorithm>
+#include <memory>
+#include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/print.hpp"

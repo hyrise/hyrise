@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "magic_enum.hpp"
 
 #include "expression/expression_functional.hpp"

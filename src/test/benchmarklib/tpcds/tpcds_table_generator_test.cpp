@@ -1,3 +1,7 @@
+#include <map>
+#include <memory>
+#include <string>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv/csv_parser.hpp"

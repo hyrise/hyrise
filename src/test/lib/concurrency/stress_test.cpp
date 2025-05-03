@@ -1,9 +1,13 @@
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <future>
+#include <memory>
 #include <numeric>
+#include <string>
 #include <thread>
+#include <vector>
 
 #include "base_test.hpp"
 #include "benchmark_config.hpp"

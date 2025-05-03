@@ -1,3 +1,8 @@
+#include <memory>
+#include <string>
+#include <unordered_set>
+#include <utility>
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"

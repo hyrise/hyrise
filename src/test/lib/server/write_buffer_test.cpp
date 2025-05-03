@@ -1,3 +1,6 @@
+#include <memory>
+#include <string>
+
 #include <boost/asio.hpp>
 
 #include "base_test.hpp"

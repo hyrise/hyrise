@@ -1,3 +1,7 @@
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"

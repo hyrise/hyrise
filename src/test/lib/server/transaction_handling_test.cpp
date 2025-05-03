@@ -1,3 +1,6 @@
+#include <memory>
+#include <string>
+
 #include "base_test.hpp"
 #include "server/query_handler.hpp"
 

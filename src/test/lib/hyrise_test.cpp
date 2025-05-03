@@ -1,3 +1,6 @@
+#include <memory>
+#include <unordered_map>
+
 #include "base_test.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "hyrise.hpp"

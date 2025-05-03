@@ -1,6 +1,9 @@
 #include <fstream>
 #include <future>
+#include <memory>
+#include <string>
 #include <thread>
+#include <vector>
 
 // GCC in release mode finds potentially uninitialized memory in pqxx. Looking at param.hxx, this appears to be a false
 // positive.

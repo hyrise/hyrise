@@ -1,3 +1,5 @@
+#include <string>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "tpch/tpch_constants.hpp"

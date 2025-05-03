@@ -9,7 +9,10 @@
 
 namespace hyrise {
 
-enum class LogicalOperator { And, Or };
+enum class LogicalOperator {
+  And,
+  Or
+};
 
 std::ostream& operator<<(std::ostream& stream, const LogicalOperator logical_operator);
 

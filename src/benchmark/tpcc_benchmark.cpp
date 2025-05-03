@@ -1,4 +1,9 @@
 #include <algorithm>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"

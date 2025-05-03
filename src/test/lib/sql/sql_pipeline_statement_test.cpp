@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"

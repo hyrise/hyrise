@@ -1,3 +1,6 @@
+#include <memory>
+#include <vector>
+
 #include "base_test.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"

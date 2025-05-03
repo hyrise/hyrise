@@ -27,13 +27,13 @@ StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
 std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
   auto stream = std::ostringstream{};
 
-  stream << "[StaticTable]:"
-         << " (";
-  for (auto column_id = ColumnID{0}; column_id < table->column_definitions().size(); ++column_id) {
+  const auto column_count = table->column_definitions().size();
+  stream << "[StaticTable]: (";
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto& column_definition = table->column_definitions()[column_id];
     stream << column_definition;
 
-    if (column_id + size_t{1} < table->column_definitions().size()) {
+    if (column_id + size_t{1} < column_count) {
       stream << ", ";
     }
   }
@@ -48,8 +48,8 @@ std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_expressions() const {
-  // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain
-  // that in the constructor
+  // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we cannot obtain that
+  // in the constructor.
   if (!_output_expressions) {
     const auto column_count = table->column_count();
     _output_expressions.emplace(column_count);

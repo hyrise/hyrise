@@ -1,5 +1,13 @@
+#include <algorithm>
 #include <fstream>
+#include <iostream>
+#include <map>
+#include <memory>
 #include <set>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "operators/join_hash.hpp"
@@ -26,7 +34,10 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 using ChunkRange = std::pair<ChunkID, ChunkID>;
 
-enum class InputSide { Left, Right };
+enum class InputSide {
+  Left,
+  Right
+};
 
 // Join operators might build internal PosLists that they have to de-reference when assembling the output Table if the
 // input itself is already a reference Table.

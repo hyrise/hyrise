@@ -1,4 +1,6 @@
+#include <memory>
 #include <regex>
+#include <utility>
 
 #include "base_test.hpp"
 #include "expression/case_expression.hpp"

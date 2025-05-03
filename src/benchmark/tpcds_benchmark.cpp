@@ -1,7 +1,10 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
 
 #include "cxxopts.hpp"
 

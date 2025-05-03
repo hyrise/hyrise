@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <iterator>
+#include <string>
 #include <vector>
 
 #include "fixed_string.hpp"

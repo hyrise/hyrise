@@ -1,3 +1,6 @@
+#include <memory>
+#include <string>
+
 #include "../storage/encoding_test.hpp"
 #include "base_test.hpp"
 #include "resolve_type.hpp"

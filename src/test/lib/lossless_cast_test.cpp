@@ -1,3 +1,5 @@
+#include <limits>
+
 #include "base_test.hpp"
 #include "lossless_cast.hpp"
 
@@ -6,32 +8,32 @@ namespace hyrise {
 class LosslessCastTest : public BaseTest {};
 
 TEST_F(LosslessCastTest, IdenticalSourceAndTarget) {
-  EXPECT_EQ(lossless_cast<int32_t>(int32_t(5)), int32_t(5));
-  EXPECT_EQ(lossless_cast<int64_t>(int64_t(5'000'000'000)), int64_t(5'000'000'000));
+  EXPECT_EQ(lossless_cast<int32_t>(int32_t{5}), int32_t{5});
+  EXPECT_EQ(lossless_cast<int64_t>(int64_t{5'000'000'000}), int64_t{5'000'000'000});
   EXPECT_EQ(lossless_cast<float>(3.2f), 3.2f);
   EXPECT_EQ(lossless_cast<double>(3.2), 3.2);
-  EXPECT_EQ(lossless_cast<pmr_string>(pmr_string{"hello"}), pmr_string("hello"));
+  EXPECT_EQ(lossless_cast<pmr_string>(pmr_string{"hello"}), pmr_string{"hello"});
 
   // Cannot check for NULL == NULL, as that's not TRUE. So simply check whether non-std::nullopt was returned.
   EXPECT_NE(lossless_cast<NullValue>(NullValue{}), std::nullopt);
 }
 
 TEST_F(LosslessCastTest, IntegralToFloatingPoint) {
-  EXPECT_EQ(lossless_cast<float>(int32_t(3)), 3.0f);
-  EXPECT_EQ(lossless_cast<float>(int64_t(3)), 3.0f);
-  EXPECT_EQ(lossless_cast<double>(int32_t(3)), 3.0);
-  EXPECT_EQ(lossless_cast<double>(int64_t(3)), 3.0);
+  EXPECT_EQ(lossless_cast<float>(int32_t{3}), 3.0f);
+  EXPECT_EQ(lossless_cast<float>(int64_t{3}), 3.0f);
+  EXPECT_EQ(lossless_cast<double>(int32_t{3}), 3.0);
+  EXPECT_EQ(lossless_cast<double>(int64_t{3}), 3.0);
 
-  EXPECT_EQ(lossless_cast<float>(int32_t(20'000'003)), std::nullopt);
-  EXPECT_EQ(lossless_cast<float>(int64_t(20'000'003)), std::nullopt);
-  EXPECT_EQ(lossless_cast<double>(int32_t(20'000'003)), 20'000'003);
-  EXPECT_EQ(lossless_cast<double>(int64_t(20'000'003)), 20'000'003);
+  EXPECT_EQ(lossless_cast<float>(int32_t{20'000'003}), std::nullopt);
+  EXPECT_EQ(lossless_cast<float>(int64_t{20'000'003}), std::nullopt);
+  EXPECT_EQ(lossless_cast<double>(int32_t{20'000'003}), 20'000'003);
+  EXPECT_EQ(lossless_cast<double>(int64_t{20'000'003}), 20'000'003);
 
-  EXPECT_EQ(lossless_cast<float>(int32_t(-20'000'003)), std::nullopt);
-  EXPECT_EQ(lossless_cast<double>(int32_t(-20'000'003)), -20'000'003);
+  EXPECT_EQ(lossless_cast<float>(int32_t{-20'000'003}), std::nullopt);
+  EXPECT_EQ(lossless_cast<double>(int32_t{-20'000'003}), -20'000'003);
 
-  EXPECT_EQ(lossless_cast<float>(int64_t(20'123'456'789'012'345ll)), std::nullopt);
-  EXPECT_EQ(lossless_cast<double>(int64_t(20'123'456'789'012'345ll)), std::nullopt);
+  EXPECT_EQ(lossless_cast<float>(int64_t{20'123'456'789'012'345}), std::nullopt);
+  EXPECT_EQ(lossless_cast<double>(int64_t{20'123'456'789'012'345}), std::nullopt);
 }
 
 TEST_F(LosslessCastTest, FloatingPointToIntegral) {
@@ -108,8 +110,8 @@ TEST_F(LosslessCastTest, FloatingPointToDifferentFloatingPoint) {
 }
 
 TEST_F(LosslessCastTest, IntegralToIntegral) {
-  EXPECT_EQ(lossless_cast<int64_t>(int32_t(3)), 3);
-  EXPECT_EQ(lossless_cast<int32_t>(int64_t(3)), 3);
+  EXPECT_EQ(lossless_cast<int64_t>(int32_t{3}), 3);
+  EXPECT_EQ(lossless_cast<int32_t>(int64_t{3}), 3);
 
   EXPECT_EQ(lossless_cast<int32_t>(2'147'483'647), 2'147'483'647);
   EXPECT_EQ(lossless_cast<int32_t>(int64_t{2'147'483'648}), std::nullopt);
@@ -126,22 +128,22 @@ TEST_F(LosslessCastTest, NullToNonNull) {
 }
 
 TEST_F(LosslessCastTest, StringToNonString) {
-  EXPECT_EQ(lossless_cast<int32_t>(pmr_string("a")), std::nullopt);
-  EXPECT_EQ(lossless_cast<int32_t>(pmr_string("1")), 1);
-  EXPECT_EQ(lossless_cast<int64_t>(pmr_string("a")), std::nullopt);
-  EXPECT_EQ(lossless_cast<int64_t>(pmr_string("1")), 1);
-  EXPECT_EQ(lossless_cast<float>(pmr_string("a")), std::nullopt);
-  EXPECT_EQ(lossless_cast<float>(pmr_string("1")), std::nullopt);
-  EXPECT_EQ(lossless_cast<double>(pmr_string("a")), std::nullopt);
-  EXPECT_EQ(lossless_cast<double>(pmr_string("1")), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(pmr_string{"a"}), std::nullopt);
+  EXPECT_EQ(lossless_cast<int32_t>(pmr_string{"1"}), 1);
+  EXPECT_EQ(lossless_cast<int64_t>(pmr_string{"a"}), std::nullopt);
+  EXPECT_EQ(lossless_cast<int64_t>(pmr_string{"1"}), 1);
+  EXPECT_EQ(lossless_cast<float>(pmr_string{"a"}), std::nullopt);
+  EXPECT_EQ(lossless_cast<float>(pmr_string{"1"}), std::nullopt);
+  EXPECT_EQ(lossless_cast<double>(pmr_string{"a"}), std::nullopt);
+  EXPECT_EQ(lossless_cast<double>(pmr_string{"1"}), std::nullopt);
 
-  EXPECT_EQ(lossless_cast<int32_t>(pmr_string("3000000000")), std::nullopt);
-  EXPECT_EQ(lossless_cast<int64_t>(pmr_string("3000000000")), 3'000'000'000);
+  EXPECT_EQ(lossless_cast<int32_t>(pmr_string{"3000000000"}), std::nullopt);
+  EXPECT_EQ(lossless_cast<int64_t>(pmr_string{"3000000000"}), 3'000'000'000);
 }
 
 TEST_F(LosslessCastTest, NumberToString) {
-  EXPECT_EQ(lossless_cast<pmr_string>(int32_t(2)), "2");
-  EXPECT_EQ(lossless_cast<pmr_string>(int64_t(2)), "2");
+  EXPECT_EQ(lossless_cast<pmr_string>(int32_t{2}), "2");
+  EXPECT_EQ(lossless_cast<pmr_string>(int64_t{2}), "2");
   EXPECT_EQ(lossless_cast<pmr_string>(2.5f), std::nullopt);
   EXPECT_EQ(lossless_cast<pmr_string>(3.333f), std::nullopt);
   EXPECT_EQ(lossless_cast<pmr_string>(2.5), std::nullopt);

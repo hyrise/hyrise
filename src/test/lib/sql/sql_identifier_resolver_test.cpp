@@ -1,4 +1,5 @@
 #include <memory>
+#include <vector>
 
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"

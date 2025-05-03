@@ -1,3 +1,7 @@
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "base_test.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"

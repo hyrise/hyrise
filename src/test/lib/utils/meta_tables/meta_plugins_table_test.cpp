@@ -1,3 +1,8 @@
+#include <iostream>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "../plugin_test_utils.hpp"
 #include "base_test.hpp"
 #include "operators/table_wrapper.hpp"
