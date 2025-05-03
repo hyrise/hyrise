@@ -83,6 +83,11 @@ class BenchmarkRunner : public Noncopyable {
   // to identify a certain point in the benchmark, e.g., when an item is finished in the ordered mode.
   void _snapshot_segment_access_counters(const std::string& moment = "");
 
+  // For throughput calculation, we need to know how many times an item was executed within a specific period of time. A
+  // BenchmarkItemResult covers many (un)successful runs of this item. Depending on what ended benchmarking for this
+  // item (limit for number of runs or execution time), we need to determine the duration from item start to end.
+  Duration _calculate_item_duration(const BenchmarkItemResult& result) const;
+
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
@@ -113,11 +118,7 @@ class BenchmarkRunner : public Noncopyable {
   // issues (see https://reviews.llvm.org/D114119).
   moodycamel::LightweightSemaphore _running_clients_semaphore{0};
 
-  // For BenchmarkMode::Shuffled, we count the number of runs executed across all items. This also includes items that
-  // were unsuccessful (e.g., because of transaction aborts).
-  std::atomic_uint32_t _total_finished_runs{0};
-
-  BenchmarkState _state{Duration{0}};
+  BenchmarkState _state{Duration{0}, 0};
 
   int _snapshot_id{0};
 
