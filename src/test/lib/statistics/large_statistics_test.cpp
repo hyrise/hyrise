@@ -33,7 +33,7 @@ class LargeStatisticsTest : public BaseTest {
   // increase the value anymore. This behavior can cause problems in statistics generation or cardinality/cost
   // estimation.
   //
-  // To understand this behavior, let us dig a bit into floating-points as deined by IEEE 754 (see
+  // To understand this behavior, let us dig a bit into floating-points as defined by IEEE 754 (see
   // https://en.wikipedia.org/wiki/IEEE_754). C++'s float is a single-precision/binary32 type. This means, floats are
   // encoded as follows:
   //     sign s (1 bit) | exponent e (8 bits) | mantissa m (23 bits) = 32 bit together.
