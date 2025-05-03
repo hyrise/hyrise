@@ -1,4 +1,5 @@
 #include <memory>
+#include <vector>
 
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"

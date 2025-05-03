@@ -2,6 +2,7 @@
 #include <cctype>
 #include <memory>
 #include <sstream>
+#include <utility>
 
 #include "encoding_test.hpp"
 #include "storage/create_iterable_from_segment.hpp"

@@ -1,3 +1,4 @@
+#include <memory>
 #include <sstream>
 
 #include "base_test.hpp"

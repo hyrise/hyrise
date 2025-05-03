@@ -1,3 +1,8 @@
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"

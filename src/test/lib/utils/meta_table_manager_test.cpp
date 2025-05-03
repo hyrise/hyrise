@@ -1,3 +1,9 @@
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "meta_tables/meta_mock_table.hpp"
 #include "operators/table_wrapper.hpp"

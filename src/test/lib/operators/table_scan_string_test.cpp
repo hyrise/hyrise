@@ -4,6 +4,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "expression/evaluation/like_matcher.hpp"

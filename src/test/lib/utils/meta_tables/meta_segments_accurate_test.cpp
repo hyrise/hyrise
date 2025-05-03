@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "base_test.hpp"
 #include "utils/meta_tables/meta_segments_accurate_table.hpp"
 

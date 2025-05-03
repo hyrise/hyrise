@@ -1,4 +1,10 @@
+#include <limits>
+#include <memory>
 #include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"

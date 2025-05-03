@@ -1,3 +1,11 @@
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"

@@ -1,3 +1,8 @@
+#include <memory>
+#include <string>
+#include <tuple>
+#include <vector>
+
 #include "magic_enum.hpp"
 
 #include "base_test.hpp"

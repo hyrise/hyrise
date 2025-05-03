@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "base_test.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "storage/table.hpp"

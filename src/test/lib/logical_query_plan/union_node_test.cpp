@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "base_test.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"

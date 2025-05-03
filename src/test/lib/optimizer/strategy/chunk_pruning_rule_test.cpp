@@ -1,3 +1,7 @@
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"

@@ -1,5 +1,10 @@
 #include "sqlite_testrunner.hpp"
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace hyrise {
 
 void SQLiteTestRunner::SetUpTestCase() {

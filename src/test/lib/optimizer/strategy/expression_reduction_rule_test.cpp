@@ -1,4 +1,6 @@
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "expression/arithmetic_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"

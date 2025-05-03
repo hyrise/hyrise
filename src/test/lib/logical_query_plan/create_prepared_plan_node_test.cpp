@@ -1,3 +1,6 @@
+#include <memory>
+#include <vector>
+
 #include "base_test.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

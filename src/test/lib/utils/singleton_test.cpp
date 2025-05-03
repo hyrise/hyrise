@@ -1,3 +1,5 @@
+#include <unordered_map>
+
 #include "../plugins/test_plugin.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"

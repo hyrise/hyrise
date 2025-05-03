@@ -1,3 +1,8 @@
+#include <algorithm>
+#include <limits>
+#include <memory>
+#include <vector>
+
 #include "base_test.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/table_wrapper.hpp"

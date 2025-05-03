@@ -1,6 +1,9 @@
 #include <cctype>
 #include <memory>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "lib/storage/encoding_test.hpp"

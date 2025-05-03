@@ -1,6 +1,11 @@
 #include <filesystem>
+#include <iostream>
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>

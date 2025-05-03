@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
 #include "operators/maintenance/create_table.hpp"

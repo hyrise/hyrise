@@ -1,4 +1,7 @@
+#include <memory>
 #include <optional>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "expression/arithmetic_expression.hpp"

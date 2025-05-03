@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <string>
 #include <unordered_set>
 
 #include "base_test.hpp"

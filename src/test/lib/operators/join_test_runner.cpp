@@ -1,5 +1,13 @@
+#include <algorithm>
 #include <fstream>
+#include <iostream>
+#include <map>
+#include <memory>
 #include <set>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "operators/join_hash.hpp"

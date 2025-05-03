@@ -25,7 +25,7 @@ let "exitcode |= $?"
 # The output if clang-format is usually not very helpful, but in most cases running ./scripts/format.sh will solve it.
 unamestr=$(uname)
 if [[ "$unamestr" == 'Darwin' ]]; then
-    clang_format="$(brew --prefix llvm)/bin/clang-format"
+    clang_format="$(brew --prefix llvm)@18/bin/clang-format"
     format_cmd="$clang_format -style=file"
 elif [[ "$unamestr" == 'Linux' ]]; then
   format_cmd="clang-format -style=file"

@@ -1,6 +1,10 @@
+#include <map>
 #include <memory>
 #include <numeric>
 #include <random>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 

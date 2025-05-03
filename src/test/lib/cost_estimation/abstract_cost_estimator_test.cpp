@@ -1,3 +1,4 @@
+#include <memory>
 #include <unordered_map>
 
 #include "base_test.hpp"

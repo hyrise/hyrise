@@ -1,6 +1,10 @@
+#include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>

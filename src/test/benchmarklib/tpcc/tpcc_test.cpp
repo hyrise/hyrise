@@ -1,3 +1,7 @@
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"

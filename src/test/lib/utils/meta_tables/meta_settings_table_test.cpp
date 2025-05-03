@@ -1,3 +1,7 @@
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "../mock_setting.hpp"
 #include "base_test.hpp"
 #include "operators/table_wrapper.hpp"

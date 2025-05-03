@@ -1,3 +1,6 @@
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "optimizer/join_ordering/enumerate_ccp.hpp"
 #include "utils/assert.hpp"

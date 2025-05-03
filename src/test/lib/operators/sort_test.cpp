@@ -1,3 +1,7 @@
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "base_test.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/sort.hpp"

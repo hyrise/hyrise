@@ -1,6 +1,10 @@
 #include <chrono>
+#include <memory>
 #include <numeric>
+#include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "base_test.hpp"

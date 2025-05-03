@@ -1,3 +1,9 @@
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <vector>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "lib/storage/encoding_test.hpp"

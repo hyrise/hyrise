@@ -1,3 +1,7 @@
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "base_test.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

@@ -1,4 +1,6 @@
+#include <memory>
 #include <regex>
+#include <string>
 
 #include "base_test.hpp"
 #include "hyrise.hpp"

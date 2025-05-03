@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
