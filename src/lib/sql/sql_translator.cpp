@@ -75,6 +75,7 @@
 #include "sql/sql_identifier_resolver.hpp"
 #include "sql/sql_identifier_resolver_proxy.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -1834,14 +1835,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   // so on. Anyway, we would need to decouple data loading and storing the table and have to load metadata or even the
   // whole table when translating the SQL statement.
   AssertInput(!import_statement.whereClause, "Predicates on imported files are not supported.");
+
+  auto encoding = std::optional<EncodingType>{};
+  if (import_statement.encoding) {
+    encoding = magic_enum::enum_cast<EncodingType>(import_statement.encoding);
+    AssertInput(encoding, "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
+  }
+
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                          import_type_to_file_type(import_statement.type));
+                          import_type_to_file_type(import_statement.type), encoding);
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  AssertInput(!export_statement.encoding,
+              "Encoding for a table export is not supported. You can choose an encoding when importing tables.");
 
   if (export_statement.select) {
     lqp = _translate_select_statement(*export_statement.select);
