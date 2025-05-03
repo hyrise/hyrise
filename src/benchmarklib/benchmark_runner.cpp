@@ -697,19 +697,17 @@ Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& re
   // If we stopped because of the run limit, we calculate the time from the item's benchmark start until the last run
   // finished.
   const auto last_run_end = [&](const auto& runs) {
-    auto run_end = TimePoint{0};
+    auto run_end = Duration{0};
 
     for (const auto& run : runs) {
-      run_end = std::max(run_end, run.begin + run.duration);
+      // `run.begin` is relative to `_benchmark_start`, but `_state.benchmark_begin` is not. Thus, we have to substract
+      // the time elapsed between the benchmark start and the start of the item.
+      run_end = std::max(run_end, run.begin + run.duration - (_state.benchmark_begin - _benchmark_start));
     }
     return run_end;
   };
 
-  const auto run_end = std::max(last_run_end(result.successful_runs), last_run_end(result.unsuccessful_runs));
-
-  // `run_end` is relative to the overall benchmark start, but `_state.benchmark_begin` is not. Thus, we have to
-  // substract the time elapsed between the benchmark start and the start of the item.
-  return max_run_end - (_state.benchmark_begin - _benchmark_start);
+  return std::max(last_run_end(result.successful_runs), last_run_end(result.unsuccessful_runs));
 }
 
 }  // namespace hyrise
