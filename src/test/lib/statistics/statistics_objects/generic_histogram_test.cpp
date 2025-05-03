@@ -11,6 +11,8 @@
 #include "utils/load_table.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
+#include "benchmark_table_encoder.hpp"
+
 /**
  * As well as testing GenericHistogram, we also test a lot of the functionally implemented in AbstractHistogram here.
  * We do this here since GenericHistogram allows us to easily construct interesting edge cases.
@@ -1200,10 +1202,17 @@ TEST_F(GenericHistogramTest, TpchTemporaryTest) {
   const auto benchmark_config = std::make_shared<BenchmarkConfig>();
   benchmark_config->cache_binary_tables = true;
 
-  auto table_generator = TPCHTableGenerator(10.0, ClusteringConfiguration::None, benchmark_config);
+  auto table_generator = TPCHTableGenerator(0.1f, ClusteringConfiguration::None, benchmark_config);
   auto generated_tables = table_generator.generate();
   ASSERT_TRUE(generated_tables.contains("lineitem"));
-  const auto& lineitem_table = generated_tables["lineitem"].table;
+  auto& lineitem_table = generated_tables["lineitem"].table;
+
+  ////////////////
+  for (auto chunk_id = ChunkID{0}; chunk_id < lineitem_table->chunk_count(); ++chunk_id) {
+    lineitem_table->get_chunk(chunk_id)->set_immutable();
+  }
+  BenchmarkTableEncoder::encode("", lineitem_table, EncodingConfig{});
+  ////////////////
 
   for (auto column_id = ColumnID{0}; column_id < lineitem_table->column_count(); ++column_id) {
     const auto column_data_type = lineitem_table->column_data_type(column_id);

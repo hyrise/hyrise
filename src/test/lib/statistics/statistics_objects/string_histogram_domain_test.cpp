@@ -11,12 +11,12 @@ class StringHistogramDomainTest : public BaseTest {
 TEST_F(StringHistogramDomainTest, StringToDomain) {
   StringHistogramDomain domain_a{'a', 'd', 2};
 
-  EXPECT_EQ(domain_a.string_to_domain(""), "");
-  EXPECT_EQ(domain_a.string_to_domain("a"), "a");
-  EXPECT_EQ(domain_a.string_to_domain("aaaaa"), "aaaaa");
-  EXPECT_EQ(domain_a.string_to_domain("aaaaz"), "aaaad");
-  EXPECT_EQ(domain_a.string_to_domain("abcda"), "abcda");
-  EXPECT_EQ(domain_a.string_to_domain("ABCDA"), "aaaaa");
+  EXPECT_EQ(domain_a.string_to_domain(pmr_string{""}), "");
+  EXPECT_EQ(domain_a.string_to_domain(pmr_string{"a"}), "a");
+  EXPECT_EQ(domain_a.string_to_domain(pmr_string{"aaaaa"}), "aaaaa");
+  EXPECT_EQ(domain_a.string_to_domain(pmr_string{"aaaaz"}), "aaaad");
+  EXPECT_EQ(domain_a.string_to_domain(pmr_string{"abcda"}), "abcda");
+  EXPECT_EQ(domain_a.string_to_domain(pmr_string{"ABCDA"}), "aaaaa");
 }
 
 TEST_F(StringHistogramDomainTest, NextValue) {

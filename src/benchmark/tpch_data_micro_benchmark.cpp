@@ -326,10 +326,12 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
       // std::cout << histogram->description() << std::endl;
     }
   });
+
+  node_queue_scheduler->finish();
 }
 
 constexpr auto LINEITEM_COLUMN_COUNT = 15;
-// BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, LINEITEM_COLUMN_COUNT);
-BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(LINEITEM_COLUMN_COUNT, LINEITEM_COLUMN_COUNT);
+BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, LINEITEM_COLUMN_COUNT);
+// BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(LINEITEM_COLUMN_COUNT, LINEITEM_COLUMN_COUNT);
 
 }  // namespace hyrise

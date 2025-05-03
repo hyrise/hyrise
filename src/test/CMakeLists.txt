@@ -245,6 +245,7 @@ set(
     lib/utils/plugin_manager_test.cpp
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
+    lib/utils/small_prefix_string_view_test.cpp
     lib/utils/print_utils_test.cpp
     lib/utils/setting_test.cpp
     lib/utils/settings_manager_test.cpp

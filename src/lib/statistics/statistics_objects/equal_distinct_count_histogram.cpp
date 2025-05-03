@@ -22,6 +22,7 @@
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/small_prefix_string_view.hpp"
 #include "utils/string_heap.hpp"
 
 namespace {
@@ -37,7 +38,7 @@ constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10'000'000};
 // where hashing is somewhat expensive.
 
 template <typename T>
-using ValueDistributionType = std::conditional_t<std::is_same_v<T, pmr_string>, std::string_view, T>;
+using ValueDistributionType = std::conditional_t<std::is_same_v<T, pmr_string>, SmallPrefixStringView, T>;
  
 template <typename T>
 using ValueDistributionMap = boost::unordered_flat_map<ValueDistributionType<T>, size_t>;
@@ -47,6 +48,7 @@ using ValueDistributionVector = std::vector<std::pair<ValueDistributionType<T>, 
 
 template <typename T, typename DictionarySegmentType, typename DictionaryType>
 void process_dictionary_segment(const DictionarySegmentType& segment, const DictionaryType& dictionary, ValueDistributionVector<T>& value_distribution_vector, StringHeap& string_heap, const HistogramDomain<T>& domain) {
+  const auto start = std::chrono::steady_clock::now();
   const auto dictionary_size = dictionary.size();
   value_distribution_vector.resize(dictionary_size);
 
@@ -59,10 +61,9 @@ void process_dictionary_segment(const DictionarySegmentType& segment, const Dict
         initial_string = dictionary[dictionary_offset];
       }
 
-      const auto adapted_string = domain.string_to_domain(initial_string);
+      const auto adapted_string = domain.string_to_domain(initial_string.data(), initial_string.size());
       if (initial_string == adapted_string) {
-        // std::cerr << "Unchanged '" << initial_string << "' and '" << adapted_string << "'\n";
-        value_distribution_vector[dictionary_offset] = {initial_string, 0};
+        value_distribution_vector[dictionary_offset] = {SmallPrefixStringView{initial_string.data(), initial_string.size()}, 0};
       } else {
         const auto heap_string_view = string_heap.add_string(adapted_string);
         value_distribution_vector[dictionary_offset] = {heap_string_view, 0};
@@ -81,11 +82,14 @@ void process_dictionary_segment(const DictionarySegmentType& segment, const Dict
       }
     }
   });
+
+  std::cerr << std::format("Dict phase: {} us\n", (std::chrono::duration<double>{std::chrono::steady_clock::now() - start}.count() * 1'000'000));
 }
 
 template <typename T>
 void process_any_unspecialized(AbstractSegment& segment, ValueDistributionVector<T>& value_distribution_vector, StringHeap& string_heap, const HistogramDomain<T>& domain) {
   auto value_distribution_map = ValueDistributionMap<T>{};  
+  // value_distribution_map.reserve(segment.size() * 2);
   value_distribution_map.reserve(segment.size());
 
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
@@ -94,13 +98,8 @@ void process_any_unspecialized(AbstractSegment& segment, ValueDistributionVector
     }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
-      const auto current_string = string_heap.add_string(iterator_value.value());
-      // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-      if (domain.contains(current_string)) {
-        ++value_distribution_map[current_string];
-      } else {
-        ++value_distribution_map[string_heap.add_string(domain.string_to_domain(current_string))];
-      }
+      const auto current_string = string_heap.add_string(domain.string_to_domain(iterator_value.value()));
+      ++value_distribution_map[current_string];
     } else {
       ++value_distribution_map[iterator_value.value()];
     }
@@ -113,6 +112,7 @@ template <typename T>
 ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_parallel_level, const size_t level, std::vector<std::unique_ptr<StringHeap>>& string_heaps,
                                                               auto segment_iterator_begin, auto segment_iterator_end,
                                                               const HistogramDomain<T>& domain) {
+  // std::cerr << "level " << level << std::endl;
   DebugAssert(segment_iterator_begin != segment_iterator_end, "Wrong call");
   if (std::distance(segment_iterator_begin, segment_iterator_end) == 1) {
     const auto [chunk_id, segment] = *segment_iterator_begin;
@@ -165,11 +165,14 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
     left_task();
     right_task();
   }
+
+  const auto start = std::chrono::steady_clock::now();
   auto result = ValueDistributionVector<T>{};
   result.reserve(left.size() + right.size());  
 
   auto left_iter = left.begin();
   auto right_iter = right.begin();
+
 
   while (left_iter != left.end() || right_iter != right.end()) {
     if (left_iter == left.end()) {
@@ -194,6 +197,8 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
       ++right_iter;
     }
   }
+
+  std::cerr << std::format("Merging: {} us\n", (std::chrono::duration<double>{std::chrono::steady_clock::now() - start}.count() * 1'000'000));
 
   DebugAssert(std::is_sorted(result.begin(), result.end()), "Not sorted.");
   return result;
@@ -242,6 +247,7 @@ std::pair<std::vector<std::unique_ptr<StringHeap>>,
 
   return {std::move(string_heaps), std::move(result)};
 }
+
 }  // namespace
 
 namespace hyrise {
@@ -302,8 +308,15 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
       max_value_idx++;
     }
 
-    bin_minima[bin_idx] = T{value_distribution[min_value_idx].first};
-    bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first};
+    if constexpr (std::is_same_v<T, pmr_string>) {
+      bin_minima[bin_idx] = T{value_distribution[min_value_idx].first.data()};
+      bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first.data()};  
+    } else {
+      bin_minima[bin_idx] = T{value_distribution[min_value_idx].first};
+      bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first};
+    }
+
+    
 
     bin_heights[bin_idx] =
         std::accumulate(value_distribution.cbegin() + min_value_idx, value_distribution.cbegin() + max_value_idx + 1,

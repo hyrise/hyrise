@@ -9,6 +9,7 @@
 #include "fixed_string_vector_iterator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/small_prefix_string_view.hpp"
 
 namespace hyrise {
 
@@ -32,7 +33,7 @@ class FixedStringVector {
     // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null
     // pointers. In order to avoid this, we insert a null terminator to the vector by using resize.
     if (_string_length == 0) {
-      _chars.resize(1u);
+      _chars.resize(1);
       _size = value_count;
     } else {
       _chars.reserve(_string_length * value_count);
@@ -52,19 +53,21 @@ class FixedStringVector {
   FixedString at(const size_t pos);
 
   template <typename T>
+    requires std::is_same_v<T, SmallPrefixStringView> || std::is_same_v<T, std::string_view> || std::is_same_v<T, pmr_string>
   T get_string_at(const size_t pos) const {
-  const auto* const string_start = &_chars[pos * _string_length];
-  // String end checks if the string length is zero to avoid reading the data directly "in front" of `chars`.
-  // If the string length is > 0, it is the position of the last char.
-  const auto string_end = _string_length == 0 ? 0 : _string_length - 1;
+    const auto* const string_start = &_chars[pos * _string_length];
 
-  if (*(string_start + string_end) == '\0') {
-    // The string is zero-padded - the pmr_string constructor takes care of finding the correct length
-    return T{string_start};
+    // String end checks if the string length is zero to avoid reading the data directly "in front" of `chars`.
+    // If the string length is > 0, it is the position of the last char.
+    const auto string_end = _string_length == 0 ? 0 : _string_length - 1;
+
+    if (*(string_start + string_end) == '\0') {
+      // The string is zero-padded. We let the constructors takes care of finding the string's length.
+      return {string_start};
+    }
+
+    return {string_start, _string_length};
   }
-
-  return T{string_start, _string_length};
-}
 
   // Make the FixedStringVector of FixedStrings iterable in different ways
   FixedStringIterator<false> begin() noexcept;

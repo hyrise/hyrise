@@ -4,6 +4,7 @@
 #include <limits>
 #include <string>
 
+#include "utils/small_prefix_string_view.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -89,6 +90,15 @@ class HistogramDomain<pmr_string> {
     return true;
   }
 
+  bool contains(const SmallPrefixStringView& string_value) const {
+    for (const auto char_value : string_value.get_string_view()) {
+      if (char_value > max_char || char_value < min_char) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * @return max_char - min_char + 1
    */
@@ -104,11 +114,22 @@ class HistogramDomain<pmr_string> {
    * @return a copy of @param string_value with all characters capped by [min_char, max_char]
    */
   template <typename T>
-    // requires (std::is_same_v<T, pmr_string> || std::is_same_v<T, std::string_view>)
+    requires (std::is_same_v<T, pmr_string> || std::is_same_v<T, std::string_view>)
   pmr_string string_to_domain(const T& string_value) const {
-    auto converted = pmr_string{string_value};
-    for (auto pos = size_t{0}; pos < converted.size(); ++pos) {
-      converted[pos] = std::min(max_char, std::max(min_char, converted[pos]));
+    const auto length = string_value.size();
+    auto converted = pmr_string{};
+    converted.resize(length);
+    for (auto pos = size_t{0}; pos < length; ++pos) {
+      converted[pos] = std::min(max_char, std::max(min_char, string_value[pos]));
+    }
+    return converted;
+  }
+
+  pmr_string string_to_domain(const char* string_value, const size_t length) const {
+    auto converted = pmr_string{};
+    converted.resize(length);
+    for (auto pos = size_t{0}; pos < length; ++pos) {
+      converted[pos] = std::min(max_char, std::max(min_char, string_value[pos]));
     }
     return converted;
   }
