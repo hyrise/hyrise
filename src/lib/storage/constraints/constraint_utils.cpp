@@ -1,5 +1,6 @@
 #include "constraint_utils.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <set>
 #include <string>
@@ -76,6 +77,56 @@ void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std
   auto ordered_column_ids = column_ids_by_name(table, ordered_columns);
 
   table->add_soft_constraint(TableOrderConstraint{std::move(ordering_column_ids), std::move(ordered_column_ids)});
+}
+
+bool is_constraint_confidently_valid(const std::shared_ptr<Table>& table,
+                                     const TableKeyConstraint& table_key_constraint) {
+  if (!table_key_constraint.can_become_invalid()) {
+    return true;
+  }
+
+  if (!table_key_constraint.last_validated_on() ||
+      (table_key_constraint.last_invalidated_on() &&
+       table_key_constraint.last_validated_on() < *table_key_constraint.last_invalidated_on())) {
+    return false;
+  }
+
+  const auto chunk_count = table->chunk_count();
+  // Due to Hyrise being a append-only database the most recent chunks are the last ones added to the table. Therefore
+  // we iterate backwards through all chunks of the table to potentially return faster.
+  for (auto prev_chunk_id = static_cast<int32_t>(chunk_count - 1); prev_chunk_id >= 0; --prev_chunk_id) {
+    const auto source_chunk = table->get_chunk(static_cast<ChunkID>(prev_chunk_id));
+
+    // We use `max_begin_cid` here. This can lead to overly pessimistic results, but as of right now we don't have a
+    // better way to determine the last valid commit id here.
+    const auto max_begin_cid = source_chunk->mvcc_data()->max_begin_cid.load();
+    if (max_begin_cid != MAX_COMMIT_ID && max_begin_cid > table_key_constraint.last_validated_on()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool is_constraint_confidently_invalid(const std::shared_ptr<Table>& table,
+                                       const TableKeyConstraint& table_key_constraint) {
+  if (!table_key_constraint.last_invalidated_on()) {
+    return false;
+  }
+
+  const auto chunk_count = table->chunk_count();
+  // Due to Hyrise being a append-only database the most recent chunks are the last ones added to the table. Therefore
+  // we iterate backwards through all chunks of the table to potentially return faster.
+  for (auto prev_chunk_id = static_cast<int32_t>(chunk_count - 1); prev_chunk_id >= 0; --prev_chunk_id) {
+    const auto source_chunk = table->get_chunk(static_cast<ChunkID>(prev_chunk_id));
+
+    const auto max_end_cid = source_chunk->mvcc_data()->max_end_cid.load();
+    if (max_end_cid != MAX_COMMIT_ID && max_end_cid > table_key_constraint.last_invalidated_on()) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace hyrise

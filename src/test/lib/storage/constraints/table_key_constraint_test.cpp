@@ -177,4 +177,12 @@ TEST_F(TableKeyConstraintTest, OrderIndependence) {
   EXPECT_EQ(*std::next(key_constraints_a.begin()), *std::next(key_constraints_b.begin()));
 }
 
+TEST_F(TableKeyConstraintTest, CanBecomeInvalid) {
+  const auto key_constraint_invalid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}};
+  const auto key_constraint_valid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+
+  EXPECT_TRUE(key_constraint_invalid.can_become_invalid());
+  EXPECT_FALSE(key_constraint_valid.can_become_invalid());
+}
+
 }  // namespace hyrise

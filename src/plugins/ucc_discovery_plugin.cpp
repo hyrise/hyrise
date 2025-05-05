@@ -128,6 +128,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     auto message = std::stringstream{};
     message << "Checking candidate " << candidate.table_name << "." << table->column_name(column_id);
 
+    auto table_constraints_modify_lock = table->acquire_constraints_modify_mutex();
     const auto& soft_key_constraints = table->soft_key_constraints();
 
     // Skip already discovered UCCs.
@@ -146,22 +147,15 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
       // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
       if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id)) {
-        message << " [rejected in " << candidate_timer.lap_formatted() << "]";
-        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-        return;
+        message << " [rejected because some chunk contains duplicates in " << candidate_timer.lap_formatted() << "]";
+      } else if (!_uniqueness_holds_across_segments<ColumnDataType>(table, column_id)) {
+        message << " [rejected because the column has cross-segment duplicates in " << candidate_timer.lap_formatted()
+                << "]";
+      } else {
+        message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
+        table->add_soft_constraint_unsafe(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
       }
-
-      // If we reach here, we have to run the more expensive cross-segment duplicate check.
-      if (!_uniqueness_holds_across_segments<ColumnDataType>(table, column_id)) {
-        message << " [rejected in " << candidate_timer.lap_formatted() << "]";
-        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-        return;
-      }
-
-      // We save UCCs directly inside the table so they can be forwarded to nodes in a query plan.
-      message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      table->add_soft_constraint(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
     });
   }
   Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
