@@ -38,7 +38,7 @@ class PredicateReorderingRule : public AbstractRule {
   // out to be a good idea. We keep it simple and use a constant factor, which is derived experimentally. This might be
   // subject to change in the future if we chose different join implementations, but works reasonably well for now.
   // TODO(anyone): Revisit if we substantially change join execution.
-  constexpr static auto JOIN_PENALTY = 1.5f;
+  constexpr static auto JOIN_PENALTY = Cost{1.5};
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
