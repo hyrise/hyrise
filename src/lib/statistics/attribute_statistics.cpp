@@ -25,7 +25,7 @@ AttributeStatistics<T>::AttributeStatistics() : BaseAttributeStatistics(data_typ
 template <typename T>
 void AttributeStatistics<T>::set_statistics_object(
     const std::shared_ptr<const AbstractStatisticsObject>& statistics_object) {
-  // We allow call patterns like `c.set_statistics_object(o.scaled(0.1f))` where `o.scaled()` might return nullptr
+  // We allow call patterns like `c.set_statistics_object(o.scaled(0.1))` where `o.scaled()` might return nullptr
   // because, e.g., scaling is not possible for `o`.
   if (!statistics_object) {
     return;

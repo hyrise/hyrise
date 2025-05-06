@@ -1036,7 +1036,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto sliced_histogram =
             std::dynamic_pointer_cast<const AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         DebugAssert(sliced_histogram, "Expected slicing of a Histogram to return either nullptr or a Histogram");
-        if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
+        if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0) {
           selectivity = 0.0;
         } else {
           selectivity = sliced_histogram->total_count() / input_table_statistics->row_count;
