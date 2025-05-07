@@ -14,6 +14,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -413,14 +414,6 @@ std::unique_lock<std::mutex> Table::acquire_append_mutex() {
   return std::unique_lock<std::mutex>(_append_mutex);
 }
 
-std::unique_lock<std::shared_mutex> Table::acquire_constraints_modify_mutex() {
-  return std::unique_lock<std::shared_mutex>(_constraint_mutex);
-}
-
-std::shared_lock<std::shared_mutex> Table::acquire_constraints_read_mutex() const {
-  return std::shared_lock<std::shared_mutex>(_constraint_mutex);
-}
-
 std::shared_ptr<TableStatistics> Table::table_statistics() const {
   return _table_statistics;
 }
@@ -454,7 +447,7 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
   _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
 }
 
-void Table::add_soft_constraint_unsafe(const AbstractTableConstraint& table_constraint) {
+void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint) {
   Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
   switch (table_constraint.type()) {
     case TableConstraintType::Key:
@@ -469,25 +462,19 @@ void Table::add_soft_constraint_unsafe(const AbstractTableConstraint& table_cons
   }
 }
 
-void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint) {
-  const auto table_constraints_modify_lock = acquire_constraints_modify_mutex();
-  add_soft_constraint_unsafe(table_constraint);
+std::unordered_set<TableKeyConstraint> Table::valid_soft_key_constraints() const {
+  auto valid_soft_key_constraints_filter = std::unordered_set<TableKeyConstraint>{};
+  _table_key_constraints.visit_all([&](const auto& constraint) {
+    if (constraint.last_validated_on() &&
+        (!constraint.last_invalidated_on() || *constraint.last_invalidated_on() < constraint.last_validated_on())) {
+      valid_soft_key_constraints_filter.insert(constraint);
+    }
+  });
+
+  return valid_soft_key_constraints_filter;
 }
 
-TableKeyConstraints Table::valid_soft_key_constraints() const {
-  const std::shared_lock<std::shared_mutex> key_constraints_read_lock{_constraint_mutex};
-  auto valid_soft_key_constraints_filter =
-      _table_key_constraints | std::views::filter([](const auto& constraint) {
-        return (constraint.last_validated_on() && (!constraint.last_invalidated_on() ||
-                                                   *constraint.last_invalidated_on() < constraint.last_validated_on()));
-      });
-  auto valid_soft_key_constraints =
-      TableKeyConstraints{valid_soft_key_constraints_filter.begin(), valid_soft_key_constraints_filter.end()};
-
-  return valid_soft_key_constraints;
-}
-
-const TableKeyConstraints& Table::soft_key_constraints() const {
+TableKeyConstraints& Table::soft_key_constraints() const {
   return _table_key_constraints;
 }
 
@@ -515,7 +502,7 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     }
   }
 
-  for (const auto& existing_constraint : _table_key_constraints) {
+  _table_key_constraints.visit_all([&](const auto& existing_constraint) {
     // Ensure that no other PRIMARY KEY is defined.
     Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
                table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
@@ -523,16 +510,25 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
 
     // Ensure there is only one key constraint per column(s). Theoretically, there could be two unique constraints
     // {a, b} and {b, c}, but for now we prohibit these cases.
-    Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
+    Assert((existing_constraint.columns().size() == 1 && table_key_constraint.columns().size() == 1) ||
+               !columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
-  }
+  });
 
-  _table_key_constraints.insert(table_key_constraint);
-}
-
-void Table::delete_key_constraint(const TableKeyConstraint& constraint) {
-  const auto table_constraints_modify_lock = acquire_constraints_modify_mutex();
-  _table_key_constraints.erase(constraint);
+  _table_key_constraints.insert_or_visit(table_key_constraint, [&](const auto& existing_constraint) {
+    // If the constraint already exists, we need to update the last_validated_on and last_invalidated_on values.
+    if (table_key_constraint.last_validated_on()) {
+      // If the constraint was already invalidated, we need to update the last_invalidated_on value.
+      existing_constraint.revalidated_on(
+          std::max(existing_constraint.last_validated_on() ? *existing_constraint.last_validated_on() : CommitID{0},
+                   *table_key_constraint.last_validated_on()));
+    }
+    if (table_key_constraint.last_invalidated_on()) {
+      existing_constraint.invalidated_on(
+          std::max(existing_constraint.last_invalidated_on() ? *existing_constraint.last_invalidated_on() : CommitID{0},
+                   *table_key_constraint.last_invalidated_on()));
+    }
+  });
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
@@ -556,7 +552,6 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
 
   const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
   Assert(inserted, "ForeignKeyConstraint has already been set.");
-  const auto referenced_table_constraints_modify_lock = referenced_table->acquire_constraints_modify_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 

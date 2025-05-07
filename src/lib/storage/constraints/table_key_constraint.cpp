@@ -86,6 +86,10 @@ bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
   return std::lexicographical_compare(_columns.cbegin(), _columns.cend(), rhs._columns.cbegin(), rhs._columns.cend());
 }
 
+std::size_t hash_value(const hyrise::TableKeyConstraint& table_key_constraint) {
+  return table_key_constraint.hash();
+}
+
 }  // namespace hyrise
 
 namespace std {
