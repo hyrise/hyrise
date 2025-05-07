@@ -718,10 +718,10 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
 
-  /** Run multiple modifications, deletions and additions concurrently that require locks:
-   * - `Table::delete_key_constraint`
+  /** Run multiple modifications and additions concurrently that could potentially lead to race conditions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`
    * - `StaticTableNode::unique_column_combinations`
+   * - `Table::soft_key_constraints().clear()` to force a revalidation of the constraints
    * NOTE: We do not execute `Table::add_soft_constraint` because we do not have the knowledge whether or not the
    * constraint already exists.
    */
@@ -740,6 +740,10 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
     pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
   };
 
+  const auto clear_table_constraints = [&] {
+    table->soft_key_constraints().clear();
+  };
+
   const auto static_table_node_constraint_access = [&] {
     const auto static_table_node = StaticTableNode::make(table);
     // Simply access the unique column combinations to require a `shared_lock`.
@@ -752,12 +756,15 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
   threads.reserve(thread_count);
 
   for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
-    switch (thread_id % 2) {
+    switch (thread_id % 3) {
       case 0:
-        threads.emplace_back(validate_constraint);
+        threads.emplace_back(static_table_node_constraint_access);
         break;
       case 1:
-        threads.emplace_back(static_table_node_constraint_access);
+        threads.emplace_back(validate_constraint);
+        break;
+      case 2:
+        threads.emplace_back(clear_table_constraints);
         break;
       default:
         break;
@@ -770,7 +777,6 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
 
   // Check that the set of TableKeyConstraints does not contain any duplicates.
   ASSERT_LE(table->soft_key_constraints().size(), 3);
-  ASSERT_GE(table->soft_key_constraints().size(), 1);
 }
 
 }  // namespace hyrise

@@ -66,7 +66,8 @@ TEST_F(ConstraintUtilsTest, TableKeyConstraint) {
   EXPECT_THROW(primary_key_constraint(_table_a, {"a"}), std::logic_error);
   EXPECT_THROW(unique_constraint(_table_a, {"a"}), std::logic_error);
   EXPECT_THROW(primary_key_constraint(_table_a, {"c"}), std::logic_error);
-  EXPECT_THROW(unique_constraint(_table_a, {"c"}), std::logic_error);
+  EXPECT_NO_THROW(
+      unique_constraint(_table_a, {"c"}));  // Trying to add an already existing unique constraint is tolarated.
   EXPECT_THROW(primary_key_constraint(_table_a, {"b", "d"}), std::logic_error);
   EXPECT_THROW(unique_constraint(_table_a, {"b", "d"}), std::logic_error);
   EXPECT_THROW(primary_key_constraint(_table_a, {"c", "d"}), std::logic_error);

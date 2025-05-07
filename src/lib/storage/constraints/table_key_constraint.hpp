@@ -4,6 +4,8 @@
 #include <set>
 #include <unordered_set>
 
+#include <boost/unordered/concurrent_flat_set.hpp>
+
 #include "abstract_table_constraint.hpp"
 #include "types.hpp"
 
@@ -72,7 +74,9 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   mutable std::optional<CommitID> _last_invalidated_on;
 };
 
-using TableKeyConstraints = std::unordered_set<TableKeyConstraint>;
+using TableKeyConstraints = boost::concurrent_flat_set<TableKeyConstraint>;
+
+std::size_t hash_value(const hyrise::TableKeyConstraint& table_key_constraint);
 
 }  // namespace hyrise
 

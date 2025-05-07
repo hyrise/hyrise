@@ -128,15 +128,10 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     auto message = std::stringstream{};
     message << "Checking candidate " << candidate.table_name << "." << table->column_name(column_id);
 
-    auto table_constraints_modify_lock = table->acquire_constraints_modify_mutex();
     const auto& soft_key_constraints = table->soft_key_constraints();
 
     // Skip already discovered UCCs.
-    if (std::any_of(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
-                    [&column_id](const auto& key_constraint) {
-                      const auto& columns = key_constraint.columns();
-                      return columns.size() == 1 && *columns.cbegin() == column_id;
-                    })) {
+    if (soft_key_constraints.contains(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE})) {
       message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
       continue;
@@ -153,7 +148,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
                 << "]";
       } else {
         message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
-        table->add_soft_constraint_unsafe(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
+        table->add_soft_constraint(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
       }
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
     });

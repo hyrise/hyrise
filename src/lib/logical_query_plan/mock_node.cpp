@@ -130,11 +130,14 @@ std::string MockNode::description(const DescriptionMode /*mode*/) const {
 UniqueColumnCombinations MockNode::unique_column_combinations() const {
   auto unique_column_combinations = UniqueColumnCombinations{};
 
-  for (const auto& table_key_constraint : _table_key_constraints) {
+  _table_key_constraints.visit_all([&](const auto& table_key_constraint) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids)) {
-      continue;
+    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids) ||
+        !table_key_constraint.last_validated_on() ||
+        (table_key_constraint.last_invalidated_on() &&
+         *table_key_constraint.last_invalidated_on() >= table_key_constraint.last_validated_on())) {
+      return;
     }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
@@ -144,7 +147,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
 
     // Create UniqueColumnCombination.
     unique_column_combinations.emplace(std::move(column_expressions));
-  }
+  });
 
   return unique_column_combinations;
 }
