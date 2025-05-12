@@ -72,7 +72,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   // Used to generate not only random numbers, but also non-uniform numbers and random last names as defined by the
   // TPC-C Specification.
-  static thread_local TPCCRandomGenerator _random_gen;
+  static thread_local TPCCRandomGenerator _random_gen; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
   /**
    * In TPCC and TPCH table sizes are usually defined relatively to each other.

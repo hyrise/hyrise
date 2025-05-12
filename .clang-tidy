@@ -47,7 +47,7 @@ Checks: '
          '
 
 WarningsAsErrors: '*'
-HeaderFilterRegex: '.*'
+HeaderFilterRegex: 'src/.*'
 
 # Explanation of disabled checks:
 #   - *-default-arguments*                                      We do use default arguments (and like them).

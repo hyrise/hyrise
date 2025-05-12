@@ -133,7 +133,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
 
   return active_ns;
-#endif
+#else
 
 #ifdef __APPLE__
   auto cpu_info = host_cpu_load_info_data_t{};
@@ -150,9 +150,11 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto active_ns = active_ticks * std::nano::den / sysconf(_SC_CLK_TCK);
 
   return active_ns;
+#else
+Fail("Method not implemented for this platform.");
 #endif
 
-  Fail("Method not implemented for this platform.");
+#endif
 }
 
 /**
@@ -170,16 +172,18 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
 
   return active_ns;
-#endif
+#else
 
 #ifdef __APPLE__
   const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);  // NOLINT(misc-include-cleaner)
   Assert(active_ns != 0, "Failed in clock_gettime_nsec_np.");
 
   return active_ns;
+#else
+Fail("Method not implemented for this platform.");
 #endif
 
-  Fail("Method not implemented for this platform.");
+#endif
 }
 
 /**
@@ -209,7 +213,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   }
 
   return memory_usage;
-#endif
+#else
 
 #ifdef __APPLE__
   auto physical_memory = int64_t{0};
@@ -231,9 +235,11 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   memory_usage.available_memory = (vm_statistics.inactive_count + vm_statistics.free_count) * page_size;
 
   return memory_usage;
+#else
+  Fail("Method not implemented for this platform.");
 #endif
 
-  Fail("Method not implemented for this platform.");
+#endif
 }
 
 /**
@@ -263,7 +269,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   }
 
   return memory_usage;
-#endif
+#else
 
 #ifdef __APPLE__
   struct task_basic_info info{};
@@ -273,9 +279,11 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   Assert(ret == KERN_SUCCESS, "Failed to get task_info.");
 
   return {info.virtual_size, info.resident_size};
+#else
+  Fail("Method not implemented for this platform.");
 #endif
 
-  Fail("Method not implemented for this platform.");
+#endif
 }
 
 /**

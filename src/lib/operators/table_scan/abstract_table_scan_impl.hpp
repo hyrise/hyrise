@@ -134,6 +134,7 @@ class AbstractTableScanImpl {
       {}  // clang-format off
       #pragma omp simd reduction(|:mask) safelen(BLOCK_SIZE)
       // clang-format on
+      // NOLINTBEGIN(openmp-exception-escape)
       for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
         // Fill `mask` with 1s at positions where the condition is fulfilled
         const auto& left = *left_it;
@@ -150,6 +151,7 @@ class AbstractTableScanImpl {
           ++right_it;
         }
       }
+      // NOLINTEND(openmp-exception-escape)
 
       if (!mask) {
         left_it_for_offsets += BLOCK_SIZE;

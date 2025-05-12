@@ -50,9 +50,9 @@ namespace detail {
 
 }  // namespace detail
 
-#define Fail(msg)                                                                                             \
-  hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
-  static_assert(true, "End call of macro with a semicolon.")
+[[noreturn]] inline void Fail(const std::string& msg) {// NOLINT(readability-identifier-naming)
+  hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg);
+}
 
 [[noreturn]] inline void FailInput(const std::string& msg) {  // NOLINT(readability-identifier-naming)
   throw InvalidInputException(std::string("Invalid input error: ") + msg);
@@ -60,20 +60,26 @@ namespace detail {
 
 }  // namespace hyrise
 
-#define Assert(expr, msg)         \
-  if (!static_cast<bool>(expr)) { \
-    Fail(msg);                    \
-  }                               \
-  static_assert(true, "End call of macro with a semicolon.")
+template<typename E>
+constexpr void Assert(const E& expr, const std::string& msg) {// NOLINT(readability-identifier-naming)
+  if (!static_cast<bool>(expr)) {
+    hyrise::Fail(msg);
+  }
+}
 
-#define AssertInput(expr, msg)                                               \
-  if (!static_cast<bool>(expr)) {                                            \
-    throw InvalidInputException(std::string("Invalid input error: ") + msg); \
-  }                                                                          \
-  static_assert(true, "End call of macro with a semicolon.")
+template<typename E>
+constexpr void AssertInput(const E& expr, const std::string& msg) {// NOLINT(readability-identifier-naming)
+  if (!static_cast<bool>(expr)) {
+    hyrise::FailInput(msg);
+  }
+}
 
 #if HYRISE_DEBUG
-#define DebugAssert(expr, msg) Assert(expr, msg)
+template<typename E>
+constexpr void DebugAssert(const E& expr, const std::string& msg) {// NOLINT(readability-identifier-naming)
+  Assert(expr, msg);
+}
 #else
-#define DebugAssert(expr, msg)
+template<typename E>
+constexpr void DebugAssert(const E& expr, const std::string& msg) {} // NOLINT(readability-identifier-naming)
 #endif

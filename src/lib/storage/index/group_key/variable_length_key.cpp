@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <memory>
 #include <ostream>
 #include <utility>
 

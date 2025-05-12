@@ -59,7 +59,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   }
 
   std::ptrdiff_t distance_to(const BitPackingIterator& other) const {
-    return other._absolute_index - _absolute_index;
+    return static_cast<ptrdiff_t>(other._absolute_index) - static_cast<ptrdiff_t>(_absolute_index);
   }
 
   uint32_t dereference() const {
