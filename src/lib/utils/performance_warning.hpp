@@ -38,7 +38,7 @@ class PerformanceWarningClass {
   }
 
  protected:
-  static bool _disabled; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static bool _disabled;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
   static bool disable() {
     const bool previous = _disabled;

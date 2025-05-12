@@ -68,7 +68,11 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   // NOLINTNEXTLINE(concurrency-mt-unsafe): dlerror is not thread-safe, but it is guarded by dl_mutex.
-  Assert(plugin_handle, std::string{"Loading plugin failed: "} + dlerror());
+  const auto* dl_error_str = dlerror();
+  if (dl_error_str != nullptr) {
+    Fail(std::string{"Loading plugin failed: "} + dl_error_str);
+  }
+  Assert(plugin_handle, "Loading plugin failed: No plugin handle returned from dlopen.");
 
   // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
   // factory method. See the sources of AbstractPlugin and TestPlugin for further details.

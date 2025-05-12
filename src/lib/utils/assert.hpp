@@ -50,7 +50,7 @@ namespace detail {
 
 }  // namespace detail
 
-[[noreturn]] inline void Fail(const std::string& msg) {// NOLINT(readability-identifier-naming)
+[[noreturn]] inline void Fail(const std::string& msg) {  // NOLINT(readability-identifier-naming)
   hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg);
 }
 
@@ -60,26 +60,26 @@ namespace detail {
 
 }  // namespace hyrise
 
-template<typename E>
-constexpr void Assert(const E& expr, const std::string& msg) {// NOLINT(readability-identifier-naming)
+template <typename E>
+constexpr void Assert(const E& expr, const std::string& msg) {  // NOLINT(readability-identifier-naming)
   if (!static_cast<bool>(expr)) {
     hyrise::Fail(msg);
   }
 }
 
-template<typename E>
-constexpr void AssertInput(const E& expr, const std::string& msg) {// NOLINT(readability-identifier-naming)
+template <typename E>
+constexpr void AssertInput(const E& expr, const std::string& msg) {  // NOLINT(readability-identifier-naming)
   if (!static_cast<bool>(expr)) {
     hyrise::FailInput(msg);
   }
 }
 
 #if HYRISE_DEBUG
-template<typename E>
-constexpr void DebugAssert(const E& expr, const std::string& msg) {// NOLINT(readability-identifier-naming)
+template <typename E>
+constexpr void DebugAssert(const E& expr, const std::string& msg) {  // NOLINT(readability-identifier-naming)
   Assert(expr, msg);
 }
 #else
-template<typename E>
-constexpr void DebugAssert(const E& expr, const std::string& msg) {} // NOLINT(readability-identifier-naming)
+template <typename E>
+constexpr void DebugAssert(const E& expr, const std::string& msg) {}  // NOLINT(readability-identifier-naming)
 #endif

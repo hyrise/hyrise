@@ -151,7 +151,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 
   return active_ns;
 #else
-Fail("Method not implemented for this platform.");
+  Fail("Method not implemented for this platform.");
 #endif
 
 #endif
@@ -180,7 +180,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 
   return active_ns;
 #else
-Fail("Method not implemented for this platform.");
+  Fail("Method not implemented for this platform.");
 #endif
 
 #endif

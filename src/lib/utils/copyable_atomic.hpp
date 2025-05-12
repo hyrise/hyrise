@@ -63,12 +63,12 @@ class copyable_atomic {
   }
 
   template <typename... Args>
-  decltype(auto) operator++(Args&&... args) { // NOLINT(cert-dcl21-cpp)
+  decltype(auto) operator++(Args&&... args) {  // NOLINT(cert-dcl21-cpp)
     return _atomic.operator++(std::forward<Args>(args)...);
   }
 
   template <typename... Args>
-  decltype(auto) operator--(Args&&... args) { // NOLINT(cert-dcl21-cpp)
+  decltype(auto) operator--(Args&&... args) {  // NOLINT(cert-dcl21-cpp)
     return _atomic.operator--(std::forward<Args>(args)...);
   }
 

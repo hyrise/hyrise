@@ -107,7 +107,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
      *     than the estimated threshold, use a binary search from the previous offset up to the end.
      */
     if (step_size < 0) {
-      return std::lower_bound(end_positions->cbegin(), end_positions->cbegin() + static_cast<ptrdiff_t>(previous_end_position_index),
+      return std::lower_bound(end_positions->cbegin(),
+                              end_positions->cbegin() + static_cast<ptrdiff_t>(previous_end_position_index),
                               new_chunk_offset);
     }
 
@@ -115,11 +116,11 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       const auto less_than_current = [&](const ChunkOffset offset) {
         return offset < new_chunk_offset;
       };
-      return std::find_if_not(end_positions->cbegin() + static_cast<ptrdiff_t>(previous_end_position_index), end_positions->cend(),
-                              less_than_current);
+      return std::find_if_not(end_positions->cbegin() + static_cast<ptrdiff_t>(previous_end_position_index),
+                              end_positions->cend(), less_than_current);
     }
-    return std::lower_bound(end_positions->cbegin() + static_cast<ptrdiff_t>(previous_end_position_index), end_positions->cend(),
-                            new_chunk_offset);
+    return std::lower_bound(end_positions->cbegin() + static_cast<ptrdiff_t>(previous_end_position_index),
+                            end_positions->cend(), new_chunk_offset);
   }
 
  private:
