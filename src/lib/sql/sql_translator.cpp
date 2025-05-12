@@ -2150,10 +2150,12 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         // Check that the aggregate can be calculated on the given expression.
         const auto result_type = aggregate_expression->data_type();
-        AssertInput(result_type != DataType::Null,
-                    std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
-                        " for input data type " +
-                        data_type_to_string.left.at(aggregate_expression->argument()->data_type()) + ".");
+        auto error_msg = std::string{"Invalid aggregate "} + aggregate_expression->as_column_name();
+        if (aggregate_expression->argument()) {
+          error_msg += " for input data type " +
+                       data_type_to_string.left.at(aggregate_expression->argument()->data_type()) + ".";
+        }
+        AssertInput(result_type != DataType::Null, error_msg);
 
         // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
         //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2
