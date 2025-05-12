@@ -1,5 +1,6 @@
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 
@@ -240,7 +241,7 @@ TEST_F(OperatorsImportTest, ThrowExceptionWithMultipleMetaSources) {
   auto expected_table = load_table("resources/test_data/tbl/float.tbl");
   auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
 
-  EXPECT_THROW(importer->execute(), std::exception);
+  EXPECT_THROW(importer->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsImportTest, ChunkSize) {

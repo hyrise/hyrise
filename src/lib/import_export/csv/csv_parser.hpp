@@ -13,7 +13,7 @@ class Table;
 class Chunk;
 
 /**
- * Creates a Table with values of the parsed csv file <filename>
+ * Creates a Table with values of the parsed csv file <filename>.
  *
  * The files are parsed according to RFC 4180 if not otherwise specified. [https://tools.ietf.org/html/rfc4180]
  * For non-RFC 4180, all linebreaks within quoted strings are further escaped with an escape character.
@@ -27,7 +27,7 @@ class CsvParser {
  public:
   /*
    * @param filename      Path to the input file.
-   * @param csv_meta      Custom csv meta information (usually constained in the file "filename" + ".json")
+   * @param csv_meta      Custom csv meta information, which is usually constained in the file "filename" + ".json".
    * @returns             The table that was created from the csv file.
    */
   static std::shared_ptr<Table> parse(const std::string& filename, const CsvMeta& csv_meta,

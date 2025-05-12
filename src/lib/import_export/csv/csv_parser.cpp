@@ -58,7 +58,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
   csvfile.seekg(0);
   csvfile.read(content.data(), csvfile_size);
 
-  // make sure content ends with a delimiter for better row processing later
+  // The content should end with a delimiter for better row processing later.
   if (content.back() != csv_meta.config.delimiter) {
     content.push_back(csv_meta.config.delimiter);
   }

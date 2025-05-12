@@ -51,12 +51,10 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   switch (_file_type) {
     case FileType::Csv: {
-      if (Hyrise::get().storage_manager.has_table(_tablename) &&
-          std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
-        Fail(
-            "Cannot load table from csv, table definition source is ambiguous. The table already exists in DBMS and "
-            "there is a meta file next to .csv file");
-      }
+      Assert(!(Hyrise::get().storage_manager.has_table(_tablename) &&
+               std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)),
+             "Cannot load table from csv, table definition source is ambiguous. The table already exists in DBMS and "
+             "there is a meta file next to .csv file");
 
       auto csv_meta = CsvMeta{};
       if (Hyrise::get().storage_manager.has_table(_tablename)) {
@@ -116,6 +114,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
+  // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
+  // and their creation benefits from dictionary encoding, we add the tables after they are encoded.
   Hyrise::get().storage_manager.add_table(_tablename, table);
 
   // We must match ImportNode::output_expressions.
