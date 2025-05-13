@@ -579,7 +579,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("w,warmup", "Number of seconds that each item is run for warm up. Warming up also caches the query plans", cxxopts::value<uint64_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode))
-    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + all_encoding_options(), cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT(whitespace/line_length)
+    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + all_encoding_options())  // NOLINT(whitespace/line_length)
     ("p,plugins", "Specify plugins to be loaded and execute their pre-/post-benchmark hooks (comma-separated paths to shared libraries w/o whitespaces)", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("chunk_indexes", "Create chunk indexes (separate index per chunk; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
