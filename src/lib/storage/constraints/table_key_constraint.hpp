@@ -1,8 +1,8 @@
 #pragma once
 
-#include <optional>
 #include <set>
 #include <unordered_set>
+#include <utility>
 
 #include <boost/unordered/concurrent_flat_set.hpp>
 
@@ -19,22 +19,62 @@ enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
  */
 class TableKeyConstraint final : public AbstractTableConstraint {
  public:
+  ~TableKeyConstraint() override = default;
   /**
    * By requesting a std::set for the constructor, we ensure that the ColumnIDs have a well-defined order when creating
    * the vector (and equal constraints have equal columns). Thus, we can safely hash and compare key constraints without
    * violating the set semantics of the constraint.
    */
   TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
-                     const std::optional<CommitID> last_validated_on = MAX_COMMIT_ID,
-                     const std::optional<CommitID> last_invalidated = {});
+                     const CommitID last_validated_on = CommitID{0}, const CommitID last_invalidated = MAX_COMMIT_ID);
   TableKeyConstraint() = delete;
+
+  TableKeyConstraint(const TableKeyConstraint& other)
+      : AbstractTableConstraint(other),
+        _columns{other._columns},
+        _key_type{other._key_type},
+        _last_validated_on{other._last_validated_on.load()},
+        _last_invalidated_on{other._last_invalidated_on.load()} {
+    // This is needed to ensure that the atomic variables are copied correctly.
+    _last_validated_on.store(other._last_validated_on.load());
+    _last_invalidated_on.store(other._last_invalidated_on.load());
+  }
+
+  TableKeyConstraint& operator=(const TableKeyConstraint& other) {
+    if (this != &other) {
+      AbstractTableConstraint::operator=(other);
+      _columns = other._columns;
+      _key_type = other._key_type;
+      _last_validated_on.store(other._last_validated_on.load());
+      _last_invalidated_on.store(other._last_invalidated_on.load());
+    }
+    return *this;
+  }
+
+  TableKeyConstraint(TableKeyConstraint&& other) noexcept
+      : AbstractTableConstraint{std::move(other)},
+        _columns{std::move(other._columns)},
+        _key_type{other._key_type},
+        _last_validated_on{other._last_validated_on.load()},
+        _last_invalidated_on{other._last_invalidated_on.load()} {}
+
+  TableKeyConstraint& operator=(TableKeyConstraint&& other) noexcept {
+    if (this != &other) {
+      AbstractTableConstraint::operator=(std::move(other));
+      _columns = std::move(other._columns);
+      _key_type = other._key_type;
+      _last_validated_on.store(other._last_validated_on.load());
+      _last_invalidated_on.store(other._last_invalidated_on.load());
+    }
+    return *this;
+  }
 
   const std::set<ColumnID>& columns() const;
 
   KeyConstraintType key_type() const;
 
-  const std::optional<CommitID>& last_validated_on() const;
-  const std::optional<CommitID>& last_invalidated_on() const;
+  std::atomic<CommitID>& last_validated_on() const;
+  std::atomic<CommitID>& last_invalidated_on() const;
 
   /**
    * Returns whether or not this key constraint can become invalid if the table data changes. This is false for constraints specified
@@ -69,9 +109,9 @@ class TableKeyConstraint final : public AbstractTableConstraint {
    * Commit ID of the snapshot this constraint was last validated on. Note that the constraint will still be valid
    * during transactions with larger commit IDs if the table this constraint belongs to has not been modified since.
    */
-  mutable std::optional<CommitID> _last_validated_on;
+  mutable std::atomic<CommitID> _last_validated_on;
   // The first element indicates if the constraint was invalid before, the second when it was.
-  mutable std::optional<CommitID> _last_invalidated_on;
+  mutable std::atomic<CommitID> _last_invalidated_on;
 };
 
 using TableKeyConstraints = boost::concurrent_flat_set<TableKeyConstraint>;

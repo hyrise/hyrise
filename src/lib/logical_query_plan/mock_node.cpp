@@ -7,6 +7,8 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -130,14 +132,15 @@ std::string MockNode::description(const DescriptionMode /*mode*/) const {
 UniqueColumnCombinations MockNode::unique_column_combinations() const {
   auto unique_column_combinations = UniqueColumnCombinations{};
 
-  _table_key_constraints.visit_all([&](const auto& table_key_constraint) {
+  for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids) ||
-        !table_key_constraint.last_validated_on() ||
-        (table_key_constraint.last_invalidated_on() &&
-         *table_key_constraint.last_invalidated_on() >= table_key_constraint.last_validated_on())) {
-      return;
+    const auto last_validated_on = table_key_constraint.last_validated_on().load();
+    const auto last_invalidated_on = table_key_constraint.last_invalidated_on().load();
+
+    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids) || last_validated_on == MAX_COMMIT_ID ||
+        (last_invalidated_on != MAX_COMMIT_ID && last_invalidated_on >= last_validated_on)) {
+      continue;
     }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
@@ -147,7 +150,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
 
     // Create UniqueColumnCombination.
     unique_column_combinations.emplace(std::move(column_expressions));
-  });
+  }
 
   return unique_column_combinations;
 }
@@ -181,11 +184,11 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
-void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
+void MockNode::set_key_constraints(const std::unordered_set<TableKeyConstraint>& key_constraints) {
   _table_key_constraints = key_constraints;
 }
 
-const TableKeyConstraints& MockNode::key_constraints() const {
+const std::unordered_set<TableKeyConstraint>& MockNode::key_constraints() const {
   return _table_key_constraints;
 }
 

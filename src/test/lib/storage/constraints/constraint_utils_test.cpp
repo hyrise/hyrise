@@ -139,38 +139,40 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeValid) {
   EXPECT_TRUE(is_constraint_confidently_valid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
   EXPECT_TRUE(is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}}));
 
-  EXPECT_FALSE(is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, {}, CommitID{0}}));
+  EXPECT_FALSE(is_constraint_confidently_valid(_table_b,
+                                               {{ColumnID{1}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID, CommitID{0}}));
 
   // Manually modify the max_begin_cid of the chunk to simulate an insert to the table.
   _table_b->append({0, 1});
-  _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid = CommitID{1};
+  _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid = CommitID{2};
 
   // The first constraint is permanent and therefore valid, the second was verified on a previous CommitID so we do not
   // know whether or not it is still valid and the last constraint has a CommmitID that is up-to-date and is therefore
   // certainly valid.
   EXPECT_TRUE(is_constraint_confidently_valid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
-  EXPECT_FALSE(is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}}));
+  EXPECT_FALSE(is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{1}}));
   EXPECT_FALSE(
-      is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}, CommitID{1}}));
+      is_constraint_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{1}, CommitID{2}}));
 }
 
 TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeInvalid) {
-  EXPECT_FALSE(
-      is_constraint_confidently_invalid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY, CommitID{0}, {}}));
-  EXPECT_TRUE(is_constraint_confidently_invalid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, {}, CommitID{0}}));
+  EXPECT_FALSE(is_constraint_confidently_invalid(
+      _table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY, CommitID{0}, MAX_COMMIT_ID}));
+  EXPECT_TRUE(is_constraint_confidently_invalid(
+      _table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID, CommitID{0}}));
 
   // Manually modify the max_end_cid of the chunk to simulate a delete to the table.
   _table_b->append({0, 1});
-  _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_end_cid = CommitID{1};
+  _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_end_cid = CommitID{2};
 
   // The first constraint is permanent and therefore NOT confidently invalid, the second was never verified but only
   // invalidated on a CommitID prior to the deletion so it is also NOT confidently invalid and the last constraint was
   // invalidated on a CommitID that is up-to-date and therefore certainly invalid.
   EXPECT_FALSE(is_constraint_confidently_invalid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
-  EXPECT_FALSE(
-      is_constraint_confidently_invalid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, {}, CommitID{0}}));
+  EXPECT_FALSE(is_constraint_confidently_invalid(
+      _table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID, CommitID{1}}));
   EXPECT_TRUE(is_constraint_confidently_invalid(_table_b,
-                                                {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}, CommitID{1}}));
+                                                {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{1}, CommitID{2}}));
 }
 
 }  // namespace hyrise

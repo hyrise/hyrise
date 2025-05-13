@@ -132,7 +132,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 
   // We create unique column combinations from selected table key constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto table_key_constraints = table->soft_key_constraints();
+  const auto& table_key_constraints = table->soft_key_constraints();
 
   table_key_constraints.visit_all([&](const auto& table_key_constraint) {
     // Discard key constraints that involve pruned column id(s).

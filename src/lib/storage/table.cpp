@@ -39,6 +39,7 @@
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 #include "utils/performance_warning.hpp"
 #include "value_segment.hpp"
 
@@ -504,17 +505,8 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
 
   _table_key_constraints.insert_or_visit(table_key_constraint, [&](const auto& existing_constraint) {
     // If the constraint already exists, we need to update the last_validated_on and last_invalidated_on values.
-    if (table_key_constraint.last_validated_on()) {
-      // If the constraint was already invalidated, we need to update the last_invalidated_on value.
-      existing_constraint.revalidated_on(
-          std::max(existing_constraint.last_validated_on() ? *existing_constraint.last_validated_on() : CommitID{0},
-                   *table_key_constraint.last_validated_on()));
-    }
-    if (table_key_constraint.last_invalidated_on()) {
-      existing_constraint.invalidated_on(
-          std::max(existing_constraint.last_invalidated_on() ? *existing_constraint.last_invalidated_on() : CommitID{0},
-                   *table_key_constraint.last_invalidated_on()));
-    }
+    set_atomic_max(existing_constraint.last_validated_on(), table_key_constraint.last_validated_on().load());
+    set_atomic_max(existing_constraint.last_invalidated_on(), table_key_constraint.last_invalidated_on().load());
   });
 }
 

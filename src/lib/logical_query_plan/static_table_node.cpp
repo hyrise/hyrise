@@ -65,7 +65,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
-  const auto table_key_constraints = table->soft_key_constraints();
+  const auto& table_key_constraints = table->soft_key_constraints();
 
   table_key_constraints.visit_all([&](const auto& table_key_constraint) {
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
@@ -90,13 +90,8 @@ size_t StaticTableNode::_on_shallow_hash() const {
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
-
-  const auto& soft_key_constraints = table->soft_key_constraints();
-  soft_key_constraints.visit_all([&](const auto& table_key_constraint) {
-    hash = hash ^ table_key_constraint.hash();
-  });
-
-  return std::hash<size_t>{}(hash - soft_key_constraints.size());
+  // We do not hash all key constraints because the cost of hashing outweights the benefit of less collisions.
+  return std::hash<size_t>{}(hash);
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
