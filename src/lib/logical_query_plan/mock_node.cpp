@@ -7,7 +7,6 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -135,11 +134,8 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    const auto last_validated_on = table_key_constraint.last_validated_on().load();
-    const auto last_invalidated_on = table_key_constraint.last_invalidated_on().load();
 
-    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids) || last_validated_on == MAX_COMMIT_ID ||
-        (last_invalidated_on != MAX_COMMIT_ID && last_invalidated_on >= last_validated_on)) {
+    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids) || !table_key_constraint.is_valid()) {
       continue;
     }
 

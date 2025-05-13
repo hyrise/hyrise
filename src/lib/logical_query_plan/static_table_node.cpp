@@ -67,12 +67,12 @@ UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   auto unique_column_combinations = UniqueColumnCombinations{};
   const auto& table_key_constraints = table->soft_key_constraints();
 
-  table_key_constraints.visit_all([&](const auto& table_key_constraint) {
+  for (const auto& table_key_constraint : table_key_constraints) {
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
     unique_column_combinations.emplace(std::move(column_expressions));
-  });
+  }
 
   return unique_column_combinations;
 }
@@ -100,7 +100,6 @@ std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
-
   return table->column_definitions() == static_table_node.table->column_definitions() &&
          table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
 }

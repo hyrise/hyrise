@@ -490,7 +490,7 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     }
   }
 
-  _table_key_constraints.visit_all([&](const auto& existing_constraint) {
+  for (const auto& existing_constraint : _table_key_constraints) {
     // Ensure that no other PRIMARY KEY is defined.
     Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
                table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
@@ -501,13 +501,14 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     Assert((existing_constraint.columns().size() == 1 && table_key_constraint.columns().size() == 1) ||
                !columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
-  });
+  }
+  auto [existing_constraint, inserted] = _table_key_constraints.insert(table_key_constraint);
 
-  _table_key_constraints.insert_or_visit(table_key_constraint, [&](const auto& existing_constraint) {
-    // If the constraint already exists, we need to update the last_validated_on and last_invalidated_on values.
-    set_atomic_max(existing_constraint.last_validated_on(), table_key_constraint.last_validated_on().load());
-    set_atomic_max(existing_constraint.last_invalidated_on(), table_key_constraint.last_invalidated_on().load());
-  });
+  if (!inserted) {
+    // If the constraint was inserted, we need to set the last_validated_on and last_invalidated_on values.
+    set_atomic_max(existing_constraint->last_validated_on(), table_key_constraint.last_validated_on().load());
+    set_atomic_max(existing_constraint->last_invalidated_on(), table_key_constraint.last_invalidated_on().load());
+  }
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {

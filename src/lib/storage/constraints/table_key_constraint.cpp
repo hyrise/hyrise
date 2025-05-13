@@ -38,6 +38,12 @@ bool TableKeyConstraint::can_become_invalid() const {
          _last_validated_on == MAX_COMMIT_ID;
 }
 
+bool TableKeyConstraint::is_valid() const {
+  const auto last_invalidated = _last_invalidated_on.load();
+  const auto last_validated = _last_validated_on.load();
+  return last_invalidated == MAX_COMMIT_ID || (last_validated != MAX_COMMIT_ID && last_invalidated >= last_validated);
+}
+
 std::atomic<CommitID>& TableKeyConstraint::last_validated_on() const {
   return _last_validated_on;
 }

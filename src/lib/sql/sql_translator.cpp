@@ -74,6 +74,7 @@
 #include "sql/sql_identifier.hpp"
 #include "sql/sql_identifier_resolver.hpp"
 #include "sql/sql_identifier_resolver_proxy.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/lqp_view.hpp"
@@ -1766,9 +1767,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
     // Set table key constraints
     const auto table = Table::create_dummy_table(column_definitions);
-    table_key_constraints.visit_all([&table](const auto& table_key_constraint) {
+    for (const auto& table_key_constraint : table_key_constraints) {
       table->add_soft_constraint(table_key_constraint);
-    });
+    }
     input_node = StaticTableNode::make(table);
   }
 

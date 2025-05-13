@@ -134,10 +134,10 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_key_constraints = table->soft_key_constraints();
 
-  table_key_constraints.visit_all([&](const auto& table_key_constraint) {
+  for (const auto& table_key_constraint : table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     if (contains_any_column_id(table_key_constraint.columns(), _pruned_column_ids)) {
-      return;
+      continue;
     }
 
     // Search for expressions representing the key constraint's ColumnIDs.
@@ -147,7 +147,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 
     // Create UniqueColumnCombination.
     unique_column_combinations.emplace(std::move(column_expressions));
-  });
+  }
 
   return unique_column_combinations;
 }
