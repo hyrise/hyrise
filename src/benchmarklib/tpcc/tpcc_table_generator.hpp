@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <ctime>
 #include <functional>
 #include <map>
@@ -144,8 +145,8 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        * indices[0]   | indices[1]  | indices[2]
        */
       for (auto loop = size_t{0}; loop < cardinalities->size(); ++loop) {
-        auto divisor =
-            std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1u, std::multiplies<>());
+        auto divisor = std::accumulate(std::begin(*cardinalities) + static_cast<ptrdiff_t>(loop) + 1,
+                                       std::end(*cardinalities), 1u, std::multiplies<>());
         indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
       }
 
