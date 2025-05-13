@@ -47,8 +47,8 @@ Checks: '
          '
 
 WarningsAsErrors: '*'
-HeaderFilterRegex: '*'
-ExcludeHeaderFilterRegex: 'third_party'
+HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: '.*third_party.*'
 
 # Explanation of disabled checks:
 #   - *-default-arguments*                                      We do use default arguments (and like them).
