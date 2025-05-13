@@ -1,5 +1,7 @@
 #pragma once
 
+#include "resolve_type.hpp"
+
 namespace hyrise {
 
 /**

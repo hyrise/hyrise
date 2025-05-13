@@ -1911,7 +1911,9 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
 
   hsql::SQLParserResult parser_result;
   hsql::SQLParser::parseSQLString(query, &parser_result);
-  Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+  if (!parser_result.isValid()) {
+    Fail(create_sql_parser_error_message(query, parser_result));
+  }
 
   SQLTranslator sql_translator{UseMvcc::No};
 
