@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <functional>
 #include <limits>
 #include <memory>
@@ -301,8 +299,8 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   _validate_ucc_candidates(ucc_candidates);
 
   // Collect constraints known for the tables
-  const auto constraints_A = _table_A->soft_key_constraints();
-  const auto constraints_B = _table_B->soft_key_constraints();
+  const auto& constraints_A = _table_A->soft_key_constraints();
+  const auto& constraints_B = _table_B->soft_key_constraints();
 
   EXPECT_EQ(constraints_A.size(), 3);
   EXPECT_EQ(constraints_B.size(), 2);

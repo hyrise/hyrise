@@ -1,6 +1,5 @@
 #include "ucc_discovery_plugin.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -137,7 +136,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     // Check if a primary key constraint already exists for the column. If it does, we can skip the candidate.
     const auto existing_pk = soft_key_constraints.find(TableKeyConstraint{{column_id}, KeyConstraintType::PRIMARY_KEY});
     if (existing_pk != soft_key_constraints.end()) {
-      message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
+      message << " [skipped (already known to be a primary key) in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
       continue;
     }
@@ -183,6 +182,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
         table->add_soft_constraint(TableKeyConstraint{
             {column_id}, KeyConstraintType::UNIQUE, transaction_context->snapshot_commit_id(), MAX_COMMIT_ID});
       }
+      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
     });
   }
   Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);

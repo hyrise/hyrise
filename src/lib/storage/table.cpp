@@ -463,10 +463,13 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
 }
 
 std::unordered_set<TableKeyConstraint> Table::valid_soft_key_constraints() const {
-  auto filter = _table_key_constraints | std::views::filter([](const auto& constraint) {
-                  return constraint.is_valid();
-                });
-  auto valid_soft_key_constraints_filter = std::unordered_set<TableKeyConstraint>{filter.begin(), filter.end()};
+  auto valid_soft_key_constraints_filter = std::unordered_set<TableKeyConstraint>{};
+  for (const auto& table_key_constraint : _table_key_constraints) {
+    // Check if the constraint is valid.
+    if (table_key_constraint.is_valid()) {
+      valid_soft_key_constraints_filter.insert(table_key_constraint);
+    }
+  }
 
   return valid_soft_key_constraints_filter;
 }
@@ -544,7 +547,7 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
-void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {  // switch to using mutex
+void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
   // Check validity of columns.
   const auto column_count = this->column_count();
   for (const auto& column_id : table_order_constraint.ordering_columns()) {
