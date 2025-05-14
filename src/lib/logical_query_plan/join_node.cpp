@@ -236,6 +236,7 @@ InclusionDependencies JoinNode::inclusion_dependencies() const {
    * TODO(anyone): The join keys of equals_() predicates form a new IND. However, we currently only care about INDs that
    * result from foreign key constraints.
    */
+  Fail("GCC thinks this is reachable.");
 }
 
 InclusionDependencies JoinNode::_output_inclusion_dependencies(
