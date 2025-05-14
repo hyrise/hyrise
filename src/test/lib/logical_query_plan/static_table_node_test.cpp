@@ -57,7 +57,7 @@ TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
 
   EXPECT_EQ(same_static_table_node->hash(), static_table_node->hash());
   EXPECT_NE(different_static_table_node_by_definitions->hash(), static_table_node->hash());
-  EXPECT_NE(different_static_table_node_by_constraints->hash(), static_table_node->hash());
+  EXPECT_EQ(different_static_table_node_by_constraints->hash(), static_table_node->hash());
 }
 
 TEST_F(StaticTableNodeTest, HashingAndEqualityConstraintOrder) {

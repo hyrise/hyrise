@@ -1,8 +1,11 @@
+#include <unordered_set>
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
@@ -84,7 +87,7 @@ TEST_F(MockNodeTest, UniqueColumnCombinations) {
   // Add constraints to MockNode.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  const auto table_key_constraints = TableKeyConstraints{key_constraint_a_b, key_constraint_c};
+  const auto table_key_constraints = std::unordered_set<TableKeyConstraint>{key_constraint_a_b, key_constraint_c};
   _mock_node_a->set_key_constraints(table_key_constraints);
 
   EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());

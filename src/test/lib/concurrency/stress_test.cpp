@@ -3,11 +3,15 @@
 #include <cmath>
 #include <future>
 #include <numeric>
+#include <optional>
+#include <shared_mutex>
 #include <thread>
 
+#include "../utils/plugin_test_utils.hpp"
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "operators/insert.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
@@ -15,11 +19,14 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "ucc_discovery_plugin.hpp"
 #include "utils/atomic_max.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace hyrise {
 
@@ -693,6 +700,89 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
       thread.join();
     }
   }
+}
+
+/**
+ * Test that adding and modifying a the TableKeyConstraints of a table concurrently does not lead to 
+ * deadlocks or inconsistencies (e.g. duplicate constraints).
+ */
+TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
+  // Create a table with multiple TableKeyConstraints
+  auto table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}},
+      TableType::Data, std::nullopt, UseMvcc::Yes);
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+
+  table->append({1, 1, 1});
+  table->append({2, 2, 2});
+  table->append({3, 3, 1});
+
+  Hyrise::get().storage_manager.add_table("dummy_table", table);
+
+  /** Run multiple modifications and additions concurrently that could potentially lead to race conditions:
+   * - `UccDiscoveryPlugin::_validate_ucc_candidates`
+   * - `StaticTableNode::unique_column_combinations`
+   * - `Table::soft_key_constraints().clear()` to force a revalidation of the constraints. This does not happen in
+   * production, but we want to test the concurrent insertion of constraints.
+   * NOTE: We do not execute `Table::add_soft_constraint` because we do not have the knowledge whether or not the
+   * constraint already exists.
+   */
+
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  auto& pm = Hyrise::get().plugin_manager;
+  std::shared_mutex table_constraints_mutex;
+
+  pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+  const auto validate_constraint = [&] {
+    std::shared_lock<std::shared_mutex> lock(table_constraints_mutex);
+    // Populate the plan cache.
+    const std::string sql = "SELECT b,c FROM dummy_table GROUP BY b,c;";
+    auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+    pipeline.get_result_table();
+
+    pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+  };
+
+  const auto clear_table_constraints = [&] {
+    std::unique_lock<std::shared_mutex> lock(table_constraints_mutex);
+    table->soft_key_constraints().clear();
+  };
+
+  const auto static_table_node_constraint_access = [&] {
+    std::shared_lock<std::shared_mutex> lock(table_constraints_mutex);
+    const auto static_table_node = StaticTableNode::make(table);
+    // Simply access the unique column combinations to require a `shared_lock`.
+    static_table_node->unique_column_combinations();
+  };
+
+  // Start running the different modifications in parallel
+  const auto thread_count = 100;
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
+
+  for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
+    switch (thread_id % 3) {
+      case 0:
+        threads.emplace_back(static_table_node_constraint_access);
+        break;
+      case 1:
+        threads.emplace_back(validate_constraint);
+        break;
+      case 2:
+        threads.emplace_back(clear_table_constraints);
+        break;
+      default:
+        break;
+    }
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  // Check that the set of TableKeyConstraints does not contain any duplicates.
+  ASSERT_LE(table->soft_key_constraints().size(), 3);
 }
 
 }  // namespace hyrise

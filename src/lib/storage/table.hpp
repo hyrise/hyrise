@@ -6,7 +6,9 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <boost/variant/get.hpp>
@@ -209,12 +211,13 @@ class Table : private Noncopyable {
   void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");
 
   /**
-   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" constraints to draw attention to that.
+   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules. We call them "soft"
+   * constraints to draw attention to that. If a constraint is added that is already existing, we update the existing
+   * constraint.
    */
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
-  const TableKeyConstraints& soft_key_constraints() const;
+  TableKeyConstraints& soft_key_constraints() const;
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
   const ForeignKeyConstraints& referenced_foreign_key_constraints() const;
@@ -274,7 +277,7 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>> _chunks;
 
-  TableKeyConstraints _table_key_constraints;
+  mutable TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _table_order_constraints;
   ForeignKeyConstraints _foreign_key_constraints;
 

@@ -5,26 +5,62 @@
 #include <functional>
 #include <set>
 #include <utility>
+#include <atomic>
 
 #include <boost/container_hash/hash.hpp>
 
 #include "storage/constraints/abstract_table_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 
 namespace hyrise {
 
-TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type)
-    : AbstractTableConstraint(TableConstraintType::Key), _key_type{key_type}, _columns{std::move(columns)} {
+TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
+                                       const CommitID last_validated_on, const CommitID last_invalidated_on)
+    : AbstractTableConstraint(TableConstraintType::Key),
+      _columns{std::move(columns)},
+      _key_type{key_type},
+      _last_validated_on{last_validated_on},
+      _last_invalidated_on{last_invalidated_on} {
   Assert(!_columns.empty(), "Did not expect useless constraint.");
+}
+
+const std::set<ColumnID>& TableKeyConstraint::columns() const {
+  return _columns;
 }
 
 KeyConstraintType TableKeyConstraint::key_type() const {
   return _key_type;
 }
 
-const std::set<ColumnID>& TableKeyConstraint::columns() const {
-  return _columns;
+bool TableKeyConstraint::can_become_invalid() const {
+  return _last_validated_on.load() != 0 || _last_invalidated_on.load() != MAX_COMMIT_ID ||
+         _last_validated_on == MAX_COMMIT_ID;
+}
+
+bool TableKeyConstraint::is_valid() const {
+  const auto last_invalidated = _last_invalidated_on.load();
+  const auto last_validated = _last_validated_on.load();
+  return last_invalidated == MAX_COMMIT_ID || (last_validated != MAX_COMMIT_ID && last_invalidated >= last_validated);
+}
+
+std::atomic<CommitID>& TableKeyConstraint::last_validated_on() const {
+  return _last_validated_on;
+}
+
+std::atomic<CommitID>& TableKeyConstraint::last_invalidated_on() const {
+  return _last_invalidated_on;
+}
+
+void TableKeyConstraint::revalidated_on(const CommitID revalidation_commit_id) const {
+  set_atomic_max(_last_validated_on, revalidation_commit_id);
+}
+
+void TableKeyConstraint::invalidated_on(const CommitID invalidation_commit_id) const {
+  Assert(can_become_invalid(), "Cannot invalidate UCC that cannot become invalid.");
+
+  set_atomic_max(_last_invalidated_on, invalidation_commit_id);
 }
 
 size_t TableKeyConstraint::hash() const {
@@ -51,6 +87,10 @@ bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
 
   // As the columns are stored in a std::set, iteration is sorted and the result is not ambiguous.
   return std::lexicographical_compare(_columns.cbegin(), _columns.cend(), rhs._columns.cbegin(), rhs._columns.cend());
+}
+
+std::size_t hash_value(const hyrise::TableKeyConstraint& table_key_constraint) {
+  return table_key_constraint.hash();
 }
 
 }  // namespace hyrise

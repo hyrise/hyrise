@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -84,14 +85,12 @@ TEST_F(TableKeyConstraintTest, AddKeyConstraintsInvalid) {
                std::logic_error);
 
   // Invalid because key constraints for the given column sets already exist.
-  EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE}),
-               std::logic_error);
+  EXPECT_NO_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE}));
   EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
   EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE}),
                std::logic_error);
-  EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE}),
-               std::logic_error);
+  EXPECT_NO_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE}));
 }
 
 TEST_F(TableKeyConstraintTest, Equals) {
@@ -175,6 +174,14 @@ TEST_F(TableKeyConstraintTest, OrderIndependence) {
   EXPECT_EQ(key_constraints_a, key_constraints_b);
   EXPECT_EQ(*key_constraints_a.begin(), *key_constraints_b.begin());
   EXPECT_EQ(*std::next(key_constraints_a.begin()), *std::next(key_constraints_b.begin()));
+}
+
+TEST_F(TableKeyConstraintTest, CanBecomeInvalid) {
+  const auto key_constraint_invalid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID};
+  const auto key_constraint_valid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+
+  EXPECT_TRUE(key_constraint_invalid.can_become_invalid());
+  EXPECT_FALSE(key_constraint_valid.can_become_invalid());
 }
 
 }  // namespace hyrise

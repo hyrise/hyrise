@@ -37,6 +37,7 @@
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 #include "utils/performance_warning.hpp"
 #include "value_segment.hpp"
 
@@ -227,7 +228,7 @@ void Table::append_mutable_chunk() {
 
   auto mvcc_data = std::shared_ptr<MvccData>{};
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
+    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MAX_COMMIT_ID);
   }
 
   append_chunk(segments, mvcc_data);
@@ -459,7 +460,7 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
   }
 }
 
-const TableKeyConstraints& Table::soft_key_constraints() const {
+TableKeyConstraints& Table::soft_key_constraints() const {
   return _table_key_constraints;
 }
 
@@ -487,8 +488,6 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     }
   }
 
-  const auto append_lock = acquire_append_mutex();
-
   for (const auto& existing_constraint : _table_key_constraints) {
     // Ensure that no other PRIMARY KEY is defined.
     Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
@@ -497,11 +496,17 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
 
     // Ensure there is only one key constraint per column(s). Theoretically, there could be two unique constraints
     // {a, b} and {b, c}, but for now we prohibit these cases.
-    Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
+    Assert((existing_constraint.columns().size() == 1 && table_key_constraint.columns().size() == 1) ||
+               !columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
+  auto [existing_constraint, inserted] = _table_key_constraints.insert(table_key_constraint);
 
-  _table_key_constraints.insert(table_key_constraint);
+  if (!inserted) {
+    // If the constraint was inserted, we need to set the last_validated_on and last_invalidated_on values.
+    set_atomic_max(existing_constraint->last_validated_on(), table_key_constraint.last_validated_on().load());
+    set_atomic_max(existing_constraint->last_invalidated_on(), table_key_constraint.last_invalidated_on().load());
+  }
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
@@ -523,10 +528,8 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
     Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
 
-  const auto append_lock = acquire_append_mutex();
   const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
   Assert(inserted, "ForeignKeyConstraint has already been set.");
-  const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
@@ -542,7 +545,6 @@ void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_c
     Assert(column_id < column_count, "ColumnID out of range.");
   }
 
-  const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
     // Do not allow intersecting order constraints. Though they can be valid, we are pessimistic for now and notice if
     // we run into intricate cases.
