@@ -61,14 +61,14 @@ namespace {
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
-constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1f;
-constexpr auto PLACEHOLDER_SELECTIVITY_MEDIUM = 0.5f;
-constexpr auto PLACEHOLDER_SELECTIVITY_HIGH = 0.9f;
-constexpr auto PLACEHOLDER_SELECTIVITY_ALL = 1.0f;
+constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1;
+constexpr auto PLACEHOLDER_SELECTIVITY_MEDIUM = 0.5;
+constexpr auto PLACEHOLDER_SELECTIVITY_HIGH = 0.9;
+constexpr auto PLACEHOLDER_SELECTIVITY_ALL = 1.0;
 
 template <typename T>
-std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& table_statistics,
-                                                         const AttributeStatistics<T>& column_statistics) {
+std::optional<Selectivity> estimate_null_value_ratio_of_column(const TableStatistics& table_statistics,
+                                                               const AttributeStatistics<T>& column_statistics) {
   // If the column has an explicit null value ratio associated with it, we can just use that
   if (column_statistics.null_value_ratio) {
     return column_statistics.null_value_ratio->ratio;
@@ -76,8 +76,8 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 
   // Otherwise derive the null value ratio from the total count of a histogram (which excludes NULLs) and the
   // TableStatistics row count (which includes NULLs)
-  if (column_statistics.histogram && table_statistics.row_count != 0.0f) {
-    return 1.0f - (static_cast<float>(column_statistics.histogram->total_count()) / table_statistics.row_count);
+  if (column_statistics.histogram && table_statistics.row_count != 0.0) {
+    return 1.0 - (column_statistics.histogram->total_count() / table_statistics.row_count);
   }
 
   return std::nullopt;
@@ -800,14 +800,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
   // Otherwise, forward the input statistics for now.
 
   if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit_node.num_rows_expression())) {
-    const auto row_count = lossy_variant_cast<float>(value_expression->value);
+    const auto row_count = lossy_variant_cast<Cardinality>(value_expression->value);
     if (!row_count) {
       // `value_expression->value` being NULL does not make much sense, but that is not the concern of the
-      // CardinalityEstimator
+      // CardinalityEstimator.
       return input_table_statistics;
     }
 
-    // Number of rows can never exceed number of input rows
+    // Number of rows can never exceed number of input rows.
     const auto clamped_row_count = std::min(*row_count, input_table_statistics->row_count);
 
     auto column_statistics =
@@ -866,7 +866,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
 
         // All that remains of the column we scanned on are exclusively NULL values or exclusively non-NULL values.
         const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
-        column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0f : 1.0f);
+        column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0 : 1.0);
         if (is_not_null) {
           // Forward other statistics if NULLs are removed.
           const auto& input_statistics = *left_input_column_statistics;
@@ -932,12 +932,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
             *bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
         if (!column_vs_column_histogram) {
           // No overlapping bins: No rows selected
-          selectivity = 0.0f;
+          selectivity = 0.0;
           return;
         }
 
         const auto cardinality = column_vs_column_histogram->total_count();
-        selectivity = input_table_statistics->row_count == 0 ? 0.0f : cardinality / input_table_statistics->row_count;
+        selectivity = input_table_statistics->row_count == 0 ? 0.0 : cardinality / input_table_statistics->row_count;
 
         /**
          * Write out the AttributeStatistics of the scanned columns
@@ -955,14 +955,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         switch (predicate.predicate_condition) {
           case PredicateCondition::Equals: {
             const auto total_distinct_count =
-                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0f});
-            selectivity = total_distinct_count > 0 ? 1.0f / total_distinct_count : 0.0f;
+                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0});
+            selectivity = total_distinct_count > 0 ? 1.0 / total_distinct_count : 0.0;
           } break;
 
           case PredicateCondition::NotEquals: {
             const auto total_distinct_count =
-                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0f});
-            selectivity = total_distinct_count > 0 ? (total_distinct_count - 1.0f) / total_distinct_count : 0.0f;
+                std::max(scan_statistics_object->total_distinct_count(), HistogramCountType{1.0});
+            selectivity = total_distinct_count > 0 ? (total_distinct_count - 1.0) / total_distinct_count : 0.0;
           } break;
 
           case PredicateCondition::LessThan:
@@ -996,7 +996,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto value_variant = boost::get<AllTypeVariant>(predicate.value);
         if (variant_is_null(value_variant)) {
           // A predicate `<column> <condition> NULL` always has a selectivity of 0
-          selectivity = 0.0f;
+          selectivity = 0.0;
           return;
         }
 
@@ -1028,7 +1028,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto sliced_statistics_object =
             scan_statistics_object->sliced(predicate.predicate_condition, value_variant, value2_variant);
         if (!sliced_statistics_object) {
-          selectivity = 0.0f;
+          selectivity = 0.0;
           return;
         }
 
@@ -1036,8 +1036,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto sliced_histogram =
             std::dynamic_pointer_cast<const AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         DebugAssert(sliced_histogram, "Expected slicing of a Histogram to return either nullptr or a Histogram");
-        if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
-          selectivity = 0.0f;
+        if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0) {
+          selectivity = 0.0;
         } else {
           selectivity = sliced_histogram->total_count() / input_table_statistics->row_count;
         }
@@ -1108,9 +1108,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     }
 
     const auto left_selectivity = Selectivity{
-        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
+        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0};
     const auto right_selectivity = Selectivity{
-        right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0f};
+        right_input_table_statistics.row_count > 0 ? cardinality / right_input_table_statistics.row_count : 0.0};
 
     /**
      * Write out the AttributeStatistics of all output columns. With no correlation info available, simply scale all
@@ -1206,7 +1206,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     }
 
     const auto left_selectivity = Selectivity{
-        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
+        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0};
 
     /**
      * Write out the AttributeStatistics of all output columns. With no correlation info available, simply scale all
@@ -1232,7 +1232,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
   });
 
-  Assert(output_table_statistics->row_count <= left_input_table_statistics.row_count * 1.01f,
+  Assert(output_table_statistics->row_count <= left_input_table_statistics.row_count * 1.01,
          "Semi join should not increase cardinality");
 
   return output_table_statistics;
@@ -1269,8 +1269,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
 }
 
 std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate_inner_equi_join_of_bins(
-    const float left_height, const float left_distinct_count, const float right_height,
-    const float right_distinct_count) {
+    const HistogramCountType left_height, const DistinctCount left_distinct_count,
+    const HistogramCountType right_height, const DistinctCount right_distinct_count) {
   // Range with more distinct values should be on the left side to keep the algorithm below simple
   if (left_distinct_count < right_distinct_count) {
     return estimate_inner_equi_join_of_bins(right_height, right_distinct_count, left_height, left_distinct_count);
@@ -1278,7 +1278,7 @@ std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate
 
   // Early out to avoid division by zero below
   if (left_distinct_count == 0 || right_distinct_count == 0) {
-    return {HistogramCountType{0.0f}, HistogramCountType{0.0f}};
+    return {HistogramCountType{0}, HistogramCountType{0}};
   }
 
   // Perform a basic principle-of-inclusion join estimation
