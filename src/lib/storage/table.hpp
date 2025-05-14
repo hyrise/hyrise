@@ -217,7 +217,12 @@ class Table : private Noncopyable {
    */
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
+  /**
+   * NOTE: All key constraints are currently stored. If a constraint invalidated it is not deleted. To retrieve
+   * constraints that are not known to be invalid use `valid_soft_key_constraints`.
+   */
   TableKeyConstraints& soft_key_constraints() const;
+  std::unordered_set<TableKeyConstraint> valid_soft_key_constraints() const;
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
   const ForeignKeyConstraints& referenced_foreign_key_constraints() const;

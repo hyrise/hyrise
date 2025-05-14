@@ -65,7 +65,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
-  const auto& table_key_constraints = table->soft_key_constraints();
+  const auto table_key_constraints = table->valid_soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
@@ -101,7 +101,7 @@ std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMappin
 bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
   return table->column_definitions() == static_table_node.table->column_definitions() &&
-         table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
+         table->valid_soft_key_constraints() == static_table_node.table->valid_soft_key_constraints();
 }
 
 }  // namespace hyrise

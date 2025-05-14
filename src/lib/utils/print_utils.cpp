@@ -115,8 +115,9 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
 
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator) {
+  const auto valid_key_constraints = table->valid_soft_key_constraints();
   const auto& table_key_constraints =
-      std::set<TableKeyConstraint>{table->soft_key_constraints().cbegin(), table->soft_key_constraints().cend()};
+      std::set<TableKeyConstraint>{valid_key_constraints.begin(), valid_key_constraints.end()};
   if (table_key_constraints.empty()) {
     return;
   }
