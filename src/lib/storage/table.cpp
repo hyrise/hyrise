@@ -40,6 +40,7 @@
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 #include "utils/performance_warning.hpp"
 #include "value_segment.hpp"
 
@@ -317,7 +318,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
 }
 
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
-                         const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
+                         PolymorphicAllocator<Chunk> alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables if MVCC is enabled.");
   AssertInput(static_cast<ColumnCount::base_type>(segments.size()) == column_count(),
@@ -463,13 +464,10 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
 }
 
 std::unordered_set<TableKeyConstraint> Table::valid_soft_key_constraints() const {
-  auto valid_soft_key_constraints_filter = std::unordered_set<TableKeyConstraint>{};
-  _table_key_constraints.visit_all([&](const auto& constraint) {
-    if (constraint.last_validated_on() &&
-        (!constraint.last_invalidated_on() || *constraint.last_invalidated_on() < constraint.last_validated_on())) {
-      valid_soft_key_constraints_filter.insert(constraint);
-    }
-  });
+  auto filter = _table_key_constraints | std::views::filter([](const auto& constraint) {
+                  return constraint.is_valid();
+                });
+  auto valid_soft_key_constraints_filter = std::unordered_set<TableKeyConstraint>{filter.begin(), filter.end()};
 
   return valid_soft_key_constraints_filter;
 }
@@ -502,7 +500,7 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     }
   }
 
-  _table_key_constraints.visit_all([&](const auto& existing_constraint) {
+  for (const auto& existing_constraint : _table_key_constraints) {
     // Ensure that no other PRIMARY KEY is defined.
     Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
                table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
@@ -513,22 +511,14 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     Assert((existing_constraint.columns().size() == 1 && table_key_constraint.columns().size() == 1) ||
                !columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
-  });
+  }
+  auto [existing_constraint, inserted] = _table_key_constraints.insert(table_key_constraint);
 
-  _table_key_constraints.insert_or_visit(table_key_constraint, [&](const auto& existing_constraint) {
-    // If the constraint already exists, we need to update the last_validated_on and last_invalidated_on values.
-    if (table_key_constraint.last_validated_on()) {
-      // If the constraint was already invalidated, we need to update the last_invalidated_on value.
-      existing_constraint.revalidated_on(
-          std::max(existing_constraint.last_validated_on() ? *existing_constraint.last_validated_on() : CommitID{0},
-                   *table_key_constraint.last_validated_on()));
-    }
-    if (table_key_constraint.last_invalidated_on()) {
-      existing_constraint.invalidated_on(
-          std::max(existing_constraint.last_invalidated_on() ? *existing_constraint.last_invalidated_on() : CommitID{0},
-                   *table_key_constraint.last_invalidated_on()));
-    }
-  });
+  if (!inserted) {
+    // If the constraint was inserted, we need to set the last_validated_on and last_invalidated_on values.
+    set_atomic_max(existing_constraint->last_validated_on(), table_key_constraint.last_validated_on().load());
+    set_atomic_max(existing_constraint->last_invalidated_on(), table_key_constraint.last_invalidated_on().load());
+  }
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {

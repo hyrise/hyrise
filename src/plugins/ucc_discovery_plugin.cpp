@@ -134,42 +134,27 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
     const auto& soft_key_constraints = table->soft_key_constraints();
 
-    // Find UCC matching the candidate, if it already exists on the table.
-    auto existing_ucc_ref = std::optional<std::reference_wrapper<const TableKeyConstraint>>{};
-    soft_key_constraints.visit(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE}, [&](const auto& constraint) {
-      existing_ucc_ref = std::ref(constraint);
-    });
-    soft_key_constraints.visit(TableKeyConstraint{{column_id}, KeyConstraintType::PRIMARY_KEY},
-                               [&](const auto& constraint) {
-                                 existing_ucc_ref = std::ref(constraint);
-                               });
-
-    // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. If it is, we can skip the
-    // expensive revalidation of the UCC.
-    if (existing_ucc_ref && is_constraint_confidently_valid(table, existing_ucc_ref->get())) {
-      message << " [skipped (already known and guaranteed to be still VALID) in " << candidate_timer.lap_formatted()
-              << "]";
+    // Check if a primary key constraint already exists for the column. If it does, we can skip the candidate.
+    const auto existing_pk = soft_key_constraints.find(TableKeyConstraint{{column_id}, KeyConstraintType::PRIMARY_KEY});
+    if (existing_pk != soft_key_constraints.end()) {
+      message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-
-      // Update the validation commit ID of UCCs that are not permanent.
-      const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
-      if (existing_ucc_ref->get().last_validated_on() &&
-          existing_ucc_ref->get().last_validated_on() < snapshot_commit_id) {
-        existing_ucc_ref->get().revalidated_on(snapshot_commit_id);
-      }
-
       continue;
     }
 
-    if (existing_ucc_ref && is_constraint_confidently_invalid(table, existing_ucc_ref->get())) {
+    // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. If it is, we can skip the
+    // expensive revalidation of the UCC. This also applies for permanent constraints.
+    const auto existing_ucc = soft_key_constraints.find(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
+    if (existing_ucc != soft_key_constraints.end() && is_constraint_confidently_valid(table, *existing_ucc)) {
+      message << " [skipped (already known and guaranteed to be still VALID) in " << candidate_timer.lap_formatted()
+              << "]";
+      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+      continue;
+    }
+
+    if (existing_ucc != soft_key_constraints.end() && is_constraint_confidently_invalid(table, *existing_ucc)) {
       message << " [skipped (already known and guaranteed to be INVALID) in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-
-      const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
-      if (existing_ucc_ref->get().last_invalidated_on() < snapshot_commit_id) {
-        existing_ucc_ref->get().invalidated_on(snapshot_commit_id);
-      }
-
       continue;
     }
 
@@ -181,40 +166,22 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
       // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
       // If that does not allow us to reject the UCC right away, we have to run the more expensive
       // cross-segment duplicate check (next clause of the if-condition).
-      auto update_ucc = [&](bool confirmed) {
-        if (!existing_ucc_ref) {
-          table->add_soft_constraint(
-              TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE,
-                                 confirmed ? transaction_context->snapshot_commit_id() : CommitID{0},
-                                 confirmed ? std::optional<CommitID>{} : transaction_context->snapshot_commit_id()));
-        } else {
-          if (confirmed && !existing_ucc_ref->get().last_validated_on()) {
-            existing_ucc_ref->get().revalidated_on(transaction_context->snapshot_commit_id());
-          } else if (!confirmed && !existing_ucc_ref->get().last_validated_on()) {
-            existing_ucc_ref->get().invalidated_on(transaction_context->snapshot_commit_id());
-          } else if (confirmed &&
-                     existing_ucc_ref->get().last_invalidated_on() > existing_ucc_ref->get().last_validated_on()) {
-            existing_ucc_ref->get().revalidated_on(transaction_context->snapshot_commit_id());
-          } else if (!confirmed &&
-                     existing_ucc_ref->get().last_validated_on() > existing_ucc_ref->get().last_invalidated_on()) {
-            existing_ucc_ref->get().invalidated_on(transaction_context->snapshot_commit_id());
-          }
-        }
-      };
-
       if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id)) {
         message << " [rejected because some chunk contains duplicates in " << candidate_timer.lap_formatted() << "]";
-        update_ucc(false);
+        table->add_soft_constraint(TableKeyConstraint{
+            {column_id}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID, transaction_context->snapshot_commit_id()});
 
       } else if (!_uniqueness_holds_across_segments<ColumnDataType>(table, candidate.table_name, column_id,
                                                                     transaction_context)) {
         message << " [rejected because the column has cross-segment duplicates in " << candidate_timer.lap_formatted()
                 << "]";
-        update_ucc(false);
+        table->add_soft_constraint(TableKeyConstraint{
+            {column_id}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID, transaction_context->snapshot_commit_id()});
 
       } else {
         message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
-        update_ucc(true);
+        table->add_soft_constraint(TableKeyConstraint{
+            {column_id}, KeyConstraintType::UNIQUE, transaction_context->snapshot_commit_id(), MAX_COMMIT_ID});
       }
     });
   }

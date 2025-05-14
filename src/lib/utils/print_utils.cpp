@@ -116,7 +116,11 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator) {
   bool first = true;
-  table->soft_key_constraints().visit_all([&](const auto& constraint) {
+  const auto valid_key_constraints = table->valid_soft_key_constraints();
+  const auto ordered_key_constraints =
+      std::set<TableKeyConstraint>{valid_key_constraints.begin(), valid_key_constraints.end()};
+
+  for (const auto& constraint : ordered_key_constraints) {
     if (!first) {
       stream << separator;
     }
@@ -132,7 +136,7 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
       }
     }
     stream << ")";
-  });
+  }
 }
 
 void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& stream, const std::string& separator) {

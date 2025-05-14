@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -176,7 +177,7 @@ TEST_F(TableKeyConstraintTest, OrderIndependence) {
 }
 
 TEST_F(TableKeyConstraintTest, CanBecomeInvalid) {
-  const auto key_constraint_invalid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}};
+  const auto key_constraint_invalid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID};
   const auto key_constraint_valid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
 
   EXPECT_TRUE(key_constraint_invalid.can_become_invalid());

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <optional>
 #include <set>
 #include <utility>
 
@@ -12,12 +11,12 @@
 #include "storage/constraints/abstract_table_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 
 namespace hyrise {
 
 TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
-                                       const std::optional<CommitID> last_validated_on,
-                                       const std::optional<CommitID> last_invalidated_on)
+                                       const CommitID last_validated_on, const CommitID last_invalidated_on)
     : AbstractTableConstraint(TableConstraintType::Key),
       _columns{std::move(columns)},
       _key_type{key_type},
@@ -35,29 +34,32 @@ KeyConstraintType TableKeyConstraint::key_type() const {
 }
 
 bool TableKeyConstraint::can_become_invalid() const {
-  return !_last_validated_on || _last_invalidated_on || _last_validated_on != MAX_COMMIT_ID;
+  return _last_validated_on.load() != 0 || _last_invalidated_on.load() != MAX_COMMIT_ID ||
+         _last_validated_on == MAX_COMMIT_ID;
 }
 
-const std::optional<CommitID>& TableKeyConstraint::last_validated_on() const {
+bool TableKeyConstraint::is_valid() const {
+  const auto last_invalidated = _last_invalidated_on.load();
+  const auto last_validated = _last_validated_on.load();
+  return last_invalidated == MAX_COMMIT_ID || (last_validated != MAX_COMMIT_ID && last_invalidated >= last_validated);
+}
+
+std::atomic<CommitID>& TableKeyConstraint::last_validated_on() const {
   return _last_validated_on;
 }
 
-const std::optional<CommitID>& TableKeyConstraint::last_invalidated_on() const {
+std::atomic<CommitID>& TableKeyConstraint::last_invalidated_on() const {
   return _last_invalidated_on;
 }
 
 void TableKeyConstraint::revalidated_on(const CommitID revalidation_commit_id) const {
-  Assert(!_last_validated_on || revalidation_commit_id >= _last_validated_on,
-         "Key constraint was already validated for larger commit id.");
-  _last_validated_on = revalidation_commit_id;
+  set_atomic_max(_last_validated_on, revalidation_commit_id);
 }
 
 void TableKeyConstraint::invalidated_on(const CommitID invalidation_commit_id) const {
   Assert(can_become_invalid(), "Cannot invalidate UCC that cannot become invalid.");
 
-  Assert(!_last_invalidated_on || invalidation_commit_id >= *_last_invalidated_on,
-         "Key constraint was already validated for larger commit id.");
-  _last_invalidated_on = invalidation_commit_id;
+  set_atomic_max(_last_invalidated_on, invalidation_commit_id);
 }
 
 size_t TableKeyConstraint::hash() const {
