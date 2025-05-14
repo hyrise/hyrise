@@ -85,9 +85,11 @@ bool is_constraint_confidently_valid(const std::shared_ptr<Table>& table,
     return true;
   }
 
-  if (!table_key_constraint.last_validated_on() ||
-      (table_key_constraint.last_invalidated_on() &&
-       table_key_constraint.last_validated_on() < *table_key_constraint.last_invalidated_on())) {
+  const auto last_validated_on = table_key_constraint.last_validated_on().load();
+  const auto last_invalidated_on = table_key_constraint.last_invalidated_on().load();
+
+  if (last_validated_on == MAX_COMMIT_ID ||
+      (last_invalidated_on != MAX_COMMIT_ID && last_validated_on < last_invalidated_on)) {
     return false;
   }
 
@@ -100,7 +102,7 @@ bool is_constraint_confidently_valid(const std::shared_ptr<Table>& table,
     // We use `max_begin_cid` here. This can lead to overly pessimistic results, but as of right now we don't have a
     // better way to determine the last valid commit id here.
     const auto max_begin_cid = source_chunk->mvcc_data()->max_begin_cid.load();
-    if (max_begin_cid != MAX_COMMIT_ID && max_begin_cid > table_key_constraint.last_validated_on()) {
+    if (max_begin_cid != MAX_COMMIT_ID && max_begin_cid > last_validated_on) {
       return false;
     }
   }
@@ -110,7 +112,8 @@ bool is_constraint_confidently_valid(const std::shared_ptr<Table>& table,
 
 bool is_constraint_confidently_invalid(const std::shared_ptr<Table>& table,
                                        const TableKeyConstraint& table_key_constraint) {
-  if (!table_key_constraint.last_invalidated_on()) {
+  const auto last_invalidated_on = table_key_constraint.last_invalidated_on().load();
+  if (last_invalidated_on == MAX_COMMIT_ID) {
     return false;
   }
 
@@ -121,7 +124,7 @@ bool is_constraint_confidently_invalid(const std::shared_ptr<Table>& table,
     const auto source_chunk = table->get_chunk(static_cast<ChunkID>(prev_chunk_id));
 
     const auto max_end_cid = source_chunk->mvcc_data()->max_end_cid.load();
-    if (max_end_cid != MAX_COMMIT_ID && max_end_cid > table_key_constraint.last_invalidated_on()) {
+    if (max_end_cid != MAX_COMMIT_ID && max_end_cid > last_invalidated_on) {
       return false;
     }
   }

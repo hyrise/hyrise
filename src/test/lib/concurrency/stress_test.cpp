@@ -4,6 +4,7 @@
 #include <future>
 #include <numeric>
 #include <optional>
+#include <shared_mutex>
 #include <thread>
 
 #include "../utils/plugin_test_utils.hpp"
@@ -702,10 +703,10 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
 }
 
 /**
- * Check that adding, deleting and modifying a the TableKeyConstraints of a table concurrently does not lead to 
- * deadlocks or inconsistencies (e.g. duplicate constraints)
+ * Test that adding and modifying a the TableKeyConstraints of a table concurrently does not lead to 
+ * deadlocks or inconsistencies (e.g. duplicate constraints).
  */
-TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
+TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   // Create a table with multiple TableKeyConstraints
   auto table = std::make_shared<Table>(
       TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}},
@@ -718,23 +719,23 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
 
-  /** Run multiple modifications, deletions and additions concurrently that require locks:
-   * - `Table::delete_key_constraint`
+  /** Run multiple modifications and additions concurrently that could potentially lead to race conditions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`
    * - `StaticTableNode::unique_column_combinations`
+   * - `Table::soft_key_constraints().clear()` to force a revalidation of the constraints. This does not happen in
+   * production, but we want to test the concurrent insertion of constraints.
    * NOTE: We do not execute `Table::add_soft_constraint` because we do not have the knowledge whether or not the
    * constraint already exists.
    */
-  const auto delete_constraint = [&] {
-    table->delete_key_constraint(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
-  };
 
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
   auto& pm = Hyrise::get().plugin_manager;
+  std::shared_mutex table_constraints_mutex;
 
   pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
   const auto validate_constraint = [&] {
+    std::shared_lock<std::shared_mutex> lock(table_constraints_mutex);
     // Populate the plan cache.
     const std::string sql = "SELECT b,c FROM dummy_table GROUP BY b,c;";
     auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
@@ -743,7 +744,13 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
     pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
   };
 
+  const auto clear_table_constraints = [&] {
+    std::unique_lock<std::shared_mutex> lock(table_constraints_mutex);
+    table->soft_key_constraints().clear();
+  };
+
   const auto static_table_node_constraint_access = [&] {
+    std::shared_lock<std::shared_mutex> lock(table_constraints_mutex);
     const auto static_table_node = StaticTableNode::make(table);
     // Simply access the unique column combinations to require a `shared_lock`.
     static_table_node->unique_column_combinations();
@@ -757,13 +764,13 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
   for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
     switch (thread_id % 3) {
       case 0:
-        threads.emplace_back(delete_constraint);
+        threads.emplace_back(static_table_node_constraint_access);
         break;
       case 1:
         threads.emplace_back(validate_constraint);
         break;
       case 2:
-        threads.emplace_back(static_table_node_constraint_access);
+        threads.emplace_back(clear_table_constraints);
         break;
       default:
         break;
@@ -776,7 +783,6 @@ TEST_F(StressTest, AddRemoveModifyTableKeyConstraintsConcurrently) {
 
   // Check that the set of TableKeyConstraints does not contain any duplicates.
   ASSERT_LE(table->soft_key_constraints().size(), 3);
-  ASSERT_GE(table->soft_key_constraints().size(), 1);
 }
 
 }  // namespace hyrise

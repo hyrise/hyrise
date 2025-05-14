@@ -38,7 +38,6 @@ std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
     }
   }
 
-  const auto key_contraints_read_lock = table->acquire_constraints_read_mutex();
   if (!table->soft_key_constraints().empty()) {
     stream << ", ";
     print_table_key_constraints(table, stream);
@@ -66,8 +65,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
-  const auto table_constraints_read_lock = table->acquire_constraints_read_mutex();
-  const auto table_key_constraints = table->soft_key_constraints();
+  const auto table_key_constraints = table->valid_soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
@@ -92,15 +90,8 @@ size_t StaticTableNode::_on_shallow_hash() const {
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
-
-  const auto constraint_read_lock = table->acquire_constraints_read_mutex();
-  const auto& soft_key_constraints = table->valid_soft_key_constraints();
-  for (const auto& table_key_constraint : soft_key_constraints) {
-    // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
-    hash = hash ^ table_key_constraint.hash();
-  }
-
-  return std::hash<size_t>{}(hash - soft_key_constraints.size());
+  // We do not hash all key constraints because the cost of hashing outweights the benefit of less collisions.
+  return std::hash<size_t>{}(hash);
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
@@ -109,10 +100,6 @@ std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
-
-  const auto lhs_constraint_read_lock = table->acquire_constraints_read_mutex();
-  const auto rhs_constraint_read_lock = static_table_node.table->acquire_constraints_read_mutex();
-
   return table->column_definitions() == static_table_node.table->column_definitions() &&
          table->valid_soft_key_constraints() == static_table_node.table->valid_soft_key_constraints();
 }

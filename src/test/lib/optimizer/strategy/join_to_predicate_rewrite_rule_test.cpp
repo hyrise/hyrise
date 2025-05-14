@@ -54,7 +54,7 @@ INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, JoinToP
 
 TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   // The rule should only rewrite inner and semi joins.
-  auto key_constraints = TableKeyConstraints{};
+  auto key_constraints = std::unordered_set<TableKeyConstraint>{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
   key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
   node_b->set_key_constraints(key_constraints);
@@ -91,7 +91,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   // Do not rewrite if there is no predicate on the column with UCC.
-  auto key_constraints = TableKeyConstraints{};
+  auto key_constraints = std::unordered_set<TableKeyConstraint>{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
   key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
   node_b->set_key_constraints(key_constraints);
@@ -114,7 +114,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
   // Do not rewrite if there is no UCC on the predicate column.
-  auto key_constraints = TableKeyConstraints{};
+  auto key_constraints = std::unordered_set<TableKeyConstraint>{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
   node_b->set_key_constraints(key_constraints);
 
@@ -137,7 +137,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
   // Do not rewrite if there is no UCC on the join column.
-  auto key_constraints = TableKeyConstraints{};
+  auto key_constraints = std::unordered_set<TableKeyConstraint>{};
   key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
   node_b->set_key_constraints(key_constraints);
 
@@ -159,7 +159,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
 
 TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
   // Do not rewrite if columns from b are required upwards in LQP.
-  auto key_constraints = TableKeyConstraints{};
+  auto key_constraints = std::unordered_set<TableKeyConstraint>{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
   key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
   node_b->set_key_constraints(key_constraints);
@@ -183,7 +183,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
 
 TEST_F(JoinToPredicateRewriteRuleTest, Union) {
   // Do not rewrite if there is a Union on table b that preserves the UCC but outputs more than one result tuple.
-  auto key_constraints = TableKeyConstraints{};
+  auto key_constraints = std::unordered_set<TableKeyConstraint>{};
   key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
   key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
   node_b->set_key_constraints(key_constraints);
