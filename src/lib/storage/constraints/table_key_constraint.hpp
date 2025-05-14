@@ -6,8 +6,6 @@
 #include <unordered_set>
 #include <utility>
 
-#include <boost/unordered/concurrent_flat_set.hpp>
-
 #include "abstract_table_constraint.hpp"
 #include "types.hpp"
 

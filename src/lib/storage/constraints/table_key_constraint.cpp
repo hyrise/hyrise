@@ -5,6 +5,7 @@
 #include <functional>
 #include <set>
 #include <utility>
+#include <atomic>
 
 #include <boost/container_hash/hash.hpp>
 
