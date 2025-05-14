@@ -703,8 +703,8 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
 }
 
 /**
- * Check that adding, deleting and modifying a the TableKeyConstraints of a table concurrently does not lead to 
- * deadlocks or inconsistencies (e.g. duplicate constraints)
+ * Test that adding and modifying a the TableKeyConstraints of a table concurrently does not lead to 
+ * deadlocks or inconsistencies (e.g. duplicate constraints).
  */
 TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   // Create a table with multiple TableKeyConstraints
