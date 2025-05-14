@@ -74,7 +74,6 @@
 #include "sql/sql_identifier.hpp"
 #include "sql/sql_identifier_resolver.hpp"
 #include "sql/sql_identifier_resolver_proxy.hpp"
-#include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/lqp_view.hpp"

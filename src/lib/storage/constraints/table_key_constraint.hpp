@@ -34,11 +34,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
         _columns{other._columns},
         _key_type{other._key_type},
         _last_validated_on{other._last_validated_on.load()},
-        _last_invalidated_on{other._last_invalidated_on.load()} {
-    // This is needed to ensure that the atomic variables are copied correctly.
-    _last_validated_on.store(other._last_validated_on.load());
-    _last_invalidated_on.store(other._last_invalidated_on.load());
-  }
+        _last_invalidated_on{other._last_invalidated_on.load()} {}
 
   TableKeyConstraint& operator=(const TableKeyConstraint& other) {
     if (this != &other) {
@@ -52,7 +48,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   }
 
   TableKeyConstraint(TableKeyConstraint&& other) noexcept
-      : AbstractTableConstraint{std::move(other)},
+      : AbstractTableConstraint(std::move(other)),
         _columns{std::move(other._columns)},
         _key_type{other._key_type},
         _last_validated_on{other._last_validated_on.load()},
