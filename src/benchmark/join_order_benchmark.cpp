@@ -60,7 +60,13 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
 
   // aka_title - 1 PK, 1 FK.
   primary_key_constraint(aka_title_table, {"id"});
-  foreign_key_constraint(aka_title_table, {"movie_id"}, title_table, {"id"});
+  // The following foreign key is specified in the paper, but it is violated by 93 tuples. You can check that with the
+  // following query:
+  //   SELECT COUNT(*)
+  //     FROM aka_title LEFT OUTER JOIN title ON aka_title.movie_id = title.id
+  //    WHERE aka_title.movie_id IS NOT NULL AND title.id IS NULL;
+  //
+  // foreign_key_constraint(aka_title_table, {"movie_id"}, title_table, {"id"});
 
   // cast_info - 1 PK, 4 FKs.
   primary_key_constraint(cast_info_table, {"id"});
