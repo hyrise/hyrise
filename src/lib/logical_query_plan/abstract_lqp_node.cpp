@@ -419,7 +419,7 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
       // Current required ColumnID is present and the referenced columns match. Continue with the next one.
       ++required_columns_it;
     }
-    // IND matches if all CloumnID-Expression-pairs match.
+    // IND matches if all ColumnID-Expression-pairs match.
     if (required_columns_it == required_columns_end) {
       return true;
     }
