@@ -1,15 +1,13 @@
 #include "inclusion_dependency.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <ostream>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "expression/abstract_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

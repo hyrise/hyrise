@@ -5,13 +5,10 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <vector>
 
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

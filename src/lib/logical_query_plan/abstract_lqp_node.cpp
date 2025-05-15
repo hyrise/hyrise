@@ -20,6 +20,7 @@
 #include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
 #include "storage/storage_manager.hpp"
@@ -401,7 +402,9 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
     // IND references the same included table. Now, check that it also has the required columns in the correct order.
     auto required_columns_it = required_column_id_for_expression.cbegin();
     const auto found_ind_size = ind.expressions.size();
-    for (auto expression_idx = ColumnID{0}; expression_idx < found_ind_size; ++expression_idx) {
+    const auto required_columns_end = required_column_id_for_expression.cend();
+    for (auto expression_idx = ColumnID{0};
+         expression_idx < found_ind_size && required_columns_it != required_columns_end; ++expression_idx) {
       // Did not reach current required ColumnID yet.
       if (required_columns_it->first > ind.included_column_ids[expression_idx]) {
         continue;
@@ -417,7 +420,7 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
       ++required_columns_it;
     }
     // IND matches if all CloumnID-Expression-pairs match.
-    if (required_columns_it == required_column_id_for_expression.cend()) {
+    if (required_columns_it == required_columns_end) {
       return true;
     }
   }
