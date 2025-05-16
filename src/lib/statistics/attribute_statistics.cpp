@@ -25,7 +25,7 @@ AttributeStatistics<T>::AttributeStatistics() : BaseAttributeStatistics(data_typ
 template <typename T>
 void AttributeStatistics<T>::set_statistics_object(
     const std::shared_ptr<const AbstractStatisticsObject>& statistics_object) {
-  // We allow call patterns like `c.set_statistics_object(o.scaled(0.1f))` where `o.scaled()` might return nullptr
+  // We allow call patterns like `c.set_statistics_object(o.scaled(0.1))` where `o.scaled()` might return nullptr
   // because, e.g., scaling is not possible for `o`.
   if (!statistics_object) {
     return;
@@ -56,7 +56,7 @@ void AttributeStatistics<T>::set_statistics_object(
 template <typename T>
 std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
   // We do not create adapted versions of the underlying statistics objects if the selectivity is 1.0 (+/- uncertainty).
-  if (std::fabs(1.0f - selectivity) <= std::numeric_limits<Selectivity>::epsilon()) {
+  if (std::abs(1.0 - selectivity) <= std::numeric_limits<Selectivity>::epsilon()) {
     return this->shared_from_this();
   }
 
