@@ -275,7 +275,7 @@ try {
           }, clangReleaseAddrUBLeakSanitizers: {
             stage("clang-release:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 5))"
+                sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 4))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseTest clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
@@ -361,17 +361,25 @@ try {
                 Utils.markStageSkippedForConditional("tpchQueryPlans")
               }
             }
-          }, tpcdsQueryPlansAndVerification: {
-            stage("tpcdsQueryPlansAndVerification") {
+          }, tpcdsQueryPlans: {
+            stage("tpcdsQueryPlans") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
                 archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
               } else {
-                Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
+                Utils.markStageSkippedForConditional("tpcdsQueryPlans")
               }
             }
-          }, jobQueryPlans: {
+          }, tpcdsVerification: {
+            stage("tpcdsVerification") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "./clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --verify"
+              } else {
+                Utils.markStageSkippedForConditional("tpcdsVerification")
+              }
+            }
+          },jobQueryPlans: {
             stage("jobQueryPlans") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // In contrast to TPC-H and TPC-DS above, we execute the JoinOrderBenchmark from the project's root directoy because its setup script requires us to do so.
