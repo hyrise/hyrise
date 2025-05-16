@@ -523,11 +523,13 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
     Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
 
-  const auto append_lock = acquire_append_mutex();
+  auto append_lock = acquire_append_mutex();
   const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
   Assert(inserted, "ForeignKeyConstraint has already been set.");
-  const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
+  auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
+  referenced_table_append_lock.unlock();
+  append_lock.unlock();
 }
 
 void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
