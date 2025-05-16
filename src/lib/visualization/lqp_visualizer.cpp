@@ -102,9 +102,9 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
                                     const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side,
                                     const CardinalityEstimator& cardinality_estimator) {
-  float row_count = NAN;
+  Cardinality row_count = NAN;
   auto pen_width = 1.0;
-  auto row_percentage = 100.0f;
+  auto row_percentage = 100.0;
 
   const auto estimated_cardinality = cardinality_estimator.estimate_cardinality(source_node);
   if (estimated_cardinality > 0.0) {
@@ -113,7 +113,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   }
 
   if (source_node->left_input()) {
-    float input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());
+    auto input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());
 
     // Include right side in cardinality estimation unless it is a semi/anti join
     const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);

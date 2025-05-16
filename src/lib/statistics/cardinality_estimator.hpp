@@ -260,8 +260,8 @@ class CardinalityEstimator {
    * @return {estimated_height, estimated_distinct_count}
    */
   static std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_bins(
-      const float left_height, const float left_distinct_count, const float right_height,
-      const float right_distinct_count);
+      const HistogramCountType left_height, const DistinctCount left_distinct_count,
+      const HistogramCountType right_height, const DistinctCount right_distinct_count);
   /** @} */
 
  private:
