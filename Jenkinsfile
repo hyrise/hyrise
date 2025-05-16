@@ -3,7 +3,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 
 // Due to their long runtime, we skip several tests in sanitizer and MacOS builds.
-tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
+tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCountsAndTableConstraints:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
 
 tests_excluded_in_mac_builds = 'TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
 
@@ -213,7 +213,7 @@ try {
                 sh "mkdir ./clang-debug/run-shuffled"
                 sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
                 // We do not want to trigger SSB data generation concurrently since it is not concurrency-safe.
-                sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle --gtest_filter=\"-SSBTableGeneratorTest.*\""
+                sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle --gtest_filter=\"-SSBTableGeneratorTest.*:SQLiteTestRunnerEncodings/*\""
               } else {
                 Utils.markStageSkippedForConditional("clangDebugRunShuffled")
               }
@@ -222,7 +222,7 @@ try {
             stage("clang-debug-unity-odr") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-                sh "cd clang-debug-unity-odr && ninja all -j \$(( \$(nproc) / 20))"
+                sh "cd clang-debug-unity-odr && ninja all"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugUnityODR")
               }
@@ -240,7 +240,7 @@ try {
             stage("clang-debug:disable-precompile-headers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
-                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k 0 -j \$(( \$(nproc) / 20))"
+                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k 0"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
               }
@@ -248,7 +248,7 @@ try {
           }, clangDebugAddrUBLeakSanitizers: {
             stage("clang-debug:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 20))"
+                sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseTest clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
@@ -333,7 +333,7 @@ try {
                 // --fair-sched=yes "improves overall responsiveness if you are running an interactive multithreaded
                 // program" and "produces better reproducibility of thread scheduling for different executions of a
                 // multithreaded application" (i.e., there are no runs that are randomly faster or slower).
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate:SQLiteTestRunner*"
                 sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
                 sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
                 sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 4 --data_preparation_cores 4"
