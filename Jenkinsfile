@@ -451,7 +451,7 @@ try {
             // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
             // only build release with LTO on the ARM machine.
-            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${ninja} ${no_lto} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
+            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${ninja} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
             sh "cd clang-debug && ninja"
             sh "./clang-debug/hyriseTest"
             sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
@@ -480,14 +480,14 @@ try {
             // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it. Passing clang
             // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
             // that are not found otherwise.
-            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${no_lto} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
             sh "cd clang-apple-release && ninja"
             sh "./clang-apple-release/hyriseTest"
 
             // Build Hyrise (Debug) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests.
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} ${unity} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang++ .."
+            sh "mkdir clang-release && cd clang-release && cmake ${release} ${unity} ${no_lto} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang++ .."
             sh "cd clang-release && ninja"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
