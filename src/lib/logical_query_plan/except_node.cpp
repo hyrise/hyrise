@@ -12,6 +12,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
@@ -44,6 +45,12 @@ UniqueColumnCombinations ExceptNode::unique_column_combinations() const {
 
 OrderDependencies ExceptNode::order_dependencies() const {
   return _forward_left_order_dependencies();
+}
+
+InclusionDependencies ExceptNode::inclusion_dependencies() const {
+  // EXCEPT filters the left input table, so it does not guarantee that all values referenced by a foreign key are still
+  // present.
+  return InclusionDependencies{};
 }
 
 FunctionalDependencies ExceptNode::non_trivial_functional_dependencies() const {

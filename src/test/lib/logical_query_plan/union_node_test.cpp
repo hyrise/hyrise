@@ -79,7 +79,7 @@ TEST_F(UnionNodeTest, Copy) {
 }
 
 TEST_F(UnionNodeTest, NodeExpressions) {
-  ASSERT_EQ(_union_node->node_expressions.size(), 0u);
+  ASSERT_EQ(_union_node->node_expressions.size(), 0);
 }
 
 TEST_F(UnionNodeTest, InvalidInputExpressions) {
@@ -262,7 +262,7 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionPositions) {
   EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
 
   // Forward OD.
-  const auto& order_dependencies = _union_node->order_dependencies();
+  const auto order_dependencies = _union_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
 }
@@ -303,7 +303,7 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionAll) {
   {
     // Keep OD if inputs have same output expressions.
     const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node1);
-    const auto& order_dependencies = union_node->order_dependencies();
+    const auto order_dependencies = union_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 1);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
   }
@@ -328,6 +328,48 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionAll) {
     const auto union_node = UnionNode::make(SetOperationMode::All, join_node_1, join_node_2);
     EXPECT_THROW(union_node->order_dependencies(), std::logic_error);
   }
+}
+
+TEST_F(UnionNodeTest, InclusionDependenciesUnionPositions) {
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
+  _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
+  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
+
+  // Forward IND.
+  const auto inclusion_dependencies = _union_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 1);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind));
+}
+
+TEST_F(UnionNodeTest, InclusionDependenciesUnionPositionsInvalidInput) {
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
+  _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
+  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
+
+  // Fail if inputs have different output expressions.
+  _union_node->set_right_input(_mock_node2);
+  EXPECT_THROW(_union_node->inclusion_dependencies(), std::logic_error);
+}
+
+TEST_F(UnionNodeTest, InclusionDependenciesUnionAll) {
+  // Forward all INDs of both inputs.
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
+  _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
+  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
+  const auto ind_u = InclusionDependency{{_u}, {ColumnID{0}}, dummy_table};
+  _mock_node2->set_foreign_key_constraints({foreign_key_constraint});
+  EXPECT_EQ(_mock_node2->inclusion_dependencies().size(), 1);
+
+  const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node2);
+  const auto inclusion_dependencies = union_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 2);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_u));
 }
 
 }  // namespace hyrise

@@ -3,6 +3,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "storage/table.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
@@ -54,7 +55,7 @@ TEST_F(AggregateNodeTest, InvalidAggregates) {
 }
 
 TEST_F(AggregateNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_aggregate_node->output_expressions().size(), 4u);
+  ASSERT_EQ(_aggregate_node->output_expressions().size(), 4);
   EXPECT_EQ(*_aggregate_node->output_expressions().at(0), *_a);
   EXPECT_EQ(*_aggregate_node->output_expressions().at(1), *_c);
   EXPECT_EQ(*_aggregate_node->output_expressions().at(2), *sum_(add_(_a, _b)));
@@ -62,7 +63,7 @@ TEST_F(AggregateNodeTest, OutputColumnExpressions) {
 }
 
 TEST_F(AggregateNodeTest, NodeExpressions) {
-  ASSERT_EQ(_aggregate_node->node_expressions.size(), 4u);
+  ASSERT_EQ(_aggregate_node->node_expressions.size(), 4);
   EXPECT_EQ(*_aggregate_node->node_expressions.at(0), *_a);
   EXPECT_EQ(*_aggregate_node->node_expressions.at(1), *_c);
   EXPECT_EQ(*_aggregate_node->node_expressions.at(2), *sum_(add_(_a, _b)));
@@ -124,12 +125,12 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
 
   // Check whether AggregateNode adds a new UCC for its group-by column(s).
   {
-    const auto& unique_column_combinations = agg_node_a->unique_column_combinations();
+    const auto unique_column_combinations = agg_node_a->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a}}));
   }
   {
-    const auto& unique_column_combinations = agg_node_b->unique_column_combinations();
+    const auto unique_column_combinations = agg_node_b->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a, _b}}));
   }
@@ -143,7 +144,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
 
   const auto aggregate_c = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate_c), _mock_node);
-  const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
+  const auto unique_column_combinations = _aggregate_node->unique_column_combinations();
 
   /**
    * Expected behaviour:
@@ -166,7 +167,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
   const auto aggregate_b = any_(_b);
   const auto aggregate_c = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(aggregate_b, aggregate_c), _mock_node);
-  const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
+  const auto unique_column_combinations = _aggregate_node->unique_column_combinations();
 
   /**
    * Expected behaviour:
@@ -203,7 +204,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
    */
 
   // Basic check.
-  const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
+  const auto unique_column_combinations = _aggregate_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
@@ -226,7 +227,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
    */
 
   // Basic check.
-  const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
+  const auto unique_column_combinations = _aggregate_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
@@ -243,18 +244,18 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
   const auto aggregate2 = sum_(add_(_a, _c));
 
   // All determinant and dependent expressions are missing.
-  const auto& agg_node_a =
+  const auto agg_node_a =
       AggregateNode::make(expression_vector(_a), expression_vector(aggregate1, aggregate2), _mock_node);
   EXPECT_TRUE(agg_node_a->non_trivial_functional_dependencies().empty());
 
   // All determinant and dependent expressions are part of the output -> expect FD forwarding
-  const auto& agg_node_b =
+  const auto agg_node_b =
       AggregateNode::make(expression_vector(_a, _c), expression_vector(aggregate1, aggregate2), _mock_node);
   EXPECT_EQ(agg_node_b->non_trivial_functional_dependencies().size(), 1);
   EXPECT_TRUE(agg_node_b->non_trivial_functional_dependencies().contains(fd_a));
 
   // Special case: All determinant expressions, but only some of the dependent expressions are part of the output
-  const auto& agg_node_c =
+  const auto agg_node_c =
       AggregateNode::make(expression_vector(_b, _c), expression_vector(aggregate1, aggregate2), _mock_node);
   const auto expected_fd = FunctionalDependency{{_b}, {_c}};
   EXPECT_EQ(agg_node_c->non_trivial_functional_dependencies().size(), 1);
@@ -266,7 +267,7 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
   _mock_node->set_key_constraints({});
   _mock_node->set_non_trivial_functional_dependencies({});
 
-  const auto& fds = _aggregate_node->functional_dependencies();
+  const auto fds = _aggregate_node->functional_dependencies();
   EXPECT_EQ(fds.size(), 1);
   const auto& fd = *fds.cbegin();
   const auto expected_determinants =
@@ -292,9 +293,8 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
 
   {
     // All expressions are either grouped or have an ANY aggregate. All ODs should remain valid.
-    const auto& aggregate_node =
-        AggregateNode::make(expression_vector(_a, _b), expression_vector(any_(_c)), _mock_node);
-    const auto& order_dependencies = aggregate_node->order_dependencies();
+    const auto aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(any_(_c)), _mock_node);
+    const auto order_dependencies = aggregate_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 3);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
@@ -302,9 +302,8 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
   }
   {
     // All expressions are either grouped or have an ANY aggregate. All ODs should remain valid.
-    const auto& aggregate_node =
-        AggregateNode::make(expression_vector(_a, _c), expression_vector(any_(_b)), _mock_node);
-    const auto& order_dependencies = aggregate_node->order_dependencies();
+    const auto aggregate_node = AggregateNode::make(expression_vector(_a, _c), expression_vector(any_(_b)), _mock_node);
+    const auto order_dependencies = aggregate_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 3);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
@@ -312,18 +311,55 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
   }
   {
     // All columns are aggregated, no ODs remain valid.
-    const auto& aggregate_node =
+    const auto aggregate_node =
         AggregateNode::make(expression_vector(), expression_vector(sum_(_a), max_(_b), min_(_c)), _mock_node);
-    const auto& order_dependencies = aggregate_node->order_dependencies();
+    const auto order_dependencies = aggregate_node->order_dependencies();
     EXPECT_TRUE(order_dependencies.empty());
   }
   {
     // c is aggregated, a is the group key, b has an ANY aggregate. Only the first OD remains valid.
-    const auto& aggregate_node =
+    const auto aggregate_node =
         AggregateNode::make(expression_vector(_a), expression_vector(any_(_b), avg_(_c)), _mock_node);
-    const auto& order_dependencies = aggregate_node->order_dependencies();
+    const auto order_dependencies = aggregate_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 1);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+  }
+}
+
+TEST_F(AggregateNodeTest, ForwardInclusionDependencies) {
+  EXPECT_TRUE(_mock_node->inclusion_dependencies().empty());
+  EXPECT_TRUE(_aggregate_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  const auto ind_a_b = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
+  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
+  const auto foreign_key_constraint_a_b =
+      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, dummy_table, {ColumnID{0}, ColumnID{1}}, nullptr};
+  _mock_node->set_foreign_key_constraints({foreign_key_constraint_a, foreign_key_constraint_a_b});
+  EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 2);
+
+  {
+    // All relevant expressions are either grouped or have an ANY aggregate. All INDs should remain valid.
+    const auto aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(any_(_b)), _mock_node);
+    const auto inclusion_dependencies = aggregate_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 2);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
+  }
+  {
+    // All columns are aggregated, no INDs remain valid.
+    const auto aggregate_node =
+        AggregateNode::make(expression_vector(), expression_vector(sum_(_a), max_(_b)), _mock_node);
+    const auto inclusion_dependencies = aggregate_node->inclusion_dependencies();
+    EXPECT_TRUE(inclusion_dependencies.empty());
+  }
+  {
+    // b is aggregated, a is the group key. Only the first IND remains valid.
+    const auto aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(max_(_b)), _mock_node);
+    const auto inclusion_dependencies = aggregate_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
   }
 }
 
