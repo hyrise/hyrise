@@ -74,17 +74,14 @@ TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCountsAndTableConstraints) {
   TPCDSTableGenerator{1, Chunk::DEFAULT_SIZE, 0}.generate_and_store();
 
   /**
-   * Check whether all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager. Then,
-   * check whether the count is correct for all tables.
+   * Check that
+   *    (i) all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager,
+   *   (ii) their row counts are as expected, and
+   *  (iii) they have one primary key and the expected number of foreign keys.
    */
-  // <row count, number of foreign keys>
-  using TableSpec = std::tuple<uint64_t, uint32_t>;
+  using TableSpec = std::tuple<uint64_t, uint32_t>;  // <row count, number of foreign keys>
   const auto expected_table_info = std::map<std::string, TableSpec>{{"call_center", {6, 2}},
-                                                                    {"catalog_page",
-                                                                     {
-                                                                         11718,
-                                                                         2,
-                                                                     }},
+                                                                    {"catalog_page", {11718, 2}},
                                                                     {"catalog_returns", {144201, 17}},
                                                                     {"catalog_sales", {1440060, 17}},
                                                                     {"customer", {100000, 6}},
