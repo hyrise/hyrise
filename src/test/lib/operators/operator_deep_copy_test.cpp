@@ -173,7 +173,8 @@ TEST_F(OperatorDeepCopyTest, DeepCopySort) {
 
   // build and execute sort
   auto sort = std::make_shared<Sort>(
-      _table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},
+      _table_wrapper_a,
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},
       ChunkOffset{2});
   sort->execute();
   EXPECT_TABLE_EQ_UNORDERED(sort->get_output(), expected_result);

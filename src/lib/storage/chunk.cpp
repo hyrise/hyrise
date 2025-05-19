@@ -289,7 +289,7 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
                                 if (left.is_null()) {
                                   return true;
                                 }
-                                const auto ascending = sort_mode == SortMode::Ascending;
+                                const auto ascending = sort_mode == SortMode::AscendingNullsFirst;
                                 return ascending ? left.value() < right.value() : left.value() > right.value();
                               }),
                "Setting a sort order for a segment which is not sorted accordingly.");

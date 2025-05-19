@@ -27,7 +27,7 @@ class SortedSegmentSearch {
         _first_search_value{search_value},
         _second_search_value{std::nullopt},
         _nullable{nullable},
-        _is_ascending{sorted_by == SortMode::Ascending} {}
+        _is_ascending{sorted_by == SortMode::AscendingNullsFirst} {}
 
   // For SortedSegmentBetweenSearch
   SortedSegmentSearch(IteratorType begin, IteratorType end, const SortMode& sorted_by, const bool nullable,
@@ -39,7 +39,7 @@ class SortedSegmentSearch {
         _first_search_value{left_value},
         _second_search_value{right_value},
         _nullable{nullable},
-        _is_ascending{sorted_by == SortMode::Ascending} {}
+        _is_ascending{sorted_by == SortMode::AscendingNullsFirst} {}
 
   void scan_sorted_segment(const ChunkID chunk_id, RowIDPosList& matches,
                            const std::shared_ptr<const AbstractPosList>& position_filter) {
