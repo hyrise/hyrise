@@ -156,7 +156,7 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::AscendingNullsFirst},
+    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::AscendingNullsFirst},  // NOLINT(whitespace/line_length)
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
   // clang-format on
@@ -1041,7 +1041,7 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjection) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::AscendingNullsFirst},
+  SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::AscendingNullsFirst},  // NOLINT(whitespace/line_length)
     AggregateNode::make(expression_vector(add_(int_float_a, int_float_b)), expression_vector(),
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
