@@ -214,7 +214,7 @@ enum class SetOperationMode { Unique, All, Positions };
 
 // According to the SQL standard, the position of NULLs is implementation-defined. In Hyrise, NULLs come before all
 // values, both for ascending and descending sorts. See sort.cpp for details.
-enum class SortMode { Ascending, Descending };
+enum class SortMode { AscendingNullsFirst, DescendingNullsFirst, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
 
@@ -241,7 +241,7 @@ enum class EraseTypes { OnlyInDebugBuild, Always };
 
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
-  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::Ascending)
+  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::AscendingNullsFirst)
       : column(init_column), sort_mode(init_sort_mode) {}
 
   ColumnID column;

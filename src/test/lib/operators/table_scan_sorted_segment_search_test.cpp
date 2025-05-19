@@ -41,7 +41,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
     _nullable = null_value_usage != NullValueUsage::WithoutNulls;
     _all_values_null = null_value_usage == NullValueUsage::OnlyNulls;
 
-    const bool ascending = _sorted_by == SortMode::Ascending;
+    const bool ascending = _sorted_by == SortMode::AscendingNullsFirst;
 
     if (!ascending) {
       std::reverse(_expected.begin(), _expected.end());
@@ -155,7 +155,7 @@ INSTANTIATE_TEST_SUITE_P(
             TestData{"BetweenUpperExclusiveAboveRange", PredicateCondition::BetweenUpperExclusive, 5, 10, {}},
             TestData{"BetweenUpperExclusiveBelowRange", PredicateCondition::BetweenUpperExclusive, -5, 0, {}}),
 
-        ::testing::Values(SortMode::Ascending, SortMode::Descending),
+        ::testing::Values(SortMode::AscendingNullsFirst, SortMode::DescendingNullsFirst),
         ::testing::Values(NullValueUsage::WithoutNulls, NullValueUsage::WithNulls, NullValueUsage::OnlyNulls)),
     table_scan_sorted_segment_search_test_formatter);
 

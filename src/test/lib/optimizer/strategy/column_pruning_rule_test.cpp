@@ -58,7 +58,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
     PredicateNode::make(greater_than_(5, c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, a),
         node_abc,
-        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::Ascending},
+        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::AscendingNullsFirst},
           node_uvw))))->deep_copy();
   // clang-format on
 
@@ -72,7 +72,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
     PredicateNode::make(greater_than_(5, pruned_c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, pruned_a),
         pruned_node_abc,
-        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::Ascending},
+        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::AscendingNullsFirst},
           node_uvw))));
   // clang-format on
 
@@ -395,8 +395,8 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
   // Do not prune away the window function argument, the PARTITION BY columns, and the ORDER BY columns.
   auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                             FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window = window_(expression_vector(a), expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
-                              std::move(frame_description));
+  const auto window = window_(expression_vector(a), expression_vector(b),
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame_description));
 
   // clang-format off
   _lqp =
@@ -412,8 +412,8 @@ TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
   // Do not prune away the window the PARTITION BY columns and the ORDER BY columns, but prune additional columns.
   auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                             FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window = window_(expression_vector(a), expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
-                              std::move(frame_description));
+  const auto window = window_(expression_vector(a), expression_vector(b),
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame_description));
 
   // clang-format off
   _lqp =

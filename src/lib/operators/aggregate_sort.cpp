@@ -41,7 +41,7 @@ std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<cons
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   sort_definitions.reserve(column_ids.size());
   for (const auto& column_id : column_ids) {
-    sort_definitions.emplace_back(column_id, SortMode::Ascending);
+    sort_definitions.emplace_back(column_id, SortMode::AscendingNullsFirst);
   }
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
