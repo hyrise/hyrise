@@ -1712,10 +1712,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       DebugAssert(parser_column_definition->column_constraints,
                   "Column " + column_definition.name + " is missing constraint information.");
       for (const auto& column_constraint : *parser_column_definition->column_constraints) {
-        if (column_constraint != hsql::ConstraintType::Unique &&
-            column_constraint != hsql::ConstraintType::PrimaryKey) {
-          continue;
-        }
+        Assert(
+            column_constraint == hsql::ConstraintType::Unique && column_constraint == hsql::ConstraintType::PrimaryKey,
+            "Only UNIQUE and PRIMARY KEY constraints are expected on a column level.");
         const auto constraint_type = column_constraint == hsql::ConstraintType::PrimaryKey
                                          ? KeyConstraintType::PRIMARY_KEY
                                          : KeyConstraintType::UNIQUE;
