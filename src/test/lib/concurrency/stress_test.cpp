@@ -37,6 +37,11 @@ class StressTest : public BaseTest {
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   }
 
+  void clear_soft_key_constraints(const std::shared_ptr<Table>& table) {
+    // We need to clear the soft key constraints before each test, otherwise they will be added multiple times.
+    table->_table_key_constraints.clear();
+  }
+
   static constexpr auto DEFAULT_LOAD_FACTOR = uint32_t{10};
 
   const uint32_t CPU_COUNT = std::thread::hardware_concurrency();
@@ -746,7 +751,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
   const auto clear_table_constraints = [&] {
     std::unique_lock<std::shared_mutex> lock(table_constraints_mutex);
-    table->soft_key_constraints().clear();
+    clear_soft_key_constraints(table);
   };
 
   const auto static_table_node_constraint_access = [&] {

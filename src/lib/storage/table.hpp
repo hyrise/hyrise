@@ -42,6 +42,7 @@ class TableStatistics;
 class Table : private Noncopyable {
   friend class StorageTableTest;
   friend class UccDiscoveryPlugin;
+  friend class StressTest;
 
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
