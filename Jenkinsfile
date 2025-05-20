@@ -361,25 +361,17 @@ try {
                 Utils.markStageSkippedForConditional("tpchQueryPlans")
               }
             }
-          }, tpcdsQueryPlans: {
-            stage("tpcdsQueryPlans") {
+          }, tpcdsQueryPlansAndVerification: {
+            stage("tpcdsQueryPlansAndVerification") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
                 archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
               } else {
                 Utils.markStageSkippedForConditional("tpcdsQueryPlans")
               }
             }
-          }, tpcdsVerification: {
-            stage("tpcdsVerification") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "./clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --verify"
-              } else {
-                Utils.markStageSkippedForConditional("tpcdsVerification")
-              }
-            }
-          },jobQueryPlans: {
+          }, jobQueryPlans: {
             stage("jobQueryPlans") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // In contrast to TPC-H and TPC-DS above, we execute the JoinOrderBenchmark from the project's root directoy because its setup script requires us to do so.
@@ -451,13 +443,13 @@ try {
             // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
             // only build release with LTO on the ARM machine.
-            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${ninja} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
-            sh "cd clang-debug && ninja"
-            sh "./clang-debug/hyriseTest"
-            sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
-            sh "./scripts/test/hyriseConsole_test.py clang-debug"
-            sh "./scripts/test/hyriseServer_test.py clang-debug"
-            sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+            sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
+            sh "cd clang-release && ninja"
+            sh "./clang-release/hyriseTest"
+            sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
+            sh "./scripts/test/hyriseConsole_test.py clang-release"
+            sh "./scripts/test/hyriseServer_test.py clang-release"
+            sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
           } finally {
             sh "ls -A1 | xargs rm -rf"
           }
@@ -487,18 +479,18 @@ try {
             // Build Hyrise (Debug) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests.
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} ${unity} ${no_lto} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang++ .."
-            sh "cd clang-release && ninja"
+            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${unity} ${no_lto} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang++ .."
+            sh "cd clang-debug && ninja"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
             // executes x86 binaries on arm.
-            sh "file ./clang-release/hyriseTest | grep arm64"
+            sh "file ./clang-debug/hyriseTest | grep arm64"
 
-            sh "./clang-release/hyriseTest"
-            sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
-            sh "./scripts/test/hyriseConsole_test.py clang-release"
-            sh "./scripts/test/hyriseServer_test.py clang-release"
-            sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+            sh "./clang-debug/hyriseTest"
+            sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
+            sh "./scripts/test/hyriseConsole_test.py clang-debug"
+            sh "./scripts/test/hyriseServer_test.py clang-debug"
+            sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
           } finally {
             sh "ls -A1 | xargs rm -rf"
           }

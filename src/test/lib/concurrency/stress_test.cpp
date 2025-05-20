@@ -32,7 +32,7 @@ class StressTest : public BaseTest {
 
   static constexpr auto DEFAULT_LOAD_FACTOR = uint32_t{10};
 
-  const uint32_t CPU_COUNT = std::thread::hardware_concurrency();
+  const uint32_t CPU_COUNT = std::min(std::thread::hardware_concurrency(), uint32_t{32});
   const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
       {CPU_COUNT}, {CPU_COUNT, 0, 0}, {0, CPU_COUNT, 0}, {0, 0, CPU_COUNT}};
 
