@@ -37,7 +37,6 @@
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/atomic_max.hpp"
 #include "utils/performance_warning.hpp"
 #include "value_segment.hpp"
 

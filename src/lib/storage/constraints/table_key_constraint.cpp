@@ -45,7 +45,7 @@ TableKeyConstraint& TableKeyConstraint::operator=(const TableKeyConstraint& othe
 }
 
 TableKeyConstraint::TableKeyConstraint(TableKeyConstraint&& other) noexcept
-    : AbstractTableConstraint(std::move(other)),
+    : AbstractTableConstraint(other.type()),
       _columns{std::move(other._columns)},
       _key_type{other._key_type},
       _last_validated_on{other._last_validated_on.load()},
@@ -53,7 +53,6 @@ TableKeyConstraint::TableKeyConstraint(TableKeyConstraint&& other) noexcept
 
 TableKeyConstraint& TableKeyConstraint::operator=(TableKeyConstraint&& other) noexcept {
   if (this != &other) {
-    AbstractTableConstraint::operator=(std::move(other));
     _columns = std::move(other._columns);
     _key_type = other._key_type;
     _last_validated_on.store(other._last_validated_on.load());
