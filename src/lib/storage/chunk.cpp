@@ -14,9 +14,11 @@
 #include "all_type_variant.hpp"
 #include "base_value_segment.hpp"
 #include "index/abstract_chunk_index.hpp"
-#include "reference_segment.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/index/chunk_index_type.hpp"
 #include "storage/mvcc_data.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -329,6 +331,16 @@ void Chunk::try_set_immutable() {
     // We were the first ones to mark the chunk as immutable. Thus, we have to take care of anything else that needs to
     // be done. In the future, this can mean to start background statistics generation, encoding, etc.
     Assert(success, "Value exchanged but value was actually false.");
+    const auto& encoded_chunk = shared_from_this();
+    const auto encoding_task = std::make_shared<JobTask>([=]() {
+      const auto column_count = encoded_chunk->column_count();
+      auto data_types = std::vector<DataType>(column_count);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        data_types[column_id] = encoded_chunk->get_segment(column_id)->data_type();
+      }
+      ChunkEncoder::encode_chunk(encoded_chunk, data_types);
+    });
+    encoding_task->schedule();
   } else {
     // Another thread is about to mark this chunk as immutable. Do nothing.
     Assert(!success, "Value not exchanged but value was actually true.");

@@ -19,6 +19,7 @@
 #include "import_export/csv/csv_converter.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
@@ -100,7 +101,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     tasks.back()->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(tasks);
+  AbstractScheduler::wait_for_tasks(tasks);
 
   for (auto& segments : segments_by_chunks) {
     DebugAssert(!segments.empty(), "Empty chunks shouldn't occur when importing CSV");
