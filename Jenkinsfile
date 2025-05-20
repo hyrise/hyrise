@@ -368,7 +368,7 @@ try {
                 archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
               } else {
-                Utils.markStageSkippedForConditional("tpcdsQueryPlans")
+                Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
               }
             }
           }, jobQueryPlans: {
@@ -443,7 +443,7 @@ try {
             // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
             // only build release with LTO on the ARM machine.
-            sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
+            sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} ${unity} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
             sh "cd clang-release && ninja"
             sh "./clang-release/hyriseTest"
             sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
@@ -479,7 +479,7 @@ try {
             // Build Hyrise (Debug) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests.
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${unity} ${no_lto} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang++ .."
+            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang++ .."
             sh "cd clang-debug && ninja"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
