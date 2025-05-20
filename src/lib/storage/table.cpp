@@ -460,7 +460,7 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
   }
 }
 
-TableKeyConstraints& Table::soft_key_constraints() const {
+const TableKeyConstraints& Table::soft_key_constraints() const {
   return _table_key_constraints;
 }
 
@@ -501,12 +501,7 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
            "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
   auto [existing_constraint, inserted] = _table_key_constraints.insert(table_key_constraint);
-
-  if (!inserted) {
-    // If the constraint was inserted, we need to set the last_validated_on and last_invalidated_on values.
-    set_atomic_max(existing_constraint->last_validated_on(), table_key_constraint.last_validated_on().load());
-    set_atomic_max(existing_constraint->last_invalidated_on(), table_key_constraint.last_invalidated_on().load());
-  }
+  Assert(inserted, "TableKeyConstraint has already been set.");
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {

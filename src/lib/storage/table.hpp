@@ -28,6 +28,7 @@
 #include "storage/mvcc_data.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
+#include "ucc_discovery_plugin.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -40,6 +41,7 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
   friend class StorageTableTest;
+  friend class UccDiscoveryPlugin;
 
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
@@ -212,12 +214,11 @@ class Table : private Noncopyable {
 
   /**
    * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules. We call them "soft"
-   * constraints to draw attention to that. If a constraint is added that is already existing, we update the existing
-   * constraint.
+   * constraints to draw attention to that. If `table_constraint` is already in the table constraints, we will fail.
    */
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
-  TableKeyConstraints& soft_key_constraints() const;
+  const TableKeyConstraints& soft_key_constraints() const;
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
   const ForeignKeyConstraints& referenced_foreign_key_constraints() const;
@@ -277,7 +278,7 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>> _chunks;
 
-  mutable TableKeyConstraints _table_key_constraints;
+  TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _table_order_constraints;
   ForeignKeyConstraints _foreign_key_constraints;
 

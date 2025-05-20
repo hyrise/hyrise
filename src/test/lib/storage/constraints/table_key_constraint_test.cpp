@@ -85,7 +85,8 @@ TEST_F(TableKeyConstraintTest, AddKeyConstraintsInvalid) {
                std::logic_error);
 
   // Invalid because key constraints for the given column sets already exist.
-  EXPECT_NO_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE}));
+  EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE}),
+               std::logic_error);
   EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
   EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE}),

@@ -29,48 +29,18 @@ class TableKeyConstraint final : public AbstractTableConstraint {
                      const CommitID last_validated_on = CommitID{0}, const CommitID last_invalidated = MAX_COMMIT_ID);
   TableKeyConstraint() = delete;
 
-  TableKeyConstraint(const TableKeyConstraint& other)
-      : AbstractTableConstraint(other),
-        _columns{other._columns},
-        _key_type{other._key_type},
-        _last_validated_on{other._last_validated_on.load()},
-        _last_invalidated_on{other._last_invalidated_on.load()} {}
+  TableKeyConstraint(const TableKeyConstraint& other);
+  TableKeyConstraint& operator=(const TableKeyConstraint& other);
 
-  TableKeyConstraint& operator=(const TableKeyConstraint& other) {
-    if (this != &other) {
-      AbstractTableConstraint::operator=(other);
-      _columns = other._columns;
-      _key_type = other._key_type;
-      _last_validated_on.store(other._last_validated_on.load());
-      _last_invalidated_on.store(other._last_invalidated_on.load());
-    }
-    return *this;
-  }
-
-  TableKeyConstraint(TableKeyConstraint&& other) noexcept
-      : AbstractTableConstraint(std::move(other)),
-        _columns{std::move(other._columns)},
-        _key_type{other._key_type},
-        _last_validated_on{other._last_validated_on.load()},
-        _last_invalidated_on{other._last_invalidated_on.load()} {}
-
-  TableKeyConstraint& operator=(TableKeyConstraint&& other) noexcept {
-    if (this != &other) {
-      AbstractTableConstraint::operator=(std::move(other));
-      _columns = std::move(other._columns);
-      _key_type = other._key_type;
-      _last_validated_on.store(other._last_validated_on.load());
-      _last_invalidated_on.store(other._last_invalidated_on.load());
-    }
-    return *this;
-  }
+  TableKeyConstraint(TableKeyConstraint&& other) noexcept;
+  TableKeyConstraint& operator=(TableKeyConstraint&& other) noexcept;
 
   const std::set<ColumnID>& columns() const;
 
   KeyConstraintType key_type() const;
 
-  std::atomic<CommitID>& last_validated_on() const;
-  std::atomic<CommitID>& last_invalidated_on() const;
+  CommitID last_validated_on() const;
+  CommitID last_invalidated_on() const;
 
   /**
    * Returns whether or not this key constraint can become invalid if the table data changes. This is false for constraints specified
@@ -109,15 +79,17 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   /**
    * Commit ID of the snapshot this constraint was last validated on. Note that the constraint will still be valid
    * during transactions with larger commit IDs if the table this constraint belongs to has not been modified since.
+   * (Only insertions pose a problem, as deletions do not invalidate the constraint.)
    */
   mutable std::atomic<CommitID> _last_validated_on;
-  // The first element indicates if the constraint was invalid before, the second when it was.
+  /**
+   * Commit ID of the snapshot this constraint was last invalidated on. Similarly, as above, this constraint will still
+   * be invalid during transactions with larger commit IDs if only insertions have been performed since the last CID. 
+   */
   mutable std::atomic<CommitID> _last_invalidated_on;
 };
 
 using TableKeyConstraints = tbb::concurrent_unordered_set<TableKeyConstraint>;
-
-std::size_t hash_value(const hyrise::TableKeyConstraint& table_key_constraint);
 
 }  // namespace hyrise
 

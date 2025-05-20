@@ -86,12 +86,13 @@ bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 size_t StaticTableNode::_on_shallow_hash() const {
-  auto hash = size_t{0};
+  auto hash = boost::hash_value(table->column_definitions().size());
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
-  // We do not hash all key constraints because the cost of hashing outweights the benefit of less collisions.
-  return std::hash<size_t>{}(hash);
+  // We do not hash all key constraints because the cost of hashing outweights the benefit of less collisions. In the
+  // case of collisions `_on_shallow_equals` will be called anyway.
+  return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
