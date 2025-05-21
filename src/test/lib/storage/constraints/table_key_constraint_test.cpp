@@ -1,4 +1,5 @@
 #include <stdexcept>
+
 #include "base_test.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
@@ -92,7 +93,8 @@ TEST_F(TableKeyConstraintTest, AddKeyConstraintsInvalid) {
                std::logic_error);
   EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE}),
                std::logic_error);
-  EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE}), std::logic_error);
+  EXPECT_THROW(_table->add_soft_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE}),
+               std::logic_error);
 }
 
 TEST_F(TableKeyConstraintTest, Equals) {
