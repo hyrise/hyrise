@@ -514,6 +514,8 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     thread.join();
   }
 
+  Hyrise::get().scheduler()->wait_for_all_tasks();
+
   // Each iteration of a thread inserts two rows, which are stored in chunks with a target size of 3.
   const auto inserted_rows = insert_count * thread_count * 2;
   const auto expected_chunks = static_cast<ChunkID::base_type>(std::ceil(static_cast<double>(inserted_rows) / 3.0));
