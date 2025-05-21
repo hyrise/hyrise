@@ -55,7 +55,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
       if (Hyrise::get().storage_manager.has_table(_tablename)) {
         if (std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
           std::cerr << "Warning: Ignoring " << filename << CsvMeta::META_FILE_EXTENSION << " because table "
-                    << _tablename << "already exists.\n";
+                    << _tablename << " already exists.\n";
         }
 
         const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
@@ -113,13 +113,14 @@ std::shared_ptr<const Table> Import::_on_execute() {
   if (Hyrise::get().storage_manager.has_table(_tablename)) {
     const auto existing_table = Hyrise::get().storage_manager.get_table(_tablename);
     const auto append_lock = existing_table->acquire_append_mutex();
-    if (existing_table->last_chunk()->is_mutable()) {
+    if (existing_table->chunk_count() > 0 && existing_table->last_chunk()->is_mutable()) {
       existing_table->last_chunk()->set_immutable();
     }
 
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      existing_table->append_chunk(table->get_chunk(chunk_id)->get_segments());
+      const auto chunk = table->get_chunk(chunk_id);
+      existing_table->append_chunk(chunk->get_segments(), chunk->mvcc_data());
     }
   } else {
     // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
