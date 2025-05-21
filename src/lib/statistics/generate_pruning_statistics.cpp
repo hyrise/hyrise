@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <boost/sort/pdqsort/pdqsort.hpp>
+
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
