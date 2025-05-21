@@ -19,7 +19,6 @@
 #include "import_export/csv/csv_converter.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"

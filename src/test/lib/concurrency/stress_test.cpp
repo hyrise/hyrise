@@ -15,6 +15,8 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/base_dictionary_segment.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -529,10 +531,13 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     ASSERT_TRUE(chunk);
     EXPECT_EQ(chunk->size(), 3);
     EXPECT_FALSE(chunk->is_mutable());
+    // Immutable chunks should be encoded, currently with dictionary encoding.
+    EXPECT_TRUE(std::static_pointer_cast<BaseDictionarySegment>(chunk->get_segment(ColumnID{0})));
   }
 
   EXPECT_EQ(table->last_chunk()->size(), 2);
   EXPECT_TRUE(table->last_chunk()->is_mutable());
+  EXPECT_TRUE(std::static_pointer_cast<BaseValueSegment>(table->last_chunk()->get_segment(ColumnID{0})));
 }
 
 // Consuming operators register at their inputs and deregister when they are executed. Thus, operators can clear

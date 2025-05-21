@@ -35,7 +35,7 @@ using ChunkPruningStatistics = std::vector<std::shared_ptr<const BaseAttributeSt
  *
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/chunk-concept
  */
-class Chunk : private Noncopyable, public std::enable_shared_from_this<Chunk> {
+class Chunk : private Noncopyable {
  public:
   // This is the architecture-defined limit on the size of a single chunk. The last chunk offset is reserved for NULL
   // as used in ReferenceSegments.
