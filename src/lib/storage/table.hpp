@@ -6,9 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <shared_mutex>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include <boost/variant/get.hpp>
@@ -28,7 +26,6 @@
 #include "storage/mvcc_data.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
-#include "ucc_discovery_plugin.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

@@ -495,8 +495,7 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
 
     // Ensure there is only one key constraint per column(s). Theoretically, there could be two unique constraints
     // {a, b} and {b, c}, but for now we prohibit these cases.
-    Assert((existing_constraint.columns().size() == 1 && table_key_constraint.columns().size() == 1) ||
-               !columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
+    Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
   auto [existing_constraint, inserted] = _table_key_constraints.insert(table_key_constraint);

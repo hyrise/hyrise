@@ -1,10 +1,10 @@
 #pragma once
 
-#include <tbb/concurrent_unordered_set.h>
-
 #include <set>
 #include <unordered_set>
 #include <utility>
+
+#include <oneapi/tbb/concurrent_unordered_set.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "abstract_table_constraint.hpp"
 #include "types.hpp"

@@ -1,7 +1,10 @@
+#include <gtest/gtest.h>
+
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <future>
+#include <mutex>
 #include <numeric>
 #include <optional>
 #include <shared_mutex>
@@ -11,7 +14,7 @@
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/static_table_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/insert.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
@@ -19,6 +22,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -708,79 +712,89 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
 }
 
 /**
- * Test that adding and modifying a the TableKeyConstraints of a table concurrently does not lead to 
- * deadlocks or inconsistencies (e.g. duplicate constraints).
+ * Test that adding and modifying the TableKeyConstraints of a table concurrently does not lead to 
+ * deadlocks or inconsistencies (e.g., duplicate constraints).
  */
 TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
-  // Create a table with multiple TableKeyConstraints
+  // Create a table with multiple TableKeyConstraints.
   auto table = std::make_shared<Table>(
       TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}},
       TableType::Data, std::nullopt, UseMvcc::Yes);
-  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+  primary_key_constraint(table, {"a"});
 
   table->append({1, 1, 1});
   table->append({2, 2, 2});
   table->append({3, 3, 1});
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
-
-  /** Run multiple modifications and additions concurrently that could potentially lead to race conditions:
+  /** This tests runs insertions and reads concurrently. Specifically, it tests the following functions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`
-   * - `StaticTableNode::unique_column_combinations`
-   * - `Table::soft_key_constraints().clear()` to force a revalidation of the constraints. This does not happen in
-   * production, but we want to test the concurrent insertion of constraints.
-   * NOTE: We do not execute `Table::add_soft_constraint` because we do not have the knowledge whether or not the
-   * constraint already exists.
+   * - `StoredTableNode::unique_column_combinations`
+   * In order to simulate insertions parallel to the reads, we have to clear the constraints in the table. As this is
+   * only needed for the test, we can use a mutex to ensure that this does not happen in parallel.
    */
 
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
   auto& pm = Hyrise::get().plugin_manager;
-  std::shared_mutex table_constraints_mutex;
 
   pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+
+  auto deletion_mutext = std::shared_mutex{};
+
+  auto start_flag = std::atomic_flag{};
+  auto stop_flag = std::atomic_flag{};
+
+  const auto VALIDATION_COUNT = uint32_t{100};
+  const auto SLEEP_TIME = std::chrono::milliseconds{1};
+
   const auto validate_constraint = [&] {
-    std::shared_lock<std::shared_mutex> lock(table_constraints_mutex);
-    // Populate the plan cache.
-    const std::string sql = "SELECT b,c FROM dummy_table GROUP BY b,c;";
-    auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
-    pipeline.get_result_table();
+    start_flag.wait(false);
+    for (auto i = uint32_t{0}; i < VALIDATION_COUNT; ++i) {
+      // Populate the plan cache.
+      const auto sql = std::string{"SELECT b,c FROM dummy_table GROUP BY b,c;"};
+      auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+      pipeline.get_result_table();
 
-    pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+      pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+
+      std::this_thread::sleep_for(SLEEP_TIME);
+
+      const auto lock = std::unique_lock{deletion_mutext};
+      clear_soft_key_constraints(table);
+    }
   };
 
-  const auto clear_table_constraints = [&] {
-    std::unique_lock<std::shared_mutex> lock(table_constraints_mutex);
-    clear_soft_key_constraints(table);
-  };
-
-  const auto static_table_node_constraint_access = [&] {
-    std::shared_lock<std::shared_mutex> lock(table_constraints_mutex);
-    const auto static_table_node = StaticTableNode::make(table);
-    // Simply access the unique column combinations to require a `shared_lock`.
-    static_table_node->unique_column_combinations();
+  const auto stored_table_node_constraint_access = [&] {
+    start_flag.wait(false);
+    while (!stop_flag.test()) {
+      const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
+      // Access the unique column combinations. We need to lock here because `unique_column_combinations` uses a
+      // reference to iterate over the constraints. This reference is invalidated when the constraints are cleared.
+      const auto lock = std::shared_lock{deletion_mutext};
+      ASSERT_LE(stored_table_node->unique_column_combinations().size(), 3);
+    }
   };
 
   // Start running the different modifications in parallel
-  const auto thread_count = 100;
+  const auto thread_count = 10;
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
 
   for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
-    switch (thread_id % 3) {
-      case 0:
-        threads.emplace_back(static_table_node_constraint_access);
-        break;
-      case 1:
-        threads.emplace_back(validate_constraint);
-        break;
-      case 2:
-        threads.emplace_back(clear_table_constraints);
-        break;
-      default:
-        break;
-    }
+    threads.emplace_back(stored_table_node_constraint_access);
   }
+
+  // The constraint validation is run in a single thread as it is not needed to be run in parallel.
+  auto validation_thread = std::thread(validate_constraint);
+
+  start_flag.test_and_set();
+  start_flag.notify_all();
+
+  validation_thread.join();
+
+  stop_flag.test_and_set();
+  stop_flag.notify_all();
 
   for (auto& thread : threads) {
     thread.join();
