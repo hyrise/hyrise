@@ -23,7 +23,6 @@
 #include "scheduler/task_queue.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/constraints/constraint_utils.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -712,7 +711,7 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
 }
 
 /**
- * Test that adding and modifying the TableKeyConstraints of a table concurrently does not lead to 
+ * Test that adding and accessing the TableKeyConstraints of a table concurrently does not lead to 
  * deadlocks or inconsistencies (e.g., duplicate constraints).
  */
 TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
@@ -727,7 +726,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   table->append({3, 3, 1});
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
-  /** This tests runs insertions and reads concurrently. Specifically, it tests the following functions:
+  /** This test runs insertions and reads concurrently. Specifically, it tests the following functions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`
    * - `StoredTableNode::unique_column_combinations`
    * In order to simulate insertions parallel to the reads, we have to clear the constraints in the table. As this is
@@ -776,7 +775,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
     }
   };
 
-  // Start running the different modifications in parallel
+  // Start running the different modifications in parallel.
   const auto thread_count = 10;
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
