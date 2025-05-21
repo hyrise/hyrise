@@ -86,10 +86,8 @@ bool key_constraint_is_confidently_valid(const std::shared_ptr<Table>& table,
   }
 
   const auto last_validated_on = table_key_constraint.last_validated_on();
-  const auto last_invalidated_on = table_key_constraint.last_invalidated_on();
 
-  if (last_validated_on == MAX_COMMIT_ID ||
-      (last_invalidated_on != MAX_COMMIT_ID && last_validated_on < last_invalidated_on)) {
+  if (!table_key_constraint.is_valid()) {
     return false;
   }
 
@@ -113,7 +111,7 @@ bool key_constraint_is_confidently_valid(const std::shared_ptr<Table>& table,
 bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
                                            const TableKeyConstraint& table_key_constraint) {
   const auto last_invalidated_on = table_key_constraint.last_invalidated_on();
-  if (last_invalidated_on == MAX_COMMIT_ID) {
+  if (table_key_constraint.is_valid()) {
     return false;
   }
 

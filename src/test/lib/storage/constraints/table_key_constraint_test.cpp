@@ -178,8 +178,10 @@ TEST_F(TableKeyConstraintTest, OrderIndependence) {
 }
 
 TEST_F(TableKeyConstraintTest, CanBecomeInvalid) {
-  const auto key_constraint_invalid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID};
-  const auto key_constraint_valid = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_invalid =
+      TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}, CommitID{0}};
+  const auto key_constraint_valid =
+      TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID, MAX_COMMIT_ID};
 
   EXPECT_TRUE(key_constraint_invalid.can_become_invalid());
   EXPECT_FALSE(key_constraint_valid.can_become_invalid());

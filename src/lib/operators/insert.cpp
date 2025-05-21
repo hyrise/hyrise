@@ -285,8 +285,8 @@ void Insert::_on_rollback_records() {
          ++chunk_offset) {
       // We use a strong sequential memory ordering here to be on the safe side. If rollbacks become a performance
       // bottleneck, the memory order should be revisited.
-      mvcc_data->set_end_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
-      mvcc_data->set_begin_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
+      mvcc_data->set_end_cid(chunk_offset, ETERNAL_COMMIT_ID, std::memory_order_seq_cst);
+      mvcc_data->set_begin_cid(chunk_offset, ETERNAL_COMMIT_ID, std::memory_order_seq_cst);
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_seq_cst);
       // Update chunk statistics.
       target_chunk->increase_invalid_row_count(ChunkOffset{1}, std::memory_order_seq_cst);

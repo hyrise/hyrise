@@ -139,7 +139,7 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
         _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
 
-  const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
+  const auto mvcc_data = std::make_shared<MvccData>(row_count, ETERNAL_COMMIT_ID);
   table->append_chunk(output_segments, mvcc_data);
   table->last_chunk()->set_immutable();
   if (num_sorted_columns > 0) {

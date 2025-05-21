@@ -26,7 +26,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
    * violating the set semantics of the constraint.
    */
   TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
-                     const CommitID last_validated_on = CommitID{0}, const CommitID last_invalidated = MAX_COMMIT_ID);
+                     const CommitID last_validated_on = MAX_COMMIT_ID, const CommitID last_invalidated = MAX_COMMIT_ID);
   TableKeyConstraint() = delete;
 
   TableKeyConstraint(const TableKeyConstraint& other);

@@ -70,14 +70,15 @@ KeyConstraintType TableKeyConstraint::key_type() const {
 }
 
 bool TableKeyConstraint::can_become_invalid() const {
-  return _last_validated_on.load() != 0;
+  return _last_validated_on.load() != MAX_COMMIT_ID;
 }
 
 bool TableKeyConstraint::is_valid() const {
   const auto last_invalidated = _last_invalidated_on.load();
   const auto last_validated = _last_validated_on.load();
+
   return !can_become_invalid() || last_invalidated == MAX_COMMIT_ID ||
-         (last_validated != MAX_COMMIT_ID && last_invalidated >= last_validated);
+         (last_validated != MAX_COMMIT_ID && last_validated > last_invalidated);
 }
 
 CommitID TableKeyConstraint::last_validated_on() const {
