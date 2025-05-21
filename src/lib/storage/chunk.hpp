@@ -78,6 +78,7 @@ class Chunk : private Noncopyable {
    *       call `get_segment again`, be aware that the returned object might have changed.
    */
   std::shared_ptr<AbstractSegment> get_segment(ColumnID column_id) const;
+  const Segments& get_segments() const;
 
   bool has_mvcc_data() const;
 

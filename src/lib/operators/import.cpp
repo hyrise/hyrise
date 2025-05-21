@@ -51,13 +51,13 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   switch (_file_type) {
     case FileType::Csv: {
-      Assert(!(Hyrise::get().storage_manager.has_table(_tablename) &&
-               std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)),
-             "Cannot load table from csv, table definition source is ambiguous. The table already exists in DBMS and "
-             "there is a meta file next to .csv file");
-
       auto csv_meta = CsvMeta{};
       if (Hyrise::get().storage_manager.has_table(_tablename)) {
+        if (std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
+          std::cerr << "Warning: Ignoring " << filename << CsvMeta::META_FILE_EXTENSION << " because table "
+                    << _tablename << "already exists.\n";
+        }
+
         const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
         const auto column_count = column_definitions.size();
 
@@ -89,10 +89,6 @@ std::shared_ptr<const Table> Import::_on_execute() {
     }
   }
 
-  if (Hyrise::get().storage_manager.has_table(_tablename)) {
-    Hyrise::get().storage_manager.drop_table(_tablename);
-  }
-
   // If a table encoding is specified, encode the table accordingly. The default encoding is
   // `EncodingType::Dictionary`, except for binary files. For binary files, the default is the encoding of the file.
   if (_target_encoding || _file_type != FileType::Binary) {
@@ -114,9 +110,22 @@ std::shared_ptr<const Table> Import::_on_execute() {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
-  // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
-  // and their creation benefits from dictionary encoding, we add the tables after they are encoded.
-  Hyrise::get().storage_manager.add_table(_tablename, table);
+  if (Hyrise::get().storage_manager.has_table(_tablename)) {
+    const auto existing_table = Hyrise::get().storage_manager.get_table(_tablename);
+    const auto append_lock = existing_table->acquire_append_mutex();
+    if (existing_table->last_chunk()->is_mutable()) {
+      existing_table->last_chunk()->set_immutable();
+    }
+
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      existing_table->append_chunk(table->get_chunk(chunk_id)->get_segments());
+    }
+  } else {
+    // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
+    // and their creation benefits from dictionary encoding, we add the tables after they are encoded.
+    Hyrise::get().storage_manager.add_table(_tablename, table);
+  }
 
   // We must match ImportNode::output_expressions.
   return nullptr;

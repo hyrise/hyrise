@@ -16,8 +16,8 @@ namespace hyrise {
  * This operator reads a file, creates a table from that input and adds it to the storage manager.
  * Supported file types are .tbl, .csv and Hyrise .bin files.
  * For .csv files, a CSV config is additionally required (if no table with the same name exists as a template).
- * The operator looks for this content in the file <filename>.json.
- * If a table with this filename already exists, it is dropped (not appended as done in Postgres).
+ * The operator looks for this content in the file <filename>.json if the table does not exist.
+ * If a table with this filename already exists, it uses it as the ground truth for meta information and appends.
  * Documentation of the file formats can be found in BinaryWriter and CsvWriter header files.
  */
 class Import : public AbstractReadOnlyOperator {

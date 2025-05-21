@@ -222,26 +222,29 @@ TEST_F(OperatorsImportTest, RetrieveCsvMetaFromEmptyTable) {
 
 TEST_F(OperatorsImportTest, RetrieveCsvMetaFromTable) {
   auto existing_table = CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json");
-  existing_table->append({10.1f});
-
-  Hyrise::get().storage_manager.add_table("a", existing_table);
-
-  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
-  auto importer = std::make_shared<Import>("resources/test_data/csv/float_without_json_meta.csv", "a");
-  importer->execute();
-
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
-}
-
-TEST_F(OperatorsImportTest, ThrowExceptionWithMultipleMetaSources) {
-  auto existing_table = CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json");
 
   Hyrise::get().storage_manager.add_table("a", existing_table);
 
   auto expected_table = load_table("resources/test_data/tbl/float.tbl");
   auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
+  importer->execute();
 
-  EXPECT_THROW(importer->execute(), std::logic_error);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+}
+
+TEST_F(OperatorsImportTest, AppendToExistingTable) {
+  auto existing_table = load_table("resources/test_data/tbl/float.tbl");
+
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
+  Assert(expected_table->chunk_count() == 1, "Testing code was only written to support one chunk tables");
+  expected_table->append_chunk(expected_table->get_chunk(ChunkID{0})->get_segments());
+
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
 }
 
 TEST_F(OperatorsImportTest, ChunkSize) {
