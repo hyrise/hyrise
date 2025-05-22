@@ -23,7 +23,7 @@ void FixedStringVector::push_back(const pmr_string& string) {
 
   if (_string_length > 0) {
     const auto pos = _chars.size();
-    // Default value of inserted elements using resize is null terminator ('\0')
+    // Default value of inserted elements using resize is null terminator ('\0').
     _chars.resize(_chars.size() + _string_length);
     string.copy(&_chars[pos], string.size());
   }

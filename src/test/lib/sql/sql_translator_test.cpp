@@ -1,5 +1,4 @@
 #include <optional>
-#include <stdexcept>
 
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
@@ -2639,11 +2638,14 @@ TEST_F(SQLTranslatorTest, InvalidConstraints) {
                InvalidInputException);
   // Constraints must not contain unknown columns.
   EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER, UNIQUE(b_int))"), InvalidInputException);
-  // We currently do not support foreign keys and should throw an error.
-  EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER REFERENCES b_table (a_int))"), std::logic_error);
+  // We currently do not support foreign keys. If we want to to so, we must make sure to store them as members of the
+  // table wrapped by the StaticTableNode that is the input of the CreateTableNode, and finally also add them to the
+  // newly created table in the CreateTable operator.
+  EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER REFERENCES b_table (a_int))"),
+               InvalidInputException);
   EXPECT_THROW(
       sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER, FOREIGN KEY (a_int) REFERENCES b_table (a_int))"),
-      std::logic_error);
+      InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
