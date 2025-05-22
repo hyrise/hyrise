@@ -13,6 +13,7 @@
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
@@ -110,8 +111,8 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
            << " has no supported encoding specified and its encoding is automatically selected.\n";
     std::cout << output.str();
 
-    const auto column_is_unique = table->column_is_unique(column_id);
-    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(column_data_type, column_is_unique));
+    const auto segment_values_are_unique = column_is_unique(table, column_id);
+    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(column_data_type, segment_values_are_unique));
   }
 
   /**

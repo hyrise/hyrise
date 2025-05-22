@@ -71,8 +71,6 @@ class Table : private Noncopyable {
   bool column_is_nullable(const ColumnID column_id) const;
   std::vector<bool> columns_are_nullable() const;
 
-  bool column_is_unique(const ColumnID column_id) const;
-
   // Fail()s, if there is no column of that name
   ColumnID column_id_by_name(const std::string& column_name) const;
 

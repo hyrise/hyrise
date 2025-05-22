@@ -36,4 +36,6 @@ void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
 void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std::string>& ordering_columns,
                       const std::vector<std::string>& ordered_columns);
 
+bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id);
+
 }  // namespace hyrise

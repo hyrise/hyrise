@@ -191,24 +191,6 @@ std::vector<bool> Table::columns_are_nullable() const {
   return nullable;
 }
 
-bool Table::column_is_unique(const ColumnID column_id) const {
-  Assert(column_id < _column_definitions.size(), "ColumnID out of range.");
-  for (const auto& key_constraint : soft_key_constraints()) {
-    const auto& key_type = key_constraint.key_type();
-    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
-      continue;
-    }
-
-    for (const auto& constraint_column_id : key_constraint.columns()) {
-      if (constraint_column_id == column_id) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   const auto iter =
       std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
