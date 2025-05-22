@@ -88,6 +88,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
             -Wno-exit-time-destructors
             -Wno-float-equal
             -Wno-global-constructors
+            -Wno-header-hygiene
             -Wno-missing-variable-declarations
             -Wno-missing-prototypes
             -Wno-newline-eof
