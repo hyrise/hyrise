@@ -20,7 +20,8 @@
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 class MvccDeletePluginSystemTest : public BaseTest {
  public:
@@ -45,7 +46,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
       segments.emplace_back(value_segment);
       const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
       _table->append_chunk(segments, mvcc_data);
-
+      _table->last_chunk()->set_immutable();
       begin_value += CHUNK_SIZE;
     }
     Hyrise::get().storage_manager.add_table(_t_name_test, _table);
@@ -67,22 +68,16 @@ class MvccDeletePluginSystemTest : public BaseTest {
       return;
     }
 
-    auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
-
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-
     const auto gt = std::make_shared<GetTable>(_t_name_test);
-    gt->set_transaction_context(transaction_context);
 
     const auto validate = std::make_shared<Validate>(gt);
-    validate->set_transaction_context(transaction_context);
 
-    const auto expr = expression_functional::equals_(column, static_cast<int>(_counter));
-    const auto where = std::make_shared<TableScan>(validate, expr);
-    where->set_transaction_context(transaction_context);
+    const auto column = pqp_column_(ColumnID{0}, DataType::Int, false, "number");
+    const auto where = std::make_shared<TableScan>(validate, equals_(column, static_cast<int>(_counter)));
 
     const auto update = std::make_shared<Update>(_t_name_test, where, where);
-    update->set_transaction_context(transaction_context);
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+    update->set_transaction_context_recursively(transaction_context);
 
     gt->execute();
     validate->execute();
@@ -90,11 +85,11 @@ class MvccDeletePluginSystemTest : public BaseTest {
     update->execute();
 
     if (update->execute_failed()) {
-      // Collided with the plugin rewriting a chunk
+      // Collided with the plugin rewriting a chunk.
       transaction_context->rollback(RollbackReason::Conflict);
     } else {
       transaction_context->commit();
-      _counter++;
+      ++_counter;
     }
   }
 
