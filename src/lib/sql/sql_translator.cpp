@@ -1717,7 +1717,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           continue;
         }
 
-        // We do not support e.g., FOREIGN KEYs yet.
+        // We do not support, e.g., FOREIGN KEYs yet.
         AssertInput(
             column_constraint == hsql::ConstraintType::Unique || column_constraint == hsql::ConstraintType::PrimaryKey,
             "Only UNIQUE and PRIMARY KEY constraints are expected on a column level.");
