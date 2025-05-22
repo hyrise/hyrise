@@ -93,6 +93,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
             -Wno-missing-prototypes
             -Wno-newline-eof
             -Wno-padded
+            -Wno-pass-failed
             -Wno-sign-conversion
             -Wno-switch-default
             -Wno-switch-enum
