@@ -29,9 +29,9 @@ class EncodingConfig {
   DataTypeEncodingMapping type_encoding_mapping;
   TableSegmentEncodingMapping custom_encoding_mapping;
 
-  static SegmentEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
-                                                        const std::string& compression_str);
-  static EncodingType encoding_string_to_type(const std::string& encoding_str);
+  static std::optional<SegmentEncodingSpec> encoding_spec_from_strings(const std::string& encoding_str,
+                                                                       const std::string& compression_str);
+  static std::optional<EncodingType> encoding_string_to_type(const std::string& encoding_str);
   static std::optional<VectorCompressionType> compression_string_to_type(const std::string& compression_str);
 
   nlohmann::json to_json() const;

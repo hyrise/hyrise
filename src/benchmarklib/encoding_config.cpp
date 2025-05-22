@@ -25,18 +25,25 @@ EncodingConfig EncodingConfig::unencoded() {
   return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
 }
 
-SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
-                                                               const std::string& compression_str) {
+std::optional<SegmentEncodingSpec> EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
+                                                                              const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
-  const auto compression = EncodingConfig::compression_string_to_type(compression_str);
+  if (!encoding.has_value()) {
+    return std::nullopt;
+  }
 
-  return compression ? SegmentEncodingSpec{encoding, compression} : SegmentEncodingSpec{encoding};
+  const auto compression = EncodingConfig::compression_string_to_type(compression_str);
+  return SegmentEncodingSpec{*encoding, compression};
 }
 
-EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
+std::optional<EncodingType> EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
+  if (encoding_str == "Automatic") {
+    return std::nullopt;
+  }
+
   const auto type = magic_enum::enum_cast<EncodingType>(encoding_str);
   Assert(type, "Invalid encoding type: '" + encoding_str + "'");
-  return *type;
+  return type;
 }
 
 std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(const std::string& compression_str) {
