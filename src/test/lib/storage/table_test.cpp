@@ -142,7 +142,7 @@ TEST_F(StorageTableTest, FillingUpAChunkSetImmutable) {
   const auto chunk = table->get_chunk(ChunkID{0});
   const auto mvcc_data = chunk->mvcc_data();
   ASSERT_TRUE(mvcc_data);
-  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MAX_COMMIT_ID);
   EXPECT_TRUE(chunk->is_mutable());
 
   table->append({6, "world"});

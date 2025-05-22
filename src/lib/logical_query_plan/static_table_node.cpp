@@ -1,7 +1,6 @@
 #include "static_table_node.hpp"
 
 #include <cstddef>
-#include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -65,7 +64,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
-  const auto table_key_constraints = table->soft_key_constraints();
+  const auto& table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
@@ -86,17 +85,13 @@ bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 size_t StaticTableNode::_on_shallow_hash() const {
-  auto hash = size_t{0};
+  auto hash = boost::hash_value(table->column_definitions().size());
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
-  const auto& soft_key_constraints = table->soft_key_constraints();
-  for (const auto& table_key_constraint : soft_key_constraints) {
-    // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
-    hash = hash ^ table_key_constraint.hash();
-  }
-
-  return std::hash<size_t>{}(hash - soft_key_constraints.size());
+  // We do not hash all key constraints because the cost of hashing outweights the benefit of less collisions. In the
+  // case of collisions `_on_shallow_equals` will be called anyway.
+  return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

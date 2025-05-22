@@ -3,6 +3,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {

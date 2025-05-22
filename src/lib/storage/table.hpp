@@ -38,6 +38,8 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
   friend class StorageTableTest;
+  friend class UccDiscoveryPlugin;
+  friend class StressTest;
 
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
@@ -209,8 +211,8 @@ class Table : private Noncopyable {
   void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");
 
   /**
-   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" constraints to draw attention to that.
+   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules. We call them "soft"
+   * constraints to draw attention to that. If `table_constraint` is already in the table constraints, we will fail.
    */
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
