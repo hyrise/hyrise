@@ -16,7 +16,6 @@
 #include <boost/variant/get.hpp>
 
 #include "magic_enum.hpp"
-#include "sql/CreateStatement.h"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
