@@ -1714,10 +1714,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       DebugAssert(parser_column_definition->column_constraints,
                   "Column " + column_definition.name + " is missing constraint information.");
       for (const auto& column_constraint : *parser_column_definition->column_constraints) {
-        if (column_constraint != hsql::ConstraintType::Unique &&
-            column_constraint != hsql::ConstraintType::PrimaryKey) {
+        // (NOT) NULL was obtained above from `parser_column_definition->nullable`.
+        if (column_constraint == hsql::ConstraintType::NotNull || column_constraint == hsql::ConstraintType::Null) {
           continue;
         }
+
+        // We do not support, e.g., FOREIGN KEYs yet.
+        AssertInput(
+            column_constraint == hsql::ConstraintType::Unique || column_constraint == hsql::ConstraintType::PrimaryKey,
+            "Only UNIQUE and PRIMARY KEY constraints are expected on a column level.");
+
         const auto constraint_type = column_constraint == hsql::ConstraintType::PrimaryKey
                                          ? KeyConstraintType::PRIMARY_KEY
                                          : KeyConstraintType::UNIQUE;
@@ -1733,9 +1739,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     // PRIMARY KEY constraints for now.
     const auto column_count = column_definitions.size();
     for (const auto& table_constraint : *create_statement.tableConstraints) {
-      Assert(table_constraint->type == hsql::ConstraintType::PrimaryKey ||
-                 table_constraint->type == hsql::ConstraintType::Unique,
-             "Only UNIQUE and PRIMARY KEY constraints are expected on a table level.");
+      AssertInput(table_constraint->type == hsql::ConstraintType::PrimaryKey ||
+                      table_constraint->type == hsql::ConstraintType::Unique,
+                  "Only UNIQUE and PRIMARY KEY constraints are expected on a table level.");
       const auto constraint_type = table_constraint->type == hsql::ConstraintType::PrimaryKey
                                        ? KeyConstraintType::PRIMARY_KEY
                                        : KeyConstraintType::UNIQUE;
