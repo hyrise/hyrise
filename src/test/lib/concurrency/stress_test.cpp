@@ -746,6 +746,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
   const auto VALIDATION_COUNT = uint32_t{100};
   const auto SLEEP_TIME = std::chrono::milliseconds{1};
+  auto writer_waiting = std::atomic<bool>{false};
 
   const auto validate_constraint = [&] {
     start_flag.wait(false);
@@ -759,8 +760,11 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
       std::this_thread::sleep_for(SLEEP_TIME);
 
+      // Notify the reader threads that the writer is waiting.
+      writer_waiting = true;
       const auto lock = std::unique_lock{deletion_mutext};
       clear_soft_key_constraints(table);
+      writer_waiting = false;
     }
   };
 
@@ -770,6 +774,9 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
       const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
       // Access the unique column combinations. We need to lock here because `unique_column_combinations` uses a
       // reference to iterate over the constraints. This reference is invalidated when the constraints are cleared.
+      while (writer_waiting) {
+        std::this_thread::sleep_for(SLEEP_TIME);
+      }
       const auto lock = std::shared_lock{deletion_mutext};
       ASSERT_LE(stored_table_node->unique_column_combinations().size(), 3);
     }
