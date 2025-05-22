@@ -13,6 +13,7 @@ namespace hyrise {
 class AbstractEncodedSegment;
 class BaseSegmentEncoder;
 class BaseValueSegment;
+class Chunk;
 
 /**
  * @brief Creates an encoder by encoding type
@@ -30,5 +31,10 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
  * For the difference of the two, please take a look at compressed_vector_type.hpp.
  */
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
+
+/**
+ * Schedules a background task that takes care of encoding a chunk and generating pruning statistics.
+ */
+void spawn_encoding_task(const std::shared_ptr<Chunk>& chunk);
 
 }  // namespace hyrise

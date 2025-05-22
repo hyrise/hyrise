@@ -3,8 +3,12 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <vector>
 
+#include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
@@ -13,6 +17,7 @@
 #include "storage/run_length_segment/run_length_encoder.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -72,6 +77,18 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
       return VectorCompressionType::BitPacking;
   }
   Fail("Invalid enum value.");
+}
+
+void spawn_encoding_task(const std::shared_ptr<Chunk>& chunk) {
+  const auto encoding_task = std::make_shared<JobTask>([=]() {
+    const auto column_count = chunk->column_count();
+    auto data_types = std::vector<DataType>(column_count);
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      data_types[column_id] = chunk->get_segment(column_id)->data_type();
+    }
+    ChunkEncoder::encode_chunk(chunk, data_types);
+  });
+  encoding_task->schedule();
 }
 
 }  // namespace hyrise

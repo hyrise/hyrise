@@ -6,17 +6,15 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "storage/mvcc_data.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
@@ -78,18 +76,6 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
       }
     });
   }
-}
-
-void spawn_encoding_task(const std::shared_ptr<Chunk>& chunk) {
-  const auto encoding_task = std::make_shared<JobTask>([=]() {
-    const auto column_count = chunk->column_count();
-    auto data_types = std::vector<DataType>(column_count);
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      data_types[column_id] = chunk->get_segment(column_id)->data_type();
-    }
-    ChunkEncoder::encode_chunk(chunk, data_types);
-  });
-  encoding_task->schedule();
 }
 
 }  // namespace
@@ -291,12 +277,12 @@ void Insert::_on_rollback_records() {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      // Just unlock the rows by resetting the TID to 0. For other transactions, this row looks like it would have never
-      // been inserted (which is basically true).
+      // Just unlock the rows by resetting the TID to 0. For other transactions, this row looks like it was never
+      // inserted (which is basically true).
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
 
-    const auto record_count = target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset + 1;
+    const auto record_count = target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
     target_chunk->increase_invalid_row_count(ChunkOffset{record_count}, std::memory_order_release);
 
     // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last rolling back Insert

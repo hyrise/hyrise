@@ -11,6 +11,8 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "storage/base_dictionary_segment.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 
@@ -82,10 +84,10 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   insert->execute();
   context->commit();
 
-  EXPECT_EQ(table->chunk_count(), 4u);
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 3u);
-  EXPECT_EQ(table->get_chunk(ChunkID{3})->size(), 2u);
-  EXPECT_EQ(table->row_count(), 13u);
+  EXPECT_EQ(table->chunk_count(), 4);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 3);
+  EXPECT_EQ(table->get_chunk(ChunkID{3})->size(), 2);
+  EXPECT_EQ(table->row_count(), 13);
 }
 
 TEST_F(OperatorsInsertTest, MultipleChunks) {
@@ -109,10 +111,10 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   insert->execute();
   context->commit();
 
-  EXPECT_EQ(table->chunk_count(), 7u);
-  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 1u);
-  EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2u);
-  EXPECT_EQ(table->row_count(), 13u);
+  EXPECT_EQ(table->chunk_count(), 7);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 1);
+  EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2);
+  EXPECT_EQ(table->row_count(), 13);
 }
 
 TEST_F(OperatorsInsertTest, CompressedChunks) {
@@ -137,9 +139,9 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   insert->execute();
   context->commit();
 
-  EXPECT_EQ(table->chunk_count(), 7u);
-  EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2u);
-  EXPECT_EQ(table->row_count(), 13u);
+  EXPECT_EQ(table->chunk_count(), 7);
+  EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2);
+  EXPECT_EQ(table->row_count(), 13);
 }
 
 TEST_F(OperatorsInsertTest, Rollback) {
@@ -163,7 +165,7 @@ TEST_F(OperatorsInsertTest, Rollback) {
     auto context2 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     validate->set_transaction_context(context2);
     validate->execute();
-    EXPECT_EQ(validate->get_output()->row_count(), 3u);
+    EXPECT_EQ(validate->get_output()->row_count(), 3);
   };
   check();
 
@@ -389,6 +391,9 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutable) {
 
     EXPECT_FALSE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
+    // Making chunks immutable should trigger encoding and generation of pruning statistics.
+    EXPECT_TRUE(std::dynamic_pointer_cast<BaseDictionarySegment>(target_table->last_chunk()->get_segment(ColumnID{0})));
+    EXPECT_TRUE(target_table->last_chunk()->pruning_statistics());
   }
 }
 
@@ -435,6 +440,8 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutableMultipleOperators) {
     }
     EXPECT_TRUE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 1);
+    EXPECT_TRUE(std::dynamic_pointer_cast<BaseValueSegment>(target_table->last_chunk()->get_segment(ColumnID{0})));
+    EXPECT_FALSE(target_table->last_chunk()->pruning_statistics());
 
     // The second operator marks the chunk as immutable once it finishes.
     if (do_commit) {
@@ -444,6 +451,9 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutableMultipleOperators) {
     }
     EXPECT_FALSE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
+    // Making chunks immutable should trigger encoding and generation of pruning statistics.
+    EXPECT_TRUE(std::dynamic_pointer_cast<BaseDictionarySegment>(target_table->last_chunk()->get_segment(ColumnID{0})));
+    EXPECT_TRUE(target_table->last_chunk()->pruning_statistics());
   }
 }
 
@@ -487,11 +497,16 @@ TEST_F(OperatorsInsertTest, MarkMultipleChunksImmutable) {
     // The last chunk is not marked as immutable because it is not full.
     EXPECT_TRUE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
+    EXPECT_TRUE(std::dynamic_pointer_cast<BaseValueSegment>(target_table->last_chunk()->get_segment(ColumnID{0})));
+    EXPECT_FALSE(target_table->last_chunk()->pruning_statistics());
 
     // Previous chunks are marked as immutable by ourselves.
     for (auto chunk_id = ChunkID{0}; chunk_id < 4; ++chunk_id) {
-      EXPECT_FALSE(target_table->get_chunk(chunk_id)->is_mutable());
-      EXPECT_EQ(target_table->get_chunk(chunk_id)->mvcc_data()->pending_inserts(), 0);
+      const auto& chunk = target_table->get_chunk(chunk_id);
+      EXPECT_FALSE(chunk->is_mutable());
+      EXPECT_EQ(chunk->mvcc_data()->pending_inserts(), 0);
+      EXPECT_TRUE(std::dynamic_pointer_cast<BaseDictionarySegment>(chunk->get_segment(ColumnID{0})));
+      EXPECT_TRUE(chunk->pruning_statistics());
     }
   }
 }
