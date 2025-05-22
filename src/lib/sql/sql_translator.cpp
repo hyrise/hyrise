@@ -250,7 +250,7 @@ std::shared_ptr<AbstractExpression> inverse_predicate(const AbstractExpression& 
       Assert(in_expression, "Expected InExpression.");
       return std::make_shared<InExpression>(inverse_predicate_condition(in_expression->predicate_condition),
                                             in_expression->operand(), in_expression->set());
-    } break;
+    }
 
     case ExpressionType::Logical: {
       const auto* logical_expression = static_cast<const LogicalExpression*>(&expression);

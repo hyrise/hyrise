@@ -199,7 +199,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Except: {
       Fail("Intersect and Except are not supported yet.");
       // Not sure what needs to happen here. That partially depends on how intersect and except are finally implemented.
-    } break;
+    }
 
     // No pruning of the input columns for these nodes as they need them all.
     case LQPNodeType::CreateTable:

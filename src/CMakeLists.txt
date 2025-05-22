@@ -7,6 +7,7 @@ endif()
 add_definitions(-DHYRISE_DEBUG=${HYRISE_DEBUG})
 
 # Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
+
 option(ENABLE_NUMA_SUPPORT "Build with NUMA support" ON)
 if (NOT ${NUMA_FOUND})
     set(ENABLE_NUMA_SUPPORT OFF)
@@ -22,16 +23,29 @@ endif()
 
 # Enable coverage if requested - this is only operating on Hyrise's source (src/) so we don't check coverage of
 # third_party stuff
+
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
-    add_compile_options(-O0 -fno-inline)
+    add_compile_options(
+        -O0
+        -fno-inline
+    )
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        add_compile_options(-fprofile-arcs -ftest-coverage)
+        add_compile_options(
+            -fprofile-arcs
+            -ftest-coverage
+        )
         set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
-        add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+        add_compile_options(
+            -fprofile-instr-generate
+            -fcoverage-mapping
+        )
+        add_link_options(
+            -fprofile-instr-generate
+            -fcoverage-mapping
+        )
         set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
     else()
         message(FATAL_ERROR "Don't know how to run coverage on your compiler (${CMAKE_CXX_COMPILER_ID}).")
@@ -42,18 +56,54 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-pthread -Wno-unknown-warning-option)
+add_compile_options(
+    -pthread
+    -Wno-unknown-warning-option
+)
 
-# Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported system)
+# Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported
+# system)
+
 if (NOT "${HYRISE_RELAXED_BUILD}")
-    # -Wno-deprecated-dynamic-exception-spec is needed for jemalloc, at least for the older version that we are using
-    add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas -Wno-subobject-linkage -Wno-deprecated-dynamic-exception-spec)
+    add_compile_options(
+        -pthread
+        -Wall
+        -Wextra
+        -pedantic
+        -Werror
+        -Wno-deprecated-dynamic-exception-spec # Needed for jemalloc, at least for the older version that we are using.
+        -Wno-dollar-in-identifier-extension
+        -Wno-subobject-linkage
+        -Wno-unknown-pragmas
+        -Wno-unused-parameter
+    )
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        add_compile_options(-Wshadow-all -Wno-pass-failed)
-    else()
-        add_compile_options(-Wshadow=global)
+        add_compile_options(
+            -Weverything
+            -Wno-c++98-compat-pedantic
+            -Wno-ctad-maybe-unsupported
+            -Wno-documentation
+            -Wno-double-promotion
+            -Wno-exit-time-destructors
+            -Wno-float-equal
+            -Wno-global-constructors
+            -Wno-missing-variable-declarations
+            -Wno-missing-prototypes
+            -Wno-newline-eof
+            -Wno-padded
+            -Wno-sign-conversion
+            -Wno-switch-default
+            -Wno-switch-enum
+            -Wno-undefined-func-template
+            -Wno-unsafe-buffer-usage
+            -Wno-weak-vtables
+        )
+
+        # We access buffers via pointers / pointer arithmetic in some cases when we know what we do (e.g., uninitialized
+        # vector works like this).
     endif()
+
 else()
     message(WARNING "Hyrise will be built with most compiler warnings deactivated. This is fine if you want to test Hyrise but will become an issue when you want to contribute code.")
 endif()
@@ -89,7 +139,8 @@ add_subdirectory(bin)
 add_subdirectory(lib)
 add_subdirectory(plugins)
 
-# No clang-tidy for the following subfolders
+# No clang-tidy for the following subfolders:
+
 set(CMAKE_CXX_CLANG_TIDY "")
 add_subdirectory(benchmark)
 add_subdirectory(test)
