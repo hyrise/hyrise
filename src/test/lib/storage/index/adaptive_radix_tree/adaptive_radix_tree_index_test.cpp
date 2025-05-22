@@ -67,7 +67,10 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
         EXPECT_EQ(index->upper_bound({*search_value}), index->lower_bound({*search_value}));
       }
     }
+    }
 
+    const auto begin = distinct_values.begin();
+    const auto rbegin = distinct_values.rbegin();
     const auto begin = distinct_values.begin();
     const auto rbegin = distinct_values.rbegin();
 
@@ -75,6 +78,8 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     int32_t min = **begin;
     int32_t max = **rbegin;
 
+    EXPECT_EQ(index->lower_bound({min}), index->cbegin());
+    EXPECT_EQ(index->upper_bound({max}), index->cend());
     EXPECT_EQ(index->lower_bound({min}), index->cbegin());
     EXPECT_EQ(index->upper_bound({max}), index->cend());
   }

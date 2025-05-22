@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include <boost/sort/sort.hpp>
+#include <boost/sort/pdqsort/pdqsort.hpp>
 
 #include "column_materializer.hpp"
 #include "utils/timer.hpp"

@@ -10,8 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/memory_resource.hpp>
-
 #include "abstract_segment.hpp"
 #include "all_type_variant.hpp"
 #include "base_value_segment.hpp"
@@ -26,9 +24,9 @@
 
 namespace hyrise {
 
-Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
-             const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
-    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
+Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data, PolymorphicAllocator<Chunk> alloc,
+             Indexes indexes)
+    : _alloc(alloc), _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
   DebugAssert(!_segments.empty(),
               "Chunks without segments are not legal, as the row count of such a chunk cannot be determined.");
 
@@ -44,10 +42,6 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
       Assert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
              "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments.");
     }
-  }
-
-  if (alloc) {
-    _alloc = *alloc;
   }
 }
 
@@ -190,16 +184,15 @@ bool Chunk::references_exactly_one_table() const {
   return true;
 }
 
-void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
+void Chunk::migrate(MemoryResource& memory_resource) {
   // Migrating chunks with indexes is not implemented yet.
   if (!_indexes.empty()) {
     Fail("Cannot migrate chunk with indexes.");
   }
 
-  _alloc = PolymorphicAllocator<size_t>(memory_source);
-  Segments new_segments(_alloc);
+  auto new_segments = Segments(&memory_resource);
   for (const auto& segment : _segments) {
-    new_segments.push_back(segment->copy_using_allocator(_alloc));
+    new_segments.push_back(segment->copy_using_memory_resource(memory_resource));
   }
   _segments = std::move(new_segments);
 }

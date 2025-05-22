@@ -7,7 +7,6 @@
 #include <optional>
 #include <vector>
 
-#include <boost/container/pmr/memory_resource.hpp>
 #include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "index/chunk_index_type.hpp"
@@ -48,7 +47,7 @@ class Chunk : private Noncopyable {
   static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
   explicit Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-                 const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
+                 PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{}, Indexes indexes = {});
 
   // Returns whether new rows can be appended to this chunk. Chunks are set immutable during `set_immutable().
   bool is_mutable() const;
@@ -111,7 +110,7 @@ class Chunk : private Noncopyable {
 
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
-  void migrate(boost::container::pmr::memory_resource* memory_source);
+  void migrate(MemoryResource& memory_resource);
 
   bool references_exactly_one_table() const;
 

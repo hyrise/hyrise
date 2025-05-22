@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include <boost/sort/sort.hpp>
+#include <boost/sort/pdqsort/pdqsort.hpp>
 
 #include "scheduler/job_task.hpp"
 #include "storage/segment_iterate.hpp"

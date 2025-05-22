@@ -11,8 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-
 #include "strong_typedef.hpp"
 
 /**
@@ -44,7 +42,7 @@ STRONG_TYPEDEF(uint32_t, ChunkOffset);
 // std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
 // since 2010 should work fine. For 64-bit atomics on ARM CPUs, the instruction set should be at least ARMv8.1-A.
 // Earlier instruction sets also work, but might yield less efficient code. More information can be found here:
-// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT
+// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT(whitespace/line_length)
 STRONG_TYPEDEF(uint32_t, CommitID);
 STRONG_TYPEDEF(uint32_t, TransactionID);
 
@@ -54,23 +52,24 @@ STRONG_TYPEDEF(uint16_t, ParameterID);
 
 namespace hyrise {
 
-// Float aliases used in cardinality estimations/statistics
-using Cardinality = float;
-using DistinctCount = float;
-using Selectivity = float;
+// Floating-point aliases used in cardinality estimations/statistics. Single-precision types (a.k.a, float) should be
+// used carefully because they soon reach a point where additions do not increment the value anymore (see #2676).
+using Cardinality = double;
+using DistinctCount = double;
+using Selectivity = double;
 
 // Cost that an AbstractCostModel assigns to an Operator/LQP node. The unit of the Cost is left to the Cost estimator
-// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common)
-using Cost = float;
+// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common).
+using Cost = double;
 
 // We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from
 // different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
 //
-// TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+using PolymorphicAllocator = std::pmr::polymorphic_allocator<T>;
+using MemoryResource = std::pmr::memory_resource;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
