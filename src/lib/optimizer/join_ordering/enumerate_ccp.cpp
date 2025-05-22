@@ -23,14 +23,15 @@ namespace hyrise {
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges)
     : _num_vertices{num_vertices}, _edges{edges} {
-  // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons.
+  // Our implementation of DpCcp is limited to handle less than 64 vertices. The algorihtm should not be used for
+  // queries that many tables because of complexity reasons anyways.
   Assert(num_vertices < sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
          "Too many vertices, EnumerateCcp relies on to_ulong().");
   Assert(num_vertices > 1, "Nothing to order if there are not multiple vertices.");
 
   if constexpr (HYRISE_DEBUG) {
-    // Test the input data for validity, i.e., whether all mentioned vertex indices in the edges are smaller than
-    // `_num_vertices`.
+    // Test the input data for validity. All edges must connect vertices that are part of the join graph, i.e., their
+    // vertex indices are smaller than `_num_vertices`.
     for (const auto& edge : _edges) {
       Assert(edge.first < _num_vertices && edge.second < _num_vertices, "Vertex index out of range.");
     }
