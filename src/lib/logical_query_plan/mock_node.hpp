@@ -9,6 +9,7 @@
 #include <boost/variant.hpp>
 
 #include "abstract_lqp_node.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
 #include "types.hpp"
@@ -44,6 +45,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   // Returns stored ODs and pays respect to pruned columns.
   OrderDependencies order_dependencies() const override;
 
+  // Returns stored INDs and pays respect to pruned columns. Pruned columns of the referenced node are not considered.
+  InclusionDependencies inclusion_dependencies() const override;
+
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
    * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
@@ -68,6 +72,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   void set_order_constraints(const TableOrderConstraints& order_constraints);
 
+  void set_foreign_key_constraints(const ForeignKeyConstraints& foreign_key_constraints);
+
   std::optional<std::string> name;
 
  protected:
@@ -85,6 +91,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   FunctionalDependencies _functional_dependencies;
   TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _order_constraints;
+  ForeignKeyConstraints _foreign_key_constraints;
 };
 
 }  // namespace hyrise
