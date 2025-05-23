@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
@@ -14,6 +15,7 @@
 #include "storage/run_length_segment/run_length_encoder.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
