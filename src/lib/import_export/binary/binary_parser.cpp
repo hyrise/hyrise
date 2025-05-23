@@ -315,10 +315,8 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
       return std::make_shared<FixedWidthIntegerVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case CompressedVectorType::FixedWidthInteger4Byte:
       return std::make_shared<FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
-    default:
-      Fail("Cannot import attribute vector with compressed vector type id: " +
-           std::to_string(compressed_vector_type_id));
   }
+  Fail("Cannot import attribute vector with compressed vector type id: " + std::to_string(compressed_vector_type_id));
 }
 
 std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_vector(
@@ -333,10 +331,8 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
       return std::make_unique<FixedWidthIntegerVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case CompressedVectorType::FixedWidthInteger4Byte:
       return std::make_unique<FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
-    default:
-      Fail("Cannot import attribute vector with compressed vector type id: " +
-           std::to_string(compressed_vector_type_id));
   }
+  Fail("Cannot import attribute vector with compressed vector type id: " + std::to_string(compressed_vector_type_id));
 }
 
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {

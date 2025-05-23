@@ -166,7 +166,6 @@ std::shared_ptr<const Table> JoinVerification::_on_execute() {
 
     case JoinMode::Cross:
       Fail("Cross join not supported");
-      break;
   }
 
   return output_table;
