@@ -124,7 +124,6 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
 
   /**@}*/
 
- public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
 
   AnySegmentIterator& operator=(const AnySegmentIterator& other) {
@@ -162,7 +161,6 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
     return _wrapper->dereference();
   }
 
- private:
   std::unique_ptr<hyrise::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
 

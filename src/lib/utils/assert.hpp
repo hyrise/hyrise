@@ -51,7 +51,7 @@ namespace detail {
 }  // namespace detail
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define Fail(msg)                                                                                             \
+#define Fail(msg)                                                                                               \
   hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + (msg)); \
   static_assert(true, "End call of macro with a semicolon.")
 
@@ -69,10 +69,10 @@ namespace detail {
   static_assert(true, "End call of macro with a semicolon.")
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define AssertInput(expr, msg)                                               \
-  if (!static_cast<bool>(expr)) {                                            \
+#define AssertInput(expr, msg)                                                 \
+  if (!static_cast<bool>(expr)) {                                              \
     throw InvalidInputException(std::string("Invalid input error: ") + (msg)); \
-  }                                                                          \
+  }                                                                            \
   static_assert(true, "End call of macro with a semicolon.")
 
 #if HYRISE_DEBUG

@@ -42,7 +42,6 @@ class VariableLengthKeyConstProxy {
  protected:
   explicit VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key);
 
- protected:
   VariableLengthKeyBase _impl{};
 };
 

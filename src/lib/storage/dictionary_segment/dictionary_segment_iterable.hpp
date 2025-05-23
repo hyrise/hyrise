@@ -117,7 +117,6 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
     }
 
-   private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     CompressedVectorIterator _attribute_it;
@@ -158,13 +157,11 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     mutable Decompressor _attribute_decompressor;
   };
 
- private:
   const BaseDictionarySegment& _segment;
   std::shared_ptr<const Dictionary> _dictionary;
 };

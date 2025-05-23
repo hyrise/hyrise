@@ -92,7 +92,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   mutable std::vector<char> cached_block;
   mutable std::optional<size_t> cached_block_index = std::nullopt;
 
- private:
   template <typename ValueIterator>
   class Iterator : public AbstractSegmentIterator<Iterator<ValueIterator>, SegmentPosition<T>> {
    public:
@@ -100,7 +99,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     using IterableType = LZ4SegmentIterable<T>;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
-   public:
     // Begin and End Iterator
     explicit Iterator(ValueIterator data_it, std::optional<NullValueIterator> null_value_it, ChunkOffset chunk_offset)
         : _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{null_value_it} {}
@@ -144,7 +142,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       return SegmentPosition<T>{*_data_it, _null_value_it ? **_null_value_it : false, _chunk_offset};
     }
 
-   private:
     ChunkOffset _chunk_offset;
     ValueIterator _data_it;
     std::optional<NullValueIterator> _null_value_it;
@@ -178,7 +175,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     DataIteratorType _data_it;
     std::optional<NullValueIterator> _null_value_it;
   };

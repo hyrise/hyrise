@@ -66,7 +66,6 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
     return _data[_absolute_index];
   }
 
- private:
   const pmr_compact_vector& _data;
   size_t _absolute_index = 0;
 };

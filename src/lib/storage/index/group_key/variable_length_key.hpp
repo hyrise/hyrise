@@ -57,7 +57,6 @@ class VariableLengthKey {
   explicit VariableLengthKey(const VariableLengthKeyBase& other);
   VariableLengthKey& operator=(const VariableLengthKeyBase& other);
 
- private:
   std::vector<VariableLengthKeyWord> _owned_data;
   VariableLengthKeyBase _impl{};
 };

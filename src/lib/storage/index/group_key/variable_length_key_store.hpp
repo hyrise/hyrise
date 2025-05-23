@@ -104,7 +104,6 @@ class VariableLengthKeyStore {
   CompositeKeyLength _key_alignment{};
   std::vector<VariableLengthKeyWord> _data;
 
- private:
   /**
    * Implementation for iterator and const_iterator using boost::iterator_facade. The template is used in order to
    * reduce
@@ -168,7 +167,6 @@ class VariableLengthKeyStore {
       return (other._data - _data) / _key_alignment;
     }
 
-   private:
     CompositeKeyLength _bytes_per_key{};
     CompositeKeyLength _key_alignment{};
     VariableLengthKeyWord* _data{};

@@ -56,7 +56,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   const ValueID _null_value_id;
   SegmentAccessCounter& _access_counter;
 
- private:
   template <typename CompressedVectorIterator>
   class Iterator : public AbstractSegmentIterator<Iterator<CompressedVectorIterator>, SegmentPosition<ValueID>> {
    public:
@@ -98,7 +97,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return {value_id, is_null, _chunk_offset};
     }
 
-   private:
     const ValueID _null_value_id;
     CompressedVectorIterator _attribute_it;
     ChunkOffset _chunk_offset;
@@ -133,7 +131,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     const ValueID _null_value_id;
     mutable Decompressor _attribute_decompressor;
   };

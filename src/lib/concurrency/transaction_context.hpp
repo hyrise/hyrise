@@ -195,7 +195,6 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    */
   void _transition(TransactionPhase from_phase, TransactionPhase to_phase);
 
- private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
   const AutoCommit _is_auto_commit;

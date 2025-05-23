@@ -139,7 +139,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
  private:
   const ReferenceSegment& _segment;
 
- private:
   // The iterator for cases where we potentially iterate over multiple referenced chunks
   template <typename PosListIteratorType>
   class MultipleChunkIterator
@@ -148,7 +147,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
 
-   public:
     explicit MultipleChunkIterator(
         const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
         const std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>>& accessors,
@@ -210,7 +208,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       (*_accessors)[chunk_id] = create_segment_accessor<T>(segment);
     }
 
-   private:
     std::shared_ptr<const Table> _referenced_table;
     ColumnID _referenced_column_id;
 

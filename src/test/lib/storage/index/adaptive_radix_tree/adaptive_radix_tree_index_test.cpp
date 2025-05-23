@@ -71,7 +71,6 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     const auto begin = distinct_values.begin();
     const auto rbegin = distinct_values.rbegin();
 
-
     Assert(*begin && *rbegin, "Optional has no value.");
     auto min = **begin;
     auto max = **rbegin;

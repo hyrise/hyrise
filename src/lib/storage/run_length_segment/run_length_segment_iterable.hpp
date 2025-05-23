@@ -123,14 +123,12 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                             end_positions->cend(), new_chunk_offset);
   }
 
- private:
   class Iterator : public AbstractSegmentIterator<Iterator, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
-   public:
     explicit Iterator(const std::shared_ptr<const pmr_vector<T>>& values,
                       const std::shared_ptr<const pmr_vector<bool>>& null_values,
                       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
@@ -188,7 +186,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                                 _chunk_offset};
     }
 
-   private:
     std::shared_ptr<const pmr_vector<T>> _values;
     std::shared_ptr<const pmr_vector<bool>> _null_values;
     std::shared_ptr<const pmr_vector<ChunkOffset>> _end_positions;
@@ -254,7 +251,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                                 chunk_offsets.offset_in_poslist};
     }
 
-   private:
     std::shared_ptr<const pmr_vector<T>> _values;
     std::shared_ptr<const pmr_vector<bool>> _null_values;
     std::shared_ptr<const pmr_vector<ChunkOffset>> _end_positions;

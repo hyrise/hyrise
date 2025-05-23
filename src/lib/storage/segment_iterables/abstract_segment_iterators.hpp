@@ -99,7 +99,6 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
     return other._position_filter_it - _position_filter_it;
   }
 
- private:
   PosListIteratorType _position_filter_begin;
   PosListIteratorType _position_filter_it;
 };
