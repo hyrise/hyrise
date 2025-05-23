@@ -81,29 +81,35 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         add_compile_options(
             -Weverything
-            -Wno-c++98-compat-pedantic
-            -Wno-ctad-maybe-unsupported
-            -Wno-documentation
-            -Wno-double-promotion
-            -Wno-exit-time-destructors
-            -Wno-float-equal
-            -Wno-global-constructors
-            -Wno-header-hygiene
-            -Wno-missing-variable-declarations
-            -Wno-missing-prototypes
-            -Wno-newline-eof
-            -Wno-padded
-            -Wno-pass-failed
-            -Wno-sign-conversion
-            -Wno-switch-default
-            -Wno-switch-enum
-            -Wno-undefined-func-template
-            -Wno-unsafe-buffer-usage
-            -Wno-weak-vtables
+            -Wno-c++98-compat-pedantic          # We are incompatible with C++98.
+            -Wno-ctad-maybe-unsupported         # Warns on some of the class template argument deductions we use. Could
+                                                # be fixable.
+            -Wno-documentation                  # We do not really do Doxygen documentation.
+            -Wno-double-promotion               # We implicitly convert float to double several times.
+            -Wno-exit-time-destructors          # We use declarations that require exit-time destructors.
+            -Wno-float-equal                    # Currently we compare floats for equality or inequality.
+            -Wno-global-constructors            # We use declarations that require global destructors.
+            -Wno-header-hygiene                 # Complains about "using namespace hyrise" in our tests and benchmarks
+                                                # when a unity builds are activated.
+            -Wno-missing-variable-declarations  # Complains about non-static variables. I do not know if fixable.
+            -Wno-missing-prototypes             # Messes with our tests and benchmarks.
+            -Wno-newline-eof                    # Warns about the thrid_party sql-parser. Please examine.
+            -Wno-padded                         # Of course the compiler adds padding to our classes.
+            -Wno-pass-failed                    # Complains about failed loop unrolling when building release builds
+                                                # with sanitization.
+            -Wno-poison-system-directories      # Only fails on the x86 Mac CI stage. Could be worth a closer look.
+            -Wno-sign-conversion                # Currently we do many implicit conversions that change signedness.
+            -Wno-switch-default                 # Warns if a switch has no default, even if all enum values are
+                                                # covered. Contradicts -Wcovered-switch-default.
+            -Wno-switch-enum                    # We have switches in which we do not want to cover every enum value
+                                                # but use a default.
+            -Wno-undefined-func-template        # Complains about missing explicit instantiation declarations. I do not
+                                                # know if this is fixable.
+            -Wno-unsafe-buffer-usage            # We access buffers via pointers / pointer arithmetic in some cases when
+                                                # we know what we do (e.g., uninitialized vector works like this).
+            -Wno-weak-vtables                   # Some of our base classes have no out-of-line virtual method
+                                                # definitions. I do not know if this is fixable.
         )
-
-        # We access buffers via pointers / pointer arithmetic in some cases when we know what we do (e.g., uninitialized
-        # vector works like this).
     endif()
 
 else()
