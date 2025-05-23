@@ -70,6 +70,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
           _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -98,6 +99,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     NonNullSegmentPosition<T> dereference() const {
       return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
     }
+    // NOLINTEND(readability-identifier-naming)
 
     ValueIterator _value_it;
     ChunkOffset _chunk_offset;

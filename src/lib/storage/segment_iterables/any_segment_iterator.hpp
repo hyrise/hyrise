@@ -135,6 +135,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
   }
 
  private:
+  // NOLINTBEGIN(readability-identifier-naming)
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() {
@@ -160,6 +161,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
   SegmentPosition<T> dereference() const {
     return _wrapper->dereference();
   }
+  // NOLINTEND(readability-identifier-naming)
 
   std::unique_ptr<hyrise::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };

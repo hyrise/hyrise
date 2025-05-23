@@ -104,6 +104,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
         : _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{null_value_it} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -141,6 +142,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     SegmentPosition<T> dereference() const {
       return SegmentPosition<T>{*_data_it, _null_value_it ? **_null_value_it : false, _chunk_offset};
     }
+    // NOLINTEND(readability-identifier-naming)
 
     ChunkOffset _chunk_offset;
     ValueIterator _data_it;

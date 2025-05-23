@@ -75,6 +75,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
           _chunk_offset{chunk_offset} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -107,6 +108,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
       return SegmentPosition<T>{value, is_null, _chunk_offset};
     }
+    // NOLINTEND(readability-identifier-naming)
 
     const pmr_vector<T>* _block_minima;
     const std::optional<pmr_vector<bool>>* _null_values;

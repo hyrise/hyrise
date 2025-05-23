@@ -65,6 +65,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
         : _null_value_id{null_value_id}, _attribute_it{std::move(attribute_it)}, _chunk_offset{chunk_offset} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -96,6 +97,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
       return {value_id, is_null, _chunk_offset};
     }
+  // NOLINTEND(readability-identifier-naming)
 
     const ValueID _null_value_id;
     CompressedVectorIterator _attribute_it;

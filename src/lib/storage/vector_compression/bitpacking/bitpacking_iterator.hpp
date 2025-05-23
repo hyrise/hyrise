@@ -40,6 +40,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   ~BitPackingIterator() = default;
 
  private:
+  // NOLINTBEGIN(readability-identifier-naming)
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() {
@@ -65,6 +66,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   uint32_t dereference() const {
     return _data[_absolute_index];
   }
+  // NOLINTEND(readability-identifier-naming)
 
   const pmr_compact_vector& _data;
   size_t _absolute_index = 0;

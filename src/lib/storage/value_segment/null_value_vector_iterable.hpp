@@ -45,6 +45,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -71,6 +72,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
       return IsNullSegmentPosition{*_null_value_it,
                                    static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
+    // NOLINTEND(readability-identifier-naming)
 
     const NullValueIterator _begin_null_value_it;
     NullValueIterator _null_value_it;

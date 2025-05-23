@@ -77,6 +77,7 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
   }
 
  private:
+  // NOLINTBEGIN(readability-identifier-naming)
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() {
@@ -98,6 +99,7 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
   std::ptrdiff_t distance_to(const AbstractPointAccessSegmentIterator& other) const {
     return other._position_filter_it - _position_filter_it;
   }
+  // NOLINTEND(readability-identifier-naming)
 
   PosListIteratorType _position_filter_begin;
   PosListIteratorType _position_filter_it;

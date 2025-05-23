@@ -142,6 +142,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _chunk_offset{chunk_offset} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -185,6 +186,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       return SegmentPosition<T>{(*_values)[vector_offset_for_value], (*_null_values)[vector_offset_for_value],
                                 _chunk_offset};
     }
+    // NOLINTEND(readability-identifier-naming)
 
     std::shared_ptr<const pmr_vector<T>> _values;
     std::shared_ptr<const pmr_vector<bool>> _null_values;

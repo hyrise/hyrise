@@ -158,6 +158,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           _accessors{accessors} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -202,6 +203,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       }
       return SegmentPosition<T>{T{}, true, pos_list_offset};
     }
+    // NOLINTEND(readability-identifier-naming)
 
     void _create_accessor(const ChunkID chunk_id) const {
       auto segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
