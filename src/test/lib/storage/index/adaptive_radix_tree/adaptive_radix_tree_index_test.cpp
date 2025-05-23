@@ -71,13 +71,11 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     const auto begin = distinct_values.begin();
     const auto rbegin = distinct_values.rbegin();
 
-    
-    Assert(*begin && *rbegin, "Optional has no value.");
-    int32_t min = **begin;
-    int32_t max = **rbegin;
 
-    EXPECT_EQ(index->lower_bound({min}), index->cbegin());
-    EXPECT_EQ(index->upper_bound({max}), index->cend());
+    Assert(*begin && *rbegin, "Optional has no value.");
+    auto min = **begin;
+    auto max = **rbegin;
+
     EXPECT_EQ(index->lower_bound({min}), index->cbegin());
     EXPECT_EQ(index->upper_bound({max}), index->cend());
   }
