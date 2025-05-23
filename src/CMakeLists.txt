@@ -7,7 +7,6 @@ endif()
 add_definitions(-DHYRISE_DEBUG=${HYRISE_DEBUG})
 
 # Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
-
 option(ENABLE_NUMA_SUPPORT "Build with NUMA support" ON)
 if (NOT ${NUMA_FOUND})
     set(ENABLE_NUMA_SUPPORT OFF)
@@ -23,7 +22,6 @@ endif()
 
 # Enable coverage if requested - this is only operating on Hyrise's source (src/) so we don't check coverage of
 # third_party stuff
-
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
     add_compile_options(
@@ -63,7 +61,6 @@ add_compile_options(
 
 # Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported
 # system)
-
 if (NOT "${HYRISE_RELAXED_BUILD}")
     add_compile_options(
         -pthread
@@ -148,7 +145,6 @@ add_subdirectory(lib)
 add_subdirectory(plugins)
 
 # No clang-tidy for the following subfolders:
-
 set(CMAKE_CXX_CLANG_TIDY "")
 add_subdirectory(benchmark)
 add_subdirectory(test)
