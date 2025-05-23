@@ -90,24 +90,23 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
   return chunk_encoding_spec;
 }
 
-SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType&  /*type*/, const bool  /*segment_values_are_unique*/) {
-  return SegmentEncodingSpec{EncodingType::LZ4};
-  // switch (type) {
-  //   case DataType::Int:
-  //     return SegmentEncodingSpec{EncodingType::FrameOfReference};
-  //   case DataType::String:
-  //     return SegmentEncodingSpec{EncodingType::FixedStringDictionary};
-  //   case DataType::Long:
-  //   case DataType::Double:
-  //   case DataType::Float:
-  //     if (segment_values_are_unique) {
-  //       return SegmentEncodingSpec{EncodingType::Unencoded};
-  //     } else {
-  //       return SegmentEncodingSpec{EncodingType::Dictionary};
-  //     }
-  //   default:
-  //     Fail("Unknown DataType when trying to select encoding for column.");
-  // }
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, const bool segment_values_are_unique) {
+  switch (type) {
+    case DataType::Int:
+      return SegmentEncodingSpec{EncodingType::FrameOfReference};
+    case DataType::String:
+      return SegmentEncodingSpec{EncodingType::FixedStringDictionary};
+    case DataType::Long:
+    case DataType::Double:
+    case DataType::Float:
+      if (segment_values_are_unique) {
+        return SegmentEncodingSpec{EncodingType::Unencoded};
+      } else {
+        return SegmentEncodingSpec{EncodingType::Dictionary};
+      }
+    default:
+      Fail("Unknown DataType when trying to select encoding for column.");
+  }
 }
 
 }  // namespace hyrise
