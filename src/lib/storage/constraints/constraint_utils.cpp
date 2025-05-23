@@ -78,4 +78,22 @@ void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std
   table->add_soft_constraint(TableOrderConstraint{std::move(ordering_column_ids), std::move(ordered_column_ids)});
 }
 
+bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id) {
+  DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
+  for (const auto& key_constraint : table->soft_key_constraints()) {
+    const auto& key_type = key_constraint.key_type();
+    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
+      continue;
+    }
+
+    for (const auto& constraint_column_id : key_constraint.columns()) {
+      if (constraint_column_id == column_id) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 }  // namespace hyrise

@@ -58,8 +58,6 @@ constexpr auto encoding_supports_data_type(SegmentEncodingType encoding_type, Co
 bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type);
 
 struct SegmentEncodingSpec {
-  constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
-
   explicit constexpr SegmentEncodingSpec(EncodingType init_encoding_type) : encoding_type{init_encoding_type} {}
 
   constexpr SegmentEncodingSpec(EncodingType init_encoding_type,
