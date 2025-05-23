@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
