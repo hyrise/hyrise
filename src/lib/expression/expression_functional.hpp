@@ -188,9 +188,9 @@ std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<Abstr
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
     return std::make_shared<LQPSubqueryExpression>(
-        lqp, std::vector<ParameterID>{{std::forward<ParameterID>(parameter_id_expression_pairs.first)...}},
-        std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(
-            std::forward<std::shared_ptr<AbstractExpression>>(parameter_id_expression_pairs.second))...}});
+        lqp, std::vector<ParameterID>{{std::forward<Args>(parameter_id_expression_pairs).first...}},
+        std::vector<std::shared_ptr<AbstractExpression>>{
+            {to_expression(std::forward<Args>(parameter_id_expression_pairs).second)...}});
   } else {
     // Not correlated
     return std::make_shared<LQPSubqueryExpression>(lqp, std::vector<ParameterID>{},
@@ -204,10 +204,10 @@ std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<Abstr
                                                      Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
-    return std::make_shared<PQPSubqueryExpression>(
-        pqp, data_type, nullable,
-        std::vector<std::pair<ParameterID, ColumnID>>{
-            {std::make_pair(parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
+    return std::make_shared<PQPSubqueryExpression>(pqp, data_type, nullable,
+                                                   std::vector<std::pair<ParameterID, ColumnID>>{{std::make_pair(
+                                                       std::forward<Args>(parameter_id_column_id_pairs).first,
+                                                       std::forward<Args>(parameter_id_column_id_pairs).second)...}});
   } else {
     // Not correlated
     return std::make_shared<PQPSubqueryExpression>(pqp, data_type, nullable);
@@ -216,12 +216,12 @@ std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<Abstr
 
 template <typename... Args>
 std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... args) {
-  return std::vector<std::shared_ptr<AbstractExpression>>({to_expression(args)...});
+  return std::vector<std::shared_ptr<AbstractExpression>>({to_expression(std::forward<Args>(args))...});
 }
 
 template <typename A, typename B, typename C>
-std::shared_ptr<CaseExpression> case_(const A& a, const B& b, const C& c) {
-  return std::make_shared<CaseExpression>(to_expression(a), to_expression(b), to_expression(c));
+std::shared_ptr<CaseExpression> case_(const A& expr1, const B& expr2, const C& expr3) {
+  return std::make_shared<CaseExpression>(to_expression(expr1), to_expression(expr2), to_expression(expr3));
 }
 
 template <typename String, typename Start, typename Length>
@@ -236,8 +236,8 @@ std::shared_ptr<FunctionExpression> concat_(const Args... args) {
 }
 
 template <typename V>
-std::shared_ptr<FunctionExpression> abs_(const V& v) {
-  return std::make_shared<FunctionExpression>(FunctionType::Absolute, expression_vector(to_expression(v)));
+std::shared_ptr<FunctionExpression> abs_(const V& value) {
+  return std::make_shared<FunctionExpression>(FunctionType::Absolute, expression_vector(to_expression(value)));
 }
 
 template <typename... Args>
@@ -246,13 +246,13 @@ std::shared_ptr<ListExpression> list_(Args&&... args) {
 }
 
 template <typename V, typename S>
-std::shared_ptr<InExpression> in_(const V& v, const S& s) {
-  return std::make_shared<InExpression>(PredicateCondition::In, to_expression(v), to_expression(s));
+std::shared_ptr<InExpression> in_(const V& value, const S& set) {
+  return std::make_shared<InExpression>(PredicateCondition::In, to_expression(value), to_expression(set));
 }
 
 template <typename V, typename S>
-std::shared_ptr<InExpression> not_in_(const V& v, const S& s) {
-  return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(v), to_expression(s));
+std::shared_ptr<InExpression> not_in_(const V& value, const S& set) {
+  return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(value), to_expression(set));
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& subquery_expression);

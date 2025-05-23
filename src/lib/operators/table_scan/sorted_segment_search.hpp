@@ -89,11 +89,10 @@ class SortedSegmentSearch {
       return std::lower_bound(begin, end, search_value, [](const auto& segment_position, const auto& value) {
         return segment_position.value() < value;
       });
-    } else {
-      return std::lower_bound(begin, end, search_value, [](const auto& segment_position, const auto& value) {
-        return segment_position.value() > value;
-      });
     }
+    return std::lower_bound(begin, end, search_value, [](const auto& segment_position, const auto& value) {
+      return segment_position.value() > value;
+    });
   }
 
   IteratorType _get_last_bound(const SearchValueType& search_value, const IteratorType begin,
@@ -102,11 +101,10 @@ class SortedSegmentSearch {
       return std::upper_bound(begin, end, search_value, [](const auto& value, const auto& segment_position) {
         return segment_position.value() > value;
       });
-    } else {
-      return std::upper_bound(begin, end, search_value, [](const auto& value, const auto& segment_position) {
-        return segment_position.value() < value;
-      });
     }
+    return std::upper_bound(begin, end, search_value, [](const auto& value, const auto& segment_position) {
+      return segment_position.value() < value;
+    });
   }
 
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order

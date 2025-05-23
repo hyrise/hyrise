@@ -705,7 +705,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   for (const auto* update_clause : *update.updates) {
     const auto column_name = std::string{update_clause->column};
-    const auto column_expression = translation_state.sql_identifier_resolver->resolve_identifier_relaxed(column_name);
+    const auto column_expression =
+        translation_state.sql_identifier_resolver->resolve_identifier_relaxed(SQLIdentifier(column_name));
     const auto column_id = selection_lqp->get_column_id(*column_expression);
 
     update_expressions[column_id] =
@@ -822,7 +823,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
     } break;
 
     case hsql::kTableSelect: {
-      AssertInput(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every nested SELECT must have its own alias");
+      AssertInput((hsql_table_ref.alias != nullptr) && (hsql_table_ref.alias->name != nullptr),
+                  "Every nested SELECT must have its own alias");
       table_name = hsql_table_ref.alias->name;
 
       auto subquery_translator = SQLTranslator{_use_mvcc, _external_sql_identifier_resolver_proxy,
@@ -1063,7 +1065,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   const auto right_state = _translate_table_ref(*join.right);
 
   Assert(!join.namedColumns->empty(), "Expected at least one named column.");
-  Assert(!join.condition, "Did not expect join condition for join using named columns.");
+  Assert(join.condition == nullptr, "Did not expect join condition for join using named columns.");
 
   const auto& left_sql_identifier_resolver = left_state.sql_identifier_resolver;
   const auto& right_sql_identifier_resolver = right_state.sql_identifier_resolver;
@@ -1089,8 +1091,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
     const auto* left_table_name = resolve_table_name(*join.left);
     const auto* right_table_name = resolve_table_name(*join.right);
 
-    AssertInput(left_expression, "Could not resolve '" + named_column + "' on '" + left_table_name + "'.");
-    AssertInput(right_expression, "Could not resolve '" + named_column + "' on '" + right_table_name + "'.");
+    AssertInput(left_expression, std::string{"Could not resolve '"} + named_column + "' on '" + left_table_name + "'.");
+    AssertInput(right_expression,
+                std::string{"Could not resolve '"} + named_column + "' on '" + right_table_name + "'.");
 
     // Left and right can resolve the named column. Set the join predicate.
     join_predicates[named_column_idx] = std::shared_ptr<AbstractExpression>(equals_(left_expression, right_expression));
@@ -1149,7 +1152,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
       const auto right_identifier = right_identifiers.back();
 
       const auto left_expression =
-          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
+          left_sql_identifier_resolver->resolve_identifier_relaxed(SQLIdentifier(right_identifier.column_name));
 
       if (left_expression) {
         // Two columns match, let's join on them.
@@ -1567,7 +1570,7 @@ void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDe
 }
 
 void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
-  AssertInput(!limit.offset, "OFFSET not supported.");
+  AssertInput(limit.offset == nullptr, "OFFSET not supported.");
   const auto num_rows_expression = _translate_hsql_expr(*limit.limit, _sql_identifier_resolver);
   _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
@@ -1634,7 +1637,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
-  Assert(create_statement.columns || create_statement.select, "CREATE TABLE: No columns specified. Parser bug?");
+  Assert((create_statement.columns != nullptr) || (create_statement.select != nullptr),
+         "CREATE TABLE: No columns specified. Parser bug?");
 
   auto input_node = std::shared_ptr<AbstractLQPNode>{};
 
@@ -1757,7 +1761,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
               column_definition.nullable = false;
               AssertInput(
                   !create_statement.columns->at(column_id)->column_constraints->contains(hsql::ConstraintType::Null),
-                  "PRIMARY KEY column " + constraint_column_name + " must not be nullable.");
+                  std::string{"PRIMARY KEY column "} + constraint_column_name + " must not be nullable.");
             }
             break;
           }
@@ -1840,7 +1844,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   // and to provide correct output expressions for subsequent nodes, some optimization rules access stored tables, and
   // so on. Anyway, we would need to decouple data loading and storing the table and have to load metadata or even the
   // whole table when translating the SQL statement.
-  AssertInput(!import_statement.whereClause, "Predicates on imported files are not supported.");
+  AssertInput(import_statement.whereClause == nullptr, "Predicates on imported files are not supported.");
 
   auto encoding = std::optional<EncodingType>{};
   if (import_statement.encoding) {
@@ -1857,7 +1861,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  AssertInput(!export_statement.encoding,
+  AssertInput(export_statement.encoding == nullptr,
               "Encoding for a table export is not supported. You can choose an encoding when importing tables.");
 
   if (export_statement.select) {
@@ -2032,7 +2036,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             FailInput("GROUPS frames are not supported.");
         }
 
-        Assert(hsql_frame_description.start && hsql_frame_description.end,
+        Assert((hsql_frame_description.start != nullptr) && (hsql_frame_description.end != nullptr),
                "FrameDescription has no frame bounds. Bug in SQL parser?");
         const auto start = translate_frame_bound(*hsql_frame_description.start);
         const auto end = translate_frame_bound(*hsql_frame_description.end);
@@ -2091,9 +2095,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           AssertInput(allow_window_functions,
                       "Window functions are only allowed in the SELECT list and must not be nested.");
           AssertInput(window_description, "Window function " + name + " requires a window definition.");
-          AssertInput(!expr.exprList || expr.exprList->empty(), "Window functions must not have an argument.");
+          AssertInput((expr.exprList == nullptr) || expr.exprList->empty(),
+                      "Window functions must not have an argument.");
         } else {
-          AssertInput(expr.exprList && expr.exprList->size() == 1,
+          AssertInput((expr.exprList != nullptr) && expr.exprList->size() == 1,
                       "Expected exactly one argument for an aggregate function.");
         }
 
@@ -2118,7 +2123,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case WindowFunction::Count:
           case WindowFunction::CountDistinct: {
             if (expr.exprList->front()->type == hsql::kExprStar) {
-              AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT().");
+              AssertInput(expr.exprList->front()->name == nullptr, "Illegal <t>.* in COUNT().");
 
               // Find any leaf node below COUNT(*).
               auto leaf_node = std::shared_ptr<AbstractLQPNode>{};
@@ -2154,10 +2159,12 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         // Check that the aggregate can be calculated on the given expression.
         const auto result_type = aggregate_expression->data_type();
-        AssertInput(result_type != DataType::Null,
-                    std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
-                        " for input data type " +
-                        data_type_to_string.left.at(aggregate_expression->argument()->data_type()) + ".");
+        auto error_msg = std::string{"Invalid aggregate "} + aggregate_expression->as_column_name();
+        if (aggregate_expression->argument()) {
+          error_msg += " for input data type " +
+                       data_type_to_string.left.at(aggregate_expression->argument()->data_type()) + ".";
+        }
+        AssertInput(result_type != DataType::Null, error_msg);
 
         // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
         //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2
@@ -2211,7 +2218,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       // TODO(anyone): Though we have not seen this in benchmarks, there is no reason to add COALESCE list arguments if
       // the preceding argument is not nullable.
       if (name == "COALESCE") {
-        AssertInput(expr.exprList && !expr.exprList->empty(), "COALESCE list must not be empty.");
+        AssertInput((expr.exprList != nullptr) && !expr.exprList->empty(), "COALESCE list must not be empty.");
         auto case_expression = std::shared_ptr<AbstractExpression>{};
         auto data_type = DataType::Null;
 
@@ -2278,7 +2285,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
 
         if (predicate_condition == PredicateCondition::BetweenInclusive) {
-          Assert(expr.exprList && expr.exprList->size() == 2, "Expected two arguments for BETWEEN.");
+          Assert((expr.exprList != nullptr) && expr.exprList->size() == 2, "Expected two arguments for BETWEEN.");
           return between_inclusive_(left, _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_resolver),
                                     _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver));
         }
@@ -2304,7 +2311,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           // `a IN (x, y, z)`
           std::vector<std::shared_ptr<AbstractExpression>> arguments;
 
-          AssertInput(expr.exprList && !expr.exprList->empty(), "IN clauses with an empty list are invalid.");
+          AssertInput((expr.exprList != nullptr) && !expr.exprList->empty(),
+                      "IN clauses with an empty list are invalid.");
 
           arguments.reserve(expr.exprList->size());
           for (const auto* hsql_argument : *expr.exprList) {

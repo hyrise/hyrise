@@ -70,13 +70,14 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
-  const ChunkOffsetMapping chunk_offsets() const {
+  ChunkOffsetMapping chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
     return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin), _position_filter_it->chunk_offset};
   }
 
  private:
+  // NOLINTBEGIN(readability-identifier-naming)
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() {
@@ -87,8 +88,8 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
     --_position_filter_it;
   }
 
-  void advance(std::ptrdiff_t n) {
-    _position_filter_it += n;
+  void advance(std::ptrdiff_t distance) {
+    _position_filter_it += distance;
   }
 
   bool equal(const AbstractPointAccessSegmentIterator& other) const {
@@ -98,8 +99,8 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
   std::ptrdiff_t distance_to(const AbstractPointAccessSegmentIterator& other) const {
     return other._position_filter_it - _position_filter_it;
   }
+  // NOLINTEND(readability-identifier-naming)
 
- private:
   PosListIteratorType _position_filter_begin;
   PosListIteratorType _position_filter_it;
 };

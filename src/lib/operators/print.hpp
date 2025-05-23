@@ -17,8 +17,8 @@ namespace hyrise {
  */
 enum class PrintFlags : uint8_t {
   None = uint8_t{0},
-  Mvcc = uint8_t{1} << 0,
-  IgnoreChunkBoundaries = uint8_t{1} << 1
+  Mvcc = uint8_t{1} << 0u,
+  IgnoreChunkBoundaries = uint8_t{1} << 1u
 };
 
 /**

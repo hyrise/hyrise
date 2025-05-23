@@ -28,13 +28,13 @@ std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
 
   stream << "BeginCIDs: ";
   for (const auto& begin_cid : mvcc_data._begin_cids) {
-    stream << begin_cid << ", ";
+    stream << static_cast<CommitID>(begin_cid) << ", ";
   }
   stream << '\n';
 
   stream << "EndCIDs: ";
   for (const auto& end_cid : mvcc_data._end_cids) {
-    stream << end_cid << ", ";
+    stream << static_cast<CommitID>(end_cid) << ", ";
   }
   stream << '\n';
 
@@ -43,7 +43,7 @@ std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
 
 CommitID MvccData::get_begin_cid(const ChunkOffset offset) const {
   DebugAssert(offset < _begin_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  return _begin_cids[offset];
+  return static_cast<CommitID>(_begin_cids[offset]);
 }
 
 void MvccData::set_begin_cid(const ChunkOffset offset, const CommitID commit_id, const std::memory_order memory_order) {
@@ -54,7 +54,7 @@ void MvccData::set_begin_cid(const ChunkOffset offset, const CommitID commit_id,
 
 CommitID MvccData::get_end_cid(const ChunkOffset offset) const {
   DebugAssert(offset < _end_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  return _end_cids[offset];
+  return static_cast<CommitID>(_end_cids[offset]);
 }
 
 void MvccData::set_end_cid(const ChunkOffset offset, const CommitID commit_id, const std::memory_order memory_order) {
@@ -64,7 +64,7 @@ void MvccData::set_end_cid(const ChunkOffset offset, const CommitID commit_id, c
 
 TransactionID MvccData::get_tid(const ChunkOffset offset) const {
   DebugAssert(offset < _tids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  return _tids[offset];
+  return static_cast<TransactionID>(_tids[offset]);
 }
 
 void MvccData::set_tid(const ChunkOffset offset, const TransactionID transaction_id,

@@ -88,7 +88,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
       auto cmd = std::stringstream{};
       cmd << "cd " << local_queries_path << " && ln -s " << _dbgen_path << "/queries/*.sql .";
       const auto ret = std::system(cmd.str().c_str());
-      Assert(!ret, "Creating symlinks to query templates failed.");
+      Assert(ret == 0, "Creating symlinks to query templates failed.");
     }
 
     // Call qgen a couple of times with different PRNG seeds and store the resulting query parameters in queries/params.
@@ -99,7 +99,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
           << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << seed << " -l " << params_path
           << " >/dev/null";
       const auto ret = std::system(cmd.str().c_str());
-      Assert(!ret, "Calling qgen failed.");
+      Assert(ret == 0, "Calling qgen failed.");
     }
     // NOLINTEND(concurrency-mt-unsafe)
 

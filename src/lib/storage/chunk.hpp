@@ -5,19 +5,14 @@
 #include <limits>
 #include <memory>
 #include <optional>
-#include <shared_mutex>
-#include <string>
 #include <vector>
 
 #include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
-#include "all_type_variant.hpp"
 #include "index/chunk_index_type.hpp"
 #include "mvcc_data.hpp"
-#include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/copyable_atomic.hpp"
 
 namespace hyrise {
 
@@ -51,8 +46,8 @@ class Chunk : private Noncopyable {
   // account for NULL being encoded as a separate value ID.
   static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
-  Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{}, Indexes indexes = {});
+  explicit Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
+                 PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{}, Indexes indexes = {});
 
   // Returns whether new rows can be appended to this chunk. Chunks are set immutable during `set_immutable().
   bool is_mutable() const;

@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <memory>
 #include <ostream>
 #include <utility>
 
@@ -13,12 +12,10 @@
 namespace hyrise {
 
 VariableLengthKey::VariableLengthKey(CompositeKeyLength bytes_per_key)
-    : _owned_data(std::make_unique<VariableLengthKeyWord[]>(bytes_per_key)),  // NOLINT
-      _impl(_owned_data.get(), bytes_per_key) {}
+    : _owned_data(bytes_per_key), _impl(_owned_data.data(), bytes_per_key) {}
 
 VariableLengthKey::VariableLengthKey(const VariableLengthKeyBase& other)
-    : _owned_data(std::make_unique<VariableLengthKeyWord[]>(other._size)),  // NOLINT
-      _impl(_owned_data.get(), other._size) {
+    : _owned_data(other._size), _impl(_owned_data.data(), other._size) {
   std::copy(other._data, other._data + other._size, _impl._data);
 }
 

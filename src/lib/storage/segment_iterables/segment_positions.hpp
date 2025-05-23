@@ -23,7 +23,6 @@ class AbstractSegmentPosition {
  public:
   using Type = T;
 
- public:
   AbstractSegmentPosition() = default;
   AbstractSegmentPosition(const AbstractSegmentPosition&) = default;
   virtual ~AbstractSegmentPosition() = default;

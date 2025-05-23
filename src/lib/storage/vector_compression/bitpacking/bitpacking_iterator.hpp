@@ -27,7 +27,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
     return *this;
   }
 
-  BitPackingIterator& operator=(BitPackingIterator&& other) {
+  BitPackingIterator& operator=(BitPackingIterator&& other) noexcept {
     if (this == &other) {
       return *this;
     }
@@ -40,6 +40,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   ~BitPackingIterator() = default;
 
  private:
+  // NOLINTBEGIN(readability-identifier-naming)
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() {
@@ -50,8 +51,8 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
     --_absolute_index;
   }
 
-  void advance(std::ptrdiff_t n) {
-    _absolute_index += n;
+  void advance(std::ptrdiff_t distance) {
+    _absolute_index += distance;
   }
 
   bool equal(const BitPackingIterator& other) const {
@@ -59,14 +60,14 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   }
 
   std::ptrdiff_t distance_to(const BitPackingIterator& other) const {
-    return other._absolute_index - _absolute_index;
+    return static_cast<ptrdiff_t>(other._absolute_index) - static_cast<ptrdiff_t>(_absolute_index);
   }
 
   uint32_t dereference() const {
     return _data[_absolute_index];
   }
+  // NOLINTEND(readability-identifier-naming)
 
- private:
   const pmr_compact_vector& _data;
   size_t _absolute_index = 0;
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <ctime>
 #include <functional>
 #include <map>
@@ -72,7 +73,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   // Used to generate not only random numbers, but also non-uniform numbers and random last names as defined by the
   // TPC-C Specification.
-  static thread_local TPCCRandomGenerator _random_gen;
+  static thread_local TPCCRandomGenerator _random_gen;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
   /**
    * In TPCC and TPCH table sizes are usually defined relatively to each other.
@@ -104,11 +105,11 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   std::string name, std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
-    auto is_first_column = column_definitions.size() == 0;
+    auto is_first_column = column_definitions.empty();
 
     auto has_null_value = false;
 
@@ -116,8 +117,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
      * Calculate the total row count for this column based on the cardinalities of the influencing tables.
      * For the CUSTOMER table this calculates 1*10*3000
      */
-    auto loop_count =
-        std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
+    auto loop_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<>());
 
     auto data = pmr_vector<T>{};
     data.reserve(chunk_size);
@@ -145,8 +145,8 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        * indices[0]   | indices[1]  | indices[2]
        */
       for (auto loop = size_t{0}; loop < cardinalities->size(); ++loop) {
-        auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1u,
-                                       std::multiplies<size_t>());
+        auto divisor = std::accumulate(std::begin(*cardinalities) + static_cast<ptrdiff_t>(loop) + 1,
+                                       std::end(*cardinalities), 1u, std::multiplies<>());
         indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
       }
 

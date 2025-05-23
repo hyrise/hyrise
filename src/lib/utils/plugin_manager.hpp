@@ -24,6 +24,23 @@ using UserExecutableFunctionMap =
     std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, PluginNameFunctionNameHash>;
 
 struct PluginHandleWrapper {
+  PluginHandleWrapper(PluginHandle init_handle, std::unique_ptr<AbstractPlugin>&& init_plugin)
+      : handle(init_handle), plugin(std::move(init_plugin)) {}
+
+  PluginHandleWrapper(PluginHandleWrapper& other) = delete;
+
+  PluginHandleWrapper(PluginHandleWrapper&& other) noexcept : handle(other.handle), plugin(std::move(other.plugin)) {}
+
+  PluginHandleWrapper& operator=(PluginHandleWrapper& other) = delete;
+
+  PluginHandleWrapper& operator=(PluginHandleWrapper&& other) noexcept {
+    handle = other.handle;
+    plugin = std::move(other.plugin);
+    return *this;
+  }
+
+  ~PluginHandleWrapper() = default;
+
   PluginHandle handle;
   std::unique_ptr<AbstractPlugin> plugin;
 };
@@ -48,12 +65,11 @@ class PluginManager : public Noncopyable {
   bool has_post_benchmark_hook(const PluginName& plugin_name) const;
 
   ~PluginManager();
+  const PluginManager& operator=(const PluginManager&) = delete;
 
  protected:
   PluginManager() = default;
   friend class Hyrise;
-
-  const PluginManager& operator=(const PluginManager&) = delete;
   PluginManager& operator=(PluginManager&&) = default;
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;

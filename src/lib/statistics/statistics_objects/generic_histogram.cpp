@@ -1,10 +1,11 @@
 #include "generic_histogram.hpp"
 
 #include <memory>
-#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <boost/range/numeric.hpp>
 
 #include "all_type_variant.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
@@ -22,16 +23,14 @@ GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T
       _bin_minima(std::move(bin_minima)),
       _bin_maxima(std::move(bin_maxima)),
       _bin_heights(std::move(bin_heights)),
-      _bin_distinct_counts(std::move(bin_distinct_counts)) {
+      _bin_distinct_counts(std::move(bin_distinct_counts)),
+      _total_count(boost::accumulate(_bin_heights, HistogramCountType{0})),
+      _total_distinct_count(boost::accumulate(_bin_distinct_counts, HistogramCountType{0})) {
   Assert(_bin_minima.size() == _bin_maxima.size(), "Must have the same number of lower as upper bin edges.");
   Assert(_bin_minima.size() == _bin_heights.size(), "Must have the same number of edges and heights.");
   Assert(_bin_minima.size() == _bin_distinct_counts.size(), "Must have the same number of edges and distinct counts.");
 
   AbstractHistogram<T>::_assert_bin_validity();
-
-  _total_count = std::accumulate(_bin_heights.cbegin(), _bin_heights.cend(), HistogramCountType{0});
-  _total_distinct_count =
-      std::accumulate(_bin_distinct_counts.cbegin(), _bin_distinct_counts.cend(), HistogramCountType{0});
 }
 
 template <typename T>

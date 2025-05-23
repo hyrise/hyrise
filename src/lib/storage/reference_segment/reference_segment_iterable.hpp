@@ -36,7 +36,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     // optimizations. For example, we can use a filtered iterator instead of having to create segments accessors
     // and using virtual method calls.
 
-    if (position_filter->references_single_chunk() && position_filter->size() > 0) {
+    if (position_filter->references_single_chunk() && !position_filter->empty()) {
       // If a single chunk is referenced, we use the PosList as a filter for the referenced segment iterable.
       // This assumes that the PosList itself does not contain any NULL values. As NULL-producing operators
       // (Join, Aggregate, Projection) do not emit a PosList with references_single_chunk, we can assume that the
@@ -139,7 +139,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
  private:
   const ReferenceSegment& _segment;
 
- private:
   // The iterator for cases where we potentially iterate over multiple referenced chunks
   template <typename PosListIteratorType>
   class MultipleChunkIterator
@@ -148,7 +147,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
 
-   public:
     explicit MultipleChunkIterator(
         const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
         const std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>>& accessors,
@@ -160,6 +158,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           _accessors{accessors} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -170,8 +169,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       --_pos_list_it;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _pos_list_it += n;
+    void advance(std::ptrdiff_t distance) {
+      _pos_list_it += distance;
     }
 
     bool equal(const MultipleChunkIterator& other) const {
@@ -204,13 +203,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       }
       return SegmentPosition<T>{T{}, true, pos_list_offset};
     }
+    // NOLINTEND(readability-identifier-naming)
 
     void _create_accessor(const ChunkID chunk_id) const {
       auto segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
       (*_accessors)[chunk_id] = create_segment_accessor<T>(segment);
     }
 
-   private:
     std::shared_ptr<const Table> _referenced_table;
     ColumnID _referenced_column_id;
 

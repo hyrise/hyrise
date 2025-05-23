@@ -20,7 +20,7 @@ class AnySegmentIteratorWrapperBase {
 
   virtual void increment() = 0;
   virtual void decrement() = 0;
-  virtual void advance(std::ptrdiff_t n) = 0;
+  virtual void advance(std::ptrdiff_t distance) = 0;
   virtual bool equal(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
   virtual std::ptrdiff_t distance_to(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
   virtual SegmentPosition<T> dereference() const = 0;
@@ -51,8 +51,8 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
     --_iterator;
   }
 
-  void advance(std::ptrdiff_t n) final {
-    _iterator += n;
+  void advance(std::ptrdiff_t distance) final {
+    _iterator += distance;
   }
 
   /**
@@ -124,7 +124,6 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
 
   /**@}*/
 
- public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
 
   AnySegmentIterator& operator=(const AnySegmentIterator& other) {
@@ -136,6 +135,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
   }
 
  private:
+  // NOLINTBEGIN(readability-identifier-naming)
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() {
@@ -146,8 +146,8 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
     _wrapper->decrement();
   }
 
-  void advance(std::ptrdiff_t n) {
-    _wrapper->advance(n);
+  void advance(std::ptrdiff_t distance) {
+    _wrapper->advance(distance);
   }
 
   bool equal(const AnySegmentIterator<T>& other) const {
@@ -161,8 +161,8 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
   SegmentPosition<T> dereference() const {
     return _wrapper->dereference();
   }
+  // NOLINTEND(readability-identifier-naming)
 
- private:
   std::unique_ptr<hyrise::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
 

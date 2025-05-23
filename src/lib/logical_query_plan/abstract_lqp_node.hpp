@@ -8,7 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "enable_make_for_lqp_node.hpp"
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
@@ -60,8 +62,8 @@ class LQPColumnExpression;
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
-  AbstractLQPNode(const LQPNodeType node_type,
-                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
+  explicit AbstractLQPNode(const LQPNodeType node_type,
+                           const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
   virtual ~AbstractLQPNode();
 
   /**
@@ -319,7 +321,7 @@ struct LQPNodeSharedPtrHash final {
 // std::shared_ptr<AbstractLQPNode>
 struct LQPNodeSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs) const {
-    return lhs == rhs || *lhs == *rhs;
+    return static_cast<size_t>(lhs == rhs || *lhs == *rhs);
   }
 };
 

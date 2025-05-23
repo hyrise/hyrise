@@ -1,10 +1,7 @@
 #pragma once
 
-#include <memory>
 #include <optional>
-#include <type_traits>
 
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -15,7 +12,7 @@ class BaseSegmentAccessor {
   BaseSegmentAccessor(const BaseSegmentAccessor&) = default;
   BaseSegmentAccessor(BaseSegmentAccessor&&) = default;
 
-  virtual ~BaseSegmentAccessor() {}
+  virtual ~BaseSegmentAccessor() = default;
 };
 
 /**
@@ -25,7 +22,7 @@ class BaseSegmentAccessor {
 template <typename T>
 class AbstractSegmentAccessor : public BaseSegmentAccessor {
  public:
-  virtual const std::optional<T> access(ChunkOffset offset) const = 0;
+  virtual std::optional<T> access(ChunkOffset offset) const = 0;
 };
 
 }  // namespace hyrise
