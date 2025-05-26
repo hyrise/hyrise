@@ -25,7 +25,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
     // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape it. No need to escape the
     // "..._unindexed" name.
-    const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+    const auto escaped_table_name = std::string{"\""} + std::string{table_name} + "\"";
 
     sqlite_wrapper->main_connection.raw_execute_query(std::string{"ALTER TABLE "}
                                                           .append(escaped_table_name)
@@ -57,7 +57,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
     auto per_table_time = Timer{};
     std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 
-    const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+    const auto escaped_table_name = std::string{"\""} + std::string{table_name} + "\"";
 
     sqlite_wrapper->main_connection.raw_execute_query(std::string{"INSERT INTO "}
                                                           .append(escaped_table_name)

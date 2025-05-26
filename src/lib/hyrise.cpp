@@ -8,6 +8,7 @@
 #include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "storage/catalog_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/log_manager.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -24,6 +25,7 @@ Hyrise::Hyrise() {
   // construction, explicitly initializing the resource first means that it is destructed last.
   std::pmr::set_default_resource(&DefaultResource::get());
 
+  catalog_manager = CatalogManager{};
   storage_manager = StorageManager{};
   plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};

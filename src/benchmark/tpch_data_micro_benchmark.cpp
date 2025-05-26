@@ -89,7 +89,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
     std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
     for (const auto& table_name : sm.table_names()) {
-      auto table = sm.get_table(table_name);
+      auto table = sm.get_table(std::string{table_name});
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->never_clear_output();
       table_wrapper->execute();

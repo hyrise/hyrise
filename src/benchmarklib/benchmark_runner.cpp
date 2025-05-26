@@ -107,7 +107,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
       auto per_table_timer = Timer{};
-      sqlite_wrapper->create_sqlite_table(*table, table_name);
+      sqlite_wrapper->create_sqlite_table(*table, std::string{table_name});
       std::cout << "(" << per_table_timer.lap_formatted() << ")\n";
     }
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")\n";

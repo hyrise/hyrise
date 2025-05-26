@@ -80,7 +80,7 @@ TEST_F(StorageManagerTest, NoSuperfluousStatisticsGeneration) {
 
 TEST_F(StorageManagerTest, TableNames) {
   const auto& sm = Hyrise::get().storage_manager;
-  const auto names = std::vector<std::string>{"first_table", "second_table"};
+  const auto names = std::vector<std::string_view>{"first_table", "second_table"};
   const auto& sm_names = sm.table_names();
   EXPECT_TRUE(std::is_sorted(sm_names.cbegin(), sm_names.cend()));
   EXPECT_EQ(sm_names, names);

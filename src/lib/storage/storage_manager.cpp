@@ -16,6 +16,7 @@
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/catalog_manager.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/prepared_plan.hpp"
 #include "types.hpp"
@@ -25,12 +26,21 @@
 namespace hyrise {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
-  const auto table_iter = _tables.find(name);
+  const auto existing_table_id = Hyrise::get().catalog_manager.get_table_id(name);
   const auto view_iter = _views.find(name);
-  Assert(table_iter == _tables.end() || !table_iter->second,
+  Assert(existing_table_id == INVALID_TABLE_ID,
          "Cannot add table " + name + " - a table with the same name already exists");
   Assert(view_iter == _views.end() || !view_iter->second,
          "Cannot add table " + name + " - a view with the same name already exists");
+
+  const auto table_id = Hyrise::get().catalog_manager.register_table(name);
+  add_table(table_id, std::move(table));
+}
+
+void StorageManager::add_table(const TableID table_id, std::shared_ptr<Table> table) {
+  const auto table_iter = _tables.find(table_id);
+  Assert(table_iter == _tables.end() || !table_iter->second,
+         "Cannot add table " + std::to_string(table_id) + " - a table with the same ID already exists");
 
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -46,69 +56,72 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   }
   generate_chunk_pruning_statistics(table);
 
-  _tables[name] = std::move(table);
+  _tables[table_id] = std::move(table);
 }
 
 void StorageManager::drop_table(const std::string& name) {
-  const auto table_iter = _tables.find(name);
-  Assert(table_iter != _tables.end() && table_iter->second, "Error deleting table. No such table named '" + name + "'");
+  const auto table_id = Hyrise::get().catalog_manager.get_table_id(name);
+  Assert(table_id != INVALID_TABLE_ID, "Error deleting table. No such table named '" + name + "'");
+  Hyrise::get().catalog_manager.deregister_table(name);
 
   // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply reset the table pointer.
-  _tables[name] = nullptr;
+  _tables[table_id] = nullptr;
+}
+
+void StorageManager::drop_table(const TableID table_id) {
+  const auto table_iter = _tables.find(table_id);
+  Assert(table_iter != _tables.end() && table_iter->second,
+         "Error deleting table. No such table with ID '" + std::to_string(table_id) + "'");
+
+  // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply reset the table pointer.
+  _tables[table_id] = nullptr;
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
-  const auto table_iter = _tables.find(name);
-  Assert(table_iter != _tables.end(), "No such table named '" + name + "'");
+  const auto table_id = Hyrise::get().catalog_manager.get_table_id(name);
+  Assert(table_id != INVALID_TABLE_ID, "No such table named '" + name + "'");
+
+  return get_table(table_id);
+}
+
+std::shared_ptr<Table> StorageManager::get_table(const TableID table_id) const {
+  const auto table_iter = _tables.find(table_id);
+  Assert(table_iter != _tables.end(), "No such table with ID '" + std::to_string(table_id) + "'");
 
   auto table = table_iter->second;
-  Assert(table,
-         "Nullptr found when accessing table named '" + name + "'. This can happen if a dropped table is accessed.");
+  Assert(table, "Nullptr found when accessing table with ID '" + std::to_string(table_id) +
+                    "'. This can happen if a dropped table is accessed.");
 
   return table;
 }
 
 bool StorageManager::has_table(const std::string& name) const {
-  const auto table_iter = _tables.find(name);
+  return Hyrise::get().catalog_manager.get_table_id(name) == INVALID_TABLE_ID;
+}
+
+bool StorageManager::has_table(const TableID table_id) const {
+  const auto table_iter = _tables.find(table_id);
   return table_iter != _tables.end() && table_iter->second;
 }
 
-std::vector<std::string> StorageManager::table_names() const {
-  auto table_names = std::vector<std::string>{};
-  table_names.reserve(_tables.size());
-
-  for (const auto& table_item : _tables) {
-    if (!table_item.second) {
-      continue;
-    }
-
-    table_names.emplace_back(table_item.first);
-  }
-
-  std::sort(table_names.begin(), table_names.end());
-  return table_names;
+std::vector<std::string_view> StorageManager::table_names() {
+  return Hyrise::get().catalog_manager.table_names();
 }
 
-std::unordered_map<std::string, std::shared_ptr<Table>> StorageManager::tables() const {
-  std::unordered_map<std::string, std::shared_ptr<Table>> result;
+std::unordered_map<std::string_view, std::shared_ptr<Table>> StorageManager::tables() const {
+  auto result = std::unordered_map<std::string_view, std::shared_ptr<Table>>{};
 
-  for (const auto& [table_name, table] : _tables) {
-    // Skip dropped table, as we don't remove the map entry when dropping, but only reset the table pointer.
-    if (!table) {
-      continue;
-    }
-
-    result[table_name] = table;
+  for (const auto& [table_name, table_id] : Hyrise::get().catalog_manager.table_ids()) {
+    result[table_name] = _tables.at(table_id);
   }
 
   return result;
 }
 
 void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
-  const auto table_iter = _tables.find(name);
+  const auto table_id = Hyrise::get().catalog_manager.get_table_id(name);
   const auto view_iter = _views.find(name);
-  Assert(table_iter == _tables.end() || !table_iter->second,
-         "Cannot add view " + name + " - a table with the same name already exists");
+  Assert(table_id == INVALID_TABLE_ID, "Cannot add view " + name + " - a table with the same name already exists");
   Assert(view_iter == _views.end() || !view_iter->second,
          "Cannot add view " + name + " - a view with the same name already exists");
 
@@ -217,20 +230,20 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.reserve(_tables.size());
 
-  for (const auto& table_item : _tables) {
-    if (!table_item.second) {
+  for (const auto& table_name_and_id : Hyrise::get().catalog_manager.table_ids()) {
+    const auto table_id = table_name_and_id.second;
+    if (table_id == INVALID_TABLE_ID) {
       continue;
     }
+    const auto& name = table_name_and_id.first;
+    const auto table = _tables.at(table_id);
 
-    auto job_task = std::make_shared<JobTask>([table_item, &path]() {
-      const auto& name = table_item.first;
-      const auto& table = table_item.second;
-
+    auto job_task = std::make_shared<JobTask>([name, table, &path]() {
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
 
       // NOLINTNEXTLINE(performance-inefficient-string-concatenation): not worth it, no performance-critical path.
-      auto export_csv = std::make_shared<Export>(table_wrapper, path + "/" + name + ".csv", FileType::Csv);
+      auto export_csv = std::make_shared<Export>(table_wrapper, path + "/" + std::string{name} + ".csv", FileType::Csv);
       export_csv->execute();
     });
     tasks.push_back(job_task);
@@ -244,10 +257,11 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
   stream << "==================\n";
   stream << "===== Tables =====\n\n";
 
-  for (auto const& table : storage_manager.tables()) {
-    stream << "==== table >> " << table.first << " <<";
-    stream << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
-           << table.second->chunk_count() << " chunks)\n";
+  for (const auto& [name, table_id] : Hyrise::get().catalog_manager.table_ids()) {
+    stream << "==== table >> " << name << " <<";
+    const auto table = storage_manager.get_table(table_id);
+    stream << " (" << table->column_count() << " columns, " << table->row_count() << " rows in " << table->chunk_count()
+           << " chunks)\n";
   }
 
   stream << "==================\n";
