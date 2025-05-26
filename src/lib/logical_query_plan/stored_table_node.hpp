@@ -20,6 +20,7 @@ class TableStatistics;
  */
 class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
+  explicit StoredTableNode(TableID init_table_id);
   explicit StoredTableNode(const std::string& init_table_name);
 
   std::shared_ptr<LQPColumnExpression> get_column(const std::string& name) const;
@@ -56,7 +57,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   OrderDependencies order_dependencies() const override;
 
-  const std::string table_name;
+  const TableID table_id;
 
   // By default, the StoredTableNode takes its statistics from the table. This field can be used to overwrite these
   // statistics if they have changed from the original table, e.g., as the result of chunk pruning.

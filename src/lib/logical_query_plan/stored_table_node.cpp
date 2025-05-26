@@ -41,11 +41,14 @@ bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<C
 
 namespace hyrise {
 
+StoredTableNode::StoredTableNode(TableID init_table_id)
+    : AbstractLQPNode(LQPNodeType::StoredTable), table_id{init_table_id} {}
+
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
-    : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
+    : StoredTableNode{Hyrise::get().catalog.table_id(init_table_name)} {}
 
 std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::string& name) const {
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   const auto column_id = table->column_id_by_name(name);
   return std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
 }
@@ -70,7 +73,7 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
   // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at
   // least one column in the output of this node, which is used by Table::size() to determine the number of 5's.
-  const auto stored_column_count = Hyrise::get().storage_manager.get_table(table_name)->column_count();
+  const auto stored_column_count = Hyrise::get().storage_manager.get_table(table_id)->column_count();
   Assert(pruned_column_ids.size() < static_cast<size_t>(stored_column_count), "Cannot exclude all columns from Table.");
 
   _pruned_column_ids = pruned_column_ids;
@@ -104,7 +107,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> StoredTableNode::prunable_subquery
 }
 
 std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
-  const auto& stored_table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& stored_table = Hyrise::get().storage_manager.get_table(table_id);
+  const auto& table_name = Hyrise::get().catalog.table_name(table_id);
 
   auto stream = std::ostringstream{};
   stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
@@ -123,7 +127,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::output_express
 }
 
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   return table->column_is_nullable(column_id);
 }
 
@@ -131,7 +135,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
   auto unique_column_combinations = UniqueColumnCombinations{};
 
   // We create unique column combinations from selected table key constraints.
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   const auto& table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
@@ -156,7 +160,7 @@ OrderDependencies StoredTableNode::order_dependencies() const {
   auto order_dependencies = OrderDependencies{};
 
   // We create order dependencies from table order constraints.
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   const auto& table_order_constraints = table->soft_order_constraints();
 
   for (const auto& table_order_constraint : table_order_constraints) {
@@ -184,7 +188,7 @@ OrderDependencies StoredTableNode::order_dependencies() const {
 std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   if (_pruned_column_ids.empty()) {
     return table->chunk_indexes_statistics();
   }
@@ -216,7 +220,7 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
 }
 
 std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() const {
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
 
   if (_pruned_column_ids.empty()) {
     return table->table_indexes_statistics();
@@ -249,8 +253,7 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
 }
 
 size_t StoredTableNode::_on_shallow_hash() const {
-  auto hash = size_t{0};
-  boost::hash_combine(hash, table_name);
+  auto hash = boost::hash_value(static_cast<TableID::base_type>(table_id));
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
     boost::hash_combine(hash, pruned_chunk_id);
   }
@@ -269,7 +272,7 @@ std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMappin
   // We cannot copy _prunable_subquery_predicated here since deep_copy() recurses into the input nodes and the
   // StoredTableNodes are the first ones to be copied. Instead, AbstractLQPNode::deep_copy() sets the copied
   // PredicateNodes after the entire LQP has been copied.
-  const auto copy = make(table_name);
+  const auto copy = make(table_id);
   copy->set_pruned_chunk_ids(_pruned_chunk_ids);
   copy->set_pruned_column_ids(_pruned_column_ids);
   return copy;
@@ -277,7 +280,7 @@ std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
-  if (table_name != stored_table_node.table_name || _pruned_chunk_ids != stored_table_node._pruned_chunk_ids ||
+  if (table_id != stored_table_node.table_id || _pruned_chunk_ids != stored_table_node._pruned_chunk_ids ||
       _pruned_column_ids != stored_table_node._pruned_column_ids) {
     return false;
   }
@@ -306,7 +309,7 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
 }
 
 void StoredTableNode::_set_output_expressions() const {
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   const auto stored_column_count = table->column_count();
 
   // Create `_output_expressions` sized with respect to the `_pruned_column_ids`

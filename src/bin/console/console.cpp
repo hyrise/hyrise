@@ -692,11 +692,12 @@ int Console::_export_table(const std::string& args) {
     }
     table_operator = std::make_shared<TableWrapper>(meta_table_manager.generate_table(tablename));
   } else {
-    if (!storage_manager.has_table(tablename)) {
+    const auto table_id = Hyrise::get().catalog.table_id(tablename);
+    if (table_id == INVALID_TABLE_ID) {
       out("Error: Table does not exist in StorageManager\n");
       return ReturnCode::Error;
     }
-    table_operator = std::make_shared<GetTable>(tablename);
+    table_operator = std::make_shared<GetTable>(table_id);
   }
 
   table_operator->execute();
@@ -724,13 +725,13 @@ int Console::_print_table(const std::string& args) {
 
   const auto& tablename = arguments.at(0);
 
-  const auto& storage_manager = Hyrise::get().storage_manager;
-  if (!storage_manager.has_table(tablename)) {
+  const auto table_id = Hyrise::get().catalog.table_id(tablename);
+  if (table_id == INVALID_TABLE_ID) {
     out("Error: Table does not exist in StorageManager\n");
     return ReturnCode::Error;
   }
 
-  const auto get_table = std::make_shared<GetTable>(tablename);
+  const auto get_table = std::make_shared<GetTable>(table_id);
   get_table->execute();
 
   out(get_table->get_output(), PrintFlags::Mvcc);

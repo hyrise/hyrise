@@ -1,4 +1,4 @@
-#include "catalog_manager.hpp"
+#include "catalog.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -25,22 +25,24 @@
 
 namespace hyrise {
 
-CatalogManager& CatalogManager::operator=(CatalogManager&& other) noexcept {
+Catalog& Catalog::operator=(Catalog&& other) noexcept {
   _table_ids = std::move(other._table_ids);
   _next_table_id = other._next_table_id.load();
   return *this;
 }
 
-TableID CatalogManager::register_table(const std::string& name) {
+TableID Catalog::register_table(const std::string& name) {
   const auto iter = _table_ids.find(name);
   Assert(iter == _table_ids.end() || iter->second == INVALID_TABLE_ID,
          "Cannot add table " + name + " - a table with the same name already exists");
   const auto table_id = _next_table_id++;
   _table_ids[name] = table_id;
+  _table_names.grow_to_at_least(table_id);
+  _table_names[table_id] = name;
   return static_cast<TableID>(table_id);
 }
 
-void CatalogManager::deregister_table(const std::string& name) {
+void Catalog::deregister_table(const std::string& name) {
   const auto iter = _table_ids.find(name);
   Assert(iter != _table_ids.end() && iter->second != INVALID_TABLE_ID,
          "Error deleting table. No such table named '" + name + "'");
@@ -49,7 +51,7 @@ void CatalogManager::deregister_table(const std::string& name) {
   _table_ids[name] = INVALID_TABLE_ID;
 }
 
-TableID CatalogManager::get_table_id(const std::string& name) {
+TableID Catalog::table_id(const std::string& name) const {
   const auto iter = _table_ids.find(name);
   if (iter == _table_ids.end()) {
     return INVALID_TABLE_ID;
@@ -57,7 +59,12 @@ TableID CatalogManager::get_table_id(const std::string& name) {
   return iter->second;
 }
 
-std::vector<std::string_view> CatalogManager::table_names() const {
+const std::string& Catalog::table_name(const TableID table_id) const {
+  Assert(table_id < _table_names.size(), "TableID out of bounds.");
+  return _table_names[table_id];
+}
+
+std::vector<std::string_view> Catalog::table_names() const {
   auto table_names = std::vector<std::string_view>{};
   table_names.reserve(_table_ids.size());
 
@@ -73,7 +80,7 @@ std::vector<std::string_view> CatalogManager::table_names() const {
   return table_names;
 }
 
-std::unordered_map<std::string_view, TableID> CatalogManager::table_ids() const {
+std::unordered_map<std::string_view, TableID> Catalog::table_ids() const {
   auto result = std::unordered_map<std::string_view, TableID>{};
 
   for (const auto& [table_name, table_id] : _table_ids) {

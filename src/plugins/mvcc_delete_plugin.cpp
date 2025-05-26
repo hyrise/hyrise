@@ -52,10 +52,9 @@ void MvccDeletePlugin::stop() {
  * invalidated rows is exceeded.
  */
 void MvccDeletePlugin::_logical_delete_loop() {
-  const auto tables = Hyrise::get().storage_manager.tables();
-
   // Check all tables.
-  for (const auto& [table_name, table] : tables) {
+  for (const auto& [table_name, table_id] : Hyrise::get().catalog.table_ids()) {
+    const auto table = Hyrise::get().storage_manager.get_table(table_id);
     if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) {
       continue;
     }
@@ -90,7 +89,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
         }
 
         auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-        const auto success = _try_logical_delete(std::string{table_name}, chunk_id, transaction_context);
+        const auto success = _try_logical_delete(table_id, chunk_id, transaction_context);
 
         if (success) {
           DebugAssert(table->get_chunk(chunk_id)->get_cleanup_commit_id(),
@@ -142,9 +141,9 @@ void MvccDeletePlugin::_physical_delete_loop() {
   }
 }
 
-bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const ChunkID chunk_id,
+bool MvccDeletePlugin::_try_logical_delete(TableID table_id, const ChunkID chunk_id,
                                            const std::shared_ptr<TransactionContext>& transaction_context) {
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_id);
   const auto& chunk = table->get_chunk(chunk_id);
 
   Assert(chunk, "Chunk does not exist. Logical Delete can not be applied.");
@@ -157,7 +156,7 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
 
-  const auto get_table = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
+  const auto get_table = std::make_shared<GetTable>(table_id, excluded_chunk_ids, std::vector<ColumnID>());
   get_table->set_transaction_context(transaction_context);
   get_table->execute();
 
@@ -168,7 +167,7 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
 
   // Use Update operator to delete and re-insert valid records in chunk. Pass validate into Update operator twice since
   // data will not be changed.
-  const auto update = std::make_shared<Update>(table_name, validate, validate);
+  const auto update = std::make_shared<Update>(table_id, validate, validate);
   update->set_transaction_context(transaction_context);
   update->execute();
 

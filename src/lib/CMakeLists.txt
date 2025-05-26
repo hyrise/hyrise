@@ -444,8 +444,8 @@ set(
     storage/buffer/frame.cpp
     storage/buffer/frame.hpp
     storage/buffer/page_id.hpp
-    storage/catalog_manager.cpp
-    storage/catalog_manager.hpp
+    storage/catalog.cpp
+    storage/catalog.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp

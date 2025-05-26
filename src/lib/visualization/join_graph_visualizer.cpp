@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -129,8 +130,8 @@ std::string JoinGraphVisualizer::_create_vertex_description(const std::shared_pt
 
   const auto stored_table_node_count = stored_table_nodes.size();
   for (auto node_idx = size_t{0}; node_idx < stored_table_node_count; ++node_idx) {
-    stream << stored_table_nodes[node_idx]->table_name;
-    if (node_idx + 1u < stored_table_nodes.size()) {
+    stream << Hyrise::get().catalog.table_name(stored_table_nodes[node_idx]->table_id);
+    if (node_idx + 1 < stored_table_nodes.size()) {
       stream << ", ";
     }
   }

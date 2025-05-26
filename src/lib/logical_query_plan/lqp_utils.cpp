@@ -15,6 +15,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
@@ -292,8 +293,8 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
   return lqp_is_validated(lqp->left_input()) && lqp_is_validated(lqp->right_input());
 }
 
-std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  std::set<std::string> modified_tables;
+std::unordered_set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  auto modified_tables = std::unordered_set<std::string>{};
 
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
@@ -306,7 +307,8 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Delete: {
         visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
           if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(sub_delete_node)) {
-            modified_tables.insert(stored_table_node->table_name);
+            const auto& table_name = Hyrise::get().catalog.table_name(stored_table_node->table_id);
+            modified_tables.insert(table_name);
           } else if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(sub_delete_node)) {
             if (mock_node->name) {
               modified_tables.insert(*mock_node->name);

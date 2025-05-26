@@ -165,7 +165,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
     }
 
     auto current_excluded_chunk_ids = std::set<ChunkID>{};
-    const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+    const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_id);
 
     const auto stored_table_node_output_expressions = stored_table_node_without_column_pruning->output_expressions();
     for (const auto& operator_predicate : *operator_predicates) {

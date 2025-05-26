@@ -112,7 +112,7 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
 /**
  * @return all names of tables that have been accessed in modifying nodes (e.g., InsertNode, UpdateNode)
  */
-std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp);
+std::unordered_set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
  * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes. It traverses the LQP from the

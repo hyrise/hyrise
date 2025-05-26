@@ -35,12 +35,12 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-GetTable::GetTable(const std::string& name) : GetTable{name, {}, {}} {}
+GetTable::GetTable(const TableID table_id) : GetTable{table_id, {}, {}} {}
 
-GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
+GetTable::GetTable(const TableID table_id, const std::vector<ChunkID>& pruned_chunk_ids,
                    const std::vector<ColumnID>& pruned_column_ids)
     : AbstractReadOnlyOperator{OperatorType::GetTable},
-      _name{name},
+      _table_id{table_id},
       _pruned_chunk_ids{pruned_chunk_ids},
       _pruned_column_ids{pruned_column_ids} {
   // Check pruned_chunk_ids
@@ -61,7 +61,7 @@ const std::string& GetTable::name() const {
 }
 
 std::string GetTable::description(DescriptionMode description_mode) const {
-  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
+  const auto stored_table = Hyrise::get().storage_manager.get_table(_table_id);
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   auto stream = std::stringstream{};
 
@@ -88,7 +88,7 @@ std::string GetTable::description(DescriptionMode description_mode) const {
 }
 
 const std::string& GetTable::table_name() const {
-  return _name;
+  return Hyrise::get().catalog.table_name(_table_id);
 }
 
 const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const {
@@ -128,13 +128,13 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
   // We cannot copy _prunable_subquery_scans here since deep_copy() recurses into the input operators and the GetTable
   // operators are the first ones to be copied. Instead, AbstractOperator::deep_copy() sets the copied TableScans after
   // the whole PQP has been copied.
-  return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
+  return std::make_shared<GetTable>(_table_id, _pruned_chunk_ids, _pruned_column_ids);
 }
 
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
-  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
+  const auto stored_table = Hyrise::get().storage_manager.get_table(_table_id);
 
   // The chunk count might change while we are in this method as other threads concurrently insert new data. MVCC
   // guarantees that rows that are inserted after this transaction was started (and thus after GetTable started to
@@ -353,7 +353,7 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
   // statistics and we want to avoid that. We cannot use `deep_copy()` here since it would complain that the referenced
   // prunable PredicateNodes are not part of the LQP.
   const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_node);
-  const auto dummy_stored_table_node = StoredTableNode::make(_name);
+  const auto dummy_stored_table_node = StoredTableNode::make(_table_id);
 
   for (const auto& op : prunable_subquery_predicates()) {
     const auto& table_scan = static_cast<const TableScan&>(*op);

@@ -23,16 +23,17 @@ namespace hyrise {
 class GetTable : public AbstractReadOnlyOperator {
  public:
   // Convenience constructor without pruning info
-  explicit GetTable(const std::string& name);
+  explicit GetTable(const TableID table_id);
 
   // Constructor with pruning info
-  GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
+  GetTable(const TableID table_id, const std::vector<ChunkID>& pruned_chunk_ids,
            const std::vector<ColumnID>& pruned_column_ids);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
 
   const std::string& table_name() const;
+  const std::string& table_id() const;
   const std::vector<ChunkID>& pruned_chunk_ids() const;
   const std::vector<ColumnID>& pruned_column_ids() const;
 
@@ -58,7 +59,7 @@ class GetTable : public AbstractReadOnlyOperator {
   std::set<ChunkID> _prune_chunks_dynamically();
 
   // Name of the table to retrieve.
-  const std::string _name;
+  const TableID _table_id;
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;
 

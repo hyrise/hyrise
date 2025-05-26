@@ -26,8 +26,7 @@ using namespace hyrise;  // NOLINT
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrHash final {
   size_t operator()(const std::shared_ptr<StoredTableNode>& node) const {
-    auto hash = size_t{0};
-    boost::hash_combine(hash, node->table_name);
+    auto hash = boost::hash_value(static_cast<TableID::base_type>(node->table_id));
     for (const auto& pruned_chunk_id : node->pruned_chunk_ids()) {
       boost::hash_combine(hash, pruned_chunk_id);
     }
@@ -43,7 +42,7 @@ struct StoredTableNodeSharedPtrEqual final {
                 "Expected sorted vector of ChunkIDs");
     DebugAssert(std::is_sorted(rhs->pruned_chunk_ids().cbegin(), rhs->pruned_chunk_ids().cend()),
                 "Expected sorted vector of ChunkIDs");
-    return lhs == rhs || (lhs->table_name == rhs->table_name && lhs->pruned_chunk_ids() == rhs->pruned_chunk_ids());
+    return lhs == rhs || (lhs->table_id == rhs->table_id && lhs->pruned_chunk_ids() == rhs->pruned_chunk_ids());
   }
 };
 

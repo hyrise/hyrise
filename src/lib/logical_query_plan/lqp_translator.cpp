@@ -178,7 +178,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
   Assert(!stored_table_node->left_input() && !stored_table_node->right_input(), "StoredTableNode must be a leaf.");
-  return std::make_shared<GetTable>(stored_table_node->table_name, stored_table_node->pruned_chunk_ids(),
+  return std::make_shared<GetTable>(stored_table_node->table_id, stored_table_node->pruned_chunk_ids(),
                                     stored_table_node->pruned_column_ids());
 }
 
@@ -232,8 +232,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   DebugAssert(std::is_sorted(pruned_chunk_ids.cbegin(), pruned_chunk_ids.cend()),
               "Expected sorted vector of ColumnIDs");
 
-  const auto table_name = stored_table_node->table_name;
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto table_id = stored_table_node->table_id;
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
 
   // Create a vector of chunk ids that have an index and are not pruned.
   const auto& indexes = table->get_table_indexes(column_id);
