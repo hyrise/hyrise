@@ -10,7 +10,7 @@
 #include <shared_mutex>
 #include <thread>
 
-#include "../utils/plugin_test_utils.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
@@ -726,7 +726,8 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   table->append({3, 3, 1});
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
-  /** This test runs insertions and reads concurrently. Specifically, it tests the following functions:
+  /** 
+   * This test runs insertions and reads concurrently. Specifically, it tests the following functions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`
    * - `StoredTableNode::unique_column_combinations`
    * In order to simulate insertions parallel to the reads, we have to clear the constraints in the table. As this is
@@ -739,7 +740,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
   pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
 
-  auto deletion_mutext = std::shared_mutex{};
+  auto deletion_mutex = std::shared_mutex{};
 
   auto start_flag = std::atomic_flag{};
   auto stop_flag = std::atomic_flag{};

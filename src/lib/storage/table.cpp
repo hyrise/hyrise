@@ -498,7 +498,7 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
-  auto [existing_constraint, inserted] = _table_key_constraints.insert(table_key_constraint);
+  const auto inserted = _table_key_constraints.insert(table_key_constraint).second;
   Assert(inserted, "TableKeyConstraint has already been set.");
 }
 
