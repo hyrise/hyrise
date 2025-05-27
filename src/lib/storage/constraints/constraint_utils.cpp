@@ -79,20 +79,17 @@ void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std
   table->add_soft_constraint(TableOrderConstraint{std::move(ordering_column_ids), std::move(ordered_column_ids)});
 }
 
-bool is_constraint_confidently_valid(const std::shared_ptr<Table>& table,
-                                     const TableKeyConstraint& table_key_constraint) {
+bool key_constraint_is_confidently_valid(const std::shared_ptr<Table>& table,
+                                         const TableKeyConstraint& table_key_constraint) {
   if (!table_key_constraint.can_become_invalid()) {
     return true;
   }
 
-  const auto last_validated_on = table_key_constraint.last_validated_on().load();
-  const auto last_invalidated_on = table_key_constraint.last_invalidated_on().load();
-
-  if (last_validated_on == MAX_COMMIT_ID ||
-      (last_invalidated_on != MAX_COMMIT_ID && last_validated_on < last_invalidated_on)) {
+  if (!table_key_constraint.is_valid()) {
     return false;
   }
 
+  const auto last_validated_on = table_key_constraint.last_validated_on();
   const auto chunk_count = table->chunk_count();
   // Due to Hyrise being a append-only database the most recent chunks are the last ones added to the table. Therefore
   // we iterate backwards through all chunks of the table to potentially return faster.
@@ -110,13 +107,13 @@ bool is_constraint_confidently_valid(const std::shared_ptr<Table>& table,
   return true;
 }
 
-bool is_constraint_confidently_invalid(const std::shared_ptr<Table>& table,
-                                       const TableKeyConstraint& table_key_constraint) {
-  const auto last_invalidated_on = table_key_constraint.last_invalidated_on().load();
-  if (last_invalidated_on == MAX_COMMIT_ID) {
+bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
+                                           const TableKeyConstraint& table_key_constraint) {
+  if (table_key_constraint.is_valid()) {
     return false;
   }
 
+  const auto last_invalidated_on = table_key_constraint.last_invalidated_on();
   const auto chunk_count = table->chunk_count();
   // Due to Hyrise being a append-only database the most recent chunks are the last ones added to the table. Therefore
   // we iterate backwards through all chunks of the table to potentially return faster.

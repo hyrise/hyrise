@@ -3,7 +3,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -60,8 +59,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
   // Pure container functionality: MockNode does not use key constraints internally.
-  void set_key_constraints(const std::unordered_set<TableKeyConstraint>& key_constraints);
-  const std::unordered_set<TableKeyConstraint>& key_constraints() const;
+  void set_key_constraints(const TableKeyConstraints& key_constraints);
+  const TableKeyConstraints& key_constraints() const;
 
   void set_non_trivial_functional_dependencies(const FunctionalDependencies& fds);
   // Returns the specified set of non-trivial FDs.
@@ -84,7 +83,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
   FunctionalDependencies _functional_dependencies;
-  std::unordered_set<TableKeyConstraint> _table_key_constraints;
+  TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _order_constraints;
 };
 

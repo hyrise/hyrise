@@ -58,7 +58,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 
   if (has_mvcc_data()) {
     // Make the row visible - mvcc_data has been pre-allocated
-    mvcc_data()->set_begin_cid(size(), CommitID{0});
+    mvcc_data()->set_begin_cid(size(), UNSET_COMMIT_ID);
   }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
@@ -297,7 +297,7 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  if (_cleanup_commit_id.load() == CommitID{0}) {
+  if (_cleanup_commit_id.load() == UNSET_COMMIT_ID) {
     // Cleanup-Commit-ID is not yet set
     return std::nullopt;
   }

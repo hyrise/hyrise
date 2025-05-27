@@ -57,6 +57,9 @@ TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
 
   EXPECT_EQ(same_static_table_node->hash(), static_table_node->hash());
   EXPECT_NE(different_static_table_node_by_definitions->hash(), static_table_node->hash());
+
+  // The constraints are not part of the hash, so the hash for two `StaticTableNode`s with the same column definitions
+  // but different constraints is the same.
   EXPECT_EQ(different_static_table_node_by_constraints->hash(), static_table_node->hash());
 }
 

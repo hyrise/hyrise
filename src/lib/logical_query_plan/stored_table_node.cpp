@@ -143,7 +143,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 
     // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
     // otherwise these optimizations could produce invalid query results.
-    if (!is_constraint_confidently_valid(table, table_key_constraint)) {
+    if (!key_constraint_is_confidently_valid(table, table_key_constraint)) {
       continue;
     }
 

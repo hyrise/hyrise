@@ -39,7 +39,6 @@
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/atomic_max.hpp"
 #include "utils/performance_warning.hpp"
 #include "value_segment.hpp"
 
@@ -462,8 +461,9 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
   }
 }
 
-std::unordered_set<TableKeyConstraint> Table::valid_soft_key_constraints() const {
-  auto valid_soft_key_constraints_filter = std::unordered_set<TableKeyConstraint>{};
+TableKeyConstraints Table::valid_soft_key_constraints() const {
+  auto valid_soft_key_constraints_filter = TableKeyConstraints{};
+  valid_soft_key_constraints_filter.reserve(_table_key_constraints.size());
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Check if the constraint is valid.
     if (table_key_constraint.is_valid()) {
@@ -474,7 +474,7 @@ std::unordered_set<TableKeyConstraint> Table::valid_soft_key_constraints() const
   return valid_soft_key_constraints_filter;
 }
 
-TableKeyConstraints& Table::soft_key_constraints() const {
+const TableKeyConstraints& Table::soft_key_constraints() const {
   return _table_key_constraints;
 }
 
@@ -510,17 +510,11 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
 
     // Ensure there is only one key constraint per column(s). Theoretically, there could be two unique constraints
     // {a, b} and {b, c}, but for now we prohibit these cases.
-    Assert((existing_constraint.columns().size() == 1 && table_key_constraint.columns().size() == 1) ||
-               !columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
+    Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
-  auto [existing_constraint, inserted] = _table_key_constraints.insert(table_key_constraint);
-
-  if (!inserted) {
-    // If the constraint was inserted, we need to set the last_validated_on and last_invalidated_on values.
-    set_atomic_max(existing_constraint->last_validated_on(), table_key_constraint.last_validated_on().load());
-    set_atomic_max(existing_constraint->last_invalidated_on(), table_key_constraint.last_invalidated_on().load());
-  }
+  const auto inserted = _table_key_constraints.insert(table_key_constraint).second;
+  Assert(inserted, "TableKeyConstraint has already been set.");
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {

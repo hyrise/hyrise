@@ -517,15 +517,15 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
 
   // The permanent UCC should remain permanent.
-  EXPECT_EQ(column_0_constraint->last_validated_on().load(), 0);
+  EXPECT_EQ(column_0_constraint->last_validated_on(), MAX_COMMIT_ID);
 
   // The non-permanent UCC should have been validated.
-  const auto first_validation_timestamp = column_1_constraint->last_validated_on().load();
+  const auto first_validation_timestamp = column_1_constraint->last_validated_on();
   EXPECT_NE(first_validation_timestamp, MAX_COMMIT_ID);
   // The following validation should not change the timestamp as the validity of the UCC is visible by examining the
-  // MVCC data of the tables chunks (see `is_constraint_confidently_valid`).
+  // MVCC data of the tables chunks (see `key_constraint_is_confidently_valid`).
   _validate_ucc_candidates(ucc_candidates);
-  EXPECT_EQ(column_1_constraint->last_validated_on().load(), first_validation_timestamp);
+  EXPECT_EQ(column_1_constraint->last_validated_on(), first_validation_timestamp);
 
   EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
   EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->is_valid());
@@ -655,7 +655,7 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
   // Check that validity of constraint is not guaranteed anymore.
   const auto constraint_A = _table_A->soft_key_constraints().find(constraint_A_c);
   ASSERT_NE(constraint_A, _table_A->soft_key_constraints().end());
-  EXPECT_FALSE(is_constraint_confidently_valid(_table_A, *constraint_A));
+  EXPECT_FALSE(key_constraint_is_confidently_valid(_table_A, *constraint_A));
 
   // Flush and repopulate the cache.
   Hyrise::get().default_pqp_cache->clear();
