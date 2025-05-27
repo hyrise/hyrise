@@ -763,6 +763,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
       // not happen at all. Instead, we store that this constraint was invalidated for the specific commit ID. This
       // prevents unnecessary revalidation of constraints that are known to be invalid.
       clear_soft_key_constraints(table);
+      writer_waiting = false;
     }
   };
 
