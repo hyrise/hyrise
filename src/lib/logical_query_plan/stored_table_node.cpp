@@ -41,7 +41,7 @@ bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<C
 
 namespace hyrise {
 
-StoredTableNode::StoredTableNode(TableID init_table_id)
+StoredTableNode::StoredTableNode(ObjectID init_table_id)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_id{init_table_id} {}
 
 std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::string& name) const {
@@ -250,7 +250,7 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
 }
 
 size_t StoredTableNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(static_cast<TableID::base_type>(table_id));
+  auto hash = boost::hash_value(static_cast<ObjectID::base_type>(table_id));
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
     boost::hash_combine(hash, pruned_chunk_id);
   }

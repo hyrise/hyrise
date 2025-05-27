@@ -35,9 +35,9 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-GetTable::GetTable(const TableID table_id) : GetTable{table_id, {}, {}} {}
+GetTable::GetTable(const ObjectID table_id) : GetTable{table_id, {}, {}} {}
 
-GetTable::GetTable(const TableID table_id, const std::vector<ChunkID>& pruned_chunk_ids,
+GetTable::GetTable(const ObjectID table_id, const std::vector<ChunkID>& pruned_chunk_ids,
                    const std::vector<ColumnID>& pruned_column_ids)
     : AbstractReadOnlyOperator{OperatorType::GetTable},
       _table_id{table_id},
@@ -91,7 +91,7 @@ const std::string& GetTable::table_name() const {
   return Hyrise::get().catalog.table_name(_table_id);
 }
 
-TableID GetTable::table_id() const {
+ObjectID GetTable::table_id() const {
   return _table_id;
 }
 

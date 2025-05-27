@@ -141,7 +141,7 @@ void MvccDeletePlugin::_physical_delete_loop() {
   }
 }
 
-bool MvccDeletePlugin::_try_logical_delete(TableID table_id, const ChunkID chunk_id,
+bool MvccDeletePlugin::_try_logical_delete(ObjectID table_id, const ChunkID chunk_id,
                                            const std::shared_ptr<TransactionContext>& transaction_context) {
   const auto table = Hyrise::get().storage_manager.get_table(table_id);
   const auto& chunk = table->get_chunk(chunk_id);
@@ -167,7 +167,8 @@ bool MvccDeletePlugin::_try_logical_delete(TableID table_id, const ChunkID chunk
 
   // Use Update operator to delete and re-insert valid records in chunk. Pass validate into Update operator twice since
   // data will not be changed.
-  const auto update = std::make_shared<Update>(table_id, validate, validate);
+  const auto& table_name = Hyrise::get().catalog.table_name(table_id);
+  const auto update = std::make_shared<Update>(table_name, validate, validate);
   update->set_transaction_context(transaction_context);
   update->execute();
 

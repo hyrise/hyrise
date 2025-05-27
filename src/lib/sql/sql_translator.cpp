@@ -77,6 +77,7 @@
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/lqp_view.hpp"
+#include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
@@ -909,7 +910,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
     const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   const auto table_id = Hyrise::get().catalog.table_id(name);
-  AssertInput(table_id != INVALID_TABLE_ID, "Did not find a table with name '" + name + "'.");
+  AssertInput(table_id != INVALID_OBJECT_ID, "Did not find a table with name '" + name + "'.");
 
   const auto stored_table_node = StoredTableNode::make(table_id);
   auto validated_stored_table_node = _validate_if_active(stored_table_node);

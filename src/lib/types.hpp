@@ -37,7 +37,7 @@ STRONG_TYPEDEF(uint32_t, CpuID);
 STRONG_TYPEDEF(uint32_t, WorkerID);
 STRONG_TYPEDEF(uint32_t, TaskID);
 STRONG_TYPEDEF(uint32_t, ChunkOffset);
-STRONG_TYPEDEF(uint32_t, TableID);
+STRONG_TYPEDEF(uint32_t, ObjectID);
 
 // When changing the following two strong typedefs to 64-bit types, please be aware that both are used with
 // std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
@@ -150,7 +150,7 @@ constexpr RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
-constexpr TableID INVALID_TABLE_ID{std::numeric_limits<TableID::base_type>::max()};
+constexpr ObjectID INVALID_OBJECT_ID{std::numeric_limits<ObjectID::base_type>::max()};
 
 // The Scheduler currently supports just these two priorities.
 enum class SchedulePriority {

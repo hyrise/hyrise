@@ -681,7 +681,6 @@ int Console::_export_table(const std::string& args) {
   const auto& tablename = arguments.at(0);
   const auto& filepath = arguments.at(1);
 
-  const auto& storage_manager = Hyrise::get().storage_manager;
   const auto& meta_table_manager = Hyrise::get().meta_table_manager;
 
   auto table_operator = std::shared_ptr<AbstractOperator>{};
@@ -693,7 +692,7 @@ int Console::_export_table(const std::string& args) {
     table_operator = std::make_shared<TableWrapper>(meta_table_manager.generate_table(tablename));
   } else {
     const auto table_id = Hyrise::get().catalog.table_id(tablename);
-    if (table_id == INVALID_TABLE_ID) {
+    if (table_id == INVALID_OBJECT_ID) {
       out("Error: Table does not exist in StorageManager\n");
       return ReturnCode::Error;
     }
@@ -726,7 +725,7 @@ int Console::_print_table(const std::string& args) {
   const auto& tablename = arguments.at(0);
 
   const auto table_id = Hyrise::get().catalog.table_id(tablename);
-  if (table_id == INVALID_TABLE_ID) {
+  if (table_id == INVALID_OBJECT_ID) {
     out("Error: Table does not exist in StorageManager\n");
     return ReturnCode::Error;
   }
