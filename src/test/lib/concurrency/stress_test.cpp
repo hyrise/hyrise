@@ -743,6 +743,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
   const auto VALIDATION_COUNT = uint32_t{100};
   const auto SLEEP_TIME = std::chrono::milliseconds{1};
+  auto writer_waiting = std::atomic<bool>{false};
 
   const auto validate_constraint = [&] {
     start_flag.wait(false);
@@ -755,7 +756,8 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
       Hyrise::get().plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
 
       std::this_thread::sleep_for(SLEEP_TIME);
-
+      // Notify the reading threads that the writer is waiting.
+      writer_waiting = true;
       const auto lock = std::unique_lock{deletion_mutex};
       // We need to clear the constraints to simulate concurrent insertions. Normally, a deletion of a constraint would
       // not happen at all. Instead, we store that this constraint was invalidated for the specific commit ID. This
@@ -767,6 +769,10 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   const auto stored_table_node_constraint_access = [&] {
     start_flag.wait(false);
     while (!stop_flag.test()) {
+      // Prevent this thread from starving the `validate_constraint` thread by continously acquiring `shared_locks`.
+      if (writer_waiting) {
+        continue;
+      }
       const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
       // Access the unique column combinations. We need to lock here because `unique_column_combinations` uses a
       // reference to iterate over the constraints. This reference is invalidated when the constraints are cleared.
