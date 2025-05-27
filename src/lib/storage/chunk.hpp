@@ -207,7 +207,7 @@ class Chunk : private Noncopyable {
   mutable std::atomic<ChunkOffset::base_type> _invalid_row_count{ChunkOffset::base_type{0}};
 
   // Default value of zero (beginning of time) means "not set".
-  std::atomic<CommitID> _cleanup_commit_id{ETERNAL_COMMIT_ID};
+  std::atomic<CommitID> _cleanup_commit_id{UNSET_COMMIT_ID};
 };
 
 }  // namespace hyrise

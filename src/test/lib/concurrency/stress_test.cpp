@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -10,10 +8,10 @@
 #include <shared_mutex>
 #include <thread>
 
-#include "lib/utils/plugin_test_utils.hpp"
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/insert.hpp"
 #include "operators/table_wrapper.hpp"
@@ -736,9 +734,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-  auto& pm = Hyrise::get().plugin_manager;
-
-  pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+  Hyrise::get().plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
 
   auto deletion_mutex = std::shared_mutex{};
 
@@ -747,7 +743,6 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
   const auto VALIDATION_COUNT = uint32_t{100};
   const auto SLEEP_TIME = std::chrono::milliseconds{1};
-  auto writer_waiting = std::atomic<bool>{false};
 
   const auto validate_constraint = [&] {
     start_flag.wait(false);
@@ -757,15 +752,15 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
       auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
       pipeline.get_result_table();
 
-      pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+      Hyrise::get().plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
 
       std::this_thread::sleep_for(SLEEP_TIME);
 
-      // Notify the reader threads that the writer is waiting.
-      writer_waiting = true;
-      const auto lock = std::unique_lock{deletion_mutext};
+      const auto lock = std::unique_lock{deletion_mutex};
+      // We need to clear the constraints to simulate concurrent insertions. Normally, a deletion of a constraint would
+      // not happen at all. Instead, we store that this constraint was invalidated for the specific commit ID. This
+      // prevents unnecessary revalidation of constraints that are known to be invalid.
       clear_soft_key_constraints(table);
-      writer_waiting = false;
     }
   };
 
@@ -775,16 +770,14 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
       const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
       // Access the unique column combinations. We need to lock here because `unique_column_combinations` uses a
       // reference to iterate over the constraints. This reference is invalidated when the constraints are cleared.
-      while (writer_waiting) {
-        std::this_thread::sleep_for(SLEEP_TIME);
-      }
-      const auto lock = std::shared_lock{deletion_mutext};
+      const auto lock = std::shared_lock{deletion_mutex};
+      // Check that the set of TableKeyConstraints does not contain any duplicates.
       ASSERT_LE(stored_table_node->unique_column_combinations().size(), 3);
     }
   };
 
   // Start running the different modifications in parallel.
-  const auto thread_count = 10;
+  const auto thread_count = 100;
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
 
@@ -807,8 +800,8 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
     thread.join();
   }
 
-  // Check that the set of TableKeyConstraints does not contain any duplicates.
-  ASSERT_LE(table->soft_key_constraints().size(), 3);
+  // The constraints were cleared, so we expect no constraints to be present anymore.
+  ASSERT_LE(table->soft_key_constraints().size(), 0);
 }
 
 }  // namespace hyrise
