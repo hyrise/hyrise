@@ -27,6 +27,7 @@ namespace hyrise {
 
 Catalog& Catalog::operator=(Catalog&& other) noexcept {
   _table_ids = std::move(other._table_ids);
+  _table_names = std::move(other._table_names);
   _next_table_id = other._next_table_id.load();
   return *this;
 }
@@ -34,12 +35,17 @@ Catalog& Catalog::operator=(Catalog&& other) noexcept {
 TableID Catalog::register_table(const std::string& name) {
   const auto iter = _table_ids.find(name);
   Assert(iter == _table_ids.end() || iter->second == INVALID_TABLE_ID,
-         "Cannot add table " + name + " - a table with the same name already exists");
+         "Cannot add table " + name + " - a table with the same name already exists.");
   const auto table_id = _next_table_id++;
-  _table_ids[name] = table_id;
   _table_names.grow_to_at_least(table_id);
   _table_names[table_id] = name;
+  _table_ids[name] = table_id;
   return static_cast<TableID>(table_id);
+}
+
+void Catalog::deregister_table(TableID table_id) {
+  Assert(table_id < _table_names.size(), "TableID " + std::to_string(table_id) + " out of range.");
+  deregister_table(_table_names[table_id]);
 }
 
 void Catalog::deregister_table(const std::string& name) {
@@ -47,20 +53,17 @@ void Catalog::deregister_table(const std::string& name) {
   Assert(iter != _table_ids.end() && iter->second != INVALID_TABLE_ID,
          "Error deleting table. No such table named '" + name + "'");
 
-  // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply reset the table ID.
+  // The `concurrent_unordered_map` does not support concurrency-safe erasure. Thus, we simply reset the table ID.
   _table_ids[name] = INVALID_TABLE_ID;
 }
 
 TableID Catalog::table_id(const std::string& name) const {
   const auto iter = _table_ids.find(name);
-  if (iter == _table_ids.end()) {
-    return INVALID_TABLE_ID;
-  }
-  return iter->second;
+  return iter == _table_ids.end() ? INVALID_TABLE_ID : iter->second;
 }
 
 const std::string& Catalog::table_name(const TableID table_id) const {
-  Assert(table_id < _table_names.size(), "TableID out of bounds.");
+  Assert(table_id < _table_names.size(), "TableID " + std::to_string(table_id) + " out of range.");
   return _table_names[table_id];
 }
 

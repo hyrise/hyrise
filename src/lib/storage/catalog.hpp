@@ -13,9 +13,12 @@
 
 namespace hyrise {
 
+// The Catalog is responsible for providing metadata, e.g., for mapping table names to their unique IDs, or for
+// maintaining table constraints.
 class Catalog : public Noncopyable {
  public:
   TableID register_table(const std::string& name);
+  void deregister_table(TableID table_id);
   void deregister_table(const std::string& name);
 
   TableID table_id(const std::string& name) const;

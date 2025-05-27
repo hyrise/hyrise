@@ -22,7 +22,7 @@ namespace hyrise {
 class Table;
 class AbstractLQPNode;
 
-// The StorageManager is a class that maintains all tables by mapping table names to table instances.
+// The StorageManager is a class that maintains all tables by mapping table IDs to table instances.
 class StorageManager : public Noncopyable {
  public:
   /**

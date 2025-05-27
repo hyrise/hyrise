@@ -91,6 +91,10 @@ const std::string& GetTable::table_name() const {
   return Hyrise::get().catalog.table_name(_table_id);
 }
 
+TableID GetTable::table_id() const {
+  return _table_id;
+}
+
 const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const {
   return _pruned_chunk_ids;
 }

@@ -44,9 +44,6 @@ namespace hyrise {
 StoredTableNode::StoredTableNode(TableID init_table_id)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_id{init_table_id} {}
 
-StoredTableNode::StoredTableNode(const std::string& init_table_name)
-    : StoredTableNode{Hyrise::get().catalog.table_id(init_table_name)} {}
-
 std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::string& name) const {
   const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   const auto column_id = table->column_id_by_name(name);

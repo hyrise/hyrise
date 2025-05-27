@@ -21,7 +21,6 @@ class TableStatistics;
 class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
   explicit StoredTableNode(TableID init_table_id);
-  explicit StoredTableNode(const std::string& init_table_name);
 
   std::shared_ptr<LQPColumnExpression> get_column(const std::string& name) const;
 

@@ -38,6 +38,9 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 }
 
 void StorageManager::add_table(const TableID table_id, std::shared_ptr<Table> table) {
+  if (table_id >= _tables.size()) {
+    _tables.grow_to_at_least(table_id);
+  }
   Assert(!_tables[table_id],
          "Cannot add table " + std::to_string(table_id) + " - a table with the same ID already exists");
 
@@ -62,15 +65,11 @@ void StorageManager::drop_table(const std::string& name) {
   const auto table_id = Hyrise::get().catalog.table_id(name);
   Assert(table_id != INVALID_TABLE_ID, "Error deleting table. No such table named '" + name + "'");
   Hyrise::get().catalog.deregister_table(name);
-
-  // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply reset the table pointer.
   _tables[table_id] = nullptr;
 }
 
 void StorageManager::drop_table(const TableID table_id) {
   Assert(_tables[table_id], "Error deleting table. No such table with ID '" + std::to_string(table_id) + "'");
-
-  // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply reset the table pointer.
   _tables[table_id] = nullptr;
 }
 

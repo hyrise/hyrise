@@ -908,12 +908,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
     const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
-  AssertInput(Hyrise::get().storage_manager.has_table(name), std::string{"Did not find a table with name "} + name);
+  const auto table_id = Hyrise::get().catalog.table_id(name);
+  AssertInput(table_id != INVALID_TABLE_ID, "Did not find a table with name '" + name + "'.");
 
-  const auto stored_table_node = StoredTableNode::make(name);
+  const auto stored_table_node = StoredTableNode::make(table_id);
   auto validated_stored_table_node = _validate_if_active(stored_table_node);
 
-  const auto table = Hyrise::get().storage_manager.get_table(name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_id);
 
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
