@@ -28,8 +28,6 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-class TableWrapper;
-
 // Defining the base fixture class.
 class StarSchemaDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
@@ -66,30 +64,10 @@ class StarSchemaDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
           std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, benchmark_config);
         table_generator->generate_and_store();
     }
-
-    _table_wrapper_map = create_table_wrappers(sm);
   }
 
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
   void TearDown(::benchmark::State& /*state*/) override {}
-
-  std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
-    std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
-    for (const auto& table_name : sm.table_names()) {
-      auto table = sm.get_table(table_name);
-      auto table_wrapper = std::make_shared<TableWrapper>(table);
-      table_wrapper->never_clear_output();
-      table_wrapper->execute();
-
-      wrapper_map.emplace(table_name, table_wrapper);
-    }
-
-    return wrapper_map;
-  }
-
-  inline static bool _tpch_data_generated = false;
-
-  std::map<std::string, std::shared_ptr<TableWrapper>> _table_wrapper_map;
 };
 
 BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinWorstCase)(benchmark::State& state) {
@@ -135,28 +113,31 @@ BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinWorstCase)(benchmark::S
   // 16 D_WEEKDAYFL        pruned
 
   const auto pruned_chunk_ids = std::vector<ChunkID>{};
-  const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{6}, ColumnID{7}, ColumnID{8},
-                                  ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
+  const auto pruned_column_ids_lineorder = std::vector<const ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{6},
+    ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
 
-  const auto get_table_lineorder = std::make_shared<GetTable>("lineorder", pruned_chunk_ids, pruned_column_ids_lineorder);
+  const auto get_table_lineorder = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
+    pruned_column_ids_lineorder);
   get_table_lineorder->never_clear_output();
   get_table_lineorder->execute();
 
-  const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
-                                  ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10},
-                                  ColumnID{11}, ColumnID{12}, ColumnID{13}, ColumnID{14}, ColumnID{15},
-                                  ColumnID{16}};
+  const auto pruned_column_ids_date = std::vector<const ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
+    ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
+    ColumnID{14}, ColumnID{15}, ColumnID{16}};
 
   const auto get_table_date = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
   get_table_date->never_clear_output();
   get_table_date->execute();
 
+  const auto join_dryrun = std::make_shared<JoinHash>(get_table_lineorder, get_table_date, JoinMode::Semi,
+    OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
+  join_dryrun->execute();
+  Assert(join_dryrun->get_output()->row_count() == get_table_lineorder->get_output()->row_count(), "Semi join must not filter anything.");
+
   for (auto _ : state) {
-    auto join = std::make_shared<JoinHash>(
-        get_table_lineorder, get_table_date, JoinMode::Semi,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
+    const auto join = std::make_shared<JoinHash>(get_table_lineorder, get_table_date, JoinMode::Semi,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
-    Assert(join->get_output()->row_count() == get_table_lineorder->get_output()->row_count(), "Semi join must not filter anything.");
   }
 }
 
