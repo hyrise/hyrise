@@ -194,6 +194,82 @@ class StarSchemaDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     Assert(scan_selectivity > 0.0005 && scan_selectivity < 0.002, "Selectivity:" + std::to_string(scan_selectivity));
   }
 
+  void setup_reduction_q31 () {
+    // Benchmarks the semi-join in query 3.1 of the SSB benchmark with a selectivity of 0.91. It joins
+    // lineorder.lo_orderdate with date.d_datekey. Before the join, this TableScan is applied to date:
+    // d_year BETWEEN INCLUSIVE 1992 AND 1997.
+
+    // lineorder:
+    // 00 LO_ORDERKEY      pruned
+    // 01 LO_LINENUMBER    pruned
+    // 02 LO_CUSTKEY       0
+    // 03 LO_PARTKEY       pruned
+    // 04 LO_SUPPKEY       1
+    // 05 LO_ORDERDATE     2
+    // 06 LO_ORDERPRIORITY pruned
+    // 07 LO_SHIPPRIORITY  pruned
+    // 08 LO_QUANTITY      pruned
+    // 09 LO_EXTENDEDPRICE pruned
+    // 10 LO_ORDTOTALPRICE pruned
+    // 11 LO_DISCOUNT      pruned
+    // 12 LO_REVENUE       3
+    // 13 LO_SUPPLYCOST    pruned
+    // 14 LO_TAX           pruned
+    // 15 LO_COMMITDATE    pruned
+    // 16 LO_SHIPMODE      pruned
+
+    // date:
+    // 00 D_DATEKEY          0
+    // 01 D_DATE             pruned
+    // 02 D_DAYOFWEEK        pruned
+    // 03 03 D_MONTH         pruned
+    // 04 D_YEAR             1
+    // 05 D_YEARMONTHNUM     pruned
+    // 06 D_YEARMONTH        pruned
+    // 07 D_DAYNUMINWEEK     pruned
+    // 08 D_DAYNUMINMONTH    pruned
+    // 09 D_DAYNUMINYEAR     pruned
+    // 10 D_MONTHNUMINYEAR   pruned
+    // 11 D_WEEKNUMINYEAR    pruned
+    // 12 D_SELLINGSEASON    pruned
+    // 13 D_LASTDAYINWEEKFL  pruned
+    // 14 D_LASTDAYINMONTHFL pruned
+    // 15 D_HOLIDAYFL        pruned
+    // 16 D_WEEKDAYFL        pruned
+
+    const auto pruned_chunk_ids = std::vector<ChunkID>{};
+    const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{3}, ColumnID{6},
+      ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{13}, ColumnID{14}, ColumnID{15},
+      ColumnID{16}};
+
+    _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
+      pruned_column_ids_lineorder);
+    _left_input->never_clear_output();
+    _left_input->execute();
+
+    const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
+      ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
+      ColumnID{14}, ColumnID{15}, ColumnID{16}};
+
+    const auto get_table_date = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
+    get_table_date->never_clear_output();
+    get_table_date->execute();
+
+    const auto operand = pqp_column_(ColumnID{1}, get_table_date->get_output()->column_data_type(ColumnID{1}),
+      get_table_date->get_output()->column_is_nullable(ColumnID{1}),
+      get_table_date->get_output()->column_name(ColumnID{1}));
+    const auto predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenInclusive, operand,
+      value_(1992), value_(1997));
+
+    _right_input = std::make_shared<TableScan>(get_table_date, predicate);
+    _right_input->never_clear_output();
+    _right_input->execute();
+
+    const auto scan_selectivity = static_cast<double>(_right_input->get_output()->row_count()) /
+      static_cast<double>(get_table_date->get_output()->row_count());
+    Assert(scan_selectivity > 0.8 && scan_selectivity < 0.9, "Selectivity:" + std::to_string(scan_selectivity));
+  }
+
   std::shared_ptr<AbstractReadOnlyOperator> _left_input;
   std::shared_ptr<AbstractReadOnlyOperator> _right_input;
 };
@@ -242,96 +318,25 @@ BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinBestCase)(benchmark::St
 }
 
 BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinBadCase)(benchmark::State& state) {
-  // Benchmarks the semi-join in query 3.1 of the SSB benchmark with a selectivity of 0.91. It joins
-  // lineorder.lo_orderdate with date.d_datekey. Before the join, this TableScan is applied to date:
-  // d_year BETWEEN INCLUSIVE 1992 AND 1997.
+  setup_reduction_q31();
 
-  // lineorder:
-  // 00 LO_ORDERKEY      pruned
-  // 01 LO_LINENUMBER    pruned
-  // 02 LO_CUSTKEY       0
-  // 03 LO_PARTKEY       pruned
-  // 04 LO_SUPPKEY       1
-  // 05 LO_ORDERDATE     2
-  // 06 LO_ORDERPRIORITY pruned
-  // 07 LO_SHIPPRIORITY  pruned
-  // 08 LO_QUANTITY      pruned
-  // 09 LO_EXTENDEDPRICE pruned
-  // 10 LO_ORDTOTALPRICE pruned
-  // 11 LO_DISCOUNT      pruned
-  // 12 LO_REVENUE       3
-  // 13 LO_SUPPLYCOST    pruned
-  // 14 LO_TAX           pruned
-  // 15 LO_COMMITDATE    pruned
-  // 16 LO_SHIPMODE      pruned
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
 
-  // date:
-  // 00 D_DATEKEY          0
-  // 01 D_DATE             pruned
-  // 02 D_DAYOFWEEK        pruned
-  // 03 03 D_MONTH         pruned
-  // 04 D_YEAR             1
-  // 05 D_YEARMONTHNUM     pruned
-  // 06 D_YEARMONTH        pruned
-  // 07 D_DAYNUMINWEEK     pruned
-  // 08 D_DAYNUMINMONTH    pruned
-  // 09 D_DAYNUMINYEAR     pruned
-  // 10 D_MONTHNUMINYEAR   pruned
-  // 11 D_WEEKNUMINYEAR    pruned
-  // 12 D_SELLINGSEASON    pruned
-  // 13 D_LASTDAYINWEEKFL  pruned
-  // 14 D_LASTDAYINMONTHFL pruned
-  // 15 D_HOLIDAYFL        pruned
-  // 16 D_WEEKDAYFL        pruned
-
-  const auto pruned_chunk_ids = std::vector<ChunkID>{};
-  const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{3}, ColumnID{6},
-    ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{13}, ColumnID{14}, ColumnID{15},
-    ColumnID{16}};
-
-  const auto get_table_lineorder = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
-    pruned_column_ids_lineorder);
-  get_table_lineorder->never_clear_output();
-  get_table_lineorder->execute();
-
-  const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
-    ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
-    ColumnID{14}, ColumnID{15}, ColumnID{16}};
-
-  const auto get_table_date = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
-  get_table_date->never_clear_output();
-  get_table_date->execute();
-
-  const auto operand = pqp_column_(ColumnID{1}, get_table_date->get_output()->column_data_type(ColumnID{1}),
-    get_table_date->get_output()->column_is_nullable(ColumnID{1}),
-    get_table_date->get_output()->column_name(ColumnID{1}));
-  const auto predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenInclusive, operand,
-    value_(1992), value_(1997));
-
-  const auto table_scan_date = std::make_shared<TableScan>(get_table_date, predicate);
-  table_scan_date->never_clear_output();
-  table_scan_date->execute();
-
-  const auto scan_selectivity = static_cast<double>(table_scan_date->get_output()->row_count()) /
-    static_cast<double>(get_table_date->get_output()->row_count());
-  Assert(scan_selectivity > 0.8 && scan_selectivity < 0.9, "Selectivity:" + std::to_string(scan_selectivity));
-
-  const auto join_dryrun = std::make_shared<JoinHash>(get_table_lineorder, table_scan_date, JoinMode::Semi,
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
     OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals});
   join_dryrun->execute();
   const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
-    static_cast<double>(get_table_lineorder->get_output()->row_count());
+    static_cast<double>(_left_input->get_output()->row_count());
   Assert(join_selectivity > 0.86 && join_selectivity < 0.96, "Selectivity:" + std::to_string(join_selectivity));
 
   for (auto _ : state) {
     const auto join = std::make_shared<JoinHash>(
-        get_table_lineorder, table_scan_date, JoinMode::Semi,
+        _left_input, _right_input, JoinMode::Semi,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
 }
-
-
-// BENCHMARK_REGISTER_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinTest)->DenseRange(0, 15);
 
 }  // namespace hyrise
