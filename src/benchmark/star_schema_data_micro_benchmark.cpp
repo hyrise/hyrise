@@ -47,12 +47,11 @@ class StarSchemaDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     std::cout << "Generating Star Schema data set with scale factor " << scale_factor << " and "
               << benchmark_config->encoding_config.default_encoding_spec << " encoding:\n";
 
-    // Try to find dbgen binary.
     const auto executable_path = std::filesystem::current_path();
-    // Assert(1 == 2, executable_path);
     const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
     Assert(std::filesystem::exists(ssb_dbgen_path / "dbgen"),
            std::string{"SSB dbgen not found at "} + ssb_dbgen_path.c_str());
+
     const auto query_path = executable_path / "../resources/benchmark/ssb/queries";
     const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
 
@@ -65,7 +64,6 @@ class StarSchemaDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << '\n';
     std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';
-
 
     std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, benchmark_config)
       ->generate_and_store();
