@@ -10,14 +10,13 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <memory_resource>
 #include <numeric>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
@@ -402,7 +401,7 @@ struct AggregateResultContext : SegmentVisitorContext {
   explicit AggregateResultContext(const size_t preallocated_size = 0)
       : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
 
-  boost::container::pmr::monotonic_buffer_resource buffer;
+  std::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, aggregate_function> results;
 };
 
@@ -631,7 +630,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
             // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
             // allocate a bit too much.
-            auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
+            auto temp_buffer = std::pmr::monotonic_buffer_resource(1'000'000);
             auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
             auto id_map = boost::unordered_flat_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
