@@ -68,75 +68,87 @@ class StarSchemaDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, benchmark_config)
       ->generate_and_store();
   }
+
+  void setup_reduction_q41() {
+    // Benchmarks the semi-join in query 4.1 of the SSB benchmark with a selectivity of 1.
+    // It joins lineorder.lo_orderdate with date.d_datekey.
+
+    // lineorder:
+    // 00 LO_ORDERKEY      pruned
+    // 01 LO_LINENUMBER    pruned
+    // 02 LO_CUSTKEY       0
+    // 03 LO_PARTKEY       1
+    // 04 LO_SUPPKEY       2
+    // 05 LO_ORDERDATE     3
+    // 06 LO_ORDERPRIORITY pruned
+    // 07 LO_SHIPPRIORITY  pruned
+    // 08 LO_QUANTITY      pruned
+    // 09 LO_EXTENDEDPRICE pruned
+    // 10 LO_ORDTOTALPRICE pruned
+    // 11 LO_DISCOUNT      pruned
+    // 12 LO_REVENUE       4
+    // 13 LO_SUPPLYCOST    5 
+    // 14 LO_TAX           pruned
+    // 15 LO_COMMITDATE    pruned
+    // 16 LO_SHIPMODE      pruned
+
+    // date:
+    // 00 D_DATEKEY          0
+    // 01 D_DATE             pruned
+    // 02 D_DAYOFWEEK        pruned
+    // 03 03 D_MONTH         pruned
+    // 04 D_YEAR             1
+    // 05 D_YEARMONTHNUM     pruned
+    // 06 D_YEARMONTH        pruned
+    // 07 D_DAYNUMINWEEK     pruned
+    // 08 D_DAYNUMINMONTH    pruned
+    // 09 D_DAYNUMINYEAR     pruned
+    // 10 D_MONTHNUMINYEAR   pruned
+    // 11 D_WEEKNUMINYEAR    pruned
+    // 12 D_SELLINGSEASON    pruned
+    // 13 D_LASTDAYINWEEKFL  pruned
+    // 14 D_LASTDAYINMONTHFL pruned
+    // 15 D_HOLIDAYFL        pruned
+    // 16 D_WEEKDAYFL        pruned
+
+    const auto pruned_chunk_ids = std::vector<ChunkID>{};
+    const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{6},
+      ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
+
+    _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
+      pruned_column_ids_lineorder);
+    _left_input->never_clear_output();
+    _left_input->execute();
+
+    const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
+      ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
+      ColumnID{14}, ColumnID{15}, ColumnID{16}};
+
+    _right_input = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
+    _right_input->never_clear_output();
+    _right_input->execute();
+  }
+
+  std::shared_ptr<AbstractReadOnlyOperator> _left_input;
+  std::shared_ptr<AbstractReadOnlyOperator> _right_input;
 };
 
 BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinWorstCase)(benchmark::State& state) {
-  // Benchmarks the semi-join in query 4.1 of the SSB benchmark with a selectivity of 1.
-  // It joins lineorder.lo_orderdate with date.d_datekey.
+  setup_reduction_q41();
 
-  // lineorder:
-  // 00 LO_ORDERKEY      pruned
-  // 01 LO_LINENUMBER    pruned
-  // 02 LO_CUSTKEY       0
-  // 03 LO_PARTKEY       1
-  // 04 LO_SUPPKEY       2
-  // 05 LO_ORDERDATE     3
-  // 06 LO_ORDERPRIORITY pruned
-  // 07 LO_SHIPPRIORITY  pruned
-  // 08 LO_QUANTITY      pruned
-  // 09 LO_EXTENDEDPRICE pruned
-  // 10 LO_ORDTOTALPRICE pruned
-  // 11 LO_DISCOUNT      pruned
-  // 12 LO_REVENUE       4
-  // 13 LO_SUPPLYCOST    5 
-  // 14 LO_TAX           pruned
-  // 15 LO_COMMITDATE    pruned
-  // 16 LO_SHIPMODE      pruned
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
 
-  // date:
-  // 00 D_DATEKEY          0
-  // 01 D_DATE             pruned
-  // 02 D_DAYOFWEEK        pruned
-  // 03 03 D_MONTH         pruned
-  // 04 D_YEAR             1
-  // 05 D_YEARMONTHNUM     pruned
-  // 06 D_YEARMONTH        pruned
-  // 07 D_DAYNUMINWEEK     pruned
-  // 08 D_DAYNUMINMONTH    pruned
-  // 09 D_DAYNUMINYEAR     pruned
-  // 10 D_MONTHNUMINYEAR   pruned
-  // 11 D_WEEKNUMINYEAR    pruned
-  // 12 D_SELLINGSEASON    pruned
-  // 13 D_LASTDAYINWEEKFL  pruned
-  // 14 D_LASTDAYINMONTHFL pruned
-  // 15 D_HOLIDAYFL        pruned
-  // 16 D_WEEKDAYFL        pruned
-
-  const auto pruned_chunk_ids = std::vector<ChunkID>{};
-  const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{6},
-    ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
-
-  const auto get_table_lineorder = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
-    pruned_column_ids_lineorder);
-  get_table_lineorder->never_clear_output();
-  get_table_lineorder->execute();
-
-  const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
-    ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
-    ColumnID{14}, ColumnID{15}, ColumnID{16}};
-
-  const auto get_table_date = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
-  get_table_date->never_clear_output();
-  get_table_date->execute();
-
-  const auto join_dryrun = std::make_shared<JoinHash>(get_table_lineorder, get_table_date, JoinMode::Semi,
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
     OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
+
   join_dryrun->execute();
-  Assert(join_dryrun->get_output()->row_count() == get_table_lineorder->get_output()->row_count(),
+  Assert(join_dryrun->get_output()->row_count() == _left_input->get_output()->row_count(),
     "Semi join must not filter anything.");
 
   for (auto _ : state) {
-    const auto join = std::make_shared<JoinHash>(get_table_lineorder, get_table_date, JoinMode::Semi,
+    const auto join = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
       OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
