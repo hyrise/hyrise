@@ -772,6 +772,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
     while (!stop_flag.test()) {
       // Prevent this thread from starving the `validate_constraint` thread by continously acquiring `shared_locks`.
       if (writer_waiting) {
+        std::this_thread::sleep_for(SLEEP_TIME);
         continue;
       }
       const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
