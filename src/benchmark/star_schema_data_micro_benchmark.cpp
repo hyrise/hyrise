@@ -129,6 +129,71 @@ class StarSchemaDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     _right_input->execute();
   }
 
+  void setup_reduction_q23() {
+    // Benchmarks the semi-join in query 2.3 of the SSB benchmark with a selectivity of 0,00018. It joins
+    // lineorder.lo_partkey with part.p_partkey. Before the join, this TableScan is applied: part.p_brand1 = "MFGR#2221".
+
+    // lineorder:
+    // 00 LO_ORDERKEY      pruned
+    // 01 LO_LINENUMBER    pruned
+    // 02 LO_CUSTKEY       pruned
+    // 03 LO_PARTKEY       0
+    // 04 LO_SUPPKEY       1
+    // 05 LO_ORDERDATE     2
+    // 06 LO_ORDERPRIORITY pruned
+    // 07 LO_SHIPPRIORITY  pruned
+    // 08 LO_QUANTITY      pruned
+    // 09 LO_EXTENDEDPRICE pruned
+    // 10 LO_ORDTOTALPRICE pruned
+    // 11 LO_DISCOUNT      pruned
+    // 12 LO_REVENUE       3
+    // 13 LO_SUPPLYCOST    pruned
+    // 14 LO_TAX           pruned
+    // 15 LO_COMMITDATE    pruned
+    // 16 LO_SHIPMODE      pruned
+
+    // part:
+    // 0 P_PARTKEY   0
+    // 1 P_NAME      pruned
+    // 2 P_MFGR      pruned
+    // 3 P_CATEGORY  pruned
+    // 4 P_BRAND     1
+    // 5 P_COLOR     pruned
+    // 6 P_TYPE      pruned
+    // 7 P_SIZE      pruned
+    // 8 P_CONTAINER pruned
+
+    const auto pruned_chunk_ids = std::vector<ChunkID>{};
+    const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{6},
+      ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
+
+    _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
+      pruned_column_ids_lineorder);
+    _left_input->never_clear_output();
+    _left_input->execute();
+
+    const auto pruned_column_ids_part = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
+                                    ColumnID{6}, ColumnID{7}, ColumnID{8}};
+
+    const auto get_table_part = std::make_shared<GetTable>("part", pruned_chunk_ids, pruned_column_ids_part);
+    get_table_part->never_clear_output();
+    get_table_part->execute();
+
+    const auto operand = pqp_column_(ColumnID{1}, get_table_part->get_output()->column_data_type(ColumnID{1}),
+      get_table_part->get_output()->column_is_nullable(ColumnID{1}),
+      get_table_part->get_output()->column_name(ColumnID{1}));
+    const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand,
+      value_("MFGR#2221"));
+
+    _right_input = std::make_shared<TableScan>(get_table_part, predicate);
+    _right_input->never_clear_output();
+    _right_input->execute();
+
+    const auto scan_selectivity = static_cast<double>(_right_input->get_output()->row_count()) /
+      static_cast<double>(get_table_part->get_output()->row_count());
+    Assert(scan_selectivity > 0.0005 && scan_selectivity < 0.002, "Selectivity:" + std::to_string(scan_selectivity));
+  }
+
   std::shared_ptr<AbstractReadOnlyOperator> _left_input;
   std::shared_ptr<AbstractReadOnlyOperator> _right_input;
 };
@@ -155,78 +220,22 @@ BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinWorstCase)(benchmark::S
 }
 
 BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinBestCase)(benchmark::State& state) {
-  // Benchmarks the semi-join in query 2.3 of the SSB benchmark with a selectivity of 0,00018. It joins
-  // lineorder.lo_partkey with part.p_partkey. Before the join, this TableScan is applied: part.p_brand1 = "MFGR#2221".
+  setup_reduction_q23();
 
-  // lineorder:
-  // 00 LO_ORDERKEY      pruned
-  // 01 LO_LINENUMBER    pruned
-  // 02 LO_CUSTKEY       pruned
-  // 03 LO_PARTKEY       0
-  // 04 LO_SUPPKEY       1
-  // 05 LO_ORDERDATE     2
-  // 06 LO_ORDERPRIORITY pruned
-  // 07 LO_SHIPPRIORITY  pruned
-  // 08 LO_QUANTITY      pruned
-  // 09 LO_EXTENDEDPRICE pruned
-  // 10 LO_ORDTOTALPRICE pruned
-  // 11 LO_DISCOUNT      pruned
-  // 12 LO_REVENUE       3
-  // 13 LO_SUPPLYCOST    pruned
-  // 14 LO_TAX           pruned
-  // 15 LO_COMMITDATE    pruned
-  // 16 LO_SHIPMODE      pruned
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
 
-  // part:
-  // 0 P_PARTKEY   0
-  // 1 P_NAME      pruned
-  // 2 P_MFGR      pruned
-  // 3 P_CATEGORY  pruned
-  // 4 P_BRAND     1
-  // 5 P_COLOR     pruned
-  // 6 P_TYPE      pruned
-  // 7 P_SIZE      pruned
-  // 8 P_CONTAINER pruned
-
-  const auto pruned_chunk_ids = std::vector<ChunkID>{};
-  const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{6},
-    ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
-
-  const auto get_table_lineorder = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
-    pruned_column_ids_lineorder);
-  get_table_lineorder->never_clear_output();
-  get_table_lineorder->execute();
-
-  const auto pruned_column_ids_part = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
-                                  ColumnID{6}, ColumnID{7}, ColumnID{8}};
-
-  const auto get_table_part = std::make_shared<GetTable>("part", pruned_chunk_ids, pruned_column_ids_part);
-  get_table_part->never_clear_output();
-  get_table_part->execute();
-
-  const auto operand = pqp_column_(ColumnID{1}, get_table_part->get_output()->column_data_type(ColumnID{1}),
-    get_table_part->get_output()->column_is_nullable(ColumnID{1}),
-    get_table_part->get_output()->column_name(ColumnID{1}));
-  const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand,
-    value_("MFGR#2221"));
-
-  const auto table_scan_part = std::make_shared<TableScan>(get_table_part, predicate);
-  table_scan_part->never_clear_output();
-  table_scan_part->execute();
-
-  const auto scan_selectivity = static_cast<double>(table_scan_part->get_output()->row_count()) /
-    static_cast<double>(get_table_part->get_output()->row_count());
-  Assert(scan_selectivity > 0.0005 && scan_selectivity < 0.002, "Selectivity:" + std::to_string(scan_selectivity));
-
-  const auto join_dryrun = std::make_shared<JoinHash>(get_table_lineorder, table_scan_part, JoinMode::Semi,
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
     OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join_dryrun->execute();
+
   const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
-    static_cast<double>(get_table_lineorder->get_output()->row_count());
+    static_cast<double>(_left_input->get_output()->row_count());
   Assert(join_selectivity > 0.00005 && join_selectivity < 0.0015, "Selectivity:" + std::to_string(join_selectivity));
 
   for (auto _ : state) {
-    const auto join = std::make_shared<JoinHash>(get_table_lineorder, table_scan_part, JoinMode::Semi,
+    const auto join = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
