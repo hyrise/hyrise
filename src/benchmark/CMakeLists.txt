@@ -19,6 +19,7 @@ add_executable(
     operators/table_scan_benchmark.cpp
     operators/table_scan_sorted_benchmark.cpp
     operators/union_all_benchmark.cpp
+    star_schema_data_micro_benchmark.cpp
     tpch_data_micro_benchmark.cpp
     tpch_table_generator_benchmark.cpp
 )
