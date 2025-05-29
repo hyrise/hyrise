@@ -265,9 +265,9 @@ std::shared_ptr<TableStatistics> prune_table_statistics(const TableStatistics& o
 
   auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(column_count);
 
-  auto scale = 1.0f;
+  auto scale = 1.0;
   if (old_statistics.row_count > 0) {
-    scale = 1 - (static_cast<float>(num_rows_pruned) / old_statistics.row_count);
+    scale = 1 - (static_cast<Cardinality>(num_rows_pruned) / old_statistics.row_count);
   }
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     if (column_id == predicate.column_id) {
@@ -281,7 +281,8 @@ std::shared_ptr<TableStatistics> prune_table_statistics(const TableStatistics& o
   }
 
   return std::make_shared<TableStatistics>(
-      std::move(column_statistics), std::max(0.0f, old_statistics.row_count - static_cast<float>(num_rows_pruned)));
+      std::move(column_statistics),
+      std::max(0.0, old_statistics.row_count - static_cast<Cardinality>(num_rows_pruned)));
 }
 
 std::vector<ColumnID> pruned_column_id_mapping(const size_t original_table_column_count,

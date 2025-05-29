@@ -12,19 +12,21 @@ RUN apt-get update \
         autoconf \
         bash-completion \
         bc \
-        clang-15 \
-        clang \
-        clang-format \
-        clang-tidy \
-        clang-tools \
+        clang-16 \
+        clang-19 \
+        clang-format-19 \
+        clang-tidy-19 \
+        clang-tools-19 \
         cmake \
         curl \
         dos2unix \
-        g++-11 \
-        gcc-11 \
+        g++-13 \
+        gcc-13 \
+        g++-14 \
+        gcc-14 \
         git \
         graphviz \
-        libboost1.83-all-dev \
+        libboost-all-dev \
         libhwloc-dev \
         libncurses5-dev \
         libnuma-dev \
@@ -47,7 +49,6 @@ RUN apt-get update \
         valgrind \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-    && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
     && pip3 install --break-system-packages scipy pandas matplotlib  # preload large Python packages (installs numpy
                                                                      # and others).
 

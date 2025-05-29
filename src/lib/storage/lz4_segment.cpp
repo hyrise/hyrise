@@ -437,21 +437,21 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
+std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_memory_resource(MemoryResource& memory_resource) const {
+  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{&memory_resource};
   for (const auto& block : _lz4_blocks) {
-    auto block_copy = pmr_vector<char>{block, alloc};
+    auto block_copy = pmr_vector<char>{block, &memory_resource};
     new_lz4_blocks.emplace_back(std::move(block_copy));
   }
 
   auto new_null_values =
-      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
-  auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
+      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, &memory_resource}} : std::nullopt;
+  auto new_dictionary = pmr_vector<char>{_dictionary, &memory_resource};
 
   auto copy = std::shared_ptr<LZ4Segment<T>>{};
 
   if (_string_offsets) {
-    auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_allocator(alloc) : nullptr;
+    auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_memory_resource(memory_resource) : nullptr;
     copy = std::make_shared<LZ4Segment<T>>(std::move(new_lz4_blocks), std::move(new_null_values),
                                            std::move(new_dictionary), std::move(new_string_offsets), _block_size,
                                            _last_block_size, _compressed_size, _num_elements);

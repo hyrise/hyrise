@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "nlohmann/json.hpp"
@@ -459,18 +460,29 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
 
   for (const auto& table_file : list_directory(cache_directory)) {
     const auto table_name = table_file.stem();
-    std::cout << "-  Loading table '" << table_name.string() << "' from cached binary " << table_file.relative_path();
-
-    auto timer = Timer{};
     auto table_info = BenchmarkTableInfo{};
-    table_info.table = BinaryParser::parse(table_file);
     table_info.loaded_from_binary = true;
     table_info.binary_file_path = table_file;
-    table_info_by_name[table_name] = table_info;
-
-    std::cout << " (" << timer.lap_formatted() << ")\n";
+    table_info_by_name[table_name] = std::move(table_info);
   }
 
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(table_info_by_name.size());
+
+  for (auto& table_name_info_pair : table_info_by_name) {
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      auto timer = Timer{};
+      auto& table_info = table_name_info_pair.second;
+      table_info.table = BinaryParser::parse(*table_info.binary_file_path);
+
+      auto message = std::stringstream{};
+      message << "-  Loaded table '" << table_name_info_pair.first << "' from cached binary "
+              << *table_info.binary_file_path << " (" << timer.lap_formatted() << ")\n";
+      std::cout << message.str() << std::flush;
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   return table_info_by_name;
 }
 

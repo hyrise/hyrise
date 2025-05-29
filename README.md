@@ -192,6 +192,7 @@ Contact: firstname.lastname@hpi.de
 -   Johannes  Frohnhofen
 -   Pascal    Führlich
 -   Carl      Gödecken
+-   Lukas     Hagen
 -   Jan-Eric  Hellenberg
 -   Adrian    Holfter
 -   Theresa   Hradilak
@@ -236,6 +237,7 @@ Contact: firstname.lastname@hpi.de
 -   Hendrik   Tjabben
 -   Justin    Trautmann
 -   Carsten   Walther
+-   Robert    Weeke 
 -   Leo       Wendt
 -   Lukas     Wenzel
 -   Fabian    Wiebe

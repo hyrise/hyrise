@@ -49,16 +49,12 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
-                if [[ "$(lsb_release -sr)" < "23.10" ]]; then
-                    # The boost versions shipped with Ubuntu before 23.10 do not provide
-                    # boost::unordered_flat_map. Thus, we manually retrieve it.
-                    sudo add-apt-repository -y ppa:mhier/libboost-latest
-                    sudo apt-get update
-                fi
 
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang-19 clang-format-19 clang-tidy-19 cmake curl dos2unix g++-11 gcc-11 git graphviz libboost1.83-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-19 man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-16 clang-19 clang-format-19 clang-tidy-19 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-19 man parallel postgresql-server-dev-all valgrind; then
+                    echo "Error during apt-get installations."
+                    exit 1
+                fi
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
@@ -70,15 +66,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                wait $!
-                apt=$?
-                if [ $apt -ne 0 ]; then
-                    echo "Error during apt-get installations."
-                    exit 1
-                fi
-
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 90 --slave /usr/bin/g++ g++ /usr/bin/g++-13
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-19 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-19 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-19 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-19 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-19 --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-19
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 90 --slave /usr/bin/g++ g++ /usr/bin/g++-14
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-19 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-19 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-19 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-19 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-19  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-19
             else
                 echo "Error during installation."
                 exit 1
@@ -93,4 +82,5 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     fi
 fi
 
+echo "Dependencies installed successfully."
 exit 0

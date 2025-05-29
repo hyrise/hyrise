@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <boost/sort/sort.hpp>
+#include <boost/sort/pdqsort/pdqsort.hpp>
 
 #include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"

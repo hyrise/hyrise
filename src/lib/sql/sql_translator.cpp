@@ -75,6 +75,7 @@
 #include "sql/sql_identifier_resolver.hpp"
 #include "sql/sql_identifier_resolver_proxy.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -740,6 +741,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
       if (hsql_table_ref.join->type == hsql::kJoinNatural) {
         return _translate_natural_join(*hsql_table_ref.join);
       } else {
+        if (hsql_table_ref.join->namedColumns) {
+          return _translate_named_columns_join(*hsql_table_ref.join);
+        }
         return _translate_predicated_join(*hsql_table_ref.join);
       }
 
@@ -1049,6 +1053,75 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
 
   result_state.lqp = lqp;
   return result_state;
+}
+
+SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(const hsql::JoinDefinition& join) {
+  const auto join_mode = translate_join_mode(join.type);
+
+  // We reuse `left_state` for the construction of the updated `TableSourceState`.
+  auto left_state = _translate_table_ref(*join.left);
+  const auto right_state = _translate_table_ref(*join.right);
+
+  Assert(!join.namedColumns->empty(), "Expected at least one named column.");
+  Assert(!join.condition, "Did not expect join condition for join using named columns.");
+
+  const auto& left_sql_identifier_resolver = left_state.sql_identifier_resolver;
+  const auto& right_sql_identifier_resolver = right_state.sql_identifier_resolver;
+
+  Assert(left_sql_identifier_resolver, "Expected SQLIdentifierResolver for left input.");
+  Assert(right_sql_identifier_resolver, "Expected SQLIdentifierResolver for right input.");
+
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>(join.namedColumns->size());
+
+  const auto resolve_table_name = [](const auto& input_ref) {
+    Assert(input_ref.alias || input_ref.name, "Every table or nested SELECT must have either a name or an alias.");
+    return input_ref.alias ? input_ref.alias->name : input_ref.name;
+  };
+
+  // Add all named columns to the join predicate.
+  for (auto named_column_idx = size_t{0}; named_column_idx < join.namedColumns->size(); ++named_column_idx) {
+    const auto& named_column = (*join.namedColumns)[named_column_idx];
+    const auto named_column_identifier = SQLIdentifier{named_column};
+
+    const auto& left_expression = left_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier);
+    const auto& right_expression = right_sql_identifier_resolver->resolve_identifier_relaxed(named_column_identifier);
+
+    const auto* left_table_name = resolve_table_name(*join.left);
+    const auto* right_table_name = resolve_table_name(*join.right);
+
+    AssertInput(left_expression, "Could not resolve '" + named_column + "' on '" + left_table_name + "'.");
+    AssertInput(right_expression, "Could not resolve '" + named_column + "' on '" + right_table_name + "'.");
+
+    // Left and right can resolve the named column. Set the join predicate.
+    join_predicates[named_column_idx] = std::shared_ptr<AbstractExpression>(equals_(left_expression, right_expression));
+  }
+
+  // Add the remaining right expressions to the output.
+  for (const auto& right_element : right_state.elements_in_order) {
+    const auto& right_expression = right_element.expression;
+
+    if (!right_element.identifiers.empty()) {
+      // Ignore previous names if there is an alias.
+      const auto& right_identifier = right_element.identifiers.back();
+
+      // Do not add a column named in the join a second time. It is already in `left_state`.
+      if (std::find(join.namedColumns->begin(), join.namedColumns->end(), right_identifier.column_name) !=
+          join.namedColumns->end()) {
+        continue;
+      }
+
+      left_state.elements_in_order.emplace_back(right_element);
+      left_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
+      if (right_identifier.table_name) {
+        left_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_element);
+        left_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
+      }
+    }
+  }
+
+  auto lqp = JoinNode::make(join_mode, join_predicates, left_state.lqp, right_state.lqp);
+  left_state.lqp = lqp;
+  return left_state;
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
@@ -1639,10 +1712,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       DebugAssert(parser_column_definition->column_constraints,
                   "Column " + column_definition.name + " is missing constraint information.");
       for (const auto& column_constraint : *parser_column_definition->column_constraints) {
-        if (column_constraint != hsql::ConstraintType::Unique &&
-            column_constraint != hsql::ConstraintType::PrimaryKey) {
+        // (NOT) NULL was obtained above from `parser_column_definition->nullable`.
+        if (column_constraint == hsql::ConstraintType::NotNull || column_constraint == hsql::ConstraintType::Null) {
           continue;
         }
+
+        // We do not support, e.g., FOREIGN KEYs yet.
+        AssertInput(
+            column_constraint == hsql::ConstraintType::Unique || column_constraint == hsql::ConstraintType::PrimaryKey,
+            "Only UNIQUE and PRIMARY KEY constraints are expected on a column level.");
+
         const auto constraint_type = column_constraint == hsql::ConstraintType::PrimaryKey
                                          ? KeyConstraintType::PRIMARY_KEY
                                          : KeyConstraintType::UNIQUE;
@@ -1658,9 +1737,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     // PRIMARY KEY constraints for now.
     const auto column_count = column_definitions.size();
     for (const auto& table_constraint : *create_statement.tableConstraints) {
-      Assert(table_constraint->type == hsql::ConstraintType::PrimaryKey ||
-                 table_constraint->type == hsql::ConstraintType::Unique,
-             "Only UNIQUE and PRIMARY KEY constraints are expected on a table level.");
+      AssertInput(table_constraint->type == hsql::ConstraintType::PrimaryKey ||
+                      table_constraint->type == hsql::ConstraintType::Unique,
+                  "Only UNIQUE and PRIMARY KEY constraints are expected on a table level.");
       const auto constraint_type = table_constraint->type == hsql::ConstraintType::PrimaryKey
                                        ? KeyConstraintType::PRIMARY_KEY
                                        : KeyConstraintType::UNIQUE;
@@ -1762,14 +1841,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   // so on. Anyway, we would need to decouple data loading and storing the table and have to load metadata or even the
   // whole table when translating the SQL statement.
   AssertInput(!import_statement.whereClause, "Predicates on imported files are not supported.");
+
+  auto encoding = std::optional<EncodingType>{};
+  if (import_statement.encoding) {
+    encoding = magic_enum::enum_cast<EncodingType>(import_statement.encoding);
+    AssertInput(encoding, "Unknown encoding type '" + std::string{import_statement.encoding} + "'.");
+  }
+
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                          import_type_to_file_type(import_statement.type));
+                          import_type_to_file_type(import_statement.type), encoding);
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  AssertInput(!export_statement.encoding,
+              "Encoding for a table export is not supported. You can choose an encoding when importing tables.");
 
   if (export_statement.select) {
     lqp = _translate_select_statement(*export_statement.select);
