@@ -10,9 +10,10 @@
  * 6. operator<<(std::ostream&, const VariableLengthKey&)
  */
 
+#include <sstream>
+
 #include "base_test.hpp"
 #include "storage/index/group_key/variable_length_key.hpp"
-#include <sstream>
 
 namespace hyrise {
 
@@ -56,7 +57,7 @@ TEST_F(VariableLengthKeyTest, InequalityOperator) {
  */
 TEST_F(VariableLengthKeyTest, BytesPerKey) {
   const auto bytes = CompositeKeyLength{16};
-  const auto key   = VariableLengthKey{bytes};
+  const auto key = VariableLengthKey{bytes};
   EXPECT_EQ(key.bytes_per_key(), bytes);
 }
 
