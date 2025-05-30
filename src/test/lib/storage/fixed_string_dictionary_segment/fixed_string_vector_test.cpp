@@ -92,6 +92,20 @@ TEST_F(FixedStringVectorTest, ReverseIterator) {
   }
 }
 
+TEST_F(FixedStringVectorTest, ReverseIteratorsExplicit) {
+  std::vector<pmr_string> v = {"abc", "def", "ghi"};
+  auto fs_vector = FixedStringVector{v.cbegin(), v.cend(), 3};
+
+  auto rbegin = fs_vector.rbegin();
+  auto rend = fs_vector.rend();
+
+  std::vector<pmr_string> expected = {"ghi", "def", "abc"};
+  size_t i = 0;
+  for (auto it = rbegin; it != rend; ++it, ++i) {
+    EXPECT_EQ(*it, expected[i]);
+  }
+}
+
 TEST_F(FixedStringVectorTest, Size) {
   EXPECT_EQ(fixed_string_vector->size(), 3u);
 }
@@ -105,6 +119,17 @@ TEST_F(FixedStringVectorTest, Erase) {
   EXPECT_EQ(fixed_string_vector->size(), 1u);
   EXPECT_EQ((*fixed_string_vector)[0u], "foo");
 }
+
+TEST_F(FixedStringVectorTest, EraseWithZeroStringLength) {
+  std::vector<pmr_string> strings = {"", ""};
+  auto vec = FixedStringVector(strings.begin(), strings.end(), 0u);
+
+  auto it = vec.begin();
+  vec.erase(it, vec.end());
+
+  EXPECT_EQ(vec.size(), 2u);
+}
+
 
 TEST_F(FixedStringVectorTest, Shrink) {
   fixed_string_vector->shrink_to_fit();
