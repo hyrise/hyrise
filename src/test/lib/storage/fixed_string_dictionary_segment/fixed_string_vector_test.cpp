@@ -233,4 +233,9 @@ TEST_F(FixedStringVectorTest, MemoryLayout) {
   EXPECT_EQ(*(fixed_string_vector->data() + 17), '\0');
 }
 
+TEST_F(FixedStringVectorTest, GetAllocator) {
+  auto _ = fixed_string_vector->get_allocator();
+  SUCCEED();
+}
+
 }  // namespace hyrise
