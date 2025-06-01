@@ -130,7 +130,6 @@ TEST_F(FixedStringVectorTest, EraseWithZeroStringLength) {
   EXPECT_EQ(vec.size(), 2u);
 }
 
-
 TEST_F(FixedStringVectorTest, Shrink) {
   fixed_string_vector->shrink_to_fit();
 
