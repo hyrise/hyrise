@@ -233,7 +233,7 @@ TEST_F(FixedStringVectorTest, MemoryLayout) {
 }
 
 TEST_F(FixedStringVectorTest, GetAllocator) {
-  auto _ = fixed_string_vector->get_allocator();
+  (void)fixed_string_vector->get_allocator();
   SUCCEED();
 }
 
