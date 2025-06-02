@@ -1,15 +1,3 @@
-/**
-* Based on Coverage Report Created: 2025-05-22 14:51, we are testing the following
- * previously uncovered member functions and operators:
- *
- * 1. VariableLengthKey::operator=(const VariableLengthKeyBase&)
- * 2. VariableLengthKey::operator=(const VariableLengthKey&)
- * 3. VariableLengthKey::operator!=(const VariableLengthKey&)
- * 4. VariableLengthKey::operator!=(const VariableLengthKeyConstProxy&)
- * 5. VariableLengthKey::bytes_per_key() const
- * 6. operator<<(std::ostream&, const VariableLengthKey&)
- */
-
 #include <sstream>
 
 #include "base_test.hpp"
