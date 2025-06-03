@@ -4,6 +4,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -14,6 +15,8 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
@@ -64,13 +67,16 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
-  const auto table_key_constraints = table->valid_soft_key_constraints();
 
-  for (const auto& table_key_constraint : table_key_constraints) {
+  for (const auto& table_key_constraint : table->soft_key_constraints()) {
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
-    unique_column_combinations.emplace(std::move(column_expressions));
+    if (key_constraint_is_confidently_valid(table, table_key_constraint)) {
+      // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
+      // otherwise these optimizations could produce invalid query results.
+      unique_column_combinations.emplace(std::move(column_expressions));
+    }
   }
 
   return unique_column_combinations;
@@ -100,8 +106,36 @@ std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
-  return table->column_definitions() == static_table_node.table->column_definitions() &&
-         table->valid_soft_key_constraints() == static_table_node.table->valid_soft_key_constraints();
+
+  if (table->column_definitions() != static_table_node.table->column_definitions()) {
+    return false;
+  }
+
+  // If the column definitions match, we check if the valid key constraints are also equal then we assume equality.
+  const auto& key_constraints = table->soft_key_constraints();
+  const auto& rhs_key_constraints = static_table_node.table->soft_key_constraints();
+
+  auto valid_key_constraints = std::unordered_set<TableKeyConstraint>{};
+  for (const auto& key_constraint : key_constraints) {
+    if (key_constraint_is_confidently_valid(table, key_constraint)) {
+      valid_key_constraints.emplace(key_constraint);
+    }
+  }
+
+  // Go through the key constraints of the other node and check if we can find a matching key constraint in the table
+  // for every single one in the other node. If we find one, we can remove it from the set.
+  for (const auto& key_constraint : rhs_key_constraints) {
+    if (key_constraint_is_confidently_valid(static_table_node.table, key_constraint)) {
+      if (valid_key_constraints.contains(key_constraint)) {
+        valid_key_constraints.erase(key_constraint);
+      } else {
+        // If we found a key constraint that is not known for the table, we can return false.
+        return false;
+      }
+    }
+  }
+  // If we set is not empty, we have key constraints that are known for the table, but not for the other node.
+  return valid_key_constraints.empty();
 }
 
 }  // namespace hyrise

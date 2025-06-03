@@ -599,14 +599,6 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
       constraints_B.find(TableKeyConstraint{{_predicate_column_B->original_column_id}, KeyConstraintType::UNIQUE})
           ->is_valid());
 
-  // Also test that invalidated UCC do are not in `valid_soft_key_constraints`. They are marked as invalid.
-  const auto constraints_A_valid = _table_A->valid_soft_key_constraints();
-  const auto constraints_B_valid = _table_B->valid_soft_key_constraints();
-  EXPECT_TRUE(constraints_A_valid.contains({{_join_columnA->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A_valid.contains({{_predicate_column_A->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_B_valid.contains({{_join_columnB->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_B_valid.contains({{_predicate_column_B->original_column_id}, KeyConstraintType::UNIQUE}));
-
   // Ensure we clear the plan caches.
   EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 0);
   EXPECT_EQ(Hyrise::get().default_pqp_cache->size(), 0);
@@ -646,7 +638,7 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
   const auto constraint_A_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
 
   ASSERT_EQ(_table_A->soft_key_constraints().size(), 2);
-  ASSERT_TRUE(_table_A->valid_soft_key_constraints().contains(constraint_A_c));
+  ASSERT_TRUE(_table_A->soft_key_constraints().find(constraint_A_c)->is_valid());
 
   exec_groupby_statement();
   exec_insert_statement();
@@ -666,7 +658,7 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
   pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
 
   ASSERT_EQ(_table_A->soft_key_constraints().size(), 2);
-  ASSERT_FALSE(_table_A->valid_soft_key_constraints().contains(constraint_A_c));
+  ASSERT_FALSE(_table_A->soft_key_constraints().find(constraint_A_c)->is_valid());
 
   // Remove duplicates.
   {
@@ -681,7 +673,7 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
 
   // Check that the key constraint is valid again.
   ASSERT_EQ(_table_A->soft_key_constraints().size(), 2);
-  ASSERT_TRUE(_table_A->valid_soft_key_constraints().contains(constraint_A_c));
+  ASSERT_TRUE(_table_A->soft_key_constraints().find(constraint_A_c)->is_valid());
 }
 
 INSTANTIATE_TEST_SUITE_P(UccDiscoveryPluginMultiEncodingTestInstances, UccDiscoveryPluginMultiEncodingTest,

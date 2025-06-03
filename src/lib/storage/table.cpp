@@ -8,12 +8,10 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <ranges>
 #include <set>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -459,19 +457,6 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
       _add_soft_order_constraint(static_cast<const TableOrderConstraint&>(table_constraint));
       return;
   }
-}
-
-TableKeyConstraints Table::valid_soft_key_constraints() const {
-  auto valid_soft_key_constraints_filter = TableKeyConstraints{};
-  valid_soft_key_constraints_filter.reserve(_table_key_constraints.size());
-  for (const auto& table_key_constraint : _table_key_constraints) {
-    // Check if the constraint is valid.
-    if (table_key_constraint.is_valid()) {
-      valid_soft_key_constraints_filter.insert(table_key_constraint);
-    }
-  }
-
-  return valid_soft_key_constraints_filter;
 }
 
 const TableKeyConstraints& Table::soft_key_constraints() const {
