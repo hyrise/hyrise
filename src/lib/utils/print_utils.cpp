@@ -117,7 +117,7 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
                                  const std::string& separator) {
   auto table_key_constraints = std::set<TableKeyConstraint>{};
   // We only print key constraints that are marked as valid. Note that this has a different meaning
-  // than "confidently valid".
+  // than "confidently valid". See TableKeyConstraint::is_valid() for details.
   for (const auto& constraint : table->soft_key_constraints()) {
     if (!constraint.is_valid()) {
       continue;

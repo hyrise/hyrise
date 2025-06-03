@@ -218,7 +218,7 @@ class Table : private Noncopyable {
 
   /**
    * NOTE: All key constraints are currently stored. If a constraint invalidated it is not deleted. To check if a key
-   * constraint is guaranteed to be valid, use key_constraint_is_confidently_valid()
+   * constraint is guaranteed to be valid, use `key_constraint_is_confidently_valid`.
    */
   const TableKeyConstraints& soft_key_constraints() const;
 

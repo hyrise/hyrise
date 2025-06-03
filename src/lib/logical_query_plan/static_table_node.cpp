@@ -67,8 +67,9 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
+  const auto& table_key_constraints = table->soft_key_constraints();
 
-  for (const auto& table_key_constraint : table->soft_key_constraints()) {
+  for (const auto& table_key_constraint : table_key_constraints) {
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
@@ -122,8 +123,8 @@ bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
     }
   }
 
-  // Go through the key constraints of the other node and check if we can find a matching key constraint in the table
-  // for every single one in the other node. If we find one, we can remove it from the set.
+  // Go through every key constraint in the other node (rhs) and check if we can find a matching key constraint in the
+  // table. If we find one, we can remove it from the set.
   for (const auto& key_constraint : rhs_key_constraints) {
     if (key_constraint_is_confidently_valid(static_table_node.table, key_constraint)) {
       if (valid_key_constraints.contains(key_constraint)) {
@@ -134,7 +135,7 @@ bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
       }
     }
   }
-  // If we set is not empty, we have key constraints that are known for the table, but not for the other node.
+  // If the set is not empty, we have key constraints that are known for the table, but not for the other node.
   return valid_key_constraints.empty();
 }
 
