@@ -1,11 +1,11 @@
 #include "table_key_constraint.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <functional>
 #include <set>
 #include <utility>
-#include <atomic>
 
 #include <boost/container_hash/hash.hpp>
 
