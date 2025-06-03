@@ -740,6 +740,10 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
   auto start_flag = std::atomic_flag{};
   auto stop_flag = std::atomic_flag{};
+
+  // We need this flag to prevent the 'stored_table_node_constraint_access' threads from continuously reacquiring
+  // shared locks on the `deletion_mutex`, starving the `validate_constraint` thread. For more details, see
+  // https://stackoverflow.com/questions/32243245/can-thread-trying-to-stdlock-unique-an-stdshared-mutex-be-starved
   auto writer_waiting_flag = std::atomic_flag{};
 
   const auto VALIDATION_COUNT = uint32_t{100};
