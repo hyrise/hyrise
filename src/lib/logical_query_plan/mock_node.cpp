@@ -7,7 +7,6 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -180,11 +179,11 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
-void MockNode::set_key_constraints(const std::unordered_set<TableKeyConstraint>& key_constraints) {
+void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
   _table_key_constraints = key_constraints;
 }
 
-const std::unordered_set<TableKeyConstraint>& MockNode::key_constraints() const {
+const TableKeyConstraints& MockNode::key_constraints() const {
   return _table_key_constraints;
 }
 
