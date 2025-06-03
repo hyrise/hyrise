@@ -8,9 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <ranges>
 #include <set>
-#include <shared_mutex>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -316,7 +314,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
 }
 
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
-                         const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
+                         PolymorphicAllocator<Chunk> alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables if MVCC is enabled.");
   AssertInput(static_cast<ColumnCount::base_type>(segments.size()) == column_count(),
@@ -413,14 +411,6 @@ std::unique_lock<std::mutex> Table::acquire_append_mutex() {
   return std::unique_lock<std::mutex>(_append_mutex);
 }
 
-std::unique_lock<std::shared_mutex> Table::acquire_constraints_modify_mutex() {
-  return std::unique_lock<std::shared_mutex>(_constraint_mutex);
-}
-
-std::shared_lock<std::shared_mutex> Table::acquire_constraints_read_mutex() const {
-  return std::shared_lock<std::shared_mutex>(_constraint_mutex);
-}
-
 std::shared_ptr<TableStatistics> Table::table_statistics() const {
   return _table_statistics;
 }
@@ -454,7 +444,7 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
   _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
 }
 
-void Table::add_soft_constraint_unsafe(const AbstractTableConstraint& table_constraint) {
+void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint) {
   Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
   switch (table_constraint.type()) {
     case TableConstraintType::Key:
@@ -467,24 +457,6 @@ void Table::add_soft_constraint_unsafe(const AbstractTableConstraint& table_cons
       _add_soft_order_constraint(static_cast<const TableOrderConstraint&>(table_constraint));
       return;
   }
-}
-
-void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint) {
-  const auto table_constraints_modify_lock = acquire_constraints_modify_mutex();
-  add_soft_constraint_unsafe(table_constraint);
-}
-
-TableKeyConstraints Table::valid_soft_key_constraints() const {
-  const std::shared_lock<std::shared_mutex> key_constraints_read_lock{_constraint_mutex};
-  auto valid_soft_key_constraints_filter =
-      _table_key_constraints | std::views::filter([](const auto& constraint) {
-        return (constraint.last_validated_on() && (!constraint.last_invalidated_on() ||
-                                                   *constraint.last_invalidated_on() < constraint.last_validated_on()));
-      });
-  auto valid_soft_key_constraints =
-      TableKeyConstraints{valid_soft_key_constraints_filter.begin(), valid_soft_key_constraints_filter.end()};
-
-  return valid_soft_key_constraints;
 }
 
 const TableKeyConstraints& Table::soft_key_constraints() const {
@@ -526,13 +498,8 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
-
-  _table_key_constraints.insert(table_key_constraint);
-}
-
-void Table::delete_key_constraint(const TableKeyConstraint& constraint) {
-  const auto table_constraints_modify_lock = acquire_constraints_modify_mutex();
-  _table_key_constraints.erase(constraint);
+  const auto inserted = _table_key_constraints.insert(table_key_constraint).second;
+  Assert(inserted, "TableKeyConstraint has already been set.");
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
@@ -556,11 +523,10 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
 
   const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
   Assert(inserted, "ForeignKeyConstraint has already been set.");
-  const auto referenced_table_constraints_modify_lock = referenced_table->acquire_constraints_modify_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
-void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {  // switch to using mutex
+void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
   // Check validity of columns.
   const auto column_count = this->column_count();
   for (const auto& column_id : table_order_constraint.ordering_columns()) {

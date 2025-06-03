@@ -6,7 +6,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -39,6 +38,8 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
   friend class StorageTableTest;
+  friend class UccDiscoveryPlugin;
+  friend class StressTest;
 
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
@@ -126,7 +127,7 @@ class Table : private Noncopyable {
    * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
   void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
-                    const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+                    const PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{});
 
   // Create and append a Chunk consisting of ValueSegments.
   void append_mutable_chunk();
@@ -186,9 +187,6 @@ class Table : private Noncopyable {
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
-  std::unique_lock<std::shared_mutex> acquire_constraints_modify_mutex();
-  std::shared_lock<std::shared_mutex> acquire_constraints_read_mutex() const;
-
   /**
    * Tables, typically those stored in the StorageManager, can be associated with statistics to perform Cardinality
    * estimation during optimization.
@@ -213,20 +211,16 @@ class Table : private Noncopyable {
   void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");
 
   /**
-   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" constraints to draw attention to that. The version with the`_unsafe` postfix does not acquire
-   * a write lock for the constraints of this table.
+   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules. We call them "soft"
+   * constraints to draw attention to that. If `table_constraint` is already in the table constraints, we will fail.
    */
-  void add_soft_constraint_unsafe(const AbstractTableConstraint& table_constraint);
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
   /**
-   * NOTE: All key constraints are currently stored. If a constraint invalidated it is not deleted. To retrieve
-   * constraints that are not known to be invalid use `valid_soft_key_constraints`.
+   * NOTE: All key constraints are currently stored. If a constraint invalidated it is not deleted. To check if a key
+   * constraint is guaranteed to be valid, use `key_constraint_is_confidently_valid`.
    */
   const TableKeyConstraints& soft_key_constraints() const;
-  TableKeyConstraints valid_soft_key_constraints() const;
-  void delete_key_constraint(const TableKeyConstraint& constraint);
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
   const ForeignKeyConstraints& referenced_foreign_key_constraints() const;
@@ -286,7 +280,6 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>> _chunks;
 
-  mutable std::shared_mutex _constraint_mutex{};
   TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _table_order_constraints;
   ForeignKeyConstraints _foreign_key_constraints;

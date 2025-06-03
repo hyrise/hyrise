@@ -1,8 +1,10 @@
 #pragma once
 
-#include <optional>
 #include <set>
 #include <unordered_set>
+#include <utility>
+
+#include <oneapi/tbb/concurrent_unordered_set.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "abstract_table_constraint.hpp"
 #include "types.hpp"
@@ -17,21 +19,28 @@ enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
  */
 class TableKeyConstraint final : public AbstractTableConstraint {
  public:
+  ~TableKeyConstraint() override = default;
   /**
    * By requesting a std::set for the constructor, we ensure that the ColumnIDs have a well-defined order when creating
    * the vector (and equal constraints have equal columns). Thus, we can safely hash and compare key constraints without
    * violating the set semantics of the constraint.
    */
   TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type,
-                     const std::optional<CommitID> last_validated_on = MAX_COMMIT_ID,
-                     const std::optional<CommitID> last_invalidated = {});
+                     const CommitID last_validated_on = MAX_COMMIT_ID, const CommitID last_invalidated = MAX_COMMIT_ID);
   TableKeyConstraint() = delete;
+
+  TableKeyConstraint(const TableKeyConstraint& other);
+  TableKeyConstraint& operator=(const TableKeyConstraint& other);
+
+  TableKeyConstraint(TableKeyConstraint&& other) noexcept;
+  TableKeyConstraint& operator=(TableKeyConstraint&& other) noexcept;
 
   const std::set<ColumnID>& columns() const;
 
   KeyConstraintType key_type() const;
-  const std::optional<CommitID>& last_validated_on() const;
-  const std::optional<CommitID>& last_invalidated_on() const;
+
+  CommitID last_validated_on() const;
+  CommitID last_invalidated_on() const;
 
   /**
    * Returns whether or not this key constraint can become invalid if the table data changes. This is false for constraints specified
@@ -39,6 +48,13 @@ class TableKeyConstraint final : public AbstractTableConstraint {
    * would make them no longer unique.
    */
   bool can_become_invalid() const;
+
+  /**
+   * Returns whether or not the last validation and invalidation `CommitID`s tell us that this constraints is valid.
+   * Be aware that this does not mean that the constraint is valid in the current transaction, only that it was 
+   * validated last. To check if a constraint is guaranteed to be valid use `key_constraint_is_confidently_valid`.
+   */
+  bool is_valid() const;
   void revalidated_on(const CommitID revalidation_commit_id) const;
   void invalidated_on(const CommitID invalidation_commit_id) const;
 
@@ -65,13 +81,17 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   /**
    * Commit ID of the snapshot this constraint was last validated on. Note that the constraint will still be valid
    * during transactions with larger commit IDs if the table this constraint belongs to has not been modified since.
+   * (Only insertions pose a problem, as deletions do not invalidate the constraint.)
    */
-  mutable std::optional<CommitID> _last_validated_on;
-  // The first element indicates if the constraint was invalid before, the second when it was.
-  mutable std::optional<CommitID> _last_invalidated_on;
+  mutable std::atomic<CommitID> _last_validated_on;
+  /**
+   * Commit ID of the snapshot this constraint was last invalidated on. Similarly, as above, this constraint will still
+   * be invalid during transactions with larger commit IDs if only insertions have been performed since the last CID. 
+   */
+  mutable std::atomic<CommitID> _last_invalidated_on;
 };
 
-using TableKeyConstraints = std::unordered_set<TableKeyConstraint>;
+using TableKeyConstraints = tbb::concurrent_unordered_set<TableKeyConstraint>;
 
 }  // namespace hyrise
 

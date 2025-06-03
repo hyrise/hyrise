@@ -116,7 +116,7 @@ const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
   return _translation_info;
 }
 
-std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable>& SQLPipelineStatement::get_optimized_logical_plan() {
+const std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable>& SQLPipelineStatement::get_optimized_logical_plan() {
   if (_optimized_logical_plan.first) {
     return _optimized_logical_plan;
   }
@@ -191,12 +191,11 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   }
 
   if (!_physical_plan) {
-    // "Normal" path in which the query plan is created instead of begin retrieved from cache
+    // "Normal" path in which the query plan is created instead of begin retrieved from cache.
     const auto& optimization_result = get_optimized_logical_plan();
-    const auto& lqp = optimization_result.first;
     // Reset time to exclude previous pipeline steps
     started = std::chrono::steady_clock::now();
-    _physical_plan = LQPTranslator{}.translate_node(lqp);
+    _physical_plan = LQPTranslator{}.translate_node(optimization_result.first);
   }
 
   done = std::chrono::steady_clock::now();
@@ -205,9 +204,9 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     _physical_plan->set_transaction_context_recursively(_transaction_context);
   }
 
-  // Cache newly created plan for the according sql statement (only if not already cached)
+  // Cache newly created plan for the according sql statement (only if not already cached).
   if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable &&
-      (_optimized_logical_plan.first && static_cast<bool>(_optimized_logical_plan.second))) {
+      static_cast<bool>(_optimized_logical_plan.second)) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 

@@ -16,9 +16,7 @@ namespace hyrise {
  * speaking, the fact that c_custkey is the primary key of the customer table.
  * This rule identifies cases where functionally dependent columns are given as group-by columns while the functional
  * dependencies's determinant column(s) is a/are also group-by column(s). It then replaces that column (e.g., c_name)
- * with a dummy aggregate function ANY(c_name). This reduces the grouping cost in the aggregate operator. During the
- * application of this rule we prioritize functional dependencies with fewer determinants, as they are more likely to
- * be useful for the rewrite. When the amount of determinants is equal, we prioritize time independent dependencies.
+ * with a dummy aggregate function ANY(c_name). This reduces the grouping cost in the aggregate operator.
  * As the aggregate operators first produce all group-by columns, followed by all aggregate columns (including ANY),
  * the order might be changed. Unless a following operation redefines the order anyway (e.g., a projection or another
  * aggregate), a new projection is inserted to restore the original column order.

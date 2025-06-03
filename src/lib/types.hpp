@@ -11,8 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-
 #include "strong_typedef.hpp"
 
 /**
@@ -68,9 +66,9 @@ using Cost = float;
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
 //
-// TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+using PolymorphicAllocator = std::pmr::polymorphic_allocator<T>;
+using MemoryResource = std::pmr::memory_resource;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
@@ -135,7 +133,14 @@ constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
-// The last commit id is reserved for uncommitted changes.
+// The commit id 0 is used for loading data into a table. It is also used as a start value for the `_cleanup_commit_id`
+// of a chunk. See `Chunk::get_cleanup_commit_id()` for details.
+constexpr CommitID UNSET_COMMIT_ID = CommitID{0};
+// As commit_id=0 for rows indicates that they have been there "from the beginning of time". The first commit id that
+// is used for a transaction is 1.
+constexpr CommitID INITIAL_COMMIT_ID = CommitID{1};
+// The last commit id is reserved for uncommitted changes. It is also used to indicate that a `TableKeyConstraint` is
+// schema-given.
 constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
 
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
