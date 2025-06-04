@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <limits>
 #include <string>
 #include <vector>
@@ -9,7 +10,7 @@ namespace hyrise {
 
 class StorageValueSegmentTest : public BaseTest {
  protected:
-  ValueSegment<int> vs_int{false, ChunkOffset{100}};
+  ValueSegment<int32_t> vs_int{false, ChunkOffset{100}};
   ValueSegment<pmr_string> vs_str{false, ChunkOffset{100}};
   ValueSegment<double> vs_double{false, ChunkOffset{100}};
 };
@@ -86,12 +87,50 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
    * on the heap.
    */
 
+  ValueSegment<int64_t> vs_long{false, ChunkOffset{100}};
+  ValueSegment<float> vs_float{false, ChunkOffset{100}};
+
+  ValueSegment<int32_t> nullable_vs_int{true, ChunkOffset{100}};
+  ValueSegment<int64_t> nullable_vs_long{true, ChunkOffset{100}};
+  ValueSegment<float> nullable_vs_float{true, ChunkOffset{100}};
+  ValueSegment<double> nullable_vs_double{true, ChunkOffset{100}};
+  ValueSegment<pmr_string> nullable_vs_str{true, ChunkOffset{100}};
+
   const auto empty_usage_int = vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_long = vs_long.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_float = vs_float.memory_usage(MemoryUsageCalculationMode::Sampled);
   const auto empty_usage_double = vs_double.memory_usage(MemoryUsageCalculationMode::Sampled);
   const auto empty_usage_str = vs_str.memory_usage(MemoryUsageCalculationMode::Sampled);
 
-  vs_int.append(1);
-  vs_int.append(2);
+  const auto empty_usage_nullable_int = nullable_vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_nullable_long = nullable_vs_long.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_nullable_float = nullable_vs_float.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_nullable_double = nullable_vs_double.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_nullable_str = nullable_vs_str.memory_usage(MemoryUsageCalculationMode::Sampled);
+
+  vs_int.append(int32_t{1});
+  vs_int.append(int32_t{2});
+
+  vs_long.append(int64_t{1});
+  vs_long.append(int64_t{2});
+
+  vs_float.append(float{42.1337f});
+
+  vs_double.append(double{42.1337});
+
+  nullable_vs_int.append(int32_t{1});
+  nullable_vs_int.append(int32_t{2});
+  nullable_vs_int.append(NULL_VALUE);
+
+  nullable_vs_long.append(int64_t{1});
+  nullable_vs_long.append(int64_t{2});
+  nullable_vs_long.append(NULL_VALUE);
+
+  nullable_vs_float.append(float{42.1337f});
+  nullable_vs_float.append(NULL_VALUE);
+
+  nullable_vs_double.append(double{42.1337});
+  nullable_vs_double.append(NULL_VALUE);
 
   const auto short_str = pmr_string{"Hello"};
   const auto longer_str = pmr_string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
@@ -99,14 +138,25 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
   vs_str.append(short_str);
   vs_str.append(longer_str);
 
-  vs_double.append(42.1337);
+  nullable_vs_str.append(short_str);
+  nullable_vs_str.append(longer_str);
 
   EXPECT_EQ(empty_usage_int, vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_long, vs_long.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_float, vs_float.memory_usage(MemoryUsageCalculationMode::Sampled));
   EXPECT_EQ(empty_usage_double, vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
 
+  EXPECT_EQ(empty_usage_nullable_int, nullable_vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_nullable_long, nullable_vs_long.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_nullable_float, nullable_vs_float.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_nullable_double, nullable_vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
+
   EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage_str);
+  EXPECT_GE(nullable_vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage_nullable_str);
   // The short string will fit within the SSO capacity of a string and the long string will be placed on the heap.
   EXPECT_EQ(vs_str.memory_usage(MemoryUsageCalculationMode::Full), empty_usage_str + longer_str.capacity() + 1);
+  EXPECT_EQ(nullable_vs_str.memory_usage(MemoryUsageCalculationMode::Full),
+            empty_usage_nullable_str + longer_str.capacity() + 1);
 }
 
 }  // namespace hyrise

@@ -160,9 +160,9 @@ size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) cons
 
   if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(_values, mode);
+  } else {
+    return common_elements_size + _values.capacity() * sizeof(T);
   }
-
-  return common_elements_size + _values.capacity() * sizeof(T);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
