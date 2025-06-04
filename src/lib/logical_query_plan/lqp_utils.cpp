@@ -516,14 +516,12 @@ UniqueColumnCombinations::iterator find_ucc_if_exists(const UniqueColumnCombinat
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
   // Look for a unique column combination that is based on a subset of the given expressions.
-  return std::find_if(unique_column_combinations.begin(), unique_column_combinations.end(),
-                     [&](auto& ucc) {
-                       return ucc.expressions.size() <= expressions.size() &&
-                              std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
-                                          [&](const auto& ucc_expression) {
-                                            return expressions.contains(ucc_expression);
-                                          });
-                     });
+  return std::find_if(unique_column_combinations.begin(), unique_column_combinations.end(), [&](auto& ucc) {
+    return ucc.expressions.size() <= expressions.size() &&
+           std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
+             return expressions.contains(ucc_expression);
+           });
+  });
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,

@@ -140,8 +140,10 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
-  const auto key_constraint_b = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
-  const auto key_constraint_c = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
+  const auto key_constraint_b =
+      TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
+  const auto key_constraint_c =
+      TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({key_constraint_b, key_constraint_c});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
 
@@ -193,7 +195,8 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
   // Prepare single UCC.
-  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
+  const auto table_key_constraint =
+      TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
@@ -219,7 +222,8 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
   // Prepare single UCC.
-  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
+  const auto table_key_constraint =
+      TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 

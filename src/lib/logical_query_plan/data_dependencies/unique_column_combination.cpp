@@ -34,7 +34,7 @@ bool UniqueColumnCombination::is_schema_given() const {
   return _is_schema_given;
 }
 
-void UniqueColumnCombination::set_schema_given() const{
+void UniqueColumnCombination::set_schema_given() const {
   _is_schema_given = true;
 }
 
