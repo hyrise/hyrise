@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "all_parameter_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -86,7 +87,7 @@ std::string IndexScanRule::name() const {
   return name;
 }
 
-void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set.");
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
@@ -109,6 +110,8 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
 
     return LQPVisitation::VisitInputs;
   });
+
+  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

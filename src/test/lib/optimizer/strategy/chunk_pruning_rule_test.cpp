@@ -1,5 +1,8 @@
+#include <memory>
+
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -456,6 +459,17 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
   _apply_rule(_rule, _lqp);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
+}
+
+TEST_F(ChunkPruningRuleTest, CheckCacheability) {
+  const auto stored_table_node = StoredTableNode::make("fixed_string_compressed");
+
+  auto predicate_node = std::dynamic_pointer_cast<AbstractLQPNode>(
+      PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz")));
+  predicate_node->set_left_input(stored_table_node);
+
+  const auto is_cacheable = _apply_rule(_rule, predicate_node);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
 }
 
 TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
