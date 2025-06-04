@@ -17,7 +17,7 @@ namespace hyrise {
  *
  * If a UCC may become invalid in the future (because it is not based on a schema constraint, but on the data
  * incidentally being unique at the moment), the UCC is marked as being not schema-given.
- * This information is important because query plans that were optimized using a non-permanent UCC are not safely
+ * This information is important because query plans that were optimized using a non-schema-given UCC are not safely
  * cacheable.
  */
 struct UniqueColumnCombination final {

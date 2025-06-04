@@ -351,7 +351,7 @@ TEST_F(OptimizerTest, OptimizationWithoutKeyConstraintCacheable) {
 }
 
 TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
-  // The optimiation uses a `TableKeyConstraint` valid for commit 0. This should lead to the plan being not cacheable.
+  // The optimization uses a `TableKeyConstraint` valid for commit 0. This should lead to the plan being not cacheable.
   auto optimizer = Optimizer{};
   optimizer.add_rule(std::make_unique<JoinToSemiJoinRule>());
 
@@ -361,7 +361,7 @@ TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
 
   Hyrise::get().storage_manager.add_table("table", table);
 
-  // Non-permanent UCC
+  // Add a non-schema-given UCC.
   table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
 
   const auto stored_table_node = StoredTableNode::make("table");

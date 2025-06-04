@@ -185,8 +185,8 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
       const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
-        // Functional dependencies are derived from UCCs. In case we encounter a non-permanent FD, this means we
-        // encountered an underlying non-permanent UCC as well.
+        // Functional dependencies are derived from UCCs. In case we encounter a non-schema-given FD, this means we
+        // encountered an underlying non-schema-given UCC as well.
         cacheable = cacheable && (fd.is_schema_given() ? IsCacheable::Yes : IsCacheable::No);
 
         // Refresh data structures correspondingly.

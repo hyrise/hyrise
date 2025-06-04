@@ -143,7 +143,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     }
 
     // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. If it is, we can skip the
-    // expensive revalidation of the UCC. This also applies for permanent constraints.
+    // expensive revalidation of the UCC. This also applies for schema-given constraints.
     const auto existing_ucc = soft_key_constraints.find(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
     if (existing_ucc != soft_key_constraints.end() && key_constraint_is_confidently_valid(table, *existing_ucc)) {
       message << " [skipped (already known and guaranteed to be still VALID) in " << candidate_timer.lap_formatted()

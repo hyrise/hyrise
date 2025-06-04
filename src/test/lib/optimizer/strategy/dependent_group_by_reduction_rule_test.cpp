@@ -25,8 +25,8 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    // Non-permanent UCC. In practice, primary key constraints will always be permanent (because they are given by
-    // the schema), but we want this constraint to be non-permanent in order to test query plan cacheability.
+    // Non-schema-given UCC. In practice, primary key constraints will always be schema-given (because they are given by
+    // the schema), but we want this constraint to be non-schema-given in order to test query plan cacheability.
     table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY, CommitID{0}});
     storage_manager.add_table("table_a", table_a);
     stored_table_node_a = StoredTableNode::make("table_a");
@@ -134,7 +134,8 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-permanent UCC was used.
+    EXPECT_FALSE(
+        static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   {
@@ -151,7 +152,8 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-permanent UCC was used.
+    EXPECT_FALSE(
+        static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -201,12 +203,12 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because used FD was derived from permanent UCC.
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because used FD was derived from schema-given UCC.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-// Test that usage of 'time-dependent' FD leads to the result not being cacheable.
-TEST_F(DependentGroupByReductionRuleTest, TimeDependentFDNotCacheable) {
+// Test that usage of schema-given FD leads to the result not being cacheable.
+TEST_F(DependentGroupByReductionRuleTest, SchemaGivenFDNotCacheable) {
   // clang-format off
   _lqp =
   AggregateNode::make(expression_vector(column_f_1, column_f_2, column_f_3), expression_vector(sum_(column_f_0)),
@@ -220,7 +222,8 @@ TEST_F(DependentGroupByReductionRuleTest, TimeDependentFDNotCacheable) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because used FD was derived from non-permanent UCC.
+  EXPECT_FALSE(
+      static_cast<bool>(is_cacheable));  // Not cacheable because used FD was derived from non-schema-given UCC.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -239,7 +242,7 @@ TEST_F(DependentGroupByReductionRuleTest, EqualDeterminantLengthCacheable) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because the permanent UCC was used.
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because the schema-given UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -264,7 +267,8 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-permanent UCC was used.
+  EXPECT_FALSE(
+      static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -323,7 +327,8 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-permanent UCC was used.
+  EXPECT_FALSE(
+      static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -345,7 +350,8 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-permanent UCC was used.
+  EXPECT_FALSE(
+      static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -436,7 +442,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
     const auto expected_lqp = stored_table_node_a->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not permanent.
+    EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not schema-given.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -456,7 +462,8 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because used UCC is implied by query and thus permanent.
+    EXPECT_TRUE(
+        static_cast<bool>(is_cacheable));  // Cacheable because used UCC is implied by query and thus schema-given.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -477,7 +484,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not permanent.
+    EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not schema-given.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 

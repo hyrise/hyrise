@@ -162,7 +162,7 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
       } else if (existing_ucc != unique_column_combinations.end() &&
                  existing_ucc->expressions.size() == group_by_columns_count) {
         // If we already have a UCC for the group-by columns that is an exact match, we do not need to add it again.
-        // However, we should still set it as permanent, as the spurious UCC is not needed anymore.
+        // However, we should still set it as schema-given, as the spurious UCC is not needed anymore.
         existing_ucc->set_schema_given();
       }
     }

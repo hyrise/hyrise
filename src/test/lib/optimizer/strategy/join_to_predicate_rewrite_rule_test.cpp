@@ -56,7 +56,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   // The rule should only rewrite inner and semi joins.
   auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
-  // Non-permanent UCC
+  // Add a non-schema-given UCC.
   key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE, CommitID{0});
   node_b->set_key_constraints(key_constraints);
 
@@ -86,8 +86,8 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   }
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  // The rule should only rewrite inner and semi joins. The UCC is not permanent therefore the result should not be
-  // cacheable in this case.
+  // The rule should only rewrite inner and semi joins. The UCC is not schema-given. Therefore, the result should not
+  // be cacheable in this case.
   EXPECT_TRUE((GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) || !static_cast<bool>(is_cacheable));
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }

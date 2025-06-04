@@ -143,7 +143,7 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeValid) {
   _table_b->append({0, 1});
   _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid = CommitID{2};
 
-  // The constraint is permanent and therefore valid.
+  // The constraint is schema-given and therefore valid.
   EXPECT_TRUE(key_constraint_is_confidently_valid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
   // This constraint was verified on a previous CommitID, so we do not know whether it is still valid.
   EXPECT_FALSE(key_constraint_is_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{1}}));
@@ -162,7 +162,7 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeInvalid) {
   _table_b->append({0, 1});
   _table_b->get_chunk(ChunkID{0})->mvcc_data()->max_end_cid = CommitID{2};
 
-  // The constraint is permanent and therefore NOT confidently invalid.
+  // The constraint is schema-given and therefore NOT confidently invalid.
   EXPECT_FALSE(key_constraint_is_confidently_invalid(_table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}));
   // This constraint was never verified but only invalidated on a CommitID prior to the deletion, so it is also NOT
   // confidently invalid.

@@ -478,7 +478,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
 TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimestamp) {
   _encode_table(_table_A, GetParam());
 
-  // Add permanent UCC to table A.
+  // Add schema-given UCC to table A.
   _table_A->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   _delete_row(_table_A, 3);
 
@@ -504,10 +504,10 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
 
-  // The permanent UCC should remain permanent.
+  // The schema-given UCC should remain schema-given.
   EXPECT_EQ(column_0_constraint->last_validated_on(), MAX_COMMIT_ID);
 
-  // The non-permanent UCC should have been validated.
+  // The non-schema-given UCC should have been validated.
   const auto first_validation_timestamp = column_1_constraint->last_validated_on();
   EXPECT_NE(first_validation_timestamp, MAX_COMMIT_ID);
   // The following validation should not change the timestamp as the validity of the UCC is visible by examining the
