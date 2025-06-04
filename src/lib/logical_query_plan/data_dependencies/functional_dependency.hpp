@@ -36,7 +36,7 @@ namespace hyrise {
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
-                       bool is_time_independent = true);
+                       bool is_schema_given = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -45,10 +45,10 @@ struct FunctionalDependency {
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
 
-  bool is_time_independent() const;
+  bool is_schema_given() const;
 
  private:
-  bool _is_time_independent;
+  bool _is_schema_given;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
@@ -68,7 +68,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
  *         Note that FDs that do not share the same time dependence are not merged. As a result, FDs become deflated as
- *          follows (assuming all FDs are time-independent):
+ *          follows (assuming all FDs are schema-given):
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}

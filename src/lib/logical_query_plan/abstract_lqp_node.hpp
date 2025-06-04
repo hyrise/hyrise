@@ -192,7 +192,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return Searchs for a unique column combination (UCC) matching the given subset of output expressions (i.e.,
    *         the rows are guaranteed to be unique). This is preferred over calling
-   *         `ucc_cacheability_if_exists(unique_column_combinations(), ...)` as it performs additional
+   *         `find_ucc_if_exists(unique_column_combinations(), ...)` as it performs additional
    *         sanity checks. Returns `std::nullopt` if no matching UCC is found.
    */
   std::optional<IsCacheable> find_ucc_cacheability(const ExpressionUnorderedSet& expressions) const;

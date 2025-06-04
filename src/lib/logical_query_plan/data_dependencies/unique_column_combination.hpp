@@ -21,18 +21,19 @@ namespace hyrise {
  * not cacheable.
  */
 struct UniqueColumnCombination final {
-  explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_permanent = true);
+  explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_schema_given = true);
 
   bool operator==(const UniqueColumnCombination& rhs) const;
   bool operator!=(const UniqueColumnCombination& rhs) const;
 
-  bool is_permanent() const;
+  bool is_schema_given() const;
+  void set_schema_given() const;
   size_t hash() const;
 
   ExpressionUnorderedSet expressions;
 
  private:
-  bool _is_permanent;
+  mutable bool _is_schema_given;
 };
 
 std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc);

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -509,23 +510,20 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
   return column_expressions;
 }
 
-std::optional<IsCacheable> ucc_cacheability_if_exists(const UniqueColumnCombinations& unique_column_combinations,
+UniqueColumnCombinations::iterator find_ucc_if_exists(const UniqueColumnCombinations& unique_column_combinations,
                                                       const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
   // Look for a unique column combination that is based on a subset of the given expressions.
-  for (const auto& ucc : unique_column_combinations) {
-    if (ucc.expressions.size() <= expressions.size() &&
-        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
-          return expressions.contains(ucc_expression);
-        })) {
-      // Found a matching UCC.
-      return ucc.is_permanent() ? IsCacheable::Yes : IsCacheable::No;
-    }
-  }
-  // Did not find a UCC for the given expressions.
-  return {};
+  return std::find_if(unique_column_combinations.begin(), unique_column_combinations.end(),
+                     [&](auto& ucc) {
+                       return ucc.expressions.size() <= expressions.size() &&
+                              std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
+                                          [&](const auto& ucc_expression) {
+                                            return expressions.contains(ucc_expression);
+                                          });
+                     });
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
@@ -571,7 +569,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                return (fd.determinants == determinants) && (fd.dependents == dependents);
                              }) == fds.cend(),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_permanent());
+    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_schema_given());
   }
   return fds;
 }

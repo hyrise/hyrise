@@ -15,10 +15,10 @@
 namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
-                                           ExpressionUnorderedSet&& init_dependents, bool is_time_independent)
+                                           ExpressionUnorderedSet&& init_dependents, bool is_schema_given)
     : determinants(std::move(init_determinants)),
       dependents(std::move(init_dependents)),
-      _is_time_independent(is_time_independent) {
+      _is_schema_given(is_schema_given) {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
@@ -52,8 +52,8 @@ bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
   return !(other == *this);
 }
 
-bool FunctionalDependency::is_time_independent() const {
-  return _is_time_independent;
+bool FunctionalDependency::is_schema_given() const {
+  return _is_schema_given;
 }
 
 size_t FunctionalDependency::hash() const {
@@ -89,7 +89,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
     } else {
       for (const auto& dependent : fd.dependents) {
         auto determinants = fd.determinants;
-        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent}, fd.is_time_independent());
+        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent}, fd.is_schema_given());
       }
     }
   }
@@ -127,16 +127,16 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
 
     // If we have found an FD with same determinants and the same time dependence, add the dependents. Otherwise, add a
     // new FD.
-    if (existing_fd != existing_fds.end() && std::get<2>(*existing_fd) == fd_to_add.is_time_independent()) {
+    if (existing_fd != existing_fds.end() && std::get<2>(*existing_fd) == fd_to_add.is_schema_given()) {
       std::get<1>(*existing_fd).insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
     } else {
-      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents, fd_to_add.is_time_independent());
+      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents, fd_to_add.is_schema_given());
     }
   }
 
   auto deflated_fds = FunctionalDependencies(fds.size());
-  for (auto [determinants, dependents, is_time_independent] : existing_fds) {
-    deflated_fds.emplace(std::move(determinants), std::move(dependents), is_time_independent);
+  for (auto [determinants, dependents, is_schema_given] : existing_fds) {
+    deflated_fds.emplace(std::move(determinants), std::move(dependents), is_schema_given);
   }
 
   return deflated_fds;

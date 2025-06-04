@@ -3,6 +3,8 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
@@ -127,17 +129,19 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
     const auto& unique_column_combinations = agg_node_a->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a}}));
+    EXPECT_TRUE(unique_column_combinations.cbegin()->is_schema_given());
   }
   {
     const auto& unique_column_combinations = agg_node_b->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a, _b}}));
+    EXPECT_TRUE(unique_column_combinations.cbegin()->is_schema_given());
   }
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
-  const auto key_constraint_b = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
-  const auto key_constraint_c = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_b = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
+  const auto key_constraint_c = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({key_constraint_b, key_constraint_c});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
 
@@ -148,6 +152,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   /**
    * Expected behaviour:
    *  - UCC from key_constraint_b remains valid since _b is part of the group-by columns.
+   *  - UCC from key_constraint_b should remain not schema-given. 
    *  - UCC from key_constraint_c, however, should be discarded because _c gets aggregated.
    */
 
@@ -155,6 +160,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
+  EXPECT_FALSE(unique_column_combinations.cbegin()->is_schema_given());
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
@@ -187,7 +193,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
   // Prepare single UCC.
-  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
@@ -197,7 +203,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
 
   /**
    * AggregateNode should try to create a new UCC from its group-by-column _a. It is the same as MockNode's UCC, which
-   * is forwarded.
+   * is forwarded. Note that because the UCC and the group-by column are an exact match, the result is schema-given.
    *
    * Expected behaviour: AggregateNode should not output the same UCC twice.
    */
@@ -207,11 +213,13 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
   EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
+  // Due to the exact match, the UCC is marked as schema-given.
+  EXPECT_TRUE(unique_column_combinations.cbegin()->is_schema_given());
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
   // Prepare single UCC.
-  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
@@ -230,6 +238,8 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
   EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
+  // The input UCC is not marked as schema-given, as it is not created by the AggregateNode.
+  EXPECT_FALSE(unique_column_combinations.cbegin()->is_schema_given());
 }
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {

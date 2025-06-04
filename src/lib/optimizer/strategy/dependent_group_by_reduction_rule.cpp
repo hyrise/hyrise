@@ -166,8 +166,8 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       const auto& left_column_ids = get_column_ids(fd_left.determinants);
       const auto& right_column_ids = get_column_ids(fd_right.determinants);
 
-      if (fd_left.is_time_independent() != fd_right.is_time_independent()) {
-        return fd_left.is_time_independent();
+      if (fd_left.is_schema_given() != fd_right.is_schema_given()) {
+        return fd_left.is_schema_given();
       }
 
       return left_column_ids < right_column_ids;
@@ -187,7 +187,7 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       if (success) {
         // Functional dependencies are derived from UCCs. In case we encounter a non-permanent FD, this means we
         // encountered an underlying non-permanent UCC as well.
-        cacheable = cacheable && (fd.is_time_independent() ? IsCacheable::Yes : IsCacheable::No);
+        cacheable = cacheable && (fd.is_schema_given() ? IsCacheable::Yes : IsCacheable::No);
 
         // Refresh data structures correspondingly.
         group_by_list_changed = true;

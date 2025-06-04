@@ -17,6 +17,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -151,9 +152,18 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
                 std::inserter(group_by_columns, group_by_columns.begin()));
 
     // Make sure that we do not add an already existing or a superset UCC.
-    if (unique_column_combinations.empty() ||
-        !ucc_cacheability_if_exists(unique_column_combinations, group_by_columns)) {
-      unique_column_combinations.emplace(std::move(group_by_columns));
+    
+    if (unique_column_combinations.empty()){
+      unique_column_combinations.emplace(std::move(group_by_columns), /*is_schema_given=*/true);
+    } else {
+      const auto& existing_ucc = find_ucc_if_exists(unique_column_combinations, group_by_columns);
+      if (existing_ucc == unique_column_combinations.end()) {
+        unique_column_combinations.emplace(std::move(group_by_columns), /*is_schema_given=*/true);
+      } else if (existing_ucc != unique_column_combinations.end() && existing_ucc->expressions.size() == group_by_columns_count) {
+        // If we already have a UCC for the group-by columns that is an exact match, we do not need to add it again. 
+        // However, we should still set it as permanent, as the spurious UCC is not needed anymore.
+        existing_ucc->set_schema_given();
+      }
     }
   }
 

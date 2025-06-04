@@ -298,7 +298,11 @@ std::optional<IsCacheable> AbstractLQPNode::find_ucc_cacheability(const Expressi
     return {};
   }
 
-  return ucc_cacheability_if_exists(unique_column_combinations, expressions);
+  const auto existic_ucc = find_ucc_if_exists(unique_column_combinations, expressions);
+  if (existic_ucc == unique_column_combinations.end()) {
+    return {};
+  }
+  return existic_ucc->is_schema_given() ? IsCacheable::Yes : IsCacheable::No;
 }
 
 bool AbstractLQPNode::has_matching_od(

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 
 namespace hyrise {
@@ -249,7 +250,7 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
  * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param
  *         expressions. A unique column combination matches if it covers a subset of @param expressions.
  */
-std::optional<IsCacheable> ucc_cacheability_if_exists(const UniqueColumnCombinations& unique_column_combinations,
+UniqueColumnCombinations::iterator find_ucc_if_exists(const UniqueColumnCombinations& unique_column_combinations,
                                                       const ExpressionUnorderedSet& expressions);
 
 /**
