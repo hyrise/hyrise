@@ -123,7 +123,8 @@ std::vector<std::string> tokenize(std::string input) {
   const auto both_are_spaces = [](char left, char right) {
     return (left == right) && (left == ' ');
   };
-  input.erase(std::ranges::unique(input, both_are_spaces), input.end());
+  const auto unique_range = std::ranges::unique(input, both_are_spaces);
+  input.erase(unique_range.begin(), unique_range.end());
 
   auto tokens = std::vector<std::string>{};
   boost::algorithm::split(tokens, input, boost::is_space());
@@ -278,7 +279,8 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   const auto both_are_spaces = [](char left, char right) {
     return (left == right) && (left == ' ');
   };
-  args.erase(std::ranges::unique(args, both_are_spaces), args.end());
+  const auto unique_range = std::ranges::unique(args, both_are_spaces);
+  args.erase(unique_range.begin(), unique_range.end());
 
   return static_cast<int>(func(args));
 }
