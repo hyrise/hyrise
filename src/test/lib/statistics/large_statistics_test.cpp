@@ -132,7 +132,7 @@ TEST_F(LargeStatisticsTest, CostAndCardinalityEstimation) {
   const auto lqp =
   UnionNode::make(SetOperationMode::All,
     a,
-    SortNode::make(expression_vector(a->get_column("a_a")), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(a->get_column("a_a")), std::vector<SortMode>{SortMode::AscendingNullsFirst},
       LimitNode::make(value_(1),
         a)));
   // clang-format on

@@ -944,8 +944,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _mode == JoinMode::Inner) {
         chunk->set_immutable();
         // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-        chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
-                                           SortColumnDefinition(right_join_column, SortMode::Ascending)});
+        chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::AscendingNullsFirst),
+                                           SortColumnDefinition(right_join_column, SortMode::AscendingNullsFirst)});
       }
     }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
