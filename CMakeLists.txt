@@ -1,5 +1,5 @@
 # consider updating DEPENDENCIES.md when you touch this line
-cmake_minimum_required(VERSION 3.10...4.02 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18...4.02 FATAL_ERROR)
 
 project(Hyrise)
 
