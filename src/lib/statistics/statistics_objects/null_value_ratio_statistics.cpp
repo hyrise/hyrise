@@ -9,7 +9,7 @@
 
 namespace hyrise {
 
-NullValueRatioStatistics::NullValueRatioStatistics(const float init_ratio)
+NullValueRatioStatistics::NullValueRatioStatistics(const Selectivity init_ratio)
     : AbstractStatisticsObject(DataType::Null), ratio(init_ratio) {}
 
 std::shared_ptr<const AbstractStatisticsObject> NullValueRatioStatistics::sliced(
