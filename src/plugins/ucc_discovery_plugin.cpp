@@ -326,7 +326,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
     }
   }
 
-  // Since we did not return earlier, we are now sure that there are no duplicated in the column.
+  // Since we did not return earlier, we are now sure that there are no duplicates in the column.
   return true;
 }
 

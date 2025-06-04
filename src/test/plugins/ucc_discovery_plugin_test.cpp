@@ -372,11 +372,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterInsertion) {
   EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
 
   // Insert a row that does not affect UCC.
-  auto transaction_context =
-      _insert_row(_table_name_A,
-                  TableColumnDefinitions{
-                      {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}},
-                  {2, 4, "fine"}, false);
+  auto transaction_context = _insert_row(_table_name_A, _table_A->column_definitions(), {2, 4, "fine"}, false);
 
   // Re-validate UCCs.
   _validate_ucc_candidates(ucc_candidates);
@@ -416,11 +412,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateIn
 
   // Insert single row into table A that has a duplicate value regarding column 1. Do not commit to first test that UCC
   // stays valid.
-  auto transaction_context =
-      _insert_row(_table_name_A,
-                  TableColumnDefinitions{
-                      {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}},
-                  {2, 3, "dublicate"}, false);
+  auto transaction_context = _insert_row(_table_name_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
 
   // Re-validate UCCs.
   _validate_ucc_candidates(ucc_candidates);
@@ -461,11 +453,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
   // Delete and then insert a row. After the delete was committed, the UCC should still be valid but after the insert
   // it should not.
   _delete_row(_table_A, 2, true);
-  auto transaction_context =
-      _insert_row(_table_name_A,
-                  TableColumnDefinitions{
-                      {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}},
-                  {2, 3, "dublicate"}, false);
+  auto transaction_context = _insert_row(_table_name_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
 
   // Re-validate UCCs.
   _validate_ucc_candidates(ucc_candidates);
@@ -532,31 +520,6 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
 
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
   EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
-}
-
-TEST_P(UccDiscoveryPluginMultiEncodingTest, DeletionOfModifiedUCC) {
-  _encode_table(_table_A, GetParam());
-
-  // Insert unique column as candidate.
-  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
-
-  _validate_ucc_candidates(ucc_candidates);
-
-  // Collect constraints known for the tables.
-  const auto& constraints_A = _table_A->soft_key_constraints();
-  EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->is_valid());
-
-  // Insert table data into the table again. -> Creates duplicate for every row.
-  _insert_row(_table_name_A,
-              TableColumnDefinitions{
-                  {"A_a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::String, false}},
-              {6, 3, "dublicate"}, true);
-
-  _validate_ucc_candidates(ucc_candidates);
-  const auto& constraints_B = _table_A->soft_key_constraints();
-  EXPECT_TRUE(constraints_B.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_B.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->is_valid());
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
@@ -630,9 +593,9 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
   ASSERT_EQ(Hyrise::get().default_lqp_cache->size(), 1);
 
   // Discover UCCs used in previous query.
-  auto& pm = Hyrise::get().plugin_manager;
-  pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
-  pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+  auto& plugin_manager = Hyrise::get().plugin_manager;
+  plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+  plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
 
   // Check that key constraint was added to the table.
   const auto constraint_A_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
@@ -655,7 +618,7 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
   exec_groupby_statement();
 
   // Check that key constraint is properly invalidated.
-  pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+  plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
 
   ASSERT_EQ(_table_A->soft_key_constraints().size(), 2);
   ASSERT_FALSE(_table_A->soft_key_constraints().find(constraint_A_c)->is_valid());
@@ -669,7 +632,7 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
 
   // Repopulate the cache.
   exec_groupby_statement();
-  pm.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+  plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
 
   // Check that the key constraint is valid again.
   ASSERT_EQ(_table_A->soft_key_constraints().size(), 2);

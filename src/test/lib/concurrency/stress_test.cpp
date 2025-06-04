@@ -741,9 +741,13 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   auto start_flag = std::atomic_flag{};
   auto stop_flag = std::atomic_flag{};
 
+  // We need this flag to prevent the 'stored_table_node_constraint_access' threads from continuously reacquiring
+  // shared locks on the `deletion_mutex`, starving the `validate_constraint` thread. For more details, see
+  // https://stackoverflow.com/questions/32243245/can-thread-trying-to-stdlock-unique-an-stdshared-mutex-be-starved
+  auto writer_waiting_flag = std::atomic_flag{};
+
   const auto VALIDATION_COUNT = uint32_t{100};
   const auto SLEEP_TIME = std::chrono::milliseconds{1};
-  auto writer_waiting = std::atomic<bool>{false};
 
   const auto validate_constraint = [&] {
     start_flag.wait(false);
@@ -757,13 +761,14 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 
       std::this_thread::sleep_for(SLEEP_TIME);
       // Notify the reading threads that the writer is waiting.
-      writer_waiting = true;
+      writer_waiting_flag.test_and_set();
       const auto lock = std::unique_lock{deletion_mutex};
       // We need to clear the constraints to simulate concurrent insertions. Normally, a deletion of a constraint would
       // not happen at all. Instead, we store that this constraint was invalidated for the specific commit ID. This
       // prevents unnecessary revalidation of constraints that are known to be invalid.
       clear_soft_key_constraints(table);
-      writer_waiting = false;
+      writer_waiting_flag.clear();
+      writer_waiting_flag.notify_all();
     }
   };
 
@@ -771,10 +776,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
     start_flag.wait(false);
     while (!stop_flag.test()) {
       // Prevent this thread from starving the `validate_constraint` thread by continously acquiring `shared_locks`.
-      if (writer_waiting) {
-        std::this_thread::sleep_for(SLEEP_TIME);
-        continue;
-      }
+      writer_waiting_flag.wait(true);
       const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
       // Access the unique column combinations. We need to lock here because `unique_column_combinations` uses a
       // reference to iterate over the constraints. This reference is invalidated when the constraints are cleared.
