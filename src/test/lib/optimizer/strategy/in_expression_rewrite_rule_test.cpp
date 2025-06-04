@@ -303,7 +303,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto expected_lqp = PredicateNode::make(equals_(col_a, 1), node);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
 
-    EXPECT_FLOAT_EQ(cardinality_estimator.estimate_cardinality(_lqp), 1000.f / 200 * 1);
+    EXPECT_DOUBLE_EQ(cardinality_estimator.estimate_cardinality(_lqp), 1000.0 / 200 * 1);
   }
 
   {
