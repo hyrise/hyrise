@@ -16,9 +16,9 @@ namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
                                            ExpressionUnorderedSet&& init_dependents, bool is_schema_given)
-    : determinants(std::move(init_determinants)),
-      dependents(std::move(init_dependents)),
-      _is_schema_given(is_schema_given) {
+    : determinants{std::move(init_determinants)},
+      dependents{std::move(init_dependents)},
+      _is_schema_given{is_schema_given} {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
@@ -125,8 +125,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
       return true;
     });
 
-    // If we have found an FD with same determinants and the same time dependence, add the dependents. Otherwise, add a
-    // new FD.
+    // If we have found an FD with same determinants, add the dependents. Otherwise, add a new FD.
     if (existing_fd != existing_fds.end() && std::get<2>(*existing_fd) == fd_to_add.is_schema_given()) {
       std::get<1>(*existing_fd).insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
     } else {

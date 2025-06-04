@@ -30,9 +30,9 @@ namespace hyrise {
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
  *
  * If the FD may become invalid in the future (because it is not based on a schema constraint, but on the data
- * incidentally fulfilling the constraint at the moment), the FD is marked as being not permanent.
- * This information is important because query plans that were optimized using a non-permanent FD are probably
- * not cacheable.
+ * incidentally fulfilling the constraint at the moment), the FD is marked as being not schema-given.
+ * This information is important because query plans that were optimized using a non-schema-given FD are not safely
+ * cacheable.
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
@@ -67,12 +67,13 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
- *         Note that FDs that do not share the same time dependence are not merged. As a result, FDs become deflated as
+ *         Note that FDs that do not share the schema-given values are not merged. As a result, FDs become deflated as
  *          follows (assuming all FDs are schema-given):
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}
- *                             {a} => {d}
+ *                             {a} => {d} 
+ *          (not schema-given) {a} => {e}         -->   {a} => {e} (not schema-given)
  */
 FunctionalDependencies deflate_fds(const FunctionalDependencies& fds);
 

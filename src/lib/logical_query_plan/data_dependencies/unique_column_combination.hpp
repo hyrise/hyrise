@@ -16,9 +16,9 @@ namespace hyrise {
  *       there has been a ValidateNode before or where MVCC is disabled).
  *
  * If a UCC may become invalid in the future (because it is not based on a schema constraint, but on the data
- * incidentally being unique at the moment), the UCC is marked as being not permanent.
- * This information is important because query plans that were optimized using a non-permanent UCC are probably
- * not cacheable.
+ * incidentally being unique at the moment), the UCC is marked as being not schema-given.
+ * This information is important because query plans that were optimized using a non-permanent UCC are not safely
+ * cacheable.
  */
 struct UniqueColumnCombination final {
   explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_schema_given = true);
