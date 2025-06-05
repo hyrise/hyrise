@@ -24,7 +24,7 @@ class FixedStringVector {
   FixedStringVector(pmr_vector<char> chars, const size_t string_length, const size_t size)
       : _string_length(string_length), _chars{std::move(chars)}, _size(size) {
     Assert(string_length * size == chars.size(),
-           "Vector length does not match given number of strings in FixedStringVector");
+           "Vector length does not match given number of strings in FixedStringVector.");
   }
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container

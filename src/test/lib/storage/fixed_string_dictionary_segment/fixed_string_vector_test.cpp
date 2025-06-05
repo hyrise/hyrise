@@ -9,7 +9,7 @@ class FixedStringVectorTest : public BaseTest {
  protected:
   void SetUp() override {
     std::vector<pmr_string> strings = {"foo", "barbaz", "str3"};
-    fixed_string_vector = std::make_shared<FixedStringVector>(strings.begin(), strings.end(), 6u);
+    fixed_string_vector = std::make_shared<FixedStringVector>(strings.begin(), strings.end(), 6);
   }
 
   std::shared_ptr<FixedStringVector> fixed_string_vector = nullptr;
