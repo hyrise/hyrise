@@ -68,7 +68,7 @@ bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chu
     // TODO(anybody) Reading the non-atomic begin_cid (which is written to in Insert without a write lock) is likely UB
     //               When activating the ChunkCompressionTask, please look for a different means of determining whether
     //               all Inserts to a Chunk finished.
-    if (mvcc_data->get_begin_cid(chunk_offset) == MvccData::MAX_COMMIT_ID) {
+    if (mvcc_data->get_begin_cid(chunk_offset) == MAX_COMMIT_ID) {
       return false;
     }
   }
