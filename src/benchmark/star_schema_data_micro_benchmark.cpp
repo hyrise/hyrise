@@ -12,6 +12,8 @@
 #include "operators/aggregate_sort.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/reduce.hpp"
+#include "operators/legacy_reduce.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -338,5 +340,186 @@ BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, SemiJoinBadCase)(benchmark::Sta
     join->execute();
   }
 }
+
+BENCHMARK_DEFINE_F(StarSchemaDataMicroBenchmarkFixture, PrototypeWorstCase)(benchmark::State& state) {
+  setup_reduction_q41();
+
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
+
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+    OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
+
+  join_dryrun->execute();
+  Assert(join_dryrun->get_output()->row_count() == _left_input->get_output()->row_count(),
+    "Semi join must not filter anything.");
+
+  for (auto _ : state) {
+    const auto filter_size = state.range(0);
+    const auto hash_count = state.range(1);
+
+    setenv("SIZE", std::to_string(filter_size).c_str(), 1);
+    setenv("HASH", std::to_string(hash_count).c_str(), 1);
+
+    const auto join = std::make_shared<Reduce>(_left_input, _right_input,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
+    join->execute();
+  }
+}
+
+BENCHMARK_DEFINE_F(StarSchemaDataMicroBenchmarkFixture, PrototypeBestCase)(benchmark::State& state) {
+  setup_reduction_q23();
+
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
+
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+    OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  join_dryrun->execute();
+
+  const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
+    static_cast<double>(_left_input->get_output()->row_count());
+  Assert(join_selectivity > 0.00005 && join_selectivity < 0.0015, "Selectivity:" + std::to_string(join_selectivity));
+
+  for (auto _ : state) {
+    const auto filter_size = state.range(0);
+    const auto hash_count = state.range(1);
+
+    setenv("SIZE", std::to_string(filter_size).c_str(), 1);
+    setenv("HASH", std::to_string(hash_count).c_str(), 1);
+
+    const auto join = std::make_shared<Reduce>(_left_input, _right_input,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+    join->execute();
+  }
+}
+
+BENCHMARK_DEFINE_F(StarSchemaDataMicroBenchmarkFixture, PrototypeBadCase)(benchmark::State& state) {
+  setup_reduction_q31();
+
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
+
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+    OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals});
+  join_dryrun->execute();
+  const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
+    static_cast<double>(_left_input->get_output()->row_count());
+  Assert(join_selectivity > 0.86 && join_selectivity < 0.96, "Selectivity:" + std::to_string(join_selectivity));
+
+  for (auto _ : state) {
+    const auto filter_size = state.range(0);
+    const auto hash_count = state.range(1);
+
+    setenv("SIZE", std::to_string(filter_size).c_str(), 1);
+    setenv("HASH", std::to_string(hash_count).c_str(), 1);
+
+    const auto join = std::make_shared<Reduce>(
+        _left_input, _right_input,
+        OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
+    join->execute();
+  }
+}
+
+BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, LegacyWorstCase)(benchmark::State& state) {
+  setup_reduction_q41();
+
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
+
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+    OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
+
+  join_dryrun->execute();
+  Assert(join_dryrun->get_output()->row_count() == _left_input->get_output()->row_count(),
+    "Semi join must not filter anything.");
+
+  for (auto _ : state) {
+    const auto join = std::make_shared<LegacyReduce>(_left_input, _right_input,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
+    join->execute();
+  }
+}
+
+BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, LegacyBestCase)(benchmark::State& state) {
+  setup_reduction_q23();
+
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
+
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+    OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  join_dryrun->execute();
+
+  const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
+    static_cast<double>(_left_input->get_output()->row_count());
+  Assert(join_selectivity > 0.00005 && join_selectivity < 0.0015, "Selectivity:" + std::to_string(join_selectivity));
+
+  for (auto _ : state) {
+    const auto join = std::make_shared<LegacyReduce>(_left_input, _right_input,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+    join->execute();
+  }
+}
+
+BENCHMARK_F(StarSchemaDataMicroBenchmarkFixture, LegacyBadCase)(benchmark::State& state) {
+  setup_reduction_q31();
+
+  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+  Assert(_left_input->executed() && _right_input->executed(),
+         "Left and right input must be executed before running the benchmark.");
+
+  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+    OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals});
+  join_dryrun->execute();
+  const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
+    static_cast<double>(_left_input->get_output()->row_count());
+  Assert(join_selectivity > 0.86 && join_selectivity < 0.96, "Selectivity:" + std::to_string(join_selectivity));
+
+  for (auto _ : state) {
+    const auto join = std::make_shared<LegacyReduce>(
+        _left_input, _right_input,
+        OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
+    join->execute();
+  }
+}
+
+BENCHMARK_REGISTER_F(StarSchemaDataMicroBenchmarkFixture, PrototypeWorstCase)
+    ->Args({18, 1})
+    ->Args({18, 2})
+    ->Args({18, 3})
+    ->Args({19, 1})
+    ->Args({19, 2})
+    ->Args({19, 3})
+    ->Args({20, 1})
+    ->Args({20, 2})
+    ->Args({20, 3});
+
+BENCHMARK_REGISTER_F(StarSchemaDataMicroBenchmarkFixture, PrototypeBestCase)
+    ->Args({18, 1})
+    ->Args({18, 2})
+    ->Args({18, 3})
+    ->Args({19, 1})
+    ->Args({19, 2})
+    ->Args({19, 3})
+    ->Args({20, 1})
+    ->Args({20, 2})
+    ->Args({20, 3});
+
+BENCHMARK_REGISTER_F(StarSchemaDataMicroBenchmarkFixture, PrototypeBadCase)
+    ->Args({18, 1})
+    ->Args({18, 2})
+    ->Args({18, 3})
+    ->Args({19, 1})
+    ->Args({19, 2})
+    ->Args({19, 3})
+    ->Args({20, 1})
+    ->Args({20, 2})
+    ->Args({20, 3});
 
 }  // namespace hyrise
