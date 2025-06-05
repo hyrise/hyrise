@@ -1,5 +1,7 @@
 #include "abstract_tpcc_procedure.hpp"
 
+#include <random>
+
 #include "benchmark_sql_executor.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
