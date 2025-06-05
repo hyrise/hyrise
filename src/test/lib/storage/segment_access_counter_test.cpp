@@ -196,4 +196,46 @@ TEST_F(SegmentAccessCounterTest, AccessPattern8) {
   EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
 }
 
+TEST_F(SegmentAccessCounterTest, SelfAssignment) {
+  SegmentAccessCounter counter;
+  counter[SegmentAccessCounter::AccessType::Point] = 10;
+  counter[SegmentAccessCounter::AccessType::Sequential] = 20;
+
+  // Store original values to check after self-assignment
+  const auto original_point = counter[SegmentAccessCounter::AccessType::Point].load();
+  const auto original_sequential = counter[SegmentAccessCounter::AccessType::Sequential].load();
+
+  // Assign via a reference to avoid -Wself-assign-overloaded
+  SegmentAccessCounter& ref = counter;
+  counter = ref;
+
+  EXPECT_EQ(counter[SegmentAccessCounter::AccessType::Point], original_point);
+  EXPECT_EQ(counter[SegmentAccessCounter::AccessType::Sequential], original_sequential);
+}
+
+TEST_F(SegmentAccessCounterTest, InequalityOperator) {
+  SegmentAccessCounter counter1;
+  SegmentAccessCounter counter2;
+
+  EXPECT_FALSE(counter1 != counter2);  // Should be equal
+
+  // Should be different
+  counter1[SegmentAccessCounter::AccessType::Point] = 42;
+
+  EXPECT_TRUE(counter1 != counter2);
+}
+
+TEST_F(SegmentAccessCounterTest, EqualityOperator) {
+  SegmentAccessCounter counter1;
+  SegmentAccessCounter counter2;
+
+  // Initially, both counters are zeroed → should be equal
+  EXPECT_TRUE(counter1 == counter2);
+
+  // Should be different
+  counter1[SegmentAccessCounter::AccessType::Point] = 1;
+
+  EXPECT_FALSE(counter1 == counter2);
+}
+
 }  // namespace hyrise
