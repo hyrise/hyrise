@@ -29,7 +29,7 @@ namespace {
 using namespace hyrise;  // NOLINT
 
 std::vector<std::vector<AllTypeVariant>> materialize_values(const std::shared_ptr<const Table>& values) {
-  auto performance_warning_disabler = PerformanceWarningDisabler{};
+  const auto performance_warning_disabler = PerformanceWarningDisabler{};
   return values->get_rows();
 }
 
@@ -43,8 +43,7 @@ std::string trim_table_name(const std::string& table_name) {
 namespace hyrise {
 
 MetaTableManager::MetaTableManager() {
-  const auto meta_tables =
-      std::vector<std::shared_ptr<AbstractMetaTable>>{std::make_shared<MetaTablesTable>(),
+  const auto meta_tables = {std::make_shared<MetaTablesTable>(),
                                                       std::make_shared<MetaColumnsTable>(),
                                                       std::make_shared<MetaChunksTable>(),
                                                       std::make_shared<MetaChunkSortOrdersTable>(),
@@ -57,12 +56,11 @@ MetaTableManager::MetaTableManager() {
                                                       std::make_shared<MetaSystemInformationTable>(),
                                                       std::make_shared<MetaSystemUtilizationTable>()};
 
-  _table_names.reserve(_meta_tables.size());
+  auto next_table_id = ObjectID{0};
   for (const auto& table : meta_tables) {
-    _meta_tables[table->name()] = table;
-    _table_names.emplace_back(table->name());
+    _meta_table_ids[table->name()] = next_table_id++;
+    _meta_tables.push_back(table);
   }
-  std::sort(_table_names.begin(), _table_names.end());
 }
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {
@@ -70,8 +68,13 @@ bool MetaTableManager::is_meta_table_name(const std::string& name) {
   return name.size() > prefix_len && std::string_view{name.data(), prefix_len} == MetaTableManager::META_PREFIX;
 }
 
-const std::vector<std::string>& MetaTableManager::table_names() const {
-  return _table_names;
+std::vector<std::string_view> MetaTableManager::table_names() const {
+  auto table_names = std::vector<std::string_view>{};
+  table_names.reserve(_meta_table_ids.size());
+  for (const auto& [name, _] : _meta_tables_ids) {
+    table_names.push_back(name);
+  }
+  return table_names;
 }
 
 void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table) {
@@ -105,7 +108,7 @@ bool MetaTableManager::can_update(const std::string& table_name) const {
 }
 
 void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<const Table>& values) {
-  const auto& rows = materialize_values(values);
+  const auto rows = materialize_values(values);
 
   for (const auto& row : rows) {
     _meta_tables.at(table_name)->_insert(row);
@@ -113,7 +116,7 @@ void MetaTableManager::insert_into(const std::string& table_name, const std::sha
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values) {
-  const auto& rows = materialize_values(values);
+  const auto rows = materialize_values(values);
 
   for (const auto& row : rows) {
     _meta_tables.at(table_name)->_remove(row);
@@ -122,8 +125,8 @@ void MetaTableManager::delete_from(const std::string& table_name, const std::sha
 
 void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values,
                               const std::shared_ptr<const Table>& update_values) {
-  const auto& selected_rows = materialize_values(selected_values);
-  const auto& update_rows = materialize_values(update_values);
+  const auto selected_rows = materialize_values(selected_values);
+  const auto update_rows = materialize_values(update_values);
   Assert(selected_rows.size() == update_rows.size(), "Selected and updated values need to have the same size.");
 
   const auto row_count = selected_rows.size();

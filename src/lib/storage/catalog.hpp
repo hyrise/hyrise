@@ -25,16 +25,6 @@ enum class ObjectType { Table, MetaTable, View, PreparedPlan };
 // maintaining table constraints.
 class Catalog : public Noncopyable {
  public:
-  struct ObjectMetadata {
-    ObjectMetadata() = default;
-    ObjectMetadata(ObjectMetadata&& other) noexcept;
-    ObjectMetadata& operator=(ObjectMetadata&& other) noexcept;
-
-    tbb::concurrent_unordered_map<std::string, ObjectID> ids{INITIAL_SIZE};
-    tbb::concurrent_vector<std::string> names{INITIAL_SIZE};
-    std::atomic<ObjectID::base_type> next_id{0};
-  };
-
   std::pair<ObjectType, ObjectID> resolve_object(const std::string& name);
 
   void add_table(const std::string& name, const std::shared_ptr<Table>& table);
@@ -67,7 +57,15 @@ class Catalog : public Noncopyable {
   Catalog() = default;
   friend class Hyrise;
 
-  // ObjectID _add_object(const std::string& name, ObjectMetadata& meta_data);
+  struct ObjectMetadata {
+    ObjectMetadata() = default;
+    ObjectMetadata(ObjectMetadata&& other) noexcept;
+    ObjectMetadata& operator=(ObjectMetadata&& other) noexcept;
+
+    tbb::concurrent_unordered_map<std::string, ObjectID> ids{INITIAL_SIZE};
+    tbb::concurrent_vector<std::string> names{INITIAL_SIZE};
+    std::atomic<ObjectID::base_type> next_id{0};
+  };
 
   ObjectMetadata _tables;
   ObjectMetadata _views;

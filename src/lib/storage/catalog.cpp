@@ -87,6 +87,29 @@ void Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& t
   Hyrise::get().storage_manager._add_table(table_id, table);
 }
 
+std::pair<ObjectType, ObjectID> resolve_object(const std::string& name) {
+  if (MetaTableManager::is_meta_table_name(name)) {
+    return {ObjectType::MetaTable, Hyrise::get().meta_table_manager.meta_table_id(name)};
+  }
+
+  const auto table_id = this->table_id(name);
+  if (table_id != INVALID_OBJECT_ID) {
+    return {ObjectType::Table, table_id};
+  }
+
+  const auto view_id = this->view_id(name);
+  if (view_id != INVALID_OBJECT_ID) {
+    return {ObjectType::View, view_id};
+  }
+
+  const auto plan_id = this->prepared_plan_id(name);
+  if (plan_id != INVALID_OBJECT_ID) {
+    return {ObjectType::PreparedPlan, plan_id};
+  }
+
+  Fail("Unknown object: '" + name + "'");
+}
+
 void Catalog::drop_table(ObjectID table_id) {
   Assert(table_id < _tables.names.size(), "ObjectID " + std::to_string(table_id) + " out of range.");
   drop_table(_tables.names[table_id]);
