@@ -106,6 +106,14 @@ TEST_F(FixedStringVectorTest, Erase) {
   EXPECT_EQ((*fixed_string_vector)[0u], "foo");
 }
 
+TEST_F(FixedStringVectorTest, EraseEmptyVector) {
+    auto empty_fixed_string_vector = FixedStringVector();
+    EXPECT_EQ(empty_fixed_string_vector.size(), 0u);
+
+    auto it = empty_fixed_string_vector.begin();
+    EXPECT_NO_THROW(empty_fixed_string_vector.erase(it, empty_fixed_string_vector.end()));
+}
+
 TEST_F(FixedStringVectorTest, Shrink) {
   fixed_string_vector->shrink_to_fit();
 
