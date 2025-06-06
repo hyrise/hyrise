@@ -118,6 +118,12 @@ struct RowID {
     return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
   }
 
+  // auto operator<=>(const RowID& other) const {
+  //   return std::tie(chunk_id, chunk_offset) <=> std::tie(other.chunk_id, other.chunk_offset);
+  // }
+
+  // bool operator==(const RowID& other) const = default;
+
   friend std::ostream& operator<<(std::ostream& stream, const RowID& row_id) {
     stream << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
     return stream;

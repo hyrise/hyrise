@@ -194,7 +194,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
             const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-            segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
+            segment_with_iterators(*probe_segment, [&](const auto& probe_iter, const auto& probe_end) {
               _reference_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index,
                                                        reference_segment_pos_list);
             });
@@ -234,7 +234,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
           const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-          segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
+          segment_with_iterators(*probe_segment, [&](const auto& probe_iter, const auto& probe_end) {
             _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
           });
         }
@@ -304,16 +304,16 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-    JoinNestedLoop::JoinParams params{.pos_list_left=*_probe_pos_list,
-                                      .pos_list_right=*_index_pos_list,
-                                      .left_matches=_probe_matches[probe_chunk_id],
-                                      .right_matches=_index_matches[index_chunk_id],
-                                      .track_left_matches=track_probe_matches,
-                                      .track_right_matches=track_index_matches,
-                                      .mode=_mode,
-                                      .predicate_condition=_adjusted_primary_predicate.predicate_condition,
-                                      .secondary_predicate_evaluator=secondary_predicate_evaluator,
-                                      .write_pos_lists=!is_semi_or_anti_join};
+    const auto params = JoinNestedLoop::JoinParams{.pos_list_left=*_probe_pos_list,
+                                                   .pos_list_right=*_index_pos_list,
+                                                   .left_matches=_probe_matches[probe_chunk_id],
+                                                   .right_matches=_index_matches[index_chunk_id],
+                                                   .track_left_matches=track_probe_matches,
+                                                   .track_right_matches=track_index_matches,
+                                                   .mode=_mode,
+                                                   .predicate_condition=_adjusted_primary_predicate.predicate_condition,
+                                                   .secondary_predicate_evaluator=secondary_predicate_evaluator,
+                                                   .write_pos_lists=!is_semi_or_anti_join};
     JoinNestedLoop::_join_two_untyped_segments(*probe_segment, *index_segment, probe_chunk_id, index_chunk_id, params);
   }
   const auto& index_pos_list_size_post_fallback = _index_pos_list->size();
@@ -343,7 +343,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
     const std::shared_ptr<AbstractChunkIndex>& index,
     const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
-    RowIDPosList index_scan_pos_list;
+    auto index_scan_pos_list = RowIDPosList{};
     const auto probe_side_position = *probe_iter;
     const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
     for (const auto& [index_begin, index_end] : index_ranges) {

@@ -325,7 +325,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
   // If you can think of a way in which an LQP can be corrupt, please add it!
   // First, collect all LQPs (the main LQP and all uncorrelated subqueries).
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  for (const auto& [lqp, _] : collect_lqp_subquery_expressions_by_lqp(root_node, true)) {
+  for (const auto& [lqp, expressions] : collect_lqp_subquery_expressions_by_lqp(root_node, true)) {
     lqps.emplace_back(lqp);
   }
 

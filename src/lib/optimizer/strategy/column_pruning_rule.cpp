@@ -355,7 +355,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
         auto pruned_column_ids = std::vector<ColumnID>{};
         const auto& node_output_expressions = node->output_expressions();
         for (const auto& expression : node_output_expressions) {
-          if (required_expressions.find(expression) != required_expressions.end()) {
+          if (required_expressions.contains(expression)) {
             continue;
           }
 

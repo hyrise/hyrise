@@ -441,8 +441,8 @@ class Sort::SortImpl {
 
     auto pos_list = RowIDPosList{};
     pos_list.reserve(_row_id_value_vector.size());
-    for (const auto& [row_id, _] : _row_id_value_vector) {
-      pos_list.emplace_back(row_id);
+    for (const auto& [row_id, value] : _row_id_value_vector) {
+      pos_list.push_back(row_id);
     }
     temporary_result_writing_time = timer.lap();
     return pos_list;

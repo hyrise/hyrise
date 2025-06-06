@@ -8,6 +8,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -1252,8 +1253,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
           break;
 
         case LogicalOperator::Or:
-          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(),
-                         right_pos_list.end(), std::back_inserter(result_pos_list));
+          std::ranges::set_union(left_pos_list, right_pos_list, std::back_inserter(result_pos_list), Compili{});
           break;
       }
     } break;
@@ -1477,9 +1477,9 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
   const auto right_size = right.size();
   if (left_size == right_size) {
     auto nulls = pmr_vector<bool>(left_size);
-    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](const auto lhs, const auto rhs) {
-      return lhs || rhs;
-    });
+    for (auto index = size_t{0}; index < left_size; ++index) {
+      nulls[index] = left[index] || right[index];
+    }
     return nulls;
   }
 

@@ -6,7 +6,6 @@
 #include <optional>
 #include <ostream>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -351,8 +350,8 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
     for (const auto& fd : non_trivial_fds) {
-      auto [_, inserted] = fds.insert(fd);
-      Assert(inserted, "FDs with the same set of determinant expressions should be merged.");
+      const auto insert_result = fds.insert(fd);
+      Assert(insert_result.second, "FDs with the same set of determinant expressions should be merged.");
 
       for (const auto& fd_determinant_expression : fd.determinants) {
         Assert(output_expressions_set.contains(fd_determinant_expression),
@@ -445,7 +444,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
 }
 
 void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
-  const auto iter = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) {
+  const auto iter = std::ranges::find_if(_outputs, [&](const auto& other) {
     /**
      * HACK!
      *  Normally we'd just check `&output == other.lock().get()` here.
@@ -457,7 +456,7 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
      * auto node_b = Node::make(..., node_a)
      *
      * node_b.reset(); // node_b::~AbstractLQPNode() will call `node_a.remove_output_pointer(node_b)`
-     *                 // But we can't lock node_b anymore, since its ref count is already 0
+     *                 // But we cannot lock node_b anymore, since its ref count is already 0.
      */
     return &output == other.lock().get() || other.expired();
   });

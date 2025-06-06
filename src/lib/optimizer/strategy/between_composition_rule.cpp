@@ -168,12 +168,12 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
       if (boundary->type != ColumnBoundaryType::None) {
         if (boundary->boundary_is_column_expression) {
           const auto inverse_boundary = std::make_shared<ColumnBoundary>(_create_inverse_boundary(boundary));
-          if (column_boundaries.find(inverse_boundary->column_expression) == column_boundaries.end()) {
+          if (column_boundaries.contains(inverse_boundary->column_expression)) {
             column_boundaries[inverse_boundary->column_expression] = std::vector<std::shared_ptr<ColumnBoundary>>();
           }
           column_boundaries[inverse_boundary->column_expression].push_back(inverse_boundary);
         }
-        if (column_boundaries.find(boundary->column_expression) == column_boundaries.end()) {
+        if (column_boundaries.contains(boundary->column_expression)) {
           column_boundaries[boundary->column_expression] = std::vector<std::shared_ptr<ColumnBoundary>>();
         }
         column_boundaries[boundary->column_expression].push_back(boundary);
@@ -185,12 +185,12 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
     lqp_remove_node(predicate_node);
   }
 
-  // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression
-  std::shared_ptr<ColumnBoundary> lower_bound_value_expression;
-  std::shared_ptr<ColumnBoundary> upper_bound_value_expression;
-  auto consumed_boundary_ids = std::vector<size_t>();
-  bool value_lower_inclusive = false;
-  bool value_upper_inclusive = false;
+  // Store the highest lower bound and the lowest upper bound for a column in order to get an optimal BetweenExpression.
+  auto lower_bound_value_expression = std::shared_ptr<ColumnBoundary>{};
+  auto upper_bound_value_expression = std::shared_ptr<ColumnBoundary>{};
+  auto consumed_boundary_ids = std::vector<size_t>{};
+  auto value_lower_inclusive = false;
+  auto value_upper_inclusive = false;
 
   // libc++ and libstdc++ have different orderings for unordered_map. This results in nodes being inserted into the LQP
   // in arbitrary order. While these will be sorted by a different rule later, it can cause tests to fail.

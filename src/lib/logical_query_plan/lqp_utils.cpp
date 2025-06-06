@@ -463,8 +463,8 @@ ExpressionUnorderedSet get_expressions_for_column_ids(const AbstractLQPNode& lqp
     DebugAssert(*column_expression.original_node.lock() == lqp_node,
                 "LQPColumnExpressions should reference the original node.");
     if (column_ids.contains(original_column_id)) {
-      [[maybe_unused]] const auto [_, success] = column_expressions.emplace(output_expression);
-      DebugAssert(success, "Did not expect multiple column expressions for the same ColumnID.");
+      const auto emplace_result = column_expressions.emplace(output_expression);
+      DebugAssert(emplace_result.second, "Did not expect multiple column expressions for the same ColumnID.");
     }
   }
 

@@ -217,7 +217,7 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
   }
 
   auto subsets = std::vector<JoinGraphVertexSet>{};
-  const auto set_ulong = vertex_set.to_ulong();
+  const auto set_ulong = vertex_set.to_ulong();  // NOLINT(clang-analyzer-core.BitwiseShift)
 
   // `subset_ulong` is the current subset subset [sic]. `set_ulong & -set_ulong` initializes it to the least significant
   // bit in `set_ulong`. E.g., if set_ulong is 011000, this initializes subset_ulong to 001000.
@@ -231,7 +231,6 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
     subset_ulong = set_ulong & (subset_ulong - set_ulong);
   }
   subsets.emplace_back(vertex_set);
-  // NOLINTEND(clang-analyzer-core.BitwiseShift)
 
   return subsets;
 }

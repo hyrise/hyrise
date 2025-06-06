@@ -13,6 +13,9 @@ class TestNonInstantiablePlugin : public AbstractPlugin, public Singleton<TestNo
     return "This is a not working Plugin because it does not export itself";
   }
 
+ private:
+  friend class Singleton;
+
   void start() final {}
 
   void stop() final {}

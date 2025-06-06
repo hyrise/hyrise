@@ -9,6 +9,26 @@
 
 #include "utils/assert.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+void assign_if_exists(char& value, const nlohmann::json& json_object, const std::string& key) {
+  if (json_object.contains(key)) {
+    auto character = std::string{json_object.at(key)};
+    Assert(character.size() == 1, "CSV meta file config: Character specifications can only be a single character.");
+    value = character[0];
+  }
+}
+
+void assign_if_exists(bool& value, const nlohmann::json& json_object, const std::string& key) {
+  if (json_object.contains(key)) {
+    value = json_object.at(key);
+  }
+}
+
+}  // namespace
+
 namespace hyrise {
 
 CsvMeta process_csv_meta_file(const std::string& filename) {
@@ -17,48 +37,6 @@ CsvMeta process_csv_meta_file(const std::string& filename) {
   auto meta_json = nlohmann::json{};
   metafile >> meta_json;
   return static_cast<CsvMeta>(meta_json);
-}
-
-static void assign_if_exists(char& value, const nlohmann::json& json_object, const std::string& key) {
-  if (json_object.find(key) != json_object.end()) {
-    std::string character = json_object.at(key);
-    Assert(character.size() == 1, "CSV meta file config: Character specifications can only be a single character.");
-    value = character[0];
-  }
-}
-
-static void assign_if_exists(bool& value, const nlohmann::json& json_object, const std::string& key) {
-  if (json_object.find(key) != json_object.end()) {
-    value = json_object.at(key);
-  }
-}
-
-static void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
-  if (json_string == "reject_null_strings") {
-    null_handling = NullHandling::RejectNullStrings;
-  } else if (json_string == "null_string_as_null") {
-    null_handling = NullHandling::NullStringAsNull;
-  } else if (json_string == "null_string_as_value") {
-    null_handling = NullHandling::NullStringAsValue;
-  } else {
-    Fail("Illegal value for null_handling: " + json_string.get<std::string>());
-  }
-}
-
-static void to_json(nlohmann::json& json_string, NullHandling null_handling) {
-  switch (null_handling) {
-    case NullHandling::RejectNullStrings:
-      json_string = "reject_null_strings";
-      break;
-    case NullHandling::NullStringAsNull:
-      json_string = "null_string_as_null";
-      break;
-    case NullHandling::NullStringAsValue:
-      json_string = "null_string_as_value";
-      break;
-    default:
-      Fail("Unexpected NullHandling.");
-  }
 }
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
@@ -95,7 +73,7 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
 }
 
 void to_json(nlohmann::json& json, const CsvMeta& meta) {
-  nlohmann::json config = nlohmann::json{{"delimiter", std::string(1, meta.config.delimiter)},
+  auto config = nlohmann::json{{"delimiter", std::string(1, meta.config.delimiter)},
                                          {"separator", std::string(1, meta.config.separator)},
                                          {"quote", std::string(1, meta.config.quote)},
                                          {"escape", std::string(1, meta.config.escape)},
@@ -113,19 +91,20 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
   json = nlohmann::json{{"config", config}, {"columns", columns}};
 }
 
-static bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
+bool operator==(const CsvMeta& left, const CsvMeta& right) {
+  return std::tie(left.config, left.columns) == std::tie(right.config, right.columns);
+}
+
+bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
   return std::tie(left.name, left.type, left.nullable) == std::tie(right.name, right.type, right.nullable);
 }
 
-static bool operator==(const ParseConfig& left, const ParseConfig& right) {
+bool operator==(const ParseConfig& left, const ParseConfig& right) {
   return std::tie(left.delimiter, left.separator, left.quote, left.escape, left.delimiter_escape,
                   left.reject_quoted_nonstrings, left.null_handling, left.rfc_mode) ==
          std::tie(right.delimiter, right.separator, right.quote, right.escape, right.delimiter_escape,
                   right.reject_quoted_nonstrings, right.null_handling, right.rfc_mode);
 }
 
-bool operator==(const CsvMeta& left, const CsvMeta& right) {
-  return std::tie(left.config, left.columns) == std::tie(right.config, right.columns);
-}
 
 }  // namespace hyrise

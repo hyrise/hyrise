@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -48,11 +49,11 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(
 void ColumnLikeTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto& end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](const auto& iter, [[maybe_unused]] const auto& end) {
     // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
     // via position_filter
-    if constexpr (!is_reference_segment_iterable_v<typename decltype(iter)::IterableType>) {
-      using ColumnDataType = typename decltype(iter)::ValueType;
+    if constexpr (!is_reference_segment_iterable_v<typename std::decay_t<decltype(iter)>::IterableType>) {
+      using ColumnDataType = typename std::decay_t<decltype(iter)>::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
