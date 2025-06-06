@@ -33,7 +33,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using reverse_iterator = Vector::reverse_iterator;
   using const_reverse_iterator = Vector::const_reverse_iterator;
 
-  /* (1 ) */ RowIDPosList() noexcept(noexcept(allocator_type())) {}
+  /* (1 ) */ RowIDPosList() noexcept(noexcept(allocator_type())) = default;
 
   /* (1 ) */ explicit RowIDPosList(const allocator_type& allocator) noexcept : Vector(allocator) {}
 
@@ -44,23 +44,26 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
       : Vector(count, alloc) {}
 
   /* (4 ) */ template <class InputIt>
-  RowIDPosList(InputIt first, InputIt last, const allocator_type& alloc = allocator_type())
+  RowIDPosList(InputIt first, InputIt last, const allocator_type& /*alloc*/ = allocator_type())
       : Vector(std::move(first), std::move(last)) {}
 
   /* (5 ) */  // RowIDPosList(const Vector& other) : Vector(other); - Oh no, you don't.
   /* (5 ) */  // RowIDPosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
   /* (6 ) */ RowIDPosList(RowIDPosList&& other) noexcept
-      : Vector(std::move(other)), _references_single_chunk{other._references_single_chunk} {}
+      // NOLINTNEXTLINE(bugprone-use-after-move,hicpp-invalid-access-moved)
+      : Vector(std::move(other)), _references_single_chunk{std::exchange(other._references_single_chunk, false)} {}
 
   /* (6+) */ explicit RowIDPosList(Vector&& other) noexcept : Vector(std::move(other)) {}
 
   /* (7 ) */ RowIDPosList(RowIDPosList&& other, const allocator_type& alloc)
-      : Vector(std::move(other), alloc), _references_single_chunk{other._references_single_chunk} {}
+      : Vector(std::move(other), alloc),
+        // NOLINTNEXTLINE(bugprone-use-after-move,hicpp-invalid-access-moved)
+        _references_single_chunk{std::exchange(other._references_single_chunk, false)} {}
 
   /* (7+) */ RowIDPosList(Vector&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
 
   /* (8 ) */ RowIDPosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
-      : Vector(std::move(init), alloc) {}
+      : Vector(init, alloc) {}
 
   RowIDPosList& operator=(RowIDPosList&& other) = default;
 

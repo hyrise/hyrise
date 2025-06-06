@@ -28,6 +28,8 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   FixedStringIterator(const FixedStringIterator&) = default;
 
   FixedStringIterator& operator=(const FixedStringIterator& other) {
+    if (this == &other)
+      return *this;
     DebugAssert(_string_length == other._string_length && &_chars == &other._chars,
                 "can't convert pointers from different vectors");
     _pos = other._pos;
@@ -35,19 +37,18 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   }
 
  private:
+  // NOLINTBEGIN(readability-identifier-naming)
   friend class boost::iterator_core_access;
 
-  // We have a couple of NOLINTs here becaues the facade expects these method names:
-
-  bool equal(FixedStringIterator const& other) const {  // NOLINT
+  bool equal(FixedStringIterator const& other) const {
     return &_chars == &other._chars && _pos == other._pos;
   }
 
-  size_t distance_to(FixedStringIterator const& other) const {  // NOLINT
+  size_t distance_to(FixedStringIterator const& other) const {
     if (_string_length == 0) {
       return 0;
     }
-    return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / std::intptr_t(_string_length);
+    return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / static_cast<std::intptr_t>(_string_length);
   }
 
   void advance(size_t n) {  // NOLINT
@@ -61,6 +62,7 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   void decrement() {  // NOLINT
     _pos -= _string_length;
   }
+  // NOLINTEND(readability-identifier-naming)
 
   template <bool OnConstStorageLocal = OnConstStorage>
   std::enable_if_t<OnConstStorageLocal, const std::string_view> dereference() const {  // NOLINT

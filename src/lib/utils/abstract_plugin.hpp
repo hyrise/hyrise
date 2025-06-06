@@ -18,6 +18,7 @@ class AbstractBenchmarkItemRunner;
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid ugly mangled names. Use
 // EXPORT in the implementation file of your plugin.
 // clang-format off
+// NOLINTBEGIN (bugprone-macro-parentheses,cppcoreguidelines-macro-usage)
 #define EXPORT_PLUGIN(PluginName)                           \
   extern "C" AbstractPlugin* factory() {                    \
     /* NOLINTNEXTLINE(cppcoreguidelines-owning-memory) */   \
@@ -25,6 +26,7 @@ class AbstractBenchmarkItemRunner;
   }                                                         \
   static_assert(true, "End call of macro with a semicolon.")
 // clang-format on
+// NOLINTEND (bugprone-macro-parentheses,cppcoreguidelines-macro-usage)
 
 using PluginFunctionName = std::string;
 using PluginFunctionPointer = std::function<void(void)>;

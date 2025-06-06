@@ -32,7 +32,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
       cmd << "cd " << tables_path << " && " << dbgen_path << "/dbgen -f -s " << scale_factor << " "
           << additional_cli_args << "  -b " << dbgen_path << "/dists.dss >/dev/null 2>&1";
       auto ret = std::system(cmd.str().c_str());
-      Assert(!ret, "Calling dbgen failed.");
+      Assert(ret == 0, "Calling dbgen failed.");
     }
 
     for (const auto& table_name : table_names) {
@@ -51,7 +51,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
         auto cmd = std::stringstream{};
         cmd << "sed -Ee 's/\\|$//' " << sed_inplace << " " << tables_path << table_name << ".csv";
         const auto ret = std::system(cmd.str().c_str());
-        Assert(!ret, "Removing trailing separators using sed failed.");
+        Assert(ret == 0, "Removing trailing separators using sed failed.");
       }
 
       // std::filesystem::copy does not seem to work. We could use symlinks here, but those would make reading the file
@@ -60,7 +60,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
         auto cmd = std::stringstream{};
         cmd << "cp  " << csv_meta_path << "/" << table_name << ".csv.json " << tables_path << table_name << ".csv.json";
         const auto ret = std::system(cmd.str().c_str());
-        Assert(!ret, "Copying csv.json files failed.");
+        Assert(ret == 0, "Copying csv.json files failed.");
       }
     }
 
@@ -73,7 +73,7 @@ void remove_csv_tables(const std::string& tables_path) {
     auto cmd = std::stringstream{};
     cmd << "rm " << tables_path << "*.csv*";
     const auto ret = std::system(cmd.str().c_str());
-    Assert(!ret, "Removing csv/csv.json files failed.");
+    Assert(ret == 0, "Removing csv/csv.json files failed.");
   }
 }
 

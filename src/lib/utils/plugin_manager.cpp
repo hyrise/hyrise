@@ -68,7 +68,11 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   // NOLINTNEXTLINE(concurrency-mt-unsafe): dlerror is not thread-safe, but it is guarded by dl_mutex.
-  Assert(plugin_handle, std::string{"Loading plugin failed: "} + dlerror());
+  const auto* dl_error_str = dlerror();
+  if (dl_error_str != nullptr) {
+    Fail(std::string{"Loading plugin failed: "} + dl_error_str);
+  }
+  Assert(plugin_handle, "Loading plugin failed: No plugin handle returned from dlopen.");
 
   // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
   // factory method. See the sources of AbstractPlugin and TestPlugin for further details.
@@ -81,17 +85,17 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   auto plugin_get = reinterpret_cast<PluginGetter>(factory);
 
   auto plugin = std::unique_ptr<AbstractPlugin>(plugin_get());
-  PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, std::move(plugin)};
+  PluginHandleWrapper plugin_handle_wrapper(plugin_handle, std::move(plugin));
   plugin = nullptr;
 
   Assert(!_is_duplicate(plugin_handle_wrapper.plugin),
          "Loading plugin failed: There can only be one instance of every plugin.");
 
   plugin_handle_wrapper.plugin->start();
-  _plugins[plugin_name] = std::move(plugin_handle_wrapper);
+  _plugins.insert_or_assign(plugin_name, std::move(plugin_handle_wrapper));
 
   // Add the newly loaded plugin's user executable function and benchmark hooks to our maps of functions.
-  auto& plugin_ref = *_plugins[plugin_name].plugin;
+  auto& plugin_ref = *_plugins.at(plugin_name).plugin;
   const auto& user_executable_functions = plugin_ref.provided_user_executable_functions();
   for (const auto& [function_name, function_pointer] : user_executable_functions) {
     _user_executable_functions[{plugin_name, function_name}] = function_pointer;

@@ -93,9 +93,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       --_chunk_offset;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _attribute_it += n;
-      _chunk_offset += n;
+    void advance(std::ptrdiff_t distance) {
+      _attribute_it += distance;
+      _chunk_offset += distance;
     }
 
     bool equal(const Iterator& other) const {
@@ -117,7 +117,6 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
     }
 
-   private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     CompressedVectorIterator _attribute_it;
@@ -158,13 +157,11 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     mutable Decompressor _attribute_decompressor;
   };
 
- private:
   const BaseDictionarySegment& _segment;
   std::shared_ptr<const Dictionary> _dictionary;
 };

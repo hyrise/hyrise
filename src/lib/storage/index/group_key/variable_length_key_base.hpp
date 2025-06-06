@@ -45,7 +45,6 @@ class VariableLengthKeyBase {
    */
   VariableLengthKeyBase& shift_and_set(uint64_t value, uint8_t bits_to_set);
 
- public:
   VariableLengthKeyWord* _data;
   CompositeKeyLength _size;
 };

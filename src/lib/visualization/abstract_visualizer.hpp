@@ -41,7 +41,7 @@ struct VizGraphInfo {
 };
 
 struct VizVertexInfo {
-  uintptr_t id;
+  uintptr_t id{};
   std::string label;
   std::string tooltip;
   std::string color = "white";
@@ -135,8 +135,13 @@ class AbstractVisualizer {
     // This unique_ptr serves as a scope guard that guarantees the deletion of the temp file once we return from this
     // method.
     const auto delete_temp_file = [&tmpname](auto ptr) {
-      delete ptr;
-      std::remove(tmpname);
+      delete ptr;  // NOLINT(cppcoreguidelines-owning-memory)
+      const auto exit_code = std::remove(tmpname);
+      if (exit_code != 0) {
+        auto output = std::ostringstream{};
+        output << "Failed to remove tmpfile " << tmpname << "\n";
+        std::cout << output.str();
+      }
     };
     const auto delete_guard = std::unique_ptr<char, decltype(delete_temp_file)>(new char, delete_temp_file);
 
@@ -156,7 +161,7 @@ class AbstractVisualizer {
         max_unnormalized_width = std::max(max_unnormalized_width, std::log(_graph[*iter].pen_width) / log_base);
       }
 
-      double offset = max_unnormalized_width - (max_normalized_width - 1.0);
+      const double offset = max_unnormalized_width - (max_normalized_width - 1.0);
 
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         auto& pen_width = _graph[*iter].pen_width;
@@ -179,7 +184,7 @@ class AbstractVisualizer {
     auto format = _graphviz_config.format;
 
     auto cmd = renderer + " -T" + format + " \"" + tmpname + "\" > \"" + img_filename + "\"";
-    auto ret = system(cmd.c_str());
+    auto ret = system(cmd.c_str());  // NOLINT(concurrency-mt-unsafe)
 
     Assert(ret == 0, "Calling graphviz' " + renderer +
                          " failed. Have you installed graphviz "
@@ -191,13 +196,13 @@ class AbstractVisualizer {
   virtual void _build_graph(const GraphBase& graph_base) = 0;
 
   template <typename T>
-  static uintptr_t _get_id(const T& v) {
-    return reinterpret_cast<uintptr_t>(&v);
+  static uintptr_t _get_id(const T& value) {
+    return reinterpret_cast<uintptr_t>(&value);
   }
 
   template <typename T>
-  static uintptr_t _get_id(const std::shared_ptr<T>& v) {
-    return reinterpret_cast<uintptr_t>(v.get());
+  static uintptr_t _get_id(const std::shared_ptr<T>& value) {
+    return reinterpret_cast<uintptr_t>(value.get());
   }
 
   enum class WrapLabel { On, Off };
@@ -227,14 +232,14 @@ class AbstractVisualizer {
   }
 
   template <typename T, typename K>
-  void _add_edge(const T& from, const K& to) {
-    _add_edge(from, to, _default_edge);
+  void _add_edge(const T& from_node, const K& to_node) {
+    _add_edge(from_node, to_node, _default_edge);
   }
 
   template <typename T, typename K>
-  void _add_edge(const T& from, const K& to, const VizEdgeInfo& edge_info) {
-    auto from_id = _get_id(from);
-    auto to_id = _get_id(to);
+  void _add_edge(const T& from_node, const K& to_node, const VizEdgeInfo& edge_info) {
+    auto from_id = _get_id(from_node);
+    auto to_id = _get_id(to_node);
 
     auto from_pos = _id_to_position.at(from_id);
     auto to_pos = _id_to_position.at(to_id);

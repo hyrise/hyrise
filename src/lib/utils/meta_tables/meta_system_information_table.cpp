@@ -65,11 +65,11 @@ size_t MetaSystemInformationTable::_cpu_count() {
 
     cpu_info_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
+    Fail(std::string{"Failed to read /proc/cpuinfo ("} + fail.what() + ")");
   }
 
   return processors;
-#endif
+#else
 
 #ifdef __APPLE__
   auto processors = size_t{};
@@ -78,21 +78,23 @@ size_t MetaSystemInformationTable::_cpu_count() {
   Assert(ret == 0, "Failed to call sysctl hw.ncpu");
 
   return processors;
+#else
+  Fail("Method not implemented for this platform");
 #endif
 
-  Fail("Method not implemented for this platform");
+#endif
 }
 
 // Returns the physical memory size
 size_t MetaSystemInformationTable::_ram_size() {
 #ifdef __linux__
-  struct sysinfo memory_info {};  // NOLINT(misc-include-cleaner): sysinfo of sys/sysinfo.h is not recognized.
+  struct sysinfo memory_info{};  // NOLINT(misc-include-cleaner): sysinfo of sys/sysinfo.h is not recognized.
 
   const auto ret = sysinfo(&memory_info);
   Assert(ret == 0, "Failed to get sysinfo");
 
   return memory_info.totalram * memory_info.mem_unit;
-#endif
+#else
 
 #ifdef __APPLE__
   auto ram = uint64_t{};
@@ -101,9 +103,11 @@ size_t MetaSystemInformationTable::_ram_size() {
   Assert(ret == 0, "Failed to call sysctl hw.memsize");
 
   return ram;
+#else
+  Fail("Method not implemented for this platform");
 #endif
 
-  Fail("Method not implemented for this platform");
+#endif
 }
 
 // Returns the CPU model string
@@ -122,11 +126,11 @@ std::string MetaSystemInformationTable::_cpu_model() {
       }
     }
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
+    Fail(std::string{"Failed to read /proc/cpuinfo ("} + fail.what() + ")");
   }
 
   Fail("Could not read CPU model.");
-#endif
+#else
 
 #ifdef __APPLE__
   size_t buffer_size = 256;
@@ -135,9 +139,11 @@ std::string MetaSystemInformationTable::_cpu_model() {
   Assert(ret == 0, "Failed to call sysctl machdep.cpu.brand_string");
 
   return std::string{buffer.data()};
+#else
+  Fail("Method not implemented for this platform");
 #endif
 
-  Fail("Method not implemented for this platform");
+#endif
 }
 
 }  // namespace hyrise

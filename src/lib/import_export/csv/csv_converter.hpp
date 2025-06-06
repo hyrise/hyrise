@@ -87,9 +87,8 @@ class CsvConverter : public BaseCsvConverter {
   std::unique_ptr<AbstractSegment> finish() override {
     if (_is_nullable) {
       return std::make_unique<ValueSegment<T>>(std::move(_parsed_values), std::move(_null_values));
-    } else {
-      return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
     }
+    return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
   }
 
  private:
@@ -109,7 +108,7 @@ class CsvConverter : public BaseCsvConverter {
 template <>
 inline std::function<int32_t(const std::string&)> CsvConverter<int32_t>::_get_conversion_function() {
   return [](const std::string& str) {
-    size_t pos;
+    size_t pos = 0;
     auto converted = std::stoi(str, &pos);
     Assert(pos == str.size(), "Unprocessed characters found while converting to int: " + str);
     return converted;
@@ -119,7 +118,7 @@ inline std::function<int32_t(const std::string&)> CsvConverter<int32_t>::_get_co
 template <>
 inline std::function<int64_t(const std::string&)> CsvConverter<int64_t>::_get_conversion_function() {
   return [](const std::string& str) {
-    size_t pos;
+    size_t pos = 0;
     auto converted = static_cast<int64_t>(std::stoll(str, &pos));
     Assert(pos == str.size(), "Unprocessed characters found while converting to long: " + str);
     return converted;
@@ -129,7 +128,7 @@ inline std::function<int64_t(const std::string&)> CsvConverter<int64_t>::_get_co
 template <>
 inline std::function<float(const std::string&)> CsvConverter<float>::_get_conversion_function() {
   return [](const std::string& str) {
-    size_t pos;
+    size_t pos = 0;
     auto converted = std::stof(str, &pos);
     Assert(pos == str.size(), "Unprocessed characters found while converting to float: " + str);
     return converted;
@@ -139,7 +138,7 @@ inline std::function<float(const std::string&)> CsvConverter<float>::_get_conver
 template <>
 inline std::function<double(const std::string&)> CsvConverter<double>::_get_conversion_function() {
   return [](const std::string& str) {
-    size_t pos;
+    size_t pos = 0;
     auto converted = std::stod(str, &pos);
     Assert(pos == str.size(), "Unprocessed characters found while converting to double: " + str);
     return converted;

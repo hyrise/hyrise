@@ -116,7 +116,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     std::getline(stat_file, cpu_line);
     stat_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/stat (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/stat ("} + fail.what() + ").");
   }
 
   const auto cpu_ticks = _parse_value_string(cpu_line);
@@ -133,7 +133,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
 
   return active_ns;
-#endif
+#else
 
 #ifdef __APPLE__
   auto cpu_info = host_cpu_load_info_data_t{};
@@ -150,9 +150,11 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto active_ns = active_ticks * std::nano::den / sysconf(_SC_CLK_TCK);
 
   return active_ns;
+#else
+  Fail("Method not implemented for this platform.");
 #endif
 
-  Fail("Method not implemented for this platform.");
+#endif
 }
 
 /**
@@ -162,7 +164,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
   // A clock that measures (user and system) CPU time consumed by (all of the threads in) the calling process.
 #ifdef __linux__
-  struct timespec time_spec {};
+  struct timespec time_spec{};
 
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);  // NOLINT(misc-include-cleaner)
   Assert(ret == 0, "Failed in clock_gettime.");
@@ -170,16 +172,18 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
 
   return active_ns;
-#endif
+#else
 
 #ifdef __APPLE__
   const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);  // NOLINT(misc-include-cleaner)
   Assert(active_ns != 0, "Failed in clock_gettime_nsec_np.");
 
   return active_ns;
+#else
+  Fail("Method not implemented for this platform.");
 #endif
 
-  Fail("Method not implemented for this platform.");
+#endif
 }
 
 /**
@@ -205,11 +209,11 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
     }
     meminfo_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/meminfo (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/meminfo ("} + fail.what() + ").");
   }
 
   return memory_usage;
-#endif
+#else
 
 #ifdef __APPLE__
   auto physical_memory = int64_t{0};
@@ -231,9 +235,11 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   memory_usage.available_memory = (vm_statistics.inactive_count + vm_statistics.free_count) * page_size;
 
   return memory_usage;
+#else
+  Fail("Method not implemented for this platform.");
 #endif
 
-  Fail("Method not implemented for this platform.");
+#endif
 }
 
 /**
@@ -259,23 +265,25 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 
     self_status_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/self/status (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/self/status ("} + fail.what() + ").");
   }
 
   return memory_usage;
-#endif
+#else
 
 #ifdef __APPLE__
-  struct task_basic_info info {};
+  struct task_basic_info info{};
 
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get task_info.");
 
   return {info.virtual_size, info.resident_size};
+#else
+  Fail("Method not implemented for this platform.");
 #endif
 
-  Fail("Method not implemented for this platform.");
+#endif
 }
 
 /**
@@ -311,7 +319,7 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     auto stats_enabled_size = sizeof(stats_enabled);
 
     const auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
-    Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled.");
+    Assert(error_code == 0, "Cannot check if jemalloc was built with --stats_enabled.");
     Assert(stats_enabled, "Hyrise's jemalloc was not build with --stats_enabled.");
   }
 
@@ -321,14 +329,14 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     auto epoch = uint64_t{1};
     auto epoch_size = sizeof(epoch);
     const auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
-    Assert(!error_code, "Setting epoch failed.");
+    Assert(error_code == 0, "Setting epoch failed.");
   }
 
   auto allocated = size_t{0};
   auto allocated_size = sizeof(allocated);
 
   const auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
-  Assert(!error_code, std::string{"mallctl failed with error code "} + std::to_string(error_code) + ".");
+  Assert(error_code == 0, std::string{"mallctl failed with error code "} + std::to_string(error_code) + ".");
 
   return allocated;
 #else

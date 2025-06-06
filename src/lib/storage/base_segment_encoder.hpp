@@ -112,7 +112,6 @@ class SegmentEncoder : public BaseSegmentEncoder {
 
   /**@}*/
 
- public:
   /**
    * @defgroup Non-virtual interface
    * @{
@@ -160,7 +159,6 @@ class SegmentEncoder : public BaseSegmentEncoder {
                                                        ? VectorCompressionType::BitPacking
                                                        : VectorCompressionType::FixedWidthInteger;
 
- private:
   Derived& _self() {
     return static_cast<Derived&>(*this);
   }

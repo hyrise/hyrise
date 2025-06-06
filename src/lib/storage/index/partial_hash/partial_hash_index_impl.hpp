@@ -58,7 +58,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual tsl::sparse_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
 
-/** 
+/**
  * Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
  * Chunks can be added via `insert()`.
  *
@@ -74,8 +74,9 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
-  size_t insert(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) final;
-  size_t remove(const std::vector<ChunkID>&) final;
+  size_t insert(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index,
+                const ColumnID column_id) final;
+  size_t remove(const std::vector<ChunkID>& chunks) final;
 
   bool indexed_null_values() const final;
 

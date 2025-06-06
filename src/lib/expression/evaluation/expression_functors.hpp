@@ -15,22 +15,22 @@ template <typename T>
 constexpr bool is_logical_operand = std::is_same_v<int32_t, T> || std::is_same_v<NullValue, T>;
 
 // Turn a bool into itself and a NULL into false
-bool to_bool(const bool value) {
+bool to_bool(const bool value) {  // NOLINT(misc-definitions-in-headers)
   return value;
 }
 
-bool to_bool(const NullValue& value) {
+bool to_bool(const NullValue& /*value*/) {  // NOLINT(misc-definitions-in-headers)
   return false;
 }
 
 // Cast a value/NULL into another type
 template <typename T, typename V>
-T to_value(const V& v) {
-  return static_cast<T>(v);
+T to_value(const V& value) {
+  return static_cast<T>(value);
 }
 
 template <typename T>
-T to_value(const NullValue& v) {
+T to_value(const NullValue& /*v*/) {
   return T{};
 }
 
@@ -100,12 +100,12 @@ struct STLComparisonFunctorWrapper {
   inline static constexpr bool supports_v = supports<Result, ArgA, ArgB>::value;
 
   template <typename Result, typename ArgA, typename ArgB>
-  void operator()(Result& result, const ArgA& a, const ArgB& b) {
+  void operator()(Result& result, const ArgA& arg_a, const ArgB& arg_b) {
     if constexpr (std::is_same_v<NullValue, ArgA> || std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
       result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(
-          static_cast<std::common_type_t<ArgA, ArgB>>(a), static_cast<std::common_type_t<ArgA, ArgB>>(b)));
+          static_cast<std::common_type_t<ArgA, ArgB>>(arg_a), static_cast<std::common_type_t<ArgA, ArgB>>(arg_b)));
     }
   }
 };
@@ -128,13 +128,13 @@ struct STLArithmeticFunctorWrapper {
   };
 
   template <typename Result, typename ArgA, typename ArgB>
-  void operator()(Result& result, const ArgA& a, const ArgB& b) {
+  void operator()(Result& result, const ArgA& arg_a, const ArgB& arg_b) {
     if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> ||
                   std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
       result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(
-          static_cast<std::common_type_t<ArgA, ArgB>>(a), static_cast<std::common_type_t<ArgA, ArgB>>(b)));
+          static_cast<std::common_type_t<ArgA, ArgB>>(arg_a), static_cast<std::common_type_t<ArgA, ArgB>>(arg_b)));
     }
   }
 };
@@ -206,8 +206,8 @@ struct DivisionEvaluator {
 struct CaseEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>)&&(
-        std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
+    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>) &&
+                                  (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
   };
 
   template <typename Result, typename ArgA, typename ArgB>

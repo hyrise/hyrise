@@ -102,7 +102,6 @@ class CompressedVector : public BaseCompressedVector {
 
   /**@}*/
 
- public:
   /**
    * @defgroup Virtual interface implementation
    * @{

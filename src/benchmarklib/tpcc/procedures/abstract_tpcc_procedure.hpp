@@ -3,9 +3,6 @@
 #include <random>
 
 #include "benchmark_sql_executor.hpp"
-#include "concurrency/transaction_context.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/table.hpp"
 #include "tpcc/tpcc_random_generator.hpp"
 
 namespace hyrise {
@@ -26,7 +23,9 @@ class AbstractTPCCProcedure {
 
   // As random values are generated during creation of the procedure, this is mostly done in a single thread, not in the
   // database worker's. As such, having a fixed seed for all thread-local random engines should not be an issue.
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   inline static thread_local std::minstd_rand _random_engine{42};
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   inline static thread_local TPCCRandomGenerator _tpcc_random_generator{42};
 
   BenchmarkSQLExecutor& _sql_executor;

@@ -56,7 +56,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   const ValueID _null_value_id;
   SegmentAccessCounter& _access_counter;
 
- private:
   template <typename CompressedVectorIterator>
   class Iterator : public AbstractSegmentIterator<Iterator<CompressedVectorIterator>, SegmentPosition<ValueID>> {
    public:
@@ -66,6 +65,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
         : _null_value_id{null_value_id}, _attribute_it{std::move(attribute_it)}, _chunk_offset{chunk_offset} {}
 
    private:
+    // NOLINTBEGIN(readability-identifier-naming)
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
@@ -82,9 +82,9 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return _attribute_it == other._attribute_it;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _attribute_it += n;
-      _chunk_offset += n;
+    void advance(std::ptrdiff_t distance) {
+      _attribute_it += distance;
+      _chunk_offset += distance;
     }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
@@ -97,8 +97,8 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
       return {value_id, is_null, _chunk_offset};
     }
+  // NOLINTEND(readability-identifier-naming)
 
-   private:
     const ValueID _null_value_id;
     CompressedVectorIterator _attribute_it;
     ChunkOffset _chunk_offset;
@@ -133,7 +133,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     const ValueID _null_value_id;
     mutable Decompressor _attribute_decompressor;
   };

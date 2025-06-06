@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <ostream>
+#include <vector>
 
 #include "types.hpp"
 #include "variable_length_key_base.hpp"
@@ -56,8 +57,7 @@ class VariableLengthKey {
   explicit VariableLengthKey(const VariableLengthKeyBase& other);
   VariableLengthKey& operator=(const VariableLengthKeyBase& other);
 
- private:
-  std::unique_ptr<VariableLengthKeyWord[]> _owned_data;
-  VariableLengthKeyBase _impl;
+  std::vector<VariableLengthKeyWord> _owned_data;
+  VariableLengthKeyBase _impl{};
 };
 }  // namespace hyrise

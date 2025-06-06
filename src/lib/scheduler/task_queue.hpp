@@ -1,10 +1,7 @@
 #pragma once
 
-#include <stdint.h>
-
 #include <array>
-#include <atomic>
-#include <condition_variable>
+#include <cstdint>
 #include <memory>
 
 #include <oneapi/tbb/concurrent_queue.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
@@ -16,7 +13,7 @@
 
 namespace moodycamel {  //
 class LightweightSemaphore;
-}
+}  // namespace moodycamel
 
 namespace hyrise {
 

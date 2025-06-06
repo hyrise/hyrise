@@ -86,7 +86,9 @@ class SQLTranslatorTest : public BaseTest {
       const std::string& query, const UseMvcc use_mvcc = UseMvcc::No) {
     hsql::SQLParserResult parser_result;
     hsql::SQLParser::parseSQLString(query, &parser_result);
-    Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+    if (!parser_result.isValid()) {
+      Fail(create_sql_parser_error_message(query, parser_result));
+    }
 
     const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
     const auto lqps = translation_result.lqp_nodes;
@@ -1909,7 +1911,9 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
 
   hsql::SQLParserResult parser_result;
   hsql::SQLParser::parseSQLString(query, &parser_result);
-  Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+  if (!parser_result.isValid()) {
+    Fail(create_sql_parser_error_message(query, parser_result));
+  }
 
   SQLTranslator sql_translator{UseMvcc::No};
 

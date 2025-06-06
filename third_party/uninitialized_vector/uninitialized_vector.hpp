@@ -25,48 +25,48 @@
  * initializing its elements. This saves the overhead of initialization, hence the
  * constructor @ref uninitialized_vector(size_t) is significantly faster than the corresponding std::vector
  * constructor, and has no overhead to a manually allocated array.
- * 
+ *
  * Probably its greatest strength lies in the construction of containers with a number of elements
  * that is runtime defined, but that will be initialized later. For example:
- * 
+ *
  * @code
  * // Open a file
  * ifstream file("myfile.bin");
- * 
+ *
  * // Construct a buffer for this file
  * uninitialized_vector<char> buffer(buffer_size);
- * 
+ *
  * // Read some data into the buffer
  * file.read(&buffer[0], buffer_size);
  * @endcode
- * 
+ *
  * However, it has a few more use-cases with improved performance over std::vector. This is
  * true because of more strengent requirements on the element's type.
- * 
+ *
  * The container will behave correctly with any trivial type, but will not work for almost
  * all non-trivial types.
- * 
+ *
  * The element type must be trivial. Because of the use of @c memcpy and @c memmove,
  * the @ref push_back() and @ref insert() methods are a bit faster than the std::vector
- * counterparts, at least on gcc 4.7. 
- * 
+ * counterparts, at least on gcc 4.7.
+ *
  * The methods with different semantics compared to std::vector are:
  * * @ref uninitialized_vector(size_t n)
  * * @ref resize(size_t n)
- * 
+ *
  * Also the following new members are introduced:
  * * @ref insert_uninitialized(const_iterator position, size_t n)
  * * @ref push_back(InputIterator first, InputIterator last)
  * * @ref push_back(size_t n, const Tp& val)
  * * @ref push_back(std::initializer_list<Tp> initlist)
  * * @ref push_back_uninitialized(size_t n)
- * 
+ *
  * All other members work exactly like std::vector's members, although some are slightly faster because of
  * the stricter requirements on the element type.
- * 
+ *
  * @tparam Tp Container's element type
  * @tparam Alloc Allocator type. Default is to use the std::allocator.
- * 
+ *
  * @author André Offringa
  * @copyright André Offringa, 2013, distributed under the GPL license version 3.
  */
@@ -127,7 +127,7 @@ class uninitialized_vector : private Alloc {
   explicit uninitialized_vector(size_t n) : _begin(allocate(n)), _end(_begin + n), _endOfStorage(_end) {}
 
   /** @brief Construct a vector with given amount of elements and set these to a specific value.
-	 * @details This constructor will initialize its members with the given value. 
+	 * @details This constructor will initialize its members with the given value.
 	 * @param n Number of elements that the uninitialized_vector will be initialized with.
 	 * @param val Value to initialize all elements with
 	 * @param allocator Allocator used for allocating and deallocating memory.
@@ -326,7 +326,7 @@ class uninitialized_vector : private Alloc {
 	 * @details This has no effect on the working of the uninitialized_vector, except that it might change
 	 * the current capacity. This can enhance performance when a large number of elements are added,
 	 * and an approximate size is known a priori.
-	 * 
+	 *
 	 * This method might cause a reallocation, causing iterators to be invalidated.
 	 * @param n Number of elements to reserve space for.
 	 */
@@ -347,7 +347,7 @@ class uninitialized_vector : private Alloc {
   /** @brief Change the capacity of the container such that no extra space is hold.
 	 * @details This has no effect on the working of the uninitialized_vector, except that it might change
 	 * the current capacity. This can reduce the current memory usage of the container.
-	 * 
+	 *
 	 * This method might cause a reallocation, causing iterators to be invalidated.
 	 */
   void shrink_to_fit() {
@@ -468,7 +468,7 @@ class uninitialized_vector : private Alloc {
 
   /** @brief Add the given value to the end of the container by moving it in.
 	 * @details Iterators are invalidated.
-	 * 
+	 *
 	 * Note that this container can only hold simple types that do not perform allocations. Therefore,
 	 * there is probably no benefit in moving the new item in over copying it in with @ref push_back(const Tp&).
 	 * @param item Value of new element.
@@ -509,7 +509,7 @@ class uninitialized_vector : private Alloc {
 	 * @param position Position of the new elements. The new elements will be added before the old element
 	 * at that position.
 	 * @param n Number of elements to add.
-	 * @param val Value of the new item. 
+	 * @param val Value of the new item.
 	 * @return Position of the first new element.
 	 */
   iterator insert(const_iterator position, size_t n, const Tp& val) {
@@ -542,7 +542,7 @@ class uninitialized_vector : private Alloc {
   /** @brief Insert an element at a given position by moving it in.
 	 * @details All iterators will be invalidated. This operation needs to move all elements after
 	 * the new element, and can therefore be expensive.
-	 * 
+	 *
 	 * Note that this container can only hold simple types that do not perform allocations. Therefore,
 	 * there is probably no benefit in moving the new item in over copying it in with
 	 * @ref insert(const_iterator, const Tp&).
@@ -619,7 +619,7 @@ class uninitialized_vector : private Alloc {
 	 * @details Iterators to both vectors will remain valid and will point into
 	 * to the swapped container afterwards. This function will never reallocate
 	 * space.
-	 * 
+	 *
 	 * The allocator will be swapped when the @c propagate_on_container_swap
 	 * of the respective @c allocator_trait is @c true_type.
 	 * Its behaviour is undefined when the allocators do not compare equal and
@@ -675,7 +675,7 @@ class uninitialized_vector : private Alloc {
 	 * @details All iterators will be invalidated. This operation needs to move all elements after
 	 * the new element, and can therefore be expensive. It will not initialize the new elements,
 	 * and is therefore faster than @ref insert(const_iterator, size_t, const Tp&).
-	 * 
+	 *
 	 * This method is non-standard: it is not present in std::vector.
 	 * @param position Position of the new elements. The new elements will be added before the old element
 	 * at that position.
@@ -695,7 +695,7 @@ class uninitialized_vector : private Alloc {
 
   /** @brief Add a range of items to the end of the container.
 	 * @details All iterators will be invalidated.
-	 * 
+	 *
 	 * This method is non-standard: it is not present in std::vector.
 	 * @param first Iterator to the beginning of the range.
 	 * @param last Iterator past the end of the range.
@@ -706,11 +706,11 @@ class uninitialized_vector : private Alloc {
   }
 
   /** @brief Add elements at the end and initialize them with a value.
-	 * @details All iterators will be invalidated. 
-	 * 
+	 * @details All iterators will be invalidated.
+	 *
 	 * This method is non-standard: it is not present in std::vector.
 	 * @param n Number of elements to add.
-	 * @param val Value of the new items. 
+	 * @param val Value of the new items.
 	 */
   void push_back(size_t n, const Tp& val) {
     if (capacity() - size() < n) {
@@ -721,8 +721,8 @@ class uninitialized_vector : private Alloc {
   }
 
   /** @brief Add elements from an initializer list to the end of the container.
-	 * @details All iterators will be invalidated. 
-	 * 
+	 * @details All iterators will be invalidated.
+	 *
 	 * This method is non-standard: it is not present in std::vector.
 	 * @param initlist The list with values to add.
 	 */
@@ -737,8 +737,8 @@ class uninitialized_vector : private Alloc {
   }
 
   /** @brief Add elements at the end without initializing them.
-	 * @details All iterators will be invalidated. 
-	 * 
+	 * @details All iterators will be invalidated.
+	 *
 	 * This method is non-standard: it is not present in std::vector.
 	 * @param n Number of elements to add.
 	 */
@@ -977,7 +977,7 @@ class uninitialized_vector : private Alloc {
 		 *   is not necessary.
 		 * - Swap the allocators. This would not reallocate memory and
 		 *   iterators remain valid, but the trait ignores propagate_on_container_swap.
-		 * 
+		 *
 		 * The standard says:
 		 * "Allocator replacement is performed by copy assignment, move assignment, or
 		 * swapping of the allocator only if allocator_traits<allocatortype>::
@@ -1045,7 +1045,7 @@ inline bool operator<(const uninitialized_vector<Tp, Alloc>& lhs, const uninitia
   for (size_t i = 0; i != minSize; ++i) {
     if (lhs[i] < rhs[i])
       return true;
-    else if (lhs[i] > rhs[i])
+    if (lhs[i] > rhs[i])
       return false;
   }
   return lhs.size() < rhs.size();
@@ -1062,7 +1062,7 @@ inline bool operator<=(const uninitialized_vector<Tp, Alloc>& lhs,
   for (size_t i = 0; i != minSize; ++i) {
     if (lhs[i] < rhs[i])
       return true;
-    else if (lhs[i] > rhs[i])
+    if (lhs[i] > rhs[i])
       return false;
   }
   return lhs.size() <= rhs.size();
@@ -1091,7 +1091,7 @@ inline bool operator>=(const uninitialized_vector<Tp, Alloc>& lhs,
 	* @details Iterators to both vectors will remain valid and will point into
 	* to the swapped container afterwards. This function will never reallocate
 	* space.
-	* 
+	*
 	* The allocator will be swapped when the @c propagate_on_container_swap
 	* of the respective @c allocator_trait is @c true_type.
 	* Its behaviour is undefined when the allocators do not compare equal and
