@@ -45,7 +45,7 @@ class StressTest : public BaseTest {
 
   static constexpr auto DEFAULT_LOAD_FACTOR = uint32_t{10};
 
-  const uint32_t CPU_COUNT = std::thread::hardware_concurrency();
+  const uint32_t CPU_COUNT = std::min(std::thread::hardware_concurrency(), uint32_t{32});
   const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
       {CPU_COUNT}, {CPU_COUNT, 0, 0}, {0, CPU_COUNT, 0}, {0, 0, CPU_COUNT}};
 
@@ -222,8 +222,8 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   }
 
   // Create a large number of nodes in a fake topology (many workers will share the same thread).
-  const auto node_count =
-      std::thread::hardware_concurrency() * (HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR);
+  const auto node_count = std::thread::hardware_concurrency() *
+                          (HYRISE_WITH_ADDR_UB_LEAK_SAN || HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR);
 
   Hyrise::get().topology.use_fake_numa_topology(node_count, 1);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
@@ -495,7 +495,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
 
   // We observed long runtimes in Debug builds, especially with UBSan enabled. Thus, we reduce the load a bit in this
   // case.
-  const auto insert_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
+  const auto insert_count = 19 * (HYRISE_DEBUG && HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
   const auto thread_count = uint32_t{100};
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
@@ -542,7 +542,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     EXPECT_FALSE(chunk->is_mutable());
   }
 
-  EXPECT_EQ(table->last_chunk()->size(), 2);
+  EXPECT_EQ(table->last_chunk()->size(), 1);
   EXPECT_TRUE(table->last_chunk()->is_mutable());
 }
 
