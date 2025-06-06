@@ -95,7 +95,6 @@ SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, cons
     case DataType::Int:
       return SegmentEncodingSpec{EncodingType::FrameOfReference};
     case DataType::String:
-      return SegmentEncodingSpec{EncodingType::FixedStringDictionary};
     case DataType::Long:
     case DataType::Double:
     case DataType::Float:
