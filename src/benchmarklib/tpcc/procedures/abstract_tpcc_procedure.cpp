@@ -8,6 +8,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "tpcc/tpcc_random_generator.hpp"
 
 namespace hyrise {
 

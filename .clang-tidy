@@ -43,7 +43,8 @@ Checks: '
          -bugprone-unchecked-optional-access,
          -llvm-header-guard,
          -boost-use-ranges,
-         -readability-static-accessed-through-instance
+         -readability-static-accessed-through-instance,
+         -portability-template-virtual-member-function
          '
 
 WarningsAsErrors: '*'
@@ -95,6 +96,7 @@ WarningsAsErrors: '*'
 #                                                               do not matter with our limited set of supported compilers.
 #   - boost-use-ranges                                          As most boost-ranges implementations are now in C++20, we prefer `std::ranges`.
 #   - readability-static-accessed-through-instance              We prefer to access the main Hyrise singleton via `Hyrise::get()`.
+#   - portability-template-virtual-member-function              We do not mind being incompatible with the MSVC compiler.
 
 
 CheckOptions:

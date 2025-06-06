@@ -62,8 +62,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_item_table() {
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "I_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
         auto data = _random_gen.astring(26, 50);
-        const auto is_original = original_ids.find(indices[0]) != original_ids.end();
-        if (is_original) {
+        if (original_ids.contains(indices[0])) {
           const auto original_string = std::string{"ORIGINAL"};
           const auto start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
           data.replace(start_pos, original_string.length(), original_string);
@@ -186,8 +185,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "S_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
         auto data = _random_gen.astring(26, 50);
-        const auto is_original = original_ids.find(indices[1]) != original_ids.end();
-        if (is_original) {
+        if (original_ids.contains(indices[1])) {
           const auto original_string = std::string{"ORIGINAL"};
           const auto start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
           data.replace(start_pos, original_string.length(), original_string);

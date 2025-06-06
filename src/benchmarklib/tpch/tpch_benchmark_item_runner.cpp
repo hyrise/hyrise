@@ -158,7 +158,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
   switch (item_id) {
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
-    case 1 - 1: {
+    case 1 - 1: {  // NOLINT(misc-redundant-expression)
       auto date_diff_dist = std::uniform_int_distribution<>{60, 120};
       const auto date =
           date_interval(boost::gregorian::date{1998, 12, 01}, -date_diff_dist(random_engine), DatetimeComponent::Day);
