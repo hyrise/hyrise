@@ -103,6 +103,12 @@ do
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root.
   for benchmark in $benchmarks
   do
+    if [ -f ../resources/bolt/$benchmark.fdata ]
+    then
+      mv $benchmark $benchmark.old
+      llvm-bolt-17 ./$benchmark.old -o $benchmark -data ../resources/bolt/$benchmark.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+    fi
+
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (single-threaded)"
       # Warming up does not make sense/much of a difference for TPCC.
