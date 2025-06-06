@@ -132,7 +132,8 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids)) {
+
+    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids) || !table_key_constraint.is_valid()) {
       continue;
     }
 

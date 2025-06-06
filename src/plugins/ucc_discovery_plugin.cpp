@@ -121,6 +121,9 @@ UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
 }
 
 void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candidates) {
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
+  const auto current_commit_id = transaction_context->snapshot_commit_id();
+
   for (const auto& candidate : ucc_candidates) {
     auto candidate_timer = Timer();
     const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name);
@@ -146,23 +149,21 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
-      if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id)) {
+      if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id) ||
+          !_uniqueness_holds_across_segments<ColumnDataType>(table, column_id)) {
         message << " [rejected in " << candidate_timer.lap_formatted() << "]";
-        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-        return;
-      }
+      } else {
+        message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
 
-      // If we reach here, we have to run the more expensive cross-segment duplicate check.
-      if (!_uniqueness_holds_across_segments<ColumnDataType>(table, column_id)) {
-        message << " [rejected in " << candidate_timer.lap_formatted() << "]";
-        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-        return;
-      }
+        auto [existing_key_constraint, inserted] = table->_table_key_constraints.insert(
+            TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE, current_commit_id, MAX_COMMIT_ID});
 
-      // We save UCCs directly inside the table so they can be forwarded to nodes in a query plan.
-      message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
+        if (!inserted) {
+          // If the constraint was not inserted, we need to update the existing one.
+          existing_key_constraint->revalidated_on(current_commit_id);
+        }
+      }
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      table->add_soft_constraint(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
     });
   }
   Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
