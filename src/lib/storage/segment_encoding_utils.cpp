@@ -93,7 +93,6 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
 SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, const bool segment_values_are_unique) {
   switch (type) {
     case DataType::Int:
-      return SegmentEncodingSpec{EncodingType::FrameOfReference};
     case DataType::String:
     case DataType::Long:
     case DataType::Double:
