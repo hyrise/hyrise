@@ -48,7 +48,7 @@ if (${COMPILE_FOR_BOLT})
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         add_compile_options(-fno-reorder-blocks-and-partition)
     endif()
-    add_link_options(--emit-relocs)
+    add_link_options(-Wl,--emit-relocs)
 endif()
 
 # Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported system)
