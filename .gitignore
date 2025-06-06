@@ -20,6 +20,7 @@ console.log
 *.dot
 *.svg
 *.png
+*.pdf
 
 compile_times.txt
 exported_table_statistics.json
