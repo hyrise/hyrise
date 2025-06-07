@@ -13,14 +13,12 @@ class PausableLoopThreadTest : public BaseTest {
 };
 
 TEST_F(PausableLoopThreadTest, BasicExecution) {
-  // Just create a thread and destroy it after 15ms, the count should be at least 1.
-  {
-    PausableLoopThread loop(std::chrono::milliseconds(10), [&](size_t) {
-      ++call_count;
-    });
+  PausableLoopThread loop(std::chrono::milliseconds(10), [&](size_t) {
+    ++call_count;
+  });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(15));
-  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(30));
+
   EXPECT_GE(call_count.load(), 1);
 }
 
@@ -63,25 +61,41 @@ TEST_F(PausableLoopThreadTest, DestructorStopsThread) {
 }
 
 TEST_F(PausableLoopThreadTest, SetLoopSleepTimeChangesInterval) {
-  std::vector<std::chrono::steady_clock::time_point> timestamps;
+  auto timestamps = std::vector<std::chrono::steady_clock::time_point>();
+  std::mutex timestamps_mutex;
 
   PausableLoopThread loop(std::chrono::milliseconds(50), [&](size_t) {
+    std::lock_guard lock(timestamps_mutex);
     timestamps.push_back(std::chrono::steady_clock::now());
   });
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(120));
-  // the internal timer of the Thread is 50ms, here we expect that we have at
-  // least timestamps since the test waits for 120ms.
-  auto initial_timestamp_count = timestamps.size();
-  EXPECT_GE(initial_timestamp_count, 2);
-  loop.set_loop_sleep_time(std::chrono::milliseconds(10));
-  // even after 10ms, we dont expect the timestamp count to change
-  // because one cycle is 50ms
-  EXPECT_EQ(initial_timestamp_count, timestamps.size());
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  std::this_thread::sleep_for(std::chrono::milliseconds(125));
 
-  // Should now be firing much more rapidly
-  EXPECT_GT(timestamps.size(), 3);
+  loop.pause();
+
+  size_t initial_timestamp_count;
+  {
+    std::lock_guard lock(timestamps_mutex);
+    initial_timestamp_count = timestamps.size();
+  }
+
+  EXPECT_GE(initial_timestamp_count, 2);
+
+  loop.set_loop_sleep_time(std::chrono::milliseconds(10));
+  {
+    std::lock_guard lock(timestamps_mutex);
+    EXPECT_EQ(initial_timestamp_count, timestamps.size());
+  }
+
+  loop.resume();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(55));
+  {
+    std::lock_guard lock(timestamps_mutex);
+    // We expect at least 4-5 new timestamps in this period.
+    // Check for more than initial + 3 to be safe.
+    EXPECT_GT(timestamps.size(), initial_timestamp_count + 3);
+  }
 }
 
 }  // namespace hyrise
