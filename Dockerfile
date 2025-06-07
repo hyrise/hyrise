@@ -35,7 +35,7 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        lld \
+        lld-19 \
         lsb-release \
         man \
         ninja-build \

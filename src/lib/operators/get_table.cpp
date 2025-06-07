@@ -309,7 +309,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto all_indexed_segments_pruned = [&](const auto& table_index) {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
-    if (std::ranges::find(_pruned_column_ids, indexed_column_id) != _pruned_column_ids.cend()) {
+    if (!std::ranges::binary_search(_pruned_column_ids, indexed_column_id)) {
       return true;
     }
 
@@ -321,15 +321,15 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
 
     // Check if the indexed chunks have been pruned.
-    DebugAssert(std::ranges::is_sorted(_pruned_chunk_ids), "Expected _pruned_chunk_ids vector to be sorted.");
     return std::ranges::all_of(indexed_chunk_ids, [&](const auto chunk_id) {
       return std::ranges::binary_search(_pruned_chunk_ids, chunk_id);
     });
   };
 
   auto table_indexes = stored_table->get_table_indexes();
-  const auto [erase_begin, erase_end] = std::ranges::remove_if(table_indexes, all_indexed_segments_pruned);
-  table_indexes.erase(erase_begin, erase_end);
+  DebugAssert(std::ranges::is_sorted(_pruned_chunk_ids), "Expected _pruned_chunk_ids vector to be sorted.");
+  const auto [remove_begin, remove_end] = std::ranges::remove_if(table_indexes, all_indexed_segments_pruned);
+  table_indexes.erase(remove_begin, remove_end);
 
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
                                  stored_table->uses_mvcc(), table_indexes);

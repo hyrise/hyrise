@@ -20,7 +20,8 @@ bool RowIDPosList::references_single_chunk() const {
             return true;
           }
           const auto& common_chunk_id = (*this)[0].chunk_id;
-          return std::ranges::all_of(*this, [&](const auto& row_id) {
+          return std::all_of(cbegin(), cend(), [&](const auto& row_id) {
+          // return std::ranges::all_of(*this, [&](const auto& row_id) {
             return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
           });
         }(),
