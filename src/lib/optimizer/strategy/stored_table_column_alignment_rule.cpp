@@ -39,10 +39,8 @@ struct StoredTableNodeSharedPtrHash final {
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrEqual final {
   bool operator()(const std::shared_ptr<StoredTableNode>& lhs, const std::shared_ptr<StoredTableNode>& rhs) const {
-    DebugAssert(std::is_sorted(lhs->pruned_chunk_ids().cbegin(), lhs->pruned_chunk_ids().cend()),
-                "Expected sorted vector of ChunkIDs");
-    DebugAssert(std::is_sorted(rhs->pruned_chunk_ids().cbegin(), rhs->pruned_chunk_ids().cend()),
-                "Expected sorted vector of ChunkIDs");
+    DebugAssert(std::ranges::is_sorted(*lhs->pruned_chunk_ids()), "Expected sorted left vector of ChunkIDs.");
+    DebugAssert(std::ranges::is_sorted(*rhs->pruned_chunk_ids()), "Expected sorted right vector of ChunkIDs.");
     return lhs == rhs || (lhs->table_name == rhs->table_name && lhs->pruned_chunk_ids() == rhs->pruned_chunk_ids());
   }
 };

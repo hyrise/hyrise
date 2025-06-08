@@ -309,7 +309,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto all_indexed_segments_pruned = [&](const auto& table_index) {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
-    if (!std::ranges::binary_search(_pruned_column_ids, indexed_column_id)) {
+    if (std::ranges::binary_search(_pruned_column_ids, indexed_column_id)) {
       return true;
     }
 
