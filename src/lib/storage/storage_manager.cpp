@@ -28,9 +28,9 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   const auto table_iter = _tables.find(name);
   const auto view_iter = _views.find(name);
   Assert(table_iter == _tables.end() || !table_iter->second,
-         "Cannot add table " + name + " - a table with the same name already exists");
+         "Cannot add table " + name + " - a table with the same name already exists.");
   Assert(view_iter == _views.end() || !view_iter->second,
-         "Cannot add table " + name + " - a view with the same name already exists");
+         "Cannot add table " + name + " - a view with the same name already exists.");
 
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -42,6 +42,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 
   // Create table statistics and chunk pruning statistics for added table.
   if (!table->table_statistics()) {
+    std::cerr << "did\n";
     table->set_table_statistics(TableStatistics::from_table(*table));
   }
   generate_chunk_pruning_statistics(table);

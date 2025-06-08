@@ -66,7 +66,9 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
+  ASSERT_TRUE(stored_table_node->table_statistics);
   const auto stored_table_node = StoredTableNode::make("compressed");
+  ASSERT_TRUE(stored_table_node->table_statistics);
 
   // clang-format off
   _lqp =

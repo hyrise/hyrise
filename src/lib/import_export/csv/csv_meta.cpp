@@ -31,6 +31,36 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
 
 namespace hyrise {
 
+// NOLINTBEGIN(lkfjdsl;kfjdsfkldsajfkj)
+void to_json(nlohmann::json& json_string, NullHandling null_handling) {
+  switch (null_handling) {
+    case NullHandling::RejectNullStrings:
+      json_string = "reject_null_strings";
+      break;
+    case NullHandling::NullStringAsNull:
+      json_string = "null_string_as_null";
+      break;
+    case NullHandling::NullStringAsValue:
+      json_string = "null_string_as_value";
+      break;
+    default:
+      Fail("Unexpected NullHandling.");
+  }
+}
+
+void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
+  if (json_string == "reject_null_strings") {
+    null_handling = NullHandling::RejectNullStrings;
+  } else if (json_string == "null_string_as_null") {
+    null_handling = NullHandling::NullStringAsNull;
+  } else if (json_string == "null_string_as_value") {
+    null_handling = NullHandling::NullStringAsValue;
+  } else {
+    Fail("Illegal value for null_handling: " + json_string.get<std::string>());
+  }
+}
+// NOLINTEND(lkfjdsl;kfjdsfkldsajfkj)
+
 CsvMeta process_csv_meta_file(const std::string& filename) {
   auto metafile = std::ifstream{filename};
   Assert(metafile.good(), "Meta file does not exist: " + filename);

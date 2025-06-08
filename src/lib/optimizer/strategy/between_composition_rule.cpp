@@ -168,12 +168,12 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
       if (boundary->type != ColumnBoundaryType::None) {
         if (boundary->boundary_is_column_expression) {
           const auto inverse_boundary = std::make_shared<ColumnBoundary>(_create_inverse_boundary(boundary));
-          if (column_boundaries.contains(inverse_boundary->column_expression)) {
+          if (!column_boundaries.contains(inverse_boundary->column_expression)) {
             column_boundaries[inverse_boundary->column_expression] = std::vector<std::shared_ptr<ColumnBoundary>>();
           }
           column_boundaries[inverse_boundary->column_expression].push_back(inverse_boundary);
         }
-        if (column_boundaries.contains(boundary->column_expression)) {
+        if (!column_boundaries.contains(boundary->column_expression)) {
           column_boundaries[boundary->column_expression] = std::vector<std::shared_ptr<ColumnBoundary>>();
         }
         column_boundaries[boundary->column_expression].push_back(boundary);
