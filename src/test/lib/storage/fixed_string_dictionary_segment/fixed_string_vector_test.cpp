@@ -107,7 +107,8 @@ TEST_F(FixedStringVectorTest, Erase) {
 }
 
 TEST_F(FixedStringVectorTest, EraseEmptyVector) {
-    auto empty_fixed_string_vector = FixedStringVector();
+    std::vector<pmr_string> v1 = {};
+    auto empty_fixed_string_vector = FixedStringVector{v1.begin(), v1.end(), 0};
     EXPECT_EQ(empty_fixed_string_vector.size(), 0u);
 
     auto it = empty_fixed_string_vector.begin();
