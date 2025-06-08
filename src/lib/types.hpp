@@ -108,27 +108,17 @@ struct RowID {
     return chunk_offset == INVALID_CHUNK_OFFSET;
   }
 
-  // Joins need to use RowIDs as keys for maps.
-  bool operator<(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) < std::tie(other.chunk_id, other.chunk_offset);
-  }
-
-  // Useful when comparing a row ID to NULL_ROW_ID.
-  bool operator==(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
-  }
-
-  // auto operator<=>(const RowID& other) const {
-  //   return std::tie(chunk_id, chunk_offset) <=> std::tie(other.chunk_id, other.chunk_offset);
-  // }
-
-  // bool operator==(const RowID& other) const = default;
+  auto operator<=>(const RowID&) const = default;
 
   friend std::ostream& operator<<(std::ostream& stream, const RowID& row_id) {
     stream << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
     return stream;
   }
 };
+
+// inline auto operator<=>(const RowID& lhs, const RowID& rhs) {
+//   return std::tie(lhs.chunk_id, lhs.chunk_offset) <=> std::tie(rhs.chunk_id, rhs.chunk_offset);
+// }
 
 using CompressedVectorTypeID = uint8_t;
 

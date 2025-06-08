@@ -1249,7 +1249,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
       switch (logical_expression.logical_operator) {
         case LogicalOperator::And:
-          std::ranges::set_intersection(left_pos_list, right_pos_list, std::back_inserter(result_pos_list), Compili{});
+          std::ranges::set_intersection(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
           break;
 
         case LogicalOperator::Or:

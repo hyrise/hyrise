@@ -36,7 +36,7 @@ Checks: '
          -abseil-*,
          -readability-avoid-const-params-in-decls,
          -readability-function-cognitive-complexity,
-         -readability-use-anyofallof,
+
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
          -bugprone-suspicious-include,
@@ -46,6 +46,7 @@ Checks: '
          -readability-static-accessed-through-instance,
          -portability-template-virtual-member-function
          '
+#          -readability-use-anyofallof,
 
 WarningsAsErrors: '*'
 
