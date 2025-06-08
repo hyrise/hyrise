@@ -3,7 +3,7 @@
 #
 # It is written to run only on cpus with a last branch register (i.e. Intel).
 # AMD cpus most likely don't have it. If you still want to run this script on AMD
-# then follow the commonts below. There will be a performance hit. It is possible to
+# then follow the comments below. There will be a performance hit. It is possible to
 # capture the profile data on an intel cpu and then optimize and run the binary on AMD.
 #
 # This script also requires perf to be installed. The perf installation has to match the kernel version.
