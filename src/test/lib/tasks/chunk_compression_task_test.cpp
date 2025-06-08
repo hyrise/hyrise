@@ -40,13 +40,12 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table_dict->get_chunk(chunk_id);
 
-    auto segment = chunk->get_segment(ColumnID{0});
-    auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
-    ASSERT_NE(dict_segment, nullptr);
+    for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
+      auto segment = chunk->get_segment(column_id);
 
-    segment = chunk->get_segment(ColumnID{1});
-    auto for_segment = std::dynamic_pointer_cast<const FrameOfReferenceSegment<int32_t>>(segment);
-    ASSERT_NE(for_segment, nullptr);
+      auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
+      ASSERT_NE(dict_segment, nullptr);
+    }
   }
 }
 
