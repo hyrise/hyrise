@@ -8,11 +8,14 @@
 #
 # This script also requires perf to be installed. The perf installation has to match the kernel version.
 # This can be tricky in the case of containers, as you don't know the kernel version at build time.
-# There are commands below for installing perf on an ubuntu 24.04 container to match a ubuntu 22.04 kernel.
+# There are commands below for installing perf on an ubuntu 24.04 container to match a ubuntu 22.04 or 20.04 kernel.
 # Keep in mind that you have to run them on the target host to receive accurate information from uname -r
 #echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee /etc/apt/sources.list.d/jammy.list
 #echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe" | sudo tee -a /etc/apt/sources.list.d/jammy.list
 #echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe" | sudo tee -a /etc/apt/sources.list.d/jammy.list
+#echo "deb http://archive.ubuntu.com/ubuntu focal main universe" | sudo tee /etc/apt/sources.list.d/focal.list
+#echo "deb http://archive.ubuntu.com/ubuntu focal-updates main universe" | sudo tee -a /etc/apt/sources.list.d/focal.list
+#echo "deb http://security.ubuntu.com/ubuntu focal-security main universe" | sudo tee -a /etc/apt/sources.list.d/focal.list
 #apt update
 #apt install linux-tools-common linux-tools-`uname -r`
 
