@@ -5,6 +5,7 @@
 #include "benchmark_sql_executor.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
+#include "tpcc/tpcc_random_generator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
