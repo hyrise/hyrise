@@ -72,16 +72,16 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
   if (file_type != FileType::Binary) {
     if (encoding) {
       const auto segment_encoding_spec_col1 = SegmentEncodingSpec{
-          *encoding != EncodingType::FixedStringDictionary ? *encoding : EncodingType::FrameOfReference};
+          *encoding != EncodingType::FixedStringDictionary ? *encoding : EncodingType::Dictionary};
       const auto segment_encoding_spec_col2 = SegmentEncodingSpec{
-          *encoding != EncodingType::FrameOfReference ? *encoding : EncodingType::FixedStringDictionary};
+          *encoding != EncodingType::FrameOfReference ? *encoding : EncodingType::Dictionary};
 
       const auto chunk_encoding_spec = ChunkEncodingSpec{segment_encoding_spec_col1, segment_encoding_spec_col2};
       ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
     } else {
       // The binary file is unencoded, so we do not have to change the encoding of `expected_table`.
-      const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::FrameOfReference},
-                                                         SegmentEncodingSpec{EncodingType::FixedStringDictionary}};
+      const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Dictionary},
+                                                         SegmentEncodingSpec{EncodingType::Dictionary}};
       ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
     }
   }
@@ -135,8 +135,8 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
 
   // The `.bin` file we load is stored and therefore expected to be `Unencoded`.
   if (file_type != FileType::Binary) {
-    const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::FrameOfReference},
-                                                       SegmentEncodingSpec{EncodingType::FixedStringDictionary}};
+    const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Dictionary},
+                                                       SegmentEncodingSpec{EncodingType::Dictionary}};
     ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
   }
 
