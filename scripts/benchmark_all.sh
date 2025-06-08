@@ -109,7 +109,6 @@ do
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root.
   for benchmark in $benchmarks
   do
-
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (single-threaded)"
       # Warming up does not make sense/much of a difference for TPCC.
