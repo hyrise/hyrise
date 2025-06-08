@@ -99,15 +99,16 @@ do
   $build_system clean
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
 
+  if [ -f ../resources/bolt.fdata ]
+  then
+    mv ./lib/libhyrise_impl.so ./lib/libhyrise_impl.so.old
+    llvm-bolt-17 ./lib/libhyrise_impl.so.old -o ./lib/libhyrise_impl.so -data ../resources/bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+  fi
+
   # Run the benchmarks.
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root.
   for benchmark in $benchmarks
   do
-    if [ -f ../resources/bolt/$benchmark.fdata ]
-    then
-      mv $benchmark $benchmark.old
-      llvm-bolt-17 ./$benchmark.old -o $benchmark -data ../resources/bolt/$benchmark.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
-    fi
 
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (single-threaded)"

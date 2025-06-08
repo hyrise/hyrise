@@ -10,14 +10,14 @@
 # This can be tricky in the case of containers, as you don't know the kernel version at build time.
 # There are commands below for installing perf on an ubuntu 24.04 container to match a ubuntu 22.04 or 20.04 kernel.
 # Keep in mind that you have to run them on the target host to receive accurate information from uname -r
-#echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee /etc/apt/sources.list.d/jammy.list
-#echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe" | sudo tee -a /etc/apt/sources.list.d/jammy.list
-#echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe" | sudo tee -a /etc/apt/sources.list.d/jammy.list
-#echo "deb http://archive.ubuntu.com/ubuntu focal main universe" | sudo tee /etc/apt/sources.list.d/focal.list
-#echo "deb http://archive.ubuntu.com/ubuntu focal-updates main universe" | sudo tee -a /etc/apt/sources.list.d/focal.list
-#echo "deb http://security.ubuntu.com/ubuntu focal-security main universe" | sudo tee -a /etc/apt/sources.list.d/focal.list
-#apt update
-#apt install linux-tools-common linux-tools-`uname -r`
+# echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee /etc/apt/sources.list.d/jammy.list
+# echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe" | sudo tee -a /etc/apt/sources.list.d/jammy.list
+# echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe" | sudo tee -a /etc/apt/sources.list.d/jammy.list
+# echo "deb http://archive.ubuntu.com/ubuntu focal main universe" | sudo tee /etc/apt/sources.list.d/focal.list
+# echo "deb http://archive.ubuntu.com/ubuntu focal-updates main universe" | sudo tee -a /etc/apt/sources.list.d/focal.list
+# echo "deb http://security.ubuntu.com/ubuntu focal-security main universe" | sudo tee -a /etc/apt/sources.list.d/focal.list
+# apt update
+# apt install linux-tools-common linux-tools-`uname -r`
 
 mkdir clang-bolt
 cd clang-bolt
@@ -25,7 +25,6 @@ cmake -DCMAKE_UNITY_BUILD=ON -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPIL
 ninja all -j $(nproc)
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema'
-mkdir -p ../resources/bolt
 for benchmark in $benchmarks
 do
     # TODO: Multi-threaded benchmarks?
@@ -33,5 +32,7 @@ do
     # remove -j any,u on cpus that do not have a last branch register (i.e. AMD)
     perf record -e cycles:u -j any,u -o $benchmark.data -- ./$benchmark -t 360 -m Shuffled
     # Add -nl on cpus that do not have a last branch register (i.e. AMD)
-    perf2bolt-17 -p $benchmark.data -o ../resources/bolt/$benchmark.fdata ./$benchmark
+    /usr/lib/llvm-17/bin/perf2bolt -p $benchmark.data -o $benchmark.fdata ./lib/libhyrise_impl.so
 done
+
+merge-fdata-17 *.fdata > ../resources/bolt.fdata
