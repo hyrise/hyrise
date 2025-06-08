@@ -32,7 +32,7 @@ using namespace hyrise;  // NOLINT
 void __attribute__((noinline)) process_match(RowID left_row_id, RowID right_row_id,
                                              const JoinNestedLoop::JoinParams& params) {
   // Write out a pair of matching row_ids - except for Semi/Anti joins, who build their output from params.left_matches
-  // after all pairs were compared
+  // after all pairs were compared.
   if (params.write_pos_lists) {
     params.pos_list_left.emplace_back(left_row_id);
     params.pos_list_right.emplace_back(right_row_id);
@@ -47,9 +47,8 @@ void __attribute__((noinline)) process_match(RowID left_row_id, RowID right_row_
   }
 }
 
-// inner join loop that joins two segments via their iterators
-// __attribute__((noinline)) to reduce compile time. As the hotloop is within this function, no performance
-// loss expected
+// Inner join loop that joins two segments via their iterators. __attribute__((noinline)) to reduce compile time. As the
+// hotloop is within this function, no performance loss is expected.
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void __attribute__((noinline)) join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it,
                                                        const LeftIterator& left_end, const RightIterator& right_begin,
@@ -65,8 +64,8 @@ void __attribute__((noinline)) join_two_typed_segments(const BinaryFunctor& func
       const auto right_value = *right_it;
       const auto right_row_id = RowID{chunk_id_right, right_value.chunk_offset()};
 
-      // AntiNullAsTrue is the only join mode where NULLs in any operand lead to a match. For all other
-      // join modes, any NULL in the predicate results in a non-match.
+      // AntiNullAsTrue is the only join mode where NULLs in any operand lead to a match. For all other join modes, any
+      // NULL in the predicate results in a non-match.
       if (params.mode == JoinMode::AntiNullAsTrue) {
         if ((left_value.is_null() || right_value.is_null() || func(left_value.value(), right_value.value())) &&
             params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
@@ -94,7 +93,6 @@ JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& le
                                const OperatorJoinPredicate& primary_predicate,
                                const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {
-  // TODO(moritz) incorporate into supports()?
 }
 
 const std::string& JoinNestedLoop::name() const {
@@ -165,7 +163,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   auto secondary_predicate_evaluator =
       MultiPredicateJoinEvaluator{*left_table, *right_table, _mode, maybe_flipped_secondary_predicates};
 
-  // Scan all chunks from left input
+  // Scan all chunks from left input.
   const auto chunk_count_left = left_table->chunk_count();
   for (auto chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left; ++chunk_id_left) {
     const auto chunk_left = left_table->get_chunk(chunk_id_left);
@@ -185,7 +183,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
       const auto segment_right = chunk_right->get_segment(right_column_id);
       const auto params = JoinParams{.pos_list_left = *pos_list_left,
-                                     .pos_list_right = *pos_list_left,
+                                     .pos_list_right = *pos_list_right,
                                      .left_matches = left_matches,
                                      .right_matches = right_matches_by_chunk[chunk_id_right],
                                      .track_left_matches = track_left_matches,
@@ -198,7 +196,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     }
 
     if (is_outer_join) {
-      // Add unmatched rows on the left for Left and Full Outer joins
+      // Add unmatched rows on the left for Left and Full Outer joins.
       for (ChunkOffset chunk_offset{0}; chunk_offset < static_cast<ChunkOffset>(left_matches.size()); ++chunk_offset) {
         if (!left_matches[chunk_offset]) {
           pos_list_left->emplace_back(chunk_id_left, chunk_offset);
@@ -211,7 +209,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   }
 
   // For Full Outer we need to add all unmatched rows for the right side.
-  // Unmatched rows on the left side are already added in the main loop above
+  // Unmatched rows on the left side are already added in the main loop above.
   if (_mode == JoinMode::FullOuter) {
     for (auto chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
       const auto chunk_right = right_table->get_chunk(chunk_id_right);
@@ -227,7 +225,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     }
   }
 
-  // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
+  // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists.
   // We use `left_matches_by_chunk` to determine whether a tuple from the left side found a match.
   if (semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
@@ -244,7 +242,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     }
   }
 
-  // Write output Chunk based on the PosList(s) we created during the Join
+  // Write output Chunk based on the PosList(s) we created during the Join.
   auto segments = Segments{};
 
   if (semi_or_anti_join) {
@@ -347,7 +345,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_
 
 void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
                                          const std::shared_ptr<RowIDPosList>& pos_list) {
-  // Add segments from table to output chunk
+  // Add segments from table to output chunk.
   for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<AbstractSegment> segment;
 
