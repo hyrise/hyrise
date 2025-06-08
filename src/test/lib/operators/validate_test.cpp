@@ -66,7 +66,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
     const auto chunk_size = chunk->size();
     for (auto index = ChunkOffset{0}; index < chunk_size; ++index) {
       mvcc_data->set_begin_cid(index, CommitID{0});
-      mvcc_data->set_end_cid(index, MvccData::MAX_COMMIT_ID);
+      mvcc_data->set_end_cid(index, MAX_COMMIT_ID);
     }
   }
 }
