@@ -15,7 +15,7 @@ plt.rc('figure', titlesize=20)
 
 # Load the data
 if len(sys.argv) < 2:
-    print("Usage: python create_reduction_scatterplots.py <reduction_stats.csv>")
+    print("Usage: python create_reduction_scatterplots.py <reduction_stats.csv> [max_input_count_millions]")
     sys.exit(1)
 
 data = pd.read_csv(sys.argv[1])
@@ -26,6 +26,16 @@ df = data[data['reduction_type'] == 'semi'].copy()
 # Convert to millions
 df['input_count'] = df['input_count'] / 1e6
 df['output_count'] = df['output_count'] / 1e6
+
+# Optional: filter by max input count if second parameter is given
+max_input_count = None
+if len(sys.argv) >= 3:
+    try:
+        max_input_count = float(sys.argv[2])
+        df = df[df['input_count'] <= max_input_count]
+    except ValueError:
+        print("Second parameter must be a number (max input count in millions).")
+        sys.exit(1)
 
 # Define colors for each benchmark
 benchmark_colors = {
@@ -69,9 +79,14 @@ def plot_reduction(ax, use_log=False):
     if use_log:
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_title('Semi-Join Reduction (Log Scale)')
+        title = 'Semi-Join Reduction (Log Scale)'
     else:
-        ax.set_title('Semi-Join Reduction (Linear Scale)')
+        title = 'Semi-Join Reduction (Linear Scale)'
+    
+    # Add filter info to title if max_input_count is set
+    if max_input_count is not None:
+        title += f"\n(Input Count ≤ {max_input_count}M)"
+    ax.set_title(title)
     
     # Add grid
     ax.grid(True, alpha=0.3)
