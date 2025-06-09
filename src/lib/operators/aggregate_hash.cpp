@@ -67,8 +67,9 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
                              for (; begin != end; ++begin) {
                                const auto& result = *begin;
 
-                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-                               // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
                                if (result.row_id.is_null()) {
                                  continue;
                                }
@@ -99,8 +100,9 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
                              for (; begin != end; ++begin) {
                                const auto& result = *begin;
 
-                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-                               // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
                                if (result.row_id.is_null()) {
                                  continue;
                                }
@@ -124,8 +126,9 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
                              for (; begin != end; ++begin) {
                                const auto& result = *begin;
 
-                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-                               // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
                                if (result.row_id.is_null()) {
                                  continue;
                                }
@@ -194,8 +197,9 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
                              for (; begin != end; ++begin) {
                                const auto& result = *begin;
 
-                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-                               // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
                                if (result.row_id.is_null()) {
                                  continue;
                                }

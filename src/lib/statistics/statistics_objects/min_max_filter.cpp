@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <utility>
 
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
