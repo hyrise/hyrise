@@ -59,6 +59,7 @@ void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
     Fail("Illegal value for null_handling: " + json_string.get<std::string>());
   }
 }
+
 // NOLINTEND(lkfjdsl;kfjdsfkldsajfkj)
 
 CsvMeta process_csv_meta_file(const std::string& filename) {
@@ -104,13 +105,13 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
 
 void to_json(nlohmann::json& json, const CsvMeta& meta) {
   auto config = nlohmann::json{{"delimiter", std::string(1, meta.config.delimiter)},
-                                         {"separator", std::string(1, meta.config.separator)},
-                                         {"quote", std::string(1, meta.config.quote)},
-                                         {"escape", std::string(1, meta.config.escape)},
-                                         {"delimiter_escape", std::string(1, meta.config.delimiter_escape)},
-                                         {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
-                                         {"null_handling", meta.config.null_handling},
-                                         {"rfc_mode", meta.config.rfc_mode}};
+                               {"separator", std::string(1, meta.config.separator)},
+                               {"quote", std::string(1, meta.config.quote)},
+                               {"escape", std::string(1, meta.config.escape)},
+                               {"delimiter_escape", std::string(1, meta.config.delimiter_escape)},
+                               {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
+                               {"null_handling", meta.config.null_handling},
+                               {"rfc_mode", meta.config.rfc_mode}};
 
   auto columns = nlohmann::json::parse("[]");
   for (const auto& column_meta : meta.columns) {
@@ -135,6 +136,5 @@ bool operator==(const ParseConfig& left, const ParseConfig& right) {
          std::tie(right.delimiter, right.separator, right.quote, right.escape, right.delimiter_escape,
                   right.reject_quoted_nonstrings, right.null_handling, right.rfc_mode);
 }
-
 
 }  // namespace hyrise

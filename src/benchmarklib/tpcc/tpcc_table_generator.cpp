@@ -546,7 +546,8 @@ void TPCCTableGenerator::_add_order_line_column(
       [&](const std::vector<size_t>& indices) {
         return _generate_inner_order_line_column(indices, order_line_counts, generator_function);
       };
-  _add_column<T>(segments_by_chunk, column_definitions, std::move(name), std::move(cardinalities), wrapped_generator_function);
+  _add_column<T>(segments_by_chunk, column_definitions, std::move(name), std::move(cardinalities),
+                 wrapped_generator_function);
 }
 
 std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(

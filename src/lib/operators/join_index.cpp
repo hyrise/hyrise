@@ -304,16 +304,17 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-    const auto params = JoinNestedLoop::JoinParams{.pos_list_left=*_probe_pos_list,
-                                                   .pos_list_right=*_index_pos_list,
-                                                   .left_matches=_probe_matches[probe_chunk_id],
-                                                   .right_matches=_index_matches[index_chunk_id],
-                                                   .track_left_matches=track_probe_matches,
-                                                   .track_right_matches=track_index_matches,
-                                                   .mode=_mode,
-                                                   .predicate_condition=_adjusted_primary_predicate.predicate_condition,
-                                                   .secondary_predicate_evaluator=secondary_predicate_evaluator,
-                                                   .write_pos_lists=!is_semi_or_anti_join};
+    const auto params =
+        JoinNestedLoop::JoinParams{.pos_list_left = *_probe_pos_list,
+                                   .pos_list_right = *_index_pos_list,
+                                   .left_matches = _probe_matches[probe_chunk_id],
+                                   .right_matches = _index_matches[index_chunk_id],
+                                   .track_left_matches = track_probe_matches,
+                                   .track_right_matches = track_index_matches,
+                                   .mode = _mode,
+                                   .predicate_condition = _adjusted_primary_predicate.predicate_condition,
+                                   .secondary_predicate_evaluator = secondary_predicate_evaluator,
+                                   .write_pos_lists = !is_semi_or_anti_join};
     JoinNestedLoop::_join_two_untyped_segments(*probe_segment, *index_segment, probe_chunk_id, index_chunk_id, params);
   }
   const auto& index_pos_list_size_post_fallback = _index_pos_list->size();
@@ -484,8 +485,8 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
     const auto chunk_count = _probe_input_table->chunk_count();
     for (auto probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_probe_matches[probe_chunk_id].size());
-           ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0};
+           chunk_offset < static_cast<ChunkOffset>(_probe_matches[probe_chunk_id].size()); ++chunk_offset) {
         if (!_probe_matches[probe_chunk_id][chunk_offset]) {
           _probe_pos_list->emplace_back(probe_chunk_id, chunk_offset);
           _index_pos_list->emplace_back(NULL_ROW_ID);

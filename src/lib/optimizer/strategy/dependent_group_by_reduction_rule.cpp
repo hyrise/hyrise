@@ -45,16 +45,17 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
       // Remove column from group-by list.
       // Further, decrement the aggregate's index which denotes the end of group-by expressions.
       const auto begin_idx_before = aggregate_node.aggregate_expressions_begin_idx;
-      const auto [erase_begin, erase_end] = std::ranges::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
-                         [&](const auto& node_expression) {
-                           if (*node_expression == *group_by_column) {
-                             // Adjust the number of group by expressions.
-                             --aggregate_node.aggregate_expressions_begin_idx;
-                             group_by_list_changed = true;
-                             return true;
-                           }
-                           return false;
-                         });
+      const auto [erase_begin, erase_end] =
+          std::ranges::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
+                                 [&](const auto& node_expression) {
+                                   if (*node_expression == *group_by_column) {
+                                     // Adjust the number of group by expressions.
+                                     --aggregate_node.aggregate_expressions_begin_idx;
+                                     group_by_list_changed = true;
+                                     return true;
+                                   }
+                                   return false;
+                                 });
       aggregate_node.node_expressions.erase(erase_begin, erase_end);
       Assert(aggregate_node.aggregate_expressions_begin_idx < begin_idx_before,
              "Failed to remove column from group-by list.");

@@ -65,7 +65,7 @@ using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 struct Compili {
-  bool operator()(const RowID &lhs, const RowID &rhs) {
+  bool operator()(const RowID& lhs, const RowID& rhs) {
     return std::tie(lhs.chunk_id, lhs.chunk_offset) < std::tie(rhs.chunk_id, rhs.chunk_offset);
   }
 };

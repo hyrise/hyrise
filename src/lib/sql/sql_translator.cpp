@@ -326,7 +326,7 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
     parameter_ids[value_placeholder_id] = parameter_id;
   }
 
-  return {.lqp_nodes=   result_nodes, .translation_info={_cacheable, parameter_ids}};
+  return {.lqp_nodes = result_nodes, .translation_info = {_cacheable, parameter_ids}};
 }
 
 SQLTranslator::SQLTranslator(
@@ -447,12 +447,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
   // 2. Check whether we need to create an AliasNode. This is the case whenever an expression was assigned a
   //    column_name that is not its generated name.
-  const auto need_alias_node = std::ranges::any_of(
-      _inflated_select_list_elements, [](const auto& element) {
-        return std::ranges::any_of(element.identifiers, [&](const auto& identifier) {
-          return identifier.column_name != element.expression->as_column_name();
-        });
-      });
+  const auto need_alias_node = std::ranges::any_of(_inflated_select_list_elements, [](const auto& element) {
+    return std::ranges::any_of(element.identifiers, [&](const auto& identifier) {
+      return identifier.column_name != element.expression->as_column_name();
+    });
+  });
 
   if (need_alias_node) {
     auto aliases = std::vector<std::string>{};

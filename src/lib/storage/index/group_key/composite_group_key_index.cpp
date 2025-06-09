@@ -115,7 +115,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
 
   // Remove duplicated keys.
   // NOLINTNEXTLINE(modernize-use-ranges): ranges requires additional comparators. Keep it simple here.
-  const auto unique_keys_end = std::unique(_keys.begin(), _keys.end());  
+  const auto unique_keys_end = std::unique(_keys.begin(), _keys.end());
   _keys.erase(unique_keys_end, _keys.end());
   _keys.shrink_to_fit();
 }

@@ -489,7 +489,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       for (const auto& value_clustered_by : table_value_clustered_by) {
         // if (std::ranges::find(_groupby_column_ids, value_clustered_by) != _groupby_column_ids.end()) {
         if (std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), value_clustered_by) !=
-          _groupby_column_ids.end()) {
+            _groupby_column_ids.end()) {
           is_value_clustered_by_groupby_column = true;
           break;
         }

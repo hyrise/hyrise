@@ -156,7 +156,8 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
       const auto cluster_column_id_end = pos_lists_idx >= _column_cluster_offsets.size() - 1
                                              ? left_in_table.column_count()
                                              : _column_cluster_offsets[pos_lists_idx + 1];
-      for (auto column_id = cluster_column_id_begin; column_id < static_cast<ColumnID::base_type>(cluster_column_id_end); ++column_id) {
+      for (auto column_id = cluster_column_id_begin;
+           column_id < static_cast<ColumnID::base_type>(cluster_column_id_end); ++column_id) {
         auto ref_segment = std::make_shared<ReferenceSegment>(
             _referenced_tables[pos_lists_idx], _referenced_column_ids[column_id], pos_lists[pos_lists_idx]);
         output_segments.push_back(ref_segment);

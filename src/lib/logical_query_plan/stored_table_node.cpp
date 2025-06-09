@@ -83,9 +83,10 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 
 void StoredTableNode::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes) {
-  DebugAssert(std::ranges::all_of(predicate_nodes, [](const auto& node) {
-                            return node.lock() && node.lock()->type == LQPNodeType::Predicate;
-                          }),
+  DebugAssert(std::ranges::all_of(predicate_nodes,
+                                  [](const auto& node) {
+                                    return node.lock() && node.lock()->type == LQPNodeType::Predicate;
+                                  }),
               "No PredicateNode set as prunable predicate.");
   _prunable_subquery_predicates = predicate_nodes;
 }
@@ -193,21 +194,19 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
   // Update index statistics
   // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
   // when remove(iterator) invalidates the iterator.
-  const auto remove_result = std::ranges::remove_if(pruned_indexes_statistics,
-                                                 [&](auto& statistics) {
-                                                   for (auto& original_column_id : statistics.column_ids) {
-                                                     const auto updated_column_id =
-                                                         column_id_mapping[original_column_id];
-                                                     if (updated_column_id == INVALID_COLUMN_ID) {
-                                                       // Indexed column was pruned - remove index from statistics
-                                                       return true;
-                                                     }
+  const auto remove_result = std::ranges::remove_if(pruned_indexes_statistics, [&](auto& statistics) {
+    for (auto& original_column_id : statistics.column_ids) {
+      const auto updated_column_id = column_id_mapping[original_column_id];
+      if (updated_column_id == INVALID_COLUMN_ID) {
+        // Indexed column was pruned - remove index from statistics
+        return true;
+      }
 
-                                                     // Update column id
-                                                     original_column_id = updated_column_id;
-                                                   }
-                                                   return false;
-                                                 });
+      // Update column id
+      original_column_id = updated_column_id;
+    }
+    return false;
+  });
   pruned_indexes_statistics.erase(remove_result.begin(), remove_result.end());
   return pruned_indexes_statistics;
 }
