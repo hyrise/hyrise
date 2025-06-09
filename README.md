@@ -2,6 +2,25 @@
 [![Coverage Status](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
 [![CodeFactor](https://www.codefactor.io/repository/github/hyrise/hyrise/badge)](https://www.codefactor.io/repository/github/hyrise/hyrise)
 
+## CXL Memory Performance for In-Memory Data Processing
+
+This repository will soon contain the code used for our VLDB 2025 paper.
+
+## Cite our work
+
+If you use the microbenchmarks or reference our findings, please cite us.
+ 
+```bibtex
+@inproceedings{Weisgut2025CxlPerformance,
+  title={CXL Memory Performance for In-Memory Data Processing},
+  author={Weisgut, Marcel and Ritter, Daniel and Tözün, Pınar and Benson, Lawrence and Rabl, Tilmann},
+  booktitle={Proceedings of the VLDB Endowment},
+  year={2025},
+  volume={18},
+  number={9}
+}
+```
+---
 # Welcome to Hyrise
 
 Hyrise is a research in-memory database system that has been developed [by HPI since 2009](https://www.vldb.org/pvldb/vol4/p105-grund.pdf) and has been entirely [rewritten in 2017](https://openproceedings.org/2019/conf/edbt/EDBT19_paper_152.pdf). Our goal is to provide a clean and flexible platform for research in the area of in-memory data management. Its architecture allows us, our students, and other researchers to conduct experiments around new data management concepts. To enable realistic experiments, Hyrise features comprehensive SQL support and performs powerful query plan optimizations. Well-known benchmarks, such as TPC-H or TPC-DS, can be executed with a single command and without any preparation.
