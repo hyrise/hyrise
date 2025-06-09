@@ -42,7 +42,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 
   // Create table statistics and chunk pruning statistics for added table.
   if (!table->table_statistics()) {
-    std::cerr << "did\n";
     table->set_table_statistics(TableStatistics::from_table(*table));
   }
   generate_chunk_pruning_statistics(table);
