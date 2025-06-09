@@ -8,7 +8,7 @@ This repository will soon contain the code used for our VLDB 2025 paper.
 
 ## Cite our work
 
-If you use the microbenchmarks or reference our findings, please cite us.
+If you use the code or reference our findings, please cite us.
  
 ```bibtex
 @inproceedings{Weisgut2025CxlPerformance,
