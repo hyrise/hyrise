@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -14,7 +15,6 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -81,6 +81,8 @@ std::string DependentGroupByReductionRule::name() const {
 
 IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  auto cacheable = IsCacheable::Yes;
+
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
@@ -104,21 +106,25 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     // Example: SELECT DISTINCT n_nationkey FROM nation is reflected as [ Aggregate GROUP BY n_nationkey ]. The
     // AggregateNode does not have more node expressions than the single GROUP BY column and the input (StoredTableNode
     // in this case) has a UCC for { n_nationkey }.
-    if (group_by_columns.size() == node->node_expressions.size() &&
-        node->left_input()->has_matching_ucc(group_by_columns)) {
-      const auto& output_expressions = aggregate_node.output_expressions();
-      // Remove the AggregateNode if it does not limit or reorder the output expressions.
-      if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
-        lqp_remove_node(node);
+    if (group_by_columns.size() == node->node_expressions.size()) {
+      auto opt_matching_ucc_cacheable = node->left_input()->find_ucc_cacheability(group_by_columns);
+      if (opt_matching_ucc_cacheable) {
+        cacheable = cacheable && *opt_matching_ucc_cacheable;
+
+        const auto& output_expressions = aggregate_node.output_expressions();
+        // Remove the AggregateNode if it does not limit or reorder the output expressions.
+        if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
+          lqp_remove_node(node);
+          return LQPVisitation::VisitInputs;
+        }
+
+        // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
+        // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ]
+        // to [ Projection n_name, n_regionkey ].
+        const auto projection_node = ProjectionNode::make(output_expressions);
+        lqp_replace_node(node, projection_node);
         return LQPVisitation::VisitInputs;
       }
-
-      // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
-      // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ] to
-      // [ Projection n_name, n_regionkey ].
-      const auto projection_node = ProjectionNode::make(output_expressions);
-      lqp_replace_node(node, projection_node);
-      return LQPVisitation::VisitInputs;
     }
 
     // Early exit (ii): If there are no functional dependencies, we can skip this rule.
@@ -159,6 +165,11 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       // library implementation details). Thus, we compare the ColumnIDs of the determinants.
       const auto& left_column_ids = get_column_ids(fd_left.determinants);
       const auto& right_column_ids = get_column_ids(fd_right.determinants);
+
+      if (fd_left.is_schema_given() != fd_right.is_schema_given()) {
+        return fd_left.is_schema_given();
+      }
+
       return left_column_ids < right_column_ids;
     });
 
@@ -174,6 +185,10 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
       const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
+        // Functional dependencies are derived from UCCs. In case we encounter a non-schema-given FD, this means we
+        // encountered an underlying non-schema-given UCC as well.
+        cacheable = cacheable && (fd.is_schema_given() ? IsCacheable::Yes : IsCacheable::No);
+
         // Refresh data structures correspondingly.
         group_by_list_changed = true;
         group_by_columns = fetch_group_by_columns();
@@ -194,7 +209,8 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
-  return IsCacheable::Yes;
+
+  return cacheable;
 }
 
 }  // namespace hyrise
