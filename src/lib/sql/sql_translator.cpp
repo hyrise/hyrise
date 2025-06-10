@@ -326,7 +326,7 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
     parameter_ids[value_placeholder_id] = parameter_id;
   }
 
-  return {.lqp_nodes = result_nodes, .translation_info = {_cacheable, parameter_ids}};
+  return {.lqp_nodes = result_nodes, .translation_info = {.cacheable = _cacheable, .parameter_ids_of_value_placeholders = parameter_ids}};
 }
 
 SQLTranslator::SQLTranslator(
@@ -880,7 +880,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
     for (auto column_id = ColumnID{0}; column_id < table_ref_alias_column_count; ++column_id) {
       const auto& expression = output_expressions[column_id];
 
-      if (renamed_expressions.find(expression) == renamed_expressions.end()) {
+      if (!renamed_expressions.contains(expression)) {
         // The original column names should not be accessible anymore because the table schema is renamed.
         sql_identifier_resolver->reset_column_names(expression);
         renamed_expressions.insert(expression);
@@ -1027,7 +1027,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
   } else {
     const auto join_predicate_iter =
-        std::find_if(join_predicates.begin(), join_predicates.end(), [&](const auto& join_predicate) {
+        std::ranges::find_if(join_predicates, [&](const auto& join_predicate) {
           return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
         });
 
@@ -1104,8 +1104,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
       const auto& right_identifier = right_element.identifiers.back();
 
       // Do not add a column named in the join a second time. It is already in `left_state`.
-      if (std::find(join.namedColumns->begin(), join.namedColumns->end(), right_identifier.column_name) !=
-          join.namedColumns->end()) {
+      if (std::ranges::find(*join.namedColumns, right_identifier.column_name) != join.namedColumns->end()) {
         continue;
       }
 
@@ -1327,8 +1326,8 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     // If needed, add a ProjectionNode to evaluate all expressions required for GROUP BY/aggregates.
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
-      const auto any_expression_not_yet_available = std::any_of(
-          pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(), [&](const auto& expression) {
+      const auto any_expression_not_yet_available = std::ranges::any_of(
+          pre_aggregate_expressions, [&](const auto& expression) {
             return !find_expression_idx(*expression, output_expressions).has_value();
           });
 
@@ -1407,7 +1406,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
           if (hsql_expr->table) {
             // Dealing with SELECT t.* here
             auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression);
-            if (std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
+            if (std::ranges::any_of(identifiers, [&](const auto& identifier) {
                   return identifier.table_name != hsql_expr->table;
                 })) {
               // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
@@ -1416,7 +1415,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
             }
           }
 
-          AssertInput(std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
+          AssertInput(std::ranges::find_if(group_by_expressions,
                                    [&](const auto& group_by_expression) {
                                      return *pre_aggregate_expression == *group_by_expression;
                                    }) != group_by_expressions.end(),
@@ -1978,7 +1977,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprParameter: {
-      Assert(expr.ival >= 0 && expr.ival <= std::numeric_limits<ValuePlaceholderID::base_type>::max(),
+      Assert(expr.ival >= 0 && static_cast<ValuePlaceholderID::base_type>(expr.ival) <= std::numeric_limits<ValuePlaceholderID::base_type>::max(),
              "ValuePlaceholderID out of range.");
       auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
       return placeholder_(_parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
@@ -2171,7 +2170,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
 
         AssertInput(std::ranges::none_of(table_expressions,
-                                         [&aggregate_expression](const auto input_expression) {
+                                         [&aggregate_expression](const auto& input_expression) {
                                            return *input_expression == *aggregate_expression;
                                          }),
                     "Hyrise cannot handle repeated aggregate expressions, see #1902 for details.");

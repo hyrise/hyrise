@@ -10,7 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
 #include "benchmark_config.hpp"
@@ -32,13 +31,12 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
          "Expected results path (" + expected_results_directory_path.string() + ") has to be a directory.");
 
   const auto is_tbl_file = [](const std::string& filename) {
-    return boost::algorithm::ends_with(filename, ".tbl");
+    return filename.ends_with(".tbl");
   };
 
   _dedicated_expected_results.resize(items().size());
 
-  std::cout << "- Loading expected result tables"
-            << "\n";
+  std::cout << "- Loading expected result tables\n";
 
   for (const auto& entry : list_directory(expected_results_directory_path)) {
     if (is_tbl_file(entry)) {

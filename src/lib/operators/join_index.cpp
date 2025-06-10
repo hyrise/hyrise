@@ -355,9 +355,10 @@ void JoinIndex::_reference_join_two_segments_using_index(
     }
 
     auto mutable_ref_seg_pos_list = RowIDPosList(reference_segment_pos_list->size());
+    // NOLINTNEXTLINE(modernize-use-ranges): PosList iterators do not filful requirements of ranges.
     std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(), mutable_ref_seg_pos_list.begin());
-    std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
-    std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
+    std::ranges::sort(mutable_ref_seg_pos_list);
+    std::ranges::sort(index_scan_pos_list);
 
     auto index_table_matches = RowIDPosList{};
     std::set_intersection(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end(), index_scan_pos_list.begin(),

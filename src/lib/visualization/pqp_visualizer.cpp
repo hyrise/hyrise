@@ -59,13 +59,13 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
                         return lhs.second > rhs.second;
                       });
 
-    // Print first column (operator name)
-    for (const auto& [operator_name, _] : sorted_duration_by_operator_name) {
+    // Print first column (operator name).
+    for (const auto& [operator_name, duration] : sorted_duration_by_operator_name) {
       operator_breakdown_stream << " " << operator_name << " \\r";
     }
     operator_breakdown_stream << "total\\r";
 
-    // Print second column (operator duration) and track total duration
+    // Print second column (operator duration) and track total duration.
     operator_breakdown_stream << "|";
     auto total_nanoseconds = std::chrono::nanoseconds{};
     for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {

@@ -13,12 +13,9 @@ namespace hyrise {
 TaskQueue::TaskQueue(NodeID node_id) : _node_id{node_id} {}
 
 bool TaskQueue::empty() const {
-  for (const auto& queue : _queues) {
-    if (!queue.empty()) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(_queues, [](const auto& queue) {
+    return queue.empty();
+  });
 }
 
 NodeID TaskQueue::node_id() const {

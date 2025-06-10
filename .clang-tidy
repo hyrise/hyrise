@@ -135,9 +135,9 @@ CheckOptions:
   - { key: readability-identifier-naming.VariableCase, value: lower_case }
 
   # Iff(!) the context is clear, very short parameter/variable names are acceptable. Current exceptions are 'it' for
-  # iterator, 'op' for operator, 'od' for order dependency, or 'fd' for functional dependency.
+  # iterator, '_' for unused variables, 'op' for operator, 'od' for order dependency, or 'fd' for functional dependency.
   - { key: readability-identifier-length.IgnoredParameterNames, value: '^(it|op|od|fd)$' }
-  - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|op|od|fd)$' }
+  - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|op|od|fd|_)$' }
 
   # Boost, nlohmann::json, and SQLParser use umbrella headers which clang-tidy's include cleaner does not (yet) handle
   # well. For now, we ignore all include cleaner issues for these three libraries.
