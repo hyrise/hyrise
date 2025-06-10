@@ -5,7 +5,7 @@
 # While it would be desirable to use Python's virtual environments, they are not straightforward to use in Jenkins'
 # scripted pipelines. With Python >= 3.11, we need to use --break-system-packages.
 
-FROM ubuntu:24.04
+FROM ubuntu:25.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y \
@@ -36,6 +36,7 @@ RUN apt-get update \
         libsqlite3-dev \
         libtbb-dev \
         lld-20 \
+        llvm-20 \
         lsb-release \
         man \
         ninja-build \
