@@ -84,8 +84,9 @@ if (ENABLE_CLANG_TIDY)
     endif()
 
     # Get the full clang-tidy path (helps with MacOS builds).
-    #set(CMAKE_CXX_CLANG_TIDY "clang-tidy-20" -line-filter=[{"name":"dynamic_bitset.hpp","lines":[[9999999,9999999]]}])
-    set(CMAKE_CXX_CLANG_TIDY "clang-tidy-20")
+    # set(CMAKE_CXX_CLANG_TIDY "clang-tidy-20" -line-filter=[{"name":"dynamic_bitset.hpp","lines":[[9999999,9999999]]}])
+    # set(CMAKE_CXX_CLANG_TIDY "clang-tidy-20")
+    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy")
     message(STATUS "clang-tidy enabled")
 endif()
 
