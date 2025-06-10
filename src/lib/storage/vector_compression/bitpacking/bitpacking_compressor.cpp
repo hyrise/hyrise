@@ -48,7 +48,8 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
   using InternalType = std::remove_reference_t<decltype(*data.get())>;
   std::fill_n(data.get(), data.bytes() / sizeof(InternalType), InternalType{0});
 
-  std::copy(vector.cbegin(), vector.cend(), data.begin());
+
+  std::copy(vector.cbegin(), vector.cend(), data.begin());  // NOLINT(modernize-use-ranges): iterator is not complaint.
 
   return std::make_unique<BitPackingVector>(std::move(data));
 }

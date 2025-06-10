@@ -47,7 +47,7 @@ void Pagination::display() {
   _print_page(current_line, current_column);
 
   auto key_pressed = int{};
-  while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {
+  while ((key_pressed = getch()) != 'q' && key_pressed != static_cast<int>(CURSES_CTRL_C)) {
     switch (key_pressed) {
       case 'j':
       case KEY_DOWN: {
@@ -208,7 +208,7 @@ void Pagination::_print_help_screen() {
   wrefresh(help_screen);
 
   auto key_pressed = int{};
-  while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {}
+  while ((key_pressed = getch()) != 'q' && key_pressed != static_cast<int>(CURSES_CTRL_C)) {}
 
   delwin(help_screen);
 }

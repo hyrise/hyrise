@@ -31,7 +31,7 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
 
 namespace hyrise {
 
-// NOLINTBEGIN(lkfjdsl;kfjdsfkldsajfkj)
+// NOLINTBEGIN(misc-use-internal-linkage): tidy does not recognize that nlohmann json requires both methods.
 void to_json(nlohmann::json& json_string, NullHandling null_handling) {
   switch (null_handling) {
     case NullHandling::RejectNullStrings:
@@ -59,8 +59,7 @@ void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
     Fail("Illegal value for null_handling: " + json_string.get<std::string>());
   }
 }
-
-// NOLINTEND(lkfjdsl;kfjdsfkldsajfkj)
+// NOLINTEND(misc-use-internal-linkage)
 
 CsvMeta process_csv_meta_file(const std::string& filename) {
   auto metafile = std::ifstream{filename};

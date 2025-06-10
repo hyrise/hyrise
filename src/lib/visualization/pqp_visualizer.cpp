@@ -96,7 +96,7 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op,
                                    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
-  if (visualized_ops.find(op) != visualized_ops.end()) {
+  if (visualized_ops.contains(op)) {
     return;
   }
   visualized_ops.insert(op);

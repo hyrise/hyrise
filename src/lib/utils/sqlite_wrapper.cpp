@@ -32,7 +32,7 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
   auto no_result = true;
   auto return_code = int32_t{0};
   while ((return_code = sqlite3_step(sqlite_statement)) == SQLITE_ROW) {
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < static_cast<ColumnID::base_type>(column_count); ++column_id) {
       if (no_result) {
         column_names[column_id] = sqlite3_column_name(sqlite_statement, column_id);
       }
@@ -77,7 +77,7 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
 
   if (!no_result) {
     auto column_definitions = TableColumnDefinitions{};
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < static_cast<ColumnID::base_type>(column_count); ++column_id) {
       if (column_types[column_id].empty()) {
         // Hyrise does not have explicit NULL columns
         column_types[column_id] = "int";
@@ -100,7 +100,7 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
                                     int column_count) {
   auto row = std::vector<AllTypeVariant>{};
 
-  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < static_cast<ColumnID::base_type>(column_count); ++column_id) {
     switch (sqlite3_column_type(sqlite_statement, column_id)) {
       case SQLITE_INTEGER: {
         row.emplace_back(sqlite3_column_int(sqlite_statement, column_id));
