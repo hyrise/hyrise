@@ -13,7 +13,7 @@
 namespace hyrise {
 
 UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_schema_given)
-    : expressions(std::move(init_expressions)), _is_schema_given(is_schema_given) {
+    : expressions{std::move(init_expressions)}, _is_schema_given{is_schema_given} {
   Assert(!expressions.empty(), "UniqueColumnCombination cannot be empty.");
 }
 

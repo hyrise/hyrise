@@ -67,7 +67,7 @@ void gather_rewrite_info(
   // predicate that filters on a UCC, a maximum of one tuple remains in the result relation. Since at this point, we al-
   // ready know the candidate join is basically a semi join, we can further transform the join to a single predicate
   // node filtering the join column for the value of the remaining tuple's join attribute.
-  visit_lqp(removable_subtree, [&](const auto& current_node) {
+  visit_lqp(removable_subtree, [&removable_subtree, &rewrite_predicate, &cacheable](auto& current_node) {
     if (current_node->type == LQPNodeType::Union) {
       return LQPVisitation::DoNotVisitInputs;
     }
@@ -106,7 +106,7 @@ void gather_rewrite_info(
     }
 
     // Check whether the referenced column is available for the subtree root node and unique. Checking whether the
-    // column is unique on the current node is not sufficient. There could be unions or joins between the subtree
+    // column is unique on the current node is not sufficient. There could be unions or joins in between the subtree
     // root and the current node, invalidating the unique column combination.
     if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
       return LQPVisitation::VisitInputs;

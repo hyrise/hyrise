@@ -427,7 +427,7 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
 }
 
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsValidityNotGuaranteed) {
-  // Check that only the key constraints are used as UCCs for optimization purposes if they are certainly still valid,
+  // Check that only the key constraints are used as UCCs for optimization purposes that are certainly still valid.
 
   // Prepare UCCs.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};

@@ -227,7 +227,7 @@ TEST_F(DependentGroupByReductionRuleTest, SchemaGivenFDNotCacheable) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-// Test that when FDs with the same amount of determinants are present, the a cacheable one is chosen.
+// Test that when FDs with the same amount of determinants are present, the cacheable one is chosen.
 TEST_F(DependentGroupByReductionRuleTest, EqualDeterminantLengthCacheable) {
   // clang-format off
   _lqp =
