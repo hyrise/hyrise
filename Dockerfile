@@ -12,18 +12,18 @@ RUN apt-get update \
         autoconf \
         bash-completion \
         bc \
-        clang-16 \
-        clang-19 \
-        clang-format-19 \
-        clang-tidy-19 \
-        clang-tools-19 \
+        clang-17 \
+        clang-20 \
+        clang-format-20 \
+        clang-tidy-20 \
+        clang-tools-20 \
         cmake \
         curl \
         dos2unix \
         g++-13 \
         gcc-13 \
-        g++-14 \
-        gcc-14 \
+        g++-15 \
+        gcc-15 \
         git \
         graphviz \
         libboost-all-dev \
@@ -35,7 +35,7 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        lld-19 \
+        lld-20 \
         lsb-release \
         man \
         ninja-build \

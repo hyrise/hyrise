@@ -51,7 +51,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             if sudo apt-get update >/dev/null; then
 
                 # Packages added here should also be added to the Dockerfile
-                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-16 llvm-19 clang-19 clang-format-19 clang-tidy-19 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-19 man parallel postgresql-server-dev-all valgrind; then
+                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-16 llvm-20 clang-20 clang-format-20 clang-tidy-20 cmake curl dos2unix g++-15 gcc-15 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-20 man parallel postgresql-server-dev-all valgrind; then
                     echo "Error during apt-get installations."
                     exit 1
                 fi
@@ -66,8 +66,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 90 --slave /usr/bin/g++ g++ /usr/bin/g++-14
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-19 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-19 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-19 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-19 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-19  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-19
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 90 --slave /usr/bin/g++ g++ /usr/bin/g++-15
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-20 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-20 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-20 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-20 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-20  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-20
             else
                 echo "Error during installation."
                 exit 1
