@@ -103,7 +103,7 @@ try {
             // them. If you want to upgrade compiler versions, please update install_dependencies.sh, DEPENDENCIES.md,
             // and the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-            clang17 = '-DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-18'
+            clang17 = '-DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17'
             gcc = '-DCMAKE_C_COMPILER=gcc-15 -DCMAKE_CXX_COMPILER=g++-15'
             gcc13 = '-DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13'
 
