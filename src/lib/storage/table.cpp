@@ -186,10 +186,9 @@ std::vector<bool> Table::columns_are_nullable() const {
 }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
-  const auto iter =
-      std::ranges::find_if(_column_definitions, [&](const auto& column_definition) {
-        return column_definition.name == column_name;
-      });
+  const auto iter = std::ranges::find_if(_column_definitions, [&](const auto& column_definition) {
+    return column_definition.name == column_name;
+  });
   Assert(iter != _column_definitions.end(), "Could not find column '" + column_name + "'.");
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
@@ -646,7 +645,7 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
 
   _table_indexes.emplace_back(table_index);
 
-  _table_indexes_statistics.emplace_back(TableIndexStatistics{.column_ids={column_id}, .chunk_ids=chunks_to_index});
+  _table_indexes_statistics.emplace_back(TableIndexStatistics{.column_ids = {column_id}, .chunk_ids = chunks_to_index});
 }
 
 template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,
