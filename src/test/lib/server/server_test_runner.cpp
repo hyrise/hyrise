@@ -4,8 +4,8 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcpp"  // libpqxx <8.0 includes deprecated 'ciso646' header.
-#include <pqxx/connection>      // NOLINT(build/include_order): cpplint considers pqxx as C system headers.
-#include <pqxx/nontransaction>  // NOLINT(build/include_order)
+#include <pqxx/connection>              // NOLINT(build/include_order): cpplint considers pqxx as C system headers.
+#include <pqxx/nontransaction>          // NOLINT(build/include_order)
 #pragma GCC diagnostic pop
 
 #include "base_test.hpp"

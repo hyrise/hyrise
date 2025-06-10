@@ -326,7 +326,8 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
     parameter_ids[value_placeholder_id] = parameter_id;
   }
 
-  return {.lqp_nodes = result_nodes, .translation_info = {.cacheable = _cacheable, .parameter_ids_of_value_placeholders = parameter_ids}};
+  return {.lqp_nodes = result_nodes,
+          .translation_info = {.cacheable = _cacheable, .parameter_ids_of_value_placeholders = parameter_ids}};
 }
 
 SQLTranslator::SQLTranslator(
@@ -1026,10 +1027,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   if (join_mode != JoinMode::Inner && join_predicates.size() > 1) {
     lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
   } else {
-    const auto join_predicate_iter =
-        std::ranges::find_if(join_predicates, [&](const auto& join_predicate) {
-          return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
-        });
+    const auto join_predicate_iter = std::ranges::find_if(join_predicates, [&](const auto& join_predicate) {
+      return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
+    });
 
     // Inner Joins with predicates like `5 + t0.a = 6+ t1.b` can be supported via Cross join + Scan. For all other join
     // modes such predicates are not supported.
@@ -1326,8 +1326,8 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     // If needed, add a ProjectionNode to evaluate all expressions required for GROUP BY/aggregates.
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
-      const auto any_expression_not_yet_available = std::ranges::any_of(
-          pre_aggregate_expressions, [&](const auto& expression) {
+      const auto any_expression_not_yet_available =
+          std::ranges::any_of(pre_aggregate_expressions, [&](const auto& expression) {
             return !find_expression_idx(*expression, output_expressions).has_value();
           });
 
@@ -1416,9 +1416,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
           }
 
           AssertInput(std::ranges::find_if(group_by_expressions,
-                                   [&](const auto& group_by_expression) {
-                                     return *pre_aggregate_expression == *group_by_expression;
-                                   }) != group_by_expressions.end(),
+                                           [&](const auto& group_by_expression) {
+                                             return *pre_aggregate_expression == *group_by_expression;
+                                           }) != group_by_expressions.end(),
                       std::string("Expression ") + pre_aggregate_expression->as_column_name() +
                           " was added to SELECT list when resolving *, but it is not part of the GROUP BY clause.");
         }
@@ -1977,7 +1977,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprParameter: {
-      Assert(expr.ival >= 0 && static_cast<ValuePlaceholderID::base_type>(expr.ival) <= std::numeric_limits<ValuePlaceholderID::base_type>::max(),
+      Assert(expr.ival >= 0 && static_cast<ValuePlaceholderID::base_type>(expr.ival) <=
+                                   std::numeric_limits<ValuePlaceholderID::base_type>::max(),
              "ValuePlaceholderID out of range.");
       auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
       return placeholder_(_parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));

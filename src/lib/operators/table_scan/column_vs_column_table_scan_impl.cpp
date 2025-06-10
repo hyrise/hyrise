@@ -75,8 +75,7 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
 
           left_iterable.with_iterators([&](auto left_it, [[maybe_unused]] const auto left_end) {
             right_iterable.with_iterators([&](auto right_it, [[maybe_unused]] const auto& right_end) {
-              if constexpr (std::is_same_v<std::decay_t<decltype(left_it)>,
-                                           std::decay_t<decltype(right_it)>>) {
+              if constexpr (std::is_same_v<std::decay_t<decltype(left_it)>, std::decay_t<decltype(right_it)>>) {
                 // Either both reference segments use the MultipleChunkIterator (which uses erased accessors anyway)
                 // or they are resolved to the underlying segment iterators (e.g., Dictionary and Dictionary)
                 result = _typed_scan_chunk_with_iterators<EraseTypes::OnlyInDebugBuild>(chunk_id, left_it, left_end,

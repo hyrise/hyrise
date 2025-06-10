@@ -142,8 +142,7 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
       if (description) {
         std::cout << *description << "\n";
       }
-      std::cout << "- Verification failed (" << timer.lap_formatted() << ")\n"
-                << *table_difference_message << "\n";
+      std::cout << "- Verification failed (" << timer.lap_formatted() << ")\n" << *table_difference_message << "\n";
     }
   } else {
     if (expected_result_table && expected_result_table->row_count() > 0) {
