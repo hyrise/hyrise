@@ -217,7 +217,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
         if (can_prune(*segment_statistics, condition, *value, value2)) {
           const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
           DebugAssert(std::ranges::is_sorted(already_pruned_chunk_ids), "Expected pruned ChunkIDs to be sorted.");
-          if (std::ranges::binary_search(already_pruned_chunk_ids, chunk_id)) {
+          if (!std::ranges::binary_search(already_pruned_chunk_ids, chunk_id)) {
             // Chunk was not yet marked as pruned - update statistics.
             num_rows_pruned += chunk->size();
           } else {
