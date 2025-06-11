@@ -472,7 +472,7 @@ try {
             // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it. Passing clang
             // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
             // that are not found otherwise.
-            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${no_lto} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
             sh "cd clang-apple-release && ninja"
             sh "./clang-apple-release/hyriseTest"
 
