@@ -58,8 +58,8 @@ then
   exit 1
 fi
 
-# Ensure that this runs on a release build. Not really necessary, just a sanity check.
-output=$(grep 'CMAKE_BUILD_TYPE:STRING=Release' CMakeCache.txt || true)
+# Ensure that this runs on a release or release with debug build. Not really necessary, just a sanity check.
+output=$(grep 'CMAKE_BUILD_TYPE:STRING=Rel' CMakeCache.txt || true)
 if [ -z "$output" ]
 then
   echo 'Current folder is not configured as a release build.'
