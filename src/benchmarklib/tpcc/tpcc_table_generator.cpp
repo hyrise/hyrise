@@ -338,7 +338,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
                        });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_CREDIT", cardinalities,
                           [&](const std::vector<size_t>& indices) {
-                            const auto is_original = original_ids.find(indices[2]) != original_ids.end();
+                            const auto is_original = original_ids.contains(indices[2]);
                             return pmr_string{is_original ? "BC" : "GC"};
                           });
   _add_column<float>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,

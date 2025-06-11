@@ -12,7 +12,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
 #include "SQLParser.h"
@@ -35,7 +34,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::optional<std::unordered_set<std::string>>& query_subset)
     : AbstractBenchmarkItemRunner(config) {
   const auto is_sql_file = [](const std::string& filename) {
-    return boost::algorithm::ends_with(filename, ".sql");
+    return filename.ends_with(".sql");
   };
 
   const auto path = std::filesystem::path{query_path};
@@ -45,7 +44,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not a .sql file.");
     _parse_query_file(query_path, query_subset);
   } else {
-    // Recursively walk through the specified directory and add all files on the way
+    // Recursively walk through the specified directory and add all files on the way.
     for (const auto& entry : list_directory(path)) {
       if (is_sql_file(entry)) {
         if (filename_blacklist.find(entry.filename()) != filename_blacklist.end()) {

@@ -54,17 +54,15 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
 }
 
 bool AbstractBenchmarkItemRunner::has_item_without_dedicated_result() {
-  // `_dedicated_expected_results` is either empty if `load_dedicated_expected_results` was not called
-  // or a sparse vector with the same size as `items()`.
+  // `_dedicated_expected_results` is either empty if `load_dedicated_expected_results` was not called  or a sparse
+  // vector with the same size as `items()`.
   if (!items().empty() && _dedicated_expected_results.empty()) {
     return true;
   }
-  for (const auto& dedicated_result : _dedicated_expected_results) {
-    if (!dedicated_result) {
-      return true;
-    }
-  }
-  return false;
+
+  return std::ranges::any_of(_dedicated_expected_results, [](const auto& dedicated_result) {
+    return !dedicated_result;
+  });
 }
 
 void AbstractBenchmarkItemRunner::on_tables_loaded() {}

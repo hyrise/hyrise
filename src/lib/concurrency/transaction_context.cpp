@@ -138,12 +138,9 @@ void TransactionContext::_mark_as_conflicted() {
 
 void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
   DebugAssert(([this]() {
-                for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::RolledBack) {
-                    return false;
-                  }
-                }
-                return true;
+                return std::ranges::all_of(_read_write_operators, [](const auto& op) {
+                  return op->state() == ReadWriteOperatorState::RolledBack;
+                });
               }()),
               "All read/write operators need to have been rolled back.");
 
