@@ -64,6 +64,7 @@ def plot_reduction(ax, use_log=False):
     
     # Add y=x reference line without legend label
     max_val = max(df['input_count'].max(), df['output_count'].max())
+    max_out = df['output_count'].max() * 1.15
     if use_log:
         # For log scale, start from a small positive value
         min_val = min(df['input_count'].min(), df['output_count'].min()) * 0.5
@@ -74,6 +75,7 @@ def plot_reduction(ax, use_log=False):
     # Set labels
     ax.set_xlabel('Input Count [Millions]')
     ax.set_ylabel('Output Count [Millions]')
+    ax.set_ylim((0, max_out))
     
     # Set scale
     if use_log:
