@@ -271,7 +271,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   boost::sort::pdqsort(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
   const auto unique_end_iter = std::ranges::unique(_column_cluster_offsets);
-  _column_cluster_offsets.resize(std::distance(_column_cluster_offsets.begin(), unique_end_iter.end()));
+  _column_cluster_offsets.resize(std::distance(_column_cluster_offsets.begin(), unique_end_iter.begin()));
 
   /**
    * Identify the tables referenced in each ColumnCluster (verification that this is the same for all chunks happens

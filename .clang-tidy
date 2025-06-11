@@ -36,17 +36,16 @@ Checks: '
          -abseil-*,
          -readability-avoid-const-params-in-decls,
          -readability-function-cognitive-complexity,
-
+         -readability-use-anyofallof,
+         -readability-static-accessed-through-instance,
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
          -bugprone-suspicious-include,
          -bugprone-unchecked-optional-access,
          -llvm-header-guard,
          -boost-use-ranges,
-         -readability-static-accessed-through-instance,
          -portability-template-virtual-member-function
          '
-#          -readability-use-anyofallof,
 
 WarningsAsErrors: '*'
 
@@ -87,6 +86,7 @@ WarningsAsErrors: '*'
 #   - readability-function-cognitive-complexity                 When appropriate, long functions with a sequential data flow (which is sometimes easier to read) are fine. In many
 #                                                                places, the rule catches functions where the code could be improved, but will likely not be due to a lack of time.
 #   - readability-use-anyofallof                                We prefer `for (const auto& item : items)` over `std::ranges::all_of()` with a lambda.
+#   - readability-static-accessed-through-instance              We prefer to access the main Hyrise singleton via `Hyrise::get()`.
 #   - misc-no-recursion                                         Ignore general recommendation to avoid recursion, which we commonly use when working with query plans.
 #   - bugprone-easily-swappable-parameters                      Ignore issues with swappable parameters as we found them to be of no help.
 #   - bugprone-suspicious-include                               Unity builds use `#include`s for cpp files. However, unity builds significantly improve the runtime of clang-tidy,
@@ -96,7 +96,6 @@ WarningsAsErrors: '*'
 #   - llvm-header-guard                                         We prefer the simpler `#pragma once`. The main arguments (e.g., lacking support in old compilers)
 #                                                               do not matter with our limited set of supported compilers.
 #   - boost-use-ranges                                          As most boost-ranges implementations are now in C++20, we prefer `std::ranges`.
-#   - readability-static-accessed-through-instance              We prefer to access the main Hyrise singleton via `Hyrise::get()`.
 #   - portability-template-virtual-member-function              We do not mind being incompatible with the MSVC compiler.
 
 
