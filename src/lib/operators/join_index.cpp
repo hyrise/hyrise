@@ -361,7 +361,8 @@ void JoinIndex::_reference_join_two_segments_using_index(
     std::ranges::sort(index_scan_pos_list);
 
     auto index_table_matches = RowIDPosList{};
-    std::ranges::set_intersection(mutable_ref_seg_pos_list, index_scan_pos_list, std::back_inserter(index_table_matches));
+    std::ranges::set_intersection(mutable_ref_seg_pos_list, index_scan_pos_list,
+                                  std::back_inserter(index_table_matches));
     _append_matches_dereferenced(probe_chunk_id, probe_side_position.chunk_offset(), index_table_matches);
   }
 }
