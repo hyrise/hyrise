@@ -47,7 +47,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     // Recursively walk through the specified directory and add all files on the way.
     for (const auto& entry : list_directory(path)) {
       if (is_sql_file(entry)) {
-        if (filename_blacklist.find(entry.filename()) != filename_blacklist.end()) {
+        if (filename_blacklist.contains(entry.filename())) {
           continue;
         }
         _parse_query_file(entry, query_subset);
