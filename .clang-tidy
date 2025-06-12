@@ -44,8 +44,11 @@ Checks: '
          -bugprone-unchecked-optional-access,
          -llvm-header-guard,
          -boost-use-ranges,
-         -portability-template-virtual-member-function
+         -portability-template-virtual-member-function,
+         -modernize-use-constraints
          '
+
+         # modernize-use-constraints: crashes with LLVM 20
 
 WarningsAsErrors: '*'
 
