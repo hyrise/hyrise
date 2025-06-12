@@ -21,10 +21,12 @@
 
 namespace hyrise {
 
+// NOLINTBEGIN(clang-analyzer-core.BitwiseShift)
+
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges)
     : _num_vertices{num_vertices}, _edges{edges} {
   // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons.
-  Assert(num_vertices < sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
+  Assert(_num_vertices < sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
          "Too many vertices, EnumerateCcp relies on to_ulong().");
   Assert(num_vertices > 1, "Nothing to order if there are not multiple vertices.");
 
@@ -217,7 +219,7 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
   }
 
   auto subsets = std::vector<JoinGraphVertexSet>{};
-  const auto set_ulong = vertex_set.to_ulong();  // NOLINT(clang-analyzer-core.BitwiseShift)
+  const auto set_ulong = vertex_set.to_ulong();
 
   // `subset_ulong` is the current subset subset [sic]. `set_ulong & -set_ulong` initializes it to the least significant
   // bit in `set_ulong`. E.g., if set_ulong is 011000, this initializes subset_ulong to 001000.
@@ -234,5 +236,7 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
 
   return subsets;
 }
+
+// NOLINTEND(clang-analyzer-core.BitwiseShift)
 
 }  // namespace hyrise
