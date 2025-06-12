@@ -51,6 +51,8 @@ class TableKeyConstraint final : public AbstractTableConstraint {
 
   /**
    * Returns whether or not the last validation and invalidation `CommitID`s tell us that this constraints is valid.
+   * Be aware that this does not mean that the constraint is valid in the current transaction, only that it was 
+   * validated last. To check if a constraint is guaranteed to be valid use `key_constraint_is_confidently_valid`.
    */
   bool is_valid() const;
   void revalidated_on(const CommitID revalidation_commit_id) const;

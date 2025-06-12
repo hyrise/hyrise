@@ -7,6 +7,7 @@
 #include "base_test.hpp"
 #include "memory/zero_allocator.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
