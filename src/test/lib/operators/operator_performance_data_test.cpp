@@ -13,6 +13,7 @@
 #include "operators/join_index.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
 namespace hyrise {
@@ -55,7 +56,7 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
 // Check for correct counting of skipped chunks/segment (this is different to chunk pruning, which happens within the
 // optimizer) due to early exists via the dictionary and counting of chunks/segments that are sorted and have thus been
 // scanned with a sorted search (i.e., binary search).
-TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
+TEST_F(OperatorPerformanceDataTest, TableScanPerformanceDataOnDictionary) {
   const TableColumnDefinitions column_definitions{{"a", DataType::Int, false}};
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
   table->append({1});
@@ -68,7 +69,7 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->append({3});
 
   table->last_chunk()->set_immutable();
-  ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->never_clear_output();
   table_wrapper->execute();
@@ -256,7 +257,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
   }
 
   // Add group-key index (required dictionary encoding) to table
-  ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
   table->create_chunk_index<GroupKeyIndex>({ColumnID{0}});
 
   {
