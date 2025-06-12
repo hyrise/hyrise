@@ -217,6 +217,10 @@ std::set<ChunkID> compute_chunk_exclude_list(
         if (can_prune(*segment_statistics, condition, *value, value2)) {
           const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
           DebugAssert(std::ranges::is_sorted(already_pruned_chunk_ids), "Expected pruned ChunkIDs to be sorted.");
+
+          // TODO(anyone-update): binary_search's include (<algorithm>) should be fixed with newer clang tidy versions (see
+          //     https://github.com/llvm/llvm-project/pull/113796)
+          // NOLINTNEXTLINE(misc-include-cleaner)
           if (!std::ranges::binary_search(already_pruned_chunk_ids, chunk_id)) {
             // Chunk was not yet marked as pruned - update statistics.
             num_rows_pruned += chunk->size();

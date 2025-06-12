@@ -309,6 +309,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto all_indexed_segments_pruned = [&](const auto& table_index) {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
+    // TODO(anyone-update): binary_search's include (<algorithm>) should be fixed with newer clang tidy versions (see
+    //     https://github.com/llvm/llvm-project/pull/113796)
+    // NOLINTNEXTLINE(misc-include-cleaner)
     if (std::ranges::binary_search(_pruned_column_ids, indexed_column_id)) {
       return true;
     }
@@ -322,6 +325,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
     // Check if the indexed chunks have been pruned.
     return std::ranges::all_of(indexed_chunk_ids, [&](const auto chunk_id) {
+      // TODO(anyone-update): binary_search's include (<algorithm>) should be fixed with newer clang tidy versions (see
+      //     https://github.com/llvm/llvm-project/pull/113796)
+      // NOLINTNEXTLINE(misc-include-cleaner)
       return std::ranges::binary_search(_pruned_chunk_ids, chunk_id);
     });
   };

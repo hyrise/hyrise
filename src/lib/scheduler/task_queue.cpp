@@ -1,5 +1,6 @@
 #include "task_queue.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>

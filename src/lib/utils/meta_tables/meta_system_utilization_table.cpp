@@ -1,5 +1,8 @@
 #include "meta_system_utilization_table.hpp"
 
+// NOLINTBEGIN(misc-include-cleaner): disable for entire file as we need many headers (e.g., macOS's `mach.h` is an
+//     umbrella header) and differentiating between macOS and Linux is too cumbersome for this file.
+
 #include <stdlib.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For _SC_CLK_TCK and others.
 #include <time.h>    // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
 
@@ -26,7 +29,6 @@
 #include <memory>
 #include <optional>
 #include <ratio>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -274,7 +276,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get task_info.");
 
-  return {info.virtual_size, info.resident_size};
+  return {.virtual_memory = info.virtual_size, .physical_memory = info.resident_size};
 #endif
 
   Fail("Method not implemented for this platform.");
@@ -358,5 +360,7 @@ std::vector<int64_t> MetaSystemUtilizationTable::_parse_value_string(std::string
   return output_values;
 }
 #endif
+
+// NOLINTEND(misc-include-cleaner)
 
 }  // namespace hyrise

@@ -752,13 +752,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
 
           case PredicateCondition::IsNull:
           case PredicateCondition::IsNotNull:
-            Fail("IS NULL is an invalid join predicate");
+            Fail("IS NULL is an invalid join predicate.");
         }
         Fail("Invalid enum value.");
 
       case JoinMode::Cross:
         // Should have been forwarded to estimate_cross_join()
-        Fail("Cross join is not a predicated join");
+        Fail("Cross join is not a predicated join.");
 
       case JoinMode::Semi:
         return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
@@ -1072,9 +1072,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
 
   // We expect both columns to be of the same type. This allows us to resolve the type only once, reducing the
   // compile time. For differing column types and/or string columns (which we cannot handle right now), we assume that
-  // all tuples qualify. This is probably a gross overestimation, but we need to return something...
+  // all tuples qualify. This is probably a gross overestimation, but we need to return something.
   // TODO(anyone): - Implement join estimation for differing column data types.
-  //               - Implement join estimation for String columns.
+  //               - Implement join estimation for string columns.
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
     return estimate_cross_join(left_input_table_statistics, right_input_table_statistics);
   }
@@ -1160,7 +1160,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
 
   // We expect both columns to be of the same type. This allows us to resolve the type only once, reducing the
   // compile time. For differing column types and/or string columns (which we cannot handle right now), we assume that
-  // all tuples qualify. This is probably a gross overestimation, but we need to return something...
+  // all tuples qualify. This is probably a gross overestimation, but we need to return something.
   // TODO(anyone): - Implement join estimation for differing column data types.
   //               - Implement join estimation for string columns.
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
@@ -1271,17 +1271,17 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
 std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate_inner_equi_join_of_bins(
     const HistogramCountType left_height, const DistinctCount left_distinct_count,
     const HistogramCountType right_height, const DistinctCount right_distinct_count) {
-  // Range with more distinct values should be on the left side to keep the algorithm below simple
+  // Range with more distinct values should be on the left side to keep the algorithm below simple.
   if (left_distinct_count < right_distinct_count) {
     return estimate_inner_equi_join_of_bins(right_height, right_distinct_count, left_height, left_distinct_count);
   }
 
-  // Early out to avoid division by zero below
+  // Early out to avoid division by zero below.
   if (left_distinct_count == 0 || right_distinct_count == 0) {
     return {HistogramCountType{0}, HistogramCountType{0}};
   }
 
-  // Perform a basic principle-of-inclusion join estimation
+  // Perform a basic principle-of-inclusion join estimation.
 
   // Each distinct value on the right side is assumed to occur `right_density` times.
   // E.g., if right_height == 10 and right_distinct_count == 2, then each distinct value occurs 5 times.
@@ -1307,7 +1307,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(
   }
 
   /**
-   * Prune `pruned_column_ids` from the statistics
+   * Prune `pruned_column_ids` from the statistics.
    */
 
   auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(

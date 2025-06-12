@@ -51,7 +51,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             if sudo apt-get update >/dev/null; then
 
                 # Packages added here should also be added to the Dockerfile
-                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-17 llvm-19 clang-19 clang-format-19 clang-tidy-19 cmake curl dos2unix g++-15 gcc-15 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-19 man parallel postgresql-server-dev-all valgrind; then
+                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-17 llvm-19 clang-19 clang-format-19 clang-tidy-19 libclang-rt-dev cmake curl dos2unix g++-15 gcc-15 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-19 man parallel postgresql-server-dev-all valgrind; then
                     echo "Error during apt-get installations."
                     exit 1
                 fi

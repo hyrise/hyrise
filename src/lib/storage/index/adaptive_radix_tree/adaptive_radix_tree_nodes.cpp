@@ -165,6 +165,10 @@ AbstractChunkIndex::Iterator ARTNode16::_delegate_to_child(
     const std::function<std::vector<ChunkOffset>::const_iterator(
         std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type, size_t)>& function) const {
   auto partial_key = key[depth];
+
+  // TODO(anyone-update): lower_bound's include (<algorithm>) should be fixed with newer clang tidy versions (see
+  //     https://github.com/llvm/llvm-project/pull/113796)
+  // NOLINTNEXTLINE(misc-include-cleaner)
   const auto* const partial_key_iterator = std::ranges::lower_bound(_partial_keys, partial_key);
   const auto partial_key_pos = std::distance(_partial_keys.begin(), partial_key_iterator);
 
