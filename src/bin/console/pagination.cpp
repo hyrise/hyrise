@@ -9,7 +9,7 @@
 #include "ncurses.h"
 #include "utils/assert.hpp"
 
-constexpr auto CURSES_CTRL_C = static_cast<int>('c') & 31;
+constexpr auto CURSES_CTRL_C = static_cast<int>(static_cast<uint32_t>('c') & uint32_t{31});
 
 namespace hyrise {
 
