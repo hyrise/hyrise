@@ -694,7 +694,7 @@ set(
 )
 
 if (NOT APPLE)
-    set(LIBRARIES ${LIBRARIES} atomic pthread)
+    set(LIBRARIES ${LIBRARIES} atomic pthread perf-cpp)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
