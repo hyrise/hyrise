@@ -72,6 +72,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
    public:
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
+    typedef std::random_access_iterator_tag iterator_category;
 
     Iterator(DictionaryIteratorType dictionary_begin_it, ValueID null_value_id, CompressedVectorIterator attribute_it,
              ChunkOffset chunk_offset)
@@ -131,6 +132,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
    public:
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
+    typedef std::random_access_iterator_tag iterator_category;
 
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
                         Decompressor attribute_decompressor, PosListIteratorType position_filter_begin,

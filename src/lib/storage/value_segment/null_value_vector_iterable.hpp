@@ -16,6 +16,7 @@ namespace hyrise {
 class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueVectorIterable> {
  public:
   using ValueType = bool;
+  typedef std::random_access_iterator_tag iterator_category;
 
   explicit NullValueVectorIterable(const pmr_vector<bool>& null_values) : _null_values{null_values} {}
 
@@ -41,6 +42,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
    public:
     using ValueType = bool;
     using NullValueIterator = pmr_vector<bool>::const_iterator;
+    typedef std::random_access_iterator_tag iterator_category;
 
    public:
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
@@ -85,6 +87,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
    public:
     using ValueType = bool;
     using NullValueVector = pmr_vector<bool>;
+    typedef std::random_access_iterator_tag iterator_category;
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values, const PosListIteratorType position_filter_begin,

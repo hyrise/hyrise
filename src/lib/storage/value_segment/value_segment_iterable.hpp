@@ -14,6 +14,7 @@ template <typename T>
 class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentIterable<T>> {
  public:
   using ValueType = T;
+  typedef std::random_access_iterator_tag iterator_category;
 
   explicit ValueSegmentIterable(const ValueSegment<T>& segment) : _segment{segment} {}
 
@@ -65,6 +66,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_vector<T>::const_iterator;
+    typedef std::random_access_iterator_tag iterator_category;
 
    public:
     explicit NonNullIterator(ValueIterator begin_value_it, ValueIterator value_it)
@@ -112,6 +114,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = pmr_vector<bool>::const_iterator;
+    typedef std::random_access_iterator_tag iterator_category;
 
    public:
     explicit Iterator(ValueIterator begin_value_it, ValueIterator value_it, NullValueIterator null_value_it)
@@ -166,6 +169,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_vector<T>::const_iterator;
+    typedef std::random_access_iterator_tag iterator_category;
 
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it, PosListIteratorType position_filter_begin,
@@ -196,6 +200,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_vector<T>::const_iterator;
     using NullValueVectorIterator = typename pmr_vector<bool>::const_iterator;
+    typedef std::random_access_iterator_tag iterator_category;
 
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,

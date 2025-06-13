@@ -42,6 +42,7 @@ template <typename T, typename Iterator>
 class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
  public:
   explicit AnySegmentIteratorWrapper(const Iterator& iterator) : _iterator{iterator} {}
+  typedef std::random_access_iterator_tag iterator_category;
 
   void increment() final {
     ++_iterator;
@@ -108,6 +109,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
  public:
   using ValueType = T;
   using IterableType = AnySegmentIterable<T>;
+  typedef std::random_access_iterator_tag iterator_category;
 
   /**
    * Prevents AnySegmentIterator from being created
