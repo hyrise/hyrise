@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstdint>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -10,7 +9,7 @@
 #include "ncurses.h"
 #include "utils/assert.hpp"
 
-constexpr auto CURSES_CTRL_C = static_cast<int>('c') & int{31};
+constexpr auto CURSES_CTRL_C = static_cast<int>('c') & 31;
 
 namespace hyrise {
 
