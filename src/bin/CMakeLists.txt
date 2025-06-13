@@ -21,6 +21,7 @@ target_link_libraries(
     hyrisePlayground
     hyrise
     hyriseBenchmarkLib
+    perf-cpp
 )
 
 # Configure client

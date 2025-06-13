@@ -16,7 +16,6 @@ add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
-add_subdirectory(perf-cpp)
 add_subdirectory(sparse-map)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(zstd/build/cmake)
@@ -79,6 +78,9 @@ target_include_directories(concurrentqueue INTERFACE concurrentqueue)
 add_library(cxxopts INTERFACE)
 target_include_directories(cxxopts INTERFACE cxxopts/include)
 
+# Build perf-cpp library
+add_library(perf-cpp INTERFACE)
+target_include_directories(perf-cpp INTERFACE perf-cpp/include)
 
 # Build lz4 library
 set(LZ4_LIBRARY_DIR lz4/lib)
