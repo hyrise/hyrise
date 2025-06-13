@@ -19,9 +19,10 @@ add_executable(
 
 target_link_libraries(
     hyrisePlayground
+
     hyrise
     hyriseBenchmarkLib
-    perf-cpp
+    perf-cpp-wrapper
 )
 
 # Configure client
