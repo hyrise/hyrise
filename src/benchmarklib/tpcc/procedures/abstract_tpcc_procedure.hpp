@@ -23,15 +23,11 @@ class AbstractTPCCProcedure {
 
  protected:
   [[nodiscard]] virtual bool _on_execute() = 0;
-
-  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables):
-  //   See https://github.com/llvm/llvm-project/issues/47384. Should be fixed with clang-tidy versions >17.
-
+ 
   // As random values are generated during creation of the procedure, this is mostly done in a single thread, not in the
   // database worker's. As such, having a fixed seed for all thread-local random engines should not be an issue.
   static thread_local std::minstd_rand _random_engine;
   static thread_local TPCCRandomGenerator _tpcc_random_generator;
-  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
   BenchmarkSQLExecutor& _sql_executor;
 };
