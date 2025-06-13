@@ -690,8 +690,7 @@ Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& re
   // For the number of executed queries, we cannot simply use `_state.scheduled_runs` because some of the runs might not
   // have finished in time. Thus, we check how many runs were actually reported.
   const auto executed_runs = result.successful_runs.size() + result.unsuccessful_runs.size();
-  static_assert(std::is_same_v<int64_t, decltype(_state.max_runs)>);  // Test for clang-tidy.
-  if (_state.max_runs > 0 && static_cast<int64_t>(executed_runs) < _state.max_runs) {
+  if (_state.max_runs > 0 && std::cmp_less(executed_runs, _state.max_runs)) {
     return _state.max_duration;
   }
 
