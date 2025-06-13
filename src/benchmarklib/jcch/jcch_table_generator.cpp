@@ -31,7 +31,7 @@ JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std:
 std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate() {
   auto table_names = std::vector<std::string>{};
   table_names.reserve(tpch_table_names.size());
-  for (const auto& [tpch_table, table_name] : tpch_table_names) {
+  for (const auto& [_, table_name] : tpch_table_names) {
     table_names.emplace_back(table_name);
   }
 

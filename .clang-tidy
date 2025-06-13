@@ -47,8 +47,7 @@ Checks: '
          -portability-template-virtual-member-function,
          -modernize-use-constraints
          '
-
-         # modernize-use-constraints: crashes with LLVM 20
+# TODO(anybody-update): `modernize-use-constraints` is temporarily disabled until LLVM fixes tidy crashes (see https://github.com/llvm/llvm-project/issues/123726)
 
 WarningsAsErrors: '*'
 

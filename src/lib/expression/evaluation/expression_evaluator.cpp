@@ -8,7 +8,6 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -63,12 +62,6 @@ namespace {
 
 using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
-
-struct Compili {
-  bool operator()(const RowID& lhs, const RowID& rhs) {
-    return std::tie(lhs.chunk_id, lhs.chunk_offset) < std::tie(rhs.chunk_id, rhs.chunk_offset);
-  }
-};
 
 template <typename Functor>
 void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {
@@ -1253,7 +1246,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
           break;
 
         case LogicalOperator::Or:
-          std::ranges::set_union(left_pos_list, right_pos_list, std::back_inserter(result_pos_list), Compili{});
+          std::ranges::set_union(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
           break;
       }
     } break;

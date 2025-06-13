@@ -30,9 +30,9 @@ const std::string& CreateTable::name() const {
 }
 
 std::string CreateTable::description(DescriptionMode description_mode) const {
-  std::ostringstream stream;
+  auto stream = std::ostringstream{};
 
-  const auto* const separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
+  const auto separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
 
   // If the input operator has already been cleared, we cannot retrieve its columns anymore. However, since the table
   // has been created, we can simply pull the definitions from the new table.
@@ -51,7 +51,7 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
       stream << "NOT NULL";
     }
 
-    if (column_id + 1u < column_definitions.size()) {
+    if (column_id + 1 < column_definitions.size()) {
       stream << separator;
     }
   }

@@ -28,7 +28,7 @@ bool TPCCStockLevel::_on_execute() {
   // also conforms to py-tpcc (see https://github.com/apavlo/py-tpcc/blob/master/pytpcc/drivers/sqlitedriver.py).
 
   // Retrieve next order ID.
-  const auto& [status, district_table] =
+  const auto& [_, district_table] =
       _sql_executor.execute("SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = " + std::to_string(w_id) +
                             " AND D_ID = " + std::to_string(d_id));
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one).");

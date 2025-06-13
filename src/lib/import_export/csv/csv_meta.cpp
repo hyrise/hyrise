@@ -31,7 +31,7 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
 
 namespace hyrise {
 
-// NOLINTBEGIN(misc-use-internal-linkage): tidy does not recognize that nlohmann json requires both methods.
+// NOLINTBEGIN(misc-use-internal-linkage): tidy does not recognize that nlohmann json requires the next two methods.
 void to_json(nlohmann::json& json_string, NullHandling null_handling) {
   switch (null_handling) {
     case NullHandling::RejectNullStrings:
@@ -59,7 +59,6 @@ void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
     Fail("Illegal value for null_handling: " + json_string.get<std::string>());
   }
 }
-
 // NOLINTEND(misc-use-internal-linkage)
 
 CsvMeta process_csv_meta_file(const std::string& filename) {
@@ -122,12 +121,12 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
   json = nlohmann::json{{"config", config}, {"columns", columns}};
 }
 
-bool operator==(const CsvMeta& left, const CsvMeta& right) {
-  return std::tie(left.config, left.columns) == std::tie(right.config, right.columns);
-}
-
 bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
   return std::tie(left.name, left.type, left.nullable) == std::tie(right.name, right.type, right.nullable);
+}
+
+bool operator==(const CsvMeta& left, const CsvMeta& right) {
+  return std::tie(left.config, left.columns) == std::tie(right.config, right.columns);
 }
 
 bool operator==(const ParseConfig& left, const ParseConfig& right) {

@@ -192,17 +192,17 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
   const auto column_id_mapping = pruned_column_id_mapping(table->column_count(), _pruned_column_ids);
 
   // Update index statistics
-  // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
-  // when remove(iterator) invalidates the iterator.
+  // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues when
+  // remove(iterator) invalidates the iterator.
   const auto remove_result = std::ranges::remove_if(pruned_indexes_statistics, [&](auto& statistics) {
     for (auto& original_column_id : statistics.column_ids) {
       const auto updated_column_id = column_id_mapping[original_column_id];
       if (updated_column_id == INVALID_COLUMN_ID) {
-        // Indexed column was pruned - remove index from statistics
+        // Indexed column was pruned - remove index from statistics.
         return true;
       }
 
-      // Update column id
+      // Update ColumnID.
       original_column_id = updated_column_id;
     }
     return false;

@@ -59,7 +59,7 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _items(items) {
   Assert(std::ranges::all_of(_items,
                              [&](const auto benchmark_item_id) {
-                               return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;  // NOLINT
+                               return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;
                              }),
          "Invalid TPC-H item ID.");
 }
