@@ -93,16 +93,14 @@ TEST_F(FixedStringVectorTest, ReverseIterator) {
 }
 
 TEST_F(FixedStringVectorTest, ReverseIteratorsExplicit) {
-  auto v = std::vector<pmr_string>{"abc", "def", "ghi"};
-  auto fs_vector = FixedStringVector{v.cbegin(), v.cend(), 3};
+  const auto vector = std::vector<pmr_string>{"abc", "def", "ghi"};
+  auto fs_vector = FixedStringVector{vector.cbegin(), vector.cend(), 3};
 
-  auto rbegin = fs_vector.rbegin();
-  auto rend = fs_vector.rend();
-
+  const auto rend = fs_vector.rend();
   auto expected = std::vector<pmr_string>{"ghi", "def", "abc"};
-  auto i = 0;
-  for (auto it = rbegin; it != rend; ++it, ++i) {
-    EXPECT_EQ(*it, expected[i]);
+  auto expected_it = expected.begin();
+  for (auto reverse_it = fs_vector.rbegin(); reverse_it != rend; ++reverse_it, ++expected_it) {
+    EXPECT_EQ(*reverse_it, *expected_it);
   }
 }
 
@@ -122,12 +120,11 @@ TEST_F(FixedStringVectorTest, Erase) {
 
 TEST_F(FixedStringVectorTest, EraseWithZeroStringLength) {
   auto strings = std::vector<pmr_string>{"", ""};
-  auto vec = FixedStringVector(strings.begin(), strings.end(), 0u);
+  auto vec = FixedStringVector(strings.begin(), strings.end(), 0);
 
-  auto it = vec.begin();
-  vec.erase(it, vec.end());
+  vec.erase(vec.begin(), vec.end());
 
-  EXPECT_EQ(vec.size(), 2u);
+  EXPECT_EQ(vec.size(), 0);
 }
 
 TEST_F(FixedStringVectorTest, Shrink) {
@@ -233,8 +230,10 @@ TEST_F(FixedStringVectorTest, MemoryLayout) {
 }
 
 TEST_F(FixedStringVectorTest, GetAllocator) {
-  (void)fixed_string_vector->get_allocator();
-  SUCCEED();
+  const auto alloc = PolymorphicAllocator<char>{};
+  const auto strings = {"", ""};
+  auto fs_vector = FixedStringVector(strings.begin(), strings.end(), 0, alloc);
+  EXPECT_EQ(alloc.resource(), fs_vector.get_allocator().resource());
 }
 
 }  // namespace hyrise
