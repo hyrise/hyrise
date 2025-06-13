@@ -228,7 +228,7 @@ TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositions) {
 TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositionsInvalidInput) {
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_a_b, key_constraint_b});
+  _mock_node1->set_key_constraints({key_constraint_a_b, key_constraint_b});
 
   // Input nodes are not allowed to have differing UCCs. The cross join does not forward any UCCs.
   // clang-format off
