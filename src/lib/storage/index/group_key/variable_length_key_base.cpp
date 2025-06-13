@@ -46,7 +46,7 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
   static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
   const auto byte_shift = shift / CHAR_BIT;
   const auto bit_shift = static_cast<CompositeKeyLength>(shift % CHAR_BIT);
-  if (static_cast<size_t>(byte_shift) >= _size) {
+  if (static_cast<CompositeKeyLength>(byte_shift) >= _size) {
     std::fill(_data, _data + _size, static_cast<VariableLengthKeyWord>(0u));
   } else {
     if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {  // NOLINT(misc-redundant-expression)

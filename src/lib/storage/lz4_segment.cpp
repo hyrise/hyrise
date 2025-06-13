@@ -221,6 +221,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
   }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
+  static_assert(std::is_same_v<size_t, std::decay_t<decltype(decompressed_block_size)>>);  // Test for clang-tidy.
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
               "Decompressed LZ4 block has different size than the initial source data.");
 }
