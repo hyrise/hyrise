@@ -21,8 +21,6 @@
 
 namespace hyrise {
 
-// NOLINTBEGIN(clang-analyzer-core.BitwiseShift)
-
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges)
     : _num_vertices{num_vertices}, _edges{edges} {
   // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons.
@@ -236,7 +234,5 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
 
   return subsets;
 }
-
-// NOLINTEND(clang-analyzer-core.BitwiseShift)
 
 }  // namespace hyrise
