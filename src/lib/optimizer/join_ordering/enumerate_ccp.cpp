@@ -24,7 +24,7 @@ namespace hyrise {
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges)
     : _num_vertices{num_vertices}, _edges{edges} {
   // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons.
-  Assert(num_vertices < sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
+  Assert(_num_vertices < sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
          "Too many vertices, EnumerateCcp relies on to_ulong().");
   Assert(num_vertices > 1, "Nothing to order if there are not multiple vertices.");
 
@@ -160,7 +160,7 @@ JoinGraphVertexSet EnumerateCcp::_exclusion_set(const size_t vertex_idx) const {
    */
 
   auto exclusion_set = JoinGraphVertexSet(_num_vertices);
-  for (size_t exclusion_vertex_idx = 0; exclusion_vertex_idx < vertex_idx; ++exclusion_vertex_idx) {
+  for (auto exclusion_vertex_idx = size_t{0}; exclusion_vertex_idx < vertex_idx; ++exclusion_vertex_idx) {
     exclusion_set.set(exclusion_vertex_idx);
   }
   return exclusion_set;
