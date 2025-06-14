@@ -86,7 +86,7 @@ DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Arg
 float convert_money(DSS_HUGE cents) {
   const auto dollars = cents / 100;
   cents %= 100;
-  return static_cast<float>(dollars) + (static_cast<float>(cents)) / 100.0f;
+  return static_cast<float>(dollars) + (static_cast<float>(cents) / 100.0f);
 }
 
 /**
@@ -105,14 +105,14 @@ void dbgen_cleanup() {
   }
 
   if (asc_date) {
+    // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
     for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
-      // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc)
-      // NOLINTBEGIN(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      // NOLINTBEGIN(cppcoreguidelines-pro-type-const-cast)
       std::free(const_cast<char*>(asc_date[idx]));
-      // NOLINTEND(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
-      // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc)
+      // NOLINTEND(cppcoreguidelines-pro-type-const-cast)
     }
-    std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(asc_date);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+    // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
   asc_date = nullptr;
 }
@@ -229,7 +229,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
           last_partkey = partsupp.partkey;
           suppkeys.clear();
         }
-        Assert(std::find(suppkeys.begin(), suppkeys.end(), partsupp.suppkey) == suppkeys.end(),
+        Assert(std::ranges::find(suppkeys, partsupp.suppkey) == suppkeys.end(),
                "Scale factor unsupported by tpch-dbgen. Consider choosing a \"round\" number.");
         suppkeys.emplace_back(partsupp.suppkey);
       }

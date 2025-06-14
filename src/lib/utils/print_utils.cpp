@@ -160,7 +160,7 @@ void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& 
   };
 
   // Sort by ColumnID.
-  std::sort(expressions_vector.begin(), expressions_vector.end(), [&](const auto& lhs, const auto& rhs) {
+  std::ranges::sort(expressions_vector, [&](const auto& lhs, const auto& rhs) {
     return minimal_column_id(lhs) < minimal_column_id(rhs);
   });
 
