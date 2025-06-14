@@ -51,7 +51,7 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
       stream << "NOT NULL";
     }
 
-    if (column_id + 1 < column_definitions.size()) {
+    if (static_cast<size_t>(column_id + 1) < column_definitions.size()) {
       stream << separator;
     }
   }
