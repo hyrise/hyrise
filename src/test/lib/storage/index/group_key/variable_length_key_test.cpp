@@ -123,7 +123,7 @@ TEST_F(VariableLengthKeyTest, OStreamOperator) {
   auto oss = std::ostringstream{};
   oss << key;
   const auto str = oss.str();
-  EXPECT_FALSE(str.empty());
+  EXPECT_EQ(str, "ab cd");
 }
 
 }  // namespace hyrise
