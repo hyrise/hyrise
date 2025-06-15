@@ -87,14 +87,14 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
    * on the heap.
    */
 
-  ValueSegment<int64_t> vs_long{false, ChunkOffset{100}};
-  ValueSegment<float> vs_float{false, ChunkOffset{100}};
+  auto vs_long = ValueSegment<int64_t>{false, ChunkOffset{100}};
+  auto vs_float = ValueSegment<float>{false, ChunkOffset{100}};
 
-  ValueSegment<int32_t> nullable_vs_int{true, ChunkOffset{100}};
-  ValueSegment<int64_t> nullable_vs_long{true, ChunkOffset{100}};
-  ValueSegment<float> nullable_vs_float{true, ChunkOffset{100}};
-  ValueSegment<double> nullable_vs_double{true, ChunkOffset{100}};
-  ValueSegment<pmr_string> nullable_vs_str{true, ChunkOffset{100}};
+  auto nullable_vs_int = ValueSegment<int32_t>{true, ChunkOffset{100}};
+  auto nullable_vs_long = ValueSegment<int64_t>{true, ChunkOffset{100}};
+  auto nullable_vs_float = ValueSegment<float>{true, ChunkOffset{100}};
+  auto nullable_vs_double = ValueSegment<double>{true, ChunkOffset{100}};
+  auto nullable_vs_str = ValueSegment<pmr_string>{true, ChunkOffset{100}};
 
   const auto empty_usage_int = vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
   const auto empty_usage_long = vs_long.memory_usage(MemoryUsageCalculationMode::Sampled);
