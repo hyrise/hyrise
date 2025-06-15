@@ -514,6 +514,17 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
   EXPECT_EQ(end2, cend(index));
 }
 
+TEST_F(PartialHashIndexTest, AssignFlatMapIterator) {
+  auto iterator{cbegin(index)};
+
+  iterator = cbegin(index);
+  EXPECT_EQ(iterator, cbegin(index));
+
+  iterator = cend(index);
+  EXPECT_EQ(iterator, cend(index));
+  EXPECT_NE(iterator, cbegin(index));
+}
+
 /*
   Test cases:
     MemoryUsageNoNulls
