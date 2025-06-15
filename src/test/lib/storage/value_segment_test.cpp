@@ -81,82 +81,51 @@ TEST_F(StorageValueSegmentTest, ArraySubscriptOperatorReturnsNullValue) {
   EXPECT_TRUE(variant_is_null(vs_double[ChunkOffset{0}]));
 }
 
-TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
+template <typename T>
+class TypedStorageValueSegmentTest : public BaseTest {
+ protected:
+  ValueSegment<T> vs{false, ChunkOffset{100}};
+  ValueSegment<T> nullable_vs{true, ChunkOffset{100}};
+};
+
+using Types = ::testing::Types<int32_t, int64_t, float, double, pmr_string>;
+TYPED_TEST_SUITE(TypedStorageValueSegmentTest, Types);
+
+TYPED_TEST(TypedStorageValueSegmentTest, MemoryUsageEstimation) {
   /**
-   * As ValueSegments are pre-allocated, their size should not change when inserting data, except for strings placed
-   * on the heap.
-   */
+    * As ValueSegments are pre-allocated, their size should not change when inserting data, except for strings placed
+    * on the heap.
+    */
 
-  auto vs_long = ValueSegment<int64_t>{false, ChunkOffset{100}};
-  auto vs_float = ValueSegment<float>{false, ChunkOffset{100}};
+  // this is necessary here because we are in a derived class template
+  const auto empty_usage = this->vs.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_nullable = this->nullable_vs.memory_usage(MemoryUsageCalculationMode::Sampled);
 
-  auto nullable_vs_int = ValueSegment<int32_t>{true, ChunkOffset{100}};
-  auto nullable_vs_long = ValueSegment<int64_t>{true, ChunkOffset{100}};
-  auto nullable_vs_float = ValueSegment<float>{true, ChunkOffset{100}};
-  auto nullable_vs_double = ValueSegment<double>{true, ChunkOffset{100}};
-  auto nullable_vs_str = ValueSegment<pmr_string>{true, ChunkOffset{100}};
+  if constexpr (std::is_same_v<TypeParam, pmr_string>) {
+    const auto short_str = pmr_string{"Hello"};
+    const auto longer_str = pmr_string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
 
-  const auto empty_usage_int = vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_long = vs_long.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_float = vs_float.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_double = vs_double.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_str = vs_str.memory_usage(MemoryUsageCalculationMode::Sampled);
+    this->vs.append(short_str);
+    this->vs.append(longer_str);
 
-  const auto empty_usage_nullable_int = nullable_vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_nullable_long = nullable_vs_long.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_nullable_float = nullable_vs_float.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_nullable_double = nullable_vs_double.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_nullable_str = nullable_vs_str.memory_usage(MemoryUsageCalculationMode::Sampled);
+    this->nullable_vs.append(short_str);
+    this->nullable_vs.append(longer_str);
+    this->nullable_vs.append(NULL_VALUE);
 
-  vs_int.append(int32_t{1});
-  vs_int.append(int32_t{2});
+    EXPECT_GE(this->vs.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage);
+    EXPECT_GE(this->nullable_vs.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage_nullable);
+    // The short string will fit within the SSO capacity of a string and the long string will be placed on the heap.
+    EXPECT_EQ(this->vs.memory_usage(MemoryUsageCalculationMode::Full), empty_usage + longer_str.capacity() + 1);
+    EXPECT_EQ(this->nullable_vs.memory_usage(MemoryUsageCalculationMode::Full),
+              empty_usage_nullable + longer_str.capacity() + 1);
+  } else {
+    this->vs.append(static_cast<TypeParam>(42.1337f));
+    this->nullable_vs.append(static_cast<TypeParam>(42.1337f));
+    this->nullable_vs.append(NULL_VALUE);
 
-  vs_long.append(int64_t{1});
-  vs_long.append(int64_t{2});
-
-  vs_float.append(float{42.1337f});
-
-  vs_double.append(double{42.1337});
-
-  nullable_vs_int.append(int32_t{1});
-  nullable_vs_int.append(int32_t{2});
-  nullable_vs_int.append(NULL_VALUE);
-
-  nullable_vs_long.append(int64_t{1});
-  nullable_vs_long.append(int64_t{2});
-  nullable_vs_long.append(NULL_VALUE);
-
-  nullable_vs_float.append(float{42.1337f});
-  nullable_vs_float.append(NULL_VALUE);
-
-  nullable_vs_double.append(double{42.1337});
-  nullable_vs_double.append(NULL_VALUE);
-
-  const auto short_str = pmr_string{"Hello"};
-  const auto longer_str = pmr_string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
-
-  vs_str.append(short_str);
-  vs_str.append(longer_str);
-
-  nullable_vs_str.append(short_str);
-  nullable_vs_str.append(longer_str);
-
-  EXPECT_EQ(empty_usage_int, vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
-  EXPECT_EQ(empty_usage_long, vs_long.memory_usage(MemoryUsageCalculationMode::Sampled));
-  EXPECT_EQ(empty_usage_float, vs_float.memory_usage(MemoryUsageCalculationMode::Sampled));
-  EXPECT_EQ(empty_usage_double, vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
-
-  EXPECT_EQ(empty_usage_nullable_int, nullable_vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
-  EXPECT_EQ(empty_usage_nullable_long, nullable_vs_long.memory_usage(MemoryUsageCalculationMode::Sampled));
-  EXPECT_EQ(empty_usage_nullable_float, nullable_vs_float.memory_usage(MemoryUsageCalculationMode::Sampled));
-  EXPECT_EQ(empty_usage_nullable_double, nullable_vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
-
-  EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage_str);
-  EXPECT_GE(nullable_vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage_nullable_str);
-  // The short string will fit within the SSO capacity of a string and the long string will be placed on the heap.
-  EXPECT_EQ(vs_str.memory_usage(MemoryUsageCalculationMode::Full), empty_usage_str + longer_str.capacity() + 1);
-  EXPECT_EQ(nullable_vs_str.memory_usage(MemoryUsageCalculationMode::Full),
-            empty_usage_nullable_str + longer_str.capacity() + 1);
+    EXPECT_EQ(empty_usage, this->vs.memory_usage(MemoryUsageCalculationMode::Sampled));
+    EXPECT_EQ(empty_usage_nullable, this->nullable_vs.memory_usage(MemoryUsageCalculationMode::Sampled));
+  }
 }
 
 }  // namespace hyrise
