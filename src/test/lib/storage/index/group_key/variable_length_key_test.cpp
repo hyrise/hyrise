@@ -51,36 +51,56 @@ TEST_F(VariableLengthKeyTest, CreateKeysWithOrAndShift) {
 
 
 /**
- * Test that copy‐assignment correctly duplicates the bit pattern
- * (this also covers operator=(const VariableLengthKeyBase&)).
+ * Test that copy‐assignment correctly duplicates the bit pattern.
  */
 TEST_F(VariableLengthKeyTest, CopyAssignment) {
   const auto bytes = CompositeKeyLength{8};
 
   auto original = VariableLengthKey{bytes};
-  original <<= CompositeKeyLength{4};
-  original |= uint64_t{0xFFFFFFFFu};
+  original.shift_and_set(1, 8);
 
   auto copy = VariableLengthKey{bytes};
+
   EXPECT_NE(copy, original);
+
   copy = original;
   EXPECT_EQ(copy, original);
 }
 
 /**
- * Test operator!= between two distinct keys and that identical keys compare equal.
+ * Test the plain <<= and |= operators.
  */
-TEST_F(VariableLengthKeyTest, InequalityOperator) {
+TEST_F(VariableLengthKeyTest, BasicShiftAndSet) {
+  const auto bytes = CompositeKeyLength{8};
+
+  auto original = VariableLengthKey{bytes};
+  original |= uint64_t{0xABCDu};
+  EXPECT_NE(original, VariableLengthKey{bytes});
+
+  original <<= CompositeKeyLength{8};
+  auto reference = VariableLengthKey{bytes};
+  reference |= uint64_t{0xABCD00u};
+  EXPECT_EQ(original, reference);
+}
+
+/**
+ * Test operator!=, < and == between two distinct keys.
+ */
+TEST_F(VariableLengthKeyTest, ComparisonOperators) {
   const auto bytes = CompositeKeyLength{4};
 
   auto a = VariableLengthKey{bytes};
-  a.shift_and_set(uint64_t{1}, uint8_t{8});
-
   auto b = VariableLengthKey{bytes};
-  b.shift_and_set(uint64_t{2}, uint8_t{8});
+
+  EXPECT_TRUE(a == b);
+
+  a.shift_and_set(1, 8);
+  b.shift_and_set(2, 8);
 
   EXPECT_TRUE(a != b);
   EXPECT_FALSE(a != a);
+  EXPECT_TRUE(a < b);
+  EXPECT_FALSE(b < a);
 }
 
 /**
@@ -98,13 +118,12 @@ TEST_F(VariableLengthKeyTest, BytesPerKey) {
 TEST_F(VariableLengthKeyTest, OStreamOperator) {
   const auto bytes = CompositeKeyLength{2};
   auto key = VariableLengthKey{bytes};
-  key.shift_and_set(uint64_t{0xABCD}, uint8_t{16});
+  key.shift_and_set(0xABCD, 16);
 
-  std::ostringstream oss;
+  auto oss = std::ostringstream{};
   oss << key;
   const auto str = oss.str();
   EXPECT_FALSE(str.empty());
 }
-
 
 }  // namespace hyrise
