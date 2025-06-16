@@ -19,6 +19,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_performance_data.hpp"
+#include "operators/print.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -259,12 +260,11 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 /// Compare to column values of two rows against each other.
 class AbstractColumnComparator : private Noncopyable {
  public:
-  AbstractColumnComparator(const std::shared_ptr<const Table>& table, const ColumnID column_id);
   virtual ~AbstractColumnComparator() = default;
 
   virtual bool is_null(RowID row_id) const = 0;
-  virtual int compare(RowID left, RowID right) const = 0;
-  virtual int compare_with_null(RowID left, RowID right) const = 0;
+  virtual std::partial_ordering compare(RowID left, RowID right) const = 0;
+  virtual std::partial_ordering compare_with_null(RowID left, RowID right) const = 0;
 
  protected:
   AbstractColumnComparator() = default;
@@ -288,6 +288,8 @@ class ColumnComparator : public AbstractColumnComparator {
         null_values.emplace_back(!row);
         if (row) {
           values.emplace_back(std::move(*row));
+        } else {
+          values.emplace_back();
         }
       }
       _values.emplace_back(std::make_unique<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values)));
@@ -307,14 +309,14 @@ class ColumnComparator : public AbstractColumnComparator {
     return null_values[offset];
   }
 
-  int compare(RowID left, RowID right) const override {
+  std::partial_ordering compare(RowID left, RowID right) const override {
     const auto [left_chunk_id, left_chunk_offset] = left;
     const auto [right_chunk_id, right_chunk_offset] = right;
     DebugAssert(left_chunk_id < _values.size(), "Left chunk out of bounds");
     DebugAssert(right_chunk_id < _values.size(), "Right chunk out of bounds");
 
     const auto& left_chunk = _values[left_chunk_id]->values();
-    const auto& right_chunk = _values[left_chunk_id]->values();
+    const auto& right_chunk = _values[right_chunk_id]->values();
     DebugAssert(left_chunk_offset < left_chunk.size(), "Out of left chunk bounds");
     DebugAssert(right_chunk_offset < right_chunk.size(), "Out of right chunk bounds");
 
@@ -325,17 +327,21 @@ class ColumnComparator : public AbstractColumnComparator {
     }
   }
 
-  int compare_with_null(RowID left, RowID right) const override {
+  std::partial_ordering compare_with_null(RowID left, RowID right) const override {
     const auto left_is_null = is_null(left);
     const auto right_is_null = is_null(right);
     if (left_is_null && right_is_null) {
-      return 0;
+      return std::partial_ordering::equivalent;
     }
     if (left_is_null) {
-      return (sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsLast) ? -1 : 1;
+      return (sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst)
+                 ? std::partial_ordering::less
+                 : std::partial_ordering::greater;
     }
     if (right_is_null) {
-      return (sort_mode == SortMode::AscendingNullsLast || sort_mode == SortMode::DescendingNullsFirst) ? -1 : 1;
+      return (sort_mode == SortMode::AscendingNullsLast || sort_mode == SortMode::DescendingNullsLast)
+                 ? std::partial_ordering::less
+                 : std::partial_ordering::greater;
     }
     return compare(left, right);
   }
@@ -365,10 +371,10 @@ class ChunkSortImpl {
       });
       end = pos_list.end();
     } else {
+      begin = pos_list.begin();
       end = std::stable_partition(begin, end, [&](RowID row_id) {
         return !_column_comparator->is_null(row_id);
       });
-      begin = pos_list.begin();
     }
 
     std::stable_sort(begin, end, [&](RowID left, RowID right) {
@@ -481,10 +487,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   const auto total_materialization_time = timer.lap();
 
   // TODO(ro): add description
-  auto sorted_chunks = std::vector<RowIDPosList>();
+  auto sorted_chunks = std::vector<RowIDPosList>(input_table->chunk_count());
   auto sort_chunk_tasks = std::vector<std::shared_ptr<AbstractTask>>();
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    sort_chunk_tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    sort_chunk_tasks.emplace_back(std::make_shared<JobTask>([this, chunk_id, &input_table, &sorted_chunks,
+                                                             &materialized_columns]() {
       const auto chunk_size = input_table->get_chunk(chunk_id)->size();
       sorted_chunks[chunk_id].reserve(chunk_size);
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
@@ -496,6 +503,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         sorter.sort(sorted_chunks[chunk_id]);
       }
     }));
+    sort_chunk_tasks.back()->schedule();
   }
   Hyrise::get().scheduler()->wait_for_tasks(sort_chunk_tasks);
 
@@ -509,12 +517,15 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     for (const auto column : column_precedence) {
       const auto comparison = materialized_columns[column]->compare_with_null(left, right);
       if (comparison != 0) {
-        return comparison < 0;
+        return comparison > 0;
       }
     }
-    return false;
+    if (left.chunk_id != right.chunk_id) {
+      return left.chunk_id > right.chunk_id;
+    }
+    return false;  // left.chunk_offset < right.chunk_offset is guaranteed by stable_sort.
   };
-  auto tpmms_priority_queue = std::priority_queue<RowID, std::vector<RowID>, decltype(comparator)>(comparator);
+  auto priority_queue = std::priority_queue<RowID, std::vector<RowID>, decltype(comparator)>(comparator);
 
   using ChunkIterator = RowIDPosList::const_iterator;
   auto chunk_ranges = std::vector<std::pair<ChunkIterator, ChunkIterator>>();
@@ -524,7 +535,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     auto begin = chunk.cbegin();
     auto end = chunk.cend();
     if (begin != end) {
-      tpmms_priority_queue.emplace(*begin);
+      priority_queue.emplace(*begin);
       ++begin;
     }
     chunk_ranges.emplace_back(begin, end);
@@ -532,14 +543,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto position_list = RowIDPosList();
   position_list.reserve(input_table->row_count());
-  while (!tpmms_priority_queue.empty()) {
-    const auto [chunk_id, chunk_offset] = tpmms_priority_queue.top();
+  while (!priority_queue.empty()) {
+    const auto [chunk_id, chunk_offset] = priority_queue.top();
     position_list.emplace_back(chunk_id, chunk_offset);
-    tpmms_priority_queue.pop();
+    priority_queue.pop();
 
     auto& chunk_range = chunk_ranges[chunk_id];
     if (chunk_range.first != chunk_range.second) {
-      tpmms_priority_queue.emplace(*chunk_range.first);
+      priority_queue.push(*chunk_range.first);
       ++chunk_range.first;
     }
   }
@@ -591,6 +602,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     sorted_table = write_reference_output_table(input_table, std::move(position_list), _output_chunk_size);
   }
 
+  Print::print(input_table);
+  std::cout << "\n";
+  Print::print(sorted_table);
+  std::cout << std::endl;
+
   const auto& final_sort_definition = _sort_definitions[0];
   // Set the sorted_by attribute of the output's chunks according to the most significant sort operation, which is the
   // column the table was sorted by last.
@@ -609,7 +625,6 @@ template <typename SortColumnType>
 class Sort::SortImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
-
   std::chrono::nanoseconds materialization_time{};
   std::chrono::nanoseconds temporary_result_writing_time{};
   std::chrono::nanoseconds sort_time{};
