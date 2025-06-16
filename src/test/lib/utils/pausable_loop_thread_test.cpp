@@ -90,8 +90,7 @@ TEST_F(PausableLoopThreadTest, SetLoopSleepTimeChangesInterval) {
   std::this_thread::sleep_for(std::chrono::milliseconds(55));
   {
     auto lock = std::lock_guard(timestamps_mutex);
-    // We expect at least 4-5 new timestamps in this period.
-    // Check for more than initial + 3 to be safe.
+    // We expect at least 4-5 new timestamps in this period. Check for more than initial + 3 to be safe.
     EXPECT_GT(timestamps.size(), initial_timestamp_count + 3);
   }
 }
