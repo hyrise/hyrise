@@ -149,7 +149,8 @@ int main() {
   auto event_counter = perf::EventCounter{counters};
 
   // Specify hardware events to count.
-  event_counter.add({"seconds", "instructions", "cycles", "cache-misses", "dTLB-miss-ratio"});
+  event_counter.add({"seconds", "instructions", "cycles", "cache-misses", "dTLB-miss-ratio"});  // Not possible on the VM server.
+  // event_counter.add("seconds");  // Runs on the VM server. Not too helpful though.
 
   //const auto functions = std::vector<std::pair<std::string, std::function<std::vector<std::string>(const size_t, std::vector<std::string>&)>>{{"get_top_by_stdsort", get_top_by_stdsort}, {"get_top_by_stdsort", get_top_by_indexsort}, {"get_top_by_stdsort", get_top_by_priorityqueue}};
   const auto functions = std::vector<std::pair<std::string, std::function<std::vector<std::string>(const size_t, std::vector<std::string>&)>>>{
