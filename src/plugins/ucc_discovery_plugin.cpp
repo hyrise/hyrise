@@ -96,7 +96,7 @@ UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
 
   auto ucc_candidates = UccCandidates{};
 
-  for (const auto& entry : snapshot | std::views::values) {
+  for (const auto& [_, entry] : snapshot) {
     const auto& root_node = entry.value;
 
     visit_lqp(root_node, [&](const auto& node) {

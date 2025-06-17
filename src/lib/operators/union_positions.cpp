@@ -12,8 +12,10 @@
 #include <boost/sort/pdqsort/pdqsort.hpp>
 
 #include "all_type_variant.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
@@ -24,7 +26,7 @@
 
 /**
  * ### UnionPositions implementation
- * The UnionPositions Operator turns each input table into a ReferenceMatrix.
+ * The UnionPositions operator turns each input table into a ReferenceMatrix.
  * The rows in the ReferenceMatrices (see below) need to be sorted in order for them to be merged, that is,
  * performing the UnionPositions operation.
  * Since sorting a multi-column matrix by rows would require a lot of value-copying, for each ReferenceMatrix, a
@@ -58,9 +60,7 @@
  *
  * ### TODO(anybody) for potential performance improvements
  * Instead of using a ReferenceMatrix, consider using a linked list of RowIDs for each row. Since most of the sorting
- *      will depend on the leftmost column, this way most of the time no remote memory would need to be accessed
- *
- * The sorting, which is the most expensive part of this operator, could probably be parallelized.
+ *      will depend on the leftmost column, this way most of the time no remote memory would need to be accessed.
  */
 namespace hyrise {
 
@@ -104,10 +104,10 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   /**
    * Init the virtual pos lists
    */
-  VirtualPosList virtual_pos_list_left(left_in_table.row_count(), 0u);
-  std::iota(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), 0u);
-  VirtualPosList virtual_pos_list_right(right_input_table()->row_count(), 0u);
-  std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0u);
+  auto virtual_pos_list_left = VirtualPosList(left_in_table.row_count(), 0);
+  std::iota(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), 0);
+  auto virtual_pos_list_right = VirtualPosList(right_input_table()->row_count(), 0);
+  std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0);
 
   /**
    * Sort the virtual pos lists so that they bring the rows in their respective ReferenceMatrix into order.
@@ -119,10 +119,24 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
    * position lists are already sorted. For cases where the input is not sorted, pdqsort is usually still more than 20%
    * faster than std::sort.
    */
-  boost::sort::pdqsort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
-                       VirtualPosListCmpContext{reference_matrix_left});
-  boost::sort::pdqsort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(),
-                       VirtualPosListCmpContext{reference_matrix_right});
+  const auto sort_left = [&]() {
+    boost::sort::pdqsort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
+                         VirtualPosListCmpContext{reference_matrix_left});
+   };
+  const auto sort_right = [&]() {
+    boost::sort::pdqsort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(),
+                         VirtualPosListCmpContext{reference_matrix_right});
+  };
+
+  if (virtual_pos_list_left.size() + virtual_pos_list_right.size() > 20'000) {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>(2);
+    jobs.push_back(std::make_shared<JobTask>(sort_left));
+    jobs.push_back(std::make_shared<JobTask>(sort_right));
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  } else {
+    sort_left();
+    sort_right();
+  }
 
   /**
    * Build result table.
@@ -250,8 +264,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
          "UnionPositions does not support non-reference tables yet.");
 
   /**
-   * Identify the ColumnClusters (verification that this is the same for all chunks happens in the #if HYRISE_DEBUG block
-   * below)
+   * Identify the ColumnClusters (verification that this is the same for all chunks happens in the `if HYRISE_DEBUG`
+   * block below).
    */
   const auto add = [&](const auto& table) {
     const auto column_count = table->column_count();
@@ -277,7 +291,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the tables referenced in each ColumnCluster (verification that this is the same for all chunks happens
-   * in the #if HYRISE_DEBUG block below)
+   * in the `if HYRISE_DEBUG` block below).
    */
   const auto first_chunk_left = left_input_table()->get_chunk(ChunkID{0});
   for (const auto& cluster_begin : _column_cluster_offsets) {
@@ -288,7 +302,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the column_ids referenced by each column (verification that this is the same for all chunks happens
-   * in the #if HYRISE_DEBUG block below)
+   * in the `if HYRISE_DEBUG` block below).
    */
   for (auto column_id = ColumnID{0}; column_id < left_input_table()->column_count(); ++column_id) {
     const auto segment = first_chunk_left->get_segment(column_id);

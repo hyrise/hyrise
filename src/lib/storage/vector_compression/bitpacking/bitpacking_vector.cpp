@@ -53,7 +53,7 @@ std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_memo
   using InternalType = std::remove_reference_t<decltype(*data_copy.get())>;
   std::fill_n(data_copy.get(), data_copy.bytes() / sizeof(InternalType), InternalType{0});
 
-  // NOLINTNEXTLINE(modernize-use-ranges): iterator is not complaint.
+  // NOLINTNEXTLINE(modernize-use-ranges): iterator is not std::ranges-complaint.
   std::copy(_data.cbegin(), _data.cend(), data_copy.begin());
 
   return std::make_unique<BitPackingVector>(std::move(data_copy));

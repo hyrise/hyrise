@@ -54,13 +54,13 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 
     auto sorted_duration_by_operator_name = std::vector<std::pair<std::string, std::chrono::nanoseconds>>{
         _duration_by_operator_name.begin(), _duration_by_operator_name.end()};
-    std::ranges::sort(sorted_duration_by_operator_name.begin(), sorted_duration_by_operator_name.end(),
+    std::ranges::sort(sorted_duration_by_operator_name,
                       [](const auto& lhs, const auto& rhs) {
                         return lhs.second > rhs.second;
                       });
 
     // Print first column (operator name).
-    for (const auto& [operator_name, duration] : sorted_duration_by_operator_name) {
+    for (const auto& [operator_name, _] : sorted_duration_by_operator_name) {
       operator_breakdown_stream << " " << operator_name << " \\r";
     }
     operator_breakdown_stream << "total\\r";

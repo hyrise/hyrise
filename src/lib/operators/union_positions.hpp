@@ -76,13 +76,13 @@ class UnionPositions : public AbstractReadOnlyOperator {
   const std::string& name() const override;
 
  private:
-  // See docs at the top of the cpp
+  // See docs at the top of the .cpp file.
   using ReferenceMatrix = std::vector<RowIDPosList>;
   using VirtualPosList = std::vector<size_t>;
 
   /**
-   * Comparator for performing the std::sort() of a virtual pos list.
-   * Needs to know about the ReferenceMatrix that the VirtualPosList references and is thus dubbed a "Context".
+   * Comparator for performing the sort() of a virtual pos list. Needs to know about the ReferenceMatrix that the
+   * VirtualPosList references and is thus dubbed a "Context".
    */
   struct VirtualPosListCmpContext {
     ReferenceMatrix& reference_matrix;
@@ -103,10 +103,10 @@ class UnionPositions : public AbstractReadOnlyOperator {
    * Validates the input AND initializes some utility data it uses (_column_cluster_offsets, _referenced_tables,
    * _referenced_column_ids).
    *
-   * We can't really split this up into one validate and one prepare step, since some of the validation depends on
+   * We cannot really split this up into one validate and one prepare step, since some of the validation depends on
    * the utility data being initialized.
    *
-   * @returns the result table of the operator if one or both of the inputs was empty and we don't actually need to
+   * @returns the result table of the operator if one or both of the inputs was empty and we do not actually need to
    *    execute the operator. nullptr otherwise.
    */
   std::shared_ptr<const Table> _prepare_operator();
@@ -115,13 +115,13 @@ class UnionPositions : public AbstractReadOnlyOperator {
   static bool _compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
                                              const ReferenceMatrix& right_matrix, size_t right_row_idx);
 
-  // See the "About ColumnClusters" doc in the cpp
+  // See the "About ColumnClusters" doc in the .cpp file.
   std::vector<ColumnID> _column_cluster_offsets;
 
-  // For each ColumnCluster, the table its pos_list references
+  // For each ColumnCluster, the table its pos_list references.
   std::vector<std::shared_ptr<const Table>> _referenced_tables;
 
-  // For each column_idx in the input tables, specifies the referenced column in the referenced table
+  // For each column_idx in the input tables, specifies the referenced column in the referenced table.
   std::vector<ColumnID> _referenced_column_ids;
 };
 }  // namespace hyrise

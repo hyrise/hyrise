@@ -116,10 +116,6 @@ struct RowID {
   }
 };
 
-// inline auto operator<=>(const RowID& lhs, const RowID& rhs) {
-//   return std::tie(lhs.chunk_id, lhs.chunk_offset) <=> std::tie(rhs.chunk_id, rhs.chunk_offset);
-// }
-
 using CompressedVectorTypeID = uint8_t;
 
 using ColumnIDPair = std::pair<ColumnID, ColumnID>;
