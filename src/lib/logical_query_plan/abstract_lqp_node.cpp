@@ -351,8 +351,8 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
     for (const auto& fd : non_trivial_fds) {
-       const auto [_, inserted] = fds.insert(fd);
-       Assert(inserted, "FDs with the same set of determinant expressions should be merged.");
+      const auto [_, inserted] = fds.insert(fd);
+      Assert(inserted, "FDs with the same set of determinant expressions should be merged.");
 
       for (const auto& fd_determinant_expression : fd.determinants) {
         Assert(output_expressions_set.contains(fd_determinant_expression),

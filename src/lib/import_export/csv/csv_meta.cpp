@@ -59,6 +59,7 @@ void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
     Fail("Illegal value for null_handling: " + json_string.get<std::string>());
   }
 }
+
 // NOLINTEND(misc-use-internal-linkage)
 
 CsvMeta process_csv_meta_file(const std::string& filename) {

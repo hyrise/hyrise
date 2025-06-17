@@ -79,5 +79,4 @@ bool operator==(const ColumnMeta& left, const ColumnMeta& right);
 bool operator==(const CsvMeta& left, const CsvMeta& right);
 bool operator==(const ParseConfig& left, const ParseConfig& right);
 
-
 }  // namespace hyrise

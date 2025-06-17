@@ -122,7 +122,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto sort_left = [&]() {
     boost::sort::pdqsort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
                          VirtualPosListCmpContext{reference_matrix_left});
-   };
+  };
   const auto sort_right = [&]() {
     boost::sort::pdqsort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(),
                          VirtualPosListCmpContext{reference_matrix_right});
