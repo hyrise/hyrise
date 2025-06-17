@@ -66,6 +66,7 @@ namespace hyrise {
  *    RowID{0, 0}
  *    RowID{0, 1}
  *    RowID{1, 0}
+ *    RowID{1, 1}
  *
  */
 class UnionPositions : public AbstractReadOnlyOperator {
