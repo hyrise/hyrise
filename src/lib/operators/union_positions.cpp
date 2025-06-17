@@ -15,6 +15,7 @@
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
