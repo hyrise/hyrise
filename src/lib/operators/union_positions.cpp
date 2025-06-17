@@ -130,8 +130,8 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   if (virtual_pos_list_left.size() + virtual_pos_list_right.size() > 20'000) {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>(2);
-    jobs.push_back(std::make_shared<JobTask>(sort_left));
-    jobs.push_back(std::make_shared<JobTask>(sort_right));
+    jobs[0] = std::make_shared<JobTask>(sort_left);
+    jobs[1] = std::make_shared<JobTask>(sort_right);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   } else {
     sort_left();
