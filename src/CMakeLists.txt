@@ -77,7 +77,8 @@ if (ENABLE_CLANG_TIDY)
     endif()
 
     # Get the full clang-tidy path (helps with macOS builds). We disable tidy'ing system headers.
-    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy;-system-headers=false")
+    #set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy;-system-headers=false")
+    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy")
     message(STATUS "clang-tidy enabled")
 endif()
 
