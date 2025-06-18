@@ -13,6 +13,8 @@ namespace hyrise {
 
 enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
 
+enum class ValidationResultType { VALID, INVALID };
+
 /**
  * Container class to define uniqueness constraints for tables. As defined by SQL, two types of keys are supported:
  * PRIMARY KEY and UNIQUE keys. Table key constraints are translated to unique column combinations (UCCs) in the LQP.
@@ -50,11 +52,11 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   bool can_become_invalid() const;
 
   /**
-   * Returns whether or not the last validation and invalidation `CommitID`s tell us that this constraints is valid.
-   * Be aware that this does not mean that the constraint is valid in the current transaction, only that it was 
-   * validated last. To check if a constraint is guaranteed to be valid use `key_constraint_is_confidently_valid`.
+   * Returns the result of the last validation attempt in the UCC discovery plugin. This does not necessarily mean that
+   * the constraint is valid for the current state of the table; it only means that it was validated last. To check if
+   * a constraint is guaranteed to be valid on a given table, use `key_constraint_is_confidently_valid`.
    */
-  bool is_valid() const;
+  ValidationResultType last_validation_result() const;
   void revalidated_on(const CommitID revalidation_commit_id) const;
   void invalidated_on(const CommitID invalidation_commit_id) const;
 

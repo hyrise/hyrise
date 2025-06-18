@@ -1,5 +1,6 @@
 #include "ucc_discovery_plugin.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -133,29 +134,41 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     message << "Checking candidate " << candidate.table_name << "." << table->column_name(column_id);
 
     const auto& soft_key_constraints = table->soft_key_constraints();
+    const auto candidate_columns = std::unordered_set<ColumnID>{column_id};
+    const auto existing_ucc =
+        std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(), [&](const auto& key_constraint) {
+          return std::includes(key_constraint.columns().cbegin(), key_constraint.columns().cend(),
+                               candidate_columns.cbegin(), candidate_columns.cend());
+        });
 
-    // Check if a primary key constraint already exists for the column. If it does, we can skip the candidate.
-    const auto existing_pk = soft_key_constraints.find(TableKeyConstraint{{column_id}, KeyConstraintType::PRIMARY_KEY});
-    if (existing_pk != soft_key_constraints.end()) {
-      message << " [skipped (already known to be a primary key) in " << candidate_timer.lap_formatted() << "]";
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      continue;
-    }
+    if (existing_ucc != soft_key_constraints.end()) {
+      // Check if the found key constraint is a primary key constraint. If it is, we can directly skip the candidate.
+      if (existing_ucc->key_type() == KeyConstraintType::PRIMARY_KEY) {
+        message << " [skipped (already known to be a primary key) in " << candidate_timer.lap_formatted() << "]";
+        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+        continue;
+      }
 
-    // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. If it is, we can skip the
-    // expensive revalidation of the UCC. This also applies for permanent constraints.
-    const auto existing_ucc = soft_key_constraints.find(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
-    if (existing_ucc != soft_key_constraints.end() && key_constraint_is_confidently_valid(table, *existing_ucc)) {
-      message << " [skipped (already known and guaranteed to be still VALID) in " << candidate_timer.lap_formatted()
-              << "]";
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      continue;
-    }
-
-    if (existing_ucc != soft_key_constraints.end() && key_constraint_is_confidently_invalid(table, *existing_ucc)) {
-      message << " [skipped (already known and guaranteed to be INVALID) in " << candidate_timer.lap_formatted() << "]";
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      continue;
+      // Check if MVCC data tells us that the existing UCC is guaranteed to be valid or invalid. If it is, we can
+      // skip the expensive revalidation attempt of the UCC. This also covers the case where the existing UCC is
+      // schema-given.
+      // We do not update the CommitID of the existing UCC. This could lead to currently running transactions not being
+      // able to see the updated UCC anymore. Even though the UCC was guaranteed to be valid, the new CommitID is
+      // larger so we lose the knowledge about this previous guarantee.
+      if (existing_ucc->key_type() == KeyConstraintType::UNIQUE) {
+        if (key_constraint_is_confidently_valid(table, *existing_ucc)) {
+          message << " [skipped (already known and guaranteed to be still VALID) in " << candidate_timer.lap_formatted()
+                  << "]";
+          Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+          continue;
+        }
+        if (key_constraint_is_confidently_invalid(table, *existing_ucc)) {
+          message << " [skipped (already known and guaranteed to be INVALID) in " << candidate_timer.lap_formatted()
+                  << "]";
+          Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+          continue;
+        }
+      }
     }
 
     // If no UCC already exists or the existing UCC is not guaranteed to be still valid, we have to now (re-)validate
@@ -239,7 +252,8 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shar
 template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
     const std::shared_ptr<const Table>& table, const std::string& table_name, const ColumnID column_id,
-    const std::shared_ptr<TransactionContext>& transaction_context) {
+    const std::shared_ptr<TransactionContext>& transaction_context,
+    const std::optional<TableKeyConstraint>& existing_ucc) {
   // `distinct_values_across_segments` collects the segment values from all chunks.
   auto distinct_values_across_segments = std::unordered_set<ColumnDataType>{};
   auto unmodified_chunks = std::vector<ChunkID>();
@@ -256,8 +270,13 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
       continue;
     }
     const auto source_segment = source_chunk->get_segment(column_id);
-
-    if (source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable()) {
+    // Was the chunk modified since the last UCC validation (inserted or updated rows)? If not, than we do not need to
+    // probe its values for duplicates later, because duplicates can only be introduced by chunks that were modified
+    // after the last validation.
+    const bool not_modified_since_last_validation =
+        existing_ucc && existing_ucc->last_validation_result() == ValidationResultType::VALID &&
+        source_chunk->mvcc_data()->max_begin_cid.load() <= existing_ucc->last_validated_on();
+    if ((source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable()) || not_modified_since_last_validation) {
       // The set of distinct values across all segments should grow by the number of rows in the segment because,
       // if it does not, it means some value must have been inserted twice -> duplicate detected.
       // In this case, the UCC is violated.

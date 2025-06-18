@@ -112,31 +112,10 @@ bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
     return false;
   }
 
-  // If the column definitions match, we check if the valid key constraints are also equal then we assume equality.
-  const auto& key_constraints = table->soft_key_constraints();
-  const auto& rhs_key_constraints = static_table_node.table->soft_key_constraints();
-
-  auto valid_key_constraints = std::unordered_set<TableKeyConstraint>{};
-  for (const auto& key_constraint : key_constraints) {
-    if (key_constraint_is_confidently_valid(table, key_constraint)) {
-      valid_key_constraints.emplace(key_constraint);
-    }
-  }
-
-  // Go through every key constraint in the other node (rhs) and check if we can find a matching key constraint in the
-  // table. If we find one, we can remove it from the set.
-  for (const auto& key_constraint : rhs_key_constraints) {
-    if (key_constraint_is_confidently_valid(static_table_node.table, key_constraint)) {
-      if (valid_key_constraints.contains(key_constraint)) {
-        valid_key_constraints.erase(key_constraint);
-      } else {
-        // If we found a key constraint that is not known for the table, we can return false.
-        return false;
-      }
-    }
-  }
-  // If the set is not empty, we have key constraints that are known for the table, but not for the other node.
-  return valid_key_constraints.empty();
+  // If the column definitions match, we also compare the key constraints. Note that this comparison does only compare
+  // the type and columns of two key constraints, not the validity or stored CommitIDs. This is sufficient for the
+  // StaticTableNode because it should not contain invalid key constraints in the first place.
+  return table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
 }
 
 }  // namespace hyrise
