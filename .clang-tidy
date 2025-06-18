@@ -44,8 +44,7 @@ Checks: '
          -bugprone-unchecked-optional-access,
          -llvm-header-guard,
          -boost-use-ranges,
-         -portability-template-virtual-member-function,
-         -modernize-use-constraints
+         -portability-template-virtual-member-function
          '
 # TODO(anybody-update): `modernize-use-constraints` is temporarily disabled until LLVM fixes tidy crashes (see https://github.com/llvm/llvm-project/issues/123726)
 

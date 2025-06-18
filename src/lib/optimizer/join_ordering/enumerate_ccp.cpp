@@ -21,8 +21,8 @@
 
 namespace hyrise {
 
-// Even though we ensure that we have less than 64 vertices, clang-tidy still complains as we shift too far when calling
-// boost's `to_ulong()`. We thus consider this warning as a false positive.
+// Even though we ensure that we have less than 64 vertices, clang-tidy still complains the dynamic bitset of Boost
+// shifts too far when calling `to_ulong()` (see https://github.com/boostorg/dynamic_bitset/issues/88).
 // NOLINTBEGIN(clang-analyzer-core.BitwiseShift)
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges)
