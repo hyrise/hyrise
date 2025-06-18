@@ -329,7 +329,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
 TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
   _encode_table(_table_A, GetParam());
 
-  // Delete row of _table_A that had a duplicate value regarding column 1 such that column 1 is unique afterwards.
+  // Delete the row of `_table_A` that had a duplicate value in column 1. Column 1 is unique afterwards.
   _delete_row(_table_A, 3);
 
   // We are only interested in column 1, since it was not unique before the deletion but should be now.
@@ -337,7 +337,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
 
   _validate_ucc_candidates(ucc_candidates);
 
-  // Collect constraints known for the tables.
+  // Collect constraints known for the table.
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 1);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
