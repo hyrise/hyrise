@@ -12,39 +12,18 @@ You can still find the (archived) previous version of Hyrise on [Github](https:/
 
 ## Citation
 
-When referencing this version of Hyrise, please use the following bibtex entry:
-<details><summary>(click to expand)</summary>
-  
+When referencing this version of Hyrise, please use the following bibtex entry: 
 ```bibtex
-@inproceedings{DBLP:conf/edbt/DreselerK0KUP19,
-  author    = {Markus Dreseler and
-               Jan Kossmann and
-               Martin Boissier and
-               Stefan Klauck and
-               Matthias Uflacker and
-               Hasso Plattner},
-  editor    = {Melanie Herschel and
-               Helena Galhardas and
-               Berthold Reinwald and
-               Irini Fundulaki and
-               Carsten Binnig and
-               Zoi Kaoudi},
-  title     = {Hyrise Re-engineered: An Extensible Database System for Research in
-               Relational In-Memory Data Management},
-  booktitle = {Advances in Database Technology - 22nd International Conference on
-               Extending Database Technology, {EDBT} 2019, Lisbon, Portugal, March
-               26-29, 2019},
+@inproceedings{DBLPlike:conf/edbt/DreselerK0KUP19,
+  author    = {Markus Dreseler and Jan Kossmann and Martin Boissier and Stefan Klauck and Matthias Uflacker and Hasso Plattner},
+  title     = {Hyrise Re-engineered: An Extensible Database System for Research in Relational In-Memory Data Management},
+  booktitle = {International Conference on Extending Database Technology ({EDBT})},
   pages     = {313--324},
   publisher = {OpenProceedings.org},
   year      = {2019},
-  url       = {https://doi.org/10.5441/002/edbt.2019.28},
   doi       = {10.5441/002/edbt.2019.28},
-  timestamp = {Mon, 18 Mar 2019 16:09:00 +0100},
-  biburl    = {https://dblp.org/rec/conf/edbt/DreselerK0KUP19.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 ```
-</details>
 
 ## Supported Systems
 Hyrise is developed for Linux (preferrably the most current Ubuntu version) and optimized to run on server hardware. We support Mac to facilitate the local development of Hyrise, but do not recommend it for benchmarking.
