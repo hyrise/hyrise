@@ -306,19 +306,24 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   EXPECT_EQ(constraints_B.size(), 2);
 
   EXPECT_TRUE(constraints_A.contains(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_A.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::VALID);
 
   EXPECT_TRUE(constraints_A.contains(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_A.find(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::VALID);
 
   EXPECT_TRUE(constraints_A.contains(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::INVALID);
 
   EXPECT_TRUE(constraints_B.contains(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_B.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_B.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::VALID);
 
   EXPECT_TRUE(constraints_B.contains(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_B.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_B.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::INVALID);
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
@@ -336,7 +341,8 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 1);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::VALID);
 
   // Delete another row. This should have no effect on the previously discovered UCC.
   auto transaction_context = _delete_row(_table_A, 2, false);
@@ -344,14 +350,18 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
   const auto& constraints_A_2 = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A_2.size(), 1);
   EXPECT_TRUE(constraints_A_2.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A_2.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(
+      constraints_A_2.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+      ValidationResultType::VALID);
 
   transaction_context->commit();
 
   const auto& constraints_A_3 = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A_3.size(), 1);
   EXPECT_TRUE(constraints_A_3.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A_3.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(
+      constraints_A_3.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+      ValidationResultType::VALID);
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterInsertion) {
@@ -369,7 +379,8 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterInsertion) {
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 1);
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::VALID);
 
   // Insert a row that does not affect UCC.
   auto transaction_context = _insert_row(_table_name_A, _table_A->column_definitions(), {2, 4, "fine"}, false);
@@ -380,7 +391,9 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterInsertion) {
 
   EXPECT_EQ(constraints_A_2.size(), 1);
   EXPECT_TRUE(constraints_A_2.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A_2.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(
+      constraints_A_2.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+      ValidationResultType::VALID);
 
   // Commit transaction and re-validate UCCs.
   transaction_context->commit();
@@ -391,7 +404,9 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterInsertion) {
 
   EXPECT_EQ(constraints_A_3.size(), 1);
   EXPECT_TRUE(constraints_A_3.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A_3.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(
+      constraints_A_3.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+      ValidationResultType::VALID);
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateInsertion) {
@@ -420,7 +435,9 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateIn
 
   EXPECT_EQ(constraints_A_2.size(), 1);
   EXPECT_TRUE(constraints_A_2.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A_2.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(
+      constraints_A_2.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+      ValidationResultType::VALID);
 
   // Commit transaction and re-validate UCCs.
   transaction_context->commit();
@@ -431,7 +448,9 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateIn
 
   EXPECT_EQ(constraints_A_3.size(), 1);
   EXPECT_TRUE(constraints_A_3.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_A_3.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(
+      constraints_A_3.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+      ValidationResultType::INVALID);
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
@@ -461,7 +480,9 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
 
   EXPECT_EQ(constraints_A_2.size(), 1);
   EXPECT_TRUE(constraints_A_2.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A_2.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(
+      constraints_A_2.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+      ValidationResultType::VALID);
 
   // Commit transaction and re-validate UCCs.
   transaction_context->commit();
@@ -472,7 +493,9 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
 
   EXPECT_EQ(constraints_A_3.size(), 1);
   EXPECT_TRUE(constraints_A_3.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_A_3.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(
+      constraints_A_3.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+      ValidationResultType::INVALID);
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimestamp) {
@@ -510,16 +533,18 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   // The non-permanent UCC should have been validated.
   const auto first_validation_timestamp = column_1_constraint->last_validated_on();
   EXPECT_NE(first_validation_timestamp, MAX_COMMIT_ID);
-  // The following validation should not change the timestamp as the validity of the UCC is visible by examining the
+  // The following validation should change the timestamp as the validity of the UCC is visible by examining the
   // MVCC data of the tables chunks (see `key_constraint_is_confidently_valid`).
   _validate_ucc_candidates(ucc_candidates);
   EXPECT_EQ(column_1_constraint->last_validated_on(), first_validation_timestamp);
 
   EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_A.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::VALID);
 
   EXPECT_TRUE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->is_valid());
+  EXPECT_EQ(constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE})->last_validation_result(),
+            ValidationResultType::VALID);
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
@@ -545,22 +570,26 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   EXPECT_EQ(constraints_B.size(), 2);
 
   EXPECT_TRUE(constraints_A.contains({{_join_columnA->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.find(TableKeyConstraint{{_join_columnA->original_column_id}, KeyConstraintType::UNIQUE})
-                  ->is_valid());
+  EXPECT_EQ(constraints_A.find(TableKeyConstraint{{_join_columnA->original_column_id}, KeyConstraintType::UNIQUE})
+                ->last_validation_result(),
+            ValidationResultType::VALID);
 
   EXPECT_TRUE(constraints_A.contains({{_predicate_column_A->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(
+  EXPECT_EQ(
       constraints_A.find(TableKeyConstraint{{_predicate_column_A->original_column_id}, KeyConstraintType::UNIQUE})
-          ->is_valid());
+          ->last_validation_result(),
+      ValidationResultType::VALID);
 
   EXPECT_TRUE(constraints_B.contains({{_join_columnB->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_B.find(TableKeyConstraint{{_join_columnB->original_column_id}, KeyConstraintType::UNIQUE})
-                  ->is_valid());
+  EXPECT_EQ(constraints_B.find(TableKeyConstraint{{_join_columnB->original_column_id}, KeyConstraintType::UNIQUE})
+                ->last_validation_result(),
+            ValidationResultType::VALID);
 
   EXPECT_TRUE(constraints_B.contains({{_predicate_column_B->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(
+  EXPECT_EQ(
       constraints_B.find(TableKeyConstraint{{_predicate_column_B->original_column_id}, KeyConstraintType::UNIQUE})
-          ->is_valid());
+          ->last_validation_result(),
+      ValidationResultType::INVALID);
 
   // Ensure we clear the plan caches.
   EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 0);
@@ -575,7 +604,7 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
     const std::string sql = "SELECT b,c FROM " + _table_name_A + " GROUP BY b,c;";
     auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
     const auto& [pipeline_status, _] = pipeline.get_result_table();
-    ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
+    EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   };
 
   const auto exec_insert_statement = [&]() {
@@ -583,14 +612,14 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
     const std::string sql = "INSERT INTO " + _table_name_A + " (A_a, b, c) VALUES (14, 12, 'duplicate_b');";
     auto pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
     const auto& [pipeline_status, _] = pipeline.get_result_table();
-    ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
+    EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
     transaction_context->commit();
   };
 
   // Perform a single query to populate the LQPCache for `identify_ucc_candidates`.
   exec_groupby_statement();
 
-  ASSERT_EQ(Hyrise::get().default_lqp_cache->size(), 1);
+  EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 1);
 
   // Discover UCCs used in previous query.
   auto& plugin_manager = Hyrise::get().plugin_manager;
@@ -600,8 +629,9 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
   // Check that key constraint was added to the table.
   const auto constraint_A_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
 
-  ASSERT_EQ(_table_A->soft_key_constraints().size(), 2);
-  ASSERT_TRUE(_table_A->soft_key_constraints().find(constraint_A_c)->is_valid());
+  EXPECT_EQ(_table_A->soft_key_constraints().size(), 2);
+  EXPECT_EQ(_table_A->soft_key_constraints().find(constraint_A_c)->last_validation_result(),
+            ValidationResultType::VALID);
 
   exec_groupby_statement();
   exec_insert_statement();
@@ -609,7 +639,7 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
 
   // Check that validity of constraint is not guaranteed anymore.
   const auto constraint_A = _table_A->soft_key_constraints().find(constraint_A_c);
-  ASSERT_NE(constraint_A, _table_A->soft_key_constraints().end());
+  EXPECT_NE(constraint_A, _table_A->soft_key_constraints().end());
   EXPECT_FALSE(key_constraint_is_confidently_valid(_table_A, *constraint_A));
 
   // Flush and repopulate the cache.
@@ -620,8 +650,9 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
   // Check that key constraint is properly invalidated.
   plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
 
-  ASSERT_EQ(_table_A->soft_key_constraints().size(), 2);
-  ASSERT_FALSE(_table_A->soft_key_constraints().find(constraint_A_c)->is_valid());
+  EXPECT_EQ(_table_A->soft_key_constraints().size(), 2);
+  EXPECT_EQ(_table_A->soft_key_constraints().find(constraint_A_c)->last_validation_result(),
+            ValidationResultType::INVALID);
 
   // Remove duplicates.
   {
@@ -635,8 +666,9 @@ TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidatio
   plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
 
   // Check that the key constraint is valid again.
-  ASSERT_EQ(_table_A->soft_key_constraints().size(), 2);
-  ASSERT_TRUE(_table_A->soft_key_constraints().find(constraint_A_c)->is_valid());
+  EXPECT_EQ(_table_A->soft_key_constraints().size(), 2);
+  EXPECT_EQ(_table_A->soft_key_constraints().find(constraint_A_c)->last_validation_result(),
+            ValidationResultType::VALID);
 }
 
 INSTANTIATE_TEST_SUITE_P(UccDiscoveryPluginMultiEncodingTestInstances, UccDiscoveryPluginMultiEncodingTest,
