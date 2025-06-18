@@ -1,3 +1,6 @@
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
@@ -393,4 +396,11 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 }
 
+TEST_F(InExpressionRewriteRuleTest, CheckCacheability) {
+  auto rule = std::make_shared<InExpressionRewriteRule>();
+  rule->strategy = InExpressionRewriteRule::Strategy::ExpressionEvaluator;
+  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(single_element_in_expression, node));
+  const auto is_cacheable = _apply_rule(rule, input_lqp);
+  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+}
 }  // namespace hyrise
