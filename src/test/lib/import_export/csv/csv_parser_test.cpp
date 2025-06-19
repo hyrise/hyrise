@@ -12,13 +12,13 @@ class CsvParserTest : public BaseTest {};
 
 TEST_F(CsvParserTest, SingleFloatColumn) {
   const auto table = CsvParser::parse("resources/test_data/csv/float.csv");
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", ChunkOffset{5});
+  const auto expected_table = load_table("resources/test_data/tbl/float.tbl", ChunkOffset{5});
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
 TEST_F(CsvParserTest, SingleLongWithNullColumn) {
   const auto table = CsvParser::parse("resources/test_data/csv/long_with_null.csv");
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/long_with_null.tbl", ChunkOffset{5});
+  const auto expected_table = load_table("resources/test_data/tbl/long_with_null.tbl", ChunkOffset{5});
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
