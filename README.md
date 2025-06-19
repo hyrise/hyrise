@@ -14,7 +14,7 @@ You can still find the (archived) previous version of Hyrise on [Github](https:/
 
 When referencing this version of Hyrise, please use the following bibtex entry: 
 ```bibtex
-@inproceedings{DBLPlike:conf/edbt/DreselerK0KUP19,
+@inproceedings{conf/edbt/DreselerK0KUP19,
   author    = {Markus Dreseler and Jan Kossmann and Martin Boissier and Stefan Klauck and Matthias Uflacker and Hasso Plattner},
   title     = {Hyrise Re-engineered: An Extensible Database System for Research in Relational In-Memory Data Management},
   booktitle = {International Conference on Extending Database Technology ({EDBT})},
