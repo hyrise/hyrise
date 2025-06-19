@@ -367,72 +367,72 @@ TEST_F(StorageChunkTest, TrySetImmutable) {
 }
 
 TEST_F(StorageChunkTest, ReferencesExactlyOneTable) {
-  // Create a test table with two columns
-  TableColumnDefinitions column_definitions;
+  // Create a test table with two columns.
+  auto column_definitions = TableColumnDefinitions();
   column_definitions.emplace_back("a", DataType::Int, true);
   column_definitions.emplace_back("b", DataType::String, true);
-  auto test_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
+  const auto test_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   test_table->append_chunk({vs_int, vs_str});
 
-  // Create a second test table
-  TableColumnDefinitions column_definitions2;
+  // Create a second test table.
+  auto column_definitions2 = TableColumnDefinitions();
   column_definitions2.emplace_back("c", DataType::Int, false);
   column_definitions2.emplace_back("d", DataType::String, false);
-  auto test_table2 = std::make_shared<Table>(column_definitions2, TableType::Data, ChunkOffset{3});
+  const auto test_table2 = std::make_shared<Table>(column_definitions2, TableType::Data, ChunkOffset{3});
   test_table2->append_chunk({ds_int, ds_str});
 
-  // Chunk with non-reference segments
-  { EXPECT_FALSE(chunk->references_exactly_one_table()); }
+  // Chunk with non-reference segments.
+  EXPECT_FALSE(chunk->references_exactly_one_table());
 
-  // Chunk with reference segments to the same table with the same pos_list
+  // Chunk with reference segments to the same table with the same pos_list.
   {
-    auto pos_list = std::make_shared<RowIDPosList>();
+    const auto pos_list = std::make_shared<RowIDPosList>();
     pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
     pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
 
-    auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list);
-    auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table, ColumnID{1}, pos_list);
+    const auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list);
+    const auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table, ColumnID{1}, pos_list);
 
-    Segments reference_segments;
+    auto reference_segments = Segments();
     reference_segments.push_back(ref_segment1);
     reference_segments.push_back(ref_segment2);
 
-    auto reference_chunk = std::make_shared<Chunk>(reference_segments);
+    const auto reference_chunk = std::make_shared<Chunk>(reference_segments);
     EXPECT_TRUE(reference_chunk->references_exactly_one_table());
   }
 
-  // Chunk with reference segments to different tables
+  // Chunk with reference segments to different tables.
   {
-    auto pos_list = std::make_shared<RowIDPosList>();
+    const auto pos_list = std::make_shared<RowIDPosList>();
     pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
 
-    auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list);
-    auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table2, ColumnID{0}, pos_list);
+    const auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list);
+    const auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table2, ColumnID{0}, pos_list);
 
-    Segments mixed_reference_segments;
+    auto mixed_reference_segments = Segments();
     mixed_reference_segments.push_back(ref_segment1);
     mixed_reference_segments.push_back(ref_segment2);
 
-    auto mixed_reference_chunk = std::make_shared<Chunk>(mixed_reference_segments);
+    const auto mixed_reference_chunk = std::make_shared<Chunk>(mixed_reference_segments);
     EXPECT_FALSE(mixed_reference_chunk->references_exactly_one_table());
   }
 
-  // Chunk with reference segments to the same table but different pos_lists
+  // Chunk with reference segments to the same table but different pos_lists.
   {
-    auto pos_list1 = std::make_shared<RowIDPosList>();
+    const auto pos_list1 = std::make_shared<RowIDPosList>();
     pos_list1->emplace_back(ChunkID{0}, ChunkOffset{0});
 
-    auto pos_list2 = std::make_shared<RowIDPosList>();
+    const auto pos_list2 = std::make_shared<RowIDPosList>();
     pos_list2->emplace_back(ChunkID{0}, ChunkOffset{1});
 
-    auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list1);
-    auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table, ColumnID{1}, pos_list2);
+    const auto ref_segment1 = std::make_shared<ReferenceSegment>(test_table, ColumnID{0}, pos_list1);
+    const auto ref_segment2 = std::make_shared<ReferenceSegment>(test_table, ColumnID{1}, pos_list2);
 
-    Segments different_pos_list_segments;
+    auto different_pos_list_segments = Segments();
     different_pos_list_segments.push_back(ref_segment1);
     different_pos_list_segments.push_back(ref_segment2);
 
-    auto different_pos_list_chunk = std::make_shared<Chunk>(different_pos_list_segments);
+    const auto different_pos_list_chunk = std::make_shared<Chunk>(different_pos_list_segments);
     EXPECT_FALSE(different_pos_list_chunk->references_exactly_one_table());
   }
 }

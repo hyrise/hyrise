@@ -197,16 +197,16 @@ TEST_F(SegmentAccessCounterTest, AccessPattern8) {
 }
 
 TEST_F(SegmentAccessCounterTest, SelfAssignment) {
-  SegmentAccessCounter counter;
+  auto counter = SegmentAccessCounter();
   counter[SegmentAccessCounter::AccessType::Point] = 10;
   counter[SegmentAccessCounter::AccessType::Sequential] = 20;
 
-  // Store original values to check after self-assignment
+  // Store original values to check after self-assignment.
   const auto original_point = counter[SegmentAccessCounter::AccessType::Point].load();
   const auto original_sequential = counter[SegmentAccessCounter::AccessType::Sequential].load();
 
-  // Assign via a reference to avoid -Wself-assign-overloaded
-  SegmentAccessCounter& ref = counter;
+  // Assign via a reference to avoid -Wself-assign-overloaded.
+  auto& ref = counter;
   counter = ref;
 
   EXPECT_EQ(counter[SegmentAccessCounter::AccessType::Point], original_point);
@@ -214,28 +214,35 @@ TEST_F(SegmentAccessCounterTest, SelfAssignment) {
 }
 
 TEST_F(SegmentAccessCounterTest, InequalityOperator) {
-  SegmentAccessCounter counter1;
-  SegmentAccessCounter counter2;
+  const auto zero_counter = SegmentAccessCounter();
+  const auto access_types = {AccessType::Point, AccessType::Sequential, AccessType::Monotonic, AccessType::Random,
+                             AccessType::Dictionary};
+  for (const auto access_type : access_types) {
+    auto modified_counter = zero_counter;
 
-  EXPECT_FALSE(counter1 != counter2);  // Should be equal
+    EXPECT_FALSE(zero_counter != modified_counter);  // Should be equal.
 
-  // Should be different
-  counter1[SegmentAccessCounter::AccessType::Point] = 42;
+    modified_counter[access_type] = 42;
 
-  EXPECT_TRUE(counter1 != counter2);
+    // Should be different.
+    EXPECT_TRUE(zero_counter != modified_counter);  // Should be equal.
+  }
 }
 
 TEST_F(SegmentAccessCounterTest, EqualityOperator) {
-  SegmentAccessCounter counter1;
-  SegmentAccessCounter counter2;
+  const auto zero_counter = SegmentAccessCounter();
+  const auto access_types = {AccessType::Point, AccessType::Sequential, AccessType::Monotonic, AccessType::Random,
+                             AccessType::Dictionary};
+  for (const auto access_type : access_types) {
+    auto modified_counter = zero_counter;
 
-  // Initially, both counters are zeroed → should be equal
-  EXPECT_TRUE(counter1 == counter2);
+    EXPECT_TRUE(zero_counter == modified_counter);  // Should be equal.
 
-  // Should be different
-  counter1[SegmentAccessCounter::AccessType::Point] = 1;
+    modified_counter[access_type] = 42;
 
-  EXPECT_FALSE(counter1 == counter2);
+    // Should be different.
+    EXPECT_FALSE(zero_counter == modified_counter);  // Should be equal.
+  }
 }
 
 }  // namespace hyrise
