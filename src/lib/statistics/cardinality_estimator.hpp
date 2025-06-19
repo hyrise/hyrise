@@ -42,8 +42,9 @@ class WindowNode;
  * change anymore. This is beneficial if we call the CardinalityEstimator multiple times for the same LQP (e.g., during
  * join ordering, predicate reordering, etc.).
  * Even if we cannot cache statistics across multiple estimation invocations because the plan structure changes in
- * between, we maintain a cache for the scope of a single call to facilitate diamonds.
- * This helps if we have diamonds in the query plan (e.g., after predicate splitup or with semi-join reductions).
+ * between, we maintain a cache for the scope of a single call to facilitate diamonds (e.g., after predicate splitup or
+ * with semi-join reductions). Without caching, we would estimate the statistics of common subplans below a diamond
+ * multiple times even if we estimated the plan's cardinality only once.
  * When allowing the CardinalityEstimator to use caching, you have to get a fresh instance (`new_instance()`). Thus, the
  * filled caches do not interfere with later estimations by, e.g., following optimizer rules.
  */
@@ -110,8 +111,9 @@ class CardinalityEstimator {
    * <lqp-ptr> -> <statistics> cache.
    * Furthermore, this call also enables statistics pruning and population of columns that must not be pruned. Thus, it
    * sets @param lqp in the cache to lazily use it for populating the columns. This passed LQP node should be the root
-   * of the (sub-)plan you wish to perform estimations for. If you do not wish to use statistics pruning (e.g., because
-   * you untie nodes from the plan while performing estimations), call `do_not_prune_unused_statistics()` afterwards.
+   * of the (sub-)plan you wish to perform estimations for. If you wish to only use statistics caching, but not
+   * statistics pruning (e.g., because you untie nodes from the plan while performing estimations), call
+   * `do_not_prune_unused_statistics()` afterwards.
    *
    * Image the following simple example of predicate reordering. Assume we have a table R with 100'000 tuples, a
    * PredicateNode A with a selectivity of 0.3, and a PredicateNode B with a selectivity of 0.5. There are also more

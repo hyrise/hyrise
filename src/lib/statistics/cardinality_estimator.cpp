@@ -1202,7 +1202,8 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_column_vs_co
   /**
    * Column-to-column scan estimation is notoriously hard; selectivities from 0 to 1 are possible for the same
    * histogram pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct
-   * counts for each bin pair.
+   * counts for each bin pair. This means that all values that could have a match, i.e., values that are in both
+   * histograms, survive.
    */
   auto left_idx = BinID{0};
   auto right_idx = BinID{0};
@@ -1215,6 +1216,9 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_column_vs_co
     const auto& left_min = left_histogram.bin_minimum(left_idx);
     const auto& right_min = right_histogram.bin_minimum(right_idx);
 
+    // We split both histograms at each others' bounds before. Thus, we can skip bins that have different bounds (i.e.,
+    // bins that exist in only one of the two histograms) because their values cannot have matches in the other
+    // histogram.
     if (left_min < right_min) {
       ++left_idx;
       continue;
@@ -1228,6 +1232,8 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_column_vs_co
     DebugAssert(left_histogram.bin_maximum(left_idx) == right_histogram.bin_maximum(right_idx),
                 "Histogram bin boundaries do not match.");
 
+    // Assume that all values that could have a match survive. Values that are only in one histogram cannot match. Thus,
+    // we use the minima of height and distinct count from the input histograms for the new histogram.
     const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
     const auto distinct_count =
         std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
