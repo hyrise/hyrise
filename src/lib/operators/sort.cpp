@@ -602,11 +602,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     sorted_table = write_reference_output_table(input_table, std::move(position_list), _output_chunk_size);
   }
 
-  Print::print(input_table);
-  std::cout << "\n";
-  Print::print(sorted_table);
-  std::cout << std::endl;
-
   const auto& final_sort_definition = _sort_definitions[0];
   // Set the sorted_by attribute of the output's chunks according to the most significant sort operation, which is the
   // column the table was sorted by last.
