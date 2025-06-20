@@ -364,8 +364,6 @@ CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(
       case CompressedVectorType::BitPacking:
         compressed_vector_type_id = static_cast<uint8_t>(*compressed_vector_type);
         break;
-      default:
-        Fail("Export of specified CompressedVectorType is not yet supported");
     }
   });
   return compressed_vector_type_id;
@@ -386,8 +384,6 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
     case CompressedVectorType::BitPacking:
       export_compact_vector(ofstream, dynamic_cast<const BitPackingVector&>(compressed_vector).data());
       return;
-    default:
-      Fail("Any other type should have been caught before.");
   }
 }
 

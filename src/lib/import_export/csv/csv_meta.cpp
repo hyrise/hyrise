@@ -56,8 +56,6 @@ void to_json(nlohmann::json& json_string, NullHandling null_handling) {
     case NullHandling::NullStringAsValue:
       json_string = "null_string_as_value";
       break;
-    default:
-      Fail("Unexpected NullHandling.");
   }
 }
 
