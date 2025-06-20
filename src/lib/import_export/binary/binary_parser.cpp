@@ -343,7 +343,7 @@ std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std
   const auto string_length = _read_value<uint32_t>(file);
   pmr_vector<char> values(string_length * count);
   file.read(values.data(), static_cast<int64_t>(values.size()));
-  return std::make_shared<FixedStringVector>(std::move(values), string_length);
+  return std::make_shared<FixedStringVector>(std::move(values), string_length, count);
 }
 
 }  // namespace hyrise

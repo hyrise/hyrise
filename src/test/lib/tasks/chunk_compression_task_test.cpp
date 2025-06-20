@@ -8,7 +8,9 @@
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "tasks/chunk_compression_task.hpp"
 
 namespace hyrise {
@@ -51,7 +53,9 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{6});
   Hyrise::get().storage_manager.add_table("table_dict", table_dict);
 
-  auto compression = std::make_shared<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
+  auto compression = std::make_shared<ChunkCompressionTask>(
+      "table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}},
+      ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Dictionary}});
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression});
 
   constexpr auto chunk_count = 2u;
