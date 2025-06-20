@@ -37,7 +37,7 @@
 namespace hyrise {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
-  std::ifstream file;
+  auto file = std::ifstream{};
   file.open(filename, std::ios::binary);
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
@@ -59,7 +59,7 @@ pmr_compact_vector BinaryParser::_read_values_compact_vector(std::ifstream& file
 
 template <typename T>
 pmr_vector<T> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
-  pmr_vector<T> values(count);
+  auto values = pmr_vector<T>(count);
   file.read(reinterpret_cast<char*>(values.data()), values.size() * sizeof(T));
   return values;
 }
@@ -73,7 +73,7 @@ pmr_vector<pmr_string> BinaryParser::_read_values(std::ifstream& file, const siz
 // specialized implementation for bool values
 template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
-  pmr_vector<BoolAsByteType> readable_bools(count);
+  auto readable_bools = pmr_vector<BoolAsByteType>(count);
   file.read(reinterpret_cast<char*>(readable_bools.data()),
             static_cast<int64_t>(readable_bools.size() * sizeof(BoolAsByteType)));
   return {readable_bools.begin(), readable_bools.end()};
@@ -96,7 +96,7 @@ pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, co
 
 template <typename T>
 T BinaryParser::_read_value(std::ifstream& file) {
-  T result;
+  auto result = T{};
   file.read(reinterpret_cast<char*>(&result), sizeof(T));
   return result;
 }
