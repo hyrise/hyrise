@@ -97,7 +97,6 @@ bool TPCCNewOrder::_on_execute() {
   Assert(customer_table && customer_table->row_count() == 1, "Did not find customer (or found more than one).");
   const auto c_discount = *customer_table->get_value<float>(ColumnID{0}, 0);
   Assert(c_discount >= 0.f && c_discount <= .5f, "Invalid customer discount rate encountered.");
-  const auto c_last = *customer_table->get_value<pmr_string>(ColumnID{1}, 0);
   const auto c_credit = *customer_table->get_value<pmr_string>(ColumnID{2}, 0);
   Assert(c_credit == "GC" || c_credit == "BC", "Invalid customer credit encountered.");
 
@@ -152,7 +151,6 @@ bool TPCCNewOrder::_on_execute() {
     Assert(stock_table && stock_table->row_count() == 1, "Did not find stock entry (or found more than one)");
     const auto s_quantity = *stock_table->get_value<int32_t>(ColumnID{0}, 0);
     const auto s_dist = *stock_table->get_value<pmr_string>(ColumnID{1}, 0);
-    const auto s_data = *stock_table->get_value<pmr_string>(ColumnID{2}, 0);
     const auto s_ytd = *stock_table->get_value<int32_t>(ColumnID{3}, 0);
     const auto s_order_cnt = *stock_table->get_value<int32_t>(ColumnID{4}, 0);
     const auto s_remote_cnt = *stock_table->get_value<int32_t>(ColumnID{4}, 0);

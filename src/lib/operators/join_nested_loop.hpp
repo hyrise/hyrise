@@ -56,10 +56,11 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // compiler would try to put the entire join for all types into a single, monolithic function. For -O3 on clang, this
   // reduces the compile time to a fourth.
 
-  static void __attribute__((noinline))
-  _join_two_untyped_segments(const AbstractSegment& abstract_segment_left,
-                             const AbstractSegment& abstract_segment_right, const ChunkID chunk_id_left,
-                             const ChunkID chunk_id_right, JoinParams& params);
+  static void __attribute__((noinline)) _join_two_untyped_segments(const AbstractSegment& abstract_segment_left,
+                                                                   const AbstractSegment& abstract_segment_right,
+                                                                   const ChunkID chunk_id_left,
+                                                                   const ChunkID chunk_id_right,
+                                                                   const JoinParams& params);
 
   static void _write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
                                   const std::shared_ptr<RowIDPosList>& pos_list);
