@@ -105,6 +105,16 @@ void encode_double_value(uint8_t* dest, const std::optional<double>& val, const 
   }
 }
 
+void encode_float_value(uint8_t* dest, const std::optional<float>& val, const SortColumnDefinition& def) {
+  double value;
+  if (val.has_value()) {
+    value = static_cast<double>(val.value());
+  }
+
+  // Use the same encoding as for double, but with float value
+  encode_double_value(dest, std::optional<double>(value), def);
+}
+
 void encode_string_value(uint8_t* dest, const std::optional<pmr_string>& val, const SortColumnDefinition& def) {
   if (!val.has_value()) {
     *dest = static_cast<uint8_t>(0xFF);  // set null byte to indicate NULL value
@@ -150,17 +160,20 @@ void setup_table(std::string table_name) {
       TableColumnDefinition{"int_col", DataType::Int, false},
       TableColumnDefinition{"int_col_nullable", DataType::Int, true},
       TableColumnDefinition{"double_col", DataType::Double, false},
+      TableColumnDefinition{"float_col", DataType::Float, false},
+      TableColumnDefinition{"long_col", DataType::Long, false},
   };
   auto output = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{1024});
   Hyrise::get().storage_manager.add_table(table_name, output);
 }
 
-void fill_table(std::string table_name) {
-  auto tab = Hyrise::get().storage_manager.get_table(table_name);
-  auto column_count = tab->column_count();
+void fill_table(const std::string table_name) {
+  const auto tab = Hyrise::get().storage_manager.get_table(table_name);
+  const auto column_count = tab->column_count();
   constexpr auto desired_chunk_count = int32_t{3};
-  auto target_chunk_size = tab->target_chunk_size();
-  for (int32_t i = 0; i < static_cast<int32_t>(target_chunk_size) * desired_chunk_count; ++i) {
+  const auto target_chunk_size = static_cast<int32_t>(tab->target_chunk_size());
+  const auto max_int = static_cast<int64_t>(std::numeric_limits<int32_t>::max());
+  for (int32_t i = 0; i < target_chunk_size * desired_chunk_count; ++i) {
     std::vector<AllTypeVariant> row_values;
     row_values.reserve(column_count);  // reserve space
 
@@ -170,8 +183,10 @@ void fill_table(std::string table_name) {
     if (i % 2 == 0)                               // simulate nullable int
       row_values.push_back(hyrise::NullValue{});  // nullable int
     else
-      row_values.push_back(i + 10000);       // nullable int
-    row_values.push_back(double{i * 1.23});  // nullable double
+      row_values.push_back(i + 10000);                  // nullable int
+    row_values.push_back(double{i * 1.23});             // nullable double
+    row_values.push_back(float{i + 0.1f});              // nullable float
+    row_values.push_back(int64_t{i + 1000} + max_int);  // long
 
     tab->append(row_values);
   }
@@ -189,10 +204,12 @@ void print_table(std::string table_name) {
 int main() {
   // define
   std::vector<SortColumnDefinition> sort_definitions = {
-      // SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},   // col1
-      SortColumnDefinition{ColumnID{2}, SortMode::AscendingNullsLast},    // col4
-      SortColumnDefinition{ColumnID{3}, SortMode::DescendingNullsFirst},  // col2
-      SortColumnDefinition{ColumnID{4}, SortMode::AscendingNullsLast},    // col2
+      // SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},
+      // SortColumnDefinition{ColumnID{2}, SortMode::AscendingNullsLast},
+      // SortColumnDefinition{ColumnID{3}, SortMode::DescendingNullsFirst},
+      // SortColumnDefinition{ColumnID{4}, SortMode::AscendingNullsLast},
+      // SortColumnDefinition{ColumnID{5}, SortMode::DescendingNullsFirst},
+      SortColumnDefinition{ColumnID{6}, SortMode::DescendingNullsFirst},
   };
 
   const std::string table_name = "test_table";
@@ -212,6 +229,8 @@ int main() {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         field_width.push_back(STRING_PREFIX);  // store size of the string prefix
+      } else if constexpr (std::is_same_v<ColumnDataType, float>) {
+        field_width.push_back(sizeof(double));  // encode float as double for sorting
       } else {
         field_width.push_back(
             sizeof(ColumnDataType));  // store size of the column type, e.g. 4 for int, 8 for double, etc.
@@ -269,6 +288,8 @@ int main() {
               encode_string_value(key_ptr + offsets[i], value, sort_definitions[i]);
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
               encode_double_value(key_ptr + offsets[i], value, sort_definitions[i]);
+            } else if constexpr (std::is_same_v<ColumnDataType, float>) {
+              encode_float_value(key_ptr + offsets[i], value, sort_definitions[i]);
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
               encode_int_value(key_ptr + offsets[i], value, sort_definitions[i]);
             } else {
