@@ -163,7 +163,7 @@ void setup_table(std::string table_name) {
       TableColumnDefinition{"float_col", DataType::Float, false},
       TableColumnDefinition{"long_col", DataType::Long, false},
   };
-  auto output = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{1024});
+  auto output = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{1025});
   Hyrise::get().storage_manager.add_table(table_name, output);
 }
 
@@ -179,7 +179,7 @@ void fill_table(const std::string table_name) {
 
     row_values.push_back(i);  // index
     row_values.push_back(pmr_string{"Country" + std::to_string(i % 10)});
-    row_values.push_back(i < 5 ? 1 : 2);
+    row_values.push_back(!(i % target_chunk_size) ? 1 : 2);
     if (i % 2 == 0)                               // simulate nullable int
       row_values.push_back(hyrise::NullValue{});  // nullable int
     else
@@ -204,12 +204,12 @@ void print_table(std::string table_name) {
 int main() {
   // define
   std::vector<SortColumnDefinition> sort_definitions = {
-      // SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},
-      // SortColumnDefinition{ColumnID{2}, SortMode::AscendingNullsLast},
-      // SortColumnDefinition{ColumnID{3}, SortMode::DescendingNullsFirst},
+      // SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsFirst},
+      SortColumnDefinition{ColumnID{2}, SortMode::AscendingNullsLast},
+      SortColumnDefinition{ColumnID{3}, SortMode::AscendingNullsLast},
       // SortColumnDefinition{ColumnID{4}, SortMode::AscendingNullsLast},
       // SortColumnDefinition{ColumnID{5}, SortMode::DescendingNullsFirst},
-      SortColumnDefinition{ColumnID{6}, SortMode::DescendingNullsFirst},
+      // SortColumnDefinition{ColumnID{6}, SortMode::DescendingNullsFirst},
   };
 
   const std::string table_name = "test_table";
@@ -217,8 +217,10 @@ int main() {
   fill_table(table_name);
 
   auto tab = Hyrise::get().storage_manager.get_table(table_name);
+  const auto chunk_count = tab->chunk_count();
+  const auto row_count = tab->row_count();
 
-  // precompute field_width, key_width and offsets
+  // === precompute field_width, key_width and key_offsets ===
 
   // based on the sizes of the columns to be sorted by, e.g. if sorting by int, string it should be [4, 8]
   std::vector<size_t> field_width;
@@ -242,22 +244,23 @@ int main() {
   for (const auto& col : field_width) {
     key_width += col + 1;  // +1 for null byte
   }
-  std::vector<size_t> offsets(sort_definitions.size());  // offsets for each column in the key
-  offsets[0] = 0;                                        // first column starts at offset 0
+
+  /**
+   * Offsets for each column in the key, i.e. `key_offsets[i]` is the offset of the i-th column in the key.
+   * This means, that `buffer[key_offsets[i]]` is the location of the i-th column's value in the key.
+  */
+  std::vector<size_t> key_offsets(sort_definitions.size());
+  key_offsets[0] = 0;  // first column starts at offset 0
   for (size_t i = 1; i < sort_definitions.size(); ++i) {
-    offsets[i] = offsets[i - 1] + field_width[i - 1] + 1;  // +1 for null byte
+    key_offsets[i] = key_offsets[i - 1] + field_width[i - 1] + 1;  // +1 for null byte
   }
 
   std::mutex print_mutex;
   std::vector<std::thread> threads;  // vector to hold threads
 
-  auto key_buffer = std::vector<uint8_t>();    // buffer to hold all keys for sorting
-  auto chunk_sizes = std::vector<size_t>();    // sizes of each chunk in the table
-  auto chunk_offsets = std::vector<size_t>();  // offsets for each key in the buffer
-  chunk_offsets.reserve(tab->chunk_count());
-  chunk_offsets[0] = 0;  // first chunk starts at offset 0
+  auto key_buffer = std::vector<uint8_t>();  // buffer to hold all keys for sorting
+  auto chunk_sizes = std::vector<size_t>();  // sizes of each chunk in the table
 
-  const auto chunk_count = tab->chunk_count();
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = tab->get_chunk(chunk_id);
     auto row_count_for_chunk = chunk->size();
@@ -268,27 +271,32 @@ int main() {
   for (size_t i = 0; i < chunk_sizes.size(); ++i) {
     auto chunk_size = chunk_sizes[i];
     total_buffer_size += chunk_size * key_width;  // total size of the keys for this chunk
-    if (i > 0) {
-      chunk_offsets.push_back(chunk_offsets[i - 1] + chunk_sizes[i - 1] * key_width);  // offset for this chunk
-    }
   }
   key_buffer.reserve(total_buffer_size);  // reserve space for all keys
+
+  RowIDPosList row_ids(row_count);  // vector to hold row IDs for each row in the table
+
+  auto row_id_offsets = std::vector<size_t>();  // offsets for each chunk's row IDs
+  row_id_offsets.reserve(chunk_count);          // reserve space for offsets
+  row_id_offsets[0] = 0;
+  for (ChunkID chunk_id = ChunkID{1}; chunk_id < chunk_count; ++chunk_id) {
+    auto offset = row_id_offsets[chunk_id - 1] + chunk_sizes[chunk_id - 1];
+    row_id_offsets[chunk_id] = offset;
+  }
 
   // for each chunk in table
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // spawn thread to sort the chunk
     threads.emplace_back([&, chunk_id]() {
       auto chunk = tab->get_chunk(chunk_id);
-      auto row_count_for_chunk = chunk->size();
-      std::cout << "Sorting chunk " << chunk_id << " with " << row_count_for_chunk << " rows..." << std::endl;
+      auto row_count_for_chunk = chunk_sizes[chunk_id];
 
       // buffer points to the start of this chunk's keys in the global key_buffer
-      uint8_t* buffer = &key_buffer[chunk_offsets[chunk_id]];
+      uint8_t* buffer = &key_buffer[row_id_offsets[chunk_id] * key_width];
 
       // create key for each row in the chunk
-      std::vector<ChunkOffset> row_indices(row_count_for_chunk);
       for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
-        row_indices[row] = ChunkOffset{row};  // build array of row indices
+        row_ids[row_id_offsets[chunk_id] + row] = RowID{chunk_id, row};  // build array of row ids
 
         uint8_t* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
 
@@ -306,13 +314,13 @@ int main() {
 
             // encode the value into the key based on the data type
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              encode_string_value(key_ptr + offsets[i], value, sort_definitions[i]);
+              encode_string_value(key_ptr + key_offsets[i], value, sort_definitions[i]);
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
-              encode_double_value(key_ptr + offsets[i], value, sort_definitions[i]);
+              encode_double_value(key_ptr + key_offsets[i], value, sort_definitions[i]);
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
-              encode_float_value(key_ptr + offsets[i], value, sort_definitions[i]);
+              encode_float_value(key_ptr + key_offsets[i], value, sort_definitions[i]);
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
-              encode_int_value(key_ptr + offsets[i], value, sort_definitions[i]);
+              encode_int_value(key_ptr + key_offsets[i], value, sort_definitions[i]);
             } else {
               throw std::logic_error("Unsupported data type for sorting: " +
                                      std::string(typeid(ColumnDataType).name()));
@@ -321,43 +329,55 @@ int main() {
         }
       }
 
-      // print each key
-      // std::cout << "Keys for chunk " << chunk_id << ":" << std::endl;
-      // for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
-      //   printKey(&buffer[row * key_width], key_width, row);
-      // }
-      // std::cout << "Total buffer size: " << buffer.size() << " bytes." << std::endl;
-
-      // Sort the buffer
-      auto compare_rows = [&](ChunkOffset a, ChunkOffset b) {
-        uint8_t* key_a = &buffer[a * key_width];
-        uint8_t* key_b = &buffer[b * key_width];
-
-        int cmp = memcmp(key_a, key_b, key_width);
-        if (cmp != 0)
-          return cmp < 0;
-
-        // std::cout << "Tie-breaker for equal keys: " << std::endl;
-        // printKey(key_a, key_width, a);
-
-        return false;
-
-        // full fallback tie-breaker for equal keys
-        auto string_segment = std::dynamic_pointer_cast<ValueSegment<pmr_string>>(chunk->get_segment(ColumnID{0}));
-        const auto& val1 = string_segment->get(a);
-        const auto& val2 = string_segment->get(b);
-
-        if (val1 != val2) {
-          if (sort_definitions[0].sort_mode == SortMode::AscendingNullsLast ||
-              sort_definitions[0].sort_mode == SortMode::AscendingNullsFirst) {
-            return val1 < val2;
-          } else {
-            return val1 > val2;
-          }
+      /*
+      {
+        // print the key for debugging
+        std::lock_guard<std::mutex> lock(print_mutex);  // lock mutex
+        // print each key
+        std::cout << "Keys for chunk " << chunk_id << ":" << std::endl;
+        for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
+          printKey(&buffer[row * key_width], key_width, row);
         }
+      }
+      */
+    });
+  }
 
-        // real fallback would look something like this:
-        /*
+  // Join all threads
+  for (auto& t : threads) {
+    t.join();
+  }
+
+  // Sort the buffer
+  auto compare_rows = [&](RowID a, RowID b) {
+    uint8_t* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
+    uint8_t* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
+
+    int cmp = memcmp(key_a, key_b, key_width);
+    if (cmp != 0)
+      return cmp < 0;
+
+    // std::cout << "Tie-breaker for equal keys: " << std::endl;
+    // printKey(key_a, key_width, a);
+
+    return false;
+
+    // full fallback tie-breaker for equal keys
+    // auto string_segment = std::dynamic_pointer_cast<ValueSegment<pmr_string>>(chunk->get_segment(ColumnID{0}));
+    // const auto& val1 = string_segment->get(a);
+    // const auto& val2 = string_segment->get(b);
+
+    // if (val1 != val2) {
+    //   if (sort_definitions[0].sort_mode == SortMode::AscendingNullsLast ||
+    //       sort_definitions[0].sort_mode == SortMode::AscendingNullsFirst) {
+    //     return val1 < val2;
+    //   } else {
+    //     return val1 > val2;
+    //   }
+    // }
+
+    // real fallback would look something like this:
+    /*
     for (size_t i = 0; i < sort_definitions.size(); ++i) {
         const auto& def = sort_definitions[i];
         const auto& col = chunk.columns[def.column_id];
@@ -370,36 +390,29 @@ int main() {
     }
     */
 
-        return false;  // completely equal
-      };
+    return false;  // completely equal
+  };
 
-      // std::sort(row_indices.begin(), row_indices.end(), [&](ChunkOffset a, ChunkOffset b) {
-      //   return memcmp(&buffer[a * key_width], &buffer[b * key_width], key_width) < 0;
-      // });
-      std::sort(row_indices.begin(), row_indices.end(), compare_rows);
+  std::sort(row_ids.begin(), row_ids.end(), compare_rows);
 
-      // Print sorted keys
-      {
-        std::lock_guard<std::mutex> lock(print_mutex);  // lock before printing to prevent garbled output
-        std::cout << "Sorted chunk " << chunk_id << ": " << std::endl;
-        auto column_count = chunk->column_count();
-        for (ChunkOffset i = ChunkOffset{0}; i < 7; ++i) {
-          const auto& row_idx = row_indices[i];
-
-          // print each row in the chunk
-          for (ColumnID col = ColumnID{0}; col < column_count; ++col) {
-            auto segment = chunk->get_segment(col);
-            std::cout << segment->operator[](row_idx) << ", ";
-          }
-          std::cout << std::endl;
-        }
-      }
-    });
+  // Print sorted keys
+  auto column_count = tab->get_chunk(ChunkID{0})->column_count();
+  // print each column once to show PERF warning
+  for (ColumnID col = ColumnID{0}; col < column_count; ++col) {
+    std::cout << "Dummy print: " << tab->get_chunk(ChunkID{0})->get_segment(col)->operator[](ChunkOffset{0})
+              << std::endl;
   }
 
-  // Join all threads
-  for (auto& t : threads) {
-    t.join();
+  for (ChunkOffset i = ChunkOffset{0}; i < 9; ++i) {
+    const auto& row_idx = row_ids[i];
+
+    // print each row in the chunk
+    std::cout << "[" << row_idx.chunk_id << "." << row_idx.chunk_offset << "]: ";
+    for (ColumnID col = ColumnID{0}; col < column_count; ++col) {
+      auto segment = tab->get_chunk(row_idx.chunk_id)->get_segment(col);
+      std::cout << segment->operator[](row_idx.chunk_offset) << ", ";
+    }
+    std::cout << std::endl;
   }
 
   return 0;
