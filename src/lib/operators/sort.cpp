@@ -572,18 +572,34 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto materialized_rows = pmr_vector<RowData>();
   materialized_rows.reserve(input_table->row_count());
 
-  auto encoding_buffer = pmr_vector<std::byte>(padded_row_size, std::byte{0});
+  auto encoding_buffers = pmr_vector<pmr_vector<std::byte>>();
+  auto buffer_iters = pmr_vector<PmrByteIter>();
+  // auto encoding_buffer = pmr_vector<std::byte>(padded_row_size, std::byte{0});
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+
+    encoding_buffers.clear();
+    encoding_buffers.reserve(chunk_size);
+    buffer_iters.clear();
+    buffer_iters.reserve(chunk_size);
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      encoding_buffers.emplace_back(padded_row_size, std::byte{0});
+      buffer_iters.push_back(encoding_buffers.back().begin());
+    }
+
+    for (const auto& encoder : column_encoders) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        const auto row_id = RowID{chunk_id, chunk_offset};
+        buffer_iters[chunk_offset] = encoder->encode(row_id, buffer_iters[chunk_offset]);
+      }
+    }
+
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
-      auto encoded_data_end = encoding_buffer.begin();
-      for (const auto& encoder : column_encoders) {
-        encoded_data_end = encoder->encode(row_id, encoded_data_end);
-      }
-      DebugAssert(encoded_data_end + padded_row_size == encoding_buffer.end(), "Raw data not fully initialized");
+      DebugAssert(buffer_iters[chunk_offset] + padded_row_size == encoding_buffers[chunk_offset].end(),
+                  "Raw data not fully initialized");
       auto raw_data = pmr_vector<RowDataValue>(padded_row_size / sizeof(RowDataValue));
-      std::memcpy(encoding_buffer.data(), raw_data.data(), padded_row_size);
+      std::memcpy(encoding_buffers[chunk_offset].data(), raw_data.data(), padded_row_size);
       materialized_rows.emplace_back(std::move(raw_data), row_id);
     }
   }
