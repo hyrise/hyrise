@@ -251,8 +251,30 @@ int main() {
   std::mutex print_mutex;
   std::vector<std::thread> threads;  // vector to hold threads
 
-  // for each chunk in table
+  auto key_buffer = std::vector<uint8_t>();    // buffer to hold all keys for sorting
+  auto chunk_sizes = std::vector<size_t>();    // sizes of each chunk in the table
+  auto chunk_offsets = std::vector<size_t>();  // offsets for each key in the buffer
+  chunk_offsets.reserve(tab->chunk_count());
+  chunk_offsets[0] = 0;  // first chunk starts at offset 0
+
   const auto chunk_count = tab->chunk_count();
+  for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto chunk = tab->get_chunk(chunk_id);
+    auto row_count_for_chunk = chunk->size();
+
+    chunk_sizes.push_back(row_count_for_chunk);
+  }
+  auto total_buffer_size = size_t{0};  // total size of the key buffer
+  for (size_t i = 0; i < chunk_sizes.size(); ++i) {
+    auto chunk_size = chunk_sizes[i];
+    total_buffer_size += chunk_size * key_width;  // total size of the keys for this chunk
+    if (i > 0) {
+      chunk_offsets.push_back(chunk_offsets[i - 1] + chunk_sizes[i - 1] * key_width);  // offset for this chunk
+    }
+  }
+  key_buffer.reserve(total_buffer_size);  // reserve space for all keys
+
+  // for each chunk in table
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // spawn thread to sort the chunk
     threads.emplace_back([&, chunk_id]() {
@@ -260,9 +282,8 @@ int main() {
       auto row_count_for_chunk = chunk->size();
       std::cout << "Sorting chunk " << chunk_id << " with " << row_count_for_chunk << " rows..." << std::endl;
 
-      // create a buffer to hold the normalized keys, like:   [key1 + key2 + key3 + ...]
-      std::vector<uint8_t> buffer;
-      buffer.reserve(row_count_for_chunk * key_width);
+      // buffer points to the start of this chunk's keys in the global key_buffer
+      uint8_t* buffer = &key_buffer[chunk_offsets[chunk_id]];
 
       // create key for each row in the chunk
       std::vector<ChunkOffset> row_indices(row_count_for_chunk);
