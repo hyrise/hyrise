@@ -22,57 +22,6 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 using NormalizedKey = std::vector<uint8_t>;
 
-struct StringSegment {
-  std::vector<std::string> values;
-};
-
-struct IntSegment {
-  std::vector<int32_t> values;
-};
-
-struct SimpleChunk {
-  std::vector<std::string> col1;
-  std::vector<int32_t> col2;
-  std::vector<int32_t> col3;
-  std::vector<int8_t> col4;
-  std::vector<int16_t> col5;
-  std::vector<double> col6;
-
-  size_t row_count() const {
-    return col1.size();
-  }
-};
-
-struct SimpleTable {
-  std::vector<SimpleChunk> chunks;
-};
-
-void encode_int32_value(uint8_t* dest, const int32_t& val, const SortColumnDefinition& def) {
-  auto null_byte = uint8_t(0);
-  if (val == 0) {
-    null_byte = 0xFF;  // set null byte to indicate NULL value
-  }
-  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
-    null_byte = ~null_byte;  // Nulls first
-  }
-  *dest = null_byte;  // null byte for the second column
-
-  uint32_t biased = static_cast<uint32_t>(val) ^ 0x80000000;  // flip sign bit
-
-  // manually append bytes MSB first (big-endian)
-  dest[1] = static_cast<uint8_t>(biased >> 24);  // Most significant byte
-  dest[2] = static_cast<uint8_t>(biased >> 16);
-  dest[3] = static_cast<uint8_t>(biased >> 8);
-  dest[4] = static_cast<uint8_t>(biased);
-
-  // Invert the bytes for descending order
-  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
-    for (size_t i = 1; i < sizeof(int32_t) + 1; ++i) {
-      dest[i] = ~dest[i];
-    }
-  }
-}
-
 /**
  * Encodes a signed integer value into a byte array for sorting purposes.
  * Prepends the integer with a null byte to indicate, whether the value is null or not.
@@ -80,9 +29,6 @@ void encode_int32_value(uint8_t* dest, const int32_t& val, const SortColumnDefin
  */
 template <typename T>
 void encode_int_value(uint8_t* dest, const std::optional<T>& val, const SortColumnDefinition& def) {
-  // static_assert(std::is_integral<T>::value && std::is_signed<T>::value,
-  //               "encode_int_value only supports signed integral types");
-
   // Determine if value is null. Replace this with your actual null check logic.
   T value;
   if (val.has_value()) {
@@ -115,8 +61,6 @@ void encode_int_value(uint8_t* dest, const std::optional<T>& val, const SortColu
   }
 }
 
-// template void encode_int_value<int8_t>(uint8_t* dest, const int8_t& val, const SortColumnDefinition& def);
-// template void encode_int_value<int16_t>(uint8_t* dest, const int16_t& val, const SortColumnDefinition& def);
 template void encode_int_value<int32_t>(uint8_t* dest, const std::optional<int32_t>& val,
                                         const SortColumnDefinition& def);
 template void encode_int_value<int64_t>(uint8_t* dest, const std::optional<int64_t>& val,
@@ -190,28 +134,6 @@ void encode_string_value(uint8_t* dest, const std::optional<pmr_string>& val, co
   }
 }
 
-// void encode_value(uint8_t* dest, const AllTypeVariant& val, const SortColumnDefinition& def) {
-//   resolve_data_type(column_data_type, [&](auto type) {
-//     using ColumnDataType = typename decltype(type)::type;
-//   });
-//   std::visit(
-//       [&](const auto& v) {
-//         using T = std::decay_t<decltype(v)>;
-
-//         if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t> || std::is_same_v<T, int32_t> ||
-//                       std::is_same_v<T, int64_t>) {
-//           encode_int_value<T>(dest, v, def);
-//         } else if constexpr (std::is_same_v<T, double>) {
-//           encode_double_value(dest, v, def);
-//         } else if constexpr (std::is_same_v<T, std::string>) {
-//           encode_string_value(dest, v, def);
-//         } else {
-//           throw std::runtime_error("Unsupported type in encode_value()");
-//         }
-//       },
-//       val);
-// }
-
 void printKey(uint8_t* dest, size_t key_width, const ChunkOffset& row_idx) {
   std::cout << "[Row " << row_idx << "]: ";
   for (size_t i = 0; i < key_width; ++i) {
@@ -273,24 +195,11 @@ int main() {
       SortColumnDefinition{ColumnID{4}, SortMode::AscendingNullsLast},    // col2
   };
 
-  // SimpleChunk chunk;
-  // chunk.col1 = {"", "apple_trunk", "apple_tree"};
-  // chunk.col2 = {1992, 1992, 1924};
-  // chunk.col3 = {10, 10, 0};
-  // chunk.col4 = {1, 2, 3};
-  // chunk.col5 = {7, 9, 8};
-  // chunk.col6 = {0.0, 2.5553, 2.5554};
-
   const std::string table_name = "test_table";
   setup_table(table_name);
   fill_table(table_name);
 
   auto tab = Hyrise::get().storage_manager.get_table(table_name);
-  std::cout << "Chunk count: " << tab->chunk_count() << std::endl;
-
-  print_table(table_name);
-
-  // size_t row_count = tab->row_count();
 
   // precompute field_width, key_width and offsets
 
@@ -367,45 +276,6 @@ int main() {
                                      std::string(typeid(ColumnDataType).name()));
             }
           });
-
-          /*
-        switch (sort_col) {
-          case 0: {
-            const auto& str_val = chunk.col1[row];
-            encode_string_value(key_ptr + offsets[i], str_val, sort_definitions[i]);
-            break;
-          }
-          case 1: {
-            const auto& int_val = chunk.col2[row];
-            encode_int_value(key_ptr + offsets[i], int_val, sort_definitions[i]);
-            break;
-          }
-          case 2: {
-            const auto& int_val2 = chunk.col3[row];
-            encode_int_value(key_ptr + offsets[i], int_val2, sort_definitions[i]);
-            break;
-          }
-          case 3: {
-            const auto& int_val = chunk.col4[row];
-            encode_int_value(key_ptr + offsets[i], int_val, sort_definitions[i]);
-            break;
-          }
-          case 4: {
-            const auto& int_val = chunk.col5[row];
-            encode_int_value(key_ptr + offsets[i], int_val, sort_definitions[i]);
-            break;
-          }
-          case 5: {
-            const auto& int_val = chunk.col6[row];
-            encode_double_value(key_ptr + offsets[i], int_val, sort_definitions[i]);
-            break;
-          }
-
-          default: {
-            break;
-          }
-        }
-        */
         }
       }
 
