@@ -1,18 +1,27 @@
 #include "sort.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <chrono>
+#include <compare>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <queue>
 #include <ranges>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <boost/accumulators/statistics_fwd.hpp>
+#include <boost/range/numeric.hpp>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -23,11 +32,13 @@
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "scheduler/operator_task.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_segment_accessor.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_accessor.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
@@ -257,143 +268,209 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   return output_table;
 }
 
-/// Compare to column values of two rows against each other.
-class AbstractColumnComparator : private Noncopyable {
+using PmrByteIter = pmr_vector<std::byte>::iterator;
+
+// Encodes the row value of
+class ColumnDataEncoder : Noncopyable {
  public:
-  virtual ~AbstractColumnComparator() = default;
+  explicit ColumnDataEncoder() = default;
+  ColumnDataEncoder(const ColumnDataEncoder&) = delete;
+  ColumnDataEncoder(ColumnDataEncoder&&) = delete;
+  ColumnDataEncoder& operator=(const ColumnDataEncoder&) = delete;
+  ColumnDataEncoder& operator=(ColumnDataEncoder&&) = delete;
+  virtual ~ColumnDataEncoder() = default;
 
-  virtual bool is_null(RowID row_id) const = 0;
-  virtual std::partial_ordering compare(RowID left, RowID right) const = 0;
-  virtual std::partial_ordering compare_with_null(RowID left, RowID right) const = 0;
+  // Set the number of bytes a value is padded to. This is required for to ensure all columnar values have the same size.
+  virtual void set_padding(size_t padding) = 0;
 
- protected:
-  AbstractColumnComparator() = default;
+  // Returns the number of bytes required to encode this value.
+  virtual size_t required_bytes(RowID row_id) const = 0;
+
+  // Encodes the value of the given row to the byte vector. Returns the iterator to the end of the encoded data.
+  virtual PmrByteIter encode(RowID row_id, PmrByteIter start) const = 0;
 };
 
-// Fully materialized column.
-template <typename ColumnDataType, SortMode sort_mode>
-class ColumnComparator : public AbstractColumnComparator {
+auto to_unsigned_representation(auto signed_value) {
+  if constexpr (std::is_same_v<decltype(signed_value), int32_t>) {
+    const auto zero_value = (std::numeric_limits<uint32_t>::max() / 2) + 1;
+    return zero_value + std::bit_cast<uint32_t>(signed_value);
+  } else if constexpr (std::is_same_v<decltype(signed_value), int64_t>) {
+    const auto zero_value = (std::numeric_limits<uint64_t>::max() / 2) + 1;
+    return zero_value + std::bit_cast<uint64_t>(signed_value);
+  } else if constexpr (std::is_same_v<decltype(signed_value), float>) {
+    auto unsigned_int = std::bit_cast<uint32_t>(signed_value);
+    if (signed_value < 0) {
+      unsigned_int ^= std::numeric_limits<uint32_t>::max();
+    } else {
+      unsigned_int |= std::numeric_limits<uint32_t>::max() / 2 + 1;
+    }
+    return unsigned_int;
+  } else if constexpr (std::is_same_v<decltype(signed_value), double>) {
+    auto unsigned_int = std::bit_cast<uint64_t>(signed_value);
+    if (signed_value < 0) {
+      unsigned_int ^= std::numeric_limits<uint64_t>::max();
+    } else {
+      unsigned_int |= std::numeric_limits<uint64_t>::max() / 2 + 1;
+    }
+    return unsigned_int;
+  } else {
+    Fail("Not implemented");
+    return uint32_t{0};
+  }
+}
+
+template <typename DataType>
+class TypedColumnDataEncoder : public ColumnDataEncoder {
  public:
-  ColumnComparator(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
-    _values.reserve(table->chunk_count());
+  TypedColumnDataEncoder(const TypedColumnDataEncoder&) = delete;
+  TypedColumnDataEncoder(TypedColumnDataEncoder&&) = delete;
+  TypedColumnDataEncoder& operator=(const TypedColumnDataEncoder&) = delete;
+  TypedColumnDataEncoder& operator=(TypedColumnDataEncoder&&) = delete;
+  ~TypedColumnDataEncoder() override = default;
+
+  TypedColumnDataEncoder(const std::shared_ptr<const Table>& table, ColumnID column_id, SortMode sort_mode)
+      : ColumnDataEncoder(),
+        _table(table),
+        _column_id(column_id),
+        _sort_mode(sort_mode),
+        _accessor(table->chunk_count()),
+        _is_nullable(_table->column_is_nullable(column_id)),
+        _padding(size_t{0}) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
-      Assert(chunk, "1234");
-      const auto segment = chunk->get_segment(column_id);
-      const auto accessor = create_segment_accessor<ColumnDataType>(segment);
-      auto values = pmr_vector<ColumnDataType>();
-      auto null_values = pmr_vector<bool>();
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        const auto row = accessor->access(chunk_offset);
-        null_values.emplace_back(!row);
-        if (row) {
-          values.emplace_back(std::move(*row));
+      const auto segment = _table->get_chunk(chunk_id)->get_segment(_column_id);
+      _accessor[chunk_id] = create_segment_accessor<DataType>(segment);
+    }
+  }
+
+  void set_padding(size_t padding) override {
+    if constexpr (std::is_same_v<DataType, int32_t> || std::is_same_v<DataType, float>) {
+      DebugAssert(padding == (_is_nullable) ? 5 : 4,
+                  std::format("Cannot encode int32_t/float with padding %d", padding));
+    } else if constexpr (std::is_same_v<DataType, int64_t> || std::is_same_v<DataType, double>) {
+      DebugAssert(padding == (_is_nullable) ? 9 : 8,
+                  std::format("Cannot encode int64_t/double with padding %d", padding));
+    }
+    _padding = padding;
+  }
+
+  size_t required_bytes(RowID row_id) const override {
+    auto null_bytes = static_cast<size_t>((_is_nullable) ? 1 : 0);
+    if constexpr (std::is_same_v<DataType, int32_t>) {
+      return size_t{4} + null_bytes;
+    }
+    if constexpr (std::is_same_v<DataType, int64_t>) {
+      return size_t{8} + null_bytes;
+    }
+    if constexpr (std::is_same_v<DataType, float>) {
+      return size_t{4} + null_bytes;
+    }
+    if constexpr (std::is_same_v<DataType, double>) {
+      return size_t{8} + null_bytes;
+    }
+    if constexpr (std::is_same_v<DataType, pmr_string>) {
+      const auto value = _accessor[row_id.chunk_id]->access(row_id.chunk_offset);
+      if (value) {
+        return value->size() + null_bytes;
+      }
+      return null_bytes;
+    }
+    Fail("Not implemented");
+  }
+
+  PmrByteIter encode(RowID row_id, PmrByteIter start) const override {
+    const auto value = _accessor[row_id.chunk_id]->access(row_id.chunk_offset);
+    if (value) {
+      if (_is_nullable) {
+        if (_sort_mode == SortMode::AscendingNullsFirst || _sort_mode == SortMode::DescendingNullsFirst) {
+          (*start++) = std::numeric_limits<std::byte>::max();
         } else {
-          values.emplace_back();
+          (*start++) = std::numeric_limits<std::byte>::min();
         }
       }
-      _values.emplace_back(std::make_unique<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values)));
+      return _encode_to_bytes(*value, start);
     }
-  }
-
-  ChunkOffset chunk_size(ChunkID chunk_id) const {
-    DebugAssert(chunk_id < _values.size(), "Chunk id out of bounds");
-    return _values[chunk_id].size();
-  }
-
-  bool is_null(RowID row_id) const override {
-    const auto [chunk_id, offset] = row_id;
-    DebugAssert(chunk_id < _values.size(), "Chunk id out of bounds");
-    const auto& null_values = _values[chunk_id]->null_values();
-    DebugAssert(offset < null_values.size(), "Chunk offset out of bounds");
-    return null_values[offset];
-  }
-
-  std::partial_ordering compare(RowID left, RowID right) const override {
-    const auto [left_chunk_id, left_chunk_offset] = left;
-    const auto [right_chunk_id, right_chunk_offset] = right;
-    DebugAssert(left_chunk_id < _values.size(), "Left chunk out of bounds");
-    DebugAssert(right_chunk_id < _values.size(), "Right chunk out of bounds");
-
-    const auto& left_chunk = _values[left_chunk_id]->values();
-    const auto& right_chunk = _values[right_chunk_id]->values();
-    DebugAssert(left_chunk_offset < left_chunk.size(), "Out of left chunk bounds");
-    DebugAssert(right_chunk_offset < right_chunk.size(), "Out of right chunk bounds");
-
-    if constexpr (sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::AscendingNullsLast) {
-      return left_chunk[left_chunk_offset] <=> right_chunk[right_chunk_offset];
-    } else {
-      return right_chunk[right_chunk_offset] <=> left_chunk[left_chunk_offset];
-    }
-  }
-
-  std::partial_ordering compare_with_null(RowID left, RowID right) const override {
-    const auto left_is_null = is_null(left);
-    const auto right_is_null = is_null(right);
-    if (left_is_null && right_is_null) {
-      return std::partial_ordering::equivalent;
-    }
-    if (left_is_null) {
-      return (sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst)
-                 ? std::partial_ordering::less
-                 : std::partial_ordering::greater;
-    }
-    if (right_is_null) {
-      return (sort_mode == SortMode::AscendingNullsLast || sort_mode == SortMode::DescendingNullsLast)
-                 ? std::partial_ordering::less
-                 : std::partial_ordering::greater;
-    }
-    return compare(left, right);
+    return _encode_null(start);
   }
 
  private:
-  std::vector<std::unique_ptr<const ValueSegment<ColumnDataType>>> _values;
-};
-
-class ChunkSortImpl {
- public:
-  std::chrono::nanoseconds sort_time{};
-
-  ChunkSortImpl(std::shared_ptr<const AbstractColumnComparator> column_comparator, const ChunkID chunk_id,
-                const SortMode sort_mode = SortMode::AscendingNullsFirst)
-      : _column_comparator(std::move(column_comparator)), _chunk_id(chunk_id), _sort_mode(sort_mode) {}
-
-  // Sorts the materialized column, potentially taking the pre-existing order of pos_list into account.
-  // The provided pos_list is modified to contain the new sorting.
-  void sort(RowIDPosList& pos_list) {
-    auto timer = Timer{};
-
-    auto begin = pos_list.begin();
-    auto end = pos_list.end();
+  PmrByteIter _encode_null(PmrByteIter start) const {
+    DebugAssert(_is_nullable, "Cannot encode null value for non-nullable columns");
     if (_sort_mode == SortMode::AscendingNullsFirst || _sort_mode == SortMode::DescendingNullsFirst) {
-      begin = std::stable_partition(begin, end, [&](RowID row_id) {
-        return _column_comparator->is_null(row_id);
-      });
-      end = pos_list.end();
+      (*start++) = std::numeric_limits<std::byte>::min();
     } else {
-      begin = pos_list.begin();
-      end = std::stable_partition(begin, end, [&](RowID row_id) {
-        return !_column_comparator->is_null(row_id);
-      });
+      (*start++) = std::numeric_limits<std::byte>::max();
     }
-
-    std::stable_sort(begin, end, [&](RowID left, RowID right) {
-      return _column_comparator->compare(left, right) < 0;
-    });
-
-    sort_time = timer.lap();
+    for (auto counter = size_t{1}; counter < _padding; counter++) {
+      (*start++) = std::byte{0};
+    }
+    return start;
   }
 
- protected:
-  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::shared_ptr<const AbstractColumnComparator> _column_comparator;
+  PmrByteIter _encode_to_bytes(const pmr_string& value, PmrByteIter start) const {
+    const auto byte_count = (_is_nullable) ? _padding - 1 : _padding;
+    if (_sort_mode == SortMode::AscendingNullsFirst || _sort_mode == SortMode::AscendingNullsLast) {
+      for (const auto chr : value) {
+        (*start++) = std::bit_cast<std::byte>(chr);
+      }
+    } else {
+      for (const auto chr : value) {
+        (*start++) = std::bit_cast<std::byte>(chr) ^ std::byte{0xff};
+      }
+    }
+    const auto fill_byte = std::numeric_limits<std::byte>::min();
+    for (auto index = static_cast<ChunkOffset>(value.size()); index < byte_count; ++index) {
+      (*start++) = fill_byte;
+    }
+    return start;
+  }
 
-  // Column and Chunk to sort by.
-  const ColumnID _column_id;
-  const ChunkID _chunk_id;
-  const SortMode _sort_mode;
-  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+  // Encode signed value to a byte array for proper use with memcmp.
+  PmrByteIter _encode_to_bytes(auto value, PmrByteIter start) const {
+    DebugAssert(_padding > 0, "Padding not set");
+    auto byte_count = _padding;
+    if (_is_nullable) {
+      byte_count -= 1;
+    }
+
+    // Convert to an unsigned representation of the signed value (integer or floating point).
+    // For all signed a < b <=> unsgined representation a' < b' holds.
+    auto unsigned_value = to_unsigned_representation(value);
+    using UnsignedInt = decltype(unsigned_value);
+    if (_sort_mode == SortMode::DescendingNullsFirst || _sort_mode == SortMode::DescendingNullsLast) {
+      // Invert order.
+      unsigned_value ^= std::numeric_limits<UnsignedInt>::max();
+    }
+
+    for (auto offset = int32_t{(static_cast<int32_t>(byte_count) - 1) * 8}; offset >= 0; offset -= 8) {
+      (*start++) = static_cast<std::byte>(unsigned_value >> static_cast<UnsignedInt>(offset));
+    }
+    return start;
+  }
+
+  const std::shared_ptr<const Table>& _table;  // NO LINT
+  ColumnID _column_id;
+  SortMode _sort_mode;
+  pmr_vector<std::unique_ptr<AbstractSegmentAccessor<DataType>>> _accessor;
+  bool _is_nullable;
+  size_t _padding;
 };
+
+struct RowData {
+  pmr_vector<std::byte> raw;
+  RowID row_id;
+};
+
+std::strong_ordering operator<=>(const RowData& lhs, const RowData& rhs) {
+  DebugAssert(lhs.raw.size() == rhs.raw.size(), "Equal row size");
+  const auto cmp = std::memcmp(lhs.raw.data(), rhs.raw.data(), lhs.raw.size());
+  if (cmp < 0) {
+    return std::strong_ordering::less;
+  }
+  if (cmp > 0) {
+    return std::strong_ordering::greater;
+  }
+  return std::strong_ordering::equal;
+}
 
 }  // namespace
 
@@ -428,6 +505,7 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
+  auto timer = Timer{};
   const auto& input_table = left_input_table();
 
   for (const auto& column_sort_definition : _sort_definitions) {
@@ -449,125 +527,87 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto sorted_table = std::shared_ptr<Table>{};
 
-  // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
-  // been determined so far. This is not a completely proper PosList on the input table as it might point to
-  // ReferenceSegments.
-
-  auto timer = Timer{};
-  auto materialized_columns = std::vector<std::shared_ptr<const AbstractColumnComparator>>(input_table->column_count());
-  for (const auto& sort_definition : _sort_definitions) {
-    const auto column_type = input_table->column_data_type(sort_definition.column);
-    resolve_data_type(column_type, [&](auto type) {
+  auto column_encoders = pmr_vector<std::shared_ptr<ColumnDataEncoder>>();
+  column_encoders.reserve(_sort_definitions.size());
+  for (const auto& column_sort_definition : _sort_definitions) {
+    const auto column_data_type = input_table->column_data_type(column_sort_definition.column);
+    resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-
-      switch (sort_definition.sort_mode) {
-        case SortMode::AscendingNullsFirst:
-          materialized_columns[sort_definition.column] =
-              std::make_shared<ColumnComparator<ColumnDataType, SortMode::AscendingNullsFirst>>(input_table,
-                                                                                                sort_definition.column);
-          break;
-        case SortMode::DescendingNullsFirst:
-          materialized_columns[sort_definition.column] =
-              std::make_shared<ColumnComparator<ColumnDataType, SortMode::DescendingNullsFirst>>(
-                  input_table, sort_definition.column);
-          break;
-        case SortMode::AscendingNullsLast:
-          materialized_columns[sort_definition.column] =
-              std::make_shared<ColumnComparator<ColumnDataType, SortMode::AscendingNullsFirst>>(input_table,
-                                                                                                sort_definition.column);
-          break;
-        case SortMode::DescendingNullsLast:
-          materialized_columns[sort_definition.column] =
-              std::make_shared<ColumnComparator<ColumnDataType, SortMode::DescendingNullsLast>>(input_table,
-                                                                                                sort_definition.column);
-          break;
-      }
+      auto encoder = std::make_shared<TypedColumnDataEncoder<ColumnDataType>>(
+          input_table, column_sort_definition.column, column_sort_definition.sort_mode);
+      column_encoders.push_back(encoder);
     });
   }
-  const auto total_materialization_time = timer.lap();
+  const auto init_time = timer.lap();
+  std::cerr << "sort::init_time " << init_time << "\n";
 
-  // TODO(ro): add description
-  auto sorted_chunks = std::vector<RowIDPosList>(input_table->chunk_count());
-  auto sort_chunk_tasks = std::vector<std::shared_ptr<AbstractTask>>();
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    sort_chunk_tasks.emplace_back(std::make_shared<JobTask>([this, chunk_id, &input_table, &sorted_chunks,
-                                                             &materialized_columns]() {
+  auto column_max_byte_length = pmr_vector<size_t>(column_encoders.size(), 0);
+  for (auto column_index = size_t{0}; column_index < column_encoders.size(); ++column_index) {
+    auto max_bytes = size_t{0};
+    for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       const auto chunk_size = input_table->get_chunk(chunk_id)->size();
-      sorted_chunks[chunk_id].reserve(chunk_size);
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-        sorted_chunks[chunk_id].emplace_back(chunk_id, chunk_offset);
-      }
-
-      for (const auto& sort_definition : std::views::reverse(_sort_definitions)) {
-        auto sorter = ChunkSortImpl(materialized_columns[sort_definition.column], chunk_id, sort_definition.sort_mode);
-        sorter.sort(sorted_chunks[chunk_id]);
-      }
-    }));
-    sort_chunk_tasks.back()->schedule();
-  }
-  Hyrise::get().scheduler()->wait_for_tasks(sort_chunk_tasks);
-
-  auto column_precedence = std::vector<ColumnID>();
-  for (const auto& sort_definition : _sort_definitions) {
-    column_precedence.push_back(sort_definition.column);
-  }
-
-  // TODO(tpmms): add description
-  auto comparator = [&](RowID left, RowID right) {
-    for (const auto column : column_precedence) {
-      const auto comparison = materialized_columns[column]->compare_with_null(left, right);
-      if (comparison != 0) {
-        return comparison > 0;
+        const auto row_id = RowID{chunk_id, chunk_offset};
+        max_bytes = std::max(max_bytes, column_encoders[column_index]->required_bytes(row_id));
       }
     }
-    if (left.chunk_id != right.chunk_id) {
-      return left.chunk_id > right.chunk_id;
-    }
-    return false;  // left.chunk_offset < right.chunk_offset is guaranteed by stable_sort.
-  };
-  auto priority_queue = std::priority_queue<RowID, std::vector<RowID>, decltype(comparator)>(comparator);
+    column_max_byte_length[column_index] = max_bytes;
+  }
+  for (auto column_index = size_t{0}; column_index < column_encoders.size(); ++column_index) {
+    column_encoders[column_index]->set_padding(column_max_byte_length[column_index]);
+  }
+  auto row_size = boost::accumulate(column_max_byte_length, size_t{0});
 
-  using ChunkIterator = RowIDPosList::const_iterator;
-  auto chunk_ranges = std::vector<std::pair<ChunkIterator, ChunkIterator>>();
-  chunk_ranges.reserve(sorted_chunks.size());
-  for (auto chunk_id = ChunkID{0}; chunk_id < sorted_chunks.size(); ++chunk_id) {
-    const auto& chunk = sorted_chunks[chunk_id];
-    auto begin = chunk.cbegin();
-    auto end = chunk.cend();
-    if (begin != end) {
-      priority_queue.emplace(*begin);
-      ++begin;
+  const auto scan_time = timer.lap();
+  std::cerr << "sort::scan_time " << scan_time << "\n";
+
+  auto materialized_rows = pmr_vector<RowData>();
+  materialized_rows.reserve(input_table->row_count());
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+    const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      const auto row_id = RowID{chunk_id, chunk_offset};
+      auto raw_data = pmr_vector<std::byte>(row_size);
+      auto encoded_data_end = raw_data.begin();
+      for (const auto& encoder : column_encoders) {
+        encoded_data_end = encoder->encode(row_id, encoded_data_end);
+      }
+      DebugAssert(encoded_data_end == raw_data.end(), "Raw data not fully initialized");
+      materialized_rows.emplace_back(std::move(raw_data), row_id);
     }
-    chunk_ranges.emplace_back(begin, end);
   }
 
+  const auto materialization_time = timer.lap();
+  std::cerr << "sort::materialization_time " << materialization_time << "\n";
+
+  // TODO(student): Use boost stable sort
+  std::stable_sort(materialized_rows.begin(), materialized_rows.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs < rhs;
+  });
+
+  const auto sort_time = timer.lap();
+  std::cerr << "sort::sort_time " << sort_time << "\n";
+
+  // Extract the positions from the sorted rows.
   auto position_list = RowIDPosList();
-  position_list.reserve(input_table->row_count());
-  while (!priority_queue.empty()) {
-    const auto [chunk_id, chunk_offset] = priority_queue.top();
-    position_list.emplace_back(chunk_id, chunk_offset);
-    priority_queue.pop();
-
-    auto& chunk_range = chunk_ranges[chunk_id];
-    if (chunk_range.first != chunk_range.second) {
-      priority_queue.push(*chunk_range.first);
-      ++chunk_range.first;
-    }
+  position_list.reserve(materialized_rows.size());
+  for (const auto& row : materialized_rows) {
+    position_list.push_back(row.row_id);
   }
+  const auto write_back_time = timer.lap();
+  std::cerr << "sort::write_back_time " << write_back_time << "\n";
 
-  const auto total_sort_time = timer.lap();
-
+  // TODO(student): Update performance metrics.
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
-  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, std::chrono::nanoseconds{0});
-  step_performance_data.set_step_runtime(OperatorSteps::Sort, total_sort_time);
+  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, materialization_time);
+  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, write_back_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Sort, sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
   //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
   // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
-  timer.lap();
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
@@ -615,127 +655,5 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
   return sorted_table;
 }
-
-template <typename SortColumnType>
-class Sort::SortImpl {
- public:
-  using RowIDValuePair = std::pair<RowID, SortColumnType>;
-  std::chrono::nanoseconds materialization_time{};
-  std::chrono::nanoseconds temporary_result_writing_time{};
-  std::chrono::nanoseconds sort_time{};
-
-  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
-           const SortMode sort_mode = SortMode::AscendingNullsFirst)
-      : _table_in(table_in), _column_id(column_id), _sort_mode(sort_mode) {
-    const auto row_count = _table_in->row_count();
-    _row_id_value_vector.reserve(row_count);
-    _null_value_rows.reserve(row_count);
-  }
-
-  // Sorts table_in, potentially taking the pre-existing order of previously_sorted_pos_list into account.
-  // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
-  // output table.
-  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    auto timer = Timer{};
-    // 1. Prepare Sort: Creating RowID-value-Structure
-    _materialize_sort_column(previously_sorted_pos_list);
-    materialization_time = timer.lap();
-
-    // 2. After we got our ValueRowID Map we sort the map by the value of the pair
-    const auto sort_with_comparator = [&](auto comparator) {
-      std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) {
-                         return comparator(lhs.second, rhs.second);
-                       });
-    };
-    if (_sort_mode == SortMode::AscendingNullsFirst) {
-      sort_with_comparator(std::less<>{});
-    } else {
-      sort_with_comparator(std::greater<>{});
-    }
-    sort_time = timer.lap();
-
-    // 2b. Insert null rows in front of all non-NULL rows
-    if (!_null_value_rows.empty()) {
-      // NULLs come before all values. The SQL standard allows for this to be implementation-defined. We used to have
-      // a NULLS LAST mode, but never used it over multiple years. Different databases have different behaviors, and
-      // storing NULLs first even for descending orders is somewhat uncommon:
-      //   https://docs.mendix.com/refguide/ordering-behavior#null-ordering-behavior
-      // For Hyrise, we found that storing NULLs first is the method that requires the least amount of code.
-      _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
-    }
-
-    auto pos_list = RowIDPosList{};
-    pos_list.reserve(_row_id_value_vector.size());
-    for (const auto& [row_id, _] : _row_id_value_vector) {
-      pos_list.emplace_back(row_id);
-    }
-    temporary_result_writing_time = timer.lap();
-    return pos_list;
-  }
-
- protected:
-  // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    // If there was no PosList passed, this is the first sorting run and we simply fill our values and nulls data
-    // structures from our input table. Otherwise we will materialize according to the PosList which is the result of
-    // the last run.
-    if (previously_sorted_pos_list) {
-      _materialize_column_from_pos_list(*previously_sorted_pos_list);
-    } else {
-      const auto chunk_count = _table_in->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = _table_in->get_chunk(chunk_id);
-        Assert(chunk, "Did not expect deleted chunk here.");  // see https://github.com/hyrise/hyrise/issues/1686
-
-        auto abstract_segment = chunk->get_segment(_column_id);
-
-        segment_iterate<SortColumnType>(*abstract_segment, [&](const auto& position) {
-          if (position.is_null()) {
-            _null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
-          } else {
-            _row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
-          }
-        });
-      }
-    }
-  }
-
-  // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
-  void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
-    const auto input_chunk_count = _table_in->chunk_count();
-    auto accessor_by_chunk_id =
-        std::vector<std::unique_ptr<AbstractSegmentAccessor<SortColumnType>>>(input_chunk_count);
-    for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-      const auto& abstract_segment = _table_in->get_chunk(input_chunk_id)->get_segment(_column_id);
-      accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<SortColumnType>(abstract_segment);
-    }
-
-    for (auto row_id : pos_list) {
-      const auto [chunk_id, chunk_offset] = row_id;
-
-      auto& accessor = accessor_by_chunk_id[chunk_id];
-      const auto typed_value = accessor->access(chunk_offset);
-      if (!typed_value) {
-        _null_value_rows.emplace_back(row_id, SortColumnType{});
-      } else {
-        _row_id_value_vector.emplace_back(row_id, typed_value.value());
-      }
-    }
-  }
-
-  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::shared_ptr<const Table> _table_in;
-
-  // Column to sort by.
-  const ColumnID _column_id;
-  const SortMode _sort_mode;
-  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
-
-  std::vector<RowIDValuePair> _row_id_value_vector;
-
-  // Stored as RowIDValuePair for better type compatibility even if value is unused.
-  std::vector<RowIDValuePair> _null_value_rows;
-};
 
 }  // namespace hyrise
