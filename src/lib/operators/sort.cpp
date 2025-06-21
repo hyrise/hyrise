@@ -18,6 +18,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <valarray>
 #include <vector>
 
 #include <boost/accumulators/statistics_fwd.hpp>
@@ -455,8 +456,10 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
   size_t _padding;
 };
 
+using RowDataValue = uint32_t;
+
 struct RowData {
-  pmr_vector<std::byte> raw;
+  pmr_vector<RowDataValue> raw;
   RowID row_id;
 };
 
@@ -556,23 +559,31 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (auto column_index = size_t{0}; column_index < column_encoders.size(); ++column_index) {
     column_encoders[column_index]->set_padding(column_max_byte_length[column_index]);
   }
-  auto row_size = boost::accumulate(column_max_byte_length, size_t{0});
+  const auto row_size = boost::accumulate(column_max_byte_length, size_t{0});
+  const auto padded_row_size = ((row_size + sizeof(RowDataValue) - 1) / sizeof(RowDataValue)) * sizeof(RowDataValue);
+  const auto padding_size = padded_row_size - row_size;
+  std::cerr << "sort::row_size " << row_size << "\n";
+  std::cerr << "sort::padded_row_size " << padded_row_size << "\n";
+  std::cerr << "sort::padding_size " << padding_size << "\n";
 
   const auto scan_time = timer.lap();
   std::cerr << "sort::scan_time " << scan_time << "\n";
 
   auto materialized_rows = pmr_vector<RowData>();
   materialized_rows.reserve(input_table->row_count());
+
+  auto encoding_buffer = pmr_vector<std::byte>(padded_row_size, std::byte{0});
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     const auto chunk_size = input_table->get_chunk(chunk_id)->size();
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
-      auto raw_data = pmr_vector<std::byte>(row_size);
-      auto encoded_data_end = raw_data.begin();
+      auto encoded_data_end = encoding_buffer.begin();
       for (const auto& encoder : column_encoders) {
         encoded_data_end = encoder->encode(row_id, encoded_data_end);
       }
-      DebugAssert(encoded_data_end == raw_data.end(), "Raw data not fully initialized");
+      DebugAssert(encoded_data_end + padded_row_size == encoding_buffer.end(), "Raw data not fully initialized");
+      auto raw_data = pmr_vector<RowDataValue>(padded_row_size / sizeof(RowDataValue));
+      std::memcpy(encoding_buffer.data(), raw_data.data(), padded_row_size);
       materialized_rows.emplace_back(std::move(raw_data), row_id);
     }
   }
