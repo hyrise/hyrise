@@ -1,6 +1,7 @@
 #include "sort.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <bit>
 #include <chrono>
 #include <compare>
@@ -18,7 +19,6 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
-#include <valarray>
 #include <vector>
 
 #include <boost/accumulators/statistics_fwd.hpp>
@@ -456,7 +456,7 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
   size_t _padding;
 };
 
-using RowDataValue = uint32_t;
+using RowDataValue = std::byte;
 
 struct RowData {
   pmr_vector<RowDataValue> raw;
@@ -473,6 +473,39 @@ std::strong_ordering operator<=>(const RowData& lhs, const RowData& rhs) {
     return std::strong_ordering::greater;
   }
   return std::strong_ordering::equal;
+}
+
+template <typename T>
+std::vector<std::shared_ptr<AbstractTask>> process_in_parallel(const std::vector<T>& elements, size_t max_parallelism,
+                                                               auto handler) {
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
+  tasks.reserve(max_parallelism);
+  const auto task_count = std::min(elements.size(), max_parallelism);
+  const auto task_workload = elements.size() / task_count;
+  auto from_index = size_t{0};
+  for (auto task_index = size_t{1}; task_index <= task_count; ++task_index) {
+    const auto to_index = (task_index != task_count) ? task_index * task_workload : elements.size();
+    const auto task = std::make_shared<JobTask>([from_index, to_index, handler, &elements] {
+      for (auto index = from_index; index < to_index; ++index) {
+        handler(elements[index]);
+      }
+    });
+    task->schedule();
+    tasks.push_back(task);
+    from_index = to_index;
+  }
+  return tasks;
+}
+
+std::vector<std::pair<size_t, ChunkID>> generate_column_chunk_id_pairs(size_t column_count, ChunkID chunk_count) {
+  auto result = std::vector<std::pair<size_t, ChunkID>>();
+  result.reserve(column_count * chunk_count);
+  for (auto column_index = size_t{0}; column_index < column_count; ++column_index) {
+    for (auto chunk_id = size_t{0}; chunk_id < chunk_count; ++chunk_id) {
+      result.emplace_back(column_index, chunk_id);
+    }
+  }
+  return result;
 }
 
 }  // namespace
@@ -544,22 +577,33 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   const auto init_time = timer.lap();
   std::cerr << "sort::init_time " << init_time << "\n";
 
-  auto column_max_byte_length = pmr_vector<size_t>(column_encoders.size(), 0);
-  for (auto column_index = size_t{0}; column_index < column_encoders.size(); ++column_index) {
+  // Scan all chunks for the maximum number of bytes necessary to represent all column values. The scanning is
+  // done in parallel on multiple threads.
+
+  const auto column_count = column_encoders.size();
+  const auto chunk_count = input_table->chunk_count();
+
+  const auto hardware_parallelism = std::thread::hardware_concurrency();
+  auto column_chunk_max_bytes = std::vector(column_count, std::vector(chunk_count, size_t{0}));
+  const auto column_chunk_pairs = generate_column_chunk_id_pairs(column_count, chunk_count);
+  const auto scan_tasks = process_in_parallel(column_chunk_pairs, hardware_parallelism, [&](const auto element) {
+    const auto [column_index, chunk_id] = element;
+    const auto chunk_size = input_table->get_chunk(chunk_id)->size();
     auto max_bytes = size_t{0};
-    for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      const auto chunk_size = input_table->get_chunk(chunk_id)->size();
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-        const auto row_id = RowID{chunk_id, chunk_offset};
-        max_bytes = std::max(max_bytes, column_encoders[column_index]->required_bytes(row_id));
-      }
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      const auto row_id = RowID{chunk_id, chunk_offset};
+      max_bytes = std::max(max_bytes, column_encoders[column_index]->required_bytes(row_id));
     }
-    column_max_byte_length[column_index] = max_bytes;
-  }
+    column_chunk_max_bytes[column_index][chunk_id] = max_bytes;
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(scan_tasks);
+
+  auto row_size = size_t{0};
   for (auto column_index = size_t{0}; column_index < column_encoders.size(); ++column_index) {
-    column_encoders[column_index]->set_padding(column_max_byte_length[column_index]);
+    const auto column_max_bytes = std::ranges::max(column_chunk_max_bytes[column_index]);
+    row_size += column_max_bytes;
+    column_encoders[column_index]->set_padding(column_max_bytes);
   }
-  const auto row_size = boost::accumulate(column_max_byte_length, size_t{0});
   const auto padded_row_size = ((row_size + sizeof(RowDataValue) - 1) / sizeof(RowDataValue)) * sizeof(RowDataValue);
   const auto padding_size = padded_row_size - row_size;
   std::cerr << "sort::row_size " << row_size << "\n";
@@ -574,7 +618,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto encoding_buffers = pmr_vector<pmr_vector<std::byte>>();
   auto buffer_iters = pmr_vector<PmrByteIter>();
-  // auto encoding_buffer = pmr_vector<std::byte>(padded_row_size, std::byte{0});
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     const auto chunk_size = input_table->get_chunk(chunk_id)->size();
 
@@ -596,10 +639,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
-      DebugAssert(buffer_iters[chunk_offset] + padded_row_size == encoding_buffers[chunk_offset].end(),
+      DebugAssert(buffer_iters[chunk_offset] + padding_size == encoding_buffers[chunk_offset].end(),
                   "Raw data not fully initialized");
       auto raw_data = pmr_vector<RowDataValue>(padded_row_size / sizeof(RowDataValue));
-      std::memcpy(encoding_buffers[chunk_offset].data(), raw_data.data(), padded_row_size);
+      std::memcpy(raw_data.data(), encoding_buffers[chunk_offset].data(), padded_row_size);
       materialized_rows.emplace_back(std::move(raw_data), row_id);
     }
   }
