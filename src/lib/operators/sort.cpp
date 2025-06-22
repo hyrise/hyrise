@@ -22,6 +22,7 @@
 #include <vector>
 
 #include <boost/accumulators/statistics_fwd.hpp>
+#include <boost/algorithm/cxx11/iota.hpp>
 #include <boost/range/numeric.hpp>
 
 #include "all_type_variant.hpp"
@@ -613,39 +614,48 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   const auto scan_time = timer.lap();
   std::cerr << "sort::scan_time " << scan_time << "\n";
 
+  // Convert the columnar layout into a row layout for better sorting. This is done by encoding all sorted columns
+  // into an array of bytes. These rows can be compared using memcmp.
+
   auto materialized_rows = pmr_vector<RowData>();
-  materialized_rows.reserve(input_table->row_count());
+  materialized_rows.resize(input_table->row_count());
 
-  auto encoding_buffers = pmr_vector<pmr_vector<std::byte>>();
-  auto buffer_iters = pmr_vector<PmrByteIter>();
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+  auto total_offset = size_t{0};
+  auto chunk_ids = std::vector<std::pair<ChunkID, size_t>>(chunk_count);
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+    chunk_ids[chunk_id] = {chunk_id, total_offset};
+    total_offset += chunk_size;
+  }
 
-    encoding_buffers.clear();
-    encoding_buffers.reserve(chunk_size);
-    buffer_iters.clear();
-    buffer_iters.reserve(chunk_size);
+  const auto materialization_tasks = process_in_parallel(chunk_ids, hardware_parallelism, [&](auto element) {
+    const auto [chunk_id, offset] = element;
+    const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+    auto encoded_rows = pmr_vector<RowData>(chunk_size);
+    auto encoding_iter = pmr_vector<PmrByteIter>(chunk_size);
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      encoding_buffers.emplace_back(padded_row_size, std::byte{0});
-      buffer_iters.push_back(encoding_buffers.back().begin());
+      const auto row_id = RowID{chunk_id, chunk_offset};
+      encoded_rows[chunk_offset] = RowData{
+          .raw = pmr_vector<RowDataValue>(padded_row_size, RowDataValue{0}),
+          .row_id = row_id,
+      };
+      encoding_iter[chunk_offset] = encoded_rows[chunk_offset].raw.begin();
     }
 
     for (const auto& encoder : column_encoders) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         const auto row_id = RowID{chunk_id, chunk_offset};
-        buffer_iters[chunk_offset] = encoder->encode(row_id, buffer_iters[chunk_offset]);
+        encoding_iter[chunk_offset] = encoder->encode(row_id, encoding_iter[chunk_offset]);
       }
     }
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      const auto row_id = RowID{chunk_id, chunk_offset};
-      DebugAssert(buffer_iters[chunk_offset] + padding_size == encoding_buffers[chunk_offset].end(),
+      DebugAssert(encoding_iter[chunk_offset] + padding_size == encoded_rows[chunk_offset].raw.end(),
                   "Raw data not fully initialized");
-      auto raw_data = pmr_vector<RowDataValue>(padded_row_size / sizeof(RowDataValue));
-      std::memcpy(raw_data.data(), encoding_buffers[chunk_offset].data(), padded_row_size);
-      materialized_rows.emplace_back(std::move(raw_data), row_id);
+      materialized_rows[offset + chunk_offset] = std::move(encoded_rows[chunk_offset]);
     }
-  }
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(materialization_tasks);
 
   const auto materialization_time = timer.lap();
   std::cerr << "sort::materialization_time " << materialization_time << "\n";
