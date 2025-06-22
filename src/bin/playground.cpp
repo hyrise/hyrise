@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -163,14 +164,14 @@ void setup_table(std::string table_name) {
       TableColumnDefinition{"float_col", DataType::Float, false},
       TableColumnDefinition{"long_col", DataType::Long, false},
   };
-  auto output = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{1025});
+  auto output = std::make_shared<Table>(column_definitions, TableType::Data);
   Hyrise::get().storage_manager.add_table(table_name, output);
 }
 
 void fill_table(const std::string table_name) {
   const auto tab = Hyrise::get().storage_manager.get_table(table_name);
   const auto column_count = tab->column_count();
-  constexpr auto desired_chunk_count = int32_t{3};
+  constexpr auto desired_chunk_count = int32_t{100};
   const auto target_chunk_size = static_cast<int32_t>(tab->target_chunk_size());
   const auto max_int = static_cast<int64_t>(std::numeric_limits<int32_t>::max());
   for (int32_t i = 0; i < target_chunk_size * desired_chunk_count; ++i) {
@@ -201,7 +202,49 @@ void print_table(std::string table_name) {
   print->execute();
 }
 
-int main() {
+void merge(RowIDPosList& data, const std::function<bool(const RowID&, const RowID&)>& compare, int left, int mid,
+           int right) {
+  std::vector<RowID> temp;
+  temp.reserve(right - left);
+
+  int i = left, j = mid;
+
+  while (i < mid && j < right) {
+    if (compare(data[i], data[j])) {
+      temp.push_back(std::move(data[i++]));
+    } else {
+      temp.push_back(std::move(data[j++]));
+    }
+  }
+  while (i < mid)
+    temp.push_back(std::move(data[i++]));
+  while (j < right)
+    temp.push_back(std::move(data[j++]));
+
+  std::move(temp.begin(), temp.end(), data.begin() + left);
+}
+
+void merge_sort(RowIDPosList& data, const std::function<bool(const RowID&, const RowID&)>& compare, int left, int right,
+                int depth = 0) {
+  if (right - left <= 1)
+    return;
+
+  int mid = left + (right - left) / 2;
+
+  // Limit parallelism depth to avoid oversubscription
+  if (depth < static_cast<int>(std::log2(std::thread::hardware_concurrency()))) {
+    std::thread left_thread(merge_sort, std::ref(data), compare, left, mid, depth + 1);
+    merge_sort(data, compare, mid, right, depth + 1);
+    left_thread.join();
+  } else {
+    merge_sort(data, compare, left, mid, depth + 1);
+    merge_sort(data, compare, mid, right, depth + 1);
+  }
+
+  merge(data, compare, left, mid, right);
+}
+
+void sort_test(int run_name = 0, bool use_merge_sort = true, bool print_result = false) {
   // define
   std::vector<SortColumnDefinition> sort_definitions = {
       // SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsFirst},
@@ -212,13 +255,15 @@ int main() {
       // SortColumnDefinition{ColumnID{6}, SortMode::DescendingNullsFirst},
   };
 
-  const std::string table_name = "test_table";
+  const std::string table_name = "test_table" + std::to_string(run_name);
   setup_table(table_name);
   fill_table(table_name);
 
   auto tab = Hyrise::get().storage_manager.get_table(table_name);
   const auto chunk_count = tab->chunk_count();
   const auto row_count = tab->row_count();
+  // std::cout << "Table '" << table_name << "' has " << row_count << " rows over " << chunk_count << " chunks."
+  //           << std::endl;
 
   // === precompute field_width, key_width and key_offsets ===
 
@@ -349,7 +394,7 @@ int main() {
   }
 
   // Sort the buffer
-  auto compare_rows = [&](RowID a, RowID b) {
+  auto compare_rows = [&](const RowID a, const RowID b) {
     uint8_t* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
     uint8_t* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
 
@@ -393,26 +438,61 @@ int main() {
     return false;  // completely equal
   };
 
-  std::sort(row_ids.begin(), row_ids.end(), compare_rows);
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+  if (use_merge_sort) {
+    merge_sort(row_ids, compare_rows, 0, row_ids.size());
+  } else {
+    std::sort(row_ids.begin(), row_ids.end(), compare_rows);
+  }
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-  // Print sorted keys
-  auto column_count = tab->get_chunk(ChunkID{0})->column_count();
-  // print each column once to show PERF warning
-  for (ColumnID col = ColumnID{0}; col < column_count; ++col) {
-    std::cout << "Dummy print: " << tab->get_chunk(ChunkID{0})->get_segment(col)->operator[](ChunkOffset{0})
-              << std::endl;
+  // std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()
+  //           << "[µs]" << std::endl;
+  // std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()
+  //           << "[ns]" << std::endl;
+  double ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(end - begin).count();
+  std::cout << "Time difference = " << std::fixed << std::setprecision(2) << ms << "[ms]" << std::endl;
+
+  if (print_result) {
+    // Print sorted keys
+    auto column_count = tab->get_chunk(ChunkID{0})->column_count();
+    // print each column once to show PERF warning
+    for (ColumnID col = ColumnID{0}; col < column_count; ++col) {
+      std::cout << "Dummy print: " << tab->get_chunk(ChunkID{0})->get_segment(col)->operator[](ChunkOffset{0})
+                << std::endl;
+    }
+
+    for (ChunkOffset i = ChunkOffset{0}; i < 9; ++i) {
+      const auto& row_idx = row_ids[i];
+
+      // print each row in the chunk
+      std::cout << "[" << row_idx.chunk_id << "." << row_idx.chunk_offset << "]: ";
+      for (ColumnID col = ColumnID{0}; col < column_count; ++col) {
+        auto segment = tab->get_chunk(row_idx.chunk_id)->get_segment(col);
+        std::cout << segment->operator[](row_idx.chunk_offset) << ", ";
+      }
+      std::cout << std::endl;
+    }
+  }
+}
+
+int main() {
+  std::cout << "=== Playground ===" << std::endl;
+
+  // Run the sort test
+  int run_name = 0;
+  size_t num_runs = 5;
+
+  std::cout << "=== merge sort ===" << std::endl;
+  for (size_t i = 0; i < num_runs; ++i) {
+    sort_test(run_name, true);
+    run_name++;
   }
 
-  for (ChunkOffset i = ChunkOffset{0}; i < 9; ++i) {
-    const auto& row_idx = row_ids[i];
-
-    // print each row in the chunk
-    std::cout << "[" << row_idx.chunk_id << "." << row_idx.chunk_offset << "]: ";
-    for (ColumnID col = ColumnID{0}; col < column_count; ++col) {
-      auto segment = tab->get_chunk(row_idx.chunk_id)->get_segment(col);
-      std::cout << segment->operator[](row_idx.chunk_offset) << ", ";
-    }
-    std::cout << std::endl;
+  std::cout << "\n=== std::sort ===" << std::endl;
+  for (size_t i = 0; i < num_runs; ++i) {
+    sort_test(run_name, false);
+    run_name++;
   }
 
   return 0;
