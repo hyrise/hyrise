@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <valarray>
 #include <vector>
 
 #include <boost/accumulators/statistics_fwd.hpp>
@@ -270,7 +271,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   return output_table;
 }
 
-using PmrByteIter = pmr_vector<std::byte>::iterator;
+using PmrByteIter = std::byte*;
 
 // Encodes the row value of
 class ColumnDataEncoder : Noncopyable {
@@ -457,24 +458,42 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
   size_t _padding;
 };
 
-using RowDataValue = std::byte;
+struct RawArray {
+  RawArray(const RawArray&) = default;
+  RawArray& operator=(const RawArray&) = default;
 
-struct RowData {
-  pmr_vector<RowDataValue> raw;
-  RowID row_id;
+  RawArray(RawArray&& other) noexcept : ptr(other.ptr) {
+    other.ptr = nullptr;
+  }
+
+  RawArray& operator=(RawArray&& other) noexcept {
+    delete ptr;
+    ptr = other.ptr;
+    other.ptr = nullptr;
+    return *this;
+  }
+
+  RawArray() : ptr(nullptr) {}
+
+  explicit RawArray(size_t len) : ptr(new std::byte[len]) {
+    Assert(ptr, "Failed to initlaize raw array");
+  }
+
+  ~RawArray() {
+    delete[] ptr;
+  }
+
+  std::byte* ptr;  // NOLINT
 };
 
-std::strong_ordering operator<=>(const RowData& lhs, const RowData& rhs) {
-  DebugAssert(lhs.raw.size() == rhs.raw.size(), "Equal row size");
-  const auto cmp = std::memcmp(lhs.raw.data(), rhs.raw.data(), lhs.raw.size());
-  if (cmp < 0) {
-    return std::strong_ordering::less;
+struct RowData {
+  RawArray raw;
+  RowID row_id;
+
+  bool less_than(const RowData& other, size_t expected_size) const {
+    return memcmp(raw.ptr, other.raw.ptr, expected_size) < 0;
   }
-  if (cmp > 0) {
-    return std::strong_ordering::greater;
-  }
-  return std::strong_ordering::equal;
-}
+};
 
 template <typename T>
 std::vector<std::shared_ptr<AbstractTask>> process_in_parallel(const std::vector<T>& elements, size_t max_parallelism,
@@ -605,11 +624,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     row_size += column_max_bytes;
     column_encoders[column_index]->set_padding(column_max_bytes);
   }
-  const auto padded_row_size = ((row_size + sizeof(RowDataValue) - 1) / sizeof(RowDataValue)) * sizeof(RowDataValue);
-  const auto padding_size = padded_row_size - row_size;
-  std::cerr << "sort::row_size " << row_size << "\n";
-  std::cerr << "sort::padded_row_size " << padded_row_size << "\n";
-  std::cerr << "sort::padding_size " << padding_size << "\n";
 
   const auto scan_time = timer.lap();
   std::cerr << "sort::scan_time " << scan_time << "\n";
@@ -636,10 +650,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
       encoded_rows[chunk_offset] = RowData{
-          .raw = pmr_vector<RowDataValue>(padded_row_size, RowDataValue{0}),
+          .raw = RawArray(row_size),
           .row_id = row_id,
       };
-      encoding_iter[chunk_offset] = encoded_rows[chunk_offset].raw.begin();
+      encoding_iter[chunk_offset] = encoded_rows[chunk_offset].raw.ptr;
     }
 
     for (const auto& encoder : column_encoders) {
@@ -650,7 +664,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     }
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      DebugAssert(encoding_iter[chunk_offset] + padding_size == encoded_rows[chunk_offset].raw.end(),
+      DebugAssert(encoding_iter[chunk_offset] == encoded_rows[chunk_offset].raw.ptr + row_size,
                   "Raw data not fully initialized");
       materialized_rows[offset + chunk_offset] = std::move(encoded_rows[chunk_offset]);
     }
@@ -662,7 +676,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   // TODO(student): Use boost stable sort
   std::stable_sort(materialized_rows.begin(), materialized_rows.end(), [&](const auto& lhs, const auto& rhs) {
-    return lhs < rhs;
+    return lhs.less_than(rhs, row_size);
   });
 
   const auto sort_time = timer.lap();
