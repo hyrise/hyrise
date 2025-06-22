@@ -4,7 +4,7 @@
 
 ## CXL Memory Performance for In-Memory Data Processing
 
-This repository will soon contain the code used for our VLDB 2025 paper.
+This repository contains the code used for our VLDB 2025 paper.
 
 ## Cite our work
 

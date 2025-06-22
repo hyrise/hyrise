@@ -1,0 +1,4535 @@
+{
+  "benchmarks": [
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 01",
+      "successful_runs": [
+        {
+          "begin": 122351280992,
+          "duration": 50354219020,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 136484041594,
+          "duration": 53160740716,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 180100480431,
+          "duration": 47716789372,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 202588085847,
+          "duration": 52403974961,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 253810946370,
+          "duration": 47840293637,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 265213930191,
+          "duration": 47888638668,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 310395769263,
+          "duration": 47854612247,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 319450211615,
+          "duration": 49896711979,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 365043050022,
+          "duration": 50607274341,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 407022473350,
+          "duration": 50669168676,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 420133300939,
+          "duration": 51121900387,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 447486646507,
+          "duration": 49459030769,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 498569706279,
+          "duration": 49045941324,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 516957136980,
+          "duration": 49971013123,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 561855229660,
+          "duration": 51224064730,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 562327448115,
+          "duration": 51000107237,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 602642510122,
+          "duration": 46449545077,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 637046320853,
+          "duration": 48962888736,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 676449972416,
+          "duration": 47946088771,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 715161888119,
+          "duration": 46511192738,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 741345667592,
+          "duration": 54103811422,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 757613738546,
+          "duration": 46443441131,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 802147553736,
+          "duration": 46486999084,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 813639952910,
+          "duration": 50686763637,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 869396367242,
+          "duration": 47925247080,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 884258870194,
+          "duration": 48246115488,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 917406799207,
+          "duration": 49266104230,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 937408755449,
+          "duration": 46915641642,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 995262788761,
+          "duration": 48571342503,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1011064722959,
+          "duration": 51494968204,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1052862698443,
+          "duration": 49656382745,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1075572016787,
+          "duration": 49044316387,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1097552982363,
+          "duration": 47350306173,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1121320613759,
+          "duration": 52330044556,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1180190967489,
+          "duration": 49118490375,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1190338623019,
+          "duration": 52642589044,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1222435934438,
+          "duration": 47576225406,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1252349076994,
+          "duration": 49728072286,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1268760992670,
+          "duration": 49426924771,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 02",
+      "successful_runs": [
+        {
+          "begin": 117836249822,
+          "duration": 1817432631,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 147883238974,
+          "duration": 497033793,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 166454531643,
+          "duration": 1367784554,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 220432324869,
+          "duration": 1158941986,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 242775350649,
+          "duration": 672376945,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 271707682689,
+          "duration": 438201380,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 300041757487,
+          "duration": 675629784,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 340522834476,
+          "duration": 491436503,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 361128880747,
+          "duration": 532943654,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 406574504756,
+          "duration": 447867860,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 415650453567,
+          "duration": 514818643,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 446952547687,
+          "duration": 533958474,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 505850033947,
+          "duration": 762174959,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 513871369418,
+          "duration": 2096365723,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 555714392046,
+          "duration": 898232641,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 575341492635,
+          "duration": 638162544,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 610284306346,
+          "duration": 685348290,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 635615379802,
+          "duration": 465032167,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 660893034416,
+          "duration": 582058963,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 685028250394,
+          "duration": 452805786,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 727743023706,
+          "duration": 1135927974,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 756739139939,
+          "duration": 643881768,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 804057413482,
+          "duration": 654450155,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 838548093322,
+          "duration": 635301867,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 860416286727,
+          "duration": 597746229,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 891146193576,
+          "duration": 435346181,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 916222352160,
+          "duration": 1184206747,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 968223920818,
+          "duration": 523969372,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 971101650113,
+          "duration": 1373718995,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1015743447198,
+          "duration": 557423211,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1034495813203,
+          "duration": 569849801,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1087981083584,
+          "duration": 493638669,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1104247034198,
+          "duration": 493122834,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1138738836152,
+          "duration": 682141135,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1165423220004,
+          "duration": 433752037,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1199025498542,
+          "duration": 675631565,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1231746087348,
+          "duration": 441943798,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1258867115101,
+          "duration": 695291919,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1302077294921,
+          "duration": 797457320,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 03",
+      "successful_runs": [
+        {
+          "begin": 131864901266,
+          "duration": 11443394132,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 152410925878,
+          "duration": 8675724993,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 167825216870,
+          "duration": 11449216331,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 197812356411,
+          "duration": 8487659527,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 259640307516,
+          "duration": 9139158099,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 283185806130,
+          "duration": 12982961089,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 312285908388,
+          "duration": 10261746582,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 341014434887,
+          "duration": 7876069574,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 374801141564,
+          "duration": 9912305837,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 411197007699,
+          "duration": 9550932572,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 422864289957,
+          "duration": 8440913934,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 445000478564,
+          "duration": 8462166571,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 479974731797,
+          "duration": 8979089628,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 515483654103,
+          "duration": 8160774830,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 540721168034,
+          "duration": 9906239335,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 570530119451,
+          "duration": 8787008301,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 621858951902,
+          "duration": 9236191945,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 626880317717,
+          "duration": 10165857391,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 662752411152,
+          "duration": 10173139844,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 699327728205,
+          "duration": 10629280684,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 729833893565,
+          "duration": 10713890958,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 747601329775,
+          "duration": 8841983543,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 795449780408,
+          "duration": 9819331415,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 819589953839,
+          "duration": 10348317203,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 860322602048,
+          "duration": 9073744292,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 905514235059,
+          "duration": 7434585123,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 912948961727,
+          "duration": 9475875692,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 937465957296,
+          "duration": 10177964189,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 970387475715,
+          "duration": 9213184201,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1005032563329,
+          "duration": 8821334276,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1035065812757,
+          "duration": 8288919861,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1093608354226,
+          "duration": 10638644783,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1119877741840,
+          "duration": 11524359056,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1140192211536,
+          "duration": 9428841613,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1168293524526,
+          "duration": 9727704236,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1190304342577,
+          "duration": 8721087553,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1216039140927,
+          "duration": 10073986807,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1249190258035,
+          "duration": 9259871570,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1299682065303,
+          "duration": 8917046427,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 04",
+      "successful_runs": [
+        {
+          "begin": 124136882775,
+          "duration": 7727787629,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 161400420671,
+          "duration": 9041330531,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 196468472589,
+          "duration": 6119414168,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 199024156753,
+          "duration": 6641574922,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 252657330181,
+          "duration": 9378918541,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 283164350979,
+          "duration": 9857693100,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 314100427219,
+          "duration": 8037729242,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 351943029526,
+          "duration": 8024971338,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 365517439509,
+          "duration": 6801124965,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 403516302488,
+          "duration": 7680643776,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 431305367045,
+          "duration": 7260222297,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 448893512722,
+          "duration": 6951299394,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 493660039557,
+          "duration": 9063777686,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 528413323845,
+          "duration": 7011920673,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 538909875729,
+          "duration": 7519855066,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 562620403873,
+          "duration": 7909644556,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 594106895014,
+          "duration": 6865210886,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 624992565272,
+          "duration": 6202778926,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 671253122699,
+          "duration": 6642968334,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 686760853199,
+          "duration": 8836381182,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 721111468777,
+          "duration": 7226930801,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 778978907630,
+          "duration": 6829696192,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 804798592478,
+          "duration": 7155889104,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 830229153503,
+          "duration": 8318774923,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 842249241362,
+          "duration": 8649640108,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 892651706176,
+          "duration": 6832684955,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 922403771163,
+          "duration": 8827096231,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 961598109453,
+          "duration": 8789337534,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 983222959509,
+          "duration": 17828200453,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 999508165163,
+          "duration": 12436940933,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1049836357699,
+          "duration": 8725957219,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1079450001295,
+          "duration": 7779165535,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1104740278920,
+          "duration": 6377566383,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1144903417134,
+          "duration": 6744239887,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1165857199348,
+          "duration": 7882045002,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1207719136052,
+          "duration": 8549393519,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1216929525466,
+          "duration": 6839041306,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1259097821902,
+          "duration": 7158943243,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1300071563054,
+          "duration": 7000285867,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.02736205206659597,
+      "name": "TPC-H 05",
+      "successful_runs": [
+        {
+          "begin": 122607582772,
+          "duration": 15906735697,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 144091193904,
+          "duration": 18157922642,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 165825086543,
+          "duration": 18400348218,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 202890319665,
+          "duration": 13696574039,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 260298693742,
+          "duration": 14184523293,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 270920055440,
+          "duration": 14108558302,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 296168811700,
+          "duration": 16116939509,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 350685045864,
+          "duration": 14832231721,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 373057989453,
+          "duration": 15966015803,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 379900292788,
+          "duration": 14122260526,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 432198230549,
+          "duration": 14754077194,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 455844860325,
+          "duration": 13881337795,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 471255334119,
+          "duration": 15534561211,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 507545829197,
+          "duration": 14759648660,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 553436924039,
+          "duration": 15345311397,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 574997076668,
+          "duration": 13939374599,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 620711759465,
+          "duration": 14204425176,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 637609861835,
+          "duration": 16564602160,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 654174573824,
+          "duration": 17078509690,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 697381627443,
+          "duration": 30896933984,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 735584118836,
+          "duration": 14876170229,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 761673117910,
+          "duration": 14970470855,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 785062563475,
+          "duration": 15271246444,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 832348548707,
+          "duration": 15204694318,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 845174458839,
+          "duration": 15241651646,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 876897899557,
+          "duration": 14568445556,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 907145709303,
+          "duration": 13425224322,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 939594195617,
+          "duration": 14122081891,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 987653765585,
+          "duration": 16303024535,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1013853951418,
+          "duration": 14898861799,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1045059598684,
+          "duration": 17811256248,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1085941841708,
+          "duration": 15401846799,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1105270298484,
+          "duration": 14541379999,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1134604856916,
+          "duration": 14437380559,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1166043873072,
+          "duration": 24260277540,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1191653056323,
+          "duration": 15566242976,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1240279707570,
+          "duration": 16054736180,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1266256789188,
+          "duration": 14351107467,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028802160070101022,
+      "name": "TPC-H 06",
+      "successful_runs": [
+        {
+          "begin": 117840299715,
+          "duration": 3103823368,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 158507248591,
+          "duration": 860951586,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 195428093550,
+          "duration": 1040234473,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 197265915462,
+          "duration": 852749556,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 262036409021,
+          "duration": 1147719750,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 266347649732,
+          "duration": 962873823,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 311666283258,
+          "duration": 2433223083,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 325845255198,
+          "duration": 854656767,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 373626637388,
+          "duration": 1174462398,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 409245285279,
+          "duration": 2091220674,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 429143226945,
+          "duration": 1069228114,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 467620297792,
+          "duration": 1009587876,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 477361086439,
+          "duration": 2613493311,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 516238945846,
+          "duration": 718118282,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 535425431041,
+          "duration": 1667105102,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 573970776111,
+          "duration": 1026263000,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 624568843155,
+          "duration": 1312703863,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 634916227871,
+          "duration": 699018977,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 670920021736,
+          "duration": 904873589,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 686209207321,
+          "duration": 817801973,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 726902600958,
+          "duration": 838555853,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 756443443200,
+          "duration": 796499625,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 790242085104,
+          "duration": 1040021368,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 835017780905,
+          "duration": 787166348,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 871228735882,
+          "duration": 1020407624,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 894265075288,
+          "duration": 842450968,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 936486339481,
+          "duration": 1060124432,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 945728800322,
+          "duration": 1435397148,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 994084781219,
+          "duration": 1177797229,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1016301051782,
+          "duration": 951235936,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1039956593706,
+          "duration": 685091654,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1069032832906,
+          "duration": 1446891420,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1110556000816,
+          "duration": 1577662197,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1133158350752,
+          "duration": 1446245347,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1178021358313,
+          "duration": 1336142568,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1199701267007,
+          "duration": 1223555454,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1232316307069,
+          "duration": 1122539127,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1251154883273,
+          "duration": 1194111280,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1302874916661,
+          "duration": 821538922,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1311645478206,
+          "duration": 763952873,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 07",
+      "successful_runs": [
+        {
+          "begin": 117836362045,
+          "duration": 9197712705,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 134284304837,
+          "duration": 6466102782,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 164285120129,
+          "duration": 6177829205,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 213494679555,
+          "duration": 4187648836,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 248189953354,
+          "duration": 4467259141,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 267310782108,
+          "duration": 4396719366,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 294622932823,
+          "duration": 3963394936,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 338656070479,
+          "duration": 4839670322,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 366039636163,
+          "duration": 5596946458,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 404914044097,
+          "duration": 4331213761,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 427387879055,
+          "duration": 4810124001,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 467027817193,
+          "duration": 4312516616,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 488954091822,
+          "duration": 5524341414,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 524261916426,
+          "duration": 4151263184,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 547615717201,
+          "duration": 5492577839,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 580659778489,
+          "duration": 4714254063,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 606588534657,
+          "duration": 4513896186,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 636080561285,
+          "duration": 4478782458,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 669649395673,
+          "duration": 3889447474,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 689957285247,
+          "duration": 7424289069,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 738095819734,
+          "duration": 9505483763,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 754233884056,
+          "duration": 4510975887,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 800333945339,
+          "duration": 4464395327,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 824242786187,
+          "duration": 5986213859,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 871864529053,
+          "duration": 5033233489,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 886479842040,
+          "duration": 4666142453,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 922424985845,
+          "duration": 6191912118,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 945534122410,
+          "duration": 4106729800,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 980754349926,
+          "duration": 6662642577,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1018286997567,
+          "duration": 4494326017,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1059950047807,
+          "duration": 4805477749,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1064184580261,
+          "duration": 4848207469,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1111118008475,
+          "duration": 4849576045,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1127960169217,
+          "duration": 4810381374,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1177476575804,
+          "duration": 4743117828,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1200925076801,
+          "duration": 4197967427,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1227057853141,
+          "duration": 4688187922,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1244513726781,
+          "duration": 4676491413,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1305926386519,
+          "duration": 5822410927,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 08",
+      "successful_runs": [
+        {
+          "begin": 130717949244,
+          "duration": 5766070571,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 159293658719,
+          "duration": 4991344133,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 170462989185,
+          "duration": 5522684381,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 216587022858,
+          "duration": 3844997632,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 254993299978,
+          "duration": 5305160119,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 293030626994,
+          "duration": 3921941122,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 307685219933,
+          "duration": 3980937621,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 325611349398,
+          "duration": 4699126530,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 362410445520,
+          "duration": 3628998580,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 394407843668,
+          "duration": 4707567772,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 420748056476,
+          "duration": 3455390706,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 462926105052,
+          "duration": 4101463535,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 474819115818,
+          "duration": 3160427338,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 519277987837,
+          "duration": 3963923935,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 558462321747,
+          "duration": 3488944868,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 566928279273,
+          "duration": 3991519280,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 618251555182,
+          "duration": 4147003930,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 637334817071,
+          "duration": 5023965781,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 680152990209,
+          "duration": 4883829601,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 717947469022,
+          "duration": 3163864928,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 732286062825,
+          "duration": 3827470678,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 784084486464,
+          "duration": 3237675184,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 794802315911,
+          "duration": 3248579868,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 806795936814,
+          "duration": 3909635223,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 847553391962,
+          "duration": 2981508346,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 882398450580,
+          "duration": 4081152896,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 930240828285,
+          "duration": 3230200661,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 953716400117,
+          "duration": 7881572435,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 985171251738,
+          "duration": 3460754799,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1014811911557,
+          "duration": 3474979846,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1043834177288,
+          "duration": 3319595969,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1089684661266,
+          "duration": 3933340617,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1115967771289,
+          "duration": 3618056560,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1151647848423,
+          "duration": 4759366917,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1171085293005,
+          "duration": 3727326124,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1212419114118,
+          "duration": 3304963322,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1229087672839,
+          "duration": 3228322275,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1256334607615,
+          "duration": 3698758924,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1270012277392,
+          "duration": 3203880900,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 09",
+      "successful_runs": [
+        {
+          "begin": 117836355814,
+          "duration": 40670702640,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 143308354857,
+          "duration": 38378399676,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 165800869773,
+          "duration": 35015849545,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 225220129714,
+          "duration": 35990867785,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 224582398439,
+          "duration": 37572940001,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 279901465607,
+          "duration": 36074227150,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 307603547586,
+          "duration": 39000055394,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 323822734768,
+          "duration": 34489918744,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 371565977199,
+          "duration": 33438263466,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 381800093443,
+          "duration": 35654576097,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 416165403659,
+          "duration": 32756867038,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 471052658474,
+          "duration": 35270048045,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 477979576975,
+          "duration": 37925591086,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 522305618020,
+          "duration": 33408641754,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 548097207964,
+          "duration": 35623063979,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 586771262704,
+          "duration": 33940262396,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 603623068091,
+          "duration": 33986667658,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 647257987719,
+          "duration": 34938988812,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 677896250066,
+          "duration": 37265545939,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 685284871739,
+          "duration": 38682835421,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 719561748310,
+          "duration": 32596780064,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 753139457065,
+          "duration": 30944896018,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 797435819489,
+          "duration": 35877816651,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 833333824259,
+          "duration": 38530547318,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 840230012568,
+          "duration": 35685904636,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 873409605997,
+          "duration": 32721216829,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 931230933496,
+          "duration": 36471050951,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 951644428479,
+          "duration": 31578483378,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 979635691016,
+          "duration": 33859189691,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1003542251330,
+          "duration": 33912084159,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1049856860296,
+          "duration": 38184549977,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1061077223763,
+          "duration": 34696754763,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1100748601743,
+          "duration": 34736809518,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1135485600454,
+          "duration": 32752977459,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1156407345128,
+          "duration": 35245649986,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1183751032387,
+          "duration": 34925688037,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1219679150344,
+          "duration": 35276187719,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1254955549527,
+          "duration": 36590439903,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1269226643630,
+          "duration": 36699595216,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 10",
+      "successful_runs": [
+        {
+          "begin": 117836359398,
+          "duration": 12881524780,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 138514367264,
+          "duration": 9368691819,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 184988645689,
+          "duration": 9430731617,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 213092851762,
+          "duration": 8469709158,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 227817481763,
+          "duration": 7278220472,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 272553749143,
+          "duration": 7347498720,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 298586443883,
+          "duration": 9016979462,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 342526965739,
+          "duration": 9415943943,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 359524032416,
+          "duration": 9156472387,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 403475219424,
+          "duration": 15125399514,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 416220762989,
+          "duration": 8466817405,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 469726413489,
+          "duration": 7693089313,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 496945714942,
+          "duration": 8904179908,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 506612404430,
+          "duration": 7635152149,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 550628224306,
+          "duration": 10681087088,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 568782369317,
+          "duration": 8583228649,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 610969780574,
+          "duration": 14022646922,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 650988912314,
+          "duration": 9761802017,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 672503056844,
+          "duration": 7649794586,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 706495137889,
+          "duration": 9133029866,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 728881140657,
+          "duration": 8253834198,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 757240075378,
+          "duration": 9061504170,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 805269179992,
+          "duration": 8544234262,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 811954688248,
+          "duration": 7680687870,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 861014160237,
+          "duration": 7882339274,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 899484530073,
+          "duration": 7660945306,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 924047278228,
+          "duration": 9534458836,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 962216695402,
+          "duration": 10806502862,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 984381916193,
+          "duration": 9702734022,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1028752924548,
+          "duration": 7828181637,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1040641950512,
+          "duration": 7653961384,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1088041523667,
+          "duration": 9511241928,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1112133775135,
+          "duration": 8369843987,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1131402156728,
+          "duration": 7336434715,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1182219740735,
+          "duration": 8118729976,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1215724114961,
+          "duration": 9034345200,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1224758558454,
+          "duration": 9301348500,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1248007146605,
+          "duration": 9451047630,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1279352647667,
+          "duration": 8376063661,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 11",
+      "successful_runs": [
+        {
+          "begin": 127034108953,
+          "duration": 749796728,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 158525769047,
+          "duration": 767765218,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 189644989698,
+          "duration": 632427567,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 220729761474,
+          "duration": 840949614,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 251071802827,
+          "duration": 722652848,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 270206386254,
+          "duration": 713440584,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 317547630567,
+          "duration": 906452339,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 330310614171,
+          "duration": 561519304,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 361661890556,
+          "duration": 748285062,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 393475132298,
+          "duration": 932604578,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 426797753090,
+          "duration": 640549875,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 453462865314,
+          "duration": 699826875,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 505576111312,
+          "duration": 1219875995,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 523644662700,
+          "duration": 593328642,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 541044765280,
+          "duration": 785950465,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 561951400721,
+          "duration": 668834614,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 588936498612,
+          "duration": 768904997,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 649742035010,
+          "duration": 803667349,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 671825032382,
+          "duration": 677999178,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 686009246164,
+          "duration": 751569377,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 740547903308,
+          "duration": 796365354,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 766301696760,
+          "duration": 1105407120,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 784647472841,
+          "duration": 672958365,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 817381137396,
+          "duration": 705662073,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 859639777778,
+          "duration": 682778848,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 872542892597,
+          "duration": 866564659,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 928617091782,
+          "duration": 1623592545,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 966525612393,
+          "duration": 920332077,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 994585378682,
+          "duration": 780440964,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 995365982519,
+          "duration": 740102112,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1043354786189,
+          "duration": 720731862,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1087229301548,
+          "duration": 751736922,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1104562463473,
+          "duration": 707783547,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1139421073813,
+          "duration": 769190251,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1179357607158,
+          "duration": 727197170,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1183056402243,
+          "duration": 694491172,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1239358553054,
+          "duration": 921110844,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1263951926677,
+          "duration": 1101034603,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1307072158700,
+          "duration": 841893785,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 12",
+      "successful_runs": [
+        {
+          "begin": 117836362501,
+          "duration": 11156373091,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 151311600107,
+          "duration": 7954395744,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 175985697484,
+          "duration": 9002904297,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 206100201651,
+          "duration": 7394255658,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 262155512360,
+          "duration": 8050680650,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 285028647812,
+          "duration": 11958755312,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 315594592898,
+          "duration": 10016714749,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 351328149917,
+          "duration": 8195653496,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 372519206821,
+          "duration": 9280753916,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 399115568225,
+          "duration": 7458663664,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 419769148831,
+          "duration": 9373971431,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 468630034038,
+          "duration": 7918646467,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 506322848081,
+          "duration": 9160591084,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 532458869889,
+          "duration": 8561700022,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 549811331754,
+          "duration": 8650773402,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 579317262790,
+          "duration": 7129322074,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 613079463940,
+          "duration": 8779340370,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 642358918034,
+          "duration": 7382933920,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 677949847240,
+          "duration": 7334897275,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 685483700888,
+          "duration": 11138755470,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 737135105317,
+          "duration": 8105136284,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 781805617420,
+          "duration": 8650019861,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 787322311812,
+          "duration": 7479643660,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 827215550026,
+          "duration": 10281222156,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 848634694410,
+          "duration": 12583617773,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 898390728727,
+          "duration": 7123350857,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 932505175955,
+          "duration": 10066073537,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 967445985311,
+          "duration": 8781801528,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 991582744762,
+          "duration": 11959399343,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1001051308487,
+          "duration": 10013388882,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1037454472420,
+          "duration": 7604899948,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1071196160186,
+          "duration": 8253775749,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1103358649168,
+          "duration": 7197195460,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1122619142138,
+          "duration": 8444405573,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1170188178984,
+          "duration": 9059322148,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1207219590447,
+          "duration": 8819440451,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1218676828599,
+          "duration": 8380880742,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1248344807154,
+          "duration": 7783806773,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1291546250810,
+          "duration": 8525284697,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.02592194406309092,
+      "name": "TPC-H 13",
+      "successful_runs": [
+        {
+          "begin": 117836365143,
+          "duration": 95256350557,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 161086936690,
+          "duration": 88011651366,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 181690106929,
+          "duration": 80785379301,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 206300177253,
+          "duration": 93741512707,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 251312041453,
+          "duration": 87343797521,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 285598020198,
+          "duration": 85967924683,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 315344008105,
+          "duration": 98990963162,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 330872267876,
+          "duration": 89260928104,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 374781868881,
+          "duration": 92551321969,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 411336534677,
+          "duration": 84921723772,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 439489429238,
+          "duration": 85907369201,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 451876740028,
+          "duration": 84982478584,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 486790045367,
+          "duration": 86157091784,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 515905266338,
+          "duration": 86737194156,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 556612870724,
+          "duration": 96913031981,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 577365833393,
+          "duration": 93553946939,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 603035788810,
+          "duration": 96291901912,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 643309749456,
+          "duration": 86524009806,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 679800464971,
+          "duration": 93476981635,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 695597365203,
+          "duration": 94262468082,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 745240301890,
+          "duration": 85673640366,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 757383069212,
+          "duration": 84866018777,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 789860024452,
+          "duration": 85023186500,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 830913982778,
+          "duration": 82742629912,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 851020695114,
+          "duration": 85465485148,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 877213742418,
+          "duration": 82984807137,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 927367168000,
+          "duration": 90469355015,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 959229997434,
+          "duration": 90626733322,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 979600736384,
+          "duration": 82446702523,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 996106162194,
+          "duration": 97502069977,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1048451800554,
+          "duration": 89978048805,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1076903210670,
+          "duration": 89140622862,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1119585970071,
+          "duration": 88965463974,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1127270545304,
+          "duration": 85146219042,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1156498263952,
+          "duration": 91846506937,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1208551567671,
+          "duration": 84850613169,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028802160070101022,
+      "name": "TPC-H 14",
+      "successful_runs": [
+        {
+          "begin": 119664559172,
+          "duration": 4471226555,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 163765170768,
+          "duration": 2683594381,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 192998584259,
+          "duration": 3033977154,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 200816937489,
+          "duration": 2073231566,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 251794593601,
+          "duration": 2016277614,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 263184244328,
+          "duration": 2029652214,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 315976677958,
+          "duration": 3473259794,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 339689729664,
+          "duration": 2837114676,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 372355089870,
+          "duration": 2426655145,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 401487878948,
+          "duration": 1987263148,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 430212649994,
+          "duration": 2107876212,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 448922382290,
+          "duration": 1668868033,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 495478674266,
+          "duration": 3090896088,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 514247817840,
+          "duration": 1991003975,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 557097295430,
+          "duration": 1913574707,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 575983225606,
+          "duration": 2123352205,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 622398838620,
+          "duration": 2169864426,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 635301172656,
+          "duration": 2033472621,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 677770705486,
+          "duration": 2029519353,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 715683710179,
+          "duration": 2263724858,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 736113671400,
+          "duration": 1981998714,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 752158565825,
+          "duration": 2075190792,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 791282238294,
+          "duration": 2404931481,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 829938395386,
+          "duration": 2410005552,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 864326753037,
+          "duration": 2124805675,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 891581592675,
+          "duration": 1950365375,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 920571035885,
+          "duration": 1832703713,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 937549025549,
+          "duration": 2044946534,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 977707984956,
+          "duration": 1927675776,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1013494967393,
+          "duration": 2242146299,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1036581358542,
+          "duration": 2200605646,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1062047550459,
+          "duration": 2136989688,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1102519335372,
+          "duration": 2043020798,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1131063574542,
+          "duration": 2094732965,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1180084843589,
+          "duration": 2971521979,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1187721786829,
+          "duration": 1934158120,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1236632206169,
+          "duration": 2726184875,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1246981212824,
+          "duration": 2055465265,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1273216306154,
+          "duration": 2646789012,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1312409626062,
+          "duration": 2031658648,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028802160070101022,
+      "name": "TPC-H 15",
+      "successful_runs": [
+        {
+          "begin": 117840301979,
+          "duration": 6500779406,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 159368287241,
+          "duration": 4396795336,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 194419615062,
+          "duration": 3392459253,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 221570765491,
+          "duration": 3011497869,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 249098703212,
+          "duration": 3988885903,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 274483360356,
+          "duration": 2661208516,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 301651458012,
+          "duration": 2735907021,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 322143651883,
+          "duration": 3701397092,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 368680650284,
+          "duration": 3673843766,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 397233347456,
+          "duration": 4254328393,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 418600654657,
+          "duration": 4263466919,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 467333309845,
+          "duration": 3719222794,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 471340383362,
+          "duration": 3478697431,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 507215978736,
+          "duration": 4059847170,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 537092742996,
+          "duration": 3628394428,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 585374133004,
+          "duration": 3381017740,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 613327589277,
+          "duration": 5550760428,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 644448040765,
+          "duration": 2809808037,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 672925677803,
+          "duration": 3524257169,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 715628221751,
+          "duration": 2866865857,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 723967744480,
+          "duration": 2934647845,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 775153730678,
+          "duration": 3078059513,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 804712095680,
+          "duration": 4780346173,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 821090962373,
+          "duration": 3151790917,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 868896566128,
+          "duration": 3646299305,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 893531984938,
+          "duration": 2552774580,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 934878999146,
+          "duration": 2586823405,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 962595310436,
+          "duration": 3930273838,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 972475593469,
+          "duration": 5232200953,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1029409783515,
+          "duration": 3866535675,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1033276474589,
+          "duration": 3960801206,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1072412734251,
+          "duration": 3159083368,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1098161383287,
+          "duration": 2587098927,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1123988019755,
+          "duration": 3282370589,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1176361816716,
+          "duration": 3828982185,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1198862343784,
+          "duration": 2914708229,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1216268555773,
+          "duration": 3410473616,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1260033404750,
+          "duration": 3918488134,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1275863293209,
+          "duration": 3489309687,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1314441512181,
+          "duration": 2556125720,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 16",
+      "successful_runs": [
+        {
+          "begin": 117836264665,
+          "duration": 15190303937,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 148380433031,
+          "duration": 13019861139,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 184225561316,
+          "duration": 11202474464,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 221562800591,
+          "duration": 11032186579,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 235851958566,
+          "duration": 12337878873,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 272146038810,
+          "duration": 11039717126,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 296987465870,
+          "duration": 13408127685,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 326700122696,
+          "duration": 12969474759,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 358250572034,
+          "duration": 12189816141,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 414335013499,
+          "duration": 12462484377,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 433993514555,
+          "duration": 11006749405,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 439664883508,
+          "duration": 12249121717,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 476548745641,
+          "duration": 11965285149,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 525396841320,
+          "duration": 11223677696,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 553109825385,
+          "duration": 13904462259,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 583720397010,
+          "duration": 10856398974,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 594576990118,
+          "duration": 12011501964,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 631195483661,
+          "duration": 13252409118,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 656238592805,
+          "duration": 13410581339,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 685036858052,
+          "duration": 12916209908,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 745662572938,
+          "duration": 11951145511,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 773277640189,
+          "duration": 11369617634,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 785808632795,
+          "duration": 11627131661,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 837496894456,
+          "duration": 13523782705,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 850535035978,
+          "duration": 17435175821,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 895107776111,
+          "duration": 11891312124,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 933471172328,
+          "duration": 12062770631,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 947644171388,
+          "duration": 11585677556,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 987417119233,
+          "duration": 12090999891,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1017836673587,
+          "duration": 12722590788,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1058562546810,
+          "duration": 12633345699,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1062559709269,
+          "duration": 14343447907,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1111970992702,
+          "duration": 12016900168,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1149621096635,
+          "duration": 14580397634,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1157229202209,
+          "duration": 12958826882,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1189655978271,
+          "duration": 10807503496,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1232188181485,
+          "duration": 12325390185,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1257458356567,
+          "duration": 11302492714,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1280607948106,
+          "duration": 12884368234,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028802160070101022,
+      "name": "TPC-H 17",
+      "successful_runs": [
+        {
+          "begin": 117836357454,
+          "duration": 4513938475,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 162249240973,
+          "duration": 3575635490,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 223308542469,
+          "duration": 1911449757,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 253308430649,
+          "duration": 6331663457,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 179274648334,
+          "duration": 83557146465,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 263773474957,
+          "duration": 2574050879,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 313102608530,
+          "duration": 2241372096,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 348890539583,
+          "duration": 2437570890,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 370440420026,
+          "duration": 2617539681,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 394022696710,
+          "duration": 3210477025,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 417454711315,
+          "duration": 2314303840,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 457317561293,
+          "duration": 2423643888,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 496281275472,
+          "duration": 2388560663,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 529973362749,
+          "duration": 2485464623,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 559011023170,
+          "duration": 2844043436,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 572947186963,
+          "duration": 2394243909,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 600972201374,
+          "duration": 2063498011,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 649092314833,
+          "duration": 1896451212,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 653526133645,
+          "duration": 2712421312,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 682197198553,
+          "duration": 2830937565,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 729540758559,
+          "duration": 2511817630,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 776643806680,
+          "duration": 2334946487,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 785320597637,
+          "duration": 2166969041,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 810705718432,
+          "duration": 2933973478,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 851025572726,
+          "duration": 8614063714,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 896084917915,
+          "duration": 2305574243,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 921380930757,
+          "duration": 2666196925,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 960198679420,
+          "duration": 2396599213,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 973023241295,
+          "duration": 2283451253,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1030559465170,
+          "duration": 2125468079,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1047154020986,
+          "duration": 2682056148,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1062870897229,
+          "duration": 2692702306,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1101343872927,
+          "duration": 2014563710,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1120503808154,
+          "duration": 2115214751,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1174812752262,
+          "duration": 2663695071,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1184243254917,
+          "duration": 2364840646,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1234060136367,
+          "duration": 3376185054,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1265076277035,
+          "duration": 2184234555,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1267260567265,
+          "duration": 1965777052,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1308352690325,
+          "duration": 2789276359,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 18",
+      "successful_runs": [
+        {
+          "begin": 124341998991,
+          "duration": 19749158922,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 140750536801,
+          "duration": 16122592443,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 190277649359,
+          "duration": 15822307392,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 224266960325,
+          "duration": 18508252551,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 261211201199,
+          "duration": 19325084731,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 264048574035,
+          "duration": 21549303174,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 296952597370,
+          "duration": 18641746121,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 322547801756,
+          "duration": 17974882328,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 372318826629,
+          "duration": 21156270251,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 384713670417,
+          "duration": 18802192120,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 424203666137,
+          "duration": 15461069434,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 457691857682,
+          "duration": 19669213320,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 488514175486,
+          "duration": 18701672534,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 511275860780,
+          "duration": 18697402706,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 536620670244,
+          "duration": 20476599476,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 567014321134,
+          "duration": 19756782253,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 618878492943,
+          "duration": 16422528139,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 647017074024,
+          "duration": 16918186883,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 663935410391,
+          "duration": 20792057494,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 709961452394,
+          "duration": 19579169674,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 728278715654,
+          "duration": 17383681762,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 767407317977,
+          "duration": 17654998051,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 794802126616,
+          "duration": 26288732144,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 809492459445,
+          "duration": 17723053234,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 861218394314,
+          "duration": 21180029178,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 906131104528,
+          "duration": 15249688692,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 908036216631,
+          "duration": 19330909393,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 967702110243,
+          "duration": 19951538622,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 975306896475,
+          "duration": 16275708573,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1032685067867,
+          "duration": 15766497585,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1038782079780,
+          "duration": 22294981462,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1064755560874,
+          "duration": 18278084136,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1100318945428,
+          "duration": 19558731188,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1132770750925,
+          "duration": 19443186082,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1173739341302,
+          "duration": 21733302623,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1201779210725,
+          "duration": 19491167910,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1229309495574,
+          "duration": 18697618311,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1258450148013,
+          "duration": 20403626659,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1287728845038,
+          "duration": 16782727474,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 19",
+      "successful_runs": [
+        {
+          "begin": 120944159503,
+          "duration": 1663390801,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 156873155629,
+          "duration": 1652505638,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 196032805072,
+          "duration": 1232979779,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 198118788249,
+          "duration": 905141035,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 262475684850,
+          "duration": 1297771989,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 262831939275,
+          "duration": 1216513481,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 300717430267,
+          "duration": 1275887500,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 343495983987,
+          "duration": 1060913173,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 359968032384,
+          "duration": 1160655918,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 415277556265,
+          "duration": 942977424,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 438565830554,
+          "duration": 923567141,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 450591390159,
+          "duration": 1285283148,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 494478687351,
+          "duration": 999776455,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 523242055746,
+          "duration": 1019631973,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 561309444570,
+          "duration": 1017768010,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 578106605346,
+          "duration": 2553139087,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 602138351901,
+          "duration": 1484683020,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 625881575887,
+          "duration": 998458462,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 661475257440,
+          "duration": 1277089347,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 684727495135,
+          "duration": 1478720281,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 718495247158,
+          "duration": 1066351795,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 758744984685,
+          "duration": 1201069771,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 793687285523,
+          "duration": 1114878991,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 818086833972,
+          "duration": 1502977454,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 843357972572,
+          "duration": 1816362748,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 875965020726,
+          "duration": 1184107058,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 907005914664,
+          "duration": 1030276296,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 966672937271,
+          "duration": 1550946031,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 988633777169,
+          "duration": 1253244423,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1003956913197,
+          "duration": 1075509126,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1033210816874,
+          "duration": 1284768712,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1088474848987,
+          "duration": 1209686907,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1119811719761,
+          "duration": 1508741723,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1138430077159,
+          "duration": 1465965579,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1164205758677,
+          "duration": 1217210554,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1186608244274,
+          "duration": 1113323090,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1221270497536,
+          "duration": 1165140283,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1249036699412,
+          "duration": 2118052358,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1304511709300,
+          "duration": 3840924811,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 20",
+      "successful_runs": [
+        {
+          "begin": 130673708052,
+          "duration": 3610458600,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 159266247055,
+          "duration": 6534584403,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 170441894489,
+          "duration": 9658533393,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 217682397689,
+          "duration": 3047193975,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 243447887018,
+          "duration": 7864117080,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 268779602296,
+          "duration": 3773998886,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 318454125640,
+          "duration": 5368458034,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 344557043496,
+          "duration": 6127876244,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 371636718622,
+          "duration": 8263553061,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 405004267321,
+          "duration": 7606923828,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 427438515359,
+          "duration": 6554847539,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 454162910238,
+          "duration": 3154572363,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 498669865038,
+          "duration": 8875846172,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 506798219269,
+          "duration": 7073133864,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 541830745144,
+          "duration": 6266440217,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 588755295550,
+          "duration": 5351366272,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 611102544642,
+          "duration": 7148781470,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 650545842304,
+          "duration": 7448710878,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 673574393122,
+          "duration": 4196177194,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 696622576857,
+          "duration": 9872434350,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 728338554044,
+          "duration": 7245309162,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 778231929581,
+          "duration": 3573460206,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 798050928327,
+          "duration": 4096603268,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 835805106321,
+          "duration": 4424775447,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 839183437202,
+          "duration": 4174407089,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 933581881703,
+          "duration": 3826637726,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 947164236473,
+          "duration": 4479905835,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 872249178988,
+          "duration": 89967323080,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 976227922335,
+          "duration": 4526195270,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1022781382051,
+          "duration": 6628274630,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1048296058337,
+          "duration": 4566494593,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1065563720893,
+          "duration": 6848946351,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1093618040634,
+          "duration": 6700693232,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1149042366273,
+          "duration": 7455734116,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1179247640838,
+          "duration": 4995440769,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1195472865292,
+          "duration": 3389293945,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1223768728541,
+          "duration": 5318820153,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1242990274488,
+          "duration": 3988797264,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1296057699124,
+          "duration": 3624190336,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028082106068348496,
+      "name": "TPC-H 21",
+      "successful_runs": [
+        {
+          "begin": 128992797141,
+          "duration": 18675971951,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 133026618939,
+          "duration": 19384253144,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 172705705943,
+          "duration": 17719020304,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 205665797287,
+          "duration": 17642603067,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 235095928720,
+          "duration": 15975717407,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 277144694224,
+          "duration": 17478062997,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 301993486835,
+          "duration": 15548765587,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 349601903942,
+          "duration": 15440907723,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 358312835607,
+          "duration": 15313780844,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 389024267102,
+          "duration": 15889755603,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 432320664723,
+          "duration": 16572620398,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 451914064248,
+          "duration": 15706179464,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 477423203118,
+          "duration": 16236797721,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 524238253911,
+          "duration": 14671446520,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 536859429192,
+          "duration": 16577357623,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 586446612855,
+          "duration": 15691610107,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 593950130673,
+          "duration": 16333937424,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 631095173444,
+          "duration": 15921857997,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 660750957256,
+          "duration": 17198853373,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 697966122190,
+          "duration": 17717531682,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 726996307651,
+          "duration": 29742665188,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 759946095892,
+          "duration": 15207505196,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 790455842102,
+          "duration": 16339843212,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 819635405456,
+          "duration": 15382171077,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 866451601668,
+          "duration": 17807047425,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 874883323034,
+          "duration": 17768346629,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 917321834996,
+          "duration": 17557123469,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 949640885839,
+          "duration": 21460588007,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 968748271343,
+          "duration": 16422735603,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1017252540336,
+          "duration": 15958050627,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1044075760231,
+          "duration": 15874261462,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1070479811751,
+          "duration": 15461796151,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1095774009975,
+          "duration": 16196862373,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1139896175752,
+          "duration": 17332991915,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1152213995529,
+          "duration": 18871151580,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1200463621425,
+          "duration": 16465820485,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1226113210406,
+          "duration": 15573099229,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1241686406951,
+          "duration": 17180668291,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1293402212627,
+          "duration": 15202345058,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    },
+    {
+      "duration": 1200351718765,
+      "items_per_second": 0.028802160070101022,
+      "name": "TPC-H 22",
+      "successful_runs": [
+        {
+          "begin": 127784043831,
+          "duration": 2889511627,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 147668911691,
+          "duration": 3642651518,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 190424955407,
+          "duration": 2573467621,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 221591516950,
+          "duration": 2675208122,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 232595093119,
+          "duration": 3256605302,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 280536454868,
+          "duration": 2627760096,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 304387490654,
+          "duration": 3297569107,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 346603740167,
+          "duration": 2998017899,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 369347152446,
+          "duration": 3169277359,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 412611226040,
+          "duration": 2666210507,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 424687723230,
+          "duration": 2700105155,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 459741241642,
+          "duration": 3184646113,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 502723977018,
+          "duration": 2852080455,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 515967848893,
+          "duration": 3310011001,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 546429861864,
+          "duration": 3381429244,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 570919924271,
+          "duration": 3050793607,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 589705445820,
+          "duration": 4244650623,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 640559578870,
+          "duration": 2750009684,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 657994727935,
+          "duration": 2898174864,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 687027042461,
+          "duration": 2930084140,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 724396092216,
+          "duration": 2600168109,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 750460445144,
+          "duration": 2678891266,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 787487702228,
+          "duration": 2754148684,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 813813441154,
+          "duration": 3567678094,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 867970249948,
+          "duration": 3258434450,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 891466375363,
+          "duration": 2798439961,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 913656873808,
+          "duration": 2565343875,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 942571397643,
+          "duration": 3157217577,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 989887202035,
+          "duration": 4698115299,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1011945282812,
+          "duration": 2866445940,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1037237321723,
+          "duration": 2719057516,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1083035215217,
+          "duration": 12178310496,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1095213563459,
+          "duration": 2947667544,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1124616567465,
+          "duration": 3343460558,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1173650869986,
+          "duration": 2710710302,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1205123262887,
+          "duration": 2595839060,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1233438972840,
+          "duration": 3191321502,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1256128829422,
+          "duration": 2968869228,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1293492527756,
+          "duration": 2565039147,
+          "pipeline_metrics": []
+        },
+        {
+          "begin": 1308604612282,
+          "duration": 3040663204,
+          "pipeline_metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    }
+  ],
+  "context": {
+    "GIT-HASH": "5d2bd0df2448a32d8ff290d6161f6b73b4f8eacf-dirty",
+    "benchmark_mode": "Shuffled",
+    "build_type": "release",
+    "chunk_indexes": false,
+    "chunk_size": 65535,
+    "clients": 10,
+    "clustering": "None",
+    "compiler": "clang 17.0.6",
+    "cores": 0,
+    "data_preparation_cores": 0,
+    "date": "2025-02-24 21:50:17",
+    "encoding": {
+      "default": {
+        "encoding": "Dictionary"
+      },
+      "type": {
+        "string": {
+          "encoding": "FixedStringDictionary"
+        }
+      }
+    },
+    "max_duration": 1200000000000,
+    "max_runs": -1,
+    "scale_factor": 100.0,
+    "time_unit": "ns",
+    "use_prepared_statements": false,
+    "using_scheduler": true,
+    "utilized_cores_per_numa_node": [
+      48,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "verify": false,
+    "warmup_duration": 0
+  },
+  "log": [
+    {
+      "log_level": "Info",
+      "message": "Called pre-benchmark hook provided by plugin 'hyrisePlacementPlugin'.",
+      "reporter": "PluginManager",
+      "timestamp": 117835962410
+    }
+  ],
+  "summary": {
+    "table_size_in_bytes": 98106840924,
+    "total_duration": 1388784726654
+  },
+  "table_generation": {
+    "binary_caching_duration": 0,
+    "chunk_index_duration": 0,
+    "encoding_duration": 294451979814,
+    "generation_duration": 393089461232,
+    "sort_duration": 0,
+    "store_duration": 371396539295,
+    "table_index_duration": 0
+  }
+}

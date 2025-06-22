@@ -1,5 +1,7 @@
 #include "chunk.hpp"
 
+#include <bits/random.h>
+
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
@@ -9,8 +11,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <boost/container/pmr/memory_resource.hpp>
 
 #include "abstract_segment.hpp"
 #include "all_type_variant.hpp"
@@ -26,9 +26,9 @@
 
 namespace hyrise {
 
-Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
-             const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
-    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
+Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data, PolymorphicAllocator<Chunk> alloc,
+             Indexes indexes)
+    : _alloc(alloc), _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
   DebugAssert(!_segments.empty(),
               "Chunks without segments are not legal, as the row count of such a chunk cannot be determined.");
 
@@ -44,10 +44,6 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
       Assert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
              "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments.");
     }
-  }
-
-  if (alloc) {
-    _alloc = *alloc;
   }
 }
 
@@ -190,16 +186,40 @@ bool Chunk::references_exactly_one_table() const {
   return true;
 }
 
-void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
+void Chunk::migrate(MemoryResource* memory_source) {
   // Migrating chunks with indexes is not implemented yet.
   if (!_indexes.empty()) {
     Fail("Cannot migrate chunk with indexes.");
   }
 
-  _alloc = PolymorphicAllocator<size_t>(memory_source);
-  Segments new_segments(_alloc);
+  Segments new_segments(memory_source);
   for (const auto& segment : _segments) {
-    new_segments.push_back(segment->copy_using_allocator(_alloc));
+    new_segments.push_back(segment->copy_using_memory_resource(memory_source));
+  }
+  _segments = std::move(new_segments);
+}
+
+void Chunk::migrate(const std::vector<MemoryResource*>& column_memory_resources) {
+  Assert(column_memory_resources.size() == _segments.size(),
+    "size mismatch:" + std::to_string(column_memory_resources.size()) + " resources, " + std::to_string(_segments.size())
+    + " segments.");
+  Segments new_segments{};
+  for (auto column_id = ColumnID{0}; column_id < column_memory_resources.size(); ++column_id) {
+    const auto& segment = _segments[column_id];
+    new_segments.push_back(segment->copy_using_memory_resource(column_memory_resources[column_id]));
+  }
+  _segments = std::move(new_segments);
+}
+
+void Chunk::migrate(const std::vector<ColumnID>& column_ids, MemoryResource* column_resource, MemoryResource* remainer_resource) {
+  Segments new_segments{};
+  for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+    const auto& segment = _segments[column_id];
+    if (std::find(column_ids.begin(), column_ids.end(), column_id) != column_ids.end()) {
+      new_segments.push_back(segment->copy_using_memory_resource(column_resource));
+      continue;
+    }
+    new_segments.push_back(segment->copy_using_memory_resource(remainer_resource));
   }
   _segments = std::move(new_segments);
 }

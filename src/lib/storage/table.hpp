@@ -125,7 +125,7 @@ class Table : private Noncopyable {
    * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
   void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
-                    const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+                    const PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{});
 
   // Create and append a Chunk consisting of ValueSegments.
   void append_mutable_chunk();
@@ -235,6 +235,13 @@ class Table : private Noncopyable {
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
+
+  // Not thread-safe. Migrates columns. For each column, the vector shall contain a memory resource pointer.
+  void migrate_columns(const std::vector<MemoryResource*>& column_memory_resources);
+
+  void migrate_columns(const std::vector<ColumnID> column_ids, MemoryResource* columns_resource, MemoryResource* remainer_resource);
+
+  void migrate(MemoryResource* memory_resource);
 
   /**
    * Tables may be clustered by one or more columns. Each value within such a column will occur in exactly one chunk.

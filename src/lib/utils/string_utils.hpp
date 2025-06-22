@@ -23,4 +23,17 @@ std::string trim_source_file_path(const std::string& path);
 // a dummy address (e.g., for testing).
 std::string replace_addresses(const std::string& input);
 
+template <typename T>
+std::string values_to_string(const std::vector<T>& values) {
+  auto sstream = std::stringstream{};
+  for (auto& value : values) {
+    if (sstream.str().empty()) {
+      sstream << value;
+    } else {
+      sstream << ", " << value;
+    }
+  }
+  return sstream.str();
+};
+
 }  // namespace hyrise

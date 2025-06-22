@@ -1,0 +1,151 @@
+- Writing benchmark results to '/home/mweisgut/hyrise-cxl/results/2025-03-25T041958_N1m0-1s100t1200cl10c0Shuffled_rn2rwfc14.json'
+- Running in multi-threaded mode using all available cores
+- Data preparation will use all available cores
+- 10 simulated clients are scheduling items in parallel
+- Running benchmark in 'Shuffled' mode
+- Encoding is 'Dictionary'
+- Chunk size is 65535
+- Executing items until max duration is up:
+- Max duration per item is 1200 seconds
+- No warmup runs are performed
+- Not caching tables as binary files
+- Not tracking system metrics
+- Not tracking SQL pipeline metrics
+- Local memory NUMA node IDs: [ 1 ]
+- Remote memory NUMA node IDs: [ 2 ]
+- Remote memory NUMA node weights: [  ]
+- # columns fixed in local memory: 14
+- Data placement type: AccessFrequency
+- Benchmarking Queries: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
+- TPC-H scale factor is 100
+- Using prepared statements: no
+- SQL plan caching switched on
+- Multi-threaded Topology:
+Number of CPUs: 48
+Available CPUs / nodes were filtered by externally set CPU affinity (e.g., numactl).
+Node #0 - Number of Node CPUs: 0, CPUIDs: []
+Node #1 - Number of Node CPUs: 48, CPUIDs: [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95]
+Node #2 - Number of Node CPUs: 0, CPUIDs: []
+Node #3 - Number of Node CPUs: 0, CPUIDs: []
+Node #4 - Number of Node CPUs: 0, CPUIDs: []
+Node #5 - Number of Node CPUs: 0, CPUIDs: []
+- Loading/Generating tables
+- Loading/Generating tables done (6 min 45 s)
+- Encoding tables (if necessary) and generating pruning statistics
+ - Column 'region.r_name' of type string will be encoded as FixedStringDictionary.
+ - Column 'region.r_comment' of type string will be encoded as FixedStringDictionary.
+ - Column 'nation.n_name' of type string will be encoded as FixedStringDictionary.
+ - Column 'nation.n_comment' of type string will be encoded as FixedStringDictionary.
+ - Column 'part.p_name' of type string will be encoded as FixedStringDictionary.
+ - Column 'supplier.s_name' of type string will be encoded as FixedStringDictionary.
+ - Column 'part.p_mfgr' of type string will be encoded as FixedStringDictionary.
+ - Column 'part.p_brand' of type string will be encoded as FixedStringDictionary.
+ - Column 'part.p_type' of type string will be encoded as FixedStringDictionary.
+ - Column 'part.p_container' of type string will be encoded as FixedStringDictionary.
+-  Processing 'region' - encoding applied (182 µs 784 ns)
+ - Column 'supplier.s_address' of type string will be encoded as FixedStringDictionary.
+ - Column 'lineitem.l_returnflag' of type string will be encoded as FixedStringDictionary.
+ - Column 'supplier.s_phone' of type string will be encoded as FixedStringDictionary.
+ - Column 'part.p_comment' of type string will be encoded as FixedStringDictionary.
+ - Column 'lineitem.l_linestatus' of type string will be encoded as FixedStringDictionary.
+ - Column 'supplier.s_comment' of type string will be encoded as FixedStringDictionary.
+ - Column 'lineitem.l_shipdate' of type string will be encoded as FixedStringDictionary.
+ - Column 'lineitem.l_commitdate' of type string will be encoded as FixedStringDictionary.
+ - Column 'lineitem.l_receiptdate' of type string will be encoded as FixedStringDictionary.
+ - Column 'lineitem.l_shipinstruct' of type string will be encoded as FixedStringDictionary.
+ - Column 'lineitem.l_shipmode' of type string will be encoded as FixedStringDictionary.
+ - Column 'lineitem.l_comment' of type string will be encoded as FixedStringDictionary.
+ - Column 'partsupp.ps_comment' of type string will be encoded as FixedStringDictionary.
+ - Column 'orders.o_orderstatus' of type string will be encoded as FixedStringDictionary.
+ - Column 'customer.c_name' of type string will be encoded as FixedStringDictionary.
+ - Column 'orders.o_orderdate' of type string will be encoded as FixedStringDictionary.
+ - Column 'orders.o_orderpriority' of type string will be encoded as FixedStringDictionary.
+ - Column 'orders.o_clerk' of type string will be encoded as FixedStringDictionary.
+ - Column 'customer.c_address' of type string will be encoded as FixedStringDictionary.
+ - Column 'customer.c_phone' of type string will be encoded as FixedStringDictionary.
+ - Column 'orders.o_comment' of type string will be encoded as FixedStringDictionary.
+ - Column 'customer.c_mktsegment' of type string will be encoded as FixedStringDictionary.
+ - Column 'customer.c_comment' of type string will be encoded as FixedStringDictionary.
+-  Processing 'nation' - encoding applied (284 µs 187 ns)
+-  Processing 'supplier' - encoding applied (1 s 376 ms)
+-  Processing 'customer' - encoding applied (15 s 643 ms)
+-  Processing 'part' - encoding applied (22 s 482 ms)
+-  Processing 'partsupp' - encoding applied (42 s 882 ms)
+-  Processing 'orders' - encoding applied (1 min 10 s)
+-  Processing 'lineitem' - encoding applied (5 min 7 s)
+- Encoding tables and generating pruning statistic done (5 min 8 s)
+- Adding tables to StorageManager and generating table statistics
+-  Added 'region' (586 µs 557 ns)
+-  Added 'nation' (493 µs 617 ns)
+-  Added 'supplier' (1 s 758 ms)
+-  Added 'part' (21 s 339 ms)
+-  Added 'customer' (26 s 976 ms)
+-  Added 'partsupp' (2 min 56 s)
+-  Added 'orders' (3 min 1 s)
+-  Added 'lineitem' (6 min 7 s)
+- Adding tables to StorageManager and generating table statistics done (6 min 7 s)
+- No chunk indexes created as --chunk_indexes was not specified or set to false
+- No table indexes created as --table_indexes was not specified or set to false
+- Load plugin hyrisePlacementPlugin from /home/mweisgut/hyrise-cxl/build-exp-page-placement/lib/libhyrisePlacementPlugin.so
+- Starting Benchmark...
+- Run pre-benchmark hook of 'hyrisePlacementPlugin'
+Options [SF: 100, local ids: 1, remote ids: 2, rmem weights: , type: AccessFrequency, columns fixed local: 14]
+LinearNuma 2: Bound region for round robin page interleaving.
+Run column placement
+LinearNuma 1: Bound region for round robin page interleaving.
+- Create access statistics snapshot table...
+- Create access statistics snapshot table...
+- Create access statistics delta table...
+Migrating columns of table region: r_name, r_regionkey, r_comment, 
+Migrating columns of table supplier: s_nationkey, s_suppkey, s_comment, s_name, s_acctbal, s_address, s_phone, 
+Migrating columns of table nation: n_name, n_nationkey, n_regionkey, n_comment, 
+Migrating columns of table part: p_size, p_brand, p_partkey, p_type, p_name, p_container, p_mfgr, p_retailprice, p_comment, 
+Migrating columns of table lineitem: l_receiptdate, l_commitdate, l_shipinstruct, l_linenumber, l_comment, 
+Migrating columns of table customer: c_custkey, c_nationkey, c_phone, c_acctbal, c_mktsegment, c_name, c_address, c_comment, 
+Migrating columns of table orders: o_orderstatus, o_comment, o_orderpriority, o_shippriority, o_totalprice, o_clerk, 
+Migrating columns of table partsupp: ps_partkey, ps_suppkey, ps_supplycost, ps_availqty, ps_comment, 
+- Run post-benchmark hook of 'hyrisePlacementPlugin'
+- Results for TPC-H 01
+  -> Executed 51 times
+- Results for TPC-H 02
+  -> Executed 53 times
+- Results for TPC-H 03
+  -> Executed 53 times
+- Results for TPC-H 04
+  -> Executed 53 times
+- Results for TPC-H 05
+  -> Executed 53 times
+- Results for TPC-H 06
+  -> Executed 54 times
+- Results for TPC-H 07
+  -> Executed 54 times
+- Results for TPC-H 08
+  -> Executed 53 times
+- Results for TPC-H 09
+  -> Executed 52 times
+- Results for TPC-H 10
+  -> Executed 53 times
+- Results for TPC-H 11
+  -> Executed 54 times
+- Results for TPC-H 12
+  -> Executed 54 times
+- Results for TPC-H 13
+  -> Executed 52 times
+- Results for TPC-H 14
+  -> Executed 53 times
+- Results for TPC-H 15
+  -> Executed 54 times
+- Results for TPC-H 16
+  -> Executed 54 times
+- Results for TPC-H 17
+  -> Executed 54 times
+- Results for TPC-H 18
+  -> Executed 52 times
+- Results for TPC-H 19
+  -> Executed 54 times
+- Results for TPC-H 20
+  -> Executed 53 times
+- Results for TPC-H 21
+  -> Executed 53 times
+- Results for TPC-H 22
+  -> Executed 54 times

@@ -11,9 +11,9 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-
 #include "strong_typedef.hpp"
+// TODO(MW) clean include of NumaNodeIDs and InterleavingWeights
+#include "memory/linear_numa_memory_resource.hpp"
 
 /**
  * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids. Because implicit constructors are
@@ -68,9 +68,21 @@ using Cost = float;
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
 //
-// TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+using PolymorphicAllocator = std::pmr::polymorphic_allocator<T>;
+using MemoryResource = std::pmr::memory_resource;
+
+enum class PlacementType { None, PagesRoundRobinInterleaved, PagesWeightedInterleaved, AccessFrequency };
+
+struct PlacementOptions {
+  float scale_factor;
+  NumaNodeIDs lmem_node_ids;
+  NumaNodeIDs rmem_node_ids;
+  InterleavingWeights rmem_weights;
+  PlacementType type;
+  uint32_t num_most_frequently_columns_local;
+  std::string json_path;
+};
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
@@ -273,6 +285,7 @@ std::ostream& operator<<(std::ostream& stream, SortMode sort_mode);
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
 std::ostream& operator<<(std::ostream& stream, SetOperationMode set_operation_mode);
 std::ostream& operator<<(std::ostream& stream, TableType table_type);
+std::ostream& operator<<(std::ostream& stream, PlacementOptions options);
 
 using BoolAsByteType = uint8_t;
 

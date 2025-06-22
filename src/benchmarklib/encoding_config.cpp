@@ -14,10 +14,14 @@
 
 namespace hyrise {
 
-EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
+EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {
+  type_encoding_mapping[DataType::String] = SegmentEncodingSpec{EncodingType::FixedStringDictionary};
+}
 
 EncodingConfig::EncodingConfig(const SegmentEncodingSpec& init_default_encoding_spec)
-    : EncodingConfig{init_default_encoding_spec, {}, {}} {}
+    : EncodingConfig{init_default_encoding_spec, {}, {}} {
+  type_encoding_mapping[DataType::String] = SegmentEncodingSpec{EncodingType::FixedStringDictionary};
+}
 
 EncodingConfig::EncodingConfig(const SegmentEncodingSpec& init_default_encoding_spec,
                                DataTypeEncodingMapping init_type_encoding_mapping,

@@ -31,10 +31,11 @@ class PerformanceWarningDisabler;
 class PerformanceWarningClass {
  public:
   explicit PerformanceWarningClass(const std::string& text) {
-    if (_disabled) {
+//    if (_disabled) {
+//      return;
+//    }
+//    std::cerr << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n";
       return;
-    }
-    std::cerr << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n";
   }
 
  protected:

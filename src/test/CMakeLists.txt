@@ -74,7 +74,8 @@ set(
     lib/logical_query_plan/window_node_test.cpp
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
-    lib/memory/segments_using_allocators_test.cpp
+    lib/memory/memory_resource_placement_test.cpp
+    lib/memory/segments_using_memory_resource_test.cpp
     lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
     lib/operators/aggregate_sort_test.cpp
@@ -320,3 +321,16 @@ target_link_libraries(hyriseSystemTest PUBLIC hyrise ${LIBRARIES})
 target_link_libraries(hyriseSystemTest PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,hyriseBenchmarkLib>")
 target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)
+
+# ===
+
+set(
+    MEMTEST_SOURCES
+    lib/memory/memory_resource_test.cpp
+    ../../src/lib/memory/linear_numa_memory_resource.hpp
+    ../../src/lib/memory/linear_numa_memory_resource.cpp
+)
+
+add_executable(memTest ${MEMTEST_SOURCES})
+target_link_libraries(memTest PUBLIC gtest gmock magic_enum numa)
+target_compile_options(memTest PUBLIC -Xclang -fno-pch-timestamp)

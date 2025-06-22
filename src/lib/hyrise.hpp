@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "concurrency/transaction_manager.hpp"
+#include "memory/linear_numa_memory_resource.hpp"
 #include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_plan_cache.hpp"
@@ -12,6 +13,7 @@
 #include "utils/plugin_manager.hpp"
 #include "utils/settings_manager.hpp"
 #include "utils/singleton.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -35,10 +37,19 @@ class Hyrise : public Singleton<Hyrise> {
 
   void set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler);
 
+  void set_numa_memory_resource(const NumaNodeIDs& node_ids, const uint64_t size);
+
   // The order of these members is important because it defines in which order their destructors are called.
   // For example, the StorageManager's destructor should not be called before the PluginManager's destructor.
   // The latter stops all plugins which, in turn, might access tables during their shutdown procedure. This
   // could not work without the StorageManager still in place.
+
+  // Memory resource string conventions:
+  // - "cxl" for memory resources used for CXL memory allocations
+  // - "local" for CPU-local memory resource
+  std::unordered_map<std::string, std::unique_ptr<MemoryResource>> memory_resources;
+  PlacementOptions placement_options;
+
   StorageManager storage_manager;
   PluginManager plugin_manager;
   TransactionManager transaction_manager;

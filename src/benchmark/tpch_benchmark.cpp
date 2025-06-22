@@ -51,7 +51,11 @@ int main(int argc, char* argv[]) {
     ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
                    "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
                    "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
-                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")); // NOLINT
+                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")) // NOLINT
+    ("lmem_ids", "Specify the local memory NUMA nodes (comma-separated NUMA IDs, e.g., --lmem_ids 0,2)", cxxopts::value<std::string>()->default_value("0")) // NOLINT
+    ("rmem_ids", "Specify the remote memory NUMA nodes (comma-separated NUMA IDs, e.g., --rmem_ids 1,3,4)", cxxopts::value<std::string>()) // NOLINT
+    ("rmem_weights", "Specify the remote memory NUMA node weights (comma-separated weights, e.g., --rmem_ids 2,1,1)", cxxopts::value<std::string>()) // NOLINT
+    ("fixed_columns", "Specify the number of most frequently accesses columns fixed in local memory", cxxopts::value<uint32_t>()->default_value("0")); // NOLINT
   // clang-format on
 
   auto config = std::shared_ptr<BenchmarkConfig>{};
@@ -60,6 +64,10 @@ int main(int argc, char* argv[]) {
   auto use_prepared_statements = false;
   auto jcch = false;
   auto jcch_skewed = false;
+  auto comma_separated_lmem_ids = std::string{};
+  auto comma_separated_rmem_ids = std::string{};
+  auto comma_separated_rmem_weights = std::string{};
+  auto fixed_local_columns = uint32_t{};
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -75,6 +83,13 @@ int main(int argc, char* argv[]) {
   scale_factor = cli_parse_result["scale"].as<float>();
 
   config = CLIConfigParser::parse_cli_options(cli_parse_result);
+  {
+    const auto json_ext = std::string{".json"};
+    const auto& path = config->output_file_path;
+    Assert(path, "Output file path is not set (-o <path>).");
+    Assert((*path).size() >= json_ext.size() && (*path).substr((*path).size() - json_ext.size()) == json_ext,
+      "Output file path does not end with .json");
+  }
 
   use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
   jcch = cli_parse_result.count("jcch");
@@ -87,6 +102,22 @@ int main(int argc, char* argv[]) {
     } else {
       Fail("Invalid JCC-H mode, use skewed or normal.");
     }
+  }
+
+  if (cli_parse_result.count("lmem_ids")) {
+    comma_separated_lmem_ids = cli_parse_result["lmem_ids"].as<std::string>();
+  }
+
+  if (cli_parse_result.count("rmem_ids")) {
+    comma_separated_rmem_ids = cli_parse_result["rmem_ids"].as<std::string>();
+  }
+
+  if (cli_parse_result.count("rmem_weights")) {
+    comma_separated_rmem_weights = cli_parse_result["rmem_weights"].as<std::string>();
+  }
+
+  if (cli_parse_result.count("fixed_columns")) {
+    fixed_local_columns = cli_parse_result["fixed_columns"].as<uint32_t>();
   }
 
   auto clustering_configuration = ClusteringConfiguration::None;
@@ -120,6 +151,83 @@ int main(int argc, char* argv[]) {
       return item_id;
     });
   }
+
+  // Build list of memory ids
+  auto lmem_node_ids = NumaNodeIDs{};
+  if (!comma_separated_lmem_ids.empty()) {
+    auto local_numa_nodes_str = std::vector<std::string>();
+    boost::trim_if(comma_separated_lmem_ids, boost::is_any_of(","));
+    boost::split(local_numa_nodes_str, comma_separated_lmem_ids, boost::is_any_of(","), boost::token_compress_on);
+    std::transform(local_numa_nodes_str.begin(), local_numa_nodes_str.end(), std::back_inserter(lmem_node_ids), [](const auto& node_id_str) {
+      return static_cast<NumaNodeID>(std::stoul(node_id_str));
+    });
+  }
+
+  auto rmem_node_ids = NumaNodeIDs{};
+  if (!comma_separated_rmem_ids.empty()) {
+    auto remote_numa_nodes_str = std::vector<std::string>();
+    boost::trim_if(comma_separated_rmem_ids, boost::is_any_of(","));
+    boost::split(remote_numa_nodes_str, comma_separated_rmem_ids, boost::is_any_of(","), boost::token_compress_on);
+    std::transform(remote_numa_nodes_str.begin(), remote_numa_nodes_str.end(), std::back_inserter(rmem_node_ids), [](const auto& node_id_str) {
+      return static_cast<NumaNodeID>(std::stoul(node_id_str));
+    });
+  }
+
+  {
+    auto print_lmem_node_ids = std::vector<std::string>();
+    std::for_each(lmem_node_ids.begin(), lmem_node_ids.end(), [&print_lmem_node_ids](auto& id) {
+      print_lmem_node_ids.push_back(std::to_string(id));
+    });
+    std::cout << "- Local memory NUMA node IDs: [ " << boost::algorithm::join(print_lmem_node_ids, ", ") << " ]\n";
+  }
+
+  {
+    auto print_rmem_node_ids = std::vector<std::string>();
+    std::for_each(rmem_node_ids.begin(), rmem_node_ids.end(), [&print_rmem_node_ids](auto& id) {
+      print_rmem_node_ids.push_back(std::to_string(id));
+    });
+    std::cout << "- Remote memory NUMA node IDs: [ " << boost::algorithm::join(print_rmem_node_ids, ", ") << " ]\n";
+  }
+
+
+  // Build list of remote memory weights
+  auto rmem_weights = InterleavingWeights{};
+  if (!comma_separated_rmem_weights.empty()) {
+    auto rmem_weights_str = std::vector<std::string>();
+    boost::trim_if(comma_separated_rmem_weights, boost::is_any_of(","));
+    boost::split(rmem_weights_str, comma_separated_rmem_weights, boost::is_any_of(","), boost::token_compress_on);
+    std::transform(rmem_weights_str.begin(), rmem_weights_str.end(), std::back_inserter(rmem_weights), [](const auto& weight_str) {
+      return static_cast<uint32_t>(std::stoul(weight_str));
+    });
+  }
+
+  {
+    auto print_rmem_weights = std::vector<std::string>();
+    std::for_each(rmem_weights.begin(), rmem_weights.end(), [&print_rmem_weights](auto& weight) {
+      print_rmem_weights.push_back(std::to_string(weight));
+    });
+    std::cout << "- Remote memory NUMA node weights: [ " << boost::algorithm::join(print_rmem_weights, ", ") << " ]\n";
+  }
+
+  std::cout << "- # columns fixed in local memory: " << fixed_local_columns << "\n";
+
+  const auto type = [&](){
+    if (fixed_local_columns > 0) {
+      return PlacementType::AccessFrequency;
+    }
+    if (rmem_node_ids.size() > 0) {
+      if (rmem_weights.size() > 0) {
+        return PlacementType::PagesWeightedInterleaved;
+      }
+      return PlacementType::PagesRoundRobinInterleaved;
+    }
+    return PlacementType::None;
+  }();
+  std::cout << "- Data placement type: " << magic_enum::enum_name(type) << "\n";
+  Hyrise::get().placement_options = {.scale_factor = scale_factor, .lmem_node_ids = lmem_node_ids,
+                                     .rmem_node_ids = rmem_node_ids, .rmem_weights = rmem_weights, .type = type,
+                                     .num_most_frequently_columns_local = fixed_local_columns,
+                                     .json_path = *config->output_file_path};
 
   std::cout << "- Benchmarking Queries: [ ";
   auto printable_item_ids = std::vector<std::string>();

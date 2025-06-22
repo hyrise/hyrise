@@ -314,7 +314,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
 }
 
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
-                         const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
+                         PolymorphicAllocator<Chunk> alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables if MVCC is enabled.");
   AssertInput(static_cast<ColumnCount::base_type>(segments.size()) == column_count(),
@@ -635,6 +635,26 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   // TODO(anybody) TableLayout missing
 
   return bytes;
+}
+
+void Table::migrate_columns(const std::vector<MemoryResource*>& column_memory_resources) {
+  Assert(column_memory_resources.size() == _chunks[0]->column_count(), "size mismatch");
+  for (auto& chunk : _chunks) {
+    chunk->migrate(column_memory_resources);
+  }
+}
+
+void Table::migrate_columns(const std::vector<ColumnID> column_ids, MemoryResource* column_resource, MemoryResource* remainer_resource) {
+  for (auto& chunk : _chunks) {
+    chunk->migrate(column_ids, column_resource, remainer_resource);
+  }
+}
+
+void Table::migrate(MemoryResource* memory_resource) {
+  Assert(memory_resource, "passed memory resource is nullptr");
+  for (auto& chunk : _chunks) {
+    chunk->migrate(memory_resource);
+  }
 }
 
 void Table::create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {

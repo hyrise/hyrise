@@ -8,6 +8,7 @@
 #include "magic_enum.hpp"
 
 #include "utils/assert.hpp"
+#include "utils/string_utils.hpp"
 
 namespace hyrise {
 
@@ -185,6 +186,13 @@ std::ostream& operator<<(std::ostream& stream, SetOperationMode set_operation_mo
 
 std::ostream& operator<<(std::ostream& stream, TableType table_type) {
   return stream << magic_enum::enum_name(table_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, PlacementOptions options) {
+  return stream << "SF: " << options.scale_factor << ", local ids: " << values_to_string(options.lmem_node_ids)
+    << ", remote ids: " << values_to_string(options.rmem_node_ids) << ", rmem weights: "
+    << values_to_string(options.rmem_weights) << ", type: " << magic_enum::enum_name(options.type)
+    << ", columns fixed local: " << options.num_most_frequently_columns_local;
 }
 
 }  // namespace hyrise

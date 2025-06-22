@@ -63,7 +63,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     : _config(config),
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
-      _context(context) {
+      _context(context),
+      _performance_warning_disabler(PerformanceWarningDisabler{}){
   // Enable caching only if no metrics are requested. When metrics are desired, we want to explicitly measure
   // translation and optimization runtimes for each SQL statement. These stages are skipped for cached plans, making it
   // hard to interpret the measurements.
@@ -168,7 +169,7 @@ void BenchmarkRunner::run() {
   // Retrieve the items to be executed and prepare the result vector.
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
-    _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
+    _results = std::vector<BenchmarkItemResult>(*std::ranges::max_element(items) + 1);
   }
 
   // Execute pre-benchmark hooks of plugins required by the user.
@@ -178,6 +179,7 @@ void BenchmarkRunner::run() {
     }
 
     std::cout << "- Run pre-benchmark hook of '" << plugin << "'\n";
+    // TODO(MW) Better pass raw pointer.
     Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, *_benchmark_item_runner);
   }
 
