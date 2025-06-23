@@ -485,12 +485,9 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
 };
 
 struct RawArray {
-  RawArray(const RawArray&) = default;
-  RawArray& operator=(const RawArray&) = default;
-
-  RawArray(RawArray&& other) noexcept : ptr(other.ptr) {
-    other.ptr = nullptr;
-  }
+  RawArray(const RawArray&) = delete;
+  RawArray& operator=(const RawArray&) = delete;
+  RawArray(RawArray&& other) noexcept = delete;
 
   RawArray& operator=(RawArray&& other) noexcept {
     delete ptr;
@@ -513,11 +510,11 @@ struct RawArray {
 };
 
 struct RowData {
-  RawArray raw;
+  std::byte* raw_head;
   RowID row_id;
 
   bool less_than(const RowData& other, size_t expected_size) const {
-    return memcmp(raw.ptr, other.raw.ptr, expected_size) < 0;
+    return memcmp(raw_head, other.raw_head, expected_size) < 0;
   }
 };
 
@@ -671,18 +668,23 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     total_offset += chunk_size;
   }
 
+  auto chunk_allocations = std::vector<RawArray>(chunk_count);
+
   const auto materialization_tasks = process_in_parallel(chunk_ids, hardware_parallelism, [&](auto element) {
     const auto [chunk_id, offset] = element;
     const auto chunk_size = input_table->get_chunk(chunk_id)->size();
+
+    chunk_allocations[chunk_id] = RawArray(chunk_size * padded_row_size);
+
     auto encoded_rows = pmr_vector<RowData>(chunk_size);
     auto encoding_iter = pmr_vector<PmrByteIter>(chunk_size);
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
       encoded_rows[chunk_offset] = RowData{
-          .raw = RawArray(padded_row_size),
+          .raw_head = chunk_allocations[chunk_id].ptr + (chunk_offset * padded_row_size),
           .row_id = row_id,
       };
-      encoding_iter[chunk_offset] = encoded_rows[chunk_offset].raw.ptr;
+      encoding_iter[chunk_offset] = encoded_rows[chunk_offset].raw_head;
     }
 
     for (const auto& encoder : column_encoders) {
@@ -696,7 +698,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       for (auto encoding_offset = row_size; encoding_offset < padded_row_size; ++encoding_offset) {
         *(encoding_iter[chunk_offset]++) = std::byte{0};
       }
-      DebugAssert(encoding_iter[chunk_offset] == encoded_rows[chunk_offset].raw.ptr + padded_row_size,
+      DebugAssert(encoding_iter[chunk_offset] == encoded_rows[chunk_offset].raw_head + padded_row_size,
                   "Raw data not fully initialized");
       materialized_rows[offset + chunk_offset] = std::move(encoded_rows[chunk_offset]);
     }
