@@ -1,7 +1,16 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/print.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -235,6 +244,31 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
   sort.execute();
 
   EXPECT_EQ(sort.get_output()->type(), TableType::Data);
+}
+
+TEST_F(SortTest, ValidateVarIntEncoding) {
+  // Check if varaiable sized integer are correctly encoded.
+  const auto table = load_table("./resources/test_data/tbl/sort/a_int.tbl");
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 16);
+  EXPECT_EQ(table->row_count(), 16);
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+  auto sort = Sort{table_wrapper, {SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}}};
+  sort.execute();
+
+  const auto output_table = sort.get_output();
+  EXPECT_EQ(output_table->row_count(), 16);
+
+  auto last = int32_t{-9};
+  for (const auto& row : output_table->get_rows()) {
+    EXPECT_EQ(row.size(), 1);
+
+    const auto current = boost::get<int32_t>(row[0]);
+    EXPECT_LT(last, current);
+    last = current;
+  }
+  EXPECT_EQ(last, int32_t{7});
 }
 
 }  // namespace hyrise

@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <iomanip>
+#include <ios>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -293,13 +295,15 @@ class ColumnDataEncoder : Noncopyable {
   virtual PmrByteIter encode(RowID row_id, PmrByteIter start) const = 0;
 };
 
-auto to_unsigned_representation(auto signed_value) {
+auto to_unsigned_representation(auto signed_value, const uint32_t expected_num_bytes) {
   if constexpr (std::is_same_v<decltype(signed_value), int32_t>) {
     const auto zero_value = (std::numeric_limits<uint32_t>::max() / 2) + 1;
-    return zero_value + std::bit_cast<uint32_t>(signed_value);
+    const auto result = zero_value + std::bit_cast<uint32_t>(signed_value);
+    return result ^ (uint32_t{1} << (expected_num_bytes * 8 - 1));
   } else if constexpr (std::is_same_v<decltype(signed_value), int64_t>) {
     const auto zero_value = (std::numeric_limits<uint64_t>::max() / 2) + 1;
-    return zero_value + std::bit_cast<uint64_t>(signed_value);
+    const auto result = zero_value + std::bit_cast<uint64_t>(signed_value);
+    return result ^ (uint64_t{1} << (expected_num_bytes * 8 - 1));
   } else if constexpr (std::is_same_v<decltype(signed_value), float>) {
     auto unsigned_int = std::bit_cast<uint32_t>(signed_value);
     if (signed_value < 0) {
@@ -317,7 +321,7 @@ auto to_unsigned_representation(auto signed_value) {
     }
     return unsigned_int;
   } else {
-    Fail("Not implemented");
+    Fail(std::format("Not implemented `{}`", typeid(decltype(signed_value)).name()));
     return uint32_t{0};
   }
 }
@@ -358,26 +362,47 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
 
   size_t required_bytes(RowID row_id) const override {
     auto null_bytes = static_cast<size_t>((_is_nullable) ? 1 : 0);
-    if constexpr (std::is_same_v<DataType, int32_t>) {
-      return size_t{4} + null_bytes;
-    }
-    if constexpr (std::is_same_v<DataType, int64_t>) {
-      return size_t{8} + null_bytes;
-    }
     if constexpr (std::is_same_v<DataType, float>) {
       return size_t{4} + null_bytes;
     }
     if constexpr (std::is_same_v<DataType, double>) {
       return size_t{8} + null_bytes;
     }
+    const auto value = _accessor[row_id.chunk_id]->access(row_id.chunk_offset);
+    if constexpr (std::is_same_v<DataType, int32_t>) {
+      if (value) {
+        auto required_bytes = size_t{0};
+        if (*value == 0) {
+          required_bytes = 1;
+        } else if (*value < 0) {
+          const auto unsigned_value = to_unsigned_representation(*value, 4) | 0x80000000;
+          required_bytes = 4 - ((std::countl_one(unsigned_value) - 1) / 8);
+        } else {
+          required_bytes = 4 - ((std::countl_zero(static_cast<uint32_t>(*value)) - 1) / 8);
+        }
+        return required_bytes + null_bytes;
+      }
+    }
+    if constexpr (std::is_same_v<DataType, int64_t>) {
+      if (value) {
+        auto required_bytes = size_t{0};
+        if (*value == 0) {
+          required_bytes = 1;
+        } else if (*value < 0) {
+          const auto unsigned_value = to_unsigned_representation(*value, 8);
+          required_bytes = 8 - ((std::countl_one(unsigned_value) - 1) / 8);
+        } else {
+          required_bytes = 8 - ((std::countl_zero(static_cast<uint32_t>(*value)) - 1) / 8);
+        }
+        return required_bytes + null_bytes;
+      }
+    }
     if constexpr (std::is_same_v<DataType, pmr_string>) {
-      const auto value = _accessor[row_id.chunk_id]->access(row_id.chunk_offset);
       if (value) {
         return value->size() + null_bytes;
       }
-      return null_bytes;
     }
-    Fail("Not implemented");
+    return null_bytes;
   }
 
   PmrByteIter encode(RowID row_id, PmrByteIter start) const override {
@@ -437,16 +462,17 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
 
     // Convert to an unsigned representation of the signed value (integer or floating point).
     // For all signed a < b <=> unsgined representation a' < b' holds.
-    auto unsigned_value = to_unsigned_representation(value);
+    auto unsigned_value = to_unsigned_representation(value, byte_count);
     using UnsignedInt = decltype(unsigned_value);
     if (_sort_mode == SortMode::DescendingNullsFirst || _sort_mode == SortMode::DescendingNullsLast) {
       // Invert order.
       unsigned_value ^= std::numeric_limits<UnsignedInt>::max();
     }
 
-    for (auto offset = int32_t{(static_cast<int32_t>(byte_count) - 1) * 8}; offset >= 0; offset -= 8) {
-      (*start++) = static_cast<std::byte>(unsigned_value >> static_cast<UnsignedInt>(offset));
+    for (auto offset = (static_cast<int32_t>(byte_count) - 1) * 8; offset >= 0; offset -= 8) {
+      *start++ = static_cast<std::byte>(unsigned_value >> static_cast<UnsignedInt>(offset));
     }
+
     return start;
   }
 
@@ -624,6 +650,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     row_size += column_max_bytes;
     column_encoders[column_index]->set_padding(column_max_bytes);
   }
+  const auto padded_row_size = ((row_size + 3) / 4) * 4;
+  std::cerr << "row_size " << row_size << "\n";
+  std::cerr << "padded_row_size " << padded_row_size << "\n";
 
   const auto scan_time = timer.lap();
   std::cerr << "sort::scan_time " << scan_time << "\n";
@@ -650,7 +679,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
       encoded_rows[chunk_offset] = RowData{
-          .raw = RawArray(row_size),
+          .raw = RawArray(padded_row_size),
           .row_id = row_id,
       };
       encoding_iter[chunk_offset] = encoded_rows[chunk_offset].raw.ptr;
@@ -664,7 +693,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     }
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      DebugAssert(encoding_iter[chunk_offset] == encoded_rows[chunk_offset].raw.ptr + row_size,
+      for (auto encoding_offset = row_size; encoding_offset < padded_row_size; ++encoding_offset) {
+        *(encoding_iter[chunk_offset]++) = std::byte{0};
+      }
+      DebugAssert(encoding_iter[chunk_offset] == encoded_rows[chunk_offset].raw.ptr + padded_row_size,
                   "Raw data not fully initialized");
       materialized_rows[offset + chunk_offset] = std::move(encoded_rows[chunk_offset]);
     }
@@ -676,7 +708,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   // TODO(student): Use boost stable sort
   std::stable_sort(materialized_rows.begin(), materialized_rows.end(), [&](const auto& lhs, const auto& rhs) {
-    return lhs.less_than(rhs, row_size);
+    return lhs.less_than(rhs, padded_row_size);
   });
 
   const auto sort_time = timer.lap();
