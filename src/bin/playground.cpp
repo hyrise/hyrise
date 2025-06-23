@@ -331,7 +331,7 @@ void sort_test(int run_name = 0, bool use_merge_sort = true, bool print_result =
 
   // for each chunk in table
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    // spawn thread to sort the chunk
+    // spawn thread to generate keys
     threads.emplace_back([&, chunk_id]() {
       auto chunk = tab->get_chunk(chunk_id);
       auto row_count_for_chunk = chunk_sizes[chunk_id];
@@ -345,6 +345,7 @@ void sort_test(int run_name = 0, bool use_merge_sort = true, bool print_result =
 
         uint8_t* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
 
+        // TODO: How to handle huge number of keycolumns? maybe max. number for key generation
         for (size_t i = 0; i < sort_definitions.size(); ++i) {
           auto sort_col = sort_definitions[i].column;
           resolve_data_type(tab->column_data_type(sort_col), [&](auto type) {
@@ -394,6 +395,8 @@ void sort_test(int run_name = 0, bool use_merge_sort = true, bool print_result =
   }
 
   // Sort the buffer
+  // TODO: if two different strings generate the same keypart, we have to compare the actual stings
+  // e.g. (AAAAAAAAA, 10) should be before (AAAAAAAAB, 4) but would not be, if don't handle this case correctly
   auto compare_rows = [&](const RowID a, const RowID b) {
     uint8_t* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
     uint8_t* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
@@ -440,7 +443,7 @@ void sort_test(int run_name = 0, bool use_merge_sort = true, bool print_result =
 
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   if (use_merge_sort) {
-    merge_sort(row_ids, compare_rows, 0, row_ids.size());
+      merge_sort(row_ids, compare_rows, 0, row_ids.size());
   } else {
     std::sort(row_ids.begin(), row_ids.end(), compare_rows);
   }
