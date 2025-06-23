@@ -9,6 +9,9 @@
 
 namespace hyrise {
 
+thread_local std::minstd_rand AbstractTPCCProcedure::_random_engine{42};
+thread_local TPCCRandomGenerator AbstractTPCCProcedure::_tpcc_random_generator{42};
+
 AbstractTPCCProcedure::AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor) : _sql_executor(sql_executor) {
   PerformanceWarning(
       "The TPC-C support is in a very early stage. Constraints are not enforced, indexes are often not used, and even "
@@ -26,8 +29,8 @@ bool AbstractTPCCProcedure::execute() {
   auto success = _on_execute();
 
   DebugAssert(transaction_context->phase() == TransactionPhase::Committed ||
-              transaction_context->phase() == TransactionPhase::RolledBackByUser ||
-              transaction_context->phase() == TransactionPhase::RolledBackAfterConflict,
+                  transaction_context->phase() == TransactionPhase::RolledBackByUser ||
+                  transaction_context->phase() == TransactionPhase::RolledBackAfterConflict,
               "Expected TPC-C transaction to either commit or roll back the MVCC transaction");
 
   return success;
