@@ -8,6 +8,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <iomanip>
 #include <ios>
@@ -299,11 +300,19 @@ auto to_unsigned_representation(auto signed_value, const uint32_t expected_num_b
   if constexpr (std::is_same_v<decltype(signed_value), int32_t>) {
     const auto zero_value = (std::numeric_limits<uint32_t>::max() / 2) + 1;
     const auto result = zero_value + std::bit_cast<uint32_t>(signed_value);
-    return result ^ (uint32_t{1} << (expected_num_bytes * 8 - 1));
+    if (expected_num_bytes < 4) {
+      const auto mask = uint32_t{1} << (8 * expected_num_bytes - 1);
+      return result ^ mask;
+    }
+    return result;
   } else if constexpr (std::is_same_v<decltype(signed_value), int64_t>) {
     const auto zero_value = (std::numeric_limits<uint64_t>::max() / 2) + 1;
     const auto result = zero_value + std::bit_cast<uint64_t>(signed_value);
-    return result ^ (uint64_t{1} << (expected_num_bytes * 8 - 1));
+    if (expected_num_bytes < 4) {
+      const auto mask = uint64_t{1} << (8 * expected_num_bytes - 1);
+      return result ^ mask;
+    }
+    return result;
   } else if constexpr (std::is_same_v<decltype(signed_value), float>) {
     auto unsigned_int = std::bit_cast<uint32_t>(signed_value);
     if (signed_value < 0) {
@@ -470,7 +479,8 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
     }
 
     for (auto offset = (static_cast<int32_t>(byte_count) - 1) * 8; offset >= 0; offset -= 8) {
-      *start++ = static_cast<std::byte>(unsigned_value >> static_cast<UnsignedInt>(offset));
+      const auto unsigned_offset = static_cast<UnsignedInt>(offset);
+      *start++ = static_cast<std::byte>((unsigned_value >> unsigned_offset) & 0xFF);
     }
 
     return start;
