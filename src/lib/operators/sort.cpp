@@ -524,7 +524,26 @@ struct RowData {
   RowID row_id;
 
   bool less_than(const RowData& other, size_t expected_size) const {
-    return memcmp(raw_head, other.raw_head, expected_size) < 0;
+    switch (expected_size / 4) {
+      case 1:
+        return memcmp(raw_head, other.raw_head, 4) < 0;
+      case 2:
+        return memcmp(raw_head, other.raw_head, 8) < 0;
+      case 3:
+        return memcmp(raw_head, other.raw_head, 12) < 0;
+      case 4:
+        return memcmp(raw_head, other.raw_head, 16) < 0;
+      case 5:
+        return memcmp(raw_head, other.raw_head, 20) < 0;
+      case 6:
+        return memcmp(raw_head, other.raw_head, 24) < 0;
+      case 7:
+        return memcmp(raw_head, other.raw_head, 28) < 0;
+      case 8:
+        return memcmp(raw_head, other.raw_head, 32) < 0;
+      default:
+        return memcmp(raw_head, other.raw_head, expected_size) < 0;
+    }
   }
 };
 
