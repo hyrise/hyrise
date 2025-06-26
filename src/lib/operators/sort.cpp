@@ -8,6 +8,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <format>
 #include <functional>
 #include <iomanip>
@@ -519,31 +520,27 @@ struct NormalizedKeyStorage {
   std::byte* ptr;  // NOLINT
 };
 
+template <size_t start, size_t end>
+int static_memcmp(std::byte* left, std::byte* right, size_t len) {
+  if (len == start) {
+    return memcmp(left, right, start);
+  }
+  if constexpr (start < end) {
+    return static_memcmp<start + 1, end>(left, right, len);
+  } else {
+    return memcmp(left, right, len);
+  }
+}
+
 struct NormalizedKeyRow {
   std::byte* key_head;
   RowID row_id;
 
   bool less_than(const NormalizedKeyRow& other, size_t expected_size) const {
-    switch (expected_size / 4) {
-      case 1:
-        return memcmp(key_head, other.key_head, 4) < 0;
-      case 2:
-        return memcmp(key_head, other.key_head, 8) < 0;
-      case 3:
-        return memcmp(key_head, other.key_head, 12) < 0;
-      case 4:
-        return memcmp(key_head, other.key_head, 16) < 0;
-      case 5:
-        return memcmp(key_head, other.key_head, 20) < 0;
-      case 6:
-        return memcmp(key_head, other.key_head, 24) < 0;
-      case 7:
-        return memcmp(key_head, other.key_head, 28) < 0;
-      case 8:
-        return memcmp(key_head, other.key_head, 32) < 0;
-      default:
-        return memcmp(key_head, other.key_head, expected_size) < 0;
+    if (expected_size == 0) {
+      return false;
     }
+    return static_memcmp<1, 32>(key_head, other.key_head, expected_size) < 0;
   }
 };
 
@@ -710,7 +707,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
       encoded_rows[chunk_offset] = NormalizedKeyRow{
-          .raw_head = chunk_allocations[chunk_id].ptr + (chunk_offset * padded_row_size),
+          .key_head = chunk_allocations[chunk_id].ptr + (chunk_offset * padded_row_size),
           .row_id = row_id,
       };
       encoding_iter[chunk_offset] = encoded_rows[chunk_offset].key_head;
