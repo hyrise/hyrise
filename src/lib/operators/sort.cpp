@@ -29,6 +29,7 @@
 #include <boost/accumulators/statistics_fwd.hpp>
 #include <boost/algorithm/cxx11/iota.hpp>
 #include <boost/range/numeric.hpp>
+#include <boost/sort/pdqsort/pdqsort.hpp>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -289,7 +290,7 @@ class ColumnDataEncoder : Noncopyable {
   virtual ~ColumnDataEncoder() = default;
 
   // Set the number of bytes a value is padded to. This is required for to ensure all columnar values have the same size.
-  virtual void set_padding(size_t padding) = 0;
+  virtual void set_width(size_t padding) = 0;
 
   // Returns the number of bytes required to encode this value.
   virtual size_t required_bytes(RowID row_id) const = 0;
@@ -353,22 +354,20 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
         _sort_mode(sort_mode),
         _accessor(table->chunk_count()),
         _is_nullable(_table->column_is_nullable(column_id)),
-        _padding(size_t{0}) {
+        _width(size_t{0}) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto segment = _table->get_chunk(chunk_id)->get_segment(_column_id);
       _accessor[chunk_id] = create_segment_accessor<DataType>(segment);
     }
   }
 
-  void set_padding(size_t padding) override {
+  void set_width(size_t width) override {
     if constexpr (std::is_same_v<DataType, int32_t> || std::is_same_v<DataType, float>) {
-      DebugAssert(padding == (_is_nullable) ? 5 : 4,
-                  std::format("Cannot encode int32_t/float with padding %d", padding));
+      DebugAssert(width == (_is_nullable) ? 5 : 4, std::format("Cannot encode int32_t/float with padding %d", width));
     } else if constexpr (std::is_same_v<DataType, int64_t> || std::is_same_v<DataType, double>) {
-      DebugAssert(padding == (_is_nullable) ? 9 : 8,
-                  std::format("Cannot encode int64_t/double with padding %d", padding));
+      DebugAssert(width == (_is_nullable) ? 9 : 8, std::format("Cannot encode int64_t/double with padding %d", width));
     }
-    _padding = padding;
+    _width = width;
   }
 
   size_t required_bytes(RowID row_id) const override {
@@ -439,14 +438,14 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
     } else {
       (*start++) = std::numeric_limits<std::byte>::max();
     }
-    for (auto counter = size_t{1}; counter < _padding; counter++) {
+    for (auto counter = size_t{1}; counter < _width; counter++) {
       (*start++) = std::byte{0};
     }
     return start;
   }
 
   PmrByteIter _encode_to_bytes(const pmr_string& value, PmrByteIter start) const {
-    const auto byte_count = (_is_nullable) ? _padding - 1 : _padding;
+    const auto byte_count = (_is_nullable) ? _width - 1 : _width;
     if (_sort_mode == SortMode::AscendingNullsFirst || _sort_mode == SortMode::AscendingNullsLast) {
       for (const auto chr : value) {
         (*start++) = std::bit_cast<std::byte>(chr);
@@ -465,8 +464,8 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
 
   // Encode signed value to a byte array for proper use with memcmp.
   PmrByteIter _encode_to_bytes(auto value, PmrByteIter start) const {
-    DebugAssert(_padding > 0, "Padding not set");
-    auto byte_count = _padding;
+    DebugAssert(_width > 0, "Padding not set");
+    auto byte_count = _width;
     if (_is_nullable) {
       byte_count -= 1;
     }
@@ -493,7 +492,7 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
   SortMode _sort_mode;
   pmr_vector<std::unique_ptr<AbstractSegmentAccessor<DataType>>> _accessor;
   bool _is_nullable;
-  size_t _padding;
+  size_t _width;
 };
 
 struct NormalizedKeyStorage {
@@ -672,7 +671,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (auto column_index = size_t{0}; column_index < column_encoders.size(); ++column_index) {
     const auto column_max_bytes = std::ranges::max(column_chunk_max_bytes[column_index]);
     row_size += column_max_bytes;
-    column_encoders[column_index]->set_padding(column_max_bytes);
+    column_encoders[column_index]->set_width(column_max_bytes);
   }
   const auto padded_row_size = ((row_size + 3) / 4) * 4;
   std::cerr << "row_size " << row_size << "\n";
@@ -736,7 +735,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   std::cerr << "sort::materialization_time " << materialization_time << "\n";
 
   // TODO(student): Use pdqsort
-  pdqsort(materialized_rows.begin(), materialized_rows.end(), [&](const auto& lhs, const auto& rhs) {
+  boost::sort::pdqsort(materialized_rows.begin(), materialized_rows.end(), [&](const auto& lhs, const auto& rhs) {
     return lhs.less_than(rhs, padded_row_size);
   });
 
