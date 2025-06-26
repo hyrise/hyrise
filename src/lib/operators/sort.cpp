@@ -8,6 +8,8 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <format>
 #include <functional>
 #include <iomanip>
 #include <ios>
@@ -300,11 +302,19 @@ auto to_unsigned_representation(auto signed_value, const uint32_t expected_num_b
   if constexpr (std::is_same_v<decltype(signed_value), int32_t>) {
     const auto zero_value = (std::numeric_limits<uint32_t>::max() / 2) + 1;
     const auto result = zero_value + std::bit_cast<uint32_t>(signed_value);
-    return result ^ (uint32_t{1} << (expected_num_bytes * 8 - 1));
+    if (expected_num_bytes < 4) {
+      const auto mask = uint32_t{1} << (8 * expected_num_bytes - 1);
+      return result ^ mask;
+    }
+    return result;
   } else if constexpr (std::is_same_v<decltype(signed_value), int64_t>) {
     const auto zero_value = (std::numeric_limits<uint64_t>::max() / 2) + 1;
     const auto result = zero_value + std::bit_cast<uint64_t>(signed_value);
-    return result ^ (uint64_t{1} << (expected_num_bytes * 8 - 1));
+    if (expected_num_bytes < 4) {
+      const auto mask = uint64_t{1} << (8 * expected_num_bytes - 1);
+      return result ^ mask;
+    }
+    return result;
   } else if constexpr (std::is_same_v<decltype(signed_value), float>) {
     auto unsigned_int = std::bit_cast<uint32_t>(signed_value);
     if (signed_value < 0) {
@@ -471,7 +481,8 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
     }
 
     for (auto offset = (static_cast<int32_t>(byte_count) - 1) * 8; offset >= 0; offset -= 8) {
-      *start++ = static_cast<std::byte>(unsigned_value >> static_cast<UnsignedInt>(offset));
+      const auto unsigned_offset = static_cast<UnsignedInt>(offset);
+      *start++ = static_cast<std::byte>((unsigned_value >> unsigned_offset) & 0xFF);
     }
 
     return start;
@@ -485,37 +496,52 @@ class TypedColumnDataEncoder : public ColumnDataEncoder {
   size_t _padding;
 };
 
-struct RawArray {
-  RawArray(const RawArray&) = delete;
-  RawArray& operator=(const RawArray&) = delete;
-  RawArray(RawArray&& other) noexcept = delete;
+struct NormalizedKeyStorage {
+  NormalizedKeyStorage(const NormalizedKeyStorage&) = delete;
+  NormalizedKeyStorage& operator=(const NormalizedKeyStorage&) = delete;
+  NormalizedKeyStorage(NormalizedKeyStorage&& other) noexcept = delete;
 
-  RawArray& operator=(RawArray&& other) noexcept {
+  NormalizedKeyStorage& operator=(NormalizedKeyStorage&& other) noexcept {
     delete ptr;
     ptr = other.ptr;
     other.ptr = nullptr;
     return *this;
   }
 
-  RawArray() : ptr(nullptr) {}
+  NormalizedKeyStorage() : ptr(nullptr) {}
 
-  explicit RawArray(size_t len) : ptr(new std::byte[len]) {
+  explicit NormalizedKeyStorage(size_t len) : ptr(new std::byte[len]) {
     Assert(ptr, "Failed to initlaize raw array");
   }
 
-  ~RawArray() {
+  ~NormalizedKeyStorage() {
     delete[] ptr;
   }
 
   std::byte* ptr;  // NOLINT
 };
 
-struct RowData {
-  std::byte* raw_head;
+template <size_t start, size_t end>
+int static_memcmp(std::byte* left, std::byte* right, size_t len) {
+  if (len == start) {
+    return memcmp(left, right, start);
+  }
+  if constexpr (start < end) {
+    return static_memcmp<start + 1, end>(left, right, len);
+  } else {
+    return memcmp(left, right, len);
+  }
+}
+
+struct NormalizedKeyRow {
+  std::byte* key_head;
   RowID row_id;
 
-  bool less_than(const RowData& other, size_t expected_size) const {
-    return memcmp(raw_head, other.raw_head, expected_size) < 0;
+  bool less_than(const NormalizedKeyRow& other, size_t expected_size) const {
+    if (expected_size == 0) {
+      return false;
+    }
+    return static_memcmp<1, 32>(key_head, other.key_head, expected_size) < 0;
   }
 };
 
@@ -658,7 +684,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // Convert the columnar layout into a row layout for better sorting. This is done by encoding all sorted columns
   // into an array of bytes. These rows can be compared using memcmp.
 
-  auto materialized_rows = pmr_vector<RowData>();
+  auto materialized_rows = pmr_vector<NormalizedKeyRow>();
   materialized_rows.resize(input_table->row_count());
 
   auto total_offset = size_t{0};
@@ -669,23 +695,23 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     total_offset += chunk_size;
   }
 
-  auto chunk_allocations = std::vector<RawArray>(chunk_count);
+  auto chunk_allocations = std::vector<NormalizedKeyStorage>(chunk_count);
 
   const auto materialization_tasks = process_in_parallel(chunk_ids, hardware_parallelism, [&](auto element) {
     const auto [chunk_id, offset] = element;
     const auto chunk_size = input_table->get_chunk(chunk_id)->size();
 
-    chunk_allocations[chunk_id] = RawArray(chunk_size * padded_row_size);
+    chunk_allocations[chunk_id] = NormalizedKeyStorage(chunk_size * padded_row_size);
 
-    auto encoded_rows = pmr_vector<RowData>(chunk_size);
+    auto encoded_rows = pmr_vector<NormalizedKeyRow>(chunk_size);
     auto encoding_iter = pmr_vector<PmrByteIter>(chunk_size);
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
-      encoded_rows[chunk_offset] = RowData{
-          .raw_head = chunk_allocations[chunk_id].ptr + (chunk_offset * padded_row_size),
+      encoded_rows[chunk_offset] = NormalizedKeyRow{
+          .key_head = chunk_allocations[chunk_id].ptr + (chunk_offset * padded_row_size),
           .row_id = row_id,
       };
-      encoding_iter[chunk_offset] = encoded_rows[chunk_offset].raw_head;
+      encoding_iter[chunk_offset] = encoded_rows[chunk_offset].key_head;
     }
 
     for (const auto& encoder : column_encoders) {
@@ -699,7 +725,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       for (auto encoding_offset = row_size; encoding_offset < padded_row_size; ++encoding_offset) {
         *(encoding_iter[chunk_offset]++) = std::byte{0};
       }
-      DebugAssert(encoding_iter[chunk_offset] == encoded_rows[chunk_offset].raw_head + padded_row_size,
+      DebugAssert(encoding_iter[chunk_offset] == encoded_rows[chunk_offset].key_head + padded_row_size,
                   "Raw data not fully initialized");
       materialized_rows[offset + chunk_offset] = std::move(encoded_rows[chunk_offset]);
     }
