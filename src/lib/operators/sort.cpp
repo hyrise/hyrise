@@ -13,6 +13,7 @@
 #include <functional>
 #include <iomanip>
 #include <ios>
+#include <ips4o.hpp>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -52,7 +53,6 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/pdqsort.h"
 #include "utils/timer.hpp"
 
 namespace {
@@ -735,7 +735,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   std::cerr << "sort::materialization_time " << materialization_time << "\n";
 
   // TODO(student): Use pdqsort
-  boost::sort::pdqsort(materialized_rows.begin(), materialized_rows.end(), [&](const auto& lhs, const auto& rhs) {
+  ips4o::sort(materialized_rows.begin(), materialized_rows.end(), [&](const auto& lhs, const auto& rhs) {
     return lhs.less_than(rhs, padded_row_size);
   });
 

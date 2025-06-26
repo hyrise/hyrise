@@ -746,6 +746,7 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
+    ips4o
     concurrentqueue
     cxxopts
     nlohmann_json::nlohmann_json
