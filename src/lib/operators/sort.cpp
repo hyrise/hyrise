@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -29,6 +31,8 @@
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
+#define STRING_PREFIX 8
+
 namespace {
 
 using namespace hyrise;  // NOLINT
@@ -37,6 +41,128 @@ using namespace hyrise;  // NOLINT
 size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
   DebugAssert(rhs > 0, "Divisor must be larger than 0.");
   return (lhs + rhs - 1u) / rhs;
+}
+
+/**
+ * Encodes a signed integer value into a byte array for sorting purposes.
+ * Prepends the integer with a null byte to indicate, whether the value is null or not.
+ * Bytes will be inverted when sorting in descending order.
+ */
+template <typename T>
+void encode_int_value(uint8_t* dest, const std::optional<T>& val, const SortColumnDefinition& def) {
+  // Determine if value is null. Replace this with your actual null check logic.
+  T value;
+  if (val.has_value()) {
+    value = val.value();
+  } else {
+    value = T();  // Default value for the type, e.g., 0 for int32_t
+  }
+
+  // First byte encodes null presence (and null order preference)
+  uint8_t null_byte = val.has_value() ? 0x00 : 0xFF;
+  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
+    null_byte = ~null_byte;
+  }
+  dest[0] = null_byte;
+
+  // Bias the value to get a lexicographically sortable encoding
+  using UnsignedT = typename std::make_unsigned<T>::type;
+  UnsignedT biased = static_cast<UnsignedT>(value) ^ (UnsignedT(1) << (sizeof(T) * 8 - 1));  // flip sign bit
+
+  // Store bytes in big-endian order starting at dest[1]
+  for (size_t i = 0; i < sizeof(T); ++i) {
+    dest[1 + i] = static_cast<uint8_t>(biased >> ((sizeof(T) - 1 - i) * 8));
+  }
+
+  // Invert for descending order (excluding the null byte)
+  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
+    for (size_t i = 1; i <= sizeof(T); ++i) {
+      dest[i] = ~dest[i];
+    }
+  }
+}
+
+template void encode_int_value<int32_t>(uint8_t* dest, const std::optional<int32_t>& val,
+                                        const SortColumnDefinition& def);
+template void encode_int_value<int64_t>(uint8_t* dest, const std::optional<int64_t>& val,
+                                        const SortColumnDefinition& def);
+
+void encode_double_value(uint8_t* dest, const std::optional<double>& val, const SortColumnDefinition& def) {
+  uint8_t null_byte = val.has_value() ? 0x00 : 0xFF;
+  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
+    null_byte = ~null_byte;
+  }
+  dest[0] = null_byte;
+
+  double value;
+  if (val.has_value()) {
+    value = val.value();
+  } else {
+    value = double();
+  }
+
+  // Reinterpret double as raw 64-bit bits
+  uint64_t bits;
+  static_assert(sizeof(double) == sizeof(uint64_t), "Size mismatch");
+  memcpy(&bits, &value, sizeof(bits));
+
+  // Flip the bits to ensure lexicographic order matches numeric order
+  if (std::signbit(value)) {
+    bits = ~bits;  // Negative values are bitwise inverted
+  } else {
+    bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
+  }
+
+  // Write to buffer in big-endian order (MSB first)
+  for (int i = 0; i < 8; ++i) {
+    dest[1 + i] = static_cast<uint8_t>(bits >> ((7 - i) * 8));
+  }
+
+  // Descending? Invert all 8 bytes (excluding null byte)
+  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
+    for (size_t i = 1; i <= 8; ++i) {
+      dest[i] = ~dest[i];
+    }
+  }
+}
+
+void encode_float_value(uint8_t* dest, const std::optional<float>& val, const SortColumnDefinition& def) {
+  double value;
+  if (val.has_value()) {
+    value = static_cast<double>(val.value());
+  }
+
+  // Use the same encoding as for double, but with float value
+  encode_double_value(dest, std::optional<double>(value), def);
+}
+
+void encode_string_value(uint8_t* dest, const std::optional<pmr_string>& val, const SortColumnDefinition& def) {
+  if (!val.has_value()) {
+    *dest = static_cast<uint8_t>(0xFF);  // set null byte to indicate NULL value
+  } else {
+    *dest = static_cast<uint8_t>(0x00);  // not NULL
+  }
+  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
+    *dest = ~(*dest);  // Nulls first
+  }
+
+  pmr_string value;
+  if (val.has_value()) {
+    value = val.value();
+  } else {
+    value = pmr_string();  // Default empty string
+  }
+
+  size_t copy_len = std::min(value.size(), size_t(STRING_PREFIX));
+  memcpy(dest + 1, value.data(), copy_len);
+  memset(dest + 1 + copy_len, 0, STRING_PREFIX - copy_len);  // pad with zeroes
+
+  // Invert the bytes for descending order
+  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
+    for (size_t i = 1; i < STRING_PREFIX + 1; ++i) {
+      dest[i] = ~dest[i];
+    }
+  }
 }
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
@@ -287,6 +413,7 @@ void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVaria
 std::shared_ptr<const Table> Sort::_on_execute() {
   const auto& input_table = left_input_table();
 
+  // validate sort definitions
   for (const auto& column_sort_definition : _sort_definitions) {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
@@ -296,6 +423,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
            "Sort does not support NULLS LAST.");
   }
 
+  // edge case: empty input table
   if (input_table->row_count() == 0) {
     if (_force_materialization == ForceMaterialization::Yes && input_table->type() == TableType::References) {
       return Table::create_dummy_table(input_table->column_definitions());
@@ -315,21 +443,175 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
   auto total_sort_time = std::chrono::nanoseconds{};
 
-  for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
-    const auto& sort_definition = _sort_definitions[sort_step];
-    const auto data_type = input_table->column_data_type(sort_definition.column);
+  const auto chunk_count = input_table->chunk_count();
+  const auto row_count = input_table->row_count();
 
-    resolve_data_type(data_type, [&](auto type) {
+  // === precompute field_width, key_width and key_offsets ===
+
+  // based on the sizes of the columns to be sorted by, e.g. if sorting by int, string it should be [4, 8]
+  std::vector<size_t> field_width;
+  field_width.reserve(_sort_definitions.size());
+  for (const auto& def : _sort_definitions) {
+    const auto sort_col = def.column;
+    resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-
-      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
-      previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
-
-      total_materialization_time += sort_impl.materialization_time;
-      total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
-      total_sort_time += sort_impl.sort_time;
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        field_width.push_back(STRING_PREFIX);  // store size of the string prefix
+      } else if constexpr (std::is_same_v<ColumnDataType, float>) {
+        field_width.push_back(sizeof(double));  // encode float as double for sorting
+      } else {
+        field_width.push_back(
+            sizeof(ColumnDataType));  // store size of the column type, e.g. 4 for int, 8 for double, etc.
+      }
     });
   }
+
+  size_t key_width = 0;  // total width of each normalized key (width of all columns to be sorted by plus null bytes)
+  for (const auto& col : field_width) {
+    key_width += col + 1;  // +1 for null byte
+  }
+
+  /**
+   * Offsets for each column in the key, i.e. `key_offsets[i]` is the offset of the i-th column in the key.
+   * This means, that `buffer[key_offsets[i]]` is the location of the i-th column's value in the key.
+  */
+  std::vector<size_t> key_offsets(_sort_definitions.size());
+  key_offsets[0] = 0;  // first column starts at offset 0
+  for (size_t i = 1; i < _sort_definitions.size(); ++i) {
+    key_offsets[i] = key_offsets[i - 1] + field_width[i - 1] + 1;  // +1 for null byte
+  }
+
+  std::mutex print_mutex;
+  std::vector<std::thread> threads;  // vector to hold threads
+
+  auto key_buffer = std::vector<uint8_t>();  // buffer to hold all keys for sorting
+  auto chunk_sizes = std::vector<size_t>();  // sizes of each chunk in the table
+
+  for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto chunk = input_table->get_chunk(chunk_id);
+    auto row_count_for_chunk = chunk->size();
+
+    chunk_sizes.push_back(row_count_for_chunk);
+  }
+  auto total_buffer_size = size_t{0};  // total size of the key buffer
+  for (size_t i = 0; i < chunk_sizes.size(); ++i) {
+    auto chunk_size = chunk_sizes[i];
+    total_buffer_size += chunk_size * key_width;  // total size of the keys for this chunk
+  }
+  key_buffer.reserve(total_buffer_size);  // reserve space for all keys
+
+  RowIDPosList row_ids(row_count);  // vector to hold row IDs for each row in the table
+
+  auto row_id_offsets = std::vector<size_t>();  // offsets for each chunk's row IDs
+  row_id_offsets.reserve(chunk_count);          // reserve space for offsets
+  row_id_offsets[0] = 0;
+  for (ChunkID chunk_id = ChunkID{1}; chunk_id < chunk_count; ++chunk_id) {
+    auto offset = row_id_offsets[chunk_id - 1] + chunk_sizes[chunk_id - 1];
+    row_id_offsets[chunk_id] = offset;
+  }
+
+  // for each chunk in table
+  for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    // spawn thread to generate keys
+    threads.emplace_back([&, chunk_id]() {
+      auto chunk = input_table->get_chunk(chunk_id);
+      auto row_count_for_chunk = chunk_sizes[chunk_id];
+
+      // buffer points to the start of this chunk's keys in the global key_buffer
+      uint8_t* buffer = &key_buffer[row_id_offsets[chunk_id] * key_width];
+
+      // create key for each row in the chunk
+      for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
+        row_ids[row_id_offsets[chunk_id] + row] = RowID{chunk_id, row};  // build array of row ids
+
+        uint8_t* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
+
+        // TODO(someone): How to handle huge number of keycolumns? maybe max. number for key generation
+        for (size_t i = 0; i < _sort_definitions.size(); ++i) {
+          auto sort_col = _sort_definitions[i].column;
+          resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
+            using ColumnDataType = typename decltype(type)::type;
+
+            // TODO(someone): preinstantiate segment accessors for each segment
+            const auto& abstract_segment = chunk->get_segment(sort_col);
+            const auto segment_accessor = create_segment_accessor<ColumnDataType>(abstract_segment);
+
+            const auto value = segment_accessor->access(ChunkOffset{row});
+
+            // encode the value into the key based on the data type
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+              encode_string_value(key_ptr + key_offsets[i], value, _sort_definitions[i]);
+            } else if constexpr (std::is_same_v<ColumnDataType, double>) {
+              encode_double_value(key_ptr + key_offsets[i], value, _sort_definitions[i]);
+            } else if constexpr (std::is_same_v<ColumnDataType, float>) {
+              encode_float_value(key_ptr + key_offsets[i], value, _sort_definitions[i]);
+            } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
+              encode_int_value(key_ptr + key_offsets[i], value, _sort_definitions[i]);
+            } else {
+              throw std::logic_error("Unsupported data type for sorting: " +
+                                     std::string(typeid(ColumnDataType).name()));
+            }
+          });
+        }
+      }
+    });
+  }
+
+  // Join all threads
+  for (auto& t : threads) {
+    t.join();
+  }
+
+  // Sort the buffer
+  // TODO(someone): if two different strings generate the same keypart, we have to compare the actual stings
+  // e.g. (AAAAAAAAA, 10) should be before (AAAAAAAAB, 4) but would not be, if don't handle this case correctly
+  auto compare_rows = [&](const RowID a, const RowID b) {
+    uint8_t* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
+    uint8_t* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
+
+    int cmp = memcmp(key_a, key_b, key_width);
+    if (cmp != 0)
+      return cmp < 0;
+
+    // real fallback would look something like this:
+    for (size_t i = 0; i < _sort_definitions.size(); ++i) {
+      int comparison_result = 0;
+      resolve_data_type(input_table->column_data_type(_sort_definitions[i].column), [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+
+        if constexpr (!std::is_same_v<ColumnDataType, pmr_string>) {
+          return;
+        }
+
+        const auto accessorA = create_segment_accessor<ColumnDataType>(
+            input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[i].column));
+        const auto accessorB = create_segment_accessor<ColumnDataType>(
+            input_table->get_chunk(b.chunk_id)->get_segment(_sort_definitions[i].column));
+
+        const auto& valA = accessorA->access(a.chunk_offset);
+        const auto& valB = accessorB->access(b.chunk_offset);
+
+        if (valA.has_value() && valB.has_value()) {
+          comparison_result = valA < valB;
+        }
+
+        return;
+      });
+
+      if (comparison_result != 0) {
+        if (_sort_definitions[i].sort_mode == SortMode::AscendingNullsFirst ||
+            _sort_definitions[i].sort_mode == SortMode::AscendingNullsLast) {
+          return comparison_result < 0;
+        } else {
+          return comparison_result > 0;
+        }
+      }
+    }
+
+    return false;  // completely equal
+  };
+
+  std::stable_sort(row_ids.begin(), row_ids.end(), compare_rows);
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
@@ -370,6 +652,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     }
   }
 
+  previously_sorted_pos_list = std::make_optional<RowIDPosList>(std::move(row_ids));
   if (must_materialize) {
     sorted_table =
         write_materialized_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
@@ -391,128 +674,5 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
   return sorted_table;
 }
-
-template <typename SortColumnType>
-class Sort::SortImpl {
- public:
-  using RowIDValuePair = std::pair<RowID, SortColumnType>;
-
-  std::chrono::nanoseconds materialization_time{};
-  std::chrono::nanoseconds temporary_result_writing_time{};
-  std::chrono::nanoseconds sort_time{};
-
-  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
-           const SortMode sort_mode = SortMode::AscendingNullsFirst)
-      : _table_in(table_in), _column_id(column_id), _sort_mode(sort_mode) {
-    const auto row_count = _table_in->row_count();
-    _row_id_value_vector.reserve(row_count);
-    _null_value_rows.reserve(row_count);
-  }
-
-  // Sorts table_in, potentially taking the pre-existing order of previously_sorted_pos_list into account.
-  // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
-  // output table.
-  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    auto timer = Timer{};
-    // 1. Prepare Sort: Creating RowID-value-Structure
-    _materialize_sort_column(previously_sorted_pos_list);
-    materialization_time = timer.lap();
-
-    // 2. After we got our ValueRowID Map we sort the map by the value of the pair
-    const auto sort_with_comparator = [&](auto comparator) {
-      std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) {
-                         return comparator(lhs.second, rhs.second);
-                       });
-    };
-    if (_sort_mode == SortMode::AscendingNullsFirst) {
-      sort_with_comparator(std::less<>{});
-    } else {
-      sort_with_comparator(std::greater<>{});
-    }
-    sort_time = timer.lap();
-
-    // 2b. Insert null rows in front of all non-NULL rows
-    if (!_null_value_rows.empty()) {
-      // NULLs come before all values. The SQL standard allows for this to be implementation-defined. We used to have
-      // a NULLS LAST mode, but never used it over multiple years. Different databases have different behaviors, and
-      // storing NULLs first even for descending orders is somewhat uncommon:
-      //   https://docs.mendix.com/refguide/ordering-behavior#null-ordering-behavior
-      // For Hyrise, we found that storing NULLs first is the method that requires the least amount of code.
-      _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
-    }
-
-    auto pos_list = RowIDPosList{};
-    pos_list.reserve(_row_id_value_vector.size());
-    for (const auto& [row_id, _] : _row_id_value_vector) {
-      pos_list.emplace_back(row_id);
-    }
-    temporary_result_writing_time = timer.lap();
-    return pos_list;
-  }
-
- protected:
-  // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    // If there was no PosList passed, this is the first sorting run and we simply fill our values and nulls data
-    // structures from our input table. Otherwise we will materialize according to the PosList which is the result of
-    // the last run.
-    if (previously_sorted_pos_list) {
-      _materialize_column_from_pos_list(*previously_sorted_pos_list);
-    } else {
-      const auto chunk_count = _table_in->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = _table_in->get_chunk(chunk_id);
-        Assert(chunk, "Did not expect deleted chunk here.");  // see https://github.com/hyrise/hyrise/issues/1686
-
-        auto abstract_segment = chunk->get_segment(_column_id);
-
-        segment_iterate<SortColumnType>(*abstract_segment, [&](const auto& position) {
-          if (position.is_null()) {
-            _null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
-          } else {
-            _row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
-          }
-        });
-      }
-    }
-  }
-
-  // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
-  void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
-    const auto input_chunk_count = _table_in->chunk_count();
-    auto accessor_by_chunk_id =
-        std::vector<std::unique_ptr<AbstractSegmentAccessor<SortColumnType>>>(input_chunk_count);
-    for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-      const auto& abstract_segment = _table_in->get_chunk(input_chunk_id)->get_segment(_column_id);
-      accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<SortColumnType>(abstract_segment);
-    }
-
-    for (auto row_id : pos_list) {
-      const auto [chunk_id, chunk_offset] = row_id;
-
-      auto& accessor = accessor_by_chunk_id[chunk_id];
-      const auto typed_value = accessor->access(chunk_offset);
-      if (!typed_value) {
-        _null_value_rows.emplace_back(row_id, SortColumnType{});
-      } else {
-        _row_id_value_vector.emplace_back(row_id, typed_value.value());
-      }
-    }
-  }
-
-  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::shared_ptr<const Table> _table_in;
-
-  // Column to sort by.
-  const ColumnID _column_id;
-  const SortMode _sort_mode;
-  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
-
-  std::vector<RowIDValuePair> _row_id_value_vector;
-
-  // Stored as RowIDValuePair for better type compatibility even if value is unused.
-  std::vector<RowIDValuePair> _null_value_rows;
-};
 
 }  // namespace hyrise
