@@ -438,7 +438,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
   // been determined so far. This is not a completely proper PosList on the input table as it might point to
   // ReferenceSegments.
-  auto previously_sorted_pos_list = std::optional<RowIDPosList>{};
 
   auto total_materialization_time = std::chrono::nanoseconds{};
   auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
@@ -452,12 +451,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // based on the sizes of the columns to be sorted by, e.g. if sorting by int, string it should be [4, 8]
   std::vector<size_t> field_width;
   field_width.reserve(_sort_definitions.size());
+  std::vector<ColumnID> string_columns;  // indices of columns that have type string
   for (const auto& def : _sort_definitions) {
     const auto sort_col = def.column;
     resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        field_width.push_back(STRING_PREFIX);  // store size of the string prefix
+        field_width.emplace_back(STRING_PREFIX);  // store size of the string prefix
+        string_columns.emplace_back(sort_col);    // keep track of string columns for fallback comparisons
       } else if constexpr (std::is_same_v<ColumnDataType, float>) {
         field_width.push_back(sizeof(double));  // encode float as double for sorting
       } else {
@@ -486,30 +487,36 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   std::vector<std::thread> threads;  // vector to hold threads
 
   auto key_buffer = std::vector<uint8_t>();  // buffer to hold all keys for sorting
-  auto chunk_sizes = std::vector<size_t>();  // sizes of each chunk in the table
+  auto total_buffer_size = size_t{0};        // total size of the key buffer
+
+  auto chunk_sizes = std::vector<size_t>();  // number of rows per chunk in the input table
+  chunk_sizes.reserve(chunk_count);          // reserve space for chunk sizes
+
+  RowIDPosList row_ids;        // vector to hold row IDs for each row in the table
+  row_ids.reserve(row_count);  // reserve space for row IDs
 
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = input_table->get_chunk(chunk_id);
     auto row_count_for_chunk = chunk->size();
 
-    chunk_sizes.push_back(row_count_for_chunk);
-  }
-  auto total_buffer_size = size_t{0};  // total size of the key buffer
-  for (size_t i = 0; i < chunk_sizes.size(); ++i) {
-    auto chunk_size = chunk_sizes[i];
-    total_buffer_size += chunk_size * key_width;  // total size of the keys for this chunk
-  }
-  key_buffer.reserve(total_buffer_size);  // reserve space for all keys
+    chunk_sizes.emplace_back(row_count_for_chunk);
+    total_buffer_size += row_count_for_chunk * key_width;  // total size of the keys for this chunk
 
-  RowIDPosList row_ids(row_count);  // vector to hold row IDs for each row in the table
+    for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
+      row_ids.emplace_back(chunk_id, row);  // build array of row ids
+    }
+  }
 
   auto row_id_offsets = std::vector<size_t>();  // offsets for each chunk's row IDs
   row_id_offsets.reserve(chunk_count);          // reserve space for offsets
-  row_id_offsets[0] = 0;
+
+  row_id_offsets.emplace_back(0);  // first chunk starts at offset 0
   for (ChunkID chunk_id = ChunkID{1}; chunk_id < chunk_count; ++chunk_id) {
     auto offset = row_id_offsets[chunk_id - 1] + chunk_sizes[chunk_id - 1];
-    row_id_offsets[chunk_id] = offset;
+    row_id_offsets.emplace_back(offset);  // offset for the next chunk
   }
+
+  key_buffer.reserve(total_buffer_size);  // reserve space for all keys
 
   // for each chunk in table
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -533,8 +540,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
           // create key for each row in the chunk
           for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
-            row_ids[row_id_offsets[chunk_id] + row] = RowID{chunk_id, row};  // build array of row ids
-
             uint8_t* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
 
             const auto value = segment_accessor->access(ChunkOffset{row});
@@ -564,8 +569,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   // Sort the buffer
-  // TODO(someone): if two different strings generate the same keypart, we have to compare the actual stings
-  // e.g. (AAAAAAAAA, 10) should be before (AAAAAAAAB, 4) but would not be, if don't handle this case correctly
   auto compare_rows = [&](const RowID a, const RowID b) {
     uint8_t* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
     uint8_t* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
@@ -574,30 +577,23 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     if (cmp != 0)
       return cmp < 0;
 
-    // real fallback would look something like this:
-    for (size_t i = 0; i < _sort_definitions.size(); ++i) {
+    // fallback to full comparison for string columns
+    // other columns are already compared correctly by the key buffer
+    for (auto& i : string_columns) {
       int comparison_result = 0;
-      resolve_data_type(input_table->column_data_type(_sort_definitions[i].column), [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
 
-        if constexpr (!std::is_same_v<ColumnDataType, pmr_string>) {
-          return;
-        }
+      const auto accessorA = create_segment_accessor<pmr_string>(
+          input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[i].column));
+      const auto accessorB = create_segment_accessor<pmr_string>(
+          input_table->get_chunk(b.chunk_id)->get_segment(_sort_definitions[i].column));
 
-        const auto accessorA = create_segment_accessor<ColumnDataType>(
-            input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[i].column));
-        const auto accessorB = create_segment_accessor<ColumnDataType>(
-            input_table->get_chunk(b.chunk_id)->get_segment(_sort_definitions[i].column));
+      const auto& valA = accessorA->access(a.chunk_offset);
+      const auto& valB = accessorB->access(b.chunk_offset);
 
-        const auto& valA = accessorA->access(a.chunk_offset);
-        const auto& valB = accessorB->access(b.chunk_offset);
-
-        if (valA.has_value() && valB.has_value()) {
-          comparison_result = valA < valB;
-        }
-
-        return;
-      });
+      // can only compare if neither value is null
+      if (valA.has_value() && valB.has_value()) {
+        comparison_result = valA < valB;
+      }
 
       if (comparison_result != 0) {
         if (_sort_definitions[i].sort_mode == SortMode::AscendingNullsFirst ||
@@ -612,6 +608,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return false;  // completely equal
   };
 
+  // TODO(someone): use better sorting algorithm, e.g. merge sort
   std::stable_sort(std::execution::par_unseq, row_ids.begin(), row_ids.end(), compare_rows);
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
@@ -653,13 +650,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     }
   }
 
-  previously_sorted_pos_list = std::make_optional<RowIDPosList>(std::move(row_ids));
   if (must_materialize) {
-    sorted_table =
-        write_materialized_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
+    sorted_table = write_materialized_output_table(input_table, std::move(row_ids), _output_chunk_size);
   } else {
-    sorted_table =
-        write_reference_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
+    sorted_table = write_reference_output_table(input_table, std::move(row_ids), _output_chunk_size);
   }
 
   const auto& final_sort_definition = _sort_definitions[0];
