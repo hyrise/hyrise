@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <execution>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -611,7 +612,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return false;  // completely equal
   };
 
-  std::stable_sort(row_ids.begin(), row_ids.end(), compare_rows);
+  std::stable_sort(std::execution::par_unseq, row_ids.begin(), row_ids.end(), compare_rows);
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
