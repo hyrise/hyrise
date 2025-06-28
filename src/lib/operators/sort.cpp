@@ -521,21 +521,21 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       // buffer points to the start of this chunk's keys in the global key_buffer
       uint8_t* buffer = &key_buffer[row_id_offsets[chunk_id] * key_width];
 
-      // create key for each row in the chunk
-      for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
-        row_ids[row_id_offsets[chunk_id] + row] = RowID{chunk_id, row};  // build array of row ids
+      // TODO(someone): How to handle huge number of keycolumns? maybe max. number for key generation
+      for (size_t i = 0; i < _sort_definitions.size(); ++i) {
+        auto sort_col = _sort_definitions[i].column;
+        resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
 
-        uint8_t* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
+          // TODO(someone): preinstantiate segment accessors for each segment
+          const auto& abstract_segment = chunk->get_segment(sort_col);
+          const auto segment_accessor = create_segment_accessor<ColumnDataType>(abstract_segment);
 
-        // TODO(someone): How to handle huge number of keycolumns? maybe max. number for key generation
-        for (size_t i = 0; i < _sort_definitions.size(); ++i) {
-          auto sort_col = _sort_definitions[i].column;
-          resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
-            using ColumnDataType = typename decltype(type)::type;
+          // create key for each row in the chunk
+          for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
+            row_ids[row_id_offsets[chunk_id] + row] = RowID{chunk_id, row};  // build array of row ids
 
-            // TODO(someone): preinstantiate segment accessors for each segment
-            const auto& abstract_segment = chunk->get_segment(sort_col);
-            const auto segment_accessor = create_segment_accessor<ColumnDataType>(abstract_segment);
+            uint8_t* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
 
             const auto value = segment_accessor->access(ChunkOffset{row});
 
@@ -552,8 +552,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
               throw std::logic_error("Unsupported data type for sorting: " +
                                      std::string(typeid(ColumnDataType).name()));
             }
-          });
-        }
+          }
+        });
       }
     });
   }
