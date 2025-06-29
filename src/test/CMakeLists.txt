@@ -241,6 +241,7 @@ set(
     lib/utils/meta_tables/meta_table_test.cpp
     lib/utils/mock_setting.cpp
     lib/utils/mock_setting.hpp
+    lib/utils/key_normalizer_test.cpp
     lib/utils/plugin_manager_test.cpp
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
