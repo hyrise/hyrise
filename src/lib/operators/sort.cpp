@@ -451,14 +451,15 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // based on the sizes of the columns to be sorted by, e.g. if sorting by int, string it should be [4, 8]
   std::vector<size_t> field_width;
   field_width.reserve(_sort_definitions.size());
-  std::vector<ColumnID> string_columns;  // indices of columns that have type string
-  for (const auto& def : _sort_definitions) {
+  std::vector<size_t> string_columns;  // indices of sort_definitions that sort columns of type string
+  for (size_t i = 0; i < _sort_definitions.size(); ++i) {
+    const auto& def = _sort_definitions[i];
     const auto sort_col = def.column;
     resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         field_width.emplace_back(STRING_PREFIX);  // store size of the string prefix
-        string_columns.emplace_back(sort_col);    // keep track of string columns for fallback comparisons
+        string_columns.emplace_back(i);           // keep track of string columns for fallback comparisons
       } else if constexpr (std::is_same_v<ColumnDataType, float>) {
         field_width.push_back(sizeof(double));  // encode float as double for sorting
       } else {
@@ -579,8 +580,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
     // fallback to full comparison for string columns
     // other columns are already compared correctly by the key buffer
-    for (auto& i : string_columns) {
+    for (auto i : string_columns) {
       int comparison_result = 0;
+      // resolve_data_type(input_table->column_data_type(_sort_definitions[i].column), [&](auto type) {
+      //   using ColumnDataType = typename decltype(type)::type;
+      // });
 
       const auto accessorA = create_segment_accessor<pmr_string>(
           input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[i].column));
