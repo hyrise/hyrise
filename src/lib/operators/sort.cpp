@@ -484,7 +484,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     key_offsets[i] = key_offsets[i - 1] + field_width[i - 1] + 1;  // +1 for null byte
   }
 
-  std::mutex print_mutex;
   std::vector<std::thread> threads;  // vector to hold threads
 
   auto key_buffer = std::vector<uint8_t>();  // buffer to hold all keys for sorting
@@ -582,9 +581,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     // other columns are already compared correctly by the key buffer
     for (auto i : string_columns) {
       int comparison_result = 0;
-      // resolve_data_type(input_table->column_data_type(_sort_definitions[i].column), [&](auto type) {
-      //   using ColumnDataType = typename decltype(type)::type;
-      // });
 
       const auto accessorA = create_segment_accessor<pmr_string>(
           input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[i].column));
