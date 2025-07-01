@@ -69,25 +69,25 @@ jobs:
 
       - name: Run Synthetic Benchmarks
         run: |
-          ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation
           $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicSynthetic $LEADERBOARD/deliver_benchmark
           exit $EXIT_CODE
 
       - name: Run TPC-DS Benchmarks (SF 1)
         run: |
-          ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 1
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 1
           $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPCDS_SF1 $LEADERBOARD/deliver_benchmark
           exit $EXIT_CODE
 
       - name: Run TPC-DS Benchmarks (SF 10)
         run: |
-          ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 10
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 10
           $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPCDS_SF10 $LEADERBOARD/deliver_benchmark
           exit $EXIT_CODE
 
       - name: Run TPC-DS Benchmarks (SF 30)
         run: |
-          ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 30
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 30
           $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPCDS_SF30 $LEADERBOARD/deliver_benchmark
           exit $EXIT_CODE
 
@@ -103,7 +103,7 @@ jobs:
 
       - name: Run Hidden Benchmarks
         run: |
-          ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation hidden
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation hidden
           $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=Hidden $LEADERBOARD/deliver_benchmark
           exit $EXIT_CODE
 
