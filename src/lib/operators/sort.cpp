@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <execution>
 #include <format>
 #include <functional>
 #include <iomanip>
@@ -71,7 +72,7 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
  *        ) D ( )  /(  O )) D ( / __/(  0 )/ __/(___ \
  *       (____/(__/  \__/(____/(____) \__/(____)(____/
  *
- * 
+ *
  * Notes on Segment Accessors:
  *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
  *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
@@ -747,9 +748,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   std::cerr << "sort::materialization_time " << materialization_time << "\n";
 
   // TODO(student): Use pdqsort
-  ips4o::sort(materialized_rows.begin(), materialized_rows.end(), [&](const auto& lhs, const auto& rhs) {
-    return lhs.less_than(rhs, padded_row_size);
-  });
+  std::stable_sort(std::execution::par_unseq, materialized_rows.begin(), materialized_rows.end(),
+                   [&](const auto& lhs, const auto& rhs) {
+                     return lhs.less_than(rhs, padded_row_size);
+                   });
 
   const auto sort_time = timer.lap();
   std::cerr << "sort::sort_time " << sort_time << "\n";
