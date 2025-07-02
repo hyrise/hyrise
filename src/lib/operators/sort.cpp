@@ -14,7 +14,6 @@
 #include <functional>
 #include <iomanip>
 #include <ios>
-#include <ips4o.hpp>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -295,14 +294,15 @@ using PmrByteIter = std::byte*;
 // Encodes the row value of
 class ColumnDataEncoder : Noncopyable {
  public:
-  explicit ColumnDataEncoder() = default;
+  ColumnDataEncoder() = default;
   ColumnDataEncoder(const ColumnDataEncoder&) = delete;
   ColumnDataEncoder(ColumnDataEncoder&&) = delete;
   ColumnDataEncoder& operator=(const ColumnDataEncoder&) = delete;
   ColumnDataEncoder& operator=(ColumnDataEncoder&&) = delete;
   virtual ~ColumnDataEncoder() = default;
 
-  // Set the number of bytes a value is padded to. This is required for to ensure all columnar values have the same size.
+  // Set the number of bytes a value is padded to. This is required for to ensure all columnar values have the same
+  // size.
   virtual void set_width(size_t padding) = 0;
 
   // Returns the number of bytes required to encode this value.
