@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  CC: clang-17
+  CXX: clang++-17
+
+  LEADERBOARD: http://vm-appleton.eaalab.hpi.uni-potsdam.de
+
+  CURL_CMD: "curl -X POST --fail-with-body -F github_user=${{github.actor}} -F ci_id=1 -F github_repository=${{github.repository}} -F project_id=1 -F secret=${{secrets.DYOD_SECRET}} -F git_commit=${{github.sha}}"
+
+  BM_RESULT_FILE: RESULTS.csv
+
+  BUILD_DIR_DEBUG: cmake-build-debug
+  BUILD_DIR_RELEASE: cmake-build-release
+
+  OPOSSUM_HEADLESS_SETUP: true
+
+jobs:
+  test_and_benchmark:
+    name: Build + Test + Benchmark
+
+    strategy:
+      fail-fast: false
+
+    runs-on: self-hosted
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y parallel python3 dos2unix ninja-build
+
+      - name: Install Dependencies
+        run: |
+          ./install_dependencies.sh
+
+      - name: Run Lint Script
+        run: ./scripts/lint.sh
+
+      - name: Setup CMake (Debug)
+        run: cmake -B ${BUILD_DIR_DEBUG} -DCMAKE_BUILD_TYPE=Debug -G Ninja
+
+      - name: Build (Debug)
+        run: ninja -C ${BUILD_DIR_DEBUG}
+
+      - name: Run Tests
+        run: |
+          ${BUILD_DIR_DEBUG}/hyriseTest
+          $CURL_CMD $LEADERBOARD/deliver_basic
+
+      - name: Setup CMake (Release)
+        run: cmake -B ${BUILD_DIR_RELEASE} -DCMAKE_BUILD_TYPE=Release -DNO_LTO=TRUE -G Ninja
+
+      - name: Build (Release)
+        run: ninja -C ${BUILD_DIR_RELEASE}
+
+      - name: Run Synthetic Benchmarks
+        run: |
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicSynthetic $LEADERBOARD/deliver_benchmark
+          exit $EXIT_CODE
+
+      - name: Run TPC-DS Benchmarks (SF 1)
+        run: |
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 1
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPCDS_SF1 $LEADERBOARD/deliver_benchmark
+          exit $EXIT_CODE
+
+      - name: Run TPC-DS Benchmarks (SF 10)
+        run: |
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 10
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPCDS_SF10 $LEADERBOARD/deliver_benchmark
+          exit $EXIT_CODE
+
+      - name: Run TPC-DS Benchmarks (SF 30)
+        run: |
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation 30
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=BasicTPCDS_SF30 $LEADERBOARD/deliver_benchmark
+          exit $EXIT_CODE
+
+      - name: Prepare Hidden Benchmarks
+        run: |
+          curl -u '${{secrets.DYOD_HIDDEN_BENCHMARKS_NEXTCLOUD_KEY}}' -H "X-Requested-With:XMLHttpRequest" "https://nextcloud.hpi.de/public.php/webdav/" -o dyod_evaluation.zip
+          unzip -o -P '${{secrets.DYOD_HIDDEN_BENCHMARKS_PASSWORD}}' dyod_evaluation.zip
+          mv -f src/bin/dyod_evaluation.cpp src/bin/dyod_evaluation.cpp.bk
+          mv -f dyod_evaluation.cpp src/bin/
+          touch src/bin/dyod_evaluation.cpp
+          ninja -C ${BUILD_DIR_RELEASE}
+          mv -f src/bin/dyod_evaluation.cpp.bk src/bin/dyod_evaluation.cpp
+
+      - name: Run Hidden Benchmarks
+        run: |
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation hidden
+          $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=Hidden $LEADERBOARD/deliver_benchmark
+          exit $EXIT_CODE
+
+      - name: Clean Up
+        if: always()
+        run: rm -rf ${BUILD_DIR_DEBUG} ${BUILD_DIR_RELEASE} *
