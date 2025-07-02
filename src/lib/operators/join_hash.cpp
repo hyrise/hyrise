@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -13,13 +14,13 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <fstream>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "join_helper/join_output_writing.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/operator_join_predicate.hpp"
@@ -33,7 +34,6 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
-#include "logical_query_plan/join_node.hpp"
 
 namespace hyrise {
 
@@ -224,23 +224,22 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
 
   auto output_table = _impl->_on_execute();
-  if (!lqp_node) return output_table;
+  if (!lqp_node)
+    return output_table;
 
   const auto join_node = std::static_pointer_cast<const JoinNode>(lqp_node);
-  if (!join_node->is_semi_reduction()) return output_table;
+  if (!join_node->is_semi_reduction())
+    return output_table;
 
   auto file_exists = std::filesystem::exists("reduction_stats.csv");
   std::ofstream output_file;
   output_file.open("reduction_stats.csv", std::ios_base::app);
 
   if (!file_exists) {
-        output_file << "reduction_type,benchmark,query,input_count,output_count\n";
+    output_file << "reduction_type,benchmark,query,input_count,output_count\n";
   }
-  output_file << "semi" << ","
-              << Hyrise::get().benchmark_name << ","
-              << Hyrise::get().query_name << ","
-              << probe_input_table->row_count() << ","
-              << output_table->row_count() << "\n";
+  output_file << "semi" << "," << Hyrise::get().benchmark_name << "," << Hyrise::get().query_name << ","
+              << probe_input_table->row_count() << "," << output_table->row_count() << "\n";
 
   return output_table;
 }

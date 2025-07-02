@@ -35,8 +35,8 @@ class OperatorsReduceTest : public BaseTest {
 
 TEST_F(OperatorsReduceTest, ReduceTableWithFilterCreatedOnItself) {
   auto reduce = std::make_shared<Reduce<std::hash, 20>>(
-    _int_int_0, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
-    false);
+      _int_int_0, _int_int_0, OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+      false);
   reduce->execute();
 
   const auto expected = load_table("resources/test_data/tbl/reduce/int_int_shuffled.tbl", ChunkOffset{7});

@@ -8,10 +8,10 @@
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
+#include "hyrise.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
-#include "hyrise.hpp"
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 

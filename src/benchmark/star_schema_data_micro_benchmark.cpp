@@ -89,7 +89,7 @@
 //     // 10 LO_ORDTOTALPRICE pruned
 //     // 11 LO_DISCOUNT      pruned
 //     // 12 LO_REVENUE       4
-//     // 13 LO_SUPPLYCOST    5 
+//     // 13 LO_SUPPLYCOST    5
 //     // 14 LO_TAX           pruned
 //     // 15 LO_COMMITDATE    pruned
 //     // 16 LO_SHIPMODE      pruned

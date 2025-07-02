@@ -19,7 +19,6 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
-#include "hyrise.hpp"
 
 using namespace hyrise;  // NOLINT
 

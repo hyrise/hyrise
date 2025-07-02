@@ -46,6 +46,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/legacy_reduce.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -57,7 +58,6 @@
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/reduce.hpp"
-#include "operators/legacy_reduce.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -439,14 +439,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   if (join_node->join_mode == JoinMode::Semi && join_node->is_semi_reduction()) {
     // const char* env = std::getenv("REDUCER");
     // if (env) {
-      // const auto env_string = std::string{env};
-      // if (env_string == "prototype") {
-        return std::make_shared<Reduce<std::hash, 20>>(left_input_operator, right_input_operator, primary_join_predicate, false);
-      // } else if (env_string == "legacy") {
-        // return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
-      // } else if (env_string != "semi") {
-        // Fail("Unsupported reducer type.");
-      // }
+    // const auto env_string = std::string{env};
+    // if (env_string == "prototype") {
+    return std::make_shared<Reduce<std::hash, 20>>(left_input_operator, right_input_operator, primary_join_predicate,
+                                                   false);
+    // } else if (env_string == "legacy") {
+    // return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
+    // } else if (env_string != "semi") {
+    // Fail("Unsupported reducer type.");
+    // }
     // }
   }
 

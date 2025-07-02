@@ -7,7 +7,6 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
 #include "ssb/ssb_table_generator.hpp"
-#include "hyrise.hpp"
 
 /**
  * The Star Schema Benchmark was introduced by O'Neil et al. "The Star Schema Benchmark and Augmented Fact Table

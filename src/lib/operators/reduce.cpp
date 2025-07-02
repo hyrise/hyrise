@@ -1,29 +1,29 @@
 #include "reduce.hpp"
 
 #include <atomic>
-#include <memory>
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <string>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
-#include "hyrise.hpp"
 
 namespace hyrise {
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 Reduce<Hasher, FilterSize>::Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
-                       const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate,
-                       const bool update_filter)
+                                   const std::shared_ptr<const AbstractOperator>& right_input,
+                                   const OperatorJoinPredicate predicate, const bool update_filter)
     : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input},
       _predicate(predicate),
       _update_filter(update_filter) {}
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 void Reduce<Hasher, FilterSize>::_create_filter(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
   const auto FILTER_SIZE = static_cast<uint32_t>(pow(2u, FilterSize));
 
@@ -48,7 +48,7 @@ void Reduce<Hasher, FilterSize>::_create_filter(const std::shared_ptr<const Tabl
   });
 }
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 std::shared_ptr<Table> Reduce<Hasher, FilterSize>::_create_reduced_table() {
   Assert(_filter, "Can not filter without filter.");
 
@@ -153,38 +153,36 @@ std::shared_ptr<Table> Reduce<Hasher, FilterSize>::_create_reduced_table() {
     }
   });
 
-  const auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
+  const auto output_table =
+      std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
 
   auto file_exists = std::filesystem::exists("reduction_stats.csv");
   std::ofstream output_file;
   output_file.open("reduction_stats.csv", std::ios_base::app);
 
   if (!file_exists) {
-        output_file << "filter_size,hash_count,benchmark,query,input_count,output_count\n";
+    output_file << "filter_size,hash_count,benchmark,query,input_count,output_count\n";
   }
-  output_file << _filter_size_string << ","
-              << _hash_count << ","
-              << Hyrise::get().benchmark_name << ","
-              << Hyrise::get().query_name << ","
-              << input_table->row_count() << ","
-              << output_table->row_count() << "\n";
+  output_file << _filter_size_string << "," << _hash_count << "," << Hyrise::get().benchmark_name << ","
+              << Hyrise::get().query_name << "," << input_table->row_count() << "," << output_table->row_count()
+              << "\n";
 
   return output_table;
 }
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 const std::string& Reduce<Hasher, FilterSize>::name() const {
   static const auto name = std::string{"Reduce"};
   return name;
 }
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 const std::shared_ptr<std::vector<std::atomic_uint64_t>>& Reduce<Hasher, FilterSize>::export_filter() const {
   Assert(_filter, "Filter is not set, reducer was probably not executed.");
   return _filter;
 }
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 std::shared_ptr<const Table> Reduce<Hasher, FilterSize>::_on_execute() {
   if (_right_input->type() == OperatorType::Reduce) {
     const auto input_reducer = std::static_pointer_cast<const Reduce>(_right_input);
@@ -202,25 +200,26 @@ std::shared_ptr<const Table> Reduce<Hasher, FilterSize>::_on_execute() {
   return output_table;
 }
 
-template <template<typename> class Hasher, uint8_t FilterSize>
-void Reduce<Hasher, FilterSize>::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+template <template <typename> class Hasher, uint8_t FilterSize>
+void Reduce<Hasher, FilterSize>::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+}
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 std::shared_ptr<AbstractOperator> Reduce<Hasher, FilterSize>::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>&  /*copied_ops*/) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<Reduce>(copied_left_input, copied_right_input, _predicate, _update_filter);
 }
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 void Reduce<Hasher, FilterSize>::_set_bit(const uint32_t hash_22bit) {
   size_t index = hash_22bit / 64;   // Determine the block
   size_t offset = hash_22bit % 64;  // Determine the bit within the block
   (*_filter)[index].fetch_or(1ULL << offset, std::memory_order_relaxed);
 }
 
-template <template<typename> class Hasher, uint8_t FilterSize>
+template <template <typename> class Hasher, uint8_t FilterSize>
 bool Reduce<Hasher, FilterSize>::_get_bit(const uint32_t hash_22bit) const {
   size_t index = hash_22bit / 64;   // Determine the block
   size_t offset = hash_22bit % 64;  // Determine the bit within the block

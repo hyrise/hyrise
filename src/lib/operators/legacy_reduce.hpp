@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+
 #include <boost/dynamic_bitset.hpp>
 
 #include "abstract_read_only_operator.hpp"
@@ -11,15 +12,14 @@ namespace hyrise {
 
 class LegacyReduce : public AbstractReadOnlyOperator {
  public:
-
   static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
   static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
   using BloomFilter = boost::dynamic_bitset<>;
-//   static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
+  //   static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 
   explicit LegacyReduce(const std::shared_ptr<const AbstractOperator>& left_input,
-                  const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate,
-                  const bool update_filter);
+                        const std::shared_ptr<const AbstractOperator>& right_input,
+                        const OperatorJoinPredicate predicate, const bool update_filter);
 
   const std::string& name() const override;
 
