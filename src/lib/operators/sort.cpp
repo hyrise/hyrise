@@ -45,6 +45,18 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
 }
 
 /**
+ *        ____  _  _  __  ____  ____   __  ____   ___
+ *       (    \( \/ )/  \(    \(___ \ /  \(___ \ / __)
+ *        ) D ( )  /(  O )) D ( / __/(  0 )/ __/(___ \
+ *       (____/(__/  \__/(____/(____) \__/(____)(____/
+ *
+ *
+ * Notes on Segment Accessors:
+ *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
+ *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
+ */
+
+/**
  * Encodes a signed integer value into a byte array for sorting purposes.
  * Prepends the integer with a null byte to indicate, whether the value is null or not.
  * Bytes will be inverted when sorting in descending order.
@@ -165,6 +177,140 @@ void encode_string_value(uint8_t* dest, const std::optional<pmr_string>& val, co
     }
   }
 }
+
+/**
+ * Encodes a signed integer value into a byte array for sorting purposes.
+ * Prepends the integer with a null byte to indicate, whether the value is null or not.
+ * Bytes will be inverted when sorting in descending order.
+ */
+template <typename T>
+void encode_int_value(uint8_t* dest, const std::optional<T>& val, const SortColumnDefinition& def) {
+  // Determine if value is null. Replace this with your actual null check logic.
+  T value;
+  if (val.has_value()) {
+    value = val.value();
+  } else {
+    value = T();  // Default value for the type, e.g., 0 for int32_t
+  }
+
+  // First byte encodes null presence (and null order preference)
+  uint8_t null_byte = val.has_value() ? 0x00 : 0xFF;
+  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
+    null_byte = ~null_byte;
+  }
+  dest[0] = null_byte;
+
+  // Bias the value to get a lexicographically sortable encoding
+  using UnsignedT = typename std::make_unsigned<T>::type;
+  UnsignedT biased = static_cast<UnsignedT>(value) ^ (UnsignedT(1) << (sizeof(T) * 8 - 1));  // flip sign bit
+
+  // Store bytes in big-endian order starting at dest[1]
+  for (size_t i = 0; i < sizeof(T); ++i) {
+    dest[1 + i] = static_cast<uint8_t>(biased >> ((sizeof(T) - 1 - i) * 8));
+  }
+
+  // Invert for descending order (excluding the null byte)
+  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
+    for (size_t i = 1; i <= sizeof(T); ++i) {
+      dest[i] = ~dest[i];
+    }
+  }
+}
+
+template void encode_int_value<int32_t>(uint8_t* dest, const std::optional<int32_t>& val,
+                                        const SortColumnDefinition& def);
+template void encode_int_value<int64_t>(uint8_t* dest, const std::optional<int64_t>& val,
+                                        const SortColumnDefinition& def);
+
+void encode_double_value(uint8_t* dest, const std::optional<double>& val, const SortColumnDefinition& def) {
+  uint8_t null_byte = val.has_value() ? 0x00 : 0xFF;
+  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
+    null_byte = ~null_byte;
+  }
+  dest[0] = null_byte;
+
+  double value;
+  if (val.has_value()) {
+    value = val.value();
+  } else {
+    value = double();
+  }
+
+  // Reinterpret double as raw 64-bit bits
+  uint64_t bits;
+  static_assert(sizeof(double) == sizeof(uint64_t), "Size mismatch");
+  memcpy(&bits, &value, sizeof(bits));
+
+  // Flip the bits to ensure lexicographic order matches numeric order
+  if (std::signbit(value)) {
+    bits = ~bits;  // Negative values are bitwise inverted
+  } else {
+    bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
+  }
+
+  // Write to buffer in big-endian order (MSB first)
+  for (int i = 0; i < 8; ++i) {
+    dest[1 + i] = static_cast<uint8_t>(bits >> ((7 - i) * 8));
+  }
+
+  // Descending? Invert all 8 bytes (excluding null byte)
+  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
+    for (size_t i = 1; i <= 8; ++i) {
+      dest[i] = ~dest[i];
+    }
+  }
+}
+
+void encode_float_value(uint8_t* dest, const std::optional<float>& val, const SortColumnDefinition& def) {
+  double value;
+  if (val.has_value()) {
+    value = static_cast<double>(val.value());
+  }
+
+  // Use the same encoding as for double, but with float value
+  encode_double_value(dest, std::optional<double>(value), def);
+}
+
+void encode_string_value(uint8_t* dest, const std::optional<pmr_string>& val, const SortColumnDefinition& def) {
+  if (!val.has_value()) {
+    *dest = static_cast<uint8_t>(0xFF);  // set null byte to indicate NULL value
+  } else {
+    *dest = static_cast<uint8_t>(0x00);  // not NULL
+  }
+  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
+    *dest = ~(*dest);  // Nulls first
+  }
+
+  pmr_string value;
+  if (val.has_value()) {
+    value = val.value();
+  } else {
+    value = pmr_string();  // Default empty string
+  }
+
+  size_t copy_len = std::min(value.size(), size_t(STRING_PREFIX));
+  memcpy(dest + 1, value.data(), copy_len);
+  memset(dest + 1 + copy_len, 0, STRING_PREFIX - copy_len);  // pad with zeroes
+
+  // Invert the bytes for descending order
+  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
+    for (size_t i = 1; i < STRING_PREFIX + 1; ++i) {
+      dest[i] = ~dest[i];
+    }
+  }
+}
+
+/**
+ *        ____  _  _  __  ____  ____   __  ____   ___
+ *       (    \( \/ )/  \(    \(___ \ /  \(___ \ / __)
+ *        ) D ( )  /(  O )) D ( / __/(  0 )/ __/(___ \
+ *       (____/(__/  \__/(____/(____) \__/(____)(____/
+ *
+ *
+ * Notes on Segment Accessors:
+ *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
+ *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
+ */
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
