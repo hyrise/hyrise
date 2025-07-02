@@ -9,6 +9,7 @@
 
 namespace hyrise {
 
+template <typename Hasher>
 class Reduce : public AbstractReadOnlyOperator {
   friend class OperatorsReduceTest;
 

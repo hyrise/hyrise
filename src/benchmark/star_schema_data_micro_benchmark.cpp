@@ -1,565 +1,565 @@
-#include <memory>
-#include "benchmark_config.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/window_function_expression.hpp"
-#include "hyrise.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "micro_benchmark_basic_fixture.hpp"
-#include "operators/aggregate_sort.hpp"
-#include "operators/get_table.hpp"
-#include "operators/join_hash.hpp"
-#include "operators/reduce.hpp"
-#include "operators/legacy_reduce.hpp"
-#include "operators/sort.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/table_wrapper.hpp"
-#include "operators/validate.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/operator_task.hpp"
-#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "storage/encoding_type.hpp"
-#include "tpch/tpch_constants.hpp"
-#include "ssb/ssb_table_generator.hpp"
-#include "types.hpp"
-
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
-
-// Defining the base fixture class.
-class ReductionBenchmarks : public MicroBenchmarkBasicFixture {
- public:
-  void SetUp(::benchmark::State& state) override {
-    auto& sm = Hyrise::get().storage_manager;
-
-    if (!sm.has_table("lineorder")) {
-      generate_ssb_data(1.0f);
-    }
-  }
-
-  // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
-  void TearDown(::benchmark::State& /*state*/) override {}
-
-  void generate_ssb_data(const float scale_factor) {
-    const auto benchmark_config = std::make_shared<BenchmarkConfig>();
-    std::cout << "Generating Star Schema data set with scale factor " << scale_factor << " and "
-              << benchmark_config->encoding_config.default_encoding_spec << " encoding:\n";
-
-    const auto executable_path = std::filesystem::current_path();
-    const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
-    Assert(std::filesystem::exists(ssb_dbgen_path / "dbgen"),
-           std::string{"SSB dbgen not found at "} + ssb_dbgen_path.c_str());
-
-    const auto query_path = executable_path / "../resources/benchmark/ssb/queries";
-    const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
-
-    // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
-    auto ssb_data_path_str = std::stringstream{};
-    ssb_data_path_str << "ssb_data/sf-" << std::noshowpoint << scale_factor;
-    std::filesystem::create_directories(ssb_data_path_str.str());
-    // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths.
-    const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str.str());
-
-    std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << '\n';
-    std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';
-
-    std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, benchmark_config)
-      ->generate_and_store();
-  }
-
-  void setup_reduction_q41() {
-    // Benchmarks the semi-join in query 4.1 of the SSB benchmark with a selectivity of 1.
-    // It joins lineorder.lo_orderdate with date.d_datekey.
-
-    // lineorder:
-    // 00 LO_ORDERKEY      pruned
-    // 01 LO_LINENUMBER    pruned
-    // 02 LO_CUSTKEY       0
-    // 03 LO_PARTKEY       1
-    // 04 LO_SUPPKEY       2
-    // 05 LO_ORDERDATE     3
-    // 06 LO_ORDERPRIORITY pruned
-    // 07 LO_SHIPPRIORITY  pruned
-    // 08 LO_QUANTITY      pruned
-    // 09 LO_EXTENDEDPRICE pruned
-    // 10 LO_ORDTOTALPRICE pruned
-    // 11 LO_DISCOUNT      pruned
-    // 12 LO_REVENUE       4
-    // 13 LO_SUPPLYCOST    5 
-    // 14 LO_TAX           pruned
-    // 15 LO_COMMITDATE    pruned
-    // 16 LO_SHIPMODE      pruned
-
-    // date:
-    // 00 D_DATEKEY          0
-    // 01 D_DATE             pruned
-    // 02 D_DAYOFWEEK        pruned
-    // 03 03 D_MONTH         pruned
-    // 04 D_YEAR             1
-    // 05 D_YEARMONTHNUM     pruned
-    // 06 D_YEARMONTH        pruned
-    // 07 D_DAYNUMINWEEK     pruned
-    // 08 D_DAYNUMINMONTH    pruned
-    // 09 D_DAYNUMINYEAR     pruned
-    // 10 D_MONTHNUMINYEAR   pruned
-    // 11 D_WEEKNUMINYEAR    pruned
-    // 12 D_SELLINGSEASON    pruned
-    // 13 D_LASTDAYINWEEKFL  pruned
-    // 14 D_LASTDAYINMONTHFL pruned
-    // 15 D_HOLIDAYFL        pruned
-    // 16 D_WEEKDAYFL        pruned
-
-    const auto pruned_chunk_ids = std::vector<ChunkID>{};
-    const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{6},
-      ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
-
-    _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
-      pruned_column_ids_lineorder);
-    _left_input->never_clear_output();
-    _left_input->execute();
-
-    const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
-      ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
-      ColumnID{14}, ColumnID{15}, ColumnID{16}};
-
-    _right_input = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
-    _right_input->never_clear_output();
-    _right_input->execute();
-  }
-
-  void setup_reduction_q23() {
-    // Benchmarks the semi-join in query 2.3 of the SSB benchmark with a selectivity of 0,00018. It joins
-    // lineorder.lo_partkey with part.p_partkey. Before the join, this TableScan is applied: part.p_brand1 = "MFGR#2221".
-
-    // lineorder:
-    // 00 LO_ORDERKEY      pruned
-    // 01 LO_LINENUMBER    pruned
-    // 02 LO_CUSTKEY       pruned
-    // 03 LO_PARTKEY       0
-    // 04 LO_SUPPKEY       1
-    // 05 LO_ORDERDATE     2
-    // 06 LO_ORDERPRIORITY pruned
-    // 07 LO_SHIPPRIORITY  pruned
-    // 08 LO_QUANTITY      pruned
-    // 09 LO_EXTENDEDPRICE pruned
-    // 10 LO_ORDTOTALPRICE pruned
-    // 11 LO_DISCOUNT      pruned
-    // 12 LO_REVENUE       3
-    // 13 LO_SUPPLYCOST    pruned
-    // 14 LO_TAX           pruned
-    // 15 LO_COMMITDATE    pruned
-    // 16 LO_SHIPMODE      pruned
-
-    // part:
-    // 0 P_PARTKEY   0
-    // 1 P_NAME      pruned
-    // 2 P_MFGR      pruned
-    // 3 P_CATEGORY  pruned
-    // 4 P_BRAND     1
-    // 5 P_COLOR     pruned
-    // 6 P_TYPE      pruned
-    // 7 P_SIZE      pruned
-    // 8 P_CONTAINER pruned
-
-    const auto pruned_chunk_ids = std::vector<ChunkID>{};
-    const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{6},
-      ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
-
-    _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
-      pruned_column_ids_lineorder);
-    _left_input->never_clear_output();
-    _left_input->execute();
-
-    const auto pruned_column_ids_part = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
-                                    ColumnID{6}, ColumnID{7}, ColumnID{8}};
-
-    const auto get_table_part = std::make_shared<GetTable>("part", pruned_chunk_ids, pruned_column_ids_part);
-    get_table_part->never_clear_output();
-    get_table_part->execute();
-
-    const auto operand = pqp_column_(ColumnID{1}, get_table_part->get_output()->column_data_type(ColumnID{1}),
-      get_table_part->get_output()->column_is_nullable(ColumnID{1}),
-      get_table_part->get_output()->column_name(ColumnID{1}));
-    const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand,
-      value_("MFGR#2221"));
-
-    _right_input = std::make_shared<TableScan>(get_table_part, predicate);
-    _right_input->never_clear_output();
-    _right_input->execute();
-
-    const auto scan_selectivity = static_cast<double>(_right_input->get_output()->row_count()) /
-      static_cast<double>(get_table_part->get_output()->row_count());
-    Assert(scan_selectivity > 0.0005 && scan_selectivity < 0.002, "Selectivity:" + std::to_string(scan_selectivity));
-  }
-
-  void setup_reduction_q31 () {
-    // Benchmarks the semi-join in query 3.1 of the SSB benchmark with a selectivity of 0.91. It joins
-    // lineorder.lo_orderdate with date.d_datekey. Before the join, this TableScan is applied to date:
-    // d_year BETWEEN INCLUSIVE 1992 AND 1997.
-
-    // lineorder:
-    // 00 LO_ORDERKEY      pruned
-    // 01 LO_LINENUMBER    pruned
-    // 02 LO_CUSTKEY       0
-    // 03 LO_PARTKEY       pruned
-    // 04 LO_SUPPKEY       1
-    // 05 LO_ORDERDATE     2
-    // 06 LO_ORDERPRIORITY pruned
-    // 07 LO_SHIPPRIORITY  pruned
-    // 08 LO_QUANTITY      pruned
-    // 09 LO_EXTENDEDPRICE pruned
-    // 10 LO_ORDTOTALPRICE pruned
-    // 11 LO_DISCOUNT      pruned
-    // 12 LO_REVENUE       3
-    // 13 LO_SUPPLYCOST    pruned
-    // 14 LO_TAX           pruned
-    // 15 LO_COMMITDATE    pruned
-    // 16 LO_SHIPMODE      pruned
-
-    // date:
-    // 00 D_DATEKEY          0
-    // 01 D_DATE             pruned
-    // 02 D_DAYOFWEEK        pruned
-    // 03 03 D_MONTH         pruned
-    // 04 D_YEAR             1
-    // 05 D_YEARMONTHNUM     pruned
-    // 06 D_YEARMONTH        pruned
-    // 07 D_DAYNUMINWEEK     pruned
-    // 08 D_DAYNUMINMONTH    pruned
-    // 09 D_DAYNUMINYEAR     pruned
-    // 10 D_MONTHNUMINYEAR   pruned
-    // 11 D_WEEKNUMINYEAR    pruned
-    // 12 D_SELLINGSEASON    pruned
-    // 13 D_LASTDAYINWEEKFL  pruned
-    // 14 D_LASTDAYINMONTHFL pruned
-    // 15 D_HOLIDAYFL        pruned
-    // 16 D_WEEKDAYFL        pruned
-
-    const auto pruned_chunk_ids = std::vector<ChunkID>{};
-    const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{3}, ColumnID{6},
-      ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{13}, ColumnID{14}, ColumnID{15},
-      ColumnID{16}};
-
-    _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
-      pruned_column_ids_lineorder);
-    _left_input->never_clear_output();
-    _left_input->execute();
-
-    const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
-      ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
-      ColumnID{14}, ColumnID{15}, ColumnID{16}};
-
-    const auto get_table_date = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
-    get_table_date->never_clear_output();
-    get_table_date->execute();
-
-    const auto operand = pqp_column_(ColumnID{1}, get_table_date->get_output()->column_data_type(ColumnID{1}),
-      get_table_date->get_output()->column_is_nullable(ColumnID{1}),
-      get_table_date->get_output()->column_name(ColumnID{1}));
-    const auto predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenInclusive, operand,
-      value_(1992), value_(1997));
-
-    _right_input = std::make_shared<TableScan>(get_table_date, predicate);
-    _right_input->never_clear_output();
-    _right_input->execute();
-
-    const auto scan_selectivity = static_cast<double>(_right_input->get_output()->row_count()) /
-      static_cast<double>(get_table_date->get_output()->row_count());
-    Assert(scan_selectivity > 0.8 && scan_selectivity < 0.9, "Selectivity:" + std::to_string(scan_selectivity));
-  }
-
-  void setup_synthetic_tables_uniform(const double left_min, const double right_min, const double left_max, const double right_max, const size_t left_num_rows, const size_t right_num_rows, const ChunkOffset left_chunk_size = Chunk::DEFAULT_SIZE, const ChunkOffset right_chunk_size = Chunk::DEFAULT_SIZE) {
-    auto table_generator = std::make_shared<SyntheticTableGenerator>();
-    auto uniform_distribution = ColumnDataDistribution::make_uniform_config(left_min, left_max);
-
-    auto left_table = table_generator->generate_table(
-        {{uniform_distribution, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary}, "column_1"}},
-        left_num_rows,
-        left_chunk_size
-    );
-
-    auto right_table = table_generator->generate_table(
-        {{uniform_distribution, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary}, "column_1"}},
-        right_num_rows,
-        right_chunk_size
-    );
-
-    _left_input = std::make_shared<TableWrapper>(left_table);
-    _left_input->never_clear_output();
-    _left_input->execute();
-
-    _right_input = std::make_shared<TableWrapper>(right_table);
-    _right_input->never_clear_output();
-    _right_input->execute();
-  }
-
-  std::shared_ptr<AbstractReadOnlyOperator> _left_input;
-  std::shared_ptr<AbstractReadOnlyOperator> _right_input;
-};
-
-BENCHMARK_F(ReductionBenchmarks, WorstCaseSemiJoin)(benchmark::State& state) {
-  setup_reduction_q41();
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
-    OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
-
-  join_dryrun->execute();
-  Assert(join_dryrun->get_output()->row_count() == _left_input->get_output()->row_count(),
-    "Semi join must not filter anything.");
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
-  }
-}
-
-BENCHMARK_F(ReductionBenchmarks, BestCaseSemiJoin)(benchmark::State& state) {
-  setup_reduction_q23();
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
-    OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
-    static_cast<double>(_left_input->get_output()->row_count());
-  Assert(join_selectivity > 0.00005 && join_selectivity < 0.0015, "Selectivity:" + std::to_string(join_selectivity));
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
-  }
-}
-
-BENCHMARK_F(ReductionBenchmarks, BadCaseSemiJoin)(benchmark::State& state) {
-  setup_reduction_q31();
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
-    OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals});
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
-    static_cast<double>(_left_input->get_output()->row_count());
-  Assert(join_selectivity > 0.86 && join_selectivity < 0.96, "Selectivity:" + std::to_string(join_selectivity));
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<JoinHash>(
-        _left_input, _right_input, JoinMode::Semi,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
-  }
-}
-
-BENCHMARK_DEFINE_F(ReductionBenchmarks, WorstCasePrototype)(benchmark::State& state) {
-  setup_reduction_q41();
-  const auto filter_size = state.range(0);
-  const auto hash_count = state.range(1);
-  setenv("SIZE", std::to_string(filter_size).c_str(), 1);
-  setenv("HASH", std::to_string(hash_count).c_str(), 1);
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<Reduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
-    join->execute();
-  }
-}
-
-BENCHMARK_DEFINE_F(ReductionBenchmarks, BestCasePrototype)(benchmark::State& state) {
-  setup_reduction_q23();
-  const auto filter_size = state.range(0);
-  const auto hash_count = state.range(1);
-  setenv("SIZE", std::to_string(filter_size).c_str(), 1);
-  setenv("HASH", std::to_string(hash_count).c_str(), 1);
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<Reduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-    join->execute();
-  }
-}
-
-BENCHMARK_DEFINE_F(ReductionBenchmarks, BadCasePrototype)(benchmark::State& state) {
-  setup_reduction_q31();
-  const auto filter_size = state.range(0);
-  const auto hash_count = state.range(1);
-  setenv("SIZE", std::to_string(filter_size).c_str(), 1);
-  setenv("HASH", std::to_string(hash_count).c_str(), 1);
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<Reduce>(_left_input, _right_input,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
-    join->execute();
-  }
-}
-
-BENCHMARK_F(ReductionBenchmarks, WorstCaseLegacy)(benchmark::State& state) {
-  setup_reduction_q41();
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<LegacyReduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<LegacyReduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
-    join->execute();
-  }
-}
-
-BENCHMARK_F(ReductionBenchmarks, BestCaseLegacy)(benchmark::State& state) {
-  setup_reduction_q23();
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<LegacyReduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<LegacyReduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-    join->execute();
-  }
-}
-
-BENCHMARK_F(ReductionBenchmarks, BadCaseLegacy)(benchmark::State& state) {
-  setup_reduction_q31();
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<LegacyReduce>(
-        _left_input, _right_input,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<LegacyReduce>(
-        _left_input, _right_input,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
-    join->execute();
-  }
-}
-
-BENCHMARK_DEFINE_F(ReductionBenchmarks, SyntheticUniformPrototype)(benchmark::State& state) {
-  setup_synthetic_tables_uniform(static_cast<double>(state.range(2)), static_cast<double>(state.range(3)), static_cast<double>(state.range(4)), static_cast<double>(state.range(5)), state.range(6), state.range(7));
-
-  const auto filter_size = state.range(0);
-  const auto hash_count = state.range(1);
-  setenv("SIZE", std::to_string(filter_size).c_str(), 1);
-  setenv("HASH", std::to_string(hash_count).c_str(), 1);
-
-  Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-  Assert(_left_input->executed() && _right_input->executed(),
-         "Left and right input must be executed before running the benchmark.");
-
-  const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-  join_dryrun->execute();
-
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-  for (auto _ : state) {
-    const auto join = std::make_shared<Reduce>(_left_input, _right_input,
-      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-    join->execute();
-  }
-}
-
-BENCHMARK_REGISTER_F(ReductionBenchmarks, WorstCasePrototype)
-  ->ArgsProduct({
-    {18, 19, 20},
-    {1, 2, 3}
-  });
-
-BENCHMARK_REGISTER_F(ReductionBenchmarks, BestCasePrototype)
-  ->ArgsProduct({
-    {18, 19, 20},
-    {1, 2, 3}
-  });
-
-BENCHMARK_REGISTER_F(ReductionBenchmarks, BadCasePrototype)
-  ->ArgsProduct({
-    {18, 19, 20},
-    {1, 2, 3}
-  });
-
-BENCHMARK_REGISTER_F(ReductionBenchmarks, SyntheticUniformPrototype)
-  ->Args({20, 3, 0, 0, 100, 1000, 10000000, 100000});
-
-}  // namespace hyrise
+// #include <memory>
+// #include "benchmark_config.hpp"
+// #include "expression/expression_functional.hpp"
+// #include "expression/window_function_expression.hpp"
+// #include "hyrise.hpp"
+// #include "logical_query_plan/join_node.hpp"
+// #include "logical_query_plan/lqp_translator.hpp"
+// #include "logical_query_plan/predicate_node.hpp"
+// #include "logical_query_plan/projection_node.hpp"
+// #include "logical_query_plan/stored_table_node.hpp"
+// #include "micro_benchmark_basic_fixture.hpp"
+// #include "operators/aggregate_sort.hpp"
+// #include "operators/get_table.hpp"
+// #include "operators/join_hash.hpp"
+// #include "operators/reduce.hpp"
+// #include "operators/legacy_reduce.hpp"
+// #include "operators/sort.hpp"
+// #include "operators/table_scan.hpp"
+// #include "operators/table_wrapper.hpp"
+// #include "operators/validate.hpp"
+// #include "scheduler/node_queue_scheduler.hpp"
+// #include "scheduler/operator_task.hpp"
+// #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+// #include "storage/encoding_type.hpp"
+// #include "tpch/tpch_constants.hpp"
+// #include "ssb/ssb_table_generator.hpp"
+// #include "types.hpp"
+
+// namespace hyrise {
+
+// using namespace expression_functional;  // NOLINT(build/namespaces)
+
+// // Defining the base fixture class.
+// class ReductionBenchmarks : public MicroBenchmarkBasicFixture {
+//  public:
+//   void SetUp(::benchmark::State& state) override {
+//     auto& sm = Hyrise::get().storage_manager;
+
+//     if (!sm.has_table("lineorder")) {
+//       generate_ssb_data(1.0f);
+//     }
+//   }
+
+//   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
+//   void TearDown(::benchmark::State& /*state*/) override {}
+
+//   void generate_ssb_data(const float scale_factor) {
+//     const auto benchmark_config = std::make_shared<BenchmarkConfig>();
+//     std::cout << "Generating Star Schema data set with scale factor " << scale_factor << " and "
+//               << benchmark_config->encoding_config.default_encoding_spec << " encoding:\n";
+
+//     const auto executable_path = std::filesystem::current_path();
+//     const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
+//     Assert(std::filesystem::exists(ssb_dbgen_path / "dbgen"),
+//            std::string{"SSB dbgen not found at "} + ssb_dbgen_path.c_str());
+
+//     const auto query_path = executable_path / "../resources/benchmark/ssb/queries";
+//     const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
+
+//     // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
+//     auto ssb_data_path_str = std::stringstream{};
+//     ssb_data_path_str << "ssb_data/sf-" << std::noshowpoint << scale_factor;
+//     std::filesystem::create_directories(ssb_data_path_str.str());
+//     // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths.
+//     const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str.str());
+
+//     std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << '\n';
+//     std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';
+
+//     std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, benchmark_config)
+//       ->generate_and_store();
+//   }
+
+//   void setup_reduction_q41() {
+//     // Benchmarks the semi-join in query 4.1 of the SSB benchmark with a selectivity of 1.
+//     // It joins lineorder.lo_orderdate with date.d_datekey.
+
+//     // lineorder:
+//     // 00 LO_ORDERKEY      pruned
+//     // 01 LO_LINENUMBER    pruned
+//     // 02 LO_CUSTKEY       0
+//     // 03 LO_PARTKEY       1
+//     // 04 LO_SUPPKEY       2
+//     // 05 LO_ORDERDATE     3
+//     // 06 LO_ORDERPRIORITY pruned
+//     // 07 LO_SHIPPRIORITY  pruned
+//     // 08 LO_QUANTITY      pruned
+//     // 09 LO_EXTENDEDPRICE pruned
+//     // 10 LO_ORDTOTALPRICE pruned
+//     // 11 LO_DISCOUNT      pruned
+//     // 12 LO_REVENUE       4
+//     // 13 LO_SUPPLYCOST    5 
+//     // 14 LO_TAX           pruned
+//     // 15 LO_COMMITDATE    pruned
+//     // 16 LO_SHIPMODE      pruned
+
+//     // date:
+//     // 00 D_DATEKEY          0
+//     // 01 D_DATE             pruned
+//     // 02 D_DAYOFWEEK        pruned
+//     // 03 03 D_MONTH         pruned
+//     // 04 D_YEAR             1
+//     // 05 D_YEARMONTHNUM     pruned
+//     // 06 D_YEARMONTH        pruned
+//     // 07 D_DAYNUMINWEEK     pruned
+//     // 08 D_DAYNUMINMONTH    pruned
+//     // 09 D_DAYNUMINYEAR     pruned
+//     // 10 D_MONTHNUMINYEAR   pruned
+//     // 11 D_WEEKNUMINYEAR    pruned
+//     // 12 D_SELLINGSEASON    pruned
+//     // 13 D_LASTDAYINWEEKFL  pruned
+//     // 14 D_LASTDAYINMONTHFL pruned
+//     // 15 D_HOLIDAYFL        pruned
+//     // 16 D_WEEKDAYFL        pruned
+
+//     const auto pruned_chunk_ids = std::vector<ChunkID>{};
+//     const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{6},
+//       ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
+
+//     _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
+//       pruned_column_ids_lineorder);
+//     _left_input->never_clear_output();
+//     _left_input->execute();
+
+//     const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
+//       ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
+//       ColumnID{14}, ColumnID{15}, ColumnID{16}};
+
+//     _right_input = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
+//     _right_input->never_clear_output();
+//     _right_input->execute();
+//   }
+
+//   void setup_reduction_q23() {
+//     // Benchmarks the semi-join in query 2.3 of the SSB benchmark with a selectivity of 0,00018. It joins
+//     // lineorder.lo_partkey with part.p_partkey. Before the join, this TableScan is applied: part.p_brand1 = "MFGR#2221".
+
+//     // lineorder:
+//     // 00 LO_ORDERKEY      pruned
+//     // 01 LO_LINENUMBER    pruned
+//     // 02 LO_CUSTKEY       pruned
+//     // 03 LO_PARTKEY       0
+//     // 04 LO_SUPPKEY       1
+//     // 05 LO_ORDERDATE     2
+//     // 06 LO_ORDERPRIORITY pruned
+//     // 07 LO_SHIPPRIORITY  pruned
+//     // 08 LO_QUANTITY      pruned
+//     // 09 LO_EXTENDEDPRICE pruned
+//     // 10 LO_ORDTOTALPRICE pruned
+//     // 11 LO_DISCOUNT      pruned
+//     // 12 LO_REVENUE       3
+//     // 13 LO_SUPPLYCOST    pruned
+//     // 14 LO_TAX           pruned
+//     // 15 LO_COMMITDATE    pruned
+//     // 16 LO_SHIPMODE      pruned
+
+//     // part:
+//     // 0 P_PARTKEY   0
+//     // 1 P_NAME      pruned
+//     // 2 P_MFGR      pruned
+//     // 3 P_CATEGORY  pruned
+//     // 4 P_BRAND     1
+//     // 5 P_COLOR     pruned
+//     // 6 P_TYPE      pruned
+//     // 7 P_SIZE      pruned
+//     // 8 P_CONTAINER pruned
+
+//     const auto pruned_chunk_ids = std::vector<ChunkID>{};
+//     const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{6},
+//       ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{14}, ColumnID{15}, ColumnID{16}};
+
+//     _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
+//       pruned_column_ids_lineorder);
+//     _left_input->never_clear_output();
+//     _left_input->execute();
+
+//     const auto pruned_column_ids_part = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
+//                                     ColumnID{6}, ColumnID{7}, ColumnID{8}};
+
+//     const auto get_table_part = std::make_shared<GetTable>("part", pruned_chunk_ids, pruned_column_ids_part);
+//     get_table_part->never_clear_output();
+//     get_table_part->execute();
+
+//     const auto operand = pqp_column_(ColumnID{1}, get_table_part->get_output()->column_data_type(ColumnID{1}),
+//       get_table_part->get_output()->column_is_nullable(ColumnID{1}),
+//       get_table_part->get_output()->column_name(ColumnID{1}));
+//     const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand,
+//       value_("MFGR#2221"));
+
+//     _right_input = std::make_shared<TableScan>(get_table_part, predicate);
+//     _right_input->never_clear_output();
+//     _right_input->execute();
+
+//     const auto scan_selectivity = static_cast<double>(_right_input->get_output()->row_count()) /
+//       static_cast<double>(get_table_part->get_output()->row_count());
+//     Assert(scan_selectivity > 0.0005 && scan_selectivity < 0.002, "Selectivity:" + std::to_string(scan_selectivity));
+//   }
+
+//   void setup_reduction_q31 () {
+//     // Benchmarks the semi-join in query 3.1 of the SSB benchmark with a selectivity of 0.91. It joins
+//     // lineorder.lo_orderdate with date.d_datekey. Before the join, this TableScan is applied to date:
+//     // d_year BETWEEN INCLUSIVE 1992 AND 1997.
+
+//     // lineorder:
+//     // 00 LO_ORDERKEY      pruned
+//     // 01 LO_LINENUMBER    pruned
+//     // 02 LO_CUSTKEY       0
+//     // 03 LO_PARTKEY       pruned
+//     // 04 LO_SUPPKEY       1
+//     // 05 LO_ORDERDATE     2
+//     // 06 LO_ORDERPRIORITY pruned
+//     // 07 LO_SHIPPRIORITY  pruned
+//     // 08 LO_QUANTITY      pruned
+//     // 09 LO_EXTENDEDPRICE pruned
+//     // 10 LO_ORDTOTALPRICE pruned
+//     // 11 LO_DISCOUNT      pruned
+//     // 12 LO_REVENUE       3
+//     // 13 LO_SUPPLYCOST    pruned
+//     // 14 LO_TAX           pruned
+//     // 15 LO_COMMITDATE    pruned
+//     // 16 LO_SHIPMODE      pruned
+
+//     // date:
+//     // 00 D_DATEKEY          0
+//     // 01 D_DATE             pruned
+//     // 02 D_DAYOFWEEK        pruned
+//     // 03 03 D_MONTH         pruned
+//     // 04 D_YEAR             1
+//     // 05 D_YEARMONTHNUM     pruned
+//     // 06 D_YEARMONTH        pruned
+//     // 07 D_DAYNUMINWEEK     pruned
+//     // 08 D_DAYNUMINMONTH    pruned
+//     // 09 D_DAYNUMINYEAR     pruned
+//     // 10 D_MONTHNUMINYEAR   pruned
+//     // 11 D_WEEKNUMINYEAR    pruned
+//     // 12 D_SELLINGSEASON    pruned
+//     // 13 D_LASTDAYINWEEKFL  pruned
+//     // 14 D_LASTDAYINMONTHFL pruned
+//     // 15 D_HOLIDAYFL        pruned
+//     // 16 D_WEEKDAYFL        pruned
+
+//     const auto pruned_chunk_ids = std::vector<ChunkID>{};
+//     const auto pruned_column_ids_lineorder = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{3}, ColumnID{6},
+//       ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{13}, ColumnID{14}, ColumnID{15},
+//       ColumnID{16}};
+
+//     _left_input = std::make_shared<GetTable>("lineorder", pruned_chunk_ids,
+//       pruned_column_ids_lineorder);
+//     _left_input->never_clear_output();
+//     _left_input->execute();
+
+//     const auto pruned_column_ids_date = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5},
+//       ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}, ColumnID{11}, ColumnID{12}, ColumnID{13},
+//       ColumnID{14}, ColumnID{15}, ColumnID{16}};
+
+//     const auto get_table_date = std::make_shared<GetTable>("date", pruned_chunk_ids, pruned_column_ids_date);
+//     get_table_date->never_clear_output();
+//     get_table_date->execute();
+
+//     const auto operand = pqp_column_(ColumnID{1}, get_table_date->get_output()->column_data_type(ColumnID{1}),
+//       get_table_date->get_output()->column_is_nullable(ColumnID{1}),
+//       get_table_date->get_output()->column_name(ColumnID{1}));
+//     const auto predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenInclusive, operand,
+//       value_(1992), value_(1997));
+
+//     _right_input = std::make_shared<TableScan>(get_table_date, predicate);
+//     _right_input->never_clear_output();
+//     _right_input->execute();
+
+//     const auto scan_selectivity = static_cast<double>(_right_input->get_output()->row_count()) /
+//       static_cast<double>(get_table_date->get_output()->row_count());
+//     Assert(scan_selectivity > 0.8 && scan_selectivity < 0.9, "Selectivity:" + std::to_string(scan_selectivity));
+//   }
+
+//   void setup_synthetic_tables_uniform(const double left_min, const double right_min, const double left_max, const double right_max, const size_t left_num_rows, const size_t right_num_rows, const ChunkOffset left_chunk_size = Chunk::DEFAULT_SIZE, const ChunkOffset right_chunk_size = Chunk::DEFAULT_SIZE) {
+//     auto table_generator = std::make_shared<SyntheticTableGenerator>();
+//     auto uniform_distribution = ColumnDataDistribution::make_uniform_config(left_min, left_max);
+
+//     auto left_table = table_generator->generate_table(
+//         {{uniform_distribution, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary}, "column_1"}},
+//         left_num_rows,
+//         left_chunk_size
+//     );
+
+//     auto right_table = table_generator->generate_table(
+//         {{uniform_distribution, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary}, "column_1"}},
+//         right_num_rows,
+//         right_chunk_size
+//     );
+
+//     _left_input = std::make_shared<TableWrapper>(left_table);
+//     _left_input->never_clear_output();
+//     _left_input->execute();
+
+//     _right_input = std::make_shared<TableWrapper>(right_table);
+//     _right_input->never_clear_output();
+//     _right_input->execute();
+//   }
+
+//   std::shared_ptr<AbstractReadOnlyOperator> _left_input;
+//   std::shared_ptr<AbstractReadOnlyOperator> _right_input;
+// };
+
+// BENCHMARK_F(ReductionBenchmarks, WorstCaseSemiJoin)(benchmark::State& state) {
+//   setup_reduction_q41();
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+//     OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
+
+//   join_dryrun->execute();
+//   Assert(join_dryrun->get_output()->row_count() == _left_input->get_output()->row_count(),
+//     "Semi join must not filter anything.");
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals});
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_F(ReductionBenchmarks, BestCaseSemiJoin)(benchmark::State& state) {
+//   setup_reduction_q23();
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+//     OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
+//     static_cast<double>(_left_input->get_output()->row_count());
+//   Assert(join_selectivity > 0.00005 && join_selectivity < 0.0015, "Selectivity:" + std::to_string(join_selectivity));
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_F(ReductionBenchmarks, BadCaseSemiJoin)(benchmark::State& state) {
+//   setup_reduction_q31();
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<JoinHash>(_left_input, _right_input, JoinMode::Semi,
+//     OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals});
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   const auto join_selectivity = static_cast<double>(join_dryrun->get_output()->row_count()) /
+//     static_cast<double>(_left_input->get_output()->row_count());
+//   Assert(join_selectivity > 0.86 && join_selectivity < 0.96, "Selectivity:" + std::to_string(join_selectivity));
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<JoinHash>(
+//         _left_input, _right_input, JoinMode::Semi,
+//         OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals});
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_DEFINE_F(ReductionBenchmarks, WorstCasePrototype)(benchmark::State& state) {
+//   setup_reduction_q41();
+//   const auto filter_size = state.range(0);
+//   const auto hash_count = state.range(1);
+//   setenv("SIZE", std::to_string(filter_size).c_str(), 1);
+//   setenv("HASH", std::to_string(hash_count).c_str(), 1);
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<Reduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_DEFINE_F(ReductionBenchmarks, BestCasePrototype)(benchmark::State& state) {
+//   setup_reduction_q23();
+//   const auto filter_size = state.range(0);
+//   const auto hash_count = state.range(1);
+//   setenv("SIZE", std::to_string(filter_size).c_str(), 1);
+//   setenv("HASH", std::to_string(hash_count).c_str(), 1);
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<Reduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_DEFINE_F(ReductionBenchmarks, BadCasePrototype)(benchmark::State& state) {
+//   setup_reduction_q31();
+//   const auto filter_size = state.range(0);
+//   const auto hash_count = state.range(1);
+//   setenv("SIZE", std::to_string(filter_size).c_str(), 1);
+//   setenv("HASH", std::to_string(hash_count).c_str(), 1);
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
+//         OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<Reduce>(_left_input, _right_input,
+//         OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_F(ReductionBenchmarks, WorstCaseLegacy)(benchmark::State& state) {
+//   setup_reduction_q41();
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<LegacyReduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<LegacyReduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals}, false);
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_F(ReductionBenchmarks, BestCaseLegacy)(benchmark::State& state) {
+//   setup_reduction_q23();
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<LegacyReduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<LegacyReduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_F(ReductionBenchmarks, BadCaseLegacy)(benchmark::State& state) {
+//   setup_reduction_q31();
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<LegacyReduce>(
+//         _left_input, _right_input,
+//         OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<LegacyReduce>(
+//         _left_input, _right_input,
+//         OperatorJoinPredicate{ColumnIDPair(ColumnID{2}, ColumnID{0}), PredicateCondition::Equals}, false);
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_DEFINE_F(ReductionBenchmarks, SyntheticUniformPrototype)(benchmark::State& state) {
+//   setup_synthetic_tables_uniform(static_cast<double>(state.range(2)), static_cast<double>(state.range(3)), static_cast<double>(state.range(4)), static_cast<double>(state.range(5)), state.range(6), state.range(7));
+
+//   const auto filter_size = state.range(0);
+//   const auto hash_count = state.range(1);
+//   setenv("SIZE", std::to_string(filter_size).c_str(), 1);
+//   setenv("HASH", std::to_string(hash_count).c_str(), 1);
+
+//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
+//   Assert(_left_input->executed() && _right_input->executed(),
+//          "Left and right input must be executed before running the benchmark.");
+
+//   const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+//   join_dryrun->execute();
+
+//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
+
+//   for (auto _ : state) {
+//     const auto join = std::make_shared<Reduce>(_left_input, _right_input,
+//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_REGISTER_F(ReductionBenchmarks, WorstCasePrototype)
+//   ->ArgsProduct({
+//     {18, 19, 20},
+//     {1, 2, 3}
+//   });
+
+// BENCHMARK_REGISTER_F(ReductionBenchmarks, BestCasePrototype)
+//   ->ArgsProduct({
+//     {18, 19, 20},
+//     {1, 2, 3}
+//   });
+
+// BENCHMARK_REGISTER_F(ReductionBenchmarks, BadCasePrototype)
+//   ->ArgsProduct({
+//     {18, 19, 20},
+//     {1, 2, 3}
+//   });
+
+// BENCHMARK_REGISTER_F(ReductionBenchmarks, SyntheticUniformPrototype)
+//   ->Args({20, 3, 0, 0, 100, 1000, 10000000, 100000});
+
+// }  // namespace hyrise

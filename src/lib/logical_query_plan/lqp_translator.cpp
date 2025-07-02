@@ -79,6 +79,57 @@
 #include "utils/performance_warning.hpp"
 #include "utils/pruning_utils.hpp"
 
+namespace {
+
+template <typename T, uint32_t p = 16>
+class Hasher {
+ public:
+  using Ty = typename std::remove_cv<T>::type;
+
+  uint64_t _multiplier = 0x9E3779B97F4A7C15;
+
+  uint32_t hash0(const Ty& key) {
+    uint32_t knuth = 596572387u;  // Peter 1
+
+    uint32_t casted_key = 0;
+    if constexpr (std::is_same_v<Ty, int32_t>) {
+      casted_key = static_cast<uint32_t>(key) + 1;
+    } else {
+      Fail("Unsupported type.");
+    }
+
+    return (casted_key * knuth) >> (32 - p);
+  }
+
+  uint32_t hash1(const Ty& key) {
+    uint32_t knuth = 370248451u;  // Peter 1
+
+    uint32_t casted_key = 0;
+    if constexpr (std::is_same_v<Ty, int32_t>) {
+      casted_key = static_cast<uint32_t>(key) + 1;
+    } else {
+      Fail("Unsupported type.");
+    }
+
+    return (casted_key * knuth) >> (32 - p);
+  }
+
+  uint32_t hash2(const Ty& key) {
+    uint32_t knuth = 2654435769u;  // Peter 1
+
+    uint32_t casted_key = 0;
+    if constexpr (std::is_same_v<Ty, int32_t>) {
+      casted_key = static_cast<uint32_t>(key) + 1;
+    } else {
+      Fail("Unsupported type.");
+    }
+
+    return (casted_key * knuth) >> (32 - p);
+  }
+};
+
+}  // namespace
+
 namespace hyrise {
 
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -382,12 +433,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   auto secondary_join_predicates =
       std::vector<OperatorJoinPredicate>(join_predicates.cbegin() + 1, join_predicates.cend());
 
+  const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
+  const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
+
   if (join_node->join_mode == JoinMode::Semi && join_node->is_semi_reduction()) {
     // const char* env = std::getenv("REDUCER");
     // if (env) {
       // const auto env_string = std::string{env};
       // if (env_string == "prototype") {
-        return std::make_shared<Reduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
+        resolve_data_type(left_data_type, [&](const auto data_type) {
+          using ColumnDataType = typename decltype(data_type)::type;
+          return std::make_shared<Reduce<std::hash<ColumnDataType>>>(left_input_operator, right_input_operator, primary_join_predicate, false);
+        });
       // } else if (env_string == "legacy") {
         // return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
       // } else if (env_string != "semi") {
@@ -397,9 +454,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   }
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};
-
-  const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
-  const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
