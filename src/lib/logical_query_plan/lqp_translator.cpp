@@ -441,10 +441,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     // if (env) {
       // const auto env_string = std::string{env};
       // if (env_string == "prototype") {
-        resolve_data_type(left_data_type, [&](const auto data_type) {
-          using ColumnDataType = typename decltype(data_type)::type;
-          return std::make_shared<Reduce<std::hash<ColumnDataType>>>(left_input_operator, right_input_operator, primary_join_predicate, false);
-        });
+        return std::make_shared<Reduce<std::hash, 20>>(left_input_operator, right_input_operator, primary_join_predicate, false);
       // } else if (env_string == "legacy") {
         // return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
       // } else if (env_string != "semi") {
