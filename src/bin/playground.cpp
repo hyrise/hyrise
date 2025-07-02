@@ -4,10 +4,9 @@
 #include <random>
 
 // This playground only compiles on Linux as we require Linux's perf and perfetto.
+#include "hyrise.hpp"
 #include "perfcpp/event_counter.h"
 #include "perfetto.h"
-
-#include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk.hpp"
@@ -18,21 +17,15 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 constexpr auto STRING_COUNT = size_t{100'000'000};  // Careful: 100M has an RSS of ~30GB.
 
-
 // Define trace categories
-PERFETTO_DEFINE_CATEGORIES(
-    perfetto::Category("Sort")
-        .SetDescription("Benchmark parallel sorting"),
-);
+PERFETTO_DEFINE_CATEGORIES(perfetto::Category("Sort").SetDescription("Benchmark parallel sorting"));
 
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
-
 
 std::vector<std::string> get_top_by_stdsort(const size_t k, std::vector<std::string>& input) {
   std::ranges::sort(input);
   return std::vector<std::string>(input.begin(), input.begin() + k);
 }
-
 
 std::vector<std::string> get_top_by_indexsort(const size_t k, std::vector<std::string>& input) {
   static_assert(std::numeric_limits<uint32_t>::max() >= STRING_COUNT);
@@ -79,7 +72,6 @@ std::vector<std::string> get_top_by_priorityqueue(const size_t k, std::vector<st
   return result;
 }
 
-
 template <typename Iterator>
 void merge_sort(Iterator first, Iterator last) {
   TRACE_EVENT("Sort", "MergeSort");
@@ -117,12 +109,12 @@ void parallel_merge_sort(std::vector<std::string>& input) {
   Hyrise::get().scheduler()->finish();
 }
 
-std::vector<std::string> get_std_strings(auto& generator,
-                                         auto& random_distribution) {
+std::vector<std::string> get_std_strings(auto& generator, auto& random_distribution) {
   auto std_strings = std::vector<std::string>(STRING_COUNT);
   for (auto index = size_t{0}; index < STRING_COUNT; ++index) {
     // Should always exceed SSO. Expensive comparisons.
-    std_strings[index] = std::string{"2042-02-31 10:10:10_"} + std::to_string(random_distribution(generator)) + "_remainderstring";
+    std_strings[index] =
+        std::string{"2042-02-31 10:10:10_"} + std::to_string(random_distribution(generator)) + "_remainderstring";
   }
 
   std::ranges::shuffle(std_strings, generator);
@@ -138,7 +130,6 @@ int main() {
   auto compare_result_data_copy = base_data;
   const auto compare_result = get_top_by_stdsort(100, compare_result_data_copy);
 
-
   /**
    * The following usage of perf-cpp and Perfetto is just to show case how to use these tools. Feel free to add helper
    * methods, classes, ... whatever you need.
@@ -149,15 +140,15 @@ int main() {
   auto event_counter = perf::EventCounter{counters};
 
   // Specify hardware events to count.
-  event_counter.add({"seconds", "instructions", "cycles", "cache-misses", "dTLB-miss-ratio"});  // Not possible on the VM server.
+  event_counter.add(
+      {"seconds", "instructions", "cycles", "cache-misses", "dTLB-miss-ratio"});  // Not possible on the VM server.
   // event_counter.add("seconds");  // Runs on the VM server. Not too helpful though.
 
-  //const auto functions = std::vector<std::pair<std::string, std::function<std::vector<std::string>(const size_t, std::vector<std::string>&)>>{{"get_top_by_stdsort", get_top_by_stdsort}, {"get_top_by_stdsort", get_top_by_indexsort}, {"get_top_by_stdsort", get_top_by_priorityqueue}};
-  const auto functions = std::vector<std::pair<std::string, std::function<std::vector<std::string>(const size_t, std::vector<std::string>&)>>>{
-    {"get_top_by_stdsort", get_top_by_stdsort},
-    {"get_top_by_indexsort", get_top_by_indexsort},
-    {"get_top_by_priorityqueue", get_top_by_priorityqueue}
-};
+  const auto functions = std::vector<
+      std::pair<std::string, std::function<std::vector<std::string>(const size_t, std::vector<std::string>&)>>>{
+      {"get_top_by_stdsort", get_top_by_stdsort},
+      {"get_top_by_indexsort", get_top_by_indexsort},
+      {"get_top_by_priorityqueue", get_top_by_priorityqueue}};
 
   for (const auto& [function_name, function] : functions) {
     auto benchmark_data = base_data;
@@ -176,7 +167,7 @@ int main() {
     std::cout << ">>> " << function_name << '\n';
     const auto perf_result = event_counter.result();
     for (const auto& [event_name, value] : perf_result) {
-        std::cout << event_name << ": " << value << '\n';
+      std::cout << event_name << ": " << value << '\n';
     }
     std::cout << '\n';
   }
@@ -212,7 +203,6 @@ int main() {
   output.open("dyod2025_mergesort.perfetto-trace", std::ios::out | std::ios::binary);
   output.write(&trace_data[0], trace_data.size());
   output.close();
-  
+
   return 0;
 }
-

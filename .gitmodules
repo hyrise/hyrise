@@ -62,3 +62,6 @@
 [submodule "third_party/perfetto"]
 	path = third_party/perfetto
 	url = https://github.com/google/perfetto.git
+[submodule "third_party/ips4o"]
+	path = third_party/ips4o
+	url = https://github.com/ips4o/ips4o
