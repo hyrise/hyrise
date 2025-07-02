@@ -17,9 +17,6 @@ struct MvccData {
   friend std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);
 
  public:
-  // The last commit id is reserved for uncommitted changes
-  static constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
-
   // This is used for optimizing the validation process. It is set during `Chunk::set_immutable()` and for each
   // commit of an Insert/Delete operator. Consult `Validate::_on_execute()` for further details.
   std::atomic<CommitID> max_begin_cid{MAX_COMMIT_ID};
