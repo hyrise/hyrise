@@ -13,7 +13,6 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
-#include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
@@ -57,7 +56,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
       }
     }
   } else {
-    segment_with_iterators<T>(*source_abstract_segment, [&](const auto source_begin, const auto /*source_end*/) {
+    segment_with_iterators<T>(*source_abstract_segment, [&](const auto& source_begin, const auto& /*source_end*/) {
       auto source_iter = source_begin + source_begin_offset;
       auto target_iter = target_values.begin() + target_begin_offset;
 
@@ -144,8 +143,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         const auto transaction_id = context->transaction_id();
         const auto end_offset = target_chunk->size() + num_rows_for_target_chunk;
         for (auto target_chunk_offset = target_chunk->size(); target_chunk_offset < end_offset; ++target_chunk_offset) {
-          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid begin CID.");
-          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid end CID.");
+          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MAX_COMMIT_ID, "Invalid begin CID.");
+          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MAX_COMMIT_ID, "Invalid end CID.");
           mvcc_data->set_tid(target_chunk_offset, transaction_id, std::memory_order_relaxed);
         }
       }
@@ -286,8 +285,8 @@ void Insert::_on_rollback_records() {
          ++chunk_offset) {
       // We use a strong sequential memory ordering here to be on the safe side. If rollbacks become a performance
       // bottleneck, the memory order should be revisited.
-      mvcc_data->set_end_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
-      mvcc_data->set_begin_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
+      mvcc_data->set_end_cid(chunk_offset, UNSET_COMMIT_ID, std::memory_order_seq_cst);
+      mvcc_data->set_begin_cid(chunk_offset, UNSET_COMMIT_ID, std::memory_order_seq_cst);
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_seq_cst);
       // Update chunk statistics.
       target_chunk->increase_invalid_row_count(ChunkOffset{1}, std::memory_order_seq_cst);
