@@ -102,7 +102,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
   // executed by an unrelated thread. Thus, we add a memory barrier.
   //
   // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
-  // _done_condition_variable.
+  // _task_done.
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
   // Atomically marks the task as scheduled or returns if another thread has already scheduled it.
@@ -110,7 +110,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
     return;
   }
 
-  Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
+  Hyrise::get().scheduler()->_schedule(shared_from_this(), preferred_node_id, _priority);
 }
 
 void AbstractTask::_join() {

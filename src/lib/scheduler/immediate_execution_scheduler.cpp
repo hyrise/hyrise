@@ -24,8 +24,8 @@ const std::vector<std::shared_ptr<TaskQueue>>& ImmediateExecutionScheduler::queu
   return _queues;
 }
 
-void ImmediateExecutionScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID /*preferred_node_id*/,
-                                           SchedulePriority /*priority*/) {
+void ImmediateExecutionScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID /*preferred_node_id*/,
+                                            SchedulePriority /*priority*/) {
   DebugAssert(task->is_scheduled(),
               "Do not call ImmediateExecutionScheduler::schedule(), call schedule() on the task.");
 

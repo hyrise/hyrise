@@ -196,27 +196,6 @@ const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const 
   return _workers;
 }
 
-void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
-                                  SchedulePriority priority) {
-  /**
-   * Add task to the queue of the preferred node if it is ready for execution.
-   */
-  DebugAssert(_active, "Cannot schedule more tasks after the NodeQueueScheduler was shut down.");
-  DebugAssert(task->is_scheduled(), "Do not call NodeQueueScheduler::schedule(), call schedule() on the task.");
-
-  const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
-  task->set_id(TaskID{task_counter});
-
-  if (!task->is_ready()) {
-    return;
-  }
-
-  const auto node_id_for_queue = determine_queue_id(preferred_node_id);
-  DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
-              "Node ID is not within range of available nodes.");
-  _queues[node_id_for_queue]->push(task, priority);
-}
-
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
   const auto active_node_count = _active_nodes.size();
 
@@ -255,6 +234,27 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   return min_load_node_id;
+}
+
+void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
+                                   SchedulePriority priority) {
+  /**
+   * Add task to the queue of the preferred node if it is ready for execution.
+   */
+  DebugAssert(_active, "Cannot schedule more tasks after the NodeQueueScheduler was shut down.");
+  DebugAssert(task->is_scheduled(), "Do not call NodeQueueScheduler::schedule(), call schedule() on the task.");
+
+  const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
+  task->set_id(TaskID{task_counter});
+
+  if (!task->is_ready()) {
+    return;
+  }
+
+  const auto node_id_for_queue = determine_queue_id(preferred_node_id);
+  DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
+              "Node ID is not within range of available nodes.");
+  _queues[node_id_for_queue]->push(task, priority);
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
