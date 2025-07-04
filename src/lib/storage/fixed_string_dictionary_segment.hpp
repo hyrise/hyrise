@@ -70,7 +70,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   /**@}*/
 
  protected:
-  const FixedStringVector& _dictionary;
+  const FixedStringVector _dictionary;
   const std::unique_ptr<const BaseCompressedVector> _attribute_vector;
   const std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };

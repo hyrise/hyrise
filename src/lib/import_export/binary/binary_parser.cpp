@@ -245,8 +245,9 @@ std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
 
-  return std::make_shared<FixedStringDictionarySegment<pmr_string>>(_import_fixed_string_vector(file, dictionary_size),
-    _import_attribute_vector(file, row_count, compressed_vector_type_id));
+  return std::make_shared<FixedStringDictionarySegment<pmr_string>>(
+      _import_fixed_string_vector(file, dictionary_size),
+      _import_attribute_vector(file, row_count, compressed_vector_type_id));
 }
 
 template <typename T>

@@ -80,7 +80,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         auto values = pmr_vector<ColumnDataType>{};
         values.reserve(segment->size());
 
-        segment_iterate<ColumnDataType>(typed_segment, [&] (const auto value) {
+        segment_iterate<ColumnDataType>(typed_segment, [&](const auto value) {
           if (!value.is_null()) {
             values.push_back(value.value());
           }

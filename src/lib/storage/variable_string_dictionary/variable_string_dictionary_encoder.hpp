@@ -5,6 +5,7 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/sort/sort.hpp>
@@ -40,7 +41,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     // Vectors to gather the input segment's data. This data is used in a later step to construct the actual dictionary
     // and attribute vector.
     auto dense_values = std::vector<pmr_string>{};  // Contains the actual values (no NULLs).
-    auto null_values = std::vector<bool>{};          // Bitmap to mark NULL values.
+    auto null_values = std::vector<bool>{};         // Bitmap to mark NULL values.
     // Maps strings to ChunkOffsets for faster writing of vector that maps ChunkOffsets to ValueID.
     auto string_to_chunk_offsets = boost::unordered_flat_map<pmr_string, std::vector<ChunkOffset>>{};
     auto segment_size = size_t{0};

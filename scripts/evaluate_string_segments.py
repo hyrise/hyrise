@@ -42,8 +42,7 @@ def flatten(x: list[list], /) -> list:
 
 class DictConvertible(ABC):
     @abstractmethod
-    def as_dict(self) -> dict:
-        ...
+    def as_dict(self) -> dict: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,7 +203,7 @@ def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize
 
 
 def refine_stats(
-    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]]
+    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]],
 ) -> dict:
     result = {"ENCODING": [], "RUNTIME": [], "MODE": [], "SIZE": [], "BENCHMARK": []}
     for benchmark_name, benchmark_results in stats.items():
@@ -473,8 +472,7 @@ class Benchmarking:
                 )
 
             @abstractmethod
-            def _pre_run_cleanup(self):
-                ...
+            def _pre_run_cleanup(self): ...
 
         class TpcHBenchmarkRunner(BenchmarkRunner):
             name = "TPC-H"

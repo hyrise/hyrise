@@ -12,24 +12,25 @@
 
 namespace hyrise {
 
-// FixedStringVector is a data type, which stores all its values in a vector and
-// is capable of storing FixedStrings.
+// FixedStringVector is a data type, which stores all its values in a vector and is capable of storing FixedStrings.
 
 class FixedStringVector {
  public:
-  // Create a FixedStringVector of FixedStrings with given values
+  // Create a FixedStringVector of FixedStrings with given values.
   FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator = {});
 
-  // Create a FixedStringVector of FixedStrings with existing data
-  FixedStringVector(pmr_vector<char> chars, const size_t string_length)
-      : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {}
+  // Create a FixedStringVector of FixedStrings with existing data.
+  FixedStringVector(pmr_vector<char>&& chars, const size_t string_length)
+      : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {
+    std::cerr << "move constructor like thing ...\n";
+  }
 
-  // Create a FixedStringVector of FixedStrings with given values by iterating over other container
+  // Create a FixedStringVector of FixedStrings with given values by iterating over other container.
   template <typename Iter>
   FixedStringVector(Iter first, Iter last, const size_t string_length, const PolymorphicAllocator<char>& allocator = {})
       : _string_length(string_length), _chars(allocator) {
     const auto value_count = std::distance(first, last);
-    // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null
+    // If string_length equals 0, we would not have any elements in the vector. Hence, we would have to deal with null
     // pointers. In order to avoid this, we insert a null terminator to the vector by using resize.
     if (_string_length == 0) {
       _chars.resize(1);
@@ -86,6 +87,8 @@ class FixedStringVector {
 
   // Return a copy of the allocator object associated with the vector of values
   PolymorphicAllocator<FixedString> get_allocator();
+
+  FixedStringVector copy_using_memory_resource(MemoryResource& memory_resource) const;
 
   // Return the calculated size of FixedStringVector in main memory
   size_t data_size() const;

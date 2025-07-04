@@ -26,8 +26,7 @@ namespace hyrise {
 
 template <typename T>
 FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
-    FixedStringVector&& dictionary,
-    std::unique_ptr<const BaseCompressedVector>&& attribute_vector)
+    FixedStringVector&& dictionary, std::unique_ptr<const BaseCompressedVector>&& attribute_vector)
     : BaseDictionarySegment(data_type_from_type<pmr_string>()),
       _dictionary{std::move(dictionary)},
       _attribute_vector{std::move(attribute_vector)},
@@ -35,7 +34,7 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
 
 template <typename T>
 AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
-  PerformanceWarning("operator[] used");
+  PerformanceWarning("operator[] used.");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
@@ -69,9 +68,13 @@ ChunkOffset FixedStringDictionarySegment<T>::size() const {
 template <typename T>
 std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_memory_resource(
     MemoryResource& memory_resource) const {
-  auto copy = std::make_shared<FixedStringDictionarySegment<T>>(FixedStringVector(_dictionary, &memory_resource),
-    _attribute_vector->copy_using_memory_resource(memory_resource));
+  auto copy =
+      std::make_shared<FixedStringDictionarySegment<T>>(_dictionary.copy_using_memory_resource(memory_resource),
+                                                        _attribute_vector->copy_using_memory_resource(memory_resource));
   copy->access_counter = access_counter;
+
+  // std::cerr << "Dict orig " << _dictionary.data_size() << '\n';
+  // std::cerr << "Dict copy " << copy->fixed_string_dictionary().data_size() << '\n';
 
   return copy;
 }
@@ -79,6 +82,8 @@ std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_mem
 template <typename T>
 size_t FixedStringDictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
   // MemoryUsageCalculationMode ignored as full calculation is efficient.
+  std::cerr << "sizeof(*this) + _dictionary.data_size() + _attribute_vector->data_size(); >> " << sizeof(*this) << " + "
+            << _dictionary.data_size() << " + " << _attribute_vector->data_size() << '\n';
   return sizeof(*this) + _dictionary.data_size() + _attribute_vector->data_size();
 }
 
@@ -120,7 +125,7 @@ ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value
 
 template <typename T>
 AllTypeVariant FixedStringDictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
-  DebugAssert(value_id < _dictionary.size(), "ValueID out of bounds");
+  DebugAssert(value_id < _dictionary.size(), "ValueID out of bounds.");
   return _dictionary.get_string_at(value_id);
 }
 

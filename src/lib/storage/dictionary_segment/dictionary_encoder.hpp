@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <boost/sort/sort.hpp>
@@ -47,9 +48,8 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       null_values.resize(segment_size);    // Resized to size of segment.
 
       for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {
-        const auto segment_item = *segment_it;
-        if (!segment_item.is_null()) {
-          const auto segment_value = segment_item.value();
+        if (!segment_it->is_null()) {
+          const auto segment_value = segment_it->value();
           dense_values.push_back(segment_value);
 
           if constexpr (Encoding == EncodingType::FixedStringDictionary) {
@@ -94,8 +94,9 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type.
-      return std::make_shared<FixedStringDictionarySegment<T>>(FixedStringVector(dictionary.cbegin(), dictionary.cend(), max_string_length, allocator),
-                                                               std::move(compressed_attribute_vector));
+      return std::make_shared<FixedStringDictionarySegment<T>>(
+          FixedStringVector(dictionary.cbegin(), dictionary.cend(), max_string_length, allocator),
+          std::move(compressed_attribute_vector));
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary.
       return std::make_shared<DictionarySegment<T>>(std::move(dictionary), std::move(compressed_attribute_vector));
