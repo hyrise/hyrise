@@ -19,7 +19,7 @@
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -74,18 +74,33 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         const auto& dictionary = typed_segment.dictionary();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
-        // If we have a generic segment, we create the dictionary ourselves.
-        auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-        auto values = boost::unordered_flat_set<ColumnDataType>{};
-        iterable.for_each([&](const auto& value) {
-          // We are only interested in non-null values.
+        // If we have a generic segment, we create the dictionary ourselves. Using an std::set is usually faster for few
+        // distinct counts. However, runtime is dominated by columns with many distinct counts and here std::sort/unique
+        // is faster (see DYOD 2025, week 8).
+        auto values = pmr_vector<ColumnDataType>{};
+        values.reserve(segment->size());
+
+        segment_iterate<ColumnDataType>(typed_segment, [&] (const auto value) {
           if (!value.is_null()) {
-            values.insert(value.value());
+            values.push_back(value.value());
           }
         });
-        auto dictionary = pmr_vector<ColumnDataType>{values.cbegin(), values.cend()};
-        boost::sort::pdqsort(dictionary.begin(), dictionary.end());
-        create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+
+        boost::sort::pdqsort(values.begin(), values.end());
+        values.erase(std::unique(values.begin(), values.end()), values.cend());
+        values.shrink_to_fit();
+        create_pruning_statistics_for_segment(*segment_statistics, values);
+
+        // auto values = boost::unordered_flat_set<ColumnDataType>{};
+        // iterable.for_each([&](const auto& value) {
+        //   // We are only interested in non-null values.
+        //   if (!value.is_null()) {
+        //     values.insert(value.value());
+        //   }
+        // });
+        // auto dictionary = pmr_vector<ColumnDataType>{values.cbegin(), values.cend()};
+        // boost::sort::pdqsort(dictionary.begin(), dictionary.end());
+        // create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 
       chunk_statistics[column_id] = segment_statistics;
