@@ -102,7 +102,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
   // executed by an unrelated thread. Thus, we add a memory barrier.
   //
   // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
-  // _done_condition_variable.
+  // _task_done.
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
   // Atomically marks the task as scheduled or returns if another thread has already scheduled it.
@@ -110,7 +110,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
     return;
   }
 
-  Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
+  Hyrise::get().scheduler()->_schedule(shared_from_this(), preferred_node_id, _priority);
 }
 
 void AbstractTask::_join() {
@@ -143,7 +143,7 @@ void AbstractTask::execute() {
     // macOS silently ignores non-reachable successors (see `SuccessorExpired` test). Thus, we obtain a shared pointer
     // here which also causes macOS to recognize that the successor is not accessible (note, the following line fails
     // with an std::bad_weak_ptr exception before testing the assertion).
-    DebugAssert(successor.get().shared_from_this(), "Cannot obtain successor");
+    DebugAssert(successor.get().shared_from_this(), "Cannot obtain successor.");
 
     // The task creator is responsible to ensure that successor tasks are available whenever an executed task tries to
     // execute/accesss its successors.
@@ -152,7 +152,7 @@ void AbstractTask::execute() {
 
   {
     // We set the task's state to done after informing all successors. It can happen that a successor (that
-    // can not be executed until its predessors are done) is both scheduled and pulled by a worker and at the same time
+    // cannot be executed until its predessors are done) is both scheduled and pulled by a worker and at the same time
     // executed here by the current worker.
     // Note, informing successors does not block the current task (unless we use the ImmediateExecutionScheduler).
     const auto success_done = _try_transition_to(TaskState::Done);

@@ -23,7 +23,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 void successors_equal(auto& lhs, const std::vector<std::shared_ptr<AbstractTask>>& rhs) {
-  EXPECT_EQ(lhs.size(), rhs.size());
+  ASSERT_EQ(lhs.size(), rhs.size());
 
   for (auto index = size_t{0}; index < lhs.size(); ++index) {
     EXPECT_EQ(lhs[index].get().shared_from_this(), rhs[index]);

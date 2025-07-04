@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "abstract_statistics_object.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -10,7 +11,7 @@ namespace hyrise {
 class NullValueRatioStatistics : public AbstractStatisticsObject,
                                  public std::enable_shared_from_this<NullValueRatioStatistics> {
  public:
-  explicit NullValueRatioStatistics(const float init_ratio);
+  explicit NullValueRatioStatistics(const Selectivity init_ratio);
 
   std::shared_ptr<const AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
@@ -18,7 +19,7 @@ class NullValueRatioStatistics : public AbstractStatisticsObject,
 
   std::shared_ptr<const AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
-  float ratio{0};
+  Selectivity ratio{0};
 };
 
 }  // namespace hyrise

@@ -4,15 +4,16 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
 bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs, const std::pair<T, T>& rhs) {
-  Assert(lhs.first.size() == lhs.second.size() && lhs.first.size() <= sizeof(unsigned long) * 8,  // NOLINT
+  Assert(lhs.first.size() == lhs.second.size() && lhs.first.size() <= sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
          "Bitset has too many bits for comparison.");
   return lhs.first.to_ulong() == static_cast<size_t>(rhs.first) &&
          lhs.second.to_ulong() == static_cast<size_t>(rhs.second);
 }
+
 }  // namespace
 
 namespace hyrise {
@@ -20,25 +21,25 @@ namespace hyrise {
 class EnumerateCcpTest : public BaseTest {};
 
 /**
- * Test that the correct CCPs are enumerated for _very_ simple graphs and that they are enumerated in the correct order
+ * Test that the correct CCPs are enumerated for _very_ simple graphs and that they are enumerated in the correct order.
  */
 
 TEST_F(EnumerateCcpTest, Simple) {
-  std::vector<std::pair<size_t, size_t>> edges{{0, 1}};
+  const auto edges = std::vector<std::pair<size_t, size_t>>{{0, 1}};
 
   const auto pairs = EnumerateCcp{2, edges}();
 
-  ASSERT_EQ(pairs.size(), 1u);
+  ASSERT_EQ(pairs.size(), 1);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b01, 0b10)));
 }
 
 TEST_F(EnumerateCcpTest, Chain) {
-  std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {1, 2}, {2, 3}};
+  const auto edges = std::vector<std::pair<size_t, size_t>>{{0, 1}, {1, 2}, {2, 3}};
 
   const auto pairs = EnumerateCcp{4, edges}();
 
-  ASSERT_EQ(pairs.size(), 10u);
+  ASSERT_EQ(pairs.size(), 10);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0100, 0b1000)));
   EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0010, 0b0100)));
@@ -53,11 +54,11 @@ TEST_F(EnumerateCcpTest, Chain) {
 }
 
 TEST_F(EnumerateCcpTest, Ring) {
-  std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {1, 2}, {2, 0}};
+  const auto edges = std::vector<std::pair<size_t, size_t>>{{0, 1}, {1, 2}, {2, 0}};
 
   const auto pairs = EnumerateCcp{3, edges}();
 
-  ASSERT_EQ(pairs.size(), 6u);
+  ASSERT_EQ(pairs.size(), 6);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b010, 0b100)));
   EXPECT_TRUE(equals(pairs[1], std::make_pair(0b001, 0b100)));
@@ -68,11 +69,11 @@ TEST_F(EnumerateCcpTest, Ring) {
 }
 
 TEST_F(EnumerateCcpTest, Star) {
-  std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {0, 2}, {0, 3}};
+  const auto edges = std::vector<std::pair<size_t, size_t>>{{0, 1}, {0, 2}, {0, 3}};
 
   const auto pairs = EnumerateCcp{4, edges}();
 
-  ASSERT_EQ(pairs.size(), 12u);
+  ASSERT_EQ(pairs.size(), 12);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0001, 0b1000)));
   EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0001, 0b0100)));
@@ -89,10 +90,10 @@ TEST_F(EnumerateCcpTest, Star) {
 }
 
 TEST_F(EnumerateCcpTest, Clique) {
-  std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {0, 2}, {0, 3}, {1, 2}, {2, 3}, {1, 3}};
+  const auto edges = std::vector<std::pair<size_t, size_t>>{{0, 1}, {0, 2}, {0, 3}, {1, 2}, {2, 3}, {1, 3}};
 
   const auto pairs = EnumerateCcp{4, edges}();
-  ASSERT_EQ(pairs.size(), 25u);
+  ASSERT_EQ(pairs.size(), 25);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0100, 0b1000)));
   EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0010, 0b1000)));
@@ -128,11 +129,11 @@ TEST_F(EnumerateCcpTest, RandomJoinGraphShape) {
    *  2 - 1 - 3
    */
 
-  std::vector<std::pair<size_t, size_t>> edges{{0, 2}, {0, 1}, {1, 3}, {2, 1}};
+  const auto edges = std::vector<std::pair<size_t, size_t>>{{0, 2}, {0, 1}, {1, 3}, {2, 1}};
 
   const auto pairs = EnumerateCcp{5, edges}();
 
-  ASSERT_EQ(pairs.size(), 15u);
+  ASSERT_EQ(pairs.size(), 15);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b00010, 0b01000)));
   EXPECT_TRUE(equals(pairs[1], std::make_pair(0b00010, 0b00100)));
@@ -152,10 +153,10 @@ TEST_F(EnumerateCcpTest, RandomJoinGraphShape) {
 }
 
 TEST_F(EnumerateCcpTest, ArbitraryVertexNumbering) {
-  std::vector<std::pair<size_t, size_t>> edges{{0, 2}, {2, 1}};
+  const auto edges = std::vector<std::pair<size_t, size_t>>{{0, 2}, {2, 1}};
 
   const auto pairs = EnumerateCcp{3, edges}();
-  ASSERT_EQ(pairs.size(), 4u);
+  ASSERT_EQ(pairs.size(), 4);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b010, 0b100)));
   EXPECT_TRUE(equals(pairs[1], std::make_pair(0b001, 0b100)));

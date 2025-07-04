@@ -23,10 +23,12 @@ class ImmediateExecutionScheduler : public AbstractScheduler {
 
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
-  void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                SchedulePriority priority = SchedulePriority::Default) override;
-
  private:
+  void _schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
+                 SchedulePriority priority = SchedulePriority::Default) override;
+
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
+
   std::vector<std::shared_ptr<TaskQueue>> _queues = std::vector<std::shared_ptr<TaskQueue>>{};
 };
 

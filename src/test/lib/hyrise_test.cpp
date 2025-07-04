@@ -64,25 +64,29 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
 TEST_F(HyriseTest, ChangingSchedulers) {
   auto counter = std::atomic<uint32_t>{0};
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(counter, 0);
+
   const auto task1 = std::make_shared<JobTask>([&]() {
     ++counter;
   });
   task1->schedule();
-
-  // Implicitely tests that changing the scheduler calls finish() on the old scheduler. We thus explicitely do not wait
+  // Test implicitly that changing the scheduler calls finish() on the old scheduler. We thus explicitely do not wait
   // for task1 here.
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+  EXPECT_EQ(counter, 1);
+
   const auto task2 = std::make_shared<JobTask>([&]() {
     ++counter;
   });
   task2->schedule();
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(counter, 2);
+
   const auto task3 = std::make_shared<JobTask>([&]() {
     ++counter;
   });
   task3->schedule();
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
-
   EXPECT_EQ(counter, 3);
 }
 

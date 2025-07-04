@@ -16,11 +16,12 @@ class TaskQueue;
  *
  * GENERAL TASK PROCESSING AND SCHEDULING CONCEPT
  *
- * Everything that needs to be processed is encapsulated in tasks. A task will be pushed into a TaskQueue by a
- * scheduler and pulled by a worker to be processed.
+ * In Hyrise, everything that needs to be processed in parallel should be encapsulated in tasks. A task will be pushed
+ * into a TaskQueue by a scheduler and pulled by a worker to be processed.
  *
- * There are currently two alternative scheduler implementations: the ImmediateExecutionScheduler (single-threaded,
- * primarily for benchmarking and debugging) and the NodeQueueScheduler (multi-threaded).
+ * There are currently two alternative scheduler implementations:
+ *   - ImmediateExecutionScheduler: single-threaded, primarily for benchmarking and debugging
+ *   - NodeQueueScheduler: multi-threaded with NUMA node-local task queues
  *
  *
  * TASK DEPENDENCIES
@@ -53,19 +54,18 @@ class AbstractScheduler : public Noncopyable {
   virtual ~AbstractScheduler() = default;
 
   /**
-   * Begin the schedulers lifecycle as the global Scheduler instance. In this method do work that can't be done before
-   * the Scheduler isn't registered as the global instance
+   * Begin the scheduler's lifecycle as the global Scheduler instance.
    */
   virtual void begin() = 0;
 
   virtual void wait_for_all_tasks() = 0;
 
   /**
-   * Ends the schedulers lifecycle as the global Scheduler instance. This waits for all scheduled tasks to be finished,
+   * Ends the scheduler's lifecycle as the global Scheduler instance. This waits for all scheduled tasks to be finished,
    * and sets the scheduler to inactive.
    *
-   * The caller of this method has to make sure that no other tasks can be scheduled from outside while this method
-   * is being executed, otherwise those tasks might get lost.
+   * The caller of this method has to make sure that no other tasks can be scheduled from outside while this method is
+   * being executed, otherwise those tasks might get lost.
    */
   virtual void finish() = 0;
 
@@ -73,25 +73,43 @@ class AbstractScheduler : public Noncopyable {
 
   virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
-  virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                        SchedulePriority priority = SchedulePriority::Default) = 0;
-
-  // Blocks until all specified tasks are completed.
-  // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.
+  /**
+   * Blocks until all specified tasks are completed. If no asynchronicity is needed, prefer
+   * `schedule_and_wait_for_tasks()`. Use this method when task creation is expensive. In this case, created tasks can
+   * be scheduled right away (using `schedule()`) and `wait_for_tasks()` blocks for their execution.
+   * The caller is responsible to ensure the tasks' lifetimes until method returns.
+   */
   static void wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
-  // Schedules the given tasks for execution and waits for them to complete before returning. Tasks may be reorganized
-  // internally, e.g., to reduce the number of tasks being executed in parallel. See the implementation of
-  // NodeQueueScheduler::_group_tasks for an example.
+  /**
+   * Schedules the given tasks for execution and waits for them to complete before returning. Preferable when task
+   * creation is cheap (i.e., first creating all jobs does not block first task from running too long) and a grouped
+   * scheduling might improve the execution of tasks. This could be the case when grouping tasks. Here, tasks may be
+   * reorganized internally, e.g., to reduce the number of tasks being executed in parallel. See the implementation of
+   * NodeQueueScheduler::_group_tasks for an example.
+   * The caller is responsible to ensure the tasks' lifetimes until method returns.
+   */
   void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
  protected:
-  // Schedules the given tasks for execution and returns immediately.
+  friend class AbstractTask;
+  /**
+   * Executes the task immediately or only registers it for execution, depending on the scheduler implementation.
+   * This method is private as tasks should be scheduled via `task->schedule()` (AbstractTask is a friend).
+   */
+  virtual void _schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
+                         SchedulePriority priority = SchedulePriority::Default) = 0;
+
+  /**
+   * Schedules the given tasks for execution and returns immediately.
+   */
   static void _schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
-  // Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
-  // parallelism and reduce scheduling overhead.
-  virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
+  /**
+   * Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
+   * parallelism and reduce scheduling overhead.
+   */
+  virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const = 0;
 };
 
 }  // namespace hyrise

@@ -28,10 +28,6 @@ void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstrac
   }
 }
 
-void AbstractScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  // Do nothing - grouping tasks is implementation-defined.
-}
-
 void AbstractScheduler::_schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   if constexpr (HYRISE_DEBUG) {
     const auto task_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());

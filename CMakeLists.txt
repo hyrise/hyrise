@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(Hyrise)
 
+enable_testing()
+
 if(APPLE)
     set(CMAKE_EXE_LINKER_FLAGS -Wl,-export_dynamic)
 else()
@@ -19,7 +21,7 @@ function(compiler_not_supported message)
 endfunction(compiler_not_supported)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.2)
         compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
     if (APPLE)
@@ -27,12 +29,12 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         compiler_not_supported("We had to drop support for GCC on OS X because it caused segfaults when used with tbb. You can continue, but don't hold us responsible for any segmentation faults.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.0)
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.0)
-        compiler_not_supported("Hyrise does not support Apple clang compilers older than version 14.")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15.0)
+        compiler_not_supported("Hyrise does not support Apple clang compilers older than version 15.")
     endif()
     # In release mode, we found issues on ARM with loop unrolling (macOS Ventura, Apple Clang 14.0).
     # As we do not benchmark on macOS, we can safely ignore this issue for now.
@@ -52,7 +54,28 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     endif()
     message(WARNING "On macOS, we recommend a recent clang compiler instead of Apple's clang compiler. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang++`.")
 else()
-    compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
+    compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID}). Compilation has only been tested with Clang (Linux + macOS) and GCC (Linux).")
+endif()
+
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
+     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 21.0)
+         # Since Clang 18, -Weverything includes a warning that warns when switch statements do not have a default case even when the entire enum is
+         # covered (see https://github.com/llvm/llvm-project/blob/7d9634e527fe52bf20a9036be6e5771f8fc4de17/clang/test/Sema/switch-default.cpp#L19).
+         # Currently, there is discussion in PR #2692 whether -Weverything should remain activated and which switch-specific warnings should be used.
+         # For now, we disable the warning for Clang versions 18 to 20.
+         message(WARNING "Disable warning 'switch-default' for Clang version ${CMAKE_CXX_COMPILER_VERSION}.")
+         add_compile_options(-Wno-switch-default)
+     endif()
+ endif()
+
+# Starting with GCC 14's libstdc++, std::atomic_load for shared pointers is deprecated (as part of C++20). However, as
+# of LLVM 19, libc++ has not implemented std::atomic<std::shared_ptr> (see P0718R2,
+# https://en.cppreference.com/w/cpp/compiler_support). As we use libstdc++ when compiling with clang on Linux, we
+# disable deprecation warnings.
+# We only disable this warning on Linux because clang on macOS uses libc++. Once libc++ implements the missing atomics,
+# the active warning on macOS will make us aware of it.
+if(NOT APPLE)
+    add_compile_options(-Wno-deprecated-declarations)
 endif()
 
 # Enable address and undefined behavior sanitization if requested
@@ -181,7 +204,11 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(SQLite3 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS container date_time)
+
+# Old versions of CMake used the FindBoost module, which is deprecated because find_package can now find
+# the upstream package directly. Therefore, disable it explicitly.
+set(BOOST_MIN_VERSION "1.81.0")
+find_package(Boost ${BOOST_MIN_VERSION} REQUIRED COMPONENTS container date_time NO_MODULE)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
 set(BOOST_LIBS Boost::container Boost::date_time)

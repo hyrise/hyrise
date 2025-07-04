@@ -69,15 +69,6 @@ class NodeQueueScheduler : public AbstractScheduler {
   const std::vector<std::shared_ptr<Worker>>& workers() const;
 
   /**
-   * @param task
-   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other nodes due
-   *                          to task stealing in NUMA environments.
-   * @param priority
-   */
-  void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                SchedulePriority priority = SchedulePriority::Default) override;
-
-  /**
    * @param preferred_node_id
    * @return `preferred_node_id` if a non-default preferred node ID is passed. When the node is the default of
    *         CURRENT_NODE_ID but no current node (where the task is executed) can be obtained, the node ID of the node
@@ -112,6 +103,15 @@ class NodeQueueScheduler : public AbstractScheduler {
    * @param tasks: list of tasks to group
    */
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
+
+  /**
+   * @param task
+   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other nodes due
+   *                          to task stealing in NUMA environments.
+   * @param priority
+   */
+  void _schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
+                 SchedulePriority priority = SchedulePriority::Default) override;
 
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count) const;
 
