@@ -44,6 +44,12 @@ class TaskQueue;
  * executing the main task executes these tasks directly when possible or waits for their completion in case other
  * workers already process these tasks (during this wait time, the worker pulls tasks from the TaskQueues to avoid
  * idling).
+ * Unless a task is supposed to run in the background (e.g., by creating a JobTask and calling schedule() without
+ * waiting), the task spawning code needs to wait for the completion of tasks. This is either done using
+ * `wait_for_tasks()` or `schedule_and_wait_for_tasks()`. The first function allows users to manually schedule tasks
+ * which is helpful when the creation of tasks itself is slow (e.g., when reading from disk). In most cases,
+ * `schedule_and_wait_for_tasks()` is preferable as it optimizes scheduling many tasks (e.g., grouping tasks, see
+ * `_group_tasks()`).
  *
  */
 
