@@ -17,6 +17,14 @@ add_executable(
     playground.cpp
 )
 
+# Configure hyriseBloomFilterEvaluation
+add_executable(
+    hyriseBloomFilterEvaluation
+
+    hyrise_bloom_filter_evaluation.cpp
+)
+
+
 target_link_libraries(
     hyrisePlayground
     hyrise
