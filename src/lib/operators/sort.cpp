@@ -1,5 +1,7 @@
 #include "sort.hpp"
 
+#include <perfetto.h>
+
 #include <algorithm>
 #include <bit>
 #include <chrono>
@@ -9,6 +11,7 @@
 #include <cstring>
 #include <execution>
 #include <format>
+#include <fstream>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -32,6 +35,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -49,6 +53,10 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
+
+PERFETTO_DEFINE_CATEGORIES(perfetto::Category("sort").SetDescription("Benchmark Sort Operator"));
+
+PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace {
 
@@ -76,6 +84,8 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<const Table>& unsorted_table,
                                                        RowIDPosList pos_list, const ChunkOffset output_chunk_size) {
+  TRACE_EVENT("sort", "write_materialized_output_table");
+
   // First, we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
@@ -95,6 +105,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   const auto output_column_count = unsorted_table->column_count();
   const auto row_count = unsorted_table->row_count();
   for (auto column_id = ColumnID{0}; column_id < output_column_count; ++column_id) {
+    TRACE_EVENT("sort", "write_column", "column_id", static_cast<size_t>(column_id));
+
     const auto column_data_type = output->column_data_type(column_id);
     const auto column_is_nullable = unsorted_table->column_is_nullable(column_id);
 
@@ -193,6 +205,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
 // reference table. If the input is already a reference table, the double indirection needs to be resolved.
 std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const Table>& unsorted_table,
                                                     RowIDPosList input_pos_list, const ChunkOffset output_chunk_size) {
+  TRACE_EVENT("sort", "write_reference_output_table");
   // First we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output_table = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::References);
@@ -207,6 +220,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(column_count));
 
   if (!resolve_indirection && input_pos_list.size() <= output_chunk_size) {
+    TRACE_EVENT("sort", "write_fast_path");
     // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection.
     const auto output_pos_list = std::make_shared<RowIDPosList>(std::move(input_pos_list));
     auto& output_segments = output_segments_by_chunk.at(0);
@@ -215,6 +229,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
     }
   } else {
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      TRACE_EVENT("sort", "write_column", "column_id", static_cast<size_t>(column_id));
+
       // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
       // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
       // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
@@ -311,14 +327,17 @@ struct NormalizedKeyRow {
 template <typename T>
 std::vector<std::shared_ptr<AbstractTask>> process_in_parallel(const std::vector<T>& elements, size_t max_parallelism,
                                                                auto handler) {
+  TRACE_EVENT("sort", "setup_parallel_processing");
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
   tasks.reserve(max_parallelism);
   const auto task_count = std::min(elements.size(), max_parallelism);
   const auto task_workload = elements.size() / task_count;
   auto from_index = size_t{0};
   for (auto task_index = size_t{1}; task_index <= task_count; ++task_index) {
+    TRACE_EVENT("sort", "setup_task", "task", task_index);
     const auto to_index = (task_index != task_count) ? task_index * task_workload : elements.size();
-    const auto task = std::make_shared<JobTask>([from_index, to_index, handler, &elements] {
+    const auto task = std::make_shared<JobTask>([task_index, from_index, to_index, handler, &elements] {
+      TRACE_EVENT("sort", "task", "task", task_index);
       for (auto index = from_index; index < to_index; ++index) {
         handler(elements[index]);
       }
@@ -583,6 +602,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto timer = Timer{};
   const auto& input_table = left_input_table();
 
+  TRACE_EVENT_BEGIN("sort", "setup");
+
   for (const auto& column_sort_definition : _sort_definitions) {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
@@ -618,6 +639,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   const auto init_time = timer.lap();
   std::cerr << "sort::init_time " << init_time << "\n";
 
+  TRACE_EVENT_END("sort");
+
   // Scan all chunks for the maximum number of bytes necessary to represent all column values. The scanning is
   // done in parallel on multiple threads.
 
@@ -628,9 +651,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto chunk_stats = std::vector<std::vector<ScanResult>>(search_column_count, std::vector<ScanResult>(chunk_count));
 
+  TRACE_EVENT_BEGIN("sort", "scan");
+
   const auto column_chunk_pairs = generate_column_chunk_id_pairs(search_column_count, chunk_count);
   const auto scan_tasks = process_in_parallel(column_chunk_pairs, hardware_parallelism, [&](const auto element) {
     const auto [column_index, chunk_id] = element;
+    TRACE_EVENT("sort", "scan_segment", "search_column_index", column_index, "chunk_id", static_cast<size_t>(chunk_id));
     const auto column_id = _sort_definitions[column_index].column;
     const auto segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
     chunk_stats[column_index][chunk_id] = column_scans[column_index](*segment);
@@ -640,6 +666,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto column_stats = std::vector<ScanResult>(search_column_count, ScanResult{});
   auto normalized_key_size = size_t{0};
   for (auto column_index = size_t{0}; column_index < search_column_count; ++column_index) {
+    TRACE_EVENT("sort", "collect_stats", "sort_column_index", column_index);
     const auto aggregated_stats = std::accumulate(chunk_stats[column_index].begin(), chunk_stats[column_index].end(),
                                                   ScanResult{}, [](ScanResult result, ScanResult chunk) {
                                                     return result.merge(chunk);
@@ -647,6 +674,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     column_stats[column_index] = aggregated_stats;
     normalized_key_size += aggregated_stats.width();
   }
+
+  TRACE_EVENT_END("sort");
 
   const auto padded_key_size = ((normalized_key_size + 3) / 4) * 4;
   std::cerr << "sort::key_size " << normalized_key_size << "\n";
@@ -661,6 +690,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto materialized_rows = pmr_vector<NormalizedKeyRow>();
   materialized_rows.resize(input_table->row_count());
 
+  TRACE_EVENT_BEGIN("sort", "materialize");
+
   // Create list of chunks to materialize.
   auto total_offset = size_t{0};
   auto chunk_ids = std::vector<std::pair<ChunkID, size_t>>(chunk_count);
@@ -673,6 +704,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto chunk_allocations = std::vector<pmr_vector<std::byte>>(chunk_count);
   const auto materialization_tasks = process_in_parallel(chunk_ids, hardware_parallelism, [&](auto element) {
     const auto [chunk_id, total_offset] = element;
+    TRACE_EVENT("sort", "materialize_chunk", "chunk_id", static_cast<size_t>(chunk_id));
     const auto chunk = input_table->get_chunk(chunk_id);
     const auto chunk_size = chunk->size();
     chunk_allocations[chunk_id] = pmr_vector<std::byte>(chunk_size * padded_key_size);
@@ -689,6 +721,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     normalized_key_iter = materialized_rows.begin() + total_offset;
     auto key_offset = size_t{0};
     for (auto index = size_t{0}; index < search_column_count; ++index) {
+      TRACE_EVENT("sort", "materialize_column", "sort_column_index", index);
       const auto sort_mode = _sort_definitions[index].sort_mode;
       const auto column_id = _sort_definitions[index].column;
       const auto nullable = column_stats[index].nullable;
@@ -705,8 +738,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   });
   Hyrise::get().scheduler()->wait_for_tasks(materialization_tasks);
 
+  TRACE_EVENT_END("sort");
+
   const auto materialization_time = timer.lap();
   std::cerr << "sort::materialization_time " << materialization_time << "\n";
+
+  TRACE_EVENT_BEGIN("sort", "sort");
 
   // TODO(student): Use pdqsort
   std::stable_sort(std::execution::par_unseq, materialized_rows.begin(), materialized_rows.end(),
@@ -714,8 +751,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                      return lhs.less_than(rhs, normalized_key_size);
                    });
 
+  TRACE_EVENT_END("sort");
+
   const auto sort_time = timer.lap();
   std::cerr << "sort::sort_time " << sort_time << "\n";
+
+  TRACE_EVENT_BEGIN("sort", "write_back");
 
   // Extract the positions from the sorted rows.
   auto position_list = RowIDPosList();
@@ -723,6 +764,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (const auto& row : materialized_rows) {
     position_list.push_back(row.row_id);
   }
+
+  TRACE_EVENT_END("sort");
+
   const auto write_back_time = timer.lap();
   std::cerr << "sort::write_back_time " << write_back_time << "\n";
 
@@ -732,6 +776,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, write_back_time);
   step_performance_data.set_step_runtime(OperatorSteps::Sort, sort_time);
 
+  TRACE_EVENT("sort", "write_output");
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
@@ -740,6 +785,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
+    TRACE_EVENT("sort", "write_prepare");
     const auto input_column_count = input_table->column_count();
 
     for (auto input_column_id = ColumnID{0}; input_column_id < input_column_count; ++input_column_id) {
@@ -783,6 +829,41 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
   return sorted_table;
+}
+
+void perfetto_run(const std::shared_ptr<const Table>& input_table,
+                  const std::vector<SortColumnDefinition>& sort_definitions) {
+  const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+  table_wrapper->execute();
+  const auto sort_operator = std::make_shared<Sort>(table_wrapper, sort_definitions);
+
+  auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
+  track_event_cfg.add_enabled_categories("sort");
+
+  auto args = perfetto::TracingInitArgs{};
+  args.backends = perfetto::kInProcessBackend;
+  perfetto::Tracing::Initialize(args);
+  perfetto::TrackEvent::Register();
+
+  auto cfg = perfetto::TraceConfig{};
+  cfg.add_buffers()->set_size_kb(4096);
+  auto* ds_cfg = cfg.add_data_sources()->mutable_config();
+  ds_cfg->set_name("track_event");
+  ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
+
+  auto tracing_session = std::unique_ptr<perfetto::TracingSession>(perfetto::Tracing::NewTrace());
+  tracing_session->Setup(cfg);
+  tracing_session->StartBlocking();
+
+  sort_operator->execute();
+
+  tracing_session->StopBlocking();
+
+  auto trace_data = std::vector<char>(tracing_session->ReadTraceBlocking());
+  auto output = std::ofstream{};
+  output.open("dyod2025_sort_operator.perfetto-trace", std::ios::out | std::ios::binary);
+  output.write(trace_data.data(), static_cast<std::streamsize>(trace_data.size()));
+  output.close();
 }
 
 }  // namespace hyrise
