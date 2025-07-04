@@ -80,6 +80,42 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
  *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
  */
 
+template <typename T>
+std::vector<std::shared_ptr<AbstractTask>> process_in_parallel(const std::vector<T>& elements, size_t max_parallelism,
+                                                               auto handler) {
+  TRACE_EVENT("sort", "setup_parallel_processing");
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
+  tasks.reserve(max_parallelism);
+  const auto task_count = std::min(elements.size(), max_parallelism);
+  const auto task_workload = elements.size() / task_count;
+  auto from_index = size_t{0};
+  for (auto task_index = size_t{1}; task_index <= task_count; ++task_index) {
+    TRACE_EVENT("sort", "setup_task", "task", task_index);
+    const auto to_index = (task_index != task_count) ? task_index * task_workload : elements.size();
+    const auto task = std::make_shared<JobTask>([task_index, from_index, to_index, handler, &elements] {
+      TRACE_EVENT("sort", "task", "task", task_index);
+      for (auto index = from_index; index < to_index; ++index) {
+        handler(elements[index]);
+      }
+    });
+    task->schedule();
+    tasks.push_back(task);
+    from_index = to_index;
+  }
+  return tasks;
+}
+
+std::vector<std::pair<size_t, ChunkID>> generate_column_chunk_id_pairs(size_t column_count, ChunkID chunk_count) {
+  auto result = std::vector<std::pair<size_t, ChunkID>>();
+  result.reserve(column_count * chunk_count);
+  for (auto column_index = size_t{0}; column_index < column_count; ++column_index) {
+    for (auto chunk_id = size_t{0}; chunk_id < chunk_count; ++chunk_id) {
+      result.emplace_back(column_index, chunk_id);
+    }
+  }
+  return result;
+}
+
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<const Table>& unsorted_table,
@@ -204,7 +240,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
 // If unsorted_table is of TableType::Data, this is trivial and the input_pos_list is used to create the output
 // reference table. If the input is already a reference table, the double indirection needs to be resolved.
 std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const Table>& unsorted_table,
-                                                    RowIDPosList input_pos_list, const ChunkOffset output_chunk_size) {
+                                                    RowIDPosList input_pos_list, const ChunkOffset output_chunk_size,
+                                                    size_t max_parallelism) {
   TRACE_EVENT("sort", "write_reference_output_table");
   // First we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
@@ -228,69 +265,69 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       output_segments[column_id] = std::make_shared<ReferenceSegment>(unsorted_table, column_id, output_pos_list);
     }
   } else {
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      TRACE_EVENT("sort", "write_column", "column_id", static_cast<size_t>(column_id));
+    TRACE_EVENT("sort", "write_slow_path");
 
-      // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
-      // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
-      // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
-      // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
-      // is acceptable. In the future, this could be improved.
-      auto output_pos_list = std::make_shared<RowIDPosList>();
-      output_pos_list->reserve(output_chunk_size);
-
-      // Collect all input segments for the current column
-      const auto input_chunk_count = unsorted_table->chunk_count();
-      auto input_segments = std::vector<std::shared_ptr<AbstractSegment>>(input_chunk_count);
-      for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-        input_segments[input_chunk_id] = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
-      }
-
-      const auto first_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(input_segments.at(0));
-      const auto referenced_table = resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
-      const auto referenced_column_id =
-          resolve_indirection ? first_reference_segment->referenced_column_id() : column_id;
-
-      // write_output_pos_list creates an output reference segment for a given ChunkID, ColumnID and PosList.
-      auto output_chunk_id = ChunkID{0};
-      const auto write_output_pos_list = [&] {
-        DebugAssert(!output_pos_list->empty(), "Asked to write empty output_pos_list");
-        output_segments_by_chunk.at(output_chunk_id)[column_id] =
-            std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
-        ++output_chunk_id;
-
-        output_pos_list = std::make_shared<RowIDPosList>();
-        if (output_chunk_id < output_chunk_count) {
-          output_pos_list->reserve(output_chunk_size);
-        }
-      };
-
-      // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
-      // `output_chunk_size` rows.
-      const auto input_pos_list_size = input_pos_list.size();
-      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list_size;
-           ++input_pos_list_offset) {
-        const auto& row_id = input_pos_list[input_pos_list_offset];
-        if (resolve_indirection) {
-          const auto& input_reference_segment = static_cast<ReferenceSegment&>(*input_segments[row_id.chunk_id]);
-          DebugAssert(input_reference_segment.referenced_table() == referenced_table,
-                      "Input column references more than one table");
-          DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
-                      "Input column references more than one column");
-          const auto& input_reference_pos_list = input_reference_segment.pos_list();
-          output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
-        } else {
-          output_pos_list->emplace_back(row_id);
-        }
-
-        if (output_pos_list->size() == output_chunk_size) {
-          write_output_pos_list();
-        }
-      }
-      if (!output_pos_list->empty()) {
-        write_output_pos_list();
+    TRACE_EVENT_BEGIN("sort", "write_setup");
+    // Collect all segments from the input table.
+    const auto input_chunk_count = unsorted_table->chunk_count();
+    auto input_segments = std::vector(column_count, std::vector<std::shared_ptr<AbstractSegment>>(input_chunk_count));
+    for (auto chunk_id = ChunkID{0}; chunk_id < input_chunk_count; ++chunk_id) {
+      const auto chunk = unsorted_table->get_chunk(chunk_id);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        input_segments[column_id][chunk_id] = chunk->get_segment(column_id);
+        DebugAssert(input_segments[column_id][chunk_id], "Expected valid segment");
       }
     }
+    TRACE_EVENT_END("sort");
+
+    // To keep the implementation simple, we write the output ReferenceSegments in column and chunk pairs. This means
+    // that even if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this
+    // is slightly more expensive to generate and slightly less efficient for following operators, we assume that the
+    // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
+    // is acceptable. In the future, this could be improved.
+    const auto output_column_chunk_id_pairs =
+        generate_column_chunk_id_pairs(column_count, ChunkID{static_cast<uint32_t>(output_chunk_count)});
+    const auto write_tasks =
+        process_in_parallel(output_column_chunk_id_pairs, max_parallelism, [&](const auto element) {
+          const auto [column_id, output_chunk_id] = element;
+          TRACE_EVENT("sort", "write_segment", "column_id", column_id, "chunk_id",
+                      static_cast<size_t>(output_chunk_id));
+
+          auto input_pos_list_offset = size_t{output_chunk_id * output_chunk_size};
+          auto input_pos_list_end = std::min(input_pos_list_offset + output_chunk_size, input_pos_list.size());
+
+          const auto first_reference_segment =
+              std::dynamic_pointer_cast<ReferenceSegment>(input_segments[column_id][output_chunk_id]);
+          const auto referenced_table =
+              resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
+          const auto referenced_column_id = resolve_indirection ? first_reference_segment->referenced_column_id()
+                                                                : ColumnID{static_cast<uint16_t>(column_id)};
+
+          auto output_pos_list = std::make_shared<RowIDPosList>();
+          output_pos_list->reserve(output_chunk_size);
+
+          // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
+          // `output_chunk_size` rows.
+          for (; input_pos_list_offset < input_pos_list_end; ++input_pos_list_offset) {
+            const auto& row_id = input_pos_list[input_pos_list_offset];
+            if (resolve_indirection) {
+              const auto& input_reference_segment =
+                  static_cast<ReferenceSegment&>(*input_segments[column_id][row_id.chunk_id]);
+              DebugAssert(input_reference_segment.referenced_table() == referenced_table,
+                          "Input column references more than one table");
+              DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
+                          "Input column references more than one column");
+              const auto& input_reference_pos_list = input_reference_segment.pos_list();
+              output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
+            } else {
+              output_pos_list->emplace_back(row_id);
+            }
+          }
+
+          output_segments_by_chunk[output_chunk_id][column_id] =
+              std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
+        });
+    Hyrise::get().scheduler()->wait_for_tasks(write_tasks);
   }
 
   for (auto& segments : output_segments_by_chunk) {
@@ -323,42 +360,6 @@ struct NormalizedKeyRow {
     return static_memcmp<1, 32>(key_head, other.key_head, expected_size) < 0;
   }
 };
-
-template <typename T>
-std::vector<std::shared_ptr<AbstractTask>> process_in_parallel(const std::vector<T>& elements, size_t max_parallelism,
-                                                               auto handler) {
-  TRACE_EVENT("sort", "setup_parallel_processing");
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
-  tasks.reserve(max_parallelism);
-  const auto task_count = std::min(elements.size(), max_parallelism);
-  const auto task_workload = elements.size() / task_count;
-  auto from_index = size_t{0};
-  for (auto task_index = size_t{1}; task_index <= task_count; ++task_index) {
-    TRACE_EVENT("sort", "setup_task", "task", task_index);
-    const auto to_index = (task_index != task_count) ? task_index * task_workload : elements.size();
-    const auto task = std::make_shared<JobTask>([task_index, from_index, to_index, handler, &elements] {
-      TRACE_EVENT("sort", "task", "task", task_index);
-      for (auto index = from_index; index < to_index; ++index) {
-        handler(elements[index]);
-      }
-    });
-    task->schedule();
-    tasks.push_back(task);
-    from_index = to_index;
-  }
-  return tasks;
-}
-
-std::vector<std::pair<size_t, ChunkID>> generate_column_chunk_id_pairs(size_t column_count, ChunkID chunk_count) {
-  auto result = std::vector<std::pair<size_t, ChunkID>>();
-  result.reserve(column_count * chunk_count);
-  for (auto column_index = size_t{0}; column_index < column_count; ++column_index) {
-    for (auto chunk_id = size_t{0}; chunk_id < chunk_count; ++chunk_id) {
-      result.emplace_back(column_index, chunk_id);
-    }
-  }
-  return result;
-}
 
 // Map signed to unsigned data types with same number of bytes (e.g., int32_t to uint32_t).
 template <typename T>
@@ -814,7 +815,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   if (must_materialize) {
     sorted_table = write_materialized_output_table(input_table, std::move(position_list), _output_chunk_size);
   } else {
-    sorted_table = write_reference_output_table(input_table, std::move(position_list), _output_chunk_size);
+    sorted_table =
+        write_reference_output_table(input_table, std::move(position_list), _output_chunk_size, hardware_parallelism);
   }
 
   const auto& final_sort_definition = _sort_definitions[0];
