@@ -14,7 +14,7 @@ class BloomFilter {
       _set_bit(bit_index);
     }
   }
-  
+
   bool probe(uint64_t hash) const {
     for (uint8_t i = 0; i < K; ++i) {
       uint32_t bit_index = _extract_bits(hash, i);
@@ -24,20 +24,20 @@ class BloomFilter {
     }
     return true;
   }
-  
+
  protected:
   void _set_bit(uint32_t bit_index) {
-    uint32_t array_index = bit_index >> 6;        // bit_index / 64
-    uint32_t bit_offset = bit_index & 0x3F;       // bit_index % 64
+    uint32_t array_index = bit_index >> 6;   // bit_index / 64
+    uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
     _filter[array_index] |= (1ULL << bit_offset);
   }
-  
+
   bool _get_bit(uint32_t bit_index) const {
-    uint32_t array_index = bit_index >> 6;        // bit_index / 64
-    uint32_t bit_offset = bit_index & 0x3F;       // bit_index % 64
+    uint32_t array_index = bit_index >> 6;   // bit_index / 64
+    uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
     return (_filter[array_index] >> bit_offset) & 1ULL;
   }
-  
+
   uint32_t _extract_bits(uint64_t hash, uint8_t hash_function_index) const {
     uint8_t shift = hash_function_index * FilterSizeExponent;
     return (hash >> shift) & ((1ULL << FilterSizeExponent) - 1);
@@ -46,8 +46,8 @@ class BloomFilter {
   // Compile-time validation
   static_assert(FilterSizeExponent >= 6, "FilterSizeExponent must be at least 6 (minimum 64 bits)");
   static_assert(K > 0, "K must be greater than 0");
-  static_assert(K * FilterSizeExponent <= 64, 
-               "Not enough bits in 64-bit hash for K hash functions with this filter size");
+  static_assert(K * FilterSizeExponent <= 64,
+                "Not enough bits in 64-bit hash for K hash functions with this filter size");
 
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);

@@ -17,14 +17,15 @@ namespace hyrise {
 
 template <template <typename> class Hasher, uint8_t FilterSize, uint8_t K>
 Reduce<Hasher, FilterSize, K>::Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
-                                   const std::shared_ptr<const AbstractOperator>& right_input,
-                                   const OperatorJoinPredicate predicate, const bool update_filter)
+                                      const std::shared_ptr<const AbstractOperator>& right_input,
+                                      const OperatorJoinPredicate predicate, const bool update_filter)
     : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input},
       _predicate(predicate),
       _update_filter(update_filter) {}
 
 template <template <typename> class Hasher, uint8_t FilterSize, uint8_t K>
-void Reduce<Hasher, FilterSize, K>::_create_filter(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
+void Reduce<Hasher, FilterSize, K>::_create_filter(const std::shared_ptr<const Table>& table,
+                                                   const ColumnID column_id) {
   const auto FILTER_SIZE = static_cast<uint32_t>(pow(2u, FilterSize));
 
   Assert(FILTER_SIZE % 64 == 0, "Filter size must be a multiple of 64.");
@@ -201,8 +202,8 @@ std::shared_ptr<const Table> Reduce<Hasher, FilterSize, K>::_on_execute() {
 }
 
 template <template <typename> class Hasher, uint8_t FilterSize, uint8_t K>
-void Reduce<Hasher, FilterSize, K>::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-}
+void Reduce<Hasher, FilterSize, K>::_on_set_parameters(
+    const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 template <template <typename> class Hasher, uint8_t FilterSize, uint8_t K>
 std::shared_ptr<AbstractOperator> Reduce<Hasher, FilterSize, K>::_on_deep_copy(
