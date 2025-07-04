@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(Hyrise)
 
+enable_testing()
+
 if(APPLE)
     set(CMAKE_EXE_LINKER_FLAGS -Wl,-export_dynamic)
 else()
@@ -19,7 +21,7 @@ function(compiler_not_supported message)
 endfunction(compiler_not_supported)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.2)
         compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
     if (APPLE)
@@ -27,12 +29,12 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         compiler_not_supported("We had to drop support for GCC on OS X because it caused segfaults when used with tbb. You can continue, but don't hold us responsible for any segmentation faults.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.0)
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.0)
-        compiler_not_supported("Hyrise does not support Apple clang compilers older than version 14.")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15.0)
+        compiler_not_supported("Hyrise does not support Apple clang compilers older than version 15.")
     endif()
     # In release mode, we found issues on ARM with loop unrolling (macOS Ventura, Apple Clang 14.0).
     # As we do not benchmark on macOS, we can safely ignore this issue for now.
@@ -56,16 +58,25 @@ else()
 endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
-     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20.0)
-         # Clang 18/19 warn when switch statements do not have a default case even when the entire enum is covered (see
-         # https://github.com/llvm/llvm-project/blob/7d9634e527fe52bf20a9036be6e5771f8fc4de17/clang/test/Sema/switch-default.cpp#L19).
-         # As clang also (correctly) complains when not all enum cases are handled, we disable the 'switch-default'
-         # warning. We disable it only for Clang 18/19 at the moment to ensure that this change is re-evaluated with the
-         # next major clang version as we would like to have as few exceptions as possible from using -Weverything.
+     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 21.0)
+         # Since Clang 18, -Weverything includes a warning that warns when switch statements do not have a default case even when the entire enum is
+         # covered (see https://github.com/llvm/llvm-project/blob/7d9634e527fe52bf20a9036be6e5771f8fc4de17/clang/test/Sema/switch-default.cpp#L19).
+         # Currently, there is discussion in PR #2692 whether -Weverything should remain activated and which switch-specific warnings should be used.
+         # For now, we disable the warning for Clang versions 18 to 20.
          message(WARNING "Disable warning 'switch-default' for Clang version ${CMAKE_CXX_COMPILER_VERSION}.")
          add_compile_options(-Wno-switch-default)
      endif()
  endif()
+
+# Starting with GCC 14's libstdc++, std::atomic_load for shared pointers is deprecated (as part of C++20). However, as
+# of LLVM 19, libc++ has not implemented std::atomic<std::shared_ptr> (see P0718R2,
+# https://en.cppreference.com/w/cpp/compiler_support). As we use libstdc++ when compiling with clang on Linux, we
+# disable deprecation warnings.
+# We only disable this warning on Linux because clang on macOS uses libc++. Once libc++ implements the missing atomics,
+# the active warning on macOS will make us aware of it.
+if(NOT APPLE)
+    add_compile_options(-Wno-deprecated-declarations)
+endif()
 
 # Enable address and undefined behavior sanitization if requested
 option(ENABLE_ADDR_UB_LEAK_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)

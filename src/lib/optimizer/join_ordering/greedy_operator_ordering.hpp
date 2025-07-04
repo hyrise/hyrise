@@ -6,6 +6,7 @@
 
 #include "abstract_join_ordering_algorithm.hpp"
 #include "join_graph_edge.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -27,7 +28,7 @@ class GreedyOperatorOrdering : public AbstractJoinOrderingAlgorithm {
 
  private:
   // Cache plan cardinalities because calculating the repeatedly during sorting is expensive
-  using PlanCardinalityPair = std::pair<std::shared_ptr<AbstractLQPNode>, float>;
+  using PlanCardinalityPair = std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>;
 
   // Build a plan from joining all vertex clusters connected by @param edge
   static PlanCardinalityPair _build_plan_for_edge(

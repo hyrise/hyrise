@@ -41,7 +41,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       // for (auto b = dictionary.cbegin(); b != dictionary.cend(); ++b) { std::cout << " '" << *b << "' "; }
 
       auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          dictionary.cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
+          dictionary.cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0}};
       auto end = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
           dictionary.cbegin(), _segment.null_value_id(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
 

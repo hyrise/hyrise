@@ -72,11 +72,11 @@ ChunkOffset VariableStringDictionarySegment<T>::size() const {
 
 template <typename T>
   requires(std::is_same_v<T, pmr_string>)
-std::shared_ptr<AbstractSegment> VariableStringDictionarySegment<T>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto copy = std::make_shared<VariableStringDictionarySegment>(pmr_vector<char>(_dictionary, alloc),
-                                                                _attribute_vector->copy_using_allocator(alloc),
-                                                                pmr_vector<uint32_t>(_offset_vector, alloc));
+std::shared_ptr<AbstractSegment> VariableStringDictionarySegment<T>::copy_using_memory_resource(
+    MemoryResource& memory_resource) const {
+  auto copy = std::make_shared<VariableStringDictionarySegment>(pmr_vector<char>(_dictionary, &memory_resource),
+                                                                _attribute_vector->copy_using_memory_resource(memory_resource),
+                                                                pmr_vector<uint32_t>(_offset_vector, &memory_resource));
   copy->access_counter = access_counter;
   return copy;
 }
