@@ -44,138 +44,12 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
   return (lhs + rhs - 1u) / rhs;
 }
 
-/**
- *        ____  _  _  __  ____  ____   __  ____   ___
- *       (    \( \/ )/  \(    \(___ \ /  \(___ \ / __)
- *        ) D ( )  /(  O )) D ( / __/(  0 )/ __/(___ \
- *       (____/(__/  \__/(____/(____) \__/(____)(____/
- *
- *
- * Notes on Segment Accessors:
- *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
- *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
- */
-
-/**
- * Encodes a signed integer value into a byte array for sorting purposes.
- * Prepends the integer with a null byte to indicate, whether the value is null or not.
- * Bytes will be inverted when sorting in descending order.
- */
-template <typename T>
-void encode_int_value(uint8_t* dest, const std::optional<T>& val, const SortColumnDefinition& def) {
-  // Determine if value is null. Replace this with your actual null check logic.
-  T value;
-  if (val.has_value()) {
-    value = val.value();
-  } else {
-    value = T();  // Default value for the type, e.g., 0 for int32_t
-  }
-
-  // First byte encodes null presence (and null order preference)
-  uint8_t null_byte = val.has_value() ? 0x00 : 0xFF;
-  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
-    null_byte = ~null_byte;
-  }
-  dest[0] = null_byte;
-
-  // Bias the value to get a lexicographically sortable encoding
-  using UnsignedT = typename std::make_unsigned<T>::type;
-  UnsignedT biased = static_cast<UnsignedT>(value) ^ (UnsignedT(1) << (sizeof(T) * 8 - 1));  // flip sign bit
-
-  // Store bytes in big-endian order starting at dest[1]
-  for (size_t i = 0; i < sizeof(T); ++i) {
-    dest[1 + i] = static_cast<uint8_t>(biased >> ((sizeof(T) - 1 - i) * 8));
-  }
-
-  // Invert for descending order (excluding the null byte)
-  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
-    for (size_t i = 1; i <= sizeof(T); ++i) {
-      dest[i] = ~dest[i];
-    }
-  }
+bool is_descending(const SortMode& mode) {
+  return mode == SortMode::DescendingNullsFirst || mode == SortMode::DescendingNullsLast;
 }
 
-template void encode_int_value<int32_t>(uint8_t* dest, const std::optional<int32_t>& val,
-                                        const SortColumnDefinition& def);
-template void encode_int_value<int64_t>(uint8_t* dest, const std::optional<int64_t>& val,
-                                        const SortColumnDefinition& def);
-
-void encode_double_value(uint8_t* dest, const std::optional<double>& val, const SortColumnDefinition& def) {
-  uint8_t null_byte = val.has_value() ? 0x00 : 0xFF;
-  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
-    null_byte = ~null_byte;
-  }
-  dest[0] = null_byte;
-
-  double value;
-  if (val.has_value()) {
-    value = val.value();
-  } else {
-    value = double();
-  }
-
-  // Reinterpret double as raw 64-bit bits
-  uint64_t bits;
-  static_assert(sizeof(double) == sizeof(uint64_t), "Size mismatch");
-  memcpy(&bits, &value, sizeof(bits));
-
-  // Flip the bits to ensure lexicographic order matches numeric order
-  if (std::signbit(value)) {
-    bits = ~bits;  // Negative values are bitwise inverted
-  } else {
-    bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
-  }
-
-  // Write to buffer in big-endian order (MSB first)
-  for (int i = 0; i < 8; ++i) {
-    dest[1 + i] = static_cast<uint8_t>(bits >> ((7 - i) * 8));
-  }
-
-  // Descending? Invert all 8 bytes (excluding null byte)
-  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
-    for (size_t i = 1; i <= 8; ++i) {
-      dest[i] = ~dest[i];
-    }
-  }
-}
-
-void encode_float_value(uint8_t* dest, const std::optional<float>& val, const SortColumnDefinition& def) {
-  double value;
-  if (val.has_value()) {
-    value = static_cast<double>(val.value());
-  }
-
-  // Use the same encoding as for double, but with float value
-  encode_double_value(dest, std::optional<double>(value), def);
-}
-
-void encode_string_value(uint8_t* dest, const std::optional<pmr_string>& val, const SortColumnDefinition& def) {
-  if (!val.has_value()) {
-    *dest = static_cast<uint8_t>(0xFF);  // set null byte to indicate NULL value
-  } else {
-    *dest = static_cast<uint8_t>(0x00);  // not NULL
-  }
-  if (def.sort_mode == SortMode::AscendingNullsFirst || def.sort_mode == SortMode::DescendingNullsFirst) {
-    *dest = ~(*dest);  // Nulls first
-  }
-
-  pmr_string value;
-  if (val.has_value()) {
-    value = val.value();
-  } else {
-    value = pmr_string();  // Default empty string
-  }
-
-  size_t copy_len = std::min(value.size(), size_t(STRING_PREFIX));
-  memcpy(dest + 1, value.data(), copy_len);
-  memset(dest + 1 + copy_len, 0, STRING_PREFIX - copy_len);  // pad with zeroes
-
-  // Invert the bytes for descending order
-  if (def.sort_mode == SortMode::DescendingNullsFirst || def.sort_mode == SortMode::DescendingNullsLast) {
-    for (size_t i = 1; i < STRING_PREFIX + 1; ++i) {
-      dest[i] = ~dest[i];
-    }
-  }
+bool is_nulls_first(const SortMode& mode) {
+  return mode == SortMode::AscendingNullsFirst || mode == SortMode::DescendingNullsFirst;
 }
 
 /**
@@ -547,7 +421,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     // spawn thread to generate keys
     threads.emplace_back([&, chunk_id]() {
       auto chunk = input_table->get_chunk(chunk_id);
-      auto row_count_for_chunk = chunk_sizes[chunk_id];
 
       // buffer points to the start of this chunk's keys in the global key_buffer
       uint8_t* buffer = &key_buffer[row_id_offsets[chunk_id] * key_width];
@@ -555,33 +428,90 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       // TODO(someone): How to handle huge number of keycolumns? maybe max. number for key generation
       for (size_t i = 0; i < _sort_definitions.size(); ++i) {
         auto sort_col = _sort_definitions[i].column;
+        auto nulls_first = is_nulls_first(_sort_definitions[i].sort_mode);
+        auto descending = is_descending(_sort_definitions[i].sort_mode);
+
+        const auto abstract_segment = chunk->get_segment(sort_col);
         resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
-          // TODO(someone): preinstantiate segment accessors for each segment
-          const auto& abstract_segment = chunk->get_segment(sort_col);
-          const auto segment_accessor = create_segment_accessor<ColumnDataType>(abstract_segment);
-
-          // create key for each row in the chunk
-          for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
+          segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
+            const auto row = val.chunk_offset();          // get the row offset in the chunk
             uint8_t* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
+            auto dest = key_ptr + key_offsets[i];  // pointer to the destination in the key buffer for this column
 
-            const auto value = segment_accessor->access(ChunkOffset{row});
+            const ColumnDataType value = val.value();
+            const auto data_length =
+                std::is_same_v<ColumnDataType, pmr_string> ? STRING_PREFIX : sizeof(ColumnDataType);
+
+            // Set the first byte to indicate if the value is null or not
+            uint8_t null_byte = !val.is_null() ? 0x00 : 0xFF;
+            if (nulls_first) {
+              null_byte = ~null_byte;
+            }
+            dest[0] = null_byte;
 
             // encode the value into the key based on the data type
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              encode_string_value(key_ptr + key_offsets[i], value, _sort_definitions[i]);
+              size_t copy_len = std::min(value.size(), size_t(STRING_PREFIX));
+              memcpy(dest + 1, value.data(), copy_len);
+              memset(dest + 1 + copy_len, 0, STRING_PREFIX - copy_len);  // pad with zeroes
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
-              encode_double_value(key_ptr + key_offsets[i], value, _sort_definitions[i]);
+              // Reinterpret double as raw 64-bit bits
+              uint64_t bits;
+              memcpy(&bits, &value, sizeof(bits));
+
+              // Flip the bits to ensure lexicographic order matches numeric order
+              if (std::signbit(value)) {
+                bits = ~bits;  // Negative values are bitwise inverted
+              } else {
+                bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
+              }
+
+              // Write to buffer in big-endian order (MSB first)
+              for (int i = 0; i < 8; ++i) {
+                dest[1 + i] = static_cast<uint8_t>(bits >> ((7 - i) * 8));
+              }
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
-              encode_float_value(key_ptr + key_offsets[i], value, _sort_definitions[i]);
+              const double value_as_double = val.is_null() ? double() : static_cast<double>(value);
+              // Reinterpret double as raw 64-bit bits
+              uint64_t bits;
+              // static_assert(sizeof(double) == sizeof(uint64_t), "Size mismatch");
+              memcpy(&bits, &value_as_double, sizeof(bits));
+
+              // Flip the bits to ensure lexicographic order matches numeric order
+              if (std::signbit(value_as_double)) {
+                bits = ~bits;  // Negative values are bitwise inverted
+              } else {
+                bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
+              }
+
+              // Write to buffer in big-endian order (MSB first)
+              for (int i = 0; i < 8; ++i) {
+                dest[1 + i] = static_cast<uint8_t>(bits >> ((7 - i) * 8));
+              }
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
-              encode_int_value(key_ptr + key_offsets[i], value, _sort_definitions[i]);
+              // Bias the value to get a lexicographically sortable encoding
+              using UnsignedT = typename std::make_unsigned<ColumnDataType>::type;
+              UnsignedT biased =
+                  static_cast<UnsignedT>(value) ^ (UnsignedT(1) << (data_length * 8 - 1));  // flip sign bit
+
+              // Store bytes in big-endian order starting at dest[1]
+              for (size_t i = 0; i < data_length; ++i) {
+                dest[1 + i] = static_cast<uint8_t>(biased >> ((data_length - 1 - i) * 8));
+              }
             } else {
               throw std::logic_error("Unsupported data type for sorting: " +
                                      std::string(typeid(ColumnDataType).name()));
             }
-          }
+
+            // Invert for descending order (excluding the null byte)
+            if (descending) {
+              for (size_t i = 1; i <= data_length; ++i) {
+                dest[i] = ~dest[i];
+              }
+            }
+          });
         });
       }
     });
