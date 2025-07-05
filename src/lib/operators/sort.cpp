@@ -460,7 +460,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
               memcpy(dest + 1, value.data(), copy_len);
               memset(dest + 1 + copy_len, 0, STRING_PREFIX - copy_len);  // pad with zeroes
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
-              // Reinterpret double as raw 64-bit bits
+              // Encode double value; reinterpret double as raw 64-bit bits
               auto bits = uint64_t{0};
               memcpy(&bits, &value, sizeof(bits));
 
@@ -476,6 +476,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                 dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
               }
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
+              // Encode float value
               const double value_as_double = val.is_null() ? double() : static_cast<double>(value);
               // Reinterpret double as raw 64-bit bits
               auto bits = uint64_t{0};
@@ -494,6 +495,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                 dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
               }
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
+              // encode int value
               // Bias the value to get a lexicographically sortable encoding
               using UnsignedT = typename std::make_unsigned<ColumnDataType>::type;
               UnsignedT biased =
