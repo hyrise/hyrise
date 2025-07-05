@@ -81,26 +81,26 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
  */
 
 template <typename T>
-std::vector<std::shared_ptr<AbstractTask>> process_in_parallel(const std::vector<T>& elements, size_t max_parallelism,
-                                                               auto handler) {
-  TRACE_EVENT("sort", "setup_parallel_processing");
+std::vector<std::shared_ptr<AbstractTask>> run_parallel_batched(const std::vector<T>& elements, size_t batch_size,
+                                                                auto handler) {
+  TRACE_EVENT("sort", "run_parallel_batched");
+
+  const auto task_count = (elements.size() + batch_size - 1) / batch_size;
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
-  tasks.reserve(max_parallelism);
-  const auto task_count = std::min(elements.size(), max_parallelism);
-  const auto task_workload = elements.size() / task_count;
-  auto from_index = size_t{0};
-  for (auto task_index = size_t{1}; task_index <= task_count; ++task_index) {
+  tasks.reserve(task_count);
+
+  for (auto task_index = size_t{0}; task_index < task_count; ++task_index) {
     TRACE_EVENT("sort", "setup_task", "task", task_index);
-    const auto to_index = (task_index != task_count) ? task_index * task_workload : elements.size();
-    const auto task = std::make_shared<JobTask>([task_index, from_index, to_index, handler, &elements] {
-      TRACE_EVENT("sort", "task", "task", task_index);
-      for (auto index = from_index; index < to_index; ++index) {
+    auto elements_begin = task_index * batch_size;
+    auto elements_end = std::min(elements_begin + batch_size, elements.size());
+    const auto task = std::make_shared<JobTask>([task_index, elements_begin, elements_end, handler, &elements] {
+      TRACE_EVENT("sort", "task", "task", task_index, "begin", elements_begin, "end", elements_end);
+      for (auto index = elements_begin; index < elements_end; ++index) {
         handler(elements[index]);
       }
     });
     task->schedule();
     tasks.push_back(task);
-    from_index = to_index;
   }
   return tasks;
 }
@@ -287,46 +287,43 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
     // is acceptable. In the future, this could be improved.
     const auto output_column_chunk_id_pairs =
         generate_column_chunk_id_pairs(column_count, ChunkID{static_cast<uint32_t>(output_chunk_count)});
-    const auto write_tasks =
-        process_in_parallel(output_column_chunk_id_pairs, max_parallelism, [&](const auto element) {
-          const auto [column_id, output_chunk_id] = element;
-          TRACE_EVENT("sort", "write_segment", "column_id", column_id, "chunk_id",
-                      static_cast<size_t>(output_chunk_id));
+    const auto write_tasks = run_parallel_batched(output_column_chunk_id_pairs, 4, [&](const auto element) {
+      const auto [column_id, output_chunk_id] = element;
+      TRACE_EVENT("sort", "write_segment", "column_id", column_id, "chunk_id", static_cast<size_t>(output_chunk_id));
 
-          auto input_pos_list_offset = size_t{output_chunk_id * output_chunk_size};
-          auto input_pos_list_end = std::min(input_pos_list_offset + output_chunk_size, input_pos_list.size());
+      auto input_pos_list_offset = size_t{output_chunk_id * output_chunk_size};
+      auto input_pos_list_end = std::min(input_pos_list_offset + output_chunk_size, input_pos_list.size());
 
-          const auto first_reference_segment =
-              std::dynamic_pointer_cast<ReferenceSegment>(input_segments[column_id][output_chunk_id]);
-          const auto referenced_table =
-              resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
-          const auto referenced_column_id = resolve_indirection ? first_reference_segment->referenced_column_id()
-                                                                : ColumnID{static_cast<uint16_t>(column_id)};
+      const auto first_reference_segment =
+          std::dynamic_pointer_cast<ReferenceSegment>(input_segments[column_id][output_chunk_id]);
+      const auto referenced_table = resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
+      const auto referenced_column_id = resolve_indirection ? first_reference_segment->referenced_column_id()
+                                                            : ColumnID{static_cast<uint16_t>(column_id)};
 
-          auto output_pos_list = std::make_shared<RowIDPosList>();
-          output_pos_list->reserve(output_chunk_size);
+      auto output_pos_list = std::make_shared<RowIDPosList>();
+      output_pos_list->reserve(output_chunk_size);
 
-          // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
-          // `output_chunk_size` rows.
-          for (; input_pos_list_offset < input_pos_list_end; ++input_pos_list_offset) {
-            const auto& row_id = input_pos_list[input_pos_list_offset];
-            if (resolve_indirection) {
-              const auto& input_reference_segment =
-                  static_cast<ReferenceSegment&>(*input_segments[column_id][row_id.chunk_id]);
-              DebugAssert(input_reference_segment.referenced_table() == referenced_table,
-                          "Input column references more than one table");
-              DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
-                          "Input column references more than one column");
-              const auto& input_reference_pos_list = input_reference_segment.pos_list();
-              output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
-            } else {
-              output_pos_list->emplace_back(row_id);
-            }
-          }
+      // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
+      // `output_chunk_size` rows.
+      for (; input_pos_list_offset < input_pos_list_end; ++input_pos_list_offset) {
+        const auto& row_id = input_pos_list[input_pos_list_offset];
+        if (resolve_indirection) {
+          const auto& input_reference_segment =
+              static_cast<ReferenceSegment&>(*input_segments[column_id][row_id.chunk_id]);
+          DebugAssert(input_reference_segment.referenced_table() == referenced_table,
+                      "Input column references more than one table");
+          DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
+                      "Input column references more than one column");
+          const auto& input_reference_pos_list = input_reference_segment.pos_list();
+          output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
+        } else {
+          output_pos_list->emplace_back(row_id);
+        }
+      }
 
-          output_segments_by_chunk[output_chunk_id][column_id] =
-              std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
-        });
+      output_segments_by_chunk[output_chunk_id][column_id] =
+          std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
+    });
     Hyrise::get().scheduler()->wait_for_tasks(write_tasks);
   }
 
@@ -655,7 +652,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_BEGIN("sort", "scan");
 
   const auto column_chunk_pairs = generate_column_chunk_id_pairs(search_column_count, chunk_count);
-  const auto scan_tasks = process_in_parallel(column_chunk_pairs, hardware_parallelism, [&](const auto element) {
+  const auto scan_tasks = run_parallel_batched(column_chunk_pairs, 4, [&](const auto element) {
     const auto [column_index, chunk_id] = element;
     TRACE_EVENT("sort", "scan_segment", "search_column_index", column_index, "chunk_id", static_cast<size_t>(chunk_id));
     const auto column_id = _sort_definitions[column_index].column;
@@ -688,8 +685,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // Convert the columnar layout into a row layout for better sorting. This is done by encoding all sorted columns
   // into an array of bytes. These rows can be compared using memcmp.
 
+  TRACE_EVENT_BEGIN("sort", "allocate_rows");
+
   auto materialized_rows = pmr_vector<NormalizedKeyRow>();
   materialized_rows.resize(input_table->row_count());
+
+  TRACE_EVENT_END("sort");
 
   TRACE_EVENT_BEGIN("sort", "materialize");
 
@@ -703,7 +704,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   auto chunk_allocations = std::vector<pmr_vector<std::byte>>(chunk_count);
-  const auto materialization_tasks = process_in_parallel(chunk_ids, hardware_parallelism, [&](auto element) {
+  const auto materialization_tasks = run_parallel_batched(chunk_ids, 1, [&](auto element) {
     const auto [chunk_id, total_offset] = element;
     TRACE_EVENT("sort", "materialize_chunk", "chunk_id", static_cast<size_t>(chunk_id));
     const auto chunk = input_table->get_chunk(chunk_id);
@@ -837,7 +838,8 @@ void perfetto_run(const std::shared_ptr<const Table>& input_table,
                   const std::vector<SortColumnDefinition>& sort_definitions) {
   const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
   table_wrapper->execute();
-  const auto sort_operator = std::make_shared<Sort>(table_wrapper, sort_definitions);
+  const auto sort_operator =
+      std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No);
 
   auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
   track_event_cfg.add_enabled_categories("sort");
