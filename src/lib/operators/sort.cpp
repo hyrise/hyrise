@@ -1,30 +1,35 @@
 #include "sort.hpp"
 
+#ifdef ENABLE_PERFETTO
+#include <perfetto.h>
+#else
+#define PERFETTO_DEFINE_CATEGORIES(...)
+#define PERFETTO_TRACK_EVENT_STATIC_STORAGE(...)
+#define TRACE_EVENT(...)
+#define TRACE_EVENT_BEGIN(...)
+#define TRACE_EVENT_END(...)
+#endif
+
 #include <algorithm>
-#include <atomic>
 #include <bit>
 #include <chrono>
-#include <compare>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <execution>
 #include <format>
+#include <fstream>
 #include <functional>
-#include <iomanip>
-#include <ios>
+#include <iterator>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <numeric>
-#include <optional>
-#include <queue>
-#include <ranges>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
-#include <valarray>
 #include <vector>
 
 #include <boost/accumulators/statistics_fwd.hpp>
@@ -38,6 +43,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -48,12 +54,17 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
+#include "storage/segment_iterables/segment_positions.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
+
+PERFETTO_DEFINE_CATEGORIES(perfetto::Category("sort").SetDescription("Benchmark Sort Operator"));
+
+PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 namespace {
 
@@ -77,10 +88,54 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
  *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
  */
 
+template <typename T>
+std::vector<std::shared_ptr<AbstractTask>> run_parallel_batched(const std::vector<T>& elements, size_t batch_size,
+                                                                auto handler) {
+  TRACE_EVENT("sort", "run_parallel_batched");
+
+  const auto task_count = (elements.size() + batch_size - 1) / batch_size;
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
+  tasks.reserve(task_count);
+
+  for (auto task_index = size_t{0}; task_index < task_count; ++task_index) {
+    TRACE_EVENT("sort", "setup_task", "task", task_index);
+    auto elements_begin = task_index * batch_size;
+    auto elements_end = std::min(elements_begin + batch_size, elements.size());
+    const auto task = std::make_shared<JobTask>([elements_begin, elements_end, handler, &elements] {
+      TRACE_EVENT("sort", "task", "begin", elements_begin, "end", elements_end);
+      for (auto index = elements_begin; index < elements_end; ++index) {
+        handler(elements[index]);
+      }
+    });
+    task->schedule();
+    tasks.push_back(task);
+  }
+  return tasks;
+}
+
+std::vector<std::pair<size_t, ChunkID>> generate_column_chunk_id_pairs(size_t column_count, ChunkID chunk_count) {
+  auto result = std::vector<std::pair<size_t, ChunkID>>();
+  result.reserve(column_count * chunk_count);
+  for (auto column_index = size_t{0}; column_index < column_count; ++column_index) {
+    for (auto chunk_id = size_t{0}; chunk_id < chunk_count; ++chunk_id) {
+      result.emplace_back(column_index, chunk_id);
+    }
+  }
+  return result;
+}
+
+std::vector<size_t> generate_counts(size_t count) {
+  auto result = std::vector<size_t>(count);
+  boost::algorithm::iota(result, 0);
+  return result;
+}
+
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<const Table>& unsorted_table,
                                                        RowIDPosList pos_list, const ChunkOffset output_chunk_size) {
+  TRACE_EVENT("sort", "write_materialized_output_table");
+
   // First, we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
@@ -92,94 +147,74 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   const auto output_chunk_count = div_ceil(pos_list.size(), output_chunk_size);
   Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
-  // Vector of segments for each chunk
-  auto output_segments_by_chunk = std::vector<Segments>{output_chunk_count};
-
   // Materialize column by column, starting a new ValueSegment whenever output_chunk_size is reached
   const auto input_chunk_count = unsorted_table->chunk_count();
   const auto output_column_count = unsorted_table->column_count();
   const auto row_count = unsorted_table->row_count();
-  for (auto column_id = ColumnID{0}; column_id < output_column_count; ++column_id) {
+
+  // Vector of segments for each chunk
+  auto output_segments_by_chunk = std::vector(output_chunk_count, Segments(output_column_count));
+
+  const auto column_ids = generate_counts(output_column_count);
+  const auto chunk_ids = generate_counts(output_chunk_count);
+
+  const auto materialize_columns = run_parallel_batched(column_ids, 1, [&](const auto column_index) {
+    TRACE_EVENT("sort", "materialize_column", "column_id", column_index);
+    const auto column_id = ColumnID{static_cast<uint16_t>(column_index)};
+
     const auto column_data_type = output->column_data_type(column_id);
     const auto column_is_nullable = unsorted_table->column_is_nullable(column_id);
 
     resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto chunk_it = output_segments_by_chunk.begin();
-      auto current_segment_size = size_t{0};
-
-      auto value_segment_value_vector = pmr_vector<ColumnDataType>{};
-      auto value_segment_null_vector = pmr_vector<bool>{};
-
-      {
-        const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count));
-        value_segment_value_vector.reserve(next_chunk_size);
-        if (column_is_nullable) {
-          value_segment_null_vector.reserve(next_chunk_size);
-        }
-      }
-
       auto accessor_by_chunk_id =
-          std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(unsorted_table->chunk_count());
+          std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(input_chunk_count);
       for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
         const auto& abstract_segment = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
+        DebugAssert(abstract_segment, "Segment should exist");
         accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
+        DebugAssert(accessor_by_chunk_id[input_chunk_id], "Accessor must be initialized");
       }
 
-      for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
-        const auto [chunk_id, chunk_offset] = pos_list[row_index];
+      const auto materialize_chunks = run_parallel_batched(chunk_ids, 4, [&](const auto chunk_index) {
+        TRACE_EVENT_BEGIN("sort", "materialize_chunk", "column_id", column_index, "chunk_id", chunk_index);
+        const auto output_chunk_id = ChunkID{static_cast<uint32_t>(chunk_index)};
 
-        auto& accessor = accessor_by_chunk_id[chunk_id];
-        const auto typed_value = accessor->access(chunk_offset);
-        const auto is_null = !typed_value;
-        value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
+        const auto output_segment_begin = chunk_index * output_chunk_size;
+        const auto output_segment_end = std::min(output_segment_begin + output_chunk_size, row_count);
+        const auto output_segment_size = output_segment_end - output_segment_begin;
+
+        auto value_segment_values = pmr_vector<ColumnDataType>();
+        value_segment_values.reserve(output_segment_size);
+        auto value_segment_null_values = pmr_vector<bool>();
         if (column_is_nullable) {
-          value_segment_null_vector.push_back(is_null);
+          value_segment_null_values.reserve(output_segment_size);
         }
 
-        ++current_segment_size;
-
-        // Check if value segment is full
-        if (current_segment_size >= output_chunk_size) {
-          current_segment_size = 0;
-
-          std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
-          if (column_is_nullable) {
-            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
-                                                                           std::move(value_segment_null_vector));
-          } else {
-            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
-          }
-
-          chunk_it->push_back(value_segment);
-          value_segment_value_vector = pmr_vector<ColumnDataType>{};
-          value_segment_null_vector = pmr_vector<bool>{};
-
-          const auto next_chunk_size =
-              std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count - row_index));
-          value_segment_value_vector.reserve(next_chunk_size);
-          if (column_is_nullable) {
-            value_segment_null_vector.reserve(next_chunk_size);
-          }
-
-          ++chunk_it;
+        const auto pos_list_begin = pos_list.begin() + output_segment_begin;
+        const auto pos_list_end = pos_list.begin() + output_segment_end;
+        for (const auto [input_chunk_id, input_chunk_offset] : std::ranges::subrange(pos_list_begin, pos_list_end)) {
+          DebugAssert(accessor_by_chunk_id[input_chunk_id], "ChunkID must be valid");
+          auto value = accessor_by_chunk_id[input_chunk_id]->access(input_chunk_offset);
+          value_segment_null_values.push_back(!value);
+          value_segment_values.push_back((value) ? *value : ColumnDataType{});
         }
-      }
 
-      // Last segment has not been added
-      if (current_segment_size > 0) {
-        std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
         if (column_is_nullable) {
-          value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
-                                                                         std::move(value_segment_null_vector));
+          const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
+              std::move(value_segment_values), std::move(value_segment_null_values));
+          output_segments_by_chunk[output_chunk_id][column_id] = value_segment;
         } else {
-          value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
+          const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_values));
+          output_segments_by_chunk[output_chunk_id][column_id] = value_segment;
         }
-        chunk_it->push_back(value_segment);
-      }
+        TRACE_EVENT_END("sort");
+      });
+      Hyrise::get().scheduler()->wait_for_tasks(materialize_chunks);
     });
-  }
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(materialize_columns);
 
   for (auto& segments : output_segments_by_chunk) {
     output->append_chunk(segments);
@@ -198,6 +233,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
 // reference table. If the input is already a reference table, the double indirection needs to be resolved.
 std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const Table>& unsorted_table,
                                                     RowIDPosList input_pos_list, const ChunkOffset output_chunk_size) {
+  TRACE_EVENT("sort", "write_reference_output_table");
   // First we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output_table = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::References);
@@ -212,6 +248,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(column_count));
 
   if (!resolve_indirection && input_pos_list.size() <= output_chunk_size) {
+    TRACE_EVENT("sort", "write_fast_path");
     // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection.
     const auto output_pos_list = std::make_shared<RowIDPosList>(std::move(input_pos_list));
     auto& output_segments = output_segments_by_chunk.at(0);
@@ -219,49 +256,51 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       output_segments[column_id] = std::make_shared<ReferenceSegment>(unsorted_table, column_id, output_pos_list);
     }
   } else {
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
-      // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
-      // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
-      // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
-      // is acceptable. In the future, this could be improved.
+    TRACE_EVENT("sort", "write_slow_path");
+
+    TRACE_EVENT_BEGIN("sort", "write_setup");
+    // Collect all segments from the input table.
+    const auto input_chunk_count = unsorted_table->chunk_count();
+    auto input_segments = std::vector(column_count, std::vector<std::shared_ptr<AbstractSegment>>(input_chunk_count));
+    for (auto chunk_id = ChunkID{0}; chunk_id < input_chunk_count; ++chunk_id) {
+      const auto chunk = unsorted_table->get_chunk(chunk_id);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        input_segments[column_id][chunk_id] = chunk->get_segment(column_id);
+        DebugAssert(input_segments[column_id][chunk_id], "Expected valid segment");
+      }
+    }
+    TRACE_EVENT_END("sort");
+
+    // To keep the implementation simple, we write the output ReferenceSegments in column and chunk pairs. This means
+    // that even if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this
+    // is slightly more expensive to generate and slightly less efficient for following operators, we assume that the
+    // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
+    // is acceptable. In the future, this could be improved.
+    const auto output_column_chunk_id_pairs =
+        generate_column_chunk_id_pairs(column_count, ChunkID{static_cast<uint32_t>(output_chunk_count)});
+    const auto write_tasks = run_parallel_batched(output_column_chunk_id_pairs, 4, [&](const auto element) {
+      const auto [column_id, output_chunk_id] = element;
+      TRACE_EVENT("sort", "write_segment", "column_id", column_id, "chunk_id", static_cast<size_t>(output_chunk_id));
+
+      auto input_pos_list_offset = size_t{output_chunk_id * output_chunk_size};
+      auto input_pos_list_end = std::min(input_pos_list_offset + output_chunk_size, input_pos_list.size());
+
+      const auto first_reference_segment =
+          std::dynamic_pointer_cast<ReferenceSegment>(input_segments[column_id][output_chunk_id]);
+      const auto referenced_table = resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
+      const auto referenced_column_id = resolve_indirection ? first_reference_segment->referenced_column_id()
+                                                            : ColumnID{static_cast<uint16_t>(column_id)};
+
       auto output_pos_list = std::make_shared<RowIDPosList>();
       output_pos_list->reserve(output_chunk_size);
 
-      // Collect all input segments for the current column
-      const auto input_chunk_count = unsorted_table->chunk_count();
-      auto input_segments = std::vector<std::shared_ptr<AbstractSegment>>(input_chunk_count);
-      for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-        input_segments[input_chunk_id] = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
-      }
-
-      const auto first_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(input_segments.at(0));
-      const auto referenced_table = resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
-      const auto referenced_column_id =
-          resolve_indirection ? first_reference_segment->referenced_column_id() : column_id;
-
-      // write_output_pos_list creates an output reference segment for a given ChunkID, ColumnID and PosList.
-      auto output_chunk_id = ChunkID{0};
-      const auto write_output_pos_list = [&] {
-        DebugAssert(!output_pos_list->empty(), "Asked to write empty output_pos_list");
-        output_segments_by_chunk.at(output_chunk_id)[column_id] =
-            std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
-        ++output_chunk_id;
-
-        output_pos_list = std::make_shared<RowIDPosList>();
-        if (output_chunk_id < output_chunk_count) {
-          output_pos_list->reserve(output_chunk_size);
-        }
-      };
-
       // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
       // `output_chunk_size` rows.
-      const auto input_pos_list_size = input_pos_list.size();
-      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list_size;
-           ++input_pos_list_offset) {
+      for (; input_pos_list_offset < input_pos_list_end; ++input_pos_list_offset) {
         const auto& row_id = input_pos_list[input_pos_list_offset];
         if (resolve_indirection) {
-          const auto& input_reference_segment = static_cast<ReferenceSegment&>(*input_segments[row_id.chunk_id]);
+          const auto& input_reference_segment =
+              static_cast<ReferenceSegment&>(*input_segments[column_id][row_id.chunk_id]);
           DebugAssert(input_reference_segment.referenced_table() == referenced_table,
                       "Input column references more than one table");
           DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
@@ -271,15 +310,12 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
         } else {
           output_pos_list->emplace_back(row_id);
         }
+      }
 
-        if (output_pos_list->size() == output_chunk_size) {
-          write_output_pos_list();
-        }
-      }
-      if (!output_pos_list->empty()) {
-        write_output_pos_list();
-      }
-    }
+      output_segments_by_chunk[output_chunk_id][column_id] =
+          std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
+    });
+    Hyrise::get().scheduler()->wait_for_tasks(write_tasks);
   }
 
   for (auto& segments : output_segments_by_chunk) {
@@ -288,250 +324,6 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
   return output_table;
 }
-
-using PmrByteIter = std::byte*;
-
-// Encodes the row value of
-class ColumnDataEncoder : Noncopyable {
- public:
-  ColumnDataEncoder() = default;
-  ColumnDataEncoder(const ColumnDataEncoder&) = delete;
-  ColumnDataEncoder(ColumnDataEncoder&&) = delete;
-  ColumnDataEncoder& operator=(const ColumnDataEncoder&) = delete;
-  ColumnDataEncoder& operator=(ColumnDataEncoder&&) = delete;
-  virtual ~ColumnDataEncoder() = default;
-
-  // Set the number of bytes a value is padded to. This is required for to ensure all columnar values have the same
-  // size.
-  virtual void set_width(size_t padding) = 0;
-
-  // Returns the number of bytes required to encode this value.
-  virtual size_t required_bytes(RowID row_id) const = 0;
-
-  // Encodes the value of the given row to the byte vector. Returns the iterator to the end of the encoded data.
-  virtual PmrByteIter encode(RowID row_id, PmrByteIter start) const = 0;
-};
-
-auto to_unsigned_representation(auto signed_value, const uint32_t expected_num_bytes) {
-  if constexpr (std::is_same_v<decltype(signed_value), int32_t>) {
-    const auto zero_value = (std::numeric_limits<uint32_t>::max() / 2) + 1;
-    const auto result = zero_value + std::bit_cast<uint32_t>(signed_value);
-    if (expected_num_bytes < 4) {
-      const auto mask = uint32_t{1} << (8 * expected_num_bytes - 1);
-      return result ^ mask;
-    }
-    return result;
-  } else if constexpr (std::is_same_v<decltype(signed_value), int64_t>) {
-    const auto zero_value = (std::numeric_limits<uint64_t>::max() / 2) + 1;
-    const auto result = zero_value + std::bit_cast<uint64_t>(signed_value);
-    if (expected_num_bytes < 4) {
-      const auto mask = uint64_t{1} << (8 * expected_num_bytes - 1);
-      return result ^ mask;
-    }
-    return result;
-  } else if constexpr (std::is_same_v<decltype(signed_value), float>) {
-    auto unsigned_int = std::bit_cast<uint32_t>(signed_value);
-    if (signed_value < 0) {
-      unsigned_int ^= std::numeric_limits<uint32_t>::max();
-    } else {
-      unsigned_int |= std::numeric_limits<uint32_t>::max() / 2 + 1;
-    }
-    return unsigned_int;
-  } else if constexpr (std::is_same_v<decltype(signed_value), double>) {
-    auto unsigned_int = std::bit_cast<uint64_t>(signed_value);
-    if (signed_value < 0) {
-      unsigned_int ^= std::numeric_limits<uint64_t>::max();
-    } else {
-      unsigned_int |= std::numeric_limits<uint64_t>::max() / 2 + 1;
-    }
-    return unsigned_int;
-  } else {
-    Fail(std::format("Not implemented `{}`", typeid(decltype(signed_value)).name()));
-    return uint32_t{0};
-  }
-}
-
-template <typename DataType>
-class TypedColumnDataEncoder : public ColumnDataEncoder {
- public:
-  TypedColumnDataEncoder(const TypedColumnDataEncoder&) = delete;
-  TypedColumnDataEncoder(TypedColumnDataEncoder&&) = delete;
-  TypedColumnDataEncoder& operator=(const TypedColumnDataEncoder&) = delete;
-  TypedColumnDataEncoder& operator=(TypedColumnDataEncoder&&) = delete;
-  ~TypedColumnDataEncoder() override = default;
-
-  TypedColumnDataEncoder(const std::shared_ptr<const Table>& table, ColumnID column_id, SortMode sort_mode)
-      : ColumnDataEncoder(),
-        _table(table),
-        _column_id(column_id),
-        _sort_mode(sort_mode),
-        _accessor(table->chunk_count()),
-        _is_nullable(_table->column_is_nullable(column_id)),
-        _width(size_t{0}) {
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto segment = _table->get_chunk(chunk_id)->get_segment(_column_id);
-      _accessor[chunk_id] = create_segment_accessor<DataType>(segment);
-    }
-  }
-
-  void set_width(size_t width) override {
-    if constexpr (std::is_same_v<DataType, int32_t> || std::is_same_v<DataType, float>) {
-      DebugAssert(width == (_is_nullable) ? 5 : 4, std::format("Cannot encode int32_t/float with padding %d", width));
-    } else if constexpr (std::is_same_v<DataType, int64_t> || std::is_same_v<DataType, double>) {
-      DebugAssert(width == (_is_nullable) ? 9 : 8, std::format("Cannot encode int64_t/double with padding %d", width));
-    }
-    _width = width;
-  }
-
-  size_t required_bytes(RowID row_id) const override {
-    auto null_bytes = static_cast<size_t>((_is_nullable) ? 1 : 0);
-    if constexpr (std::is_same_v<DataType, float>) {
-      return size_t{4} + null_bytes;
-    }
-    if constexpr (std::is_same_v<DataType, double>) {
-      return size_t{8} + null_bytes;
-    }
-    const auto value = _accessor[row_id.chunk_id]->access(row_id.chunk_offset);
-    if constexpr (std::is_same_v<DataType, int32_t>) {
-      if (value) {
-        auto required_bytes = size_t{0};
-        if (*value == 0) {
-          required_bytes = 1;
-        } else if (*value < 0) {
-          const auto unsigned_value = to_unsigned_representation(*value, 4) | 0x80000000;
-          required_bytes = 4 - ((std::countl_one(unsigned_value) - 1) / 8);
-        } else {
-          required_bytes = 4 - ((std::countl_zero(static_cast<uint32_t>(*value)) - 1) / 8);
-        }
-        return required_bytes + null_bytes;
-      }
-    }
-    if constexpr (std::is_same_v<DataType, int64_t>) {
-      if (value) {
-        auto required_bytes = size_t{0};
-        if (*value == 0) {
-          required_bytes = 1;
-        } else if (*value < 0) {
-          const auto unsigned_value = to_unsigned_representation(*value, 8);
-          required_bytes = 8 - ((std::countl_one(unsigned_value) - 1) / 8);
-        } else {
-          required_bytes = 8 - ((std::countl_zero(static_cast<uint32_t>(*value)) - 1) / 8);
-        }
-        return required_bytes + null_bytes;
-      }
-    }
-    if constexpr (std::is_same_v<DataType, pmr_string>) {
-      if (value) {
-        return value->size() + null_bytes;
-      }
-    }
-    return null_bytes;
-  }
-
-  PmrByteIter encode(RowID row_id, PmrByteIter start) const override {
-    const auto value = _accessor[row_id.chunk_id]->access(row_id.chunk_offset);
-    if (value) {
-      if (_is_nullable) {
-        if (_sort_mode == SortMode::AscendingNullsFirst || _sort_mode == SortMode::DescendingNullsFirst) {
-          (*start++) = std::numeric_limits<std::byte>::max();
-        } else {
-          (*start++) = std::numeric_limits<std::byte>::min();
-        }
-      }
-      return _encode_to_bytes(*value, start);
-    }
-    return _encode_null(start);
-  }
-
- private:
-  PmrByteIter _encode_null(PmrByteIter start) const {
-    DebugAssert(_is_nullable, "Cannot encode null value for non-nullable columns");
-    if (_sort_mode == SortMode::AscendingNullsFirst || _sort_mode == SortMode::DescendingNullsFirst) {
-      (*start++) = std::numeric_limits<std::byte>::min();
-    } else {
-      (*start++) = std::numeric_limits<std::byte>::max();
-    }
-    for (auto counter = size_t{1}; counter < _width; counter++) {
-      (*start++) = std::byte{0};
-    }
-    return start;
-  }
-
-  PmrByteIter _encode_to_bytes(const pmr_string& value, PmrByteIter start) const {
-    const auto byte_count = (_is_nullable) ? _width - 1 : _width;
-    if (_sort_mode == SortMode::AscendingNullsFirst || _sort_mode == SortMode::AscendingNullsLast) {
-      for (const auto chr : value) {
-        (*start++) = std::bit_cast<std::byte>(chr);
-      }
-    } else {
-      for (const auto chr : value) {
-        (*start++) = std::bit_cast<std::byte>(chr) ^ std::byte{0xff};
-      }
-    }
-    const auto fill_byte = std::numeric_limits<std::byte>::min();
-    for (auto index = static_cast<ChunkOffset>(value.size()); index < byte_count; ++index) {
-      (*start++) = fill_byte;
-    }
-    return start;
-  }
-
-  // Encode signed value to a byte array for proper use with memcmp.
-  PmrByteIter _encode_to_bytes(auto value, PmrByteIter start) const {
-    DebugAssert(_width > 0, "Padding not set");
-    auto byte_count = _width;
-    if (_is_nullable) {
-      byte_count -= 1;
-    }
-
-    // Convert to an unsigned representation of the signed value (integer or floating point).
-    // For all signed a < b <=> unsgined representation a' < b' holds.
-    auto unsigned_value = to_unsigned_representation(value, byte_count);
-    using UnsignedInt = decltype(unsigned_value);
-    if (_sort_mode == SortMode::DescendingNullsFirst || _sort_mode == SortMode::DescendingNullsLast) {
-      // Invert order.
-      unsigned_value ^= std::numeric_limits<UnsignedInt>::max();
-    }
-
-    for (auto offset = (static_cast<int32_t>(byte_count) - 1) * 8; offset >= 0; offset -= 8) {
-      const auto unsigned_offset = static_cast<UnsignedInt>(offset);
-      *start++ = static_cast<std::byte>((unsigned_value >> unsigned_offset) & 0xFF);
-    }
-
-    return start;
-  }
-
-  const std::shared_ptr<const Table>& _table;  // NO LINT
-  ColumnID _column_id;
-  SortMode _sort_mode;
-  pmr_vector<std::unique_ptr<AbstractSegmentAccessor<DataType>>> _accessor;
-  bool _is_nullable;
-  size_t _width;
-};
-
-struct NormalizedKeyStorage {
-  NormalizedKeyStorage(const NormalizedKeyStorage&) = delete;
-  NormalizedKeyStorage& operator=(const NormalizedKeyStorage&) = delete;
-  NormalizedKeyStorage(NormalizedKeyStorage&& other) noexcept = delete;
-
-  NormalizedKeyStorage& operator=(NormalizedKeyStorage&& other) noexcept {
-    delete ptr;
-    ptr = other.ptr;
-    other.ptr = nullptr;
-    return *this;
-  }
-
-  NormalizedKeyStorage() : ptr(nullptr) {}
-
-  explicit NormalizedKeyStorage(size_t len) : ptr(new std::byte[len]) {
-    Assert(ptr, "Failed to initlaize raw array");
-  }
-
-  ~NormalizedKeyStorage() {
-    delete[] ptr;
-  }
-
-  std::byte* ptr;  // NOLINT
-};
 
 template <size_t start, size_t end>
 int static_memcmp(std::byte* left, std::byte* right, size_t len) {
@@ -557,37 +349,210 @@ struct NormalizedKeyRow {
   }
 };
 
+// Map signed to unsigned data types with same number of bytes (e.g., int32_t to uint32_t).
 template <typename T>
-std::vector<std::shared_ptr<AbstractTask>> process_in_parallel(const std::vector<T>& elements, size_t max_parallelism,
-                                                               auto handler) {
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
-  tasks.reserve(max_parallelism);
-  const auto task_count = std::min(elements.size(), max_parallelism);
-  const auto task_workload = elements.size() / task_count;
-  auto from_index = size_t{0};
-  for (auto task_index = size_t{1}; task_index <= task_count; ++task_index) {
-    const auto to_index = (task_index != task_count) ? task_index * task_workload : elements.size();
-    const auto task = std::make_shared<JobTask>([from_index, to_index, handler, &elements] {
-      for (auto index = from_index; index < to_index; ++index) {
-        handler(elements[index]);
-      }
-    });
-    task->schedule();
-    tasks.push_back(task);
-    from_index = to_index;
+auto to_unsigned(T value) {
+  if constexpr (std::is_same_v<decltype(value), int32_t> || std::is_same_v<decltype(value), float>) {
+    return std::bit_cast<uint32_t>(value);
+  } else if constexpr (std::is_same_v<decltype(value), int64_t> || std::is_same_v<decltype(value), double>) {
+    return std::bit_cast<uint64_t>(value);
   }
-  return tasks;
 }
 
-std::vector<std::pair<size_t, ChunkID>> generate_column_chunk_id_pairs(size_t column_count, ChunkID chunk_count) {
-  auto result = std::vector<std::pair<size_t, ChunkID>>();
-  result.reserve(column_count * chunk_count);
-  for (auto column_index = size_t{0}; column_index < column_count; ++column_index) {
-    for (auto chunk_id = size_t{0}; chunk_id < chunk_count; ++chunk_id) {
-      result.emplace_back(column_index, chunk_id);
-    }
+struct ScanResult {
+  // Maximum number of bytes required to encode all values.
+  size_t encoding_width = 0;
+  // Contains a null value.
+  bool nullable = false;
+
+  // Returns number of bytes required to encode all scanned values. Includes the extra byte for null values.
+  size_t width() const {
+    return encoding_width + ((nullable) ? 1 : 0);
   }
+
+  ScanResult merge(ScanResult other) {
+    return {
+        .encoding_width = std::max(encoding_width, other.encoding_width),
+        .nullable = nullable || other.nullable,
+    };
+  }
+};
+
+/// Scans column for maximum bytes necessary to encode all segmenet values and null values.
+template <typename ColumnDataType>
+ScanResult scan_column(const AbstractSegment& segment) {
+  auto result = ScanResult{
+      .encoding_width = 0,
+      .nullable = false,
+  };
+  segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto end) {
+    while (it != end) {
+      const auto& segment_position = *it;
+      if (segment_position.is_null()) {
+        result.nullable = true;
+      } else if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        result.encoding_width = std::max(result.encoding_width, segment_position.value().size());
+      } else {
+        const auto& value = segment_position.value();
+        if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
+          using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{}));
+          static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned");
+          // We often encounter small number, but we still 32-bit numbers while 8 or 16 bit would be sufficient.
+          // Because of that we want to reduce the bit-width of our integer numbers to the bare minimum. The idea
+          // is to drop all leading 0 for positive integers and all 1 leading 1 for negative numbers. We only keep
+          // 1-bit to store the signess for our integers. To keep the reduction simple we only drop full bytes.
+          //
+          // Example for 32-bit:
+          //
+          // Number | Hex Representation | Number of dropped bytes | Shortened Int
+          // -------|--------------------|-------------------------|--------------
+          //   -42  | 0xFFFFFFd6         | 6                       | 0xd6
+          //    42  | 0x0000002a         | 6                       | 0x2a
+          constexpr auto BASE_BYTE_COUNT = sizeof(UnsignedColumnDataType);
+          if (value < 0) {
+            result.encoding_width = std::max(
+                result.encoding_width, BASE_BYTE_COUNT - (std::countl_one<UnsignedColumnDataType>(value) - 1) / 8);
+          } else {
+            result.encoding_width = std::max(
+                result.encoding_width, BASE_BYTE_COUNT - (std::countl_zero<UnsignedColumnDataType>(value) - 1) / 8);
+          }
+        } else if constexpr (std::is_same_v<ColumnDataType, float>) {
+          result.encoding_width = 4;
+        } else if constexpr (std::is_same_v<ColumnDataType, double>) {
+          result.encoding_width = 8;
+        }
+      }
+      ++it;
+    }
+  });
   return result;
+}
+
+// Swap byte order. Should be replaced with C++23's std::byteswap if possible.
+auto byteswap(std::unsigned_integral auto value) {
+  auto* uint_bytes = reinterpret_cast<std::byte*>(&value);
+  for (auto start = uint_bytes, end = uint_bytes + sizeof(decltype(value)) - 1; start < end; ++start, --end) {
+    std::swap(*start, *end);
+  }
+  return value;
+}
+
+// Copy an integer to the byte array. To ensure the encoded integer is comparable with memcmp the endianess of the
+// encoded integer is changed to big-endian. In addition, it will take the number of bytes necessary to encode this
+// integer, because of the variable length encoding of int32_t and uint32_t (see materialization and scanning).
+void copy_uint_to_byte_array(std::byte* byte_array, std::unsigned_integral auto uint,
+                             size_t len = sizeof(decltype(uint))) {
+  if constexpr (std::endian::native == std::endian::little) {
+    uint = byteswap(uint);
+  } else if constexpr (std::endian::native != std::endian::big) {
+    Fail("mixed-endian is unsupported");
+  }
+  const auto* uint_byte_array = reinterpret_cast<std::byte*>(&uint);
+  memcpy(byte_array, uint_byte_array + (sizeof(decltype(uint)) - len), len);
+}
+
+using NormalizedKeyIter = pmr_vector<NormalizedKeyRow>::iterator;
+
+// Append segement's values as byte array to the normalized keys. Expects that the normalized_key_iter is valid for
+// each segment's values.
+//
+// Parameters:
+// @param segment              Segment to encode values from
+// @param offset               Offset to the start of the normalized key row's byte array.
+// @param expected_width       The number of bytes all values must be encoded to.
+// @param ascending            Sort normalized keys in ascending order.
+// @param nullable             Put exrta byte in front to encode null values.
+// @param nulls_first          Put null values to the start of the normalized key order else to the back.
+// @param normalized_key_iter  Iterator to the normalized keys.
+template <typename ColumnDataType>
+void materialize_segment_as_normalized_keys(const AbstractSegment& segment, const size_t offset,
+                                            const size_t expected_width, const bool ascending, const bool nullable,
+                                            const bool nulls_first, NormalizedKeyIter normalized_key_iter) {
+  // Normalized keys are ordered in ascendingly by default. The modifier is applied to invert this order.
+  const auto modifier = (ascending) ? std::byte{0x00} : std::byte{0xFF};
+  const auto full_modifier = (ascending) ? uint64_t{0x00} : std::numeric_limits<uint64_t>::max();
+  const auto normalized_null_value = ((nulls_first) ? std::byte{0x00} : std::byte{0xFF});
+  const auto normalized_non_null_value = ((nulls_first) ? std::byte{0xFF} : std::byte{0x00});
+  segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto end) {
+    while (it != end) {
+      const auto segment_position = *it;
+      DebugAssert(nullable || !segment_position.is_null(), "Segment must be nullable or contains no null values");
+      auto* normalized_key_start = normalized_key_iter->key_head + offset;
+
+      // Encode the null byte for nullable segments. This byte is used to order null vs. non-null values (e.g.
+      // put them to the front or end depending on the specified null order)
+      if (nullable && segment_position.is_null()) {
+        *normalized_key_start++ = normalized_null_value;
+        // Initialize actual key by setting all bytes to 0.
+        for (auto counter = size_t{0}; counter < expected_width; ++counter) {
+          *normalized_key_start++ = std::byte{0};
+        }
+        DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + expected_width + 1,
+                    "Encoded unexpected number of bytes");
+        ++it, ++normalized_key_iter;
+        continue;
+      }
+      if (nullable) {
+        *normalized_key_start++ = normalized_non_null_value;
+      }
+
+      const auto& value = segment_position.value();
+
+      // Normalize value and encode to byte array.
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        for (const auto chr : value) {
+          *normalized_key_start++ = static_cast<std::byte>(chr) ^ modifier;
+        }
+        // Add null bytes to pad values to correct size. (All keys must have the same size)
+        for (auto counter = segment_position.value().size(); counter < expected_width; ++counter) {
+          *normalized_key_start++ = std::byte{0} ^ modifier;
+        }
+      } else if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
+        using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{}));
+        static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned");
+
+        // Encode numeric values to a byte array, because we want to compare these values we need to ensure that
+        // the order is consistent after the conversion. Because of that, we will set the null value to half of the
+        // numeric space. While this can be done by setting the highest bit to 1 for all positive values, negative
+        // values are encoded as Two's complement and therefore need to be inverted. Because we use var int encoding,
+        // the highest bit is determined by expected encoding length.
+        //
+        // Examples for int32_t:
+        //
+        // Number | Hex Representation | Unsinged (full) Representation | Unsigned (variable) Representation
+        // -------|--------------------|--------------------------------|-----------------------------------
+        //   -42  | 0xFFFFFFd6         | 0x7FFFFFd6                     | 0x56
+        //    42  | 0x0000002a         | 0x8000002a                     | 0xaa
+
+        auto unsigned_value = to_unsigned<ColumnDataType>(value);
+        unsigned_value ^= UnsignedColumnDataType{1} << ((expected_width * 8) - 1);
+        unsigned_value ^= static_cast<UnsignedColumnDataType>(full_modifier);
+        copy_uint_to_byte_array(normalized_key_start, unsigned_value, expected_width);
+        normalized_key_start += expected_width;
+      } else if constexpr (std::is_same_v<ColumnDataType, float> || std::is_same_v<ColumnDataType, double>) {
+        using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{value}));
+        static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned");
+
+        auto unsigned_value = to_unsigned<ColumnDataType>(ColumnDataType{value});
+        if (value < 0) {
+          unsigned_value ^= std::numeric_limits<UnsignedColumnDataType>::max();
+        } else {
+          unsigned_value |= UnsignedColumnDataType{1} << ((sizeof(UnsignedColumnDataType) * 8) - 1);
+        }
+        unsigned_value = byteswap(unsigned_value);
+        memcpy(normalized_key_start, &unsigned_value, sizeof(UnsignedColumnDataType));
+        normalized_key_start += sizeof(UnsignedColumnDataType);
+      } else {
+        Fail(std::format("Cannot encode values of type '{}'", typeid(ColumnDataType).name()));
+      }
+      if constexpr (HYRISE_DEBUG) {
+        DebugAssert(
+            normalized_key_start == normalized_key_iter->key_head + offset + expected_width + (nullable) ? 1 : 0,
+            "Encoded unexpected number of bytes");
+      }
+      ++it, ++normalized_key_iter;
+    }
+  });
 }
 
 }  // namespace
@@ -626,6 +591,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto timer = Timer{};
   const auto& input_table = left_input_table();
 
+  TRACE_EVENT_BEGIN("sort", "setup");
+
   for (const auto& column_sort_definition : _sort_definitions) {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
@@ -639,66 +606,82 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     if (_force_materialization == ForceMaterialization::Yes && input_table->type() == TableType::References) {
       return Table::create_dummy_table(input_table->column_definitions());
     }
-
     return input_table;
   }
 
   auto sorted_table = std::shared_ptr<Table>{};
 
-  auto column_encoders = pmr_vector<std::shared_ptr<ColumnDataEncoder>>();
-  column_encoders.reserve(_sort_definitions.size());
+  auto column_scans = pmr_vector<std::function<ScanResult(const AbstractSegment&)>>();
+  column_scans.reserve(_sort_definitions.size());
+  auto column_materializer =
+      pmr_vector<std::function<void(const AbstractSegment&, size_t, size_t, bool, bool, bool, NormalizedKeyIter)>>();
+  column_materializer.reserve(_sort_definitions.size());
   for (const auto& column_sort_definition : _sort_definitions) {
     const auto column_data_type = input_table->column_data_type(column_sort_definition.column);
     resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      auto encoder = std::make_shared<TypedColumnDataEncoder<ColumnDataType>>(
-          input_table, column_sort_definition.column, column_sort_definition.sort_mode);
-      column_encoders.push_back(encoder);
+      column_scans.emplace_back(scan_column<ColumnDataType>);
+      column_materializer.emplace_back(materialize_segment_as_normalized_keys<ColumnDataType>);
     });
   }
-  const auto init_time = timer.lap();
-  std::cerr << "sort::init_time " << init_time << "\n";
+
+  // const auto init_time = timer.lap();
+  timer.lap();
+
+  TRACE_EVENT_END("sort");
 
   // Scan all chunks for the maximum number of bytes necessary to represent all column values. The scanning is
   // done in parallel on multiple threads.
 
-  const auto column_count = column_encoders.size();
+  const auto search_column_count = _sort_definitions.size();
   const auto chunk_count = input_table->chunk_count();
 
-  const auto hardware_parallelism = std::thread::hardware_concurrency();
-  auto column_chunk_max_bytes = std::vector(column_count, std::vector(chunk_count, size_t{0}));
-  const auto column_chunk_pairs = generate_column_chunk_id_pairs(column_count, chunk_count);
-  const auto scan_tasks = process_in_parallel(column_chunk_pairs, hardware_parallelism, [&](const auto element) {
+  auto chunk_stats = std::vector<std::vector<ScanResult>>(search_column_count, std::vector<ScanResult>(chunk_count));
+
+  TRACE_EVENT_BEGIN("sort", "scan");
+
+  const auto column_chunk_pairs = generate_column_chunk_id_pairs(search_column_count, chunk_count);
+  const auto scan_tasks = run_parallel_batched(column_chunk_pairs, 4, [&](const auto element) {
     const auto [column_index, chunk_id] = element;
-    const auto chunk_size = input_table->get_chunk(chunk_id)->size();
-    auto max_bytes = size_t{0};
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      const auto row_id = RowID{chunk_id, chunk_offset};
-      max_bytes = std::max(max_bytes, column_encoders[column_index]->required_bytes(row_id));
-    }
-    column_chunk_max_bytes[column_index][chunk_id] = max_bytes;
+    TRACE_EVENT("sort", "scan_segment", "search_column_index", column_index, "chunk_id", static_cast<size_t>(chunk_id));
+    const auto column_id = _sort_definitions[column_index].column;
+    const auto segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
+    chunk_stats[column_index][chunk_id] = column_scans[column_index](*segment);
   });
   Hyrise::get().scheduler()->wait_for_tasks(scan_tasks);
 
-  auto row_size = size_t{0};
-  for (auto column_index = size_t{0}; column_index < column_encoders.size(); ++column_index) {
-    const auto column_max_bytes = std::ranges::max(column_chunk_max_bytes[column_index]);
-    row_size += column_max_bytes;
-    column_encoders[column_index]->set_width(column_max_bytes);
+  auto column_stats = std::vector<ScanResult>(search_column_count, ScanResult{});
+  auto normalized_key_size = size_t{0};
+  for (auto column_index = size_t{0}; column_index < search_column_count; ++column_index) {
+    TRACE_EVENT("sort", "collect_stats", "sort_column_index", column_index);
+    const auto aggregated_stats = std::accumulate(chunk_stats[column_index].begin(), chunk_stats[column_index].end(),
+                                                  ScanResult{}, [](ScanResult result, ScanResult chunk) {
+                                                    return result.merge(chunk);
+                                                  });
+    column_stats[column_index] = aggregated_stats;
+    normalized_key_size += aggregated_stats.width();
   }
-  const auto padded_row_size = ((row_size + 3) / 4) * 4;
-  std::cerr << "row_size " << row_size << "\n";
-  std::cerr << "padded_row_size " << padded_row_size << "\n";
 
-  const auto scan_time = timer.lap();
-  std::cerr << "sort::scan_time " << scan_time << "\n";
+  TRACE_EVENT_END("sort");
+
+  const auto padded_key_size = ((normalized_key_size + 3) / 4) * 4;
+
+  // const auto scan_time = timer.lap();
+  timer.lap();
 
   // Convert the columnar layout into a row layout for better sorting. This is done by encoding all sorted columns
   // into an array of bytes. These rows can be compared using memcmp.
 
+  TRACE_EVENT_BEGIN("sort", "allocate_rows");
+
   auto materialized_rows = pmr_vector<NormalizedKeyRow>();
   materialized_rows.resize(input_table->row_count());
 
+  TRACE_EVENT_END("sort");
+
+  TRACE_EVENT_BEGIN("sort", "materialize");
+
+  // Create list of chunks to materialize.
   auto total_offset = size_t{0};
   auto chunk_ids = std::vector<std::pair<ChunkID, size_t>>(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -707,54 +690,60 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     total_offset += chunk_size;
   }
 
-  auto chunk_allocations = std::vector<NormalizedKeyStorage>(chunk_count);
+  auto chunk_allocations = std::vector<pmr_vector<std::byte>>(chunk_count);
+  const auto materialization_tasks = run_parallel_batched(chunk_ids, 1, [&](auto element) {
+    const auto [chunk_id, total_offset] = element;
+    TRACE_EVENT("sort", "materialize_chunk", "chunk_id", static_cast<size_t>(chunk_id));
+    const auto chunk = input_table->get_chunk(chunk_id);
+    const auto chunk_size = chunk->size();
+    chunk_allocations[chunk_id] = pmr_vector<std::byte>(chunk_size * padded_key_size);
 
-  const auto materialization_tasks = process_in_parallel(chunk_ids, hardware_parallelism, [&](auto element) {
-    const auto [chunk_id, offset] = element;
-    const auto chunk_size = input_table->get_chunk(chunk_id)->size();
-
-    chunk_allocations[chunk_id] = NormalizedKeyStorage(chunk_size * padded_row_size);
-
-    auto encoded_rows = pmr_vector<NormalizedKeyRow>(chunk_size);
-    auto encoding_iter = pmr_vector<PmrByteIter>(chunk_size);
+    auto normalized_key_iter = materialized_rows.begin() + total_offset;
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
-      encoded_rows[chunk_offset] = NormalizedKeyRow{
-          .key_head = chunk_allocations[chunk_id].ptr + (chunk_offset * padded_row_size),
+      *normalized_key_iter++ = NormalizedKeyRow{
+          .key_head = chunk_allocations[chunk_id].data() + (chunk_offset * padded_key_size),
           .row_id = row_id,
       };
-      encoding_iter[chunk_offset] = encoded_rows[chunk_offset].key_head;
     }
 
-    for (const auto& encoder : column_encoders) {
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-        const auto row_id = RowID{chunk_id, chunk_offset};
-        encoding_iter[chunk_offset] = encoder->encode(row_id, encoding_iter[chunk_offset]);
-      }
-    }
-
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      for (auto encoding_offset = row_size; encoding_offset < padded_row_size; ++encoding_offset) {
-        *(encoding_iter[chunk_offset]++) = std::byte{0};
-      }
-      DebugAssert(encoding_iter[chunk_offset] == encoded_rows[chunk_offset].key_head + padded_row_size,
-                  "Raw data not fully initialized");
-      materialized_rows[offset + chunk_offset] = std::move(encoded_rows[chunk_offset]);
+    normalized_key_iter = materialized_rows.begin() + total_offset;
+    auto key_offset = size_t{0};
+    for (auto index = size_t{0}; index < search_column_count; ++index) {
+      TRACE_EVENT("sort", "materialize_column", "sort_column_index", index);
+      const auto sort_mode = _sort_definitions[index].sort_mode;
+      const auto column_id = _sort_definitions[index].column;
+      const auto nullable = column_stats[index].nullable;
+      const auto encoding_width = column_stats[index].encoding_width;
+      const auto segment = chunk->get_segment(column_id);
+      const auto ascending = sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::AscendingNullsLast;
+      const auto nulls_first =
+          sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
+      DebugAssert(index < column_materializer.size(), "Search column out of bounds");
+      column_materializer[index](*segment, key_offset, encoding_width, ascending, nullable, nulls_first,
+                                 normalized_key_iter);
+      key_offset += column_stats[index].width();
     }
   });
   Hyrise::get().scheduler()->wait_for_tasks(materialization_tasks);
 
+  TRACE_EVENT_END("sort");
+
   const auto materialization_time = timer.lap();
-  std::cerr << "sort::materialization_time " << materialization_time << "\n";
+
+  TRACE_EVENT_BEGIN("sort", "sort");
 
   // TODO(student): Use pdqsort
   std::stable_sort(std::execution::par_unseq, materialized_rows.begin(), materialized_rows.end(),
                    [&](const auto& lhs, const auto& rhs) {
-                     return lhs.less_than(rhs, padded_row_size);
+                     return lhs.less_than(rhs, normalized_key_size);
                    });
 
+  TRACE_EVENT_END("sort");
+
   const auto sort_time = timer.lap();
-  std::cerr << "sort::sort_time " << sort_time << "\n";
+
+  TRACE_EVENT_BEGIN("sort", "write_back");
 
   // Extract the positions from the sorted rows.
   auto position_list = RowIDPosList();
@@ -762,8 +751,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (const auto& row : materialized_rows) {
     position_list.push_back(row.row_id);
   }
+
+  TRACE_EVENT_END("sort");
+
   const auto write_back_time = timer.lap();
-  std::cerr << "sort::write_back_time " << write_back_time << "\n";
 
   // TODO(student): Update performance metrics.
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
@@ -771,6 +762,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, write_back_time);
   step_performance_data.set_step_runtime(OperatorSteps::Sort, sort_time);
 
+  TRACE_EVENT("sort", "write_output");
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
@@ -779,6 +771,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
+    TRACE_EVENT("sort", "write_prepare");
     const auto input_column_count = input_table->column_count();
 
     for (auto input_column_id = ColumnID{0}; input_column_id < input_column_count; ++input_column_id) {
@@ -822,6 +815,46 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
   return sorted_table;
+}
+
+void perfetto_run(const std::shared_ptr<const Table>& input_table,
+                  const std::vector<SortColumnDefinition>& sort_definitions) {
+  const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+  table_wrapper->execute();
+  const auto sort_operator =
+      std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No);
+
+#ifdef ENABLE_PERFETTO
+  auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
+  track_event_cfg.add_enabled_categories("sort");
+
+  auto args = perfetto::TracingInitArgs{};
+  args.backends = perfetto::kInProcessBackend;
+  perfetto::Tracing::Initialize(args);
+  perfetto::TrackEvent::Register();
+
+  auto cfg = perfetto::TraceConfig{};
+  cfg.add_buffers()->set_size_kb(4096);
+  auto* ds_cfg = cfg.add_data_sources()->mutable_config();
+  ds_cfg->set_name("track_event");
+  ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
+
+  auto tracing_session = std::unique_ptr<perfetto::TracingSession>(perfetto::Tracing::NewTrace());
+  tracing_session->Setup(cfg);
+  tracing_session->StartBlocking();
+#endif
+
+  sort_operator->execute();
+
+#ifdef ENABLE_PERFETTO
+  tracing_session->StopBlocking();
+
+  auto trace_data = std::vector<char>(tracing_session->ReadTraceBlocking());
+  auto output = std::ofstream{};
+  output.open("dyod2025_sort_operator.perfetto-trace", std::ios::out | std::ios::binary);
+  output.write(trace_data.data(), static_cast<std::streamsize>(trace_data.size()));
+  output.close();
+#endif
 }
 
 }  // namespace hyrise

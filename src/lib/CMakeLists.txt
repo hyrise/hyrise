@@ -754,6 +754,11 @@ target_link_libraries_system(
     tbb
 )
 
+if (ENABLE_PERFETTO)
+    target_link_libraries(hyrise_impl perfetto-wrapper)
+    target_compile_options(hyrise_impl $<ENABLE_PERFETTO:-DENABLE_PERFETTO>)
+endif()
+
 if (NUMA_FOUND)
     target_link_libraries(hyrise_impl PUBLIC numa)
 endif()

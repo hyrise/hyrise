@@ -54,4 +54,7 @@ class Sort : public AbstractReadOnlyOperator {
   const ForceMaterialization _force_materialization;
 };
 
+void perfetto_run(const std::shared_ptr<const Table>& input_table,
+                  const std::vector<SortColumnDefinition>& sort_definition);
+
 }  // namespace hyrise
