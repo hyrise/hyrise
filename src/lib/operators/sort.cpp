@@ -1,6 +1,14 @@
 #include "sort.hpp"
 
+#ifdef ENABLE_PERFETTO
 #include <perfetto.h>
+#else
+#define PERFETTO_DEFINE_CATEGORIES(...)
+#define PERFETTO_TRACK_EVENT_STATIC_STORAGE(...)
+#define TRACE_EVENT(...)
+#define TRACE_EVENT_BEGIN(...)
+#define TRACE_EVENT_END(...)
+#endif
 
 #include <algorithm>
 #include <bit>
@@ -93,8 +101,8 @@ std::vector<std::shared_ptr<AbstractTask>> run_parallel_batched(const std::vecto
     TRACE_EVENT("sort", "setup_task", "task", task_index);
     auto elements_begin = task_index * batch_size;
     auto elements_end = std::min(elements_begin + batch_size, elements.size());
-    const auto task = std::make_shared<JobTask>([task_index, elements_begin, elements_end, handler, &elements] {
-      TRACE_EVENT("sort", "task", "task", task_index, "begin", elements_begin, "end", elements_end);
+    const auto task = std::make_shared<JobTask>([elements_begin, elements_end, handler, &elements] {
+      TRACE_EVENT("sort", "task", "begin", elements_begin, "end", elements_end);
       for (auto index = elements_begin; index < elements_end; ++index) {
         handler(elements[index]);
       }
@@ -617,8 +625,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     });
   }
 
-  const auto init_time = timer.lap();
-  std::cerr << "sort::init_time " << init_time << "\n";
+  // const auto init_time = timer.lap();
+  timer.lap();
 
   TRACE_EVENT_END("sort");
 
@@ -657,11 +665,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_END("sort");
 
   const auto padded_key_size = ((normalized_key_size + 3) / 4) * 4;
-  std::cerr << "sort::key_size " << normalized_key_size << "\n";
-  std::cerr << "sort::padded_key_size " << padded_key_size << "\n";
 
-  const auto scan_time = timer.lap();
-  std::cerr << "sort::scan_time " << scan_time << "\n";
+  // const auto scan_time = timer.lap();
+  timer.lap();
 
   // Convert the columnar layout into a row layout for better sorting. This is done by encoding all sorted columns
   // into an array of bytes. These rows can be compared using memcmp.
@@ -724,7 +730,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_END("sort");
 
   const auto materialization_time = timer.lap();
-  std::cerr << "sort::materialization_time " << materialization_time << "\n";
 
   TRACE_EVENT_BEGIN("sort", "sort");
 
@@ -737,7 +742,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_END("sort");
 
   const auto sort_time = timer.lap();
-  std::cerr << "sort::sort_time " << sort_time << "\n";
 
   TRACE_EVENT_BEGIN("sort", "write_back");
 
@@ -751,7 +755,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_END("sort");
 
   const auto write_back_time = timer.lap();
-  std::cerr << "sort::write_back_time " << write_back_time << "\n";
 
   // TODO(student): Update performance metrics.
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
@@ -821,6 +824,7 @@ void perfetto_run(const std::shared_ptr<const Table>& input_table,
   const auto sort_operator =
       std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No);
 
+#ifdef ENABLE_PERFETTO
   auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
   track_event_cfg.add_enabled_categories("sort");
 
@@ -838,9 +842,11 @@ void perfetto_run(const std::shared_ptr<const Table>& input_table,
   auto tracing_session = std::unique_ptr<perfetto::TracingSession>(perfetto::Tracing::NewTrace());
   tracing_session->Setup(cfg);
   tracing_session->StartBlocking();
+#endif
 
   sort_operator->execute();
 
+#ifdef ENABLE_PERFETTO
   tracing_session->StopBlocking();
 
   auto trace_data = std::vector<char>(tracing_session->ReadTraceBlocking());
@@ -848,6 +854,7 @@ void perfetto_run(const std::shared_ptr<const Table>& input_table,
   output.open("dyod2025_sort_operator.perfetto-trace", std::ios::out | std::ios::binary);
   output.write(trace_data.data(), static_cast<std::streamsize>(trace_data.size()));
   output.close();
+#endif
 }
 
 }  // namespace hyrise

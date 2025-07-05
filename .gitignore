@@ -53,3 +53,5 @@ sftp*
 # Clangd files
 compile_commands.json
 .cache/
+
+file:*

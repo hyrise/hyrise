@@ -35,17 +35,19 @@ target_include_directories(perf-cpp-wrapper INTERFACE ${CMAKE_CURRENT_SOURCE_DIR
 target_compile_options(perf-cpp-wrapper INTERFACE -Wno-deprecated-copy-with-dtor -Wno-extra-semi-stmt)
 
 
-# Perfetto
-add_library(perfetto STATIC
-    perfetto/sdk/perfetto.cc
-)
-target_include_directories(perfetto PUBLIC perfetto/sdk)
-target_compile_definitions(perfetto PUBLIC PERFETTO_IMPLEMENTATION)
+if (ENABLE_PERFETTO)
+    # Perfetto
+    add_library(perfetto STATIC
+        perfetto/sdk/perfetto.cc
+    )
+    target_include_directories(perfetto PUBLIC perfetto/sdk)
+    target_compile_definitions(perfetto PUBLIC PERFETTO_IMPLEMENTATION)
 
-# Create wrapper
-add_library(perfetto-wrapper INTERFACE)
-target_link_libraries(perfetto-wrapper INTERFACE perfetto)
-target_link_libraries(perfetto-wrapper INTERFACE dl pthread rt)
+    # Create wrapper
+    add_library(perfetto-wrapper INTERFACE)
+    target_link_libraries(perfetto-wrapper INTERFACE perfetto)
+    target_link_libraries(perfetto-wrapper INTERFACE dl pthread rt)
+endif()
 
 
 # Build sql-parser library

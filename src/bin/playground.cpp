@@ -5,7 +5,6 @@
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
 #include "operators/sort.hpp"
-#include "perfetto.h"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
