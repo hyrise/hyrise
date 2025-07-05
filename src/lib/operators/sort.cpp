@@ -343,21 +343,23 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   const auto chunk_count = input_table->chunk_count();
   const auto row_count = input_table->row_count();
+  const auto sort_definitions_size = _sort_definitions.size();
 
   // === precompute field_width, key_width and key_offsets ===
 
   // based on the sizes of the columns to be sorted by, e.g. if sorting by int, string it should be [4, 8]
-  std::vector<size_t> field_width;
-  field_width.reserve(_sort_definitions.size());
-  std::vector<size_t> string_columns;  // indices of sort_definitions that sort columns of type string
-  for (size_t i = 0; i < _sort_definitions.size(); ++i) {
-    const auto& def = _sort_definitions[i];
+  auto field_width = std::vector<size_t>();
+  field_width.reserve(sort_definitions_size);
+  auto string_columns = std::vector<size_t>();  // indices of sort_definitions that sort columns of type string
+
+  for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
+    const auto& def = _sort_definitions[index];
     const auto sort_col = def.column;
     resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         field_width.emplace_back(STRING_PREFIX);  // store size of the string prefix
-        string_columns.emplace_back(i);           // keep track of string columns for fallback comparisons
+        string_columns.emplace_back(index);           // keep track of string columns for fallback comparisons
       } else if constexpr (std::is_same_v<ColumnDataType, float>) {
         field_width.push_back(sizeof(double));  // encode float as double for sorting
       } else {
@@ -367,22 +369,23 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     });
   }
 
-  size_t key_width = 0;  // total width of each normalized key (width of all columns to be sorted by plus null bytes)
-  for (const auto& col : field_width) {
-    key_width += col + 1;  // +1 for null byte
+  // total width of each normalized key (width of all columns to be sorted by plus null bytes)
+  auto key_width = size_t{0};
+  for (const auto& column : field_width) {
+    key_width += column + 1;  // +1 for null byte
   }
 
   /**
    * Offsets for each column in the key, i.e. `key_offsets[i]` is the offset of the i-th column in the key.
    * This means, that `buffer[key_offsets[i]]` is the location of the i-th column's value in the key.
   */
-  std::vector<size_t> key_offsets(_sort_definitions.size());
+  auto key_offsets = std::vector<size_t>(sort_definitions_size);
   key_offsets[0] = 0;  // first column starts at offset 0
-  for (size_t i = 1; i < _sort_definitions.size(); ++i) {
-    key_offsets[i] = key_offsets[i - 1] + field_width[i - 1] + 1;  // +1 for null byte
+  for (auto index = size_t{1}; index < sort_definitions_size; ++index) {
+    key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;  // +1 for null byte
   }
 
-  std::vector<std::thread> threads;  // vector to hold threads
+  auto threads = std::vector<std::thread>();  // vector to hold threads
 
   auto key_buffer = std::vector<uint8_t>();  // buffer to hold all keys for sorting
   auto total_buffer_size = size_t{0};        // total size of the key buffer
@@ -390,8 +393,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto chunk_sizes = std::vector<size_t>();  // number of rows per chunk in the input table
   chunk_sizes.reserve(chunk_count);          // reserve space for chunk sizes
 
-  RowIDPosList row_ids;        // vector to hold row IDs for each row in the table
-  row_ids.reserve(row_count);  // reserve space for row IDs
+  auto row_ids = RowIDPosList{};  // vector to hold row IDs for each row in the table
+  row_ids.reserve(row_count);     // reserve space for row IDs
 
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = input_table->get_chunk(chunk_id);
@@ -423,13 +426,13 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       auto chunk = input_table->get_chunk(chunk_id);
 
       // buffer points to the start of this chunk's keys in the global key_buffer
-      uint8_t* buffer = &key_buffer[row_id_offsets[chunk_id] * key_width];
+      auto* buffer = &key_buffer[row_id_offsets[chunk_id] * key_width];
 
       // TODO(someone): How to handle huge number of keycolumns? maybe max. number for key generation
-      for (size_t i = 0; i < _sort_definitions.size(); ++i) {
-        auto sort_col = _sort_definitions[i].column;
-        auto nulls_first = is_nulls_first(_sort_definitions[i].sort_mode);
-        auto descending = is_descending(_sort_definitions[i].sort_mode);
+      for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
+        auto sort_col = _sort_definitions[index].column;
+        auto nulls_first = is_nulls_first(_sort_definitions[index].sort_mode);
+        auto descending = is_descending(_sort_definitions[index].sort_mode);
 
         const auto abstract_segment = chunk->get_segment(sort_col);
         resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
@@ -437,15 +440,15 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
             const auto row = val.chunk_offset();          // get the row offset in the chunk
-            uint8_t* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
-            auto dest = key_ptr + key_offsets[i];  // pointer to the destination in the key buffer for this column
+            auto* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
+            auto dest = key_ptr + key_offsets[index];  // pointer to the destination in the key buffer for this column
 
             const ColumnDataType value = val.value();
             const auto data_length =
                 std::is_same_v<ColumnDataType, pmr_string> ? STRING_PREFIX : sizeof(ColumnDataType);
 
             // Set the first byte to indicate if the value is null or not
-            uint8_t null_byte = !val.is_null() ? 0x00 : 0xFF;
+            auto null_byte = !val.is_null() ? 0x00 : 0xFF;
             if (nulls_first) {
               null_byte = ~null_byte;
             }
@@ -453,12 +456,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
             // encode the value into the key based on the data type
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              size_t copy_len = std::min(value.size(), size_t(STRING_PREFIX));
+              auto copy_len = std::min(value.size(), size_t(STRING_PREFIX));
               memcpy(dest + 1, value.data(), copy_len);
               memset(dest + 1 + copy_len, 0, STRING_PREFIX - copy_len);  // pad with zeroes
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
               // Reinterpret double as raw 64-bit bits
-              uint64_t bits;
+              auto bits = uint64_t{0};
               memcpy(&bits, &value, sizeof(bits));
 
               // Flip the bits to ensure lexicographic order matches numeric order
@@ -469,13 +472,13 @@ std::shared_ptr<const Table> Sort::_on_execute() {
               }
 
               // Write to buffer in big-endian order (MSB first)
-              for (int i = 0; i < 8; ++i) {
-                dest[1 + i] = static_cast<uint8_t>(bits >> ((7 - i) * 8));
+              for (auto byte_idx = uint32_t{0}; byte_idx < 8; ++byte_idx) {
+                dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
               }
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
               const double value_as_double = val.is_null() ? double() : static_cast<double>(value);
               // Reinterpret double as raw 64-bit bits
-              uint64_t bits;
+              auto bits = uint64_t{0};
               // static_assert(sizeof(double) == sizeof(uint64_t), "Size mismatch");
               memcpy(&bits, &value_as_double, sizeof(bits));
 
@@ -487,8 +490,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
               }
 
               // Write to buffer in big-endian order (MSB first)
-              for (int i = 0; i < 8; ++i) {
-                dest[1 + i] = static_cast<uint8_t>(bits >> ((7 - i) * 8));
+              for (auto byte_idx = uint32_t{0}; byte_idx < 8; ++byte_idx) {
+                dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
               }
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
               // Bias the value to get a lexicographically sortable encoding
@@ -497,8 +500,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                   static_cast<UnsignedT>(value) ^ (UnsignedT(1) << (data_length * 8 - 1));  // flip sign bit
 
               // Store bytes in big-endian order starting at dest[1]
-              for (size_t i = 0; i < data_length; ++i) {
-                dest[1 + i] = static_cast<uint8_t>(biased >> ((data_length - 1 - i) * 8));
+              for (auto byte_idx = size_t{0}; byte_idx < data_length; ++byte_idx) {
+                dest[1 + byte_idx] = static_cast<uint8_t>(biased >> ((data_length - 1 - byte_idx) * 8));
               }
             } else {
               throw std::logic_error("Unsupported data type for sorting: " +
@@ -507,8 +510,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
             // Invert for descending order (excluding the null byte)
             if (descending) {
-              for (size_t i = 1; i <= data_length; ++i) {
-                dest[i] = ~dest[i];
+              for (auto idx = size_t{1}; idx <= data_length; ++idx) {
+                dest[idx] = ~dest[idx];
               }
             }
           });
@@ -518,28 +521,28 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   // Join all threads
-  for (auto& t : threads) {
-    t.join();
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   // Sort the buffer
   auto compare_rows = [&](const RowID a, const RowID b) {
-    uint8_t* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
-    uint8_t* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
+    auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
+    auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
 
-    int cmp = memcmp(key_a, key_b, key_width);
-    if (cmp != 0)
-      return cmp < 0;
+    int compare = memcmp(key_a, key_b, key_width);
+    if (compare != 0)
+      return compare < 0;
 
     // fallback to full comparison for string columns
     // other columns are already compared correctly by the key buffer
-    for (auto i : string_columns) {
-      int comparison_result = 0;
+    for (auto index : string_columns) {
+      auto comparison_result = uint32_t{0};
 
       const auto accessorA = create_segment_accessor<pmr_string>(
-          input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[i].column));
+          input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[index].column));
       const auto accessorB = create_segment_accessor<pmr_string>(
-          input_table->get_chunk(b.chunk_id)->get_segment(_sort_definitions[i].column));
+          input_table->get_chunk(b.chunk_id)->get_segment(_sort_definitions[index].column));
 
       const auto& valA = accessorA->access(a.chunk_offset);
       const auto& valB = accessorB->access(b.chunk_offset);
@@ -550,8 +553,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       }
 
       if (comparison_result != 0) {
-        if (_sort_definitions[i].sort_mode == SortMode::AscendingNullsFirst ||
-            _sort_definitions[i].sort_mode == SortMode::AscendingNullsLast) {
+        if (_sort_definitions[index].sort_mode == SortMode::AscendingNullsFirst ||
+            _sort_definitions[index].sort_mode == SortMode::AscendingNullsLast) {
           return comparison_result < 0;
         } else {
           return comparison_result > 0;
