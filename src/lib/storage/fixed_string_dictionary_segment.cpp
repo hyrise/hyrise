@@ -73,9 +73,6 @@ std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_mem
                                                         _attribute_vector->copy_using_memory_resource(memory_resource));
   copy->access_counter = access_counter;
 
-  // std::cerr << "Dict orig " << _dictionary.data_size() << '\n';
-  // std::cerr << "Dict copy " << copy->fixed_string_dictionary().data_size() << '\n';
-
   return copy;
 }
 

@@ -15,13 +15,11 @@ class SimpleTrackingMemoryResource : public MemoryResource {
 
   void* do_allocate(std::size_t bytes, std::size_t alignment) override {
     allocated += bytes;
-    std::cout << "JObytes" << bytes << " location " << &*this << '\n';
     return std::malloc(bytes);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
 
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
     allocated -= bytes;
-    std::cout << "JObytesweg" << bytes << " location " << &*this << '\n';
     std::free(p);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
 
@@ -82,38 +80,36 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
   std::shared_ptr<BaseValueSegment> empty_original_segment;
 };
 
-// TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
-//   // Test that migrated segments properly use the assigned memory resource.
-//   auto encoded_segment = std::static_pointer_cast<AbstractSegment>(original_segment);
-//   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
-//     encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
-//   }
+TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
+  // Test that migrated segments properly use the assigned memory resource.
+  auto encoded_segment = std::static_pointer_cast<AbstractSegment>(original_segment);
+  if (encoding_spec.encoding_type != EncodingType::Unencoded) {
+    encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
+  }
 
-//   auto resource = SimpleTrackingMemoryResource{};
-//   std::cout << "a\n";
-//   const auto copied_segment = encoded_segment->copy_using_memory_resource(resource);
-//   std::cout << "b\n";
+  auto resource = SimpleTrackingMemoryResource{};
+  const auto copied_segment = encoded_segment->copy_using_memory_resource(resource);
 
-//   // The segment control structure (i.e., the object itself) and its members are not stored using PMR. Thus, we
-//   // retrieve the size of an empty segment for later subtraction.
-//   auto empty_encoded_segment = std::static_pointer_cast<AbstractSegment>(empty_original_segment);
-//   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
-//     empty_encoded_segment = ChunkEncoder::encode_segment(empty_original_segment, data_type, encoding_spec);
-//   }
+  // The segment control structure (i.e., the object itself) and its members are not stored using PMR. Thus, we
+  // retrieve the size of an empty segment for later subtraction.
+  auto empty_encoded_segment = std::static_pointer_cast<AbstractSegment>(empty_original_segment);
+  if (encoding_spec.encoding_type != EncodingType::Unencoded) {
+    empty_encoded_segment = ChunkEncoder::encode_segment(empty_original_segment, data_type, encoding_spec);
+  }
 
-//   const auto copied_segment_size = copied_segment->memory_usage(MemoryUsageCalculationMode::Full);
-//   const auto empty_segment_size = empty_encoded_segment->memory_usage(MemoryUsageCalculationMode::Full);
-//   EXPECT_GT(copied_segment_size, empty_segment_size);
-//   auto estimated_usage = copied_segment_size - empty_segment_size;
+  const auto copied_segment_size = copied_segment->memory_usage(MemoryUsageCalculationMode::Full);
+  const auto empty_segment_size = empty_encoded_segment->memory_usage(MemoryUsageCalculationMode::Full);
+  EXPECT_GT(copied_segment_size, empty_segment_size);
+  auto estimated_usage = copied_segment_size - empty_segment_size;
 
-//   if (encoding_spec.encoding_type == EncodingType::FixedStringDictionary) {
-//     // An empty FixedStringDictionary holds a single \0 char to make some things easier. We need to fix the
-//     //  calculation for this.
-//     estimated_usage += 1;
-//   }
+  if (encoding_spec.encoding_type == EncodingType::FixedStringDictionary) {
+    // An empty FixedStringDictionary holds a single \0 char to make some things easier. We need to fix the calculation
+    // for this.
+    estimated_usage += 1;
+  }
 
-//   EXPECT_EQ(resource.allocated, estimated_usage);
-// }
+  EXPECT_EQ(resource.allocated, estimated_usage);
+}
 
 TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
   // Test that SegmentAccessCounters are correctly copied when a segment is migrated

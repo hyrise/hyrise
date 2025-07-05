@@ -19,10 +19,13 @@ class FixedStringVector {
   // Create a FixedStringVector of FixedStrings with given values.
   FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator = {});
 
+  // Move constructor
+  FixedStringVector(FixedStringVector&& other) noexcept
+      : _string_length(other._string_length), _chars(std::move(other._chars)), _size(other._size) {}
+
   // Create a FixedStringVector of FixedStrings with existing data.
   FixedStringVector(pmr_vector<char>&& chars, const size_t string_length)
       : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {
-    std::cerr << "move constructor like thing ...\n";
   }
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container.
