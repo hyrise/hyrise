@@ -755,8 +755,8 @@ target_link_libraries_system(
 )
 
 if (ENABLE_PERFETTO)
-    target_link_libraries(hyrise_impl perfetto-wrapper)
-    target_compile_options(hyrise_impl $<ENABLE_PERFETTO:-DENABLE_PERFETTO>)
+    target_link_libraries_system(hyrise_impl perfetto)
+    target_compile_options(hyrise_impl PRIVATE -DENABLE_PERFETTO)
 endif()
 
 if (NUMA_FOUND)
