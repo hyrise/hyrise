@@ -16,10 +16,13 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_segment_accessor.hpp"
 #include "storage/chunk.hpp"
@@ -385,8 +388,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;  // +1 for null byte
   }
 
-  auto threads = std::vector<std::thread>();  // vector to hold threads
-
   auto key_buffer = std::vector<uint8_t>();  // buffer to hold all keys for sorting
   auto total_buffer_size = size_t{0};        // total size of the key buffer
 
@@ -419,10 +420,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   key_buffer.reserve(total_buffer_size);  // reserve space for all keys
 
+  // job queue for generating keys in parallel
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(static_cast<size_t>(chunk_count));
+
   // for each chunk in table
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // spawn thread to generate keys
-    threads.emplace_back([&, chunk_id]() {
+    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
       auto chunk = input_table->get_chunk(chunk_id);
 
       // buffer points to the start of this chunk's keys in the global key_buffer
@@ -519,13 +524,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           });
         });
       }
-    });
+    }));
+    jobs.back()->schedule();  // schedule job immediately
   }
 
-  // Join all threads
-  for (auto& thread : threads) {
-    thread.join();
-  }
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);  // wait for all chunks to be materialized
 
   // Sort the buffer
   auto compare_rows = [&](const RowID a, const RowID b) {
