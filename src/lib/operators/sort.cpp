@@ -313,6 +313,7 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
+  auto preparation_timer = Timer{};
   const auto& input_table = left_input_table();
 
   // validate sort definitions
@@ -339,9 +340,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
   // been determined so far. This is not a completely proper PosList on the input table as it might point to
   // ReferenceSegments.
-
-  auto total_materialization_time = std::chrono::nanoseconds{};
-  auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
+  auto total_preparation_time = std::chrono::nanoseconds{};
+  auto total_key_generation_time = std::chrono::nanoseconds{};
   auto total_sort_time = std::chrono::nanoseconds{};
 
   const auto chunk_count = input_table->chunk_count();
@@ -419,11 +419,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   key_buffer.reserve(total_buffer_size);  // reserve space for all keys
+  total_preparation_time = preparation_timer.lap();
 
   // job queue for generating keys in parallel
+  auto key_generation_timer = Timer{};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(static_cast<size_t>(chunk_count));
-
   // for each chunk in table
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // spawn thread to generate keys
@@ -529,8 +530,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);  // wait for all chunks to be materialized
+  total_key_generation_time = key_generation_timer.lap();
 
   // Sort the buffer
+  auto sort_timer = Timer();
   auto compare_rows = [&](const RowID a, const RowID b) {
     auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
     auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
@@ -571,11 +574,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   };
 
   // TODO(someone): use better sorting algorithm, e.g. merge sort
-  std::stable_sort(std::execution::par_unseq, row_ids.begin(), row_ids.end(), compare_rows);
+  std::stable_sort(TemporaryResultWriting, row_ids.begin(), row_ids.end(), compare_rows);
+  total_sort_time = sort_timer.lap();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
-  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, total_temporary_result_writing_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Preparation, total_preparation_time);
+  step_performance_data.set_step_runtime(OperatorSteps::KeyGeneration, total_key_generation_time);
   step_performance_data.set_step_runtime(OperatorSteps::Sort, total_sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
