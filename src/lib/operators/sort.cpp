@@ -452,7 +452,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             if (nulls_first) {
               null_byte = ~null_byte;
             }
-            dest[0] = null_byte;
+            dest[0] = static_cast<uint8_t>(null_byte);
 
             // encode the value into the key based on the data type
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
@@ -539,7 +539,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     // fallback to full comparison for string columns
     // other columns are already compared correctly by the key buffer
     for (auto index : string_columns) {
-      auto comparison_result = uint32_t{0};
+      auto comparison_result = int32_t{0};
 
       const auto accessorA = create_segment_accessor<pmr_string>(
           input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[index].column));
