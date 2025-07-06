@@ -273,8 +273,10 @@ TEST_F(BinaryParserTest, FixedStringDictionarySingleChunk) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
+  std::cerr << "a\n";
   auto table = BinaryParser::parse(_reference_filepath +
                                    ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  std::cerr << "b\n";
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }

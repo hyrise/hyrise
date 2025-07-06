@@ -38,7 +38,7 @@
 namespace hyrise {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
-  std::ifstream file;
+  auto file = std::ifstream{};
   file.open(filename, std::ios::binary);
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
@@ -174,7 +174,7 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
                                                 hana::type_c<ColumnDataType>)) {
         return _import_fixed_string_dictionary_segment(file, row_count);
       } else {
-        Fail("Unsupported data type for FixedStringDictionary encoding");
+        Fail("Unsupported data type for FixedStringDictionary encoding.");
       }
     case EncodingType::VariableStringDictionary:
       return _import_variable_string_length_segment<pmr_string>(file, row_count);
@@ -185,13 +185,13 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
                                                 hana::type_c<ColumnDataType>)) {
         return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);
       } else {
-        Fail("Unsupported data type for FOR encoding");
+        Fail("Unsupported data type for FOR encoding.");
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
   }
 
-  Fail("Invalid EncodingType");
+  Fail("Invalid EncodingType.");
 }
 
 template <typename T>
@@ -245,9 +245,11 @@ std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
 
-  return std::make_shared<FixedStringDictionarySegment<pmr_string>>(
-      _import_fixed_string_vector(file, dictionary_size),
-      _import_attribute_vector(file, row_count, compressed_vector_type_id));
+  auto fixed_string_vector = _import_fixed_string_vector(file, dictionary_size);
+  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
+
+  return std::make_shared<FixedStringDictionarySegment<pmr_string>>(std::move(fixed_string_vector),
+                                                                    std::move(attribute_vector));
 }
 
 template <typename T>

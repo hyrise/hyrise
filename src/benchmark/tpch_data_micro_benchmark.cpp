@@ -436,8 +436,8 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemManualDictionaryEnc
   });
 }
 
-BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture,
-                   BM_LineitemManualStringOptimizedDictionaryEncoding)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemManualStringOptimizedDictionaryEncoding)
+(benchmark::State& state) {
   const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
 
   const auto& sm = Hyrise::get().storage_manager;

@@ -25,8 +25,7 @@ class FixedStringVector {
 
   // Create a FixedStringVector of FixedStrings with existing data.
   FixedStringVector(pmr_vector<char>&& chars, const size_t string_length)
-      : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {
-  }
+      : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {}
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container.
   template <typename Iter>
