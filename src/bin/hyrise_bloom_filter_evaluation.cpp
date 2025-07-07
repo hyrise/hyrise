@@ -1,15 +1,15 @@
+#include <cassert>
 #include <chrono>
+#include <cstdint>
 #include <exception>
 #include <iostream>
 #include <fstream>
 #include <random>
 #include <string>
 #include <vector>
-// #include <cstdint>
 
 #include <boost/functional/hash.hpp>
 
-// #include "types.hpp"
 #include "utils/bloom_filter.hpp"
 #include "utils/assert.hpp"
 
@@ -26,38 +26,28 @@ struct BenchmarkResult {
   int64_t probe_time_us;
 };
 
-std::vector<int32_t> generate_data(size_t vector_size, double distinctiveness) {
+std::vector<int32_t> generate_data(const int32_t vector_size, const double distinctiveness,
+                                   const int32_t range_min = 0) {
+  Assert(vector_size > 0, "vector_size must be greater than 0");
+  Assert(distinctiveness > 0, "distinctiveness must be greater than 0");
+  Assert(range_min >= 0, "range_min must be non-negative");
+
+  const auto range_max = static_cast<double>(vector_size) * distinctiveness + static_cast<double>(range_min);
+  Assert(range_max <= static_cast<double>(INT32_MAX), "range_max exceeds INT32_MAX");
+
   std::cout << "Generating vector of size: " << vector_size << " and distinctiveness: " << distinctiveness << "\n";
-  // Calculate the range based on distinctiveness
-  // For distinctiveness = 1.0, use full int32_t range
-  // For distinctiveness = 0.1, use range that gives ~10% distinct values
-  size_t range = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) -
-                 static_cast<int64_t>(std::numeric_limits<int32_t>::min()) + 1;
+  std::cout << "Range: [" << range_min << ", " << static_cast<int32_t>(range_max) << "]\n";
 
-  // Calculate effective range: smaller distinctiveness = smaller range
-  // For distinctiveness = 1.0, use the full range
-  // For smaller distinctiveness, calculate range to get desired distinct ratio
-  if (distinctiveness < 1.0) {
-    range = static_cast<size_t>(static_cast<double>(vector_size) * distinctiveness);
-  }
-
-  // Calculate the actual range bounds
-  auto range_min = std::numeric_limits<int32_t>::min();
-  auto range_max = static_cast<int32_t>(static_cast<size_t>(range_min) + range - 1);
-
-  // Set up random number generation
   std::mt19937 gen(4615968);
-  std::uniform_int_distribution<int32_t> dis(range_min, range_max);
+  std::uniform_int_distribution<int32_t> dis(range_min, static_cast<int32_t>(range_max));
 
-  // Generate the vector
   std::vector<int32_t> result;
   result.reserve(vector_size);
 
-  for (size_t i = 0; i < vector_size; ++i) {
+  for (int32_t i = 0; i < vector_size; ++i) {
     result.emplace_back(dis(gen));
   }
 
-  std::cout << "Finished vector generation.\n";
   return result;
 }
 
@@ -90,9 +80,8 @@ BenchmarkResult run_bloom_filter_evaluation(const std::vector<int32_t>& build_ve
       }
     });
   } else {
-    throw std::exception();
-  } 
-  (void)build_time;
+    Fail("Invalid hash function specified");
+  }
 
   size_t hits = 0;
   auto probe_time = int64_t{0};
@@ -109,13 +98,8 @@ BenchmarkResult run_bloom_filter_evaluation(const std::vector<int32_t>& build_ve
       }
     });
   } else {
-    throw std::exception();
+    Fail("Invalid hash function specified");
   } 
-
-  (void)probe_time;
-  (void)hits;
-
-  // if (hits != build_vec.size()) throw std::exception();
 
   return BenchmarkResult{
     vector_size,
@@ -139,7 +123,7 @@ void write_csv(const std::vector<BenchmarkResult>& results, const std::string& f
   }
 }
 
-std::vector<size_t> vector_sizes = {10'000, 1'000'000, 100'000'000};
+std::vector<int32_t> vector_sizes = {10'000, 1'000'000, 100'000'000};
 std::vector<double> distinctivenesses = {0.01, 0.1, 1};
 uint8_t hash_functions = 2;
 
