@@ -11,13 +11,14 @@ This repository contains the code used for our VLDB 2025 paper.
 If you use the code or reference our findings, please cite us.
  
 ```bibtex
-@inproceedings{Weisgut2025CxlPerformance,
+@article{Weisgut2025CxlPerformance,
   title={CXL Memory Performance for In-Memory Data Processing},
   author={Weisgut, Marcel and Ritter, Daniel and Tözün, Pınar and Benson, Lawrence and Rabl, Tilmann},
-  booktitle={Proceedings of the VLDB Endowment},
+  journal={Proceedings of the VLDB Endowment},
   year={2025},
   volume={18},
-  number={9}
+  number={9},
+  pages={3119-3133},
 }
 ```
 ---
