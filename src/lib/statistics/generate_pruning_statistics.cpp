@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <type_traits>
-#include <unordered_set>
 #include <vector>
 
 #include <boost/sort/pdqsort/pdqsort.hpp>
