@@ -80,7 +80,7 @@ public:
         append_floating_point(value, desc, nulls_first);
     }
 
-    void append(const std::optional<std::string>& value, const NormalizedSortMode desc, const NullsMode nulls_first, const size_t prefix_size = 12) {
+    void append(const std::optional<pmr_string>& value, const NormalizedSortMode desc, const NullsMode nulls_first, const size_t prefix_size = 12) {
         append_null_prefix(value.has_value(), nulls_first);
         if (!value.has_value()) {
             _buffer.resize(_buffer.size() + prefix_size, 0x00);
@@ -110,6 +110,63 @@ public:
 
     void append_row_id(uint64_t row_id) {
         append_integral(std::optional(row_id), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    }
+
+    void append_chunk(const std::shared_ptr<const Chunk>& chunk, const std::vector<SortColumnDefinition>& sort_definitions) {
+      struct SegmentInformationAndAccessor {
+        std::unique_ptr<BaseSegmentAccessor> accessor;
+        DataType data_type;
+        NormalizedSortMode sort_mode;
+        NullsMode nulls_mode;
+      };
+
+      const auto num_rows = chunk->size();
+
+      auto segment_information_and_accessors = std::unordered_map<ColumnID, SegmentInformationAndAccessor>{};
+      segment_information_and_accessors.reserve(sort_definitions.size());
+      for (const auto [column_id, sort_mode] : sort_definitions) {
+        const auto segment = chunk->get_segment(column_id);
+        const auto data_type = segment->data_type();
+
+        resolve_data_type(data_type, [&](const auto type) {
+          using Type = typename decltype(type)::type;
+
+          segment_information_and_accessors.emplace(column_id, SegmentInformationAndAccessor{
+            std::move(create_segment_accessor<Type>(segment)),
+            data_type,
+            (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::AscendingNullsLast) ? NormalizedSortMode::Ascending : NormalizedSortMode::Descending,
+            (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::DescendingNullsFirst) ? NullsMode::NullsFirst : NullsMode::NullsLast
+          });
+        });
+      }
+
+      for (auto row_id = ChunkOffset(0); row_id < num_rows; ++row_id) {
+        for (const auto [column_id, sort_mode] : sort_definitions) {
+          const auto data_type = segment_information_and_accessors[column_id].data_type;
+
+          // There is a method resolve_data_and_segment_type() which will probably be useful here
+          resolve_data_type(data_type, [&](const auto type) {
+            using Type = typename decltype(type)::type;
+
+            const auto& segment_info = segment_information_and_accessors[column_id];
+
+            const auto& accessor = dynamic_cast<const AbstractSegmentAccessor<Type>&>(*segment_info.accessor);
+
+            append(accessor.access(row_id), segment_info.sort_mode, segment_info.nulls_mode);
+          });
+
+          append_row_id(row_id);
+        }
+      }
+    }
+
+    void append_table(const std::shared_ptr<const Table>& table, const std::vector<SortColumnDefinition>& sort_definitions) {
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto current_chunk = table->get_chunk(chunk_id);
+
+        append_chunk(current_chunk, sort_definitions);
+      }
     }
 
 private:

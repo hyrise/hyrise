@@ -44,8 +44,8 @@ TEST_F(KeyNormalizerTest, TestStringNormalization) {
   {
     std::vector<unsigned char> key_apple, key_orange;
     KeyNormalizer norm_apple(key_apple), norm_orange(key_orange);
-    norm_apple.append(std::optional<std::string>("apple"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-    norm_orange.append(std::optional<std::string>("orange"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm_apple.append(std::optional<pmr_string>("apple"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm_orange.append(std::optional<pmr_string>("orange"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
     ASSERT_LT(compare_keys(key_apple, key_orange), 0);
   }
 
@@ -53,8 +53,8 @@ TEST_F(KeyNormalizerTest, TestStringNormalization) {
   {
     std::vector<unsigned char> key_apple, key_orange;
     KeyNormalizer norm_apple(key_apple), norm_orange(key_orange);
-    norm_apple.append(std::optional<std::string>("apple"), NormalizedSortMode::Descending, NullsMode::NullsFirst);
-    norm_orange.append(std::optional<std::string>("orange"), NormalizedSortMode::Descending, NullsMode::NullsFirst);
+    norm_apple.append(std::optional<pmr_string>("apple"), NormalizedSortMode::Descending, NullsMode::NullsFirst);
+    norm_orange.append(std::optional<pmr_string>("orange"), NormalizedSortMode::Descending, NullsMode::NullsFirst);
     ASSERT_GT(compare_keys(key_apple, key_orange), 0);
   }
 
@@ -62,8 +62,8 @@ TEST_F(KeyNormalizerTest, TestStringNormalization) {
   {
     std::vector<unsigned char> key_pie, key_strudel;
     KeyNormalizer norm_pie(key_pie), norm_strudel(key_strudel);
-    norm_pie.append(std::optional<std::string>("apple_pie"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-    norm_strudel.append(std::optional<std::string>("apple_strudel"), NormalizedSortMode::Ascending,
+    norm_pie.append(std::optional<pmr_string>("apple_pie"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm_strudel.append(std::optional<pmr_string>("apple_strudel"), NormalizedSortMode::Ascending,
                         NullsMode::NullsFirst);
     ASSERT_LT(compare_keys(key_pie, key_strudel), 0);
   }
@@ -144,10 +144,10 @@ TEST_F(KeyNormalizerTest, TestComposedKeyNormalization) {
     KeyNormalizer norm1(key1), norm2(key2);
 
     norm1.append(std::optional(10), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-    norm1.append(std::optional<std::string>("apple"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm1.append(std::optional<pmr_string>("apple"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
 
     norm2.append(std::optional(10), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-    norm2.append(std::optional<std::string>("orange"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm2.append(std::optional<pmr_string>("orange"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
 
     // the size of the keys should be 18 bytes, the reason for this is: since we use NullsFirst ordering,
     // we have to reserve one byte to indicate this, the int32_t takes 4 bytes. Total will be 1 + 4 = 5
@@ -163,10 +163,10 @@ TEST_F(KeyNormalizerTest, TestComposedKeyNormalization) {
     KeyNormalizer norm1(key1), norm2(key2);
 
     norm1.append(std::optional(5), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-    norm1.append(std::optional<std::string>("zulu"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm1.append(std::optional<pmr_string>("zulu"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
 
     norm2.append(std::optional(10), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-    norm2.append(std::optional<std::string>("alpha"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm2.append(std::optional<pmr_string>("alpha"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
 
     ASSERT_LT(compare_keys(key1, key2), 0);
   }
@@ -177,11 +177,11 @@ TEST_F(KeyNormalizerTest, TestComposedKeyNormalization) {
     KeyNormalizer norm1(key1), norm2(key2);
 
     norm1.append(std::optional(10), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-    norm1.append(std::optional<std::string>("apple"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm1.append(std::optional<pmr_string>("apple"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
     norm1.append(std::optional(9.99f), NormalizedSortMode::Descending, NullsMode::NullsFirst);
 
     norm2.append(std::optional(10), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-    norm2.append(std::optional<std::string>("apple"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
+    norm2.append(std::optional<pmr_string>("apple"), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
     norm2.append(std::optional(3.14f), NormalizedSortMode::Descending, NullsMode::NullsFirst);
 
     ASSERT_EQ(key1.size(), 23);  // (int_32 + null) + (string + null) + (float + null) = 23.
