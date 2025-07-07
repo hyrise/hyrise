@@ -127,7 +127,7 @@ PolymorphicAllocator<FixedString> FixedStringVector::get_allocator() {
 }
 
 FixedStringVector FixedStringVector::copy_using_memory_resource(MemoryResource& memory_resource) const {
-  return FixedStringVector(pmr_vector<char>{_chars, &memory_resource}, _string_length);
+  return FixedStringVector{pmr_vector<char>{_chars, &memory_resource}, _string_length};
 }
 
 void FixedStringVector::reserve(const size_t size) {
