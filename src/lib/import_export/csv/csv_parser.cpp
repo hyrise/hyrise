@@ -86,11 +86,12 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
 
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>(
-        [relevant_content, field_ends, &table, &segments, &csv_meta, &escaped_linebreak, &append_chunk_mutex]() {
+        [relevant_content, field_ends = std::move(field_ends), &table, &segments, &csv_meta, &escaped_linebreak, &append_chunk_mutex]() {
           _parse_into_chunk(relevant_content, field_ends, *table, segments, csv_meta, escaped_linebreak,
                             append_chunk_mutex);
         }));
     tasks.back()->schedule();
+    field_ends = std::vector<size_t>{};
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(tasks);
