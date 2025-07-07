@@ -39,10 +39,8 @@ setup_get_table_and_sort_definitions(const auto& table_name, const std::vector<s
   auto table = sm.get_table(table_name);
   const auto column_count = table->column_count();
   auto unpruned_column_ids = std::vector<ColumnID>{};
-  auto sort_definitions = std::vector<SortColumnDefinition>{};
   for (const auto& column_name : sort_column_names) {
     const auto column_id = table->column_id_by_name(column_name);
-    sort_definitions.emplace_back(column_id);
     unpruned_column_ids.emplace_back(column_id);
   }
   unpruned_column_ids.emplace_back(table->column_id_by_name(project_column_name));
@@ -50,14 +48,19 @@ setup_get_table_and_sort_definitions(const auto& table_name, const std::vector<s
   std::ranges::sort(unpruned_column_ids);
   auto all_column_ids = std::vector<ColumnID>(column_count);
   std::iota(all_column_ids.begin(), all_column_ids.end(), ColumnID{0});
-  auto pruned_column_ids = std::vector<ColumnID>(column_count);
 
-  const auto [begin, end] = std::ranges::set_difference(all_column_ids, unpruned_column_ids, pruned_column_ids.begin());
-  pruned_column_ids.erase(begin, end);
+  auto pruned_column_ids = std::vector<ColumnID>();
+  std::ranges::set_difference(all_column_ids, unpruned_column_ids, std::back_inserter(pruned_column_ids));
 
   const auto get_table = std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, pruned_column_ids);
   get_table->never_clear_output();
   get_table->execute();
+
+  auto sort_definitions = std::vector<SortColumnDefinition>{};
+  for (const auto& column_name : sort_column_names) {
+    const auto column_id = get_table->get_output()->column_id_by_name(column_name);
+    sort_definitions.emplace_back(column_id);
+  }
 
   return {table, get_table, sort_definitions};
 }
@@ -240,7 +243,7 @@ BENCHMARK(BM_SortWithStrings)->RangeMultiplier(100)->Range(100, 1'000'000);
 
 BENCHMARK(BM_SortDuckDBTPCDS_CS)->ArgsProduct({{1, 10, 100}, {0, 1, 2}});
 
-BENCHMARK(BM_SortDuckDBTPCDS_C_Strings)->Arg(100)->Arg(300);
-BENCHMARK(BM_SortDuckDBTPCDS_C_Integers)->Arg(100)->Arg(300);
+BENCHMARK(BM_SortDuckDBTPCDS_C_Strings)->ArgsProduct({{100, 300}, {0, 1, 2}});
+BENCHMARK(BM_SortDuckDBTPCDS_C_Integers)->ArgsProduct({{100, 300}, {0, 1, 2}});
 
 }  // namespace hyrise

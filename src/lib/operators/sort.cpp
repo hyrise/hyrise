@@ -39,6 +39,18 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
   return (lhs + rhs - 1u) / rhs;
 }
 
+/**
+ *        ____  _  _  __  ____  ____   __  ____   ___
+ *       (    \( \/ )/  \(    \(___ \ /  \(___ \ / __)
+ *        ) D ( )  /(  O )) D ( / __/(  0 )/ __/(___ \
+ *       (____/(__/  \__/(____/(____) \__/(____)(____/
+ *
+ * 
+ * Notes on Segment Accessors:
+ *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
+ *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
+ */
+
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<const Table>& unsorted_table,
