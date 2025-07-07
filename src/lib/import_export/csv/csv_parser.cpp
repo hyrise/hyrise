@@ -11,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -85,11 +86,11 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
         std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>(
-        [relevant_content, field_ends = std::move(field_ends), &table, &segments, &csv_meta, &escaped_linebreak, &append_chunk_mutex]() {
-          _parse_into_chunk(relevant_content, field_ends, *table, segments, csv_meta, escaped_linebreak,
-                            append_chunk_mutex);
-        }));
+    tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends = std::move(field_ends), &table,
+                                                  &segments, &csv_meta, &escaped_linebreak, &append_chunk_mutex]() {
+      _parse_into_chunk(relevant_content, field_ends, *table, segments, csv_meta, escaped_linebreak,
+                        append_chunk_mutex);
+    }));
     tasks.back()->schedule();
     field_ends = std::vector<size_t>{};
   }
