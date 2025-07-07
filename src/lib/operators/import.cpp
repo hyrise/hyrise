@@ -16,6 +16,8 @@
 #include "import_export/file_type.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "types.hpp"
@@ -123,6 +125,9 @@ std::shared_ptr<const Table> Import::_on_execute() {
       const auto chunk = table->get_chunk(chunk_id);
       existing_table->append_chunk(chunk->get_segments(), chunk->mvcc_data());
     }
+
+    table->set_table_statistics(TableStatistics::from_table(*table));
+    generate_chunk_pruning_statistics(table);
   } else {
     // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
     // and their creation benefits from dictionary encoding, we add the tables after they are encoded.
