@@ -46,8 +46,7 @@ std::vector<int32_t> generate_data(size_t vector_size, double distinctiveness) {
   auto range_max = static_cast<int32_t>(static_cast<size_t>(range_min) + range - 1);
 
   // Set up random number generation
-  std::random_device rd;
-  std::mt19937 gen(rd());
+  std::mt19937 gen(4615968);
   std::uniform_int_distribution<int32_t> dis(range_min, range_max);
 
   // Generate the vector
@@ -140,7 +139,7 @@ void write_csv(const std::vector<BenchmarkResult>& results, const std::string& f
   }
 }
 
-std::vector<size_t> vector_sizes = {10000, 1000000, 100000000};
+std::vector<size_t> vector_sizes = {10'000, 1'000'000, 100'000'000};
 std::vector<double> distinctivenesses = {0.01, 0.1, 1};
 uint8_t hash_functions = 2;
 

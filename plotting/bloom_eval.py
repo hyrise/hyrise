@@ -6,10 +6,10 @@ from matplotlib.lines import Line2D
 
 # 1) Read & filter
 df = pd.read_csv('data/bloom_filter_results.csv')
-df = df[(df.vector_size == 10_000) & (df.distinctiveness == 0.1)]
+df = df[(df.vector_size == 10_000) & (df.distinctiveness == 1)]
 
 # 2) Compute filter_rate
-df['filter_rate'] = df.hitrate / df.vector_size
+df['filter_rate'] = 1 - (df.hitrate / df.vector_size)
 
 # 3) Assign a unique marker to each filter_size
 unique_sizes = sorted(df.filter_size.unique())
@@ -25,6 +25,7 @@ color_map = {g: cmap(i) for i, g in enumerate(unique_groups)}
 
 # 5) Plot
 fig, ax = plt.subplots(figsize=(8,6))
+ax.set_xlim(left=0.8)
 for _, row in df.iterrows():
     ax.scatter(
         row.filter_rate,
@@ -35,9 +36,9 @@ for _, row in df.iterrows():
         s=80
     )
 
-ax.set_xlabel('Filter Rate (hitrate / vector_size)')
+ax.set_xlabel('Filter Rate (1 - hitrate / vector_size)')
 ax.set_ylabel('Probe Time (µs)')
-ax.set_title('Probe Time vs Filter Rate (10 K vectors, δ=0.1)')
+ax.set_title('Probe Time vs Filter Rate (10 K vectors, distinctiveness=1)')
 
 # 6) Legends
 # — Marker legend for filter_size
@@ -61,8 +62,8 @@ color_handles = [
            label=g)
     for g in unique_groups
 ]
-ax.legend(handles=color_handles, title='k_hash', loc='lower right')
+ax.legend(handles=color_handles, title='k_hash', loc='lower left')
 
 plt.tight_layout()
-plt.savefig("eval_10K.pdf")
+plt.savefig("eval_10K_dist1_1.pdf")
 plt.show()
