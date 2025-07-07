@@ -366,7 +366,7 @@ FixedStringVector BinaryParser::_import_fixed_string_vector(std::ifstream& file,
   const auto string_length = _read_value<uint32_t>(file);
   auto values = pmr_vector<char>(string_length * count);
   file.read(values.data(), static_cast<int64_t>(values.size()));
-  return FixedStringVector(std::move(values), string_length);
+  return FixedStringVector{std::move(values), string_length};
 }
 
 }  // namespace hyrise
