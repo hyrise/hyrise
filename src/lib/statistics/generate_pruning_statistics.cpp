@@ -1,5 +1,6 @@
 #include "generate_pruning_statistics.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <vector>
