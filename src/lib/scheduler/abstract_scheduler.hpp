@@ -44,9 +44,9 @@ class TaskQueue;
  * executing the main task executes these tasks directly when possible or waits for their completion in case other
  * workers already process these tasks (during this wait time, the worker pulls tasks from the TaskQueues to avoid
  * idling).
- * Unless a task is supposed to run in the background (e.g., by creating a JobTask and calling schedule() without
+ * Unless a task is supposed to run in the background (e.g., by creating a JobTask and calling `schedule()` without
  * waiting), the task spawning code needs to wait for the completion of tasks. This is either done using
- * `wait_for_tasks()` or `schedule_and_wait_for_tasks()`. The first function allows users to manually schedule tasks
+ * `wait_for_tasks()` or `schedule_and_wait_for_tasks()`. The first function allows users to manually schedule tasks,
  * which is helpful when the creation of tasks itself is slow (e.g., when reading from disk). In most cases,
  * `schedule_and_wait_for_tasks()` is preferable as it optimizes scheduling many tasks (e.g., grouping tasks, see
  * `_group_tasks()`).
@@ -90,7 +90,7 @@ class AbstractScheduler : public Noncopyable {
    * creation is cheap (i.e., first creating all jobs does not block first task from running too long) and a grouped
    * scheduling might improve the execution of tasks. This could be the case when grouping tasks. Here, tasks may be
    * reorganized internally, e.g., to reduce the number of tasks being executed in parallel. See the implementation of
-   * NodeQueueScheduler::_group_tasks for an example.
+   * `NodeQueueScheduler::_group_tasks()` for an example.
    * The caller is responsible to ensure the tasks' lifetimes until method returns.
    */
   void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);

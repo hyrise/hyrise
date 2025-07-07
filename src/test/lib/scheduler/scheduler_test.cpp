@@ -137,7 +137,7 @@ TEST_F(SchedulerTest, BasicTest) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 30);
+  EXPECT_EQ(counter, 30);
 }
 
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
