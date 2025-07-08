@@ -103,13 +103,22 @@ TEST_F(FixedStringTest, Assign) {
   EXPECT_EQ(fixed_string3, "bar");
 }
 
-TEST_F(FixedStringTest, Swap) {
+TEST_F(FixedStringTest, STDSwap) {
   std::vector<char> char_vector = {'b', 'a', 'r'};
   FixedString fixed_string = FixedString(&char_vector[0], 3u);
 
   std::swap(fixed_string1, fixed_string);
   EXPECT_EQ(fixed_string1, "bar");
   EXPECT_EQ(fixed_string, "foo");
+}
+
+TEST_F(FixedStringTest, Swap) {
+  std::vector<char> char_vector = {'b', 'a', 'r'};
+  FixedString fixed_string3 = FixedString(&char_vector[0], 3u);
+
+  fixed_string1.swap(fixed_string3);
+  EXPECT_EQ(fixed_string1, "bar");
+  EXPECT_EQ(fixed_string3, "foo");
 }
 
 TEST_F(FixedStringTest, OutputToStream) {
