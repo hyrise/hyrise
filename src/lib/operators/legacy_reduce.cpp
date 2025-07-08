@@ -174,7 +174,8 @@ std::shared_ptr<Table> LegacyReduce::_create_reduced_table() {
   if (!file_exists) {
     output_file << "reduction_type,benchmark,query,input_count,output_count\n";
   }
-  output_file << "legacy" << "," << Hyrise::get().benchmark_name << "," << Hyrise::get().query_name << ","
+  output_file << "legacy"
+              << "," << Hyrise::get().benchmark_name << "," << Hyrise::get().query_name << ","
               << input_table->row_count() << "," << output_table->row_count() << "\n";
 
   return output_table;
