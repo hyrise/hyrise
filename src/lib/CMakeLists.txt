@@ -604,6 +604,8 @@ set(
     utils/format_duration.cpp
     utils/format_duration.hpp
     utils/invalid_input_exception.hpp
+    utils/key_normalizer.cpp
+    utils/key_normalizer.h
     utils/list_directory.cpp
     utils/list_directory.hpp
     utils/load_table.cpp
@@ -644,7 +646,6 @@ set(
     utils/meta_tables/meta_tables_table.hpp
     utils/meta_tables/segment_meta_data.cpp
     utils/meta_tables/segment_meta_data.hpp
-    utils/key_normalizer.h
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
