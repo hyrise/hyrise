@@ -66,22 +66,7 @@ class OperatorsUpdateTest : public BaseTest {
 };
 
 TEST_F(OperatorsUpdateTest, OperatorName) {
-  const auto get_table = std::make_shared<GetTable>(table_to_update_name);
-  const auto scan = std::make_shared<TableScan>(get_table,
-                                                 std::make_shared<BinaryPredicateExpression>(
-                                                     PredicateCondition::Equals, column_a, value_(2)));
-  scan->never_clear_output();
-  const auto projection = std::make_shared<Projection>(
-      scan, std::vector<std::shared_ptr<AbstractExpression>>{column_a});
-
-  get_table->execute();
-  scan->execute();
-  projection->execute();
-
-  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  const auto update = std::make_shared<Update>(table_to_update_name, scan, projection);
-  update->set_transaction_context(transaction_context);
-
+  const auto update = std::make_shared<Update>("", nullptr, nullptr);
   EXPECT_EQ(update->name(), "Update");
 }
 

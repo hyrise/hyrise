@@ -222,7 +222,7 @@ TYPED_TEST(OperatorsAggregateTest, OperatorDescription) {
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
     max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_is_nullable(ColumnID{1}),
                      table->column_name(ColumnID{1})))};
-  auto aggregate =
+  const auto aggregate =
       std::make_shared<TypeParam>(this->_table_wrapper_1_1, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
   EXPECT_EQ(aggregate->description(DescriptionMode::SingleLine), aggregate->name() + " GroupBy {Column #0} MAX(b)");
   EXPECT_EQ(aggregate->description(DescriptionMode::MultiLine), aggregate->name() + "\nGroupBy {Column #0}\nMAX(b)");
