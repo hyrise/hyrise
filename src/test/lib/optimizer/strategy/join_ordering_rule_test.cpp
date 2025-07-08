@@ -89,7 +89,7 @@ TEST_F(JoinOrderingRuleTest, CheckCacheability) {
                                                             JoinNode::make(JoinMode::Cross, node_d, node_c)))))));
 
   const auto is_cacheable = _apply_rule(rule, input_lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

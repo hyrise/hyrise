@@ -320,7 +320,7 @@ TEST_F(PredicateReorderingTest, CheckCacheability) {
   auto input_lqp =
       std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(greater_than_(a, 60), ValidateNode::make(node)));
   const auto is_cacheable = _apply_rule(_rule, input_lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

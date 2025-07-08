@@ -114,7 +114,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
 TEST_F(StoredTableColumnAlignmentRuleTest, CheckCacheability) {
   auto _union_node_abstract = _union_node->deep_copy();
   const auto is_cacheable = _apply_rule(_rule, _union_node_abstract);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

@@ -87,7 +87,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     const auto expected_lqp = _lqp->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -98,7 +98,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     const auto expected_lqp = _lqp->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -119,7 +119,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   {
@@ -136,7 +136,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -152,7 +152,7 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -167,7 +167,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -186,7 +186,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -211,7 +211,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -250,7 +250,7 @@ TEST_F(DependentGroupByReductionRuleTest, AggregateButNoChanges) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -270,7 +270,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -292,7 +292,7 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -309,7 +309,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -328,7 +328,7 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -360,7 +360,7 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -383,7 +383,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
     const auto expected_lqp = stored_table_node_a->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -403,7 +403,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -424,7 +424,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -443,7 +443,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -461,7 +461,7 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
     const auto expected_lqp = _lqp->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -476,7 +476,7 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
     const auto expected_lqp = _lqp->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }

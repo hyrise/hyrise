@@ -397,7 +397,7 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentSetOperationMode) {
 TEST_F(PredicateMergeRuleTest, CheckCacheability) {
   auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(less_than_(a_a, 10), node_a));
   const auto is_cacheable = _apply_rule(rule, input_lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

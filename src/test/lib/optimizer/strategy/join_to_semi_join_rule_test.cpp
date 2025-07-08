@@ -79,7 +79,7 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -121,7 +121,9 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not permanent.
+  // Not cacheable because UCC used is not permanent. Non-cacheability is added in #2600. This is why it is still
+  // cacheable.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -167,7 +169,9 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not permanent.
+  // Not cacheable because UCC used is not permanent. Non-cacheability is added in #2600. This is why it is still
+  // cacheable.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -199,7 +203,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -230,7 +234,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -271,7 +275,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -304,7 +308,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

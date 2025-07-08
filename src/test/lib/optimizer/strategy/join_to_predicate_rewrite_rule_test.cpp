@@ -85,7 +85,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   }
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -108,7 +108,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   const auto expected_lqp = _lqp->deep_copy();
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -131,7 +131,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
   const auto expected_lqp = _lqp->deep_copy();
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -153,7 +153,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
   const auto expected_lqp = _lqp->deep_copy();
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -177,7 +177,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
   const auto expected_lqp = _lqp->deep_copy();
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -204,7 +204,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, Union) {
   const auto expected_lqp = _lqp->deep_copy();
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

@@ -194,7 +194,7 @@ TEST_F(IndexScanRuleTest, CheckCacheability) {
 
   EXPECT_EQ(std::dynamic_pointer_cast<PredicateNode>(predicate_node_0)->scan_type, ScanType::TableScan);
   const auto is_cacheable = _apply_rule(rule, predicate_node_0);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

@@ -469,7 +469,7 @@ TEST_F(ChunkPruningRuleTest, CheckCacheability) {
   predicate_node->set_left_input(stored_table_node);
 
   const auto is_cacheable = _apply_rule(_rule, predicate_node);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {

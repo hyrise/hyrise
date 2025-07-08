@@ -231,7 +231,7 @@ TEST_F(SemiJoinReductionRuleTest, CheckCacheability) {
   auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
       JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_a_a, _b_a), _node_a, _node_b));
   const auto is_cacheable = _apply_rule(_rule, input_lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise
