@@ -25,6 +25,14 @@ class BloomFilter {
     return true;
   }
 
+  double saturation() const {
+    uint64_t set_bits = 0;
+    for (const auto& word : _filter) {
+      set_bits += __builtin_popcountll(word);
+    }
+    return static_cast<double>(set_bits) / (array_size * 64);
+  }
+
  protected:
   void _set_bit(uint32_t bit_index) {
     uint32_t array_index = bit_index >> 6;   // bit_index / 64
