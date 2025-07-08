@@ -186,7 +186,7 @@ class Chunk : private Noncopyable {
   /**
    * Insert operators indicate that the chunk is full when appending a new chunk to the table. From this moment on, the
    * former last chunk can be marked as immutable as soon as all pending Inserts commit or roll back and try to mark the
-   * chunks they interted into. If there are no pending Inserts, i.e., the chunk was filled to its target size and all
+   * chunks they inserted into. If there are no pending Inserts, i.e., the chunk was filled to its target size and all
    * Inserts are committed/rolled back, the chunk is immediately marked.
    */
   void mark_as_full();

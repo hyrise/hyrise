@@ -43,8 +43,8 @@ TEST_F(LimitNodeTest, Copy) {
 }
 
 TEST_F(LimitNodeTest, NodeExpressions) {
-  ASSERT_EQ(_limit_node->node_expressions.size(), 1u);
-  EXPECT_EQ(*_limit_node->node_expressions.at(0u), *value_(10));
+  ASSERT_EQ(_limit_node->node_expressions.size(), 1);
+  EXPECT_EQ(*_limit_node->node_expressions.at(0), *value_(10));
 }
 
 TEST_F(LimitNodeTest, ForwardUniqueColumnCombinations) {
@@ -55,7 +55,7 @@ TEST_F(LimitNodeTest, ForwardUniqueColumnCombinations) {
   _mock_node->set_key_constraints({key_constraint_a});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
-  const auto& unique_column_combinations = _limit_node->unique_column_combinations();
+  const auto unique_column_combinations = _limit_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 1);
   EXPECT_TRUE(unique_column_combinations.contains({UniqueColumnCombination{{_a}}}));
 }
@@ -69,9 +69,22 @@ TEST_F(LimitNodeTest, ForwardOrderDependencies) {
   _mock_node->set_order_constraints({order_constraint});
   EXPECT_EQ(_mock_node->order_dependencies().size(), 1);
 
-  const auto& order_dependencies = _limit_node->order_dependencies();
+  const auto order_dependencies = _limit_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od));
+}
+
+TEST_F(LimitNodeTest, NoInclusionDependencies) {
+  EXPECT_TRUE(_mock_node->inclusion_dependencies().empty());
+  EXPECT_TRUE(_limit_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
+  _mock_node->set_foreign_key_constraints({foreign_key_constraint});
+  EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 1);
+
+  EXPECT_TRUE(_limit_node->inclusion_dependencies().empty());
 }
 
 }  // namespace hyrise
