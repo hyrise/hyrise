@@ -29,18 +29,18 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CompressSegmentString) {
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   // Test attribute_vector size
-  EXPECT_EQ(dict_segment->size(), 6u);
-  EXPECT_EQ(dict_segment->attribute_vector()->size(), 6u);
+  EXPECT_EQ(dict_segment->size(), 6);
+  EXPECT_EQ(dict_segment->attribute_vector()->size(), 6);
 
-  // Test dictionary size (uniqueness)
-  EXPECT_EQ(dict_segment->unique_values_count(), 4u);
+  // Test dictionary size (uniqueness).
+  EXPECT_EQ(dict_segment->unique_values_count(), 4);
 
   // Test sorting
   auto dict = dict_segment->fixed_string_dictionary();
-  EXPECT_EQ(*(dict->begin()), "Alexander");
-  EXPECT_EQ(*(dict->begin() + 1), "Bill");
-  EXPECT_EQ(*(dict->begin() + 2), "Hasso");
-  EXPECT_EQ(*(dict->begin() + 3), "Steve");
+  EXPECT_EQ(*(dict.begin()), "Alexander");
+  EXPECT_EQ(*(dict.begin() + 1), "Bill");
+  EXPECT_EQ(*(dict.begin() + 2), "Hasso");
+  EXPECT_EQ(*(dict.begin() + 3), "Steve");
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
@@ -72,9 +72,9 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
 
   // Test sorting
   auto dict = dict_segment->fixed_string_dictionary();
-  EXPECT_EQ(*(dict->begin()), "QuiteShort");
-  EXPECT_EQ(*(dict->begin() + 1), "Short");
-  EXPECT_EQ(*(dict->begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
+  EXPECT_EQ(*(dict.begin()), "QuiteShort");
+  EXPECT_EQ(*(dict.begin() + 1), "Short");
+  EXPECT_EQ(*(dict.begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, LowerUpperBound) {
@@ -111,7 +111,7 @@ TEST_F(StorageFixedStringDictionarySegmentTest, NullValues) {
       ChunkEncoder::encode_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
-  EXPECT_EQ(dict_segment->null_value_id(), 2u);
+  EXPECT_EQ(dict_segment->null_value_id(), 2);
   EXPECT_TRUE(variant_is_null((*dict_segment)[ChunkOffset{1}]));
 }
 

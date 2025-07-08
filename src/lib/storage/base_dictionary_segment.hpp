@@ -44,7 +44,7 @@ class BaseDictionarySegment : public AbstractEncodedSegment {
    */
   virtual ValueID::base_type unique_values_count() const = 0;
 
-  virtual std::shared_ptr<const BaseCompressedVector> attribute_vector() const = 0;
+  virtual const std::unique_ptr<const BaseCompressedVector>& attribute_vector() const = 0;
 
   /**
    * @brief Returns encoding specific null value ID

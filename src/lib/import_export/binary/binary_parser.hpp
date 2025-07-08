@@ -16,6 +16,7 @@
 #include "storage/run_length_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 
 namespace hyrise {
@@ -76,6 +77,10 @@ class BinaryParser {
   template <typename T>
   static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);
 
+  template <typename T>
+  static std::shared_ptr<VariableStringDictionarySegment<T>> _import_variable_string_length_segment(
+      std::ifstream& file, ChunkOffset row_count);
+
   static std::shared_ptr<FixedStringDictionarySegment<pmr_string>> _import_fixed_string_dictionary_segment(
       std::ifstream& file, ChunkOffset row_count);
 
@@ -90,13 +95,13 @@ class BinaryParser {
   static std::shared_ptr<LZ4Segment<T>> _import_lz4_segment(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given compressed_vector_type_id.
-  static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(
+  static std::unique_ptr<const BaseCompressedVector> _import_attribute_vector(
       std::ifstream& file, ChunkOffset row_count, CompressedVectorTypeID compressed_vector_type_id);
 
   static std::unique_ptr<const BaseCompressedVector> _import_offset_value_vector(
       std::ifstream& file, ChunkOffset row_count, CompressedVectorTypeID compressed_vector_type_id);
 
-  static std::shared_ptr<FixedStringVector> _import_fixed_string_vector(std::ifstream& file, const size_t count);
+  static FixedStringVector _import_fixed_string_vector(std::ifstream& file, const size_t count);
 
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>

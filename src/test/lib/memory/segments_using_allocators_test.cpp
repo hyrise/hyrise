@@ -40,7 +40,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
 
       const auto convert_value = [](const auto int_value) {
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          return pmr_string{std::string{"HereIsAReallyLongStringToGuaranteeThatWeNeedExternalMemory"} +
+          return pmr_string{std::string{"HereIsAReallyLongStringToGuaranteeThatWeDoNotUseSmallStringOptimizations"} +
                             std::to_string(int_value)};
         } else {
           return int_value;
@@ -49,8 +49,8 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
 
       original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, ChunkOffset{300});
       empty_original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, ChunkOffset{0});
-      // original_segment contains the numbers from 0 to 99, then 100x100, then the numbers from 200 to 299.
-      // This way, we can check if, e.g., run-length encoding properly handles the duplicate values
+      // `original_segment` contains the numbers from 0 to 99, then NULLs and 100x100, then the numbers from 200 to 299.
+      // This way, we can check if, e.g., run-length encoding properly handles the duplicate values.
       for (auto value = int32_t{0}; value <= 99; ++value) {
         original_segment->append(convert_value(value));
       }

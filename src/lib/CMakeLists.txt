@@ -210,12 +210,12 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
-    operators/join_helper/join_output_writing.cpp
-    operators/join_helper/join_output_writing.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
     operators/join_hash/join_hash_steps.hpp
     operators/join_hash/join_hash_traits.hpp
+    operators/join_helper/join_output_writing.cpp
+    operators/join_helper/join_output_writing.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_nested_loop.cpp
@@ -485,6 +485,9 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
+    storage/index/chunk_index_statistics.cpp
+    storage/index/chunk_index_statistics.hpp
+    storage/index/chunk_index_type.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
@@ -497,10 +500,6 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
-    storage/index/chunk_index_statistics.cpp
-    storage/index/chunk_index_statistics.hpp
-    storage/index/table_index_statistics.cpp
-    storage/index/table_index_statistics.hpp
     storage/index/partial_hash/flat_map_iterator.cpp
     storage/index/partial_hash/flat_map_iterator.hpp
     storage/index/partial_hash/flat_map_iterator_impl.cpp
@@ -509,7 +508,8 @@ set(
     storage/index/partial_hash/partial_hash_index.hpp
     storage/index/partial_hash/partial_hash_index_impl.cpp
     storage/index/partial_hash/partial_hash_index_impl.hpp
-    storage/index/chunk_index_type.hpp
+    storage/index/table_index_statistics.cpp
+    storage/index/table_index_statistics.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/lz4_segment.cpp
@@ -561,9 +561,23 @@ set(
     storage/value_segment.hpp
     storage/value_segment/null_value_vector_iterable.hpp
     storage/value_segment/value_segment_iterable.hpp
+    storage/variable_string_dictionary/variable_string_dictionary_encoder.hpp
+    storage/variable_string_dictionary/variable_string_dictionary_iterable.hpp
+    storage/variable_string_dictionary/variable_string_vector.cpp
+    storage/variable_string_dictionary/variable_string_vector.hpp
+    storage/variable_string_dictionary/variable_string_vector_iterator.hpp
+    storage/variable_string_dictionary_segment.cpp
+    storage/variable_string_dictionary_segment.hpp
     storage/vector_compression/base_compressed_vector.hpp
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_compressor.cpp
+    storage/vector_compression/bitpacking/bitpacking_compressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_decompressor.hpp
+    storage/vector_compression/bitpacking/bitpacking_iterator.hpp
+    storage/vector_compression/bitpacking/bitpacking_vector.cpp
+    storage/vector_compression/bitpacking/bitpacking_vector.hpp
+    storage/vector_compression/bitpacking/bitpacking_vector_type.hpp
     storage/vector_compression/compressed_vector_type.cpp
     storage/vector_compression/compressed_vector_type.hpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.cpp
@@ -572,13 +586,6 @@ set(
     storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
-    storage/vector_compression/bitpacking/bitpacking_compressor.cpp
-    storage/vector_compression/bitpacking/bitpacking_compressor.hpp
-    storage/vector_compression/bitpacking/bitpacking_iterator.hpp
-    storage/vector_compression/bitpacking/bitpacking_decompressor.hpp
-    storage/vector_compression/bitpacking/bitpacking_vector.hpp
-    storage/vector_compression/bitpacking/bitpacking_vector.cpp
-    storage/vector_compression/bitpacking/bitpacking_vector_type.hpp
     storage/vector_compression/vector_compression.cpp
     storage/vector_compression/vector_compression.hpp
     strong_typedef.hpp

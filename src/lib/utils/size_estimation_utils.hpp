@@ -50,7 +50,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   using StringType = typename V::value_type;
   const auto base_size = sizeof(V);
 
-  // Early out
+  // Early out.
   if (string_vector.empty()) {
     return base_size + (string_vector.capacity() * sizeof(StringType));
   }
@@ -62,7 +62,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
       std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * static_cast<float>(string_vector.size()))));
 
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
-    // Run the (expensive) calculation of aggregating the whole vector's string sizes when full estimation is desired
+    // Run the (expensive) calculation of aggregating the entire vector's string sizes when full estimation is desired
     // or the given input vector is small.
     auto elements_size = string_vector.capacity() * sizeof(StringType);
     for (const auto& single_string : string_vector) {
@@ -84,7 +84,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   while (sample_set.size() < samples_to_draw) {
     sample_set.insert(distribution(generator));
   }
-  // Create vector from set of samples (std::set yields a sorted order)
+  // Create vector from set of samples (std::set yields a sorted order).
   auto sample_positions = std::vector<size_t>(sample_set.cbegin(), sample_set.cend());
 
   // We get the accurate size for all strings in the sample (preallocated buffers + potential heap allocations) and

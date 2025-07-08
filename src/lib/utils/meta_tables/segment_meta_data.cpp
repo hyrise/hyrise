@@ -94,21 +94,22 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
   resolve_data_type(segment->data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
-    // For dictionary segments, an early (and much faster) exit is possible by using the dictionary size
+    // For dictionary segments, an early (and much faster) exit is possible by using the dictionary size.
     if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(segment)) {
-      distinct_value_count = dictionary_segment->dictionary()->size();
+      distinct_value_count = dictionary_segment->dictionary().size();
       return;
     }
 
     if (const auto fs_dictionary_segment =
             std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
-      distinct_value_count = fs_dictionary_segment->fixed_string_dictionary()->size();
+      distinct_value_count = fs_dictionary_segment->fixed_string_dictionary().size();
       return;
     }
 
     auto distinct_values = std::unordered_set<ColumnDataType>{};
     auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
     iterable.with_iterators([&](auto it, const auto end) {
+      distinct_values.reserve(std::distance(it, end) / 2);
       for (; it != end; ++it) {
         const auto segment_item = *it;
         if (!segment_item.is_null()) {

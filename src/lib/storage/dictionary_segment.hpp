@@ -12,18 +12,18 @@ namespace hyrise {
 class BaseCompressedVector;
 
 /**
- * @brief Segment implementing dictionary encoding
+ * @brief Segment implementing dictionary encoding.
  *
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
 class DictionarySegment : public BaseDictionarySegment {
  public:
-  explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
+  explicit DictionarySegment(pmr_vector<T>&& dictionary,
+                             std::unique_ptr<const BaseCompressedVector>&& attribute_vector);
 
   // returns an underlying dictionary
-  std::shared_ptr<const pmr_vector<T>> dictionary() const;
+  const pmr_vector<T>& dictionary() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -35,10 +35,10 @@ class DictionarySegment : public BaseDictionarySegment {
   std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     const auto value_id = _decompressor->get(chunk_offset);
-    if (value_id == _dictionary->size()) {
+    if (value_id == _dictionary.size()) {
       return std::nullopt;
     }
-    return (*_dictionary)[value_id];
+    return _dictionary[value_id];
   }
 
   ChunkOffset size() const final;
@@ -78,15 +78,15 @@ class DictionarySegment : public BaseDictionarySegment {
 
   ValueID::base_type unique_values_count() const final;
 
-  std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
+  const std::unique_ptr<const BaseCompressedVector>& attribute_vector() const final;
 
   ValueID null_value_id() const final;
 
   /**@}*/
 
  protected:
-  const std::shared_ptr<const pmr_vector<T>> _dictionary;
-  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
+  const pmr_vector<T> _dictionary;
+  const std::unique_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 
