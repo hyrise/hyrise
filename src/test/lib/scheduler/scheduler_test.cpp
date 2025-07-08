@@ -143,7 +143,7 @@ TEST_F(SchedulerTest, BasicTest) {
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
   auto counter = std::atomic_uint32_t{0};
   increment_counter_in_subtasks(counter);
-  ASSERT_EQ(counter, 30);
+  EXPECT_EQ(counter, 30);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
@@ -154,7 +154,7 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
 
   stress_linear_dependencies(counter);
 
-  ASSERT_EQ(counter, 3);
+  EXPECT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, Grouping) {
@@ -192,7 +192,7 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
 
   stress_multiple_dependencies(counter);
 
-  ASSERT_EQ(counter, 4);
+  EXPECT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
@@ -203,25 +203,25 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
 
   stress_diamond_dependencies(counter);
 
-  ASSERT_EQ(counter, 7);
+  EXPECT_EQ(counter, 7);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
   auto counter = std::atomic_uint32_t{0};
   stress_linear_dependencies(counter);
-  ASSERT_EQ(counter, 3);
+  EXPECT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
   auto counter = std::atomic_uint32_t{0};
   stress_multiple_dependencies(counter);
-  ASSERT_EQ(counter, 4);
+  EXPECT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
   auto counter = std::atomic_uint32_t{0};
   stress_diamond_dependencies(counter);
-  ASSERT_EQ(counter, 7);
+  EXPECT_EQ(counter, 7);
 }
 
 TEST_F(SchedulerTest, NotAllDependenciesPassedToScheduler) {
@@ -239,18 +239,19 @@ TEST_F(SchedulerTest, NotAllDependenciesPassedToScheduler) {
   const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{task1, task2};
 
   // The scheduler should complain that not all dependencies (task3 is a successor of task2) are passed.
-  ASSERT_THROW(Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks), std::logic_error);
+  EXPECT_THROW(Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks), std::logic_error);
 }
 
-TEST_F(SchedulerTest, SameSuccessorMultipleTimes) {
+TEST_F(SchedulerTest, DuplicatePredecessorTasks) {
   const auto task1 = std::make_shared<JobTask>([&]() {});
   const auto task2 = std::make_shared<JobTask>([&]() {});
 
   task1->set_as_predecessor_of(task2);
   task1->set_as_predecessor_of(task2);
+  EXPECT_EQ(task1->successors().size(), 1);
   const auto task2_2 = task2;
   task1->set_as_predecessor_of(task2_2);
-  ASSERT_EQ(task1->successors().size(), 1);
+  EXPECT_EQ(task1->successors().size(), 1);
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {
@@ -438,7 +439,7 @@ TEST_F(SchedulerTest, GetThisThreadWorker) {
 
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.emplace_back(std::make_shared<JobTask>([&]() {
-    EXPECT_NO_THROW(Worker::get_this_thread_worker());
+    EXPECT_NE(Worker::get_this_thread_worker(), nullptr);
   }));
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);

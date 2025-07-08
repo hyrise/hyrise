@@ -464,7 +464,7 @@ TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
 }
 
 TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
-  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto worker_count = node_queue_scheduler->workers().size();
