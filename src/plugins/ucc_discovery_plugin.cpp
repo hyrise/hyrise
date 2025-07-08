@@ -252,11 +252,10 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shar
 template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
     const std::shared_ptr<const Table>& table, const std::string& table_name, const ColumnID column_id,
-    const std::shared_ptr<TransactionContext>& transaction_context,
-    const std::optional<TableKeyConstraint>& existing_ucc) {
+    const std::shared_ptr<TransactionContext>& transaction_context) {
   // `distinct_values_across_segments` collects the segment values from all chunks.
   auto distinct_values_across_segments = std::unordered_set<ColumnDataType>{};
-  auto unmodified_chunks = std::vector<ChunkID>();
+  auto unmodified_chunks = std::vector<ChunkID>{};
 
   const auto chunk_count = table->chunk_count();
 
@@ -270,33 +269,24 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
       continue;
     }
     const auto source_segment = source_chunk->get_segment(column_id);
-    // Was the chunk modified since the last UCC validation (inserted or updated rows)? If not, than we do not need to
-    // probe its values for duplicates later, because duplicates can only be introduced by chunks that were modified
-    // after the last validation.
-    const bool not_modified_since_last_validation =
-        existing_ucc && existing_ucc->last_validation_result() == ValidationResultType::VALID &&
-        source_chunk->mvcc_data()->max_begin_cid.load() <= existing_ucc->last_validated_on();
-    if ((source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable()) || not_modified_since_last_validation) {
-      // The set of distinct values across all segments should grow by the number of rows in the segment because,
-      // if it does not, it means some value must have been inserted twice -> duplicate detected.
-      // In this case, the UCC is violated.
-      const auto expected_distinct_value_count = distinct_values_across_segments.size() + source_segment->size();
-
+    // Were values inserted into the chunk (inserted or updated rows)? If not and it is a dictionary segment, we can
+    // directly add all distinct values to the set of distinct values.
+    if ((source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable())) {
       // If we enter this branch, we know that this segment has not been modified since its creation. Therefore we can
       // directly add all of its values to the set of distinct values.
-      if (const auto& dictionary_segment =
-              std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(source_segment)) {
-        // Directly insert dictionary entries.
-        const auto& dictionary = dictionary_segment->dictionary();
-        distinct_values_across_segments.insert(dictionary->cbegin(), dictionary->cend());
-      } else {
-        segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto end) {
-          while (it != end) {
-            distinct_values_across_segments.insert(it->value());
-            ++it;
-          }
-        });
+      const auto& dictionary_segment =
+          std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(source_segment);
+      if (!dictionary_segment) {
+        continue;
       }
+
+      // The set of distinct values across all segments should grow by the number of rows in the segment. Otherwise,
+      // some value must have been inserted twice, and we detected a duplicate that violates the UCC.
+      const auto expected_distinct_value_count = distinct_values_across_segments.size() + source_segment->size();
+
+      // Directly insert dictionary entries.
+      const auto& dictionary = dictionary_segment->dictionary();
+      distinct_values_across_segments.insert(dictionary->cbegin(), dictionary->cend());
 
       if (distinct_values_across_segments.size() != expected_distinct_value_count) {
         return false;

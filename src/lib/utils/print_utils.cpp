@@ -118,12 +118,12 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
   auto table_key_constraints =
       std::set<TableKeyConstraint>{table->soft_key_constraints().begin(), table->soft_key_constraints().end()};
   // We only print key constraints that are marked as valid. Note that this has a different meaning
-  // than "confidently valid". See TableKeyConstraint::was_valid_last() for details.
+  // than "confidently valid". See `TableKeyConstraint::last_validation_result()` for details.
   if (table_key_constraints.empty()) {
     return;
   }
 
-  bool first = true;
+  auto first = true;
   for (const auto& constraint : table_key_constraints) {
     if (constraint.last_validation_result() == ValidationResultType::INVALID) {
       continue;

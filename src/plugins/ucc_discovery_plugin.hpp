@@ -90,8 +90,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   template <typename ColumnDataType>
   static bool _uniqueness_holds_across_segments(const std::shared_ptr<const Table>& table,
                                                 const std::string& table_name, const ColumnID column_id,
-                                                const std::shared_ptr<TransactionContext>& transaction_context,
-                                                const std::optional<TableKeyConstraint>& existing_ucc = std::nullopt);
+                                                const std::shared_ptr<TransactionContext>& transaction_context);
 
   /**
    * Extracts columns as candidates for UCC validation from a given aggregate node that is used in a groupby operation.

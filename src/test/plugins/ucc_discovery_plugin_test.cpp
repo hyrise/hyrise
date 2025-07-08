@@ -90,7 +90,6 @@ std::shared_ptr<TransactionContext> _delete_row(const std::shared_ptr<Table> tab
   const auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(transaction_context);
   delete_op->execute();
-  // execute_all({table_wrapper, table_scan, delete_op});
 
   if (commit_transaction) {
     transaction_context->commit();
