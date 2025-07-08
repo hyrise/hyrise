@@ -69,8 +69,8 @@ TEST_F(HyriseTest, ChangingSchedulers) {
   });
   task1->schedule();
 
-  // Implicitely tests that changing the scheduler calls `finish()` on the old scheduler. Thus, we explicitely do not wait
-  // for task1 here.
+  // Implicitely tests that changing the scheduler calls `finish()` on the old scheduler. Thus, we explicitely do not
+  // wait for task1 here.
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
   const auto task2 = std::make_shared<JobTask>([&]() {
     ++counter;
