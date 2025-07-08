@@ -1,5 +1,6 @@
 #include <memory>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -367,6 +368,14 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   _apply_rule(rule, _lqp);
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(ExpressionReductionRuleTest, CheckCacheability) {
+  auto lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      AggregateNode::make(expression_vector(), expression_vector(sum_(b), count_star_(mock_node), avg_(b)),  // NOLINT
+                          mock_node));
+  const auto is_cacheable = _apply_rule(rule, lqp);
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise
