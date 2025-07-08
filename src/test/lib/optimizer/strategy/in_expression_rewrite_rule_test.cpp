@@ -4,6 +4,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/in_expression_rewrite_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "storage/table.hpp"
 #include "strategy_base_test.hpp"
 

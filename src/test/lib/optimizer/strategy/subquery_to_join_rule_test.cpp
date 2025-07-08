@@ -12,6 +12,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
 
 namespace hyrise {

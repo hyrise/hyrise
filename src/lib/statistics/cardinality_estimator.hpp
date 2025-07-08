@@ -3,32 +3,32 @@
 #include <algorithm>
 #include <memory>
 #include <ostream>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include <boost/dynamic_bitset.hpp>
 
-#include "cardinality_estimation_cache.hpp"
-#include "operators/operator_scan_predicate.hpp"
 #include "statistics/base_attribute_statistics.hpp"
+#include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/statistics_objects/generic_histogram_builder.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
 template <typename T>
-class AbstractHistogram;
-template <typename T>
 class GenericHistogram;
 template <typename T>
 class AttributeStatistics;
+class AbstractLQPNode;
 class AggregateNode;
 class AliasNode;
 class JoinNode;
 class LimitNode;
+struct OperatorScanPredicate;
 class PredicateNode;
 class ProjectionNode;
+class TableStatistics;
 class UnionNode;
 class ValidateNode;
 class WindowNode;
@@ -41,14 +41,16 @@ class WindowNode;
  * To increase estimation performance, we cache already estimated statistics for (sub-)plans that are guaranteed not to
  * change anymore. This is beneficial if we call the CardinalityEstimator multiple times for the same LQP (e.g., during
  * join ordering, predicate reordering, etc.).
- * Even if we cannot cache statistics across multiple estimation invocations, we maintain a cache for a single call.
- * This helps if we have diamonds in the query plan (e.g., after predicate splitup or with semi-join reductions).
+ * Even if we cannot cache statistics across multiple estimation invocations because the plan structure changes in
+ * between, we maintain a cache for the scope of a single call to facilitate diamonds (e.g., after predicate splitup or
+ * with semi-join reductions). Without caching, we would estimate the statistics of common subplans below a diamond
+ * multiple times even if we estimated the plan's cardinality only once.
  * When allowing the CardinalityEstimator to use caching, you have to get a fresh instance (`new_instance()`). Thus, the
  * filled caches do not interfere with later estimations by, e.g., following optimizer rules.
  */
 class CardinalityEstimator {
  public:
-  using StatisticsByLQP = CardinalityEstimationCache::StatisticsByLQP;
+  using StatisticsByLQP = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<TableStatistics>>;
 
   /**
    * @return A new instance of this estimator with empty caches. Used so that caching guarantees can be enabled on the
@@ -86,6 +88,11 @@ class CardinalityEstimator {
         const std::optional<AllTypeVariant>& /*variant_value2*/ = std::nullopt) const override;
   };
 
+  // Helper to ensure no statistics for required LQPColumnExpressions were pruned. Should be adapted if we estimate
+  // aggregations, window functions, or computed projections.
+  static void assert_required_statistics(const ColumnID column_id, const std::shared_ptr<AbstractLQPNode>& input_node,
+                                         const std::shared_ptr<const TableStatistics>& input_statistics);
+
   /**
    * Statistics caching
    * @{
@@ -102,6 +109,11 @@ class CardinalityEstimator {
    * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up constructed plans. Thus, the
    * cardinalities/statistics of nodes, once constructed, never change. This enables the usage of an
    * <lqp-ptr> -> <statistics> cache.
+   * Furthermore, this call also enables statistics pruning and population of columns that must not be pruned. Thus, it
+   * sets @param lqp in the cache to lazily use it for populating the columns. This passed LQP node should be the root
+   * of the (sub-)plan you wish to perform estimations for. If you wish to only use statistics caching, but not
+   * statistics pruning (e.g., because you untie nodes from the plan while performing estimations), call
+   * `do_not_prune_unused_statistics()` afterwards.
    *
    * Image the following simple example of predicate reordering. Assume we have a table R with 100'000 tuples, a
    * PredicateNode A with a selectivity of 0.3, and a PredicateNode B with a selectivity of 0.5. There are also more
@@ -140,7 +152,30 @@ class CardinalityEstimator {
    *        the cardinalities of nodes below do not change. To keep optimization costs low, it is best practice to
    *        recursively go bottom-up if you change the query plan in a way that influences intermediate cardinalities.
    */
-  void guarantee_bottom_up_construction() const;
+  void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
+
+  /**
+   * Prune statistics that are not relevant for cardinality estimation. Thus, we avoid forwarding and scaling
+   * histograms. When caching is allowed, `guarantee_bottom_up_construction()` takes care that all predicates of the
+   * final LQP are present in the cache.
+   *
+   * We do not prune statistics for single estimation calls without statistics caching enabled because we cannot easily
+   * collect required statistics while recursing into the query plan: There might be diamonds where different paths
+   * require different expressions. One branch of the diamond reaches the common input branch first, and not all
+   * required expressions have been collected yet. Because we still cache estimated statistics during the estimation of
+   * a single LQP, these expressions will be missing when the other branch of the diamond requests the estimated
+   * statistics of the common input.
+   *
+   *    [ StoredTableNode ] -+---> [ PredicateNode a = 1 ] ---+-> [ UnionPositions ]
+   *                          \                              /
+   *                           +-> [ PredicateNode b = 2 ] -+
+   *
+   *
+   * For the same reason, turn off pruning if you untie nodes while you perform estimations (e.g., in
+   * PredicatePlacementRule)!
+   */
+  void prune_unused_statistics() const;
+  void do_not_prune_unused_statistics() const;
   /** @} */
 
   /**
@@ -196,54 +231,7 @@ class CardinalityEstimator {
    */
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(
-      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
-    /**
-     * Column-to-column scan estimation is notoriously hard; selectivities from 0 to 1 are possible for the same
-     * histogram pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct
-     * counts for each bin pair.
-     */
-    auto left_idx = BinID{0};
-    auto right_idx = BinID{0};
-    auto left_bin_count = left_histogram.bin_count();
-    auto right_bin_count = right_histogram.bin_count();
-
-    auto builder = GenericHistogramBuilder<T>{};
-
-    while (left_idx < left_bin_count && right_idx < right_bin_count) {
-      const auto& left_min = left_histogram.bin_minimum(left_idx);
-      const auto& right_min = right_histogram.bin_minimum(right_idx);
-
-      if (left_min < right_min) {
-        ++left_idx;
-        continue;
-      }
-
-      if (right_min < left_min) {
-        ++right_idx;
-        continue;
-      }
-
-      DebugAssert(left_histogram.bin_maximum(left_idx) == right_histogram.bin_maximum(right_idx),
-                  "Histogram bin boundaries do not match.");
-
-      const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
-      const auto distinct_count =
-          std::min(left_histogram.bin_distinct_count(left_idx), right_histogram.bin_distinct_count(right_idx));
-
-      if (height > 0 && distinct_count > 0) {
-        builder.add_bin(left_min, left_histogram.bin_maximum(left_idx), height, distinct_count);
-      }
-
-      ++left_idx;
-      ++right_idx;
-    }
-
-    if (builder.empty()) {
-      return nullptr;
-    }
-
-    return builder.build();
-  }
+      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram);
 
   /** @} */
 
@@ -266,59 +254,7 @@ class CardinalityEstimator {
 
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
-      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
-    /**
-     * left_histogram and right_histogram are turned into "unified" histograms by `split_at_bin_bounds`, meaning that
-     * their bins are split so that their bin boundaries match.
-     * E.g., if left_histogram has a single bin [1, 10] and right histogram has a single bin [5, 20] then
-     * unified_left_histogram == {[1, 4], [5, 10]}
-     * unified_right_histogram == {[5, 10], [11, 20]}
-     * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
-     */
-
-    auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
-    auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
-
-    auto left_idx = BinID{0};
-    auto right_idx = BinID{0};
-    auto left_bin_count = unified_left_histogram->bin_count();
-    auto right_bin_count = unified_right_histogram->bin_count();
-
-    auto builder = GenericHistogramBuilder<T>{};
-
-    // Iterate over both unified histograms and find overlapping bins.
-    while (left_idx < left_bin_count && right_idx < right_bin_count) {
-      const auto& left_min = unified_left_histogram->bin_minimum(left_idx);
-      const auto& right_min = unified_right_histogram->bin_minimum(right_idx);
-
-      if (left_min < right_min) {
-        ++left_idx;
-        continue;
-      }
-
-      if (right_min < left_min) {
-        ++right_idx;
-        continue;
-      }
-
-      DebugAssert(unified_left_histogram->bin_maximum(left_idx) == unified_right_histogram->bin_maximum(right_idx),
-                  "Histogram bin boundaries do not match.");
-
-      // Overlapping bins found, estimate the join for these bins' range.
-      const auto [height, distinct_count] = estimate_inner_equi_join_of_bins(
-          unified_left_histogram->bin_height(left_idx), unified_left_histogram->bin_distinct_count(left_idx),
-          unified_right_histogram->bin_height(right_idx), unified_right_histogram->bin_distinct_count(right_idx));
-
-      if (height > 0) {
-        builder.add_bin(left_min, unified_left_histogram->bin_maximum(left_idx), height, distinct_count);
-      }
-
-      ++left_idx;
-      ++right_idx;
-    }
-
-    return builder.build();
-  }
+      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram);
 
   /**
    * Given two HistogramBins with equal bounds and the specified height and distinct counts, estimate the number of
@@ -330,14 +266,24 @@ class CardinalityEstimator {
       const HistogramCountType right_height, const DistinctCount right_distinct_count);
   /** @} */
 
-  /**
-   * Helper
-   * @{
-   */
-  static std::shared_ptr<TableStatistics> prune_column_statistics(
-      const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
+ private:
+  friend class Optimizer;
+  friend class OptimizerTest_PollutedCardinalityEstimationCache_Test;
+  friend class CardinalityEstimatorTest_StatisticsCaching_Test;
+  friend class CardinalityEstimatorTest_StatisticsPruning_Test;
+  friend class CostEstimatorLogicalTest_CardinalityCaching_Test;
 
-  /** @} */
+  struct CardinalityEstimationCache {
+    std::optional<JoinGraphStatisticsCache> join_graph_statistics_cache;
+
+    std::optional<StatisticsByLQP> statistics_by_lqp;
+
+    std::optional<ExpressionUnorderedSet> required_column_expressions;
+
+    std::shared_ptr<const AbstractLQPNode> lqp;
+  };
+
+  void _populate_required_column_expressions() const;
 
   mutable CardinalityEstimationCache cardinality_estimation_cache;
 };
