@@ -2,68 +2,80 @@
 
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
+import seaborn as sns
+import sys
 
-# 1) Read & filter
-df = pd.read_csv('data/bloom_filter_results.csv')
-df = df[(df.vector_size == 10_000) & (df.distinctiveness == 1)]
+# Parse command-line argument
+if len(sys.argv) != 2:
+    print("Usage: python bloom_eval.py <csv_file>")
+    sys.exit(1)
 
-# 2) Compute filter_rate
-df['filter_rate'] = 1 - (df.hitrate / df.vector_size)
+csv_file = sys.argv[1]
 
-# 3) Assign a unique marker to each filter_size
-unique_sizes = sorted(df.filter_size.unique())
-marker_list  = ['o','s','^','D','v','*','P','X']  # extend if needed
-markers      = {size: marker_list[i % len(marker_list)]
-                for i, size in enumerate(unique_sizes)}
+df = pd.read_csv(csv_file)
 
-# 4) Assign a unique color to each (k, hash_function) pair
-df['group'] = df.k.astype(str) + '_h' + df.hash_function.astype(str)
-unique_groups = df.group.unique()
-cmap = plt.cm.get_cmap('tab10', len(unique_groups))
-color_map = {g: cmap(i) for i, g in enumerate(unique_groups)}
+# Filter for distinctiveness = 0.1
+df = df[df['distinctiveness'] == 0.1]
 
-# 5) Plot
-fig, ax = plt.subplots(figsize=(8,6))
-ax.set_xlim(left=0.8)
-for _, row in df.iterrows():
-    ax.scatter(
-        row.filter_rate,
-        row.probe_time_us,
-        marker=markers[row.filter_size],
-        color=color_map[row.group],
-        edgecolor='k',
-        s=80
+# Add combined times and filter rate
+df['combined_time_ns'] = df['build_time_ns'] + df['probe_time_ns']
+df['filter_rate'] = 1 - (df['hits'] / df['vector_size'])
+
+# Group by relevant columns and calculate median values
+grouped = df.groupby(['vector_size', 'overlap', 'filter_size', 'hash_function', 'k'])
+median_df = grouped[['combined_time_ns', 'filter_rate', 'saturation']].median().reset_index()
+print(median_df.to_string())  # Print the first few rows of the median DataFrame for verification
+
+# Print unique filter rates for each combination of vector_size, overlap, and filter_size
+print("\nUnique filter rates for each combination of vector_size, overlap, and filter_size:")
+for vector_size in median_df['vector_size'].unique():
+    for overlap in median_df['overlap'].unique():
+        for filter_size in median_df['filter_size'].unique():
+            subset = median_df[
+                (median_df['vector_size'] == vector_size) &
+                (median_df['overlap'] == overlap) &
+                (median_df['filter_size'] == filter_size)
+            ]
+            print(f"Vector Size: {vector_size}, Overlap: {overlap}, Filter Size: {filter_size}, Filter Rates: {subset['filter_rate'].unique()}")
+
+# Generate facet plots for each vector size
+vector_sizes = median_df['vector_size'].unique()
+for vector_size in vector_sizes:
+    subset = median_df[median_df['vector_size'] == vector_size]
+
+    # Create facet grid
+    g = sns.FacetGrid(
+        subset,
+        row="overlap",
+        col="filter_size",
+        margin_titles=True,
+        height=4,
+        aspect=1.5
     )
 
-ax.set_xlabel('Filter Rate (1 - hitrate / vector_size)')
-ax.set_ylabel('Probe Time (µs)')
-ax.set_title('Probe Time vs Filter Rate (10 K vectors, distinctiveness=1)')
+    # Define scatterplot with lines connecting points of the same hash function
+    def scatterplot_with_lines(data, **kwargs):
+        sns.scatterplot(
+            data=data,
+            x="filter_rate",
+            y="combined_time_ns",
+            hue="hash_function",
+            style="hash_function",
+            markers=["o", "s"],
+            **kwargs
+        )
+        for hash_function in data['hash_function'].unique():
+            hash_subset = data[data['hash_function'] == hash_function]
+            plt.plot(hash_subset['filter_rate'], hash_subset['combined_time_ns'], label=f"Hash {hash_function}")
 
-# 6) Legends
-# — Marker legend for filter_size
-marker_handles = [
-    Line2D([0],[0],
-           marker=markers[s],
-           color='gray',
-           linestyle='',
-           label=f'filter_size={s}')
-    for s in unique_sizes
-]
-leg1 = ax.legend(handles=marker_handles, title='Filter Size', loc='upper left')
-ax.add_artist(leg1)
+    g.map_dataframe(scatterplot_with_lines)
 
-# — Color legend for k & hash_function
-color_handles = [
-    Line2D([0],[0],
-           marker='o',
-           color=color_map[g],
-           linestyle='',
-           label=g)
-    for g in unique_groups
-]
-ax.legend(handles=color_handles, title='k_hash', loc='lower left')
+    # Add titles and labels
+    g.set_titles(row_template="Overlap: {row_name}", col_template="Filter Size: {col_name}")
+    g.set_axis_labels("Filter Rate", "Combined Time (ns)")
+    g.add_legend(title="Hash Function")
 
-plt.tight_layout()
-plt.savefig("eval_10K_dist1_1.pdf")
-plt.show()
+    # Save the plot to a PDF
+    pdf_filename = f"bloom_eval_{vector_size}.pdf"
+    plt.savefig(pdf_filename)
+    print(f"Saved plot to {pdf_filename}")

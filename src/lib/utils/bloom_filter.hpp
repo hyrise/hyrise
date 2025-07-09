@@ -9,10 +9,13 @@ template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter {
  public:
   void insert(uint64_t hash) {
+    // std::cout << hash << " -> ";
     for (uint8_t i = 0; i < K; ++i) {
       uint32_t bit_index = _extract_bits(hash, i);
+      // std::cout << bit_index << " ";
       _set_bit(bit_index);
     }
+    // std::cout << std::endl;
   }
 
   bool probe(uint64_t hash) const {

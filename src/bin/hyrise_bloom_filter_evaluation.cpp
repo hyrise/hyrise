@@ -19,8 +19,8 @@ std::vector<int32_t> vector_sizes = {10'000, 1'000'000, 100'000'000};
 std::vector<double> distinctivenesses = {0.01, 0.1, 1};
 std::vector<double> overlaps = {0.0, 0.25, 0.5, 0.75, 1.0};
 uint8_t hash_functions = 2;
-uint16_t min_runs = 1000;
-int64_t min_time_ns = 30'000'000'000;
+uint16_t min_runs = 5;
+int64_t min_time_ns = 100'000'000;
 
 struct BenchmarkResult {
   int32_t vector_size;
@@ -106,7 +106,10 @@ std::vector<BenchmarkResult> run_bloom_filter_evaluation(const std::vector<int32
     } else if (hash_function == 1) {
       build_time = measure_duration([&]() {
         for (const auto& val : build_vec) {
-          bloom_filter.insert(boost::hash<int32_t>{}(val));
+          // std::mt19937 rng(val);  // Seed the RNG with the value
+          size_t seed = 0;
+          boost::hash_combine(seed, val);
+          bloom_filter.insert(static_cast<uint64_t>(seed));  // Use the generated random number as the hash
         }
       });
     } else {
@@ -125,7 +128,9 @@ std::vector<BenchmarkResult> run_bloom_filter_evaluation(const std::vector<int32
     } else if (hash_function == 1) {
       probe_time = measure_duration([&]() {
         for (const auto& val : probe_vec) {
-          if (bloom_filter.probe(boost::hash<int32_t>{}(val)))
+          size_t seed = 0;
+          boost::hash_combine(seed, val);
+          if (bloom_filter.probe(static_cast<uint64_t>(seed)))  // Use the generated random number as the hash
             ++hits;
         }
       });
