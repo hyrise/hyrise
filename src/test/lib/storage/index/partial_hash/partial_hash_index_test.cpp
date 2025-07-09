@@ -518,13 +518,13 @@ TEST_F(PartialHashIndexTest, AssignFlatMapIterator) {
   // auto iterator = something; would not call the assignment operator, but the constructor.
   auto iterator = FlatMapIterator{cend(index)};
 
-  // Explicitely invoke assign operator
+  // Explicitely invoke assign operator.
   iterator = cbegin(index);
   EXPECT_EQ(iterator, cbegin(index));
   EXPECT_EQ(*iterator, *cbegin(index));
   EXPECT_NE(iterator, cend(index));
 
-  // Test re-assignment of the same value
+  // Test re-assignment of the same value.
   iterator = cbegin(index);
   EXPECT_EQ(iterator, cbegin(index));
   EXPECT_EQ(*iterator, *cbegin(index));

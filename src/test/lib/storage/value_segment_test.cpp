@@ -97,7 +97,7 @@ TYPED_TEST(TypedStorageValueSegmentTest, MemoryUsageEstimation) {
     * on the heap.
     */
 
-  // this is necessary here because we are in a derived class template
+  // `this` is necessary here because we are in a derived class template.
   const auto empty_usage = this->vs.memory_usage(MemoryUsageCalculationMode::Sampled);
   const auto empty_usage_nullable = this->nullable_vs.memory_usage(MemoryUsageCalculationMode::Sampled);
 
