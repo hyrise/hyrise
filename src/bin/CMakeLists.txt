@@ -30,10 +30,13 @@ add_executable(
     hyrise_bloom_filter_evaluation.cpp
 )
 
+add_library(xxhash STATIC xxhash.c)
+target_compile_options(xxhash PRIVATE -w)
 target_link_libraries(
     hyriseBloomFilterEvaluation
     hyrise
     hyriseBenchmarkLib
+    xxhash
 )
 
 # Configure client
