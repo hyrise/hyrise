@@ -464,7 +464,7 @@ TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
 }
 
 TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
-  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto worker_count = node_queue_scheduler->workers().size();
@@ -474,11 +474,13 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
     GTEST_SKIP();
   }
 
+  auto NodeQueueScheduler_NUM_GROUPS = size_t{10};
+
   const auto multiplier = 1'000;
   const auto task_count = multiplier * worker_count;
 
   for (auto run = uint8_t{0}; run < 10; ++run) {
-    auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler::NUM_GROUPS, 0);
+    auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler_NUM_GROUPS, 0);
     auto output_counter = std::atomic<size_t>{0};
     auto concurrently_processed_tasks = std::atomic<int64_t>{0};
 
@@ -488,15 +490,15 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
       tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
         ++output_counter;
         const auto active_groups = ++concurrently_processed_tasks;
-        ASSERT_LE(active_groups, NodeQueueScheduler::NUM_GROUPS);
+        ASSERT_LE(active_groups, NodeQueueScheduler_NUM_GROUPS);
 
-        const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
+        const auto group_id = task_id % NodeQueueScheduler_NUM_GROUPS;
         const auto prev_task_id = previous_task_id_per_group[group_id];
         if (prev_task_id > 0) {
           // Once the first task of each group has been executed, we check the previous TaskID of the group to verify
           // that grouping execution happens in the expected round-robin order (see
           // `void NodeQueueScheduler::_group_tasks()`).
-          EXPECT_EQ(prev_task_id + NodeQueueScheduler::NUM_GROUPS, task_id);
+          EXPECT_EQ(prev_task_id + NodeQueueScheduler_NUM_GROUPS, task_id);
         }
         previous_task_id_per_group[group_id] = task_id;
 

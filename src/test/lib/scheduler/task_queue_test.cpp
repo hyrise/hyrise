@@ -36,12 +36,8 @@ TEST_F(TaskQueueTest, StealableJobs) {
 TEST_F(TaskQueueTest, EstimateLoad) {
   auto task_queue = TaskQueue{NodeID{0}};
 
-  auto task_1 = std::make_shared<JobTask>(
-                      []() {},
-                      SchedulePriority::High);
-  auto task_2 = std::make_shared<JobTask>(
-                      []() {},
-                      SchedulePriority::Default);
+  auto task_1 = std::make_shared<JobTask>([]() {}, SchedulePriority::High);
+  auto task_2 = std::make_shared<JobTask>([]() {}, SchedulePriority::Default);
 
   EXPECT_TRUE(task_queue.empty());
   // Task that has not yet been scheduled, will not be added to the task queue.

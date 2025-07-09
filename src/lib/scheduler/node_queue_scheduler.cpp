@@ -286,7 +286,8 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
   const auto first_task_node_id = tasks[0]->node_id();
 
   // Ensure short cuts taken below to test for node_id are valid.
-  DebugAssert(INVALID_NODE_ID == std::numeric_limits<NodeID::base_type>::max(), "Unexpected value for INVALID_NODE_ID.");
+  DebugAssert(INVALID_NODE_ID == std::numeric_limits<NodeID::base_type>::max(),
+              "Unexpected value for INVALID_NODE_ID.");
   DebugAssert(CURRENT_NODE_ID == INVALID_NODE_ID - 1, "Unexpected value for CURRENT_NODE_ID.");
 
   const auto node_id_for_queue_check =
@@ -317,7 +318,7 @@ void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID pr
   DebugAssert(_active, "Cannot schedule more tasks after the NodeQueueScheduler was shut down.");
   DebugAssert(task->is_scheduled(), "Do not call NodeQueueScheduler::schedule(), call schedule() on the task.");
 
-  const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
+  const auto task_counter = _task_counter++;  // Atomically take snapshot of counter.
   task->set_id(TaskID{task_counter});
 
   if (!task->is_ready()) {
@@ -339,7 +340,8 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   _group_tasks(tasks, *group_count);
 }
 
-void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count) const {
+void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks,
+                                      const size_t group_count) const {
   // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
   // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
   // concurrently. The current value has been found with a divining rod.

@@ -18,20 +18,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 
-namespace {
-
-using namespace hyrise;  // NOLINT(build/namespaces)
-
-void successors_equal(auto& lhs, const std::vector<std::shared_ptr<AbstractTask>>& rhs) {
-  ASSERT_EQ(lhs.size(), rhs.size());
-
-  for (auto index = size_t{0}; index < lhs.size(); ++index) {
-    EXPECT_EQ(lhs[index].get().shared_from_this(), rhs[index]);
-  }
-}
-
-}  // namespace
-
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
@@ -55,7 +41,7 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
   const auto gt = std::make_shared<GetTable>("table_a");
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(gt);
 
-  ASSERT_EQ(tasks.size(), 1);
+  EXPECT_EQ(tasks.size(), 1);
   EXPECT_NO_THROW(root_operator_task->schedule());
 
   EXPECT_TABLE_EQ_UNORDERED(_test_table_a, gt->get_output());
@@ -69,7 +55,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(ts);
   for (const auto& task : tasks) {
     EXPECT_NO_THROW(task->schedule());
-    // We don't have to wait here, because we are running the task tests without a scheduler.
+    // We do not have to wait here, because we are running the task tests without a scheduler.
   }
 
   const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", ChunkOffset{2});
@@ -86,7 +72,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(join);
   for (const auto& task : tasks) {
     EXPECT_NO_THROW(task->schedule());
-    // We don't have to wait here, because we are running the task tests without a scheduler.
+    // We do not have to wait here, because we are running the task tests without a scheduler.
   }
 
   const auto expected_result = load_table("resources/test_data/tbl/join_operators/int_inner_join.tbl", ChunkOffset{2});
@@ -104,7 +90,7 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(union_positions);
 
-  ASSERT_EQ(tasks.size(), 5);
+  EXPECT_EQ(tasks.size(), 5);
   const auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
   EXPECT_TRUE(tasks_set.contains(gt_a->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(scan_a->get_or_create_operator_task()));
@@ -112,18 +98,20 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   EXPECT_TRUE(tasks_set.contains(scan_c->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(union_positions->get_or_create_operator_task()));
 
-  successors_equal(gt_a->get_or_create_operator_task()->successors(), {scan_a->get_or_create_operator_task()});
-  successors_equal(scan_a->get_or_create_operator_task()->successors(),
-                   {scan_b->get_or_create_operator_task(), scan_c->get_or_create_operator_task()});
-  successors_equal(scan_b->get_or_create_operator_task()->successors(),
-                   {union_positions->get_or_create_operator_task()});
-  successors_equal(scan_c->get_or_create_operator_task()->successors(),
-                   {union_positions->get_or_create_operator_task()});
-  successors_equal(union_positions->get_or_create_operator_task()->successors(), {});
+  EXPECT_TASKS_EQ(gt_a->get_or_create_operator_task()->successors(),
+                  std::vector{scan_a->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(scan_a->get_or_create_operator_task()->successors(),
+                  (std::vector{scan_b->get_or_create_operator_task(), scan_c->get_or_create_operator_task()}));
+  EXPECT_TASKS_EQ(scan_b->get_or_create_operator_task()->successors(),
+                  std::vector{union_positions->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(scan_c->get_or_create_operator_task()->successors(),
+                  std::vector{union_positions->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(union_positions->get_or_create_operator_task()->successors(),
+                  std::vector<std::shared_ptr<AbstractTask>>{});
 
   for (const auto& task : tasks) {
     EXPECT_NO_THROW(task->schedule());
-    // We don't have to wait here, because we are running the task tests without a scheduler.
+    // We do not have to wait here, because we are running the task tests without a scheduler.
   }
 }
 
@@ -155,7 +143,7 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(projection);
 
-  ASSERT_EQ(tasks.size(), 7);
+  EXPECT_EQ(tasks.size(), 7);
   const auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
   EXPECT_TRUE(tasks_set.contains(gt_a->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(gt_b->get_or_create_operator_task()));
@@ -165,24 +153,27 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   EXPECT_TRUE(tasks_set.contains(table_wrapper->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(projection->get_or_create_operator_task()));
 
-  successors_equal(gt_b->get_or_create_operator_task()->successors(), {aggregate_a->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(gt_b->get_or_create_operator_task()->successors(),
+                  std::vector{aggregate_a->get_or_create_operator_task()});
 
-  successors_equal(gt_a->get_or_create_operator_task()->successors(), {scan->get_or_create_operator_task()});
-  successors_equal(aggregate_a->get_or_create_operator_task()->successors(), {scan->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(gt_a->get_or_create_operator_task()->successors(), std::vector{scan->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(aggregate_a->get_or_create_operator_task()->successors(),
+                  std::vector{scan->get_or_create_operator_task()});
 
-  successors_equal(scan->get_or_create_operator_task()->successors(), {aggregate_b->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(scan->get_or_create_operator_task()->successors(),
+                  std::vector{aggregate_b->get_or_create_operator_task()});
 
-  successors_equal(aggregate_b->get_or_create_operator_task()->successors(),
-                   {projection->get_or_create_operator_task()});
-  successors_equal(table_wrapper->get_or_create_operator_task()->successors(),
-                   {projection->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(aggregate_b->get_or_create_operator_task()->successors(),
+                  std::vector{projection->get_or_create_operator_task()});
+  EXPECT_TASKS_EQ(table_wrapper->get_or_create_operator_task()->successors(),
+                  std::vector{projection->get_or_create_operator_task()});
 
   EXPECT_EQ(root_operator_task, projection->get_or_create_operator_task());
   EXPECT_TRUE(projection->get_or_create_operator_task()->successors().empty());
 
   for (const auto& task : tasks) {
     EXPECT_NO_THROW(task->schedule());
-    // We don't have to wait here, because we are running the task tests without a scheduler.
+    // We do not have to wait here, because we are running the task tests without a scheduler.
   }
 }
 
@@ -263,7 +254,7 @@ TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(table_scan);
 
-  ASSERT_EQ(tasks.size(), 5);
+  EXPECT_EQ(tasks.size(), 5);
   const auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
   EXPECT_TRUE(tasks_set.contains(get_table_a->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(get_table_b->get_or_create_operator_task()));
