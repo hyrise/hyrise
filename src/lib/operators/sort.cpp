@@ -5,7 +5,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <execution>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -568,7 +567,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   };
 
   // TODO(someone): use better sorting algorithm, e.g. merge sort
-  std::stable_sort(std::execution::par_unseq, row_ids.begin(), row_ids.end(), compare_rows);
+  std::stable_sort(row_ids.begin(), row_ids.end(), compare_rows);
   auto sort_time = timer.lap();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
