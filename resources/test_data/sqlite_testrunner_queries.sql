@@ -138,16 +138,21 @@ SELECT * FROM (SELECT COUNT(a) AS cnt1 FROM id_int_int_int_50) AS s1, (SELECT CO
 SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.b = R.b) AS S2;
 SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM id_int_int_int_50 AS L, id_int_int_int_50 AS R WHERE L.a = R.a) AS S2;
 
--- ORDER BY
-SELECT * FROM mixed ORDER BY a;
+-- ORDER BY (when projecting all columns, we append columns `id` (mixed) or `d` (mixed_null) to get deterministic results)
+SELECT a FROM mixed ORDER BY a;
+SELECT * FROM mixed ORDER BY a, id;
 SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
 SELECT a AS x, b AS y FROM mixed ORDER BY x, y;
 SELECT b + 13 AS t FROM mixed ORDER BY a, b ASC;
-SELECT * FROM mixed ORDER BY a, b DESC;
+SELECT a, b FROM mixed ORDER BY a, b DESC;
+SELECT * FROM mixed ORDER BY a, b DESC, id;
 SELECT * FROM mixed ORDER BY b, a, c;
 SELECT * FROM mixed ORDER BY b, a DESC, c;
 SELECT sub.a, sub.b FROM (SELECT a, b FROM mixed WHERE a = 'a' ORDER BY b) AS sub WHERE sub.b > 10 ORDER BY b;
-SELECT * FROM mixed_null ORDER BY b;
+SELECT b FROM mixed_null ORDER BY b;
+SELECT * FROM mixed_null ORDER BY b, d;
+SELECT * FROM mixed_null ORDER BY b, d;
+SELECT T1.c, T2.c FROM mixed_null as T1 JOIN mixed_null as T2 ON T1.b=T2.b ORDER BY T2.c, T1.c;
 
 -- LIMIT
 SELECT * FROM mixed LIMIT 77;
@@ -175,7 +180,7 @@ SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed AS t2 ON t1.id >= t2.b WHERE t1.id > 90;
-SELECT * FROM id_int_int_int_100 AS t1 INNER JOIN (SELECT a AS id FROM id_int_int_int_100) t2 USING (id) 
+SELECT * FROM id_int_int_int_100 AS t1 INNER JOIN (SELECT a AS id FROM id_int_int_int_100) t2 USING (id)
 
 -- Join multiple predicates
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
@@ -266,7 +271,7 @@ SELECT DISTINCT * FROM mixed;
 SELECT DISTINCT a, MIN(b) FROM mixed GROUP BY a;
 SELECT DISTINCT MIN(b) FROM mixed GROUP BY a;
 SELECT DISTINCT id + b FROM mixed ORDER BY id + b DESC LIMIT 10;
-SELECT DISTINCT id + b, id + c FROM mixed ORDER BY id + b;
+SELECT DISTINCT id + b, id + c FROM mixed ORDER BY id + b, id + c;
 
 -- Join, GROUP BY, Having, ...
 SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;

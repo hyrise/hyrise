@@ -166,7 +166,7 @@ TEST_F(SchedulerTest, Grouping) {
   auto output = std::vector<size_t>{};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
-  constexpr auto TASK_COUNT = 50;
+  constexpr auto TASK_COUNT = 96;
 
   for (auto task_id = 0; task_id < TASK_COUNT; ++task_id) {
     tasks.emplace_back(std::make_shared<JobTask>([&output, task_id] {
@@ -180,7 +180,7 @@ TEST_F(SchedulerTest, Grouping) {
   // AbstractTask::set_predecessor_of, the first task in the input vector ends up being the last task being called. This
   // results in [40 30 20 10 0 41 31 21 11 1 ...]
   const auto num_groups = NodeQueueScheduler::NUM_GROUPS;
-  EXPECT_EQ(TASK_COUNT % num_groups, 0);
+  ASSERT_EQ(TASK_COUNT % num_groups, 0);
   auto expected_output = std::vector<size_t>{};
   for (auto group = 0; group < num_groups; ++group) {
     for (auto task_id = 0; task_id < TASK_COUNT / num_groups; ++task_id) {
