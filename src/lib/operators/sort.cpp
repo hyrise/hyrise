@@ -760,10 +760,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_BEGIN("sort", "sort");
 
   // TODO(student): Use pdqsort
-  std::stable_sort(std::execution::par_unseq, materialized_rows.begin(), materialized_rows.end(),
-                   [&](const auto& lhs, const auto& rhs) {
-                     return lhs.less_than(rhs, normalized_key_size);
-                   });
+  std::sort(std::execution::par_unseq, materialized_rows.begin(), materialized_rows.end(),
+            [&](const auto& lhs, const auto& rhs) {
+              return lhs.less_than(rhs, normalized_key_size);
+            });
 
   TRACE_EVENT_END("sort");
 
