@@ -608,31 +608,17 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto sorted_table = std::shared_ptr<Table>{};
 
-  // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
-  // been determined so far. This is not a completely proper PosList on the input table as it might point to
-  // ReferenceSegments.
-  auto previously_sorted_pos_list = std::optional<RowIDPosList>{};
-
-  auto total_materialization_time = std::chrono::nanoseconds{};
-  auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
-  auto total_sort_time = std::chrono::nanoseconds{};
-
-  const auto sort_step_count = _sort_definitions.size();
-
-  for (auto sort_step = static_cast<int64_t>(sort_step_count - 1); sort_step >= 0; --sort_step) {
-    const auto& sort_definition = _sort_definitions[sort_step];
-    const auto data_type = input_table->column_data_type(sort_definition.column);
-
-    resolve_data_type(data_type, [&](auto type) {
+  auto column_scans = pmr_vector<std::function<ScanResult(const AbstractSegment&)>>();
+  column_scans.reserve(_sort_definitions.size());
+  auto column_materializer =
+      pmr_vector<std::function<void(const AbstractSegment&, size_t, size_t, bool, bool, bool, NormalizedKeyIter)>>();
+  column_materializer.reserve(_sort_definitions.size());
+  for (const auto& column_sort_definition : _sort_definitions) {
+    const auto column_data_type = input_table->column_data_type(column_sort_definition.column);
+    resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-
-      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
-      previously_sorted_pos_list =
-          sort_impl.sort(previously_sorted_pos_list, sort_step == static_cast<int64_t>(sort_step_count - 1));
-
-      total_materialization_time += sort_impl.materialization_time;
-      total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
-      total_sort_time += sort_impl.sort_time;
+      column_scans.emplace_back(scan_column<ColumnDataType>);
+      column_materializer.emplace_back(materialize_segment_as_normalized_keys<ColumnDataType>);
     });
   }
 
