@@ -327,7 +327,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
   auto total_sort_time = std::chrono::nanoseconds{};
 
-  for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
+  const auto sort_step_count = _sort_definitions.size();
+
+  for (auto sort_step = static_cast<int64_t>(sort_step_count - 1); sort_step >= 0; --sort_step) {
     const auto& sort_definition = _sort_definitions[sort_step];
     const auto data_type = input_table->column_data_type(sort_definition.column);
 
@@ -335,7 +337,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       using ColumnDataType = typename decltype(type)::type;
 
       auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
-      previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
+      previously_sorted_pos_list =
+          sort_impl.sort(previously_sorted_pos_list, sort_step == static_cast<int64_t>(sort_step_count - 1));
 
       total_materialization_time += sort_impl.materialization_time;
       total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
@@ -424,7 +427,7 @@ class Sort::SortImpl {
   // Sorts table_in, potentially taking the pre-existing order of previously_sorted_pos_list into account.
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
-  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
+  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list, const bool is_last_column) {
     auto timer = Timer{};
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
@@ -432,10 +435,18 @@ class Sort::SortImpl {
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
-      std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) {
-                         return comparator(lhs.second, rhs.second);
-                       });
+      if (is_last_column) {
+        // Sorting the last column does not need to be stable (helps especially in single-column sorting cases).
+        std::ranges::sort(_row_id_value_vector,
+                             [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
+                               return comparator(lhs.second, rhs.second);
+                             });
+      } else {
+        std::ranges::stable_sort(_row_id_value_vector,
+                              [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
+                                return comparator(lhs.second, rhs.second);
+                              });
+      }
     };
     if (_sort_mode == SortMode::AscendingNullsFirst) {
       sort_with_comparator(std::less<>{});
