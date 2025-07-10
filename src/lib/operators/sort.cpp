@@ -88,46 +88,34 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
  *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
  */
 
-template <typename T>
-std::vector<std::shared_ptr<AbstractTask>> run_parallel_batched(const std::vector<T>& elements, size_t batch_size,
-                                                                auto handler) {
+size_t opt_batch_size(size_t count, size_t min_batch_size, size_t max_tasks_per_thread) {
+  const auto hardware_concurrency = std::thread::hardware_concurrency();
+  const auto max_count_per_thread = (count + hardware_concurrency - 1) / hardware_concurrency;
+  const auto max_count_per_batch = (max_count_per_thread + max_tasks_per_thread - 1) / max_tasks_per_thread;
+  return std::max(max_count_per_batch, min_batch_size);
+}
+
+std::vector<std::shared_ptr<AbstractTask>> run_parallel_batched(size_t count, size_t batch_size, auto handler) {
   TRACE_EVENT("sort", "run_parallel_batched");
 
-  const auto task_count = (elements.size() + batch_size - 1) / batch_size;
+  const auto task_count = (count + batch_size - 1) / batch_size;
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
   tasks.reserve(task_count);
 
   for (auto task_index = size_t{0}; task_index < task_count; ++task_index) {
-    TRACE_EVENT("sort", "setup_task", "task", task_index);
-    auto elements_begin = task_index * batch_size;
-    auto elements_end = std::min(elements_begin + batch_size, elements.size());
-    const auto task = std::make_shared<JobTask>([elements_begin, elements_end, handler, &elements] {
-      TRACE_EVENT("sort", "task", "begin", elements_begin, "end", elements_end);
-      for (auto index = elements_begin; index < elements_end; ++index) {
-        handler(elements[index]);
+    TRACE_EVENT("sort", "setup task", "task", task_index);
+    const auto begin = task_index * batch_size;
+    const auto end = std::min(begin + batch_size, count);
+    const auto task = std::make_shared<JobTask>([begin, end, handler] {
+      TRACE_EVENT("sort", "task", "begin", begin, "end", end);
+      for (auto index = begin; index < end; ++index) {
+        handler(index);
       }
     });
     task->schedule();
     tasks.push_back(task);
   }
   return tasks;
-}
-
-std::vector<std::pair<size_t, ChunkID>> generate_column_chunk_id_pairs(size_t column_count, ChunkID chunk_count) {
-  auto result = std::vector<std::pair<size_t, ChunkID>>();
-  result.reserve(column_count * chunk_count);
-  for (auto column_index = size_t{0}; column_index < column_count; ++column_index) {
-    for (auto chunk_id = size_t{0}; chunk_id < chunk_count; ++chunk_id) {
-      result.emplace_back(column_index, chunk_id);
-    }
-  }
-  return result;
-}
-
-std::vector<size_t> generate_counts(size_t count) {
-  auto result = std::vector<size_t>(count);
-  boost::algorithm::iota(result, 0);
-  return result;
 }
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
@@ -155,10 +143,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   // Vector of segments for each chunk
   auto output_segments_by_chunk = std::vector(output_chunk_count, Segments(output_column_count));
 
-  const auto column_ids = generate_counts(output_column_count);
-  const auto chunk_ids = generate_counts(output_chunk_count);
-
-  const auto materialize_columns = run_parallel_batched(column_ids, 1, [&](const auto column_index) {
+  const auto materialize_columns = run_parallel_batched(output_column_count, 1, [&](const auto column_index) {
     TRACE_EVENT("sort", "materialize_column", "column_id", column_index);
     const auto column_id = ColumnID{static_cast<uint16_t>(column_index)};
 
@@ -177,7 +162,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         DebugAssert(accessor_by_chunk_id[input_chunk_id], "Accessor must be initialized");
       }
 
-      const auto materialize_chunks = run_parallel_batched(chunk_ids, 4, [&](const auto chunk_index) {
+      const auto materialize_chunks = run_parallel_batched(output_chunk_count, 8, [&](const auto chunk_index) {
         TRACE_EVENT_BEGIN("sort", "materialize_chunk", "column_id", column_index, "chunk_id", chunk_index);
         const auto output_chunk_id = ChunkID{static_cast<uint32_t>(chunk_index)};
 
@@ -276,46 +261,57 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
     // is slightly more expensive to generate and slightly less efficient for following operators, we assume that the
     // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
     // is acceptable. In the future, this could be improved.
-    const auto output_column_chunk_id_pairs =
-        generate_column_chunk_id_pairs(column_count, ChunkID{static_cast<uint32_t>(output_chunk_count)});
-    const auto write_tasks = run_parallel_batched(output_column_chunk_id_pairs, 4, [&](const auto element) {
-      const auto [column_id, output_chunk_id] = element;
-      TRACE_EVENT("sort", "write_segment", "column_id", column_id, "chunk_id", static_cast<size_t>(output_chunk_id));
+    auto column_write_tasks = std::vector(column_count, std::vector<std::shared_ptr<AbstractTask>>());
+    const auto batch_size = opt_batch_size(output_chunk_count, 8, (8 + column_count - 1) / column_count);
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      column_write_tasks[column_id] = run_parallel_batched(
+          output_chunk_count, batch_size,
+          [column_id, output_chunk_size, &input_pos_list, &input_segments, &unsorted_table, &output_segments_by_chunk,
+           resolve_indirection](const size_t output_chunk_index) {
+            TRACE_EVENT_BEGIN("sort", "write_segment", "column_id", static_cast<size_t>(column_id), "chunk_id",
+                              output_chunk_index);
 
-      auto input_pos_list_offset = size_t{output_chunk_id * output_chunk_size};
-      auto input_pos_list_end = std::min(input_pos_list_offset + output_chunk_size, input_pos_list.size());
+            auto input_pos_list_offset = size_t{output_chunk_index * output_chunk_size};
+            auto input_pos_list_end = std::min(input_pos_list_offset + output_chunk_size, input_pos_list.size());
 
-      const auto first_reference_segment =
-          std::dynamic_pointer_cast<ReferenceSegment>(input_segments[column_id][output_chunk_id]);
-      const auto referenced_table = resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
-      const auto referenced_column_id = resolve_indirection ? first_reference_segment->referenced_column_id()
-                                                            : ColumnID{static_cast<uint16_t>(column_id)};
+            const auto first_reference_segment =
+                std::dynamic_pointer_cast<ReferenceSegment>(input_segments[column_id][output_chunk_index]);
+            const auto referenced_table =
+                resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
+            const auto referenced_column_id = resolve_indirection ? first_reference_segment->referenced_column_id()
+                                                                  : ColumnID{static_cast<uint16_t>(column_id)};
 
-      auto output_pos_list = std::make_shared<RowIDPosList>();
-      output_pos_list->reserve(output_chunk_size);
+            auto output_pos_list = std::make_shared<RowIDPosList>();
+            output_pos_list->reserve(output_chunk_size);
 
-      // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
-      // `output_chunk_size` rows.
-      for (; input_pos_list_offset < input_pos_list_end; ++input_pos_list_offset) {
-        const auto& row_id = input_pos_list[input_pos_list_offset];
-        if (resolve_indirection) {
-          const auto& input_reference_segment =
-              static_cast<ReferenceSegment&>(*input_segments[column_id][row_id.chunk_id]);
-          DebugAssert(input_reference_segment.referenced_table() == referenced_table,
-                      "Input column references more than one table");
-          DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
-                      "Input column references more than one column");
-          const auto& input_reference_pos_list = input_reference_segment.pos_list();
-          output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
-        } else {
-          output_pos_list->emplace_back(row_id);
-        }
-      }
+            // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
+            // `output_chunk_size` rows.
+            for (; input_pos_list_offset < input_pos_list_end; ++input_pos_list_offset) {
+              const auto& row_id = input_pos_list[input_pos_list_offset];
+              if (resolve_indirection) {
+                const auto& input_reference_segment =
+                    static_cast<ReferenceSegment&>(*input_segments[column_id][row_id.chunk_id]);
+                DebugAssert(input_reference_segment.referenced_table() == referenced_table,
+                            "Input column references more than one table");
+                DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
+                            "Input column references more than one column");
+                const auto& input_reference_pos_list = input_reference_segment.pos_list();
+                output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
+              } else {
+                output_pos_list->emplace_back(row_id);
+              }
+            }
 
-      output_segments_by_chunk[output_chunk_id][column_id] =
-          std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
-    });
-    Hyrise::get().scheduler()->wait_for_tasks(write_tasks);
+            output_segments_by_chunk[output_chunk_index][column_id] =
+                std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
+
+            TRACE_EVENT_END("sort");
+          });
+    }
+
+    for (const auto& write_tasks : column_write_tasks) {
+      Hyrise::get().scheduler()->wait_for_tasks(write_tasks);
+    }
   }
 
   for (auto& segments : output_segments_by_chunk) {
@@ -588,6 +584,7 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
+  TRACE_EVENT("sort", "execute");
   auto timer = Timer{};
   const auto& input_table = left_input_table();
 
@@ -620,7 +617,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     const auto column_data_type = input_table->column_data_type(column_sort_definition.column);
     resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      column_scans.emplace_back(scan_column<ColumnDataType>);
       column_materializer.emplace_back(materialize_segment_as_normalized_keys<ColumnDataType>);
     });
   }
@@ -640,24 +636,51 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   TRACE_EVENT_BEGIN("sort", "scan");
 
-  const auto column_chunk_pairs = generate_column_chunk_id_pairs(search_column_count, chunk_count);
-  const auto scan_tasks = run_parallel_batched(column_chunk_pairs, 4, [&](const auto element) {
-    const auto [column_index, chunk_id] = element;
-    TRACE_EVENT("sort", "scan_segment", "search_column_index", column_index, "chunk_id", static_cast<size_t>(chunk_id));
+  auto tasks_per_column = std::vector(search_column_count, std::vector<std::shared_ptr<AbstractTask>>());
+  for (auto column_index = size_t{0}; column_index < search_column_count; ++column_index) {
     const auto column_id = _sort_definitions[column_index].column;
-    const auto segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
-    chunk_stats[column_index][chunk_id] = column_scans[column_index](*segment);
-  });
-  Hyrise::get().scheduler()->wait_for_tasks(scan_tasks);
+    const auto column_data_type = input_table->column_data_type(column_id);
+    const auto batch_size = opt_batch_size(chunk_count, 8, (10 + search_column_count - 1) / search_column_count);
+    resolve_data_type(column_data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      if constexpr (std::is_same_v<ColumnDataType, float> || std::is_same_v<ColumnDataType, double>) {
+        // Always the same with.
+        const auto column_is_nullable = input_table->column_is_nullable(column_id);
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          chunk_stats[column_index][chunk_id] = {.encoding_width = sizeof(ColumnDataType),
+                                                 .nullable = column_is_nullable};
+        }
+      } else {
+        // Elements may have different size.
+        tasks_per_column[column_index] = run_parallel_batched(
+            chunk_count, batch_size, [column_id, column_index, &chunk_stats, &input_table](const auto chunk_index) {
+              TRACE_EVENT_BEGIN("sort", "scan", "column_id", static_cast<uint16_t>(column_id));
+              const auto chunk_id = static_cast<ChunkID>(chunk_index);
+              const auto segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
+              chunk_stats[column_index][chunk_id] = scan_column<ColumnDataType>(*segment);
+              TRACE_EVENT_END("sort");
+            });
+      }
+    });
+  }
+
+  for (const auto& tasks : tasks_per_column) {
+    if (!tasks.empty()) {
+      Hyrise::get().scheduler()->wait_for_tasks(tasks);
+    }
+  }
 
   auto column_stats = std::vector<ScanResult>(search_column_count, ScanResult{});
   auto normalized_key_size = size_t{0};
   for (auto column_index = size_t{0}; column_index < search_column_count; ++column_index) {
+    const auto column_id = _sort_definitions[column_index].column;
     TRACE_EVENT("sort", "collect_stats", "sort_column_index", column_index);
     const auto aggregated_stats = std::accumulate(chunk_stats[column_index].begin(), chunk_stats[column_index].end(),
                                                   ScanResult{}, [](ScanResult result, ScanResult chunk) {
                                                     return result.merge(chunk);
                                                   });
+    Assert(aggregated_stats.width() > 0, std::format("Invalid width for column {}", static_cast<uint16_t>(column_id)));
     column_stats[column_index] = aggregated_stats;
     normalized_key_size += aggregated_stats.width();
   }
@@ -665,6 +688,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_END("sort");
 
   const auto padded_key_size = ((normalized_key_size + 3) / 4) * 4;
+  std::cerr << "normalized_key_size " << normalized_key_size << "\n";
+  std::cerr << "padded_key_size " << padded_key_size << "\n";
 
   // const auto scan_time = timer.lap();
   timer.lap();
@@ -683,22 +708,22 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   // Create list of chunks to materialize.
   auto total_offset = size_t{0};
-  auto chunk_ids = std::vector<std::pair<ChunkID, size_t>>(chunk_count);
+  auto chunk_offsets = std::vector<size_t>(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_size = input_table->get_chunk(chunk_id)->size();
-    chunk_ids[chunk_id] = {chunk_id, total_offset};
+    chunk_offsets[chunk_id] = total_offset;
     total_offset += chunk_size;
   }
 
   auto chunk_allocations = std::vector<pmr_vector<std::byte>>(chunk_count);
-  const auto materialization_tasks = run_parallel_batched(chunk_ids, 1, [&](auto element) {
-    const auto [chunk_id, total_offset] = element;
+  const auto materialization_tasks = run_parallel_batched(chunk_count, 1, [&](const auto chunk_index) {
+    const auto chunk_id = static_cast<ChunkID>(chunk_index);
     TRACE_EVENT("sort", "materialize_chunk", "chunk_id", static_cast<size_t>(chunk_id));
     const auto chunk = input_table->get_chunk(chunk_id);
     const auto chunk_size = chunk->size();
     chunk_allocations[chunk_id] = pmr_vector<std::byte>(chunk_size * padded_key_size);
 
-    auto normalized_key_iter = materialized_rows.begin() + total_offset;
+    auto normalized_key_iter = materialized_rows.begin() + chunk_offsets[chunk_index];
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
       *normalized_key_iter++ = NormalizedKeyRow{
@@ -707,7 +732,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       };
     }
 
-    normalized_key_iter = materialized_rows.begin() + total_offset;
+    normalized_key_iter = materialized_rows.begin() + chunk_offsets[chunk_index];
     auto key_offset = size_t{0};
     for (auto index = size_t{0}; index < search_column_count; ++index) {
       TRACE_EVENT("sort", "materialize_column", "sort_column_index", index);
@@ -819,42 +844,47 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
 void perfetto_run(const std::shared_ptr<const Table>& input_table,
                   const std::vector<SortColumnDefinition>& sort_definitions) {
-  const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
-  table_wrapper->execute();
-  const auto sort_operator =
-      std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No);
+  for (auto index = size_t{0}; index < 5; ++index) {
+    const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+    table_wrapper->execute();
+    const auto sort_operator =
+        std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No);
 
 #ifdef ENABLE_PERFETTO
-  auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
-  track_event_cfg.add_enabled_categories("sort");
+    auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
+    track_event_cfg.add_enabled_categories("sort");
 
-  auto args = perfetto::TracingInitArgs{};
-  args.backends = perfetto::kInProcessBackend;
-  perfetto::Tracing::Initialize(args);
-  perfetto::TrackEvent::Register();
+    auto args = perfetto::TracingInitArgs{};
+    args.backends = perfetto::kInProcessBackend;
+    perfetto::Tracing::Initialize(args);
+    perfetto::TrackEvent::Register();
 
-  auto cfg = perfetto::TraceConfig{};
-  cfg.add_buffers()->set_size_kb(4096);
-  auto* ds_cfg = cfg.add_data_sources()->mutable_config();
-  ds_cfg->set_name("track_event");
-  ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
+    auto cfg = perfetto::TraceConfig{};
+    cfg.add_buffers()->set_size_kb(4096);
+    auto* ds_cfg = cfg.add_data_sources()->mutable_config();
+    ds_cfg->set_name("track_event");
+    ds_cfg->set_track_event_config_raw(track_event_cfg.SerializeAsString());
 
-  auto tracing_session = std::unique_ptr<perfetto::TracingSession>(perfetto::Tracing::NewTrace());
-  tracing_session->Setup(cfg);
-  tracing_session->StartBlocking();
+    auto tracing_session = std::unique_ptr<perfetto::TracingSession>(perfetto::Tracing::NewTrace());
+    tracing_session->Setup(cfg);
+    tracing_session->StartBlocking();
 #endif
 
-  sort_operator->execute();
+    auto timer = Timer{};
+    sort_operator->execute();
+    std::cout << timer.lap() << "\n";
 
 #ifdef ENABLE_PERFETTO
-  tracing_session->StopBlocking();
+    tracing_session->StopBlocking();
 
-  auto trace_data = std::vector<char>(tracing_session->ReadTraceBlocking());
-  auto output = std::ofstream{};
-  output.open("dyod2025_sort_operator.perfetto-trace", std::ios::out | std::ios::binary);
-  output.write(trace_data.data(), static_cast<std::streamsize>(trace_data.size()));
-  output.close();
+    auto trace_data = std::vector<char>(tracing_session->ReadTraceBlocking());
+    auto output = std::ofstream{};
+    output.open(std::format("traces/dyod2025_sort_operator_{}.perfetto-trace", index),
+                std::ios::out | std::ios::binary);
+    output.write(trace_data.data(), static_cast<std::streamsize>(trace_data.size()));
+    output.close();
 #endif
+  }
 }
 
 }  // namespace hyrise
