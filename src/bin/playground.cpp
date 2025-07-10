@@ -23,7 +23,7 @@ int main() {
 
   auto* initial_buffer = std::cout.rdbuf();
   std::cout.rdbuf(nullptr);
-  TPCDSTableGenerator(100, benchmark_config).generate_and_store();
+  TPCDSTableGenerator(10, benchmark_config).generate_and_store();
   std::cout.rdbuf(initial_buffer);
 
   auto cs_table = storage_manager.get_table("catalog_sales");
