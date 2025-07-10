@@ -313,7 +313,7 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
-  auto preparation_timer = Timer{};
+  auto timer = Timer{};
   const auto& input_table = left_input_table();
 
   // validate sort definitions
@@ -335,14 +335,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return input_table;
   }
 
-  auto sorted_table = std::shared_ptr<Table>{};
-
   // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
   // been determined so far. This is not a completely proper PosList on the input table as it might point to
   // ReferenceSegments.
-  auto total_preparation_time = std::chrono::nanoseconds{};
-  auto total_key_generation_time = std::chrono::nanoseconds{};
-  auto total_sort_time = std::chrono::nanoseconds{};
+  auto sorted_table = std::shared_ptr<Table>{};
 
   const auto chunk_count = input_table->chunk_count();
   const auto row_count = input_table->row_count();
@@ -362,7 +358,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         field_width.emplace_back(STRING_PREFIX);  // store size of the string prefix
-        string_columns.emplace_back(index);           // keep track of string columns for fallback comparisons
+        string_columns.emplace_back(index);       // keep track of string columns for fallback comparisons
       } else if constexpr (std::is_same_v<ColumnDataType, float>) {
         field_width.push_back(sizeof(double));  // encode float as double for sorting
       } else {
@@ -419,10 +415,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   key_buffer.reserve(total_buffer_size);  // reserve space for all keys
-  total_preparation_time = preparation_timer.lap();
+  auto preparation_time = timer.lap();
 
   // job queue for generating keys in parallel
-  auto key_generation_timer = Timer{};
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(static_cast<size_t>(chunk_count));
   // for each chunk in table
@@ -445,7 +440,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           using ColumnDataType = typename decltype(type)::type;
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
-            const auto row = val.chunk_offset();          // get the row offset in the chunk
+            const auto row = val.chunk_offset();       // get the row offset in the chunk
             auto* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
             auto dest = key_ptr + key_offsets[index];  // pointer to the destination in the key buffer for this column
 
@@ -530,10 +525,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);  // wait for all chunks to be materialized
-  total_key_generation_time = key_generation_timer.lap();
+  auto key_generation_time = timer.lap();
 
   // Sort the buffer
-  auto sort_timer = Timer();
   auto compare_rows = [&](const RowID a, const RowID b) {
     auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
     auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
@@ -574,20 +568,19 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   };
 
   // TODO(someone): use better sorting algorithm, e.g. merge sort
-  std::stable_sort(TemporaryResultWriting, row_ids.begin(), row_ids.end(), compare_rows);
-  total_sort_time = sort_timer.lap();
+  std::stable_sort(std::execution::par_unseq, row_ids.begin(), row_ids.end(), compare_rows);
+  auto sort_time = timer.lap();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.set_step_runtime(OperatorSteps::Preparation, total_preparation_time);
-  step_performance_data.set_step_runtime(OperatorSteps::KeyGeneration, total_key_generation_time);
-  step_performance_data.set_step_runtime(OperatorSteps::Sort, total_sort_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Preparation, preparation_time);
+  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, key_generation_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Sort, sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
   //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
   // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
-  auto timer = Timer{};
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
