@@ -74,19 +74,14 @@ void Worker::operator()() {
 }
 
 void Worker::_work(const AllowSleep allow_sleep) {
-  [[maybe_unused]] auto pulled_from_next = false;
-  [[maybe_unused]] auto pulled_from_local_queue = false;
-  [[maybe_unused]] auto pulled_from_other_queue = false;
   // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
   if (_next_task) {
     task = std::move(_next_task);
     _next_task = nullptr;
-    pulled_from_next = true;
   } else {
     if (_queue->semaphore.tryWait()) {
       task = _queue->pull();
-      pulled_from_local_queue = true;
     }
   }
 
@@ -100,7 +95,6 @@ void Worker::_work(const AllowSleep allow_sleep) {
       if (queue->semaphore.tryWait()) {
         task = queue->steal();
         if (task) {
-          pulled_from_other_queue = true;
           task->set_node_id(_queue->node_id());
           break;
         }
@@ -124,7 +118,6 @@ void Worker::_work(const AllowSleep allow_sleep) {
     return;
   }
 
-  // std::cerr << pulled_from_next << "-" << pulled_from_local_queue << "-" <<  pulled_from_other_queue << "\n";
   task->execute();
 
   // In case the processed task is a ShutdownTask, we shut down the worker (see `operator()` loop).

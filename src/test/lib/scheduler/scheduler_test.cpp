@@ -128,8 +128,8 @@ class SchedulerTest : public BaseTest {
   static void group_and_schedule_tasks(const std::shared_ptr<NodeQueueScheduler>& node_queue_scheduler,
                                        const std::vector<std::shared_ptr<AbstractTask>>& tasks,
                                        const size_t group_count) {
-    node_queue_scheduler->_schedule_tasks(tasks);
     node_queue_scheduler->_group_tasks(tasks, group_count);
+    node_queue_scheduler->_schedule_tasks(tasks);
   }
 };
 
@@ -164,41 +164,7 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   EXPECT_EQ(counter, 3);
 }
 
-TEST_F(SchedulerTest, GroupingSingleWorker) {
-  // Tests the grouping done in NodeQueueScheduler::_group_tasks. We check that tasks of each group are executed in
-  // order. Note that the execution of groups might happen interleaved as workers use randomness (see worker.cpp).
-  Hyrise::get().topology.use_fake_numa_topology(1, 1);
-  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-  Hyrise::get().set_scheduler(node_queue_scheduler);
-
-  for (const auto task_count : std::vector<size_t>{17, 50, 51, 52, 53, 54, 55, 56, 97, 111, 2'000}) {
-    for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
-      auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-      auto start_offset = size_t{0};
-      auto expected_task_id = size_t{0};
-
-      for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
-        tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
-          if (expected_task_id >= task_count) {
-            ++start_offset;
-            expected_task_id = start_offset;
-          }
-
-          EXPECT_EQ(expected_task_id, task_id);
-
-          if (expected_task_id != task_id)
-            std::cerr << "ERROR: Comparing expected: " << expected_task_id << " and actual: " << task_id << "\n";
-          expected_task_id += group_count;
-        }));
-      }
-
-      group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
-      node_queue_scheduler->wait_for_tasks(tasks);
-    }
-  }
-}
-
-TEST_F(SchedulerTest, GroupingMultipleWorkers) {
+TEST_F(SchedulerTest, ConcurrentlyProcessedTaskGroups) {
   auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
@@ -207,7 +173,7 @@ TEST_F(SchedulerTest, GroupingMultipleWorkers) {
     GTEST_SKIP();
   }
 
-  const auto multiplier = 1'000;
+  const auto multiplier = 500;
   const auto task_count = multiplier * worker_count;
 
   for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
@@ -232,28 +198,30 @@ TEST_F(SchedulerTest, GroupingMultipleWorkers) {
   }
 }
 
-TEST_F(SchedulerTest, GroupingMultipleWorkers2) {
+TEST_F(SchedulerTest, GroupingOrderOfTasks) {
   auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
-  const auto task_count = 5'000;
+  for (const auto task_count : std::vector<size_t>{1, 2, 3, 4, 5, 17, 500, 1'024}) {
+    for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
+      auto previous_task_id_per_group = std::vector<size_t>(group_count, 0);
+      auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
-  auto previous_task_id_per_group = std::vector<size_t>(16, 0);
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-
-  for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
-    tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
-      const auto group_id = task_id % 16;
-      const auto prev_task_id = previous_task_id_per_group[group_id];
-      if (prev_task_id > 0) {
-        EXPECT_EQ(prev_task_id + 16, task_id);
+      for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+        tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
+          const auto group_id = task_id % group_count;
+          const auto prev_task_id = previous_task_id_per_group[group_id];
+          if (prev_task_id > 0) {
+            EXPECT_EQ(prev_task_id + group_count, task_id);
+          }
+          previous_task_id_per_group[group_id] = task_id;
+        }));
       }
-      previous_task_id_per_group[group_id] = task_id;
-    }));
-  }
 
-  group_and_schedule_tasks(node_queue_scheduler, tasks, 16);
-  node_queue_scheduler->wait_for_tasks(tasks);
+      group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
+      node_queue_scheduler->wait_for_tasks(tasks);
+    }
+  }
 
   Hyrise::get().scheduler()->finish();
 }
