@@ -150,8 +150,7 @@ SELECT * FROM mixed ORDER BY b, a, c;
 SELECT * FROM mixed ORDER BY b, a DESC, c;
 SELECT sub.a, sub.b FROM (SELECT a, b FROM mixed WHERE a = 'a' ORDER BY b) AS sub WHERE sub.b > 10 ORDER BY b;
 SELECT b FROM mixed_null ORDER BY b;
-SELECT * FROM mixed_null ORDER BY b, d;
-SELECT * FROM mixed_null ORDER BY b, d;
+SELECT d, b FROM mixed_null ORDER BY b, d;
 SELECT T1.c, T2.c FROM mixed_null as T1 JOIN mixed_null as T2 ON T1.b=T2.b ORDER BY T2.c, T1.c;
 
 -- LIMIT
