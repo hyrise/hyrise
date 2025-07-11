@@ -231,7 +231,9 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
         return false;
       }
 
-      Assert(_state == TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued.");
+      // We check that enqueued tasks are not in state Created. They should be either in state Scheduled, or they have
+      // been already enqueued between the check above and this assert.
+      Assert(_state != TaskState::Created, "Illegal state transition to TaskState::Enqueued.");
       return _state.compare_exchange_strong(expected_scheduled, new_state);
     }
     case TaskState::AssignedToWorker: {
