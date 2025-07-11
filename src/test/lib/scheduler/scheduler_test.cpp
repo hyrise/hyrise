@@ -124,12 +124,17 @@ class SchedulerTest : public BaseTest {
     }
   }
 
-  // Used to access protected friend members of schedulers.
+  // Used to access protected friend members of scheduler.
   static void group_and_schedule_tasks(const std::shared_ptr<NodeQueueScheduler>& node_queue_scheduler,
                                        const std::vector<std::shared_ptr<AbstractTask>>& tasks,
                                        const size_t group_count) {
     node_queue_scheduler->_group_tasks(tasks, group_count);
     node_queue_scheduler->_schedule_tasks(tasks);
+  }
+
+  // Used to access protected friend members of abstract task.
+  static bool try_transition_to_scheduled(std::shared_ptr<ShutdownTask>& task) {
+    return task->_try_transition_to(TaskState::Scheduled);
   }
 };
 
@@ -515,20 +520,22 @@ TEST_F(SchedulerTest, MergeSort) {
 
 TEST_F(SchedulerTest, ShutdownTaskDecrement) {
   auto counter_1 = std::atomic_int64_t{1};
-  auto shutdown_task_1 = ShutdownTask{counter_1};
-  // Prepare job for execution (usually done when scheduled and obtained by workers)
-  EXPECT_TRUE(shutdown_task_1.try_mark_as_enqueued());
-  EXPECT_TRUE(shutdown_task_1.try_mark_as_assigned_to_worker());
+  auto shutdown_task_1 = std::make_shared<ShutdownTask>(counter_1);
+  // Manually prepare job for execution (usually done when scheduled and obtained by workers).
+  EXPECT_TRUE(try_transition_to_scheduled(shutdown_task_1));
+  EXPECT_TRUE(shutdown_task_1->try_mark_as_enqueued());
+  EXPECT_TRUE(shutdown_task_1->try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_1.load(), 1);
-  shutdown_task_1.execute();
+  shutdown_task_1->execute();
   EXPECT_EQ(counter_1.load(), 0);
 
   auto counter_2 = std::atomic_int64_t{0};
-  auto shutdown_task_2 = ShutdownTask{counter_2};
-  EXPECT_TRUE(shutdown_task_2.try_mark_as_enqueued());
-  EXPECT_TRUE(shutdown_task_2.try_mark_as_assigned_to_worker());
+  auto shutdown_task_2 = std::make_shared<ShutdownTask>(counter_2);
+  EXPECT_TRUE(try_transition_to_scheduled(shutdown_task_2));
+  EXPECT_TRUE(shutdown_task_2->try_mark_as_enqueued());
+  EXPECT_TRUE(shutdown_task_2->try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_2.load(), 0);
-  EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
+  EXPECT_THROW(shutdown_task_2->execute(), std::logic_error);
 }
 
 TEST_F(SchedulerTest, GetThisThreadWorker) {

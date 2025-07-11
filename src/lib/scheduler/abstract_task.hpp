@@ -85,6 +85,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // In the test cases, we create a cyclic task graph to ensure we fail in this case (cyclic tasks lead to deadlocks).
   friend class OperatorTaskTest;
+  friend class SchedulerTest;
   friend class TaskQueueTest;
 
  public:
