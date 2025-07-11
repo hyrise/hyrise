@@ -378,8 +378,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        field_width.emplace_back(STRING_PREFIX);  // store size of the string prefix
-        string_columns.emplace_back(index);       // keep track of string columns for fallback comparisons
+        field_width.emplace_back(STRING_PREFIX + 1);  // store size of the string prefix
+        string_columns.emplace_back(index);           // keep track of string columns for fallback comparisons
       } else if constexpr (std::is_same_v<ColumnDataType, float>) {
         field_width.push_back(sizeof(double));  // encode float as double for sorting
       } else {
@@ -478,9 +478,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
             // encode the value into the key based on the data type
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              auto copy_len = std::min(value.size(), size_t(STRING_PREFIX));
-              memcpy(dest + 1, value.data(), copy_len);
-              memset(dest + 1 + copy_len, 0, STRING_PREFIX - copy_len);  // pad with zeroes
+              auto string_len = std::min(value.size(), size_t(STRING_PREFIX));
+              memcpy(dest + 1, value.data(), string_len);
+              memset(dest + 1 + string_len, 0, STRING_PREFIX - string_len);  // pad with zeroes
+              dest[1 + STRING_PREFIX] = static_cast<uint8_t>(value.size());  // store actual string length
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
               // Encode double value; reinterpret double as raw 64-bit bits
               auto bits = uint64_t{0};
@@ -589,7 +590,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   };
 
   // TODO(someone): use better sorting algorithm, e.g. merge sort
-  std::stable_sort(row_ids.begin(), row_ids.end(), compare_rows);
+  std::sort(row_ids.begin(), row_ids.end(), compare_rows);
   auto sort_time = timer.lap();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
