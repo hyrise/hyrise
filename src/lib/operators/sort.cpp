@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "boost/sort/pdqsort/pdqsort.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
@@ -590,7 +591,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   };
 
   // TODO(someone): use better sorting algorithm, e.g. merge sort
-  std::sort(row_ids.begin(), row_ids.end(), compare_rows);
+  boost::sort::pdqsort(row_ids.begin(), row_ids.end(), compare_rows);
   auto sort_time = timer.lap();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
