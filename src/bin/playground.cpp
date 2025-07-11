@@ -1,5 +1,3 @@
-#include <random>
-
 // This playground only compiles on Linux as we require Linux's perf and perfetto.
 #include "benchmark_config.hpp"
 #include "encoding_config.hpp"

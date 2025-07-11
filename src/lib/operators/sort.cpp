@@ -358,17 +358,20 @@ auto to_unsigned(T value) {
 struct ScanResult {
   // Maximum number of bytes required to encode all values.
   size_t encoding_width = 0;
+  // Number of extra bytes required to encode the length of an string.
+  size_t extra_width = 0;
   // Contains a null value.
   bool nullable = false;
 
   // Returns number of bytes required to encode all scanned values. Includes the extra byte for null values.
   size_t width() const {
-    return encoding_width + ((nullable) ? 1 : 0);
+    return encoding_width + extra_width + ((nullable) ? 1 : 0);
   }
 
   ScanResult merge(ScanResult other) {
     return {
         .encoding_width = std::max(encoding_width, other.encoding_width),
+        .extra_width = std::max(extra_width, other.extra_width),
         .nullable = nullable || other.nullable,
     };
   }
@@ -379,6 +382,7 @@ template <typename ColumnDataType>
 ScanResult scan_column(const AbstractSegment& segment) {
   auto result = ScanResult{
       .encoding_width = 0,
+      .extra_width = 0,
       .nullable = false,
   };
   segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto end) {
@@ -388,6 +392,8 @@ ScanResult scan_column(const AbstractSegment& segment) {
         result.nullable = true;
       } else if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         result.encoding_width = std::max(result.encoding_width, segment_position.value().size());
+        const auto extra_width = static_cast<size_t>((std::countl_zero(result.encoding_width) + 7) / 8);
+        result.extra_width = std::max(result.extra_width, extra_width);
       } else {
         const auto& value = segment_position.value();
         if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
@@ -461,9 +467,9 @@ using NormalizedKeyIter = pmr_vector<NormalizedKeyRow>::iterator;
 // @param nulls_first          Put null values to the start of the normalized key order else to the back.
 // @param normalized_key_iter  Iterator to the normalized keys.
 template <typename ColumnDataType>
-void materialize_segment_as_normalized_keys(const AbstractSegment& segment, const size_t offset,
-                                            const size_t expected_width, const bool ascending, const bool nullable,
-                                            const bool nulls_first, NormalizedKeyIter normalized_key_iter) {
+void materialize_segment_as_normalized_keys(const AbstractSegment& segment, const size_t offset, const bool ascending,
+                                            const ScanResult column_info, const bool nulls_first,
+                                            NormalizedKeyIter normalized_key_iter) {
   // Normalized keys are ordered in ascendingly by default. The modifier is applied to invert this order.
   const auto modifier = (ascending) ? std::byte{0x00} : std::byte{0xFF};
   const auto full_modifier = (ascending) ? uint64_t{0x00} : std::numeric_limits<uint64_t>::max();
@@ -472,23 +478,24 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
   segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto end) {
     while (it != end) {
       const auto segment_position = *it;
-      DebugAssert(nullable || !segment_position.is_null(), "Segment must be nullable or contains no null values");
+      DebugAssert(column_info.nullable || !segment_position.is_null(),
+                  "Segment must be nullable or contains no null values");
       auto* normalized_key_start = normalized_key_iter->key_head + offset;
 
       // Encode the null byte for nullable segments. This byte is used to order null vs. non-null values (e.g.
       // put them to the front or end depending on the specified null order)
-      if (nullable && segment_position.is_null()) {
+      if (column_info.nullable && segment_position.is_null()) {
         *normalized_key_start++ = normalized_null_value;
         // Initialize actual key by setting all bytes to 0.
-        for (auto counter = size_t{0}; counter < expected_width; ++counter) {
+        for (auto counter = size_t{0}; counter < column_info.encoding_width + column_info.extra_width; ++counter) {
           *normalized_key_start++ = std::byte{0};
         }
-        DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + expected_width + 1,
+        DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + column_info.width(),
                     "Encoded unexpected number of bytes");
         ++it, ++normalized_key_iter;
         continue;
       }
-      if (nullable) {
+      if (column_info.nullable) {
         *normalized_key_start++ = normalized_non_null_value;
       }
 
@@ -500,9 +507,11 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
           *normalized_key_start++ = static_cast<std::byte>(chr) ^ modifier;
         }
         // Add null bytes to pad values to correct size. (All keys must have the same size)
-        for (auto counter = segment_position.value().size(); counter < expected_width; ++counter) {
+        for (auto counter = segment_position.value().size(); counter < column_info.encoding_width; ++counter) {
           *normalized_key_start++ = std::byte{0} ^ modifier;
         }
+        copy_uint_to_byte_array(normalized_key_start, segment_position.value().size(), column_info.extra_width);
+        normalized_key_start += column_info.extra_width;
       } else if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
         using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{}));
         static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned");
@@ -521,10 +530,10 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         //    42  | 0x0000002a         | 0x8000002a                     | 0xaa
 
         auto unsigned_value = to_unsigned<ColumnDataType>(value);
-        unsigned_value ^= UnsignedColumnDataType{1} << ((expected_width * 8) - 1);
+        unsigned_value ^= UnsignedColumnDataType{1} << ((column_info.encoding_width * 8) - 1);
         unsigned_value ^= static_cast<UnsignedColumnDataType>(full_modifier);
-        copy_uint_to_byte_array(normalized_key_start, unsigned_value, expected_width);
-        normalized_key_start += expected_width;
+        copy_uint_to_byte_array(normalized_key_start, unsigned_value, column_info.encoding_width);
+        normalized_key_start += column_info.encoding_width;
       } else if constexpr (std::is_same_v<ColumnDataType, float> || std::is_same_v<ColumnDataType, double>) {
         using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{value}));
         static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned");
@@ -542,9 +551,8 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         Fail(std::format("Cannot encode values of type '{}'", typeid(ColumnDataType).name()));
       }
       if constexpr (HYRISE_DEBUG) {
-        DebugAssert(
-            normalized_key_start == normalized_key_iter->key_head + offset + expected_width + (nullable) ? 1 : 0,
-            "Encoded unexpected number of bytes");
+        DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + column_info.width(),
+                    "Encoded unexpected number of bytes");
       }
       ++it, ++normalized_key_iter;
     }
@@ -608,16 +616,13 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto sorted_table = std::shared_ptr<Table>{};
 
-  auto column_scans = pmr_vector<std::function<ScanResult(const AbstractSegment&)>>();
-  column_scans.reserve(_sort_definitions.size());
   auto column_materializer =
-      pmr_vector<std::function<void(const AbstractSegment&, size_t, size_t, bool, bool, bool, NormalizedKeyIter)>>();
+      pmr_vector<std::function<void(const AbstractSegment&, size_t, bool, ScanResult, bool, NormalizedKeyIter)>>();
   column_materializer.reserve(_sort_definitions.size());
   for (const auto& column_sort_definition : _sort_definitions) {
     const auto column_data_type = input_table->column_data_type(column_sort_definition.column);
     resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      column_scans.emplace_back(scan_column<ColumnDataType>);
       column_materializer.emplace_back(materialize_segment_as_normalized_keys<ColumnDataType>);
     });
   }
@@ -739,15 +744,13 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       TRACE_EVENT("sort", "materialize_column", "sort_column_index", index);
       const auto sort_mode = _sort_definitions[index].sort_mode;
       const auto column_id = _sort_definitions[index].column;
-      const auto nullable = column_stats[index].nullable;
-      const auto encoding_width = column_stats[index].encoding_width;
       const auto segment = chunk->get_segment(column_id);
       const auto ascending = sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::AscendingNullsLast;
       const auto nulls_first =
           sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
       DebugAssert(index < column_materializer.size(), "Search column out of bounds");
-      column_materializer[index](*segment, key_offset, encoding_width, ascending, nullable, nulls_first,
-                                 normalized_key_iter);
+      auto materializer = column_materializer[index];
+      materializer(*segment, key_offset, ascending, column_stats[index], nulls_first, normalized_key_iter);
       key_offset += column_stats[index].width();
     }
   });
