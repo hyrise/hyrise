@@ -239,14 +239,18 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
          return false;
       }
 
-      Assert(_state == TaskState::Scheduled || _state == TaskState::Enqueued,
-             "Illegal state transition to TaskState::AssignedToWorker... " + std::to_string(static_cast<size_t>(_state.load())));
+      // Assert(_state == TaskState::Scheduled || _state == TaskState::Enqueued,
+      //        "Illegal state transition to TaskState::AssignedToWorker... " + std::to_string(static_cast<size_t>(_state.load())));
+
+      // If are not yet assigned, we try to assign to the worker.
       if (_state.compare_exchange_strong(expected_scheduled, new_state)) {
         return true;
       }
 
       auto expected_enqueued = TaskState::Enqueued;
-      return _state.compare_exchange_strong(expected_enqueued, new_state);
+      if (_state.compare_exchange_strong(expected_enqueued, new_state)) {
+        return true;
+      }
     }
     case TaskState::Started: {
       Assert(_state == TaskState::Scheduled || _state == TaskState::AssignedToWorker,
