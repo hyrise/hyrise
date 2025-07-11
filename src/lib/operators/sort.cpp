@@ -219,67 +219,76 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       output_segments[column_id] = std::make_shared<ReferenceSegment>(unsorted_table, column_id, output_pos_list);
     }
   } else {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(static_cast<size_t>(column_count));
+
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
-      // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
-      // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
-      // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
-      // is acceptable. In the future, this could be improved.
-      auto output_pos_list = std::make_shared<RowIDPosList>();
-      output_pos_list->reserve(output_chunk_size);
+      jobs.emplace_back(std::make_shared<JobTask>([&, column_id]() {
+        // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
+        // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
+        // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
+        // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
+        // is acceptable. In the future, this could be improved.
+        auto output_pos_list = std::make_shared<RowIDPosList>();
+        output_pos_list->reserve(output_chunk_size);
 
-      // Collect all input segments for the current column
-      const auto input_chunk_count = unsorted_table->chunk_count();
-      auto input_segments = std::vector<std::shared_ptr<AbstractSegment>>(input_chunk_count);
-      for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-        input_segments[input_chunk_id] = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
-      }
-
-      const auto first_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(input_segments.at(0));
-      const auto referenced_table = resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
-      const auto referenced_column_id =
-          resolve_indirection ? first_reference_segment->referenced_column_id() : column_id;
-
-      // write_output_pos_list creates an output reference segment for a given ChunkID, ColumnID and PosList.
-      auto output_chunk_id = ChunkID{0};
-      const auto write_output_pos_list = [&] {
-        DebugAssert(!output_pos_list->empty(), "Asked to write empty output_pos_list");
-        output_segments_by_chunk.at(output_chunk_id)[column_id] =
-            std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
-        ++output_chunk_id;
-
-        output_pos_list = std::make_shared<RowIDPosList>();
-        if (output_chunk_id < output_chunk_count) {
-          output_pos_list->reserve(output_chunk_size);
-        }
-      };
-
-      // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
-      // `output_chunk_size` rows.
-      const auto input_pos_list_size = input_pos_list.size();
-      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list_size;
-           ++input_pos_list_offset) {
-        const auto& row_id = input_pos_list[input_pos_list_offset];
-        if (resolve_indirection) {
-          const auto& input_reference_segment = static_cast<ReferenceSegment&>(*input_segments[row_id.chunk_id]);
-          DebugAssert(input_reference_segment.referenced_table() == referenced_table,
-                      "Input column references more than one table");
-          DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
-                      "Input column references more than one column");
-          const auto& input_reference_pos_list = input_reference_segment.pos_list();
-          output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
-        } else {
-          output_pos_list->emplace_back(row_id);
+        // Collect all input segments for the current column
+        const auto input_chunk_count = unsorted_table->chunk_count();
+        auto input_segments = std::vector<std::shared_ptr<AbstractSegment>>(input_chunk_count);
+        for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
+          input_segments[input_chunk_id] = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
         }
 
-        if (output_pos_list->size() == output_chunk_size) {
+        const auto first_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(input_segments.at(0));
+        const auto referenced_table =
+            resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
+        const auto referenced_column_id =
+            resolve_indirection ? first_reference_segment->referenced_column_id() : column_id;
+
+        // write_output_pos_list creates an output reference segment for a given ChunkID, ColumnID and PosList.
+        auto output_chunk_id = ChunkID{0};
+        const auto write_output_pos_list = [&] {
+          DebugAssert(!output_pos_list->empty(), "Asked to write empty output_pos_list");
+          output_segments_by_chunk.at(output_chunk_id)[column_id] =
+              std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
+          ++output_chunk_id;
+
+          output_pos_list = std::make_shared<RowIDPosList>();
+          if (output_chunk_id < output_chunk_count) {
+            output_pos_list->reserve(output_chunk_size);
+          }
+        };
+
+        // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
+        // `output_chunk_size` rows.
+        const auto input_pos_list_size = input_pos_list.size();
+        for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list_size;
+             ++input_pos_list_offset) {
+          const auto& row_id = input_pos_list[input_pos_list_offset];
+          if (resolve_indirection) {
+            const auto& input_reference_segment = static_cast<ReferenceSegment&>(*input_segments[row_id.chunk_id]);
+            DebugAssert(input_reference_segment.referenced_table() == referenced_table,
+                        "Input column references more than one table");
+            DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
+                        "Input column references more than one column");
+            const auto& input_reference_pos_list = input_reference_segment.pos_list();
+            output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
+          } else {
+            output_pos_list->emplace_back(row_id);
+          }
+
+          if (output_pos_list->size() == output_chunk_size) {
+            write_output_pos_list();
+          }
+        }
+        if (!output_pos_list->empty()) {
           write_output_pos_list();
         }
-      }
-      if (!output_pos_list->empty()) {
-        write_output_pos_list();
-      }
+      }));
+      jobs.back()->schedule();  // schedule job immediately
     }
+
+    Hyrise::get().scheduler()->wait_for_tasks(jobs);
   }
 
   for (auto& segments : output_segments_by_chunk) {
