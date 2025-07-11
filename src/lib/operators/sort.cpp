@@ -224,10 +224,12 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&, column_id]() {
-        // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
-        // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
-        // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
-        // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
+        // To keep the implementation simple, we write the output ReferenceSegments column by column.
+        // This means that even if input ReferenceSegments share a PosList,
+        //  the output will contain independent PosLists. While this is
+        // slightly more expensive to generate and slightly less efficient for following operators,
+        // we assume that the lion's share of the work has been done
+        // before the Sort operator is executed and that the relative cost of this
         // is acceptable. In the future, this could be improved.
         auto output_pos_list = std::make_shared<RowIDPosList>();
         output_pos_list->reserve(output_chunk_size);
