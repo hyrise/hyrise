@@ -10,7 +10,7 @@
 namespace hyrise {
 
 // This class spawns a thread that executes a procedure, defined by @param loop_func, in a loop. Between each iteration
-// there is a user-definable sleep period. The loop can be paused, resumed and finished. The loop starts executing
+// there is a user-definable sleep period. The loop can be paused, resumed, and finished. The loop starts executing
 // immediately upon construction.
 // Whenever the @param loop_func is called, an execution counter is passed to it.
 struct PausableLoopThread {
