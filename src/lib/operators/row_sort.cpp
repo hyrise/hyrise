@@ -66,7 +66,7 @@ std::shared_ptr<const Table> RowSort::_on_execute() {
     return input_table;
   }
 
-  auto [normalized_keys, tuple_key_size] = KeyNormalizer::convert_table(input_table, _sort_definitions);
+  const auto [normalized_keys, tuple_key_size] = KeyNormalizer::convert_table(input_table, _sort_definitions);
 
   auto [iterator, end_iterator] = KeyNormalizer::get_iterators(normalized_keys, tuple_key_size);
   std::vector<RowIdIterator> sort_iterators;
