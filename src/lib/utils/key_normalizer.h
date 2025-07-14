@@ -30,6 +30,10 @@ class KeyNormalizer {
 
   void append(const std::optional<int32_t>& value, NormalizedSortMode desc, NullsMode nulls_first);
 
+  template <typename T>
+  static void insert(std::vector<unsigned char>& buffer, T value, uint64_t offset, NormalizedSortMode sort_mode,
+                     uint32_t string_prefix_length);
+
   void append(const std::optional<int64_t>& value, NormalizedSortMode desc, NullsMode nulls_first);
 
   void append(const std::optional<float>& value, NormalizedSortMode desc, NullsMode nulls_first);
@@ -41,11 +45,24 @@ class KeyNormalizer {
 
   void append_row_id(uint64_t row_id);
 
+  static void insert_row_id(std::vector<unsigned char>& buffer, ChunkOffset row_id, uint64_t offset);
+
+  static void insert_null_prefix(std::vector<unsigned char>& buffer, bool is_null, uint64_t offset,
+                                 NullsMode nulls_mode);
+
   void append_chunk(const std::shared_ptr<const Chunk>& chunk,
                     const std::vector<SortColumnDefinition>& sort_definitions);
 
+  static void insert_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
+                           const std::vector<SortColumnDefinition>& sort_definitions, uint64_t offset,
+                           ChunkOffset last_row_id, uint32_t tuple_key_size, uint32_t string_prefix_length);
+
   void append_table(const std::shared_ptr<const Table>& table,
                     const std::vector<SortColumnDefinition>& sort_definitions);
+
+  static std::vector<unsigned char> convert_table(const std::shared_ptr<const Table>& table,
+                                                  const std::vector<SortColumnDefinition>& sort_definitions,
+                                                  uint32_t string_prefix_length = 12);
 
  private:
   std::vector<unsigned char>& _buffer;
@@ -57,15 +74,23 @@ class KeyNormalizer {
      */
   void _append_null_prefix(bool has_value, NullsMode nulls_first) const;
 
-  void _insert_null_prefix(bool is_null, uint64_t offset, NullsMode nulls_mode);
-
   template <typename T>
   void _append_integral(const std::optional<T>& value, NormalizedSortMode desc, NullsMode nulls_first);
 
   template <class T>
-  void _insert_integral(const T& value, NormalizedSortMode sort_mode, NullsMode nulls_mode);
+    requires std::is_integral_v<T>
+  static void _insert_integral(std::vector<unsigned char>& buffer, T value, uint64_t offset,
+                               NormalizedSortMode sort_mode);
 
   template <typename T>
   void _append_floating_point(const std::optional<T>& value, NormalizedSortMode desc, NullsMode nulls_first);
+
+  template <class T>
+    requires std::is_floating_point_v<T>
+  static void _insert_floating_point(std::vector<unsigned char>& buffer, T value, uint64_t offset,
+                                     NormalizedSortMode sort_mode);
+
+  static void _insert_string(std::vector<unsigned char>& buffer, pmr_string value, uint64_t offset,
+                             NormalizedSortMode sort_mode, uint32_t string_prefix_length);
 };
 }  // namespace hyrise
