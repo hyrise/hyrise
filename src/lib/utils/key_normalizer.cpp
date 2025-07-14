@@ -152,7 +152,7 @@ void KeyNormalizer::append_chunk(const std::shared_ptr<const Chunk>& chunk,
 void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
                                  const std::vector<SortColumnDefinition>& sort_definitions, const uint64_t offset,
                                  const ChunkOffset last_row_id, const uint32_t tuple_key_size,
-                                 const uint32_t string_prefix_length) {
+                                 const uint32_t string_prefix_length, const ChunkOffset chunk_size) {
   for (const auto sort_definition : sort_definitions) {
     const auto sort_mode = sort_definition.sort_mode;
     const auto normalized_sort_mode =
@@ -172,7 +172,7 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
     });
   }
 
-  for (auto i = ChunkOffset{0}; i < chunk->size(); ++i) {
+  for (auto i = ChunkOffset{0}; i < chunk_size; ++i) {
     insert_row_id(buffer, ChunkOffset{last_row_id + i}, offset + (i + 1) * tuple_key_size - sizeof(ChunkOffset));
   }
 }
@@ -215,11 +215,11 @@ std::vector<unsigned char> KeyNormalizer::convert_table(const std::shared_ptr<co
   auto row_id = ChunkOffset{0};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto current_chunk = table->get_chunk(chunk_id);
+    const auto chunk_size = current_chunk->size();
 
     insert_chunk(result_buffer, current_chunk, sort_definitions, row_id * tuple_key_size, row_id, tuple_key_size,
-                 string_prefix_length);
+                 string_prefix_length, chunk_size);
 
-    const auto chunk_size = current_chunk->size();
     row_id += chunk_size;
   }
 
