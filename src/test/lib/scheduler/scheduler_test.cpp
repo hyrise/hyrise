@@ -170,7 +170,7 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
 }
 
 TEST_F(SchedulerTest, ConcurrentlyProcessedTaskGroups) {
-  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto worker_count = node_queue_scheduler->workers().size();

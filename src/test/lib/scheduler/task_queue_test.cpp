@@ -43,9 +43,11 @@ TEST_F(TaskQueueTest, EstimateLoad) {
   // Task that has not yet been scheduled, will not be added to the task queue. Pushing tries to mark the task as
   // enqueued, which cannot be done to tasks that are not scheduled yet.
   EXPECT_THROW(task_queue.push(task_1, SchedulePriority::High), std::logic_error);
+  EXPECT_EQ(task_1.state(), TaskState::Created);
   EXPECT_TRUE(task_queue.empty());
 
   EXPECT_TRUE(try_transition_to_scheduled(task_1));
+  EXPECT_EQ(task_1.state(), TaskState::Scheduled);
   EXPECT_TRUE(try_transition_to_scheduled(task_2));
 
   EXPECT_TRUE(task_queue.empty());
