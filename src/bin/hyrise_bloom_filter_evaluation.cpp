@@ -86,7 +86,7 @@ auto measure_duration(F&& f) {
 template <uint8_t FilterSize, uint8_t K>
 void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec,
                                  const std::vector<int32_t>& probe_vec,
-                                 const uint8_t hash_function, size_t vector_size,
+                                 const uint8_t hash_function, const size_t vector_size,
                                  double distinctiveness, double overlap,
                                  const std::string& csv_filename) {
   std::cout << "Evaluation Bloom filter with size: " << std::to_string(FilterSize) << ", K: " << std::to_string(K)
