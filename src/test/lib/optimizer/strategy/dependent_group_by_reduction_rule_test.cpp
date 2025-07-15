@@ -8,6 +8,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/dependent_group_by_reduction_rule.hpp"
 #include "strategy_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -27,7 +28,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
 
     // Non-schema-given UCC. In practice, primary key constraints will always be schema-given (because they are given by
     // the schema), but we want this constraint to be non-schema-given in order to test query plan cacheability.
-    table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY, CommitID{0}});
+    table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{1}});
     storage_manager.add_table("table_a", table_a);
     stored_table_node_a = StoredTableNode::make("table_a");
     column_a_0 = stored_table_node_a->get_column("column0");
@@ -205,7 +206,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-// Test that usage of schema-given FD leads to the result not being cacheable.
+// Test that usage of non-schema-given FD leads to the result not being cacheable.
 TEST_F(DependentGroupByReductionRuleTest, SchemaGivenFDNotCacheable) {
   // clang-format off
   _lqp =
@@ -239,7 +240,7 @@ TEST_F(DependentGroupByReductionRuleTest, EqualDeterminantLengthCacheable) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because the schema-given UCC was used.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because the schema-given UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
