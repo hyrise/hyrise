@@ -85,7 +85,7 @@ bool key_constraint_is_confidently_valid(const std::shared_ptr<Table>& table,
     return true;
   }
 
-  if (!table_key_constraint.is_valid()) {
+  if (table_key_constraint.last_validation_result() == ValidationResultType::INVALID) {
     return false;
   }
 
@@ -109,7 +109,7 @@ bool key_constraint_is_confidently_valid(const std::shared_ptr<Table>& table,
 
 bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
                                            const TableKeyConstraint& table_key_constraint) {
-  if (table_key_constraint.is_valid()) {
+  if (table_key_constraint.last_validation_result() == ValidationResultType::VALID) {
     return false;
   }
 
