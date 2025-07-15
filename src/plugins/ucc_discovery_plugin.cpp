@@ -307,7 +307,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
   validate_table->execute();
   const auto& table_view = validate_table->get_output();
 
-  // Check all chunks that we could not handle in the previous loop. Note that the loop below will only contain these 
+  // Check all chunks that we could not handle in the previous loop. Note that the loop below will only contain these
   // chunks, as we have excluded the others when executing the GetTable operator.
   const auto validated_chunk_count = table_view->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < validated_chunk_count; ++chunk_id) {
