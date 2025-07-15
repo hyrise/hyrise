@@ -1,5 +1,6 @@
 #include "ucc_discovery_plugin.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -133,29 +134,41 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     message << "Checking candidate " << candidate.table_name << "." << table->column_name(column_id);
 
     const auto& soft_key_constraints = table->soft_key_constraints();
+    const auto candidate_columns = std::unordered_set<ColumnID>{column_id};
+    const auto existing_ucc =
+        std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(), [&](const auto& key_constraint) {
+          return std::includes(key_constraint.columns().cbegin(), key_constraint.columns().cend(),
+                               candidate_columns.cbegin(), candidate_columns.cend());
+        });
 
-    // Check if a primary key constraint already exists for the column. If it does, we can skip the candidate.
-    const auto existing_pk = soft_key_constraints.find(TableKeyConstraint{{column_id}, KeyConstraintType::PRIMARY_KEY});
-    if (existing_pk != soft_key_constraints.end()) {
-      message << " [skipped (already known to be a primary key) in " << candidate_timer.lap_formatted() << "]";
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      continue;
-    }
+    if (existing_ucc != soft_key_constraints.end()) {
+      // Check if the found key constraint is a primary key constraint. If it is, we can directly skip the candidate.
+      if (existing_ucc->key_type() == KeyConstraintType::PRIMARY_KEY) {
+        message << " [skipped (already known to be a primary key) in " << candidate_timer.lap_formatted() << "]";
+        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+        continue;
+      }
 
-    // Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. If it is, we can skip the
-    // expensive revalidation of the UCC. This also applies for schema-given constraints.
-    const auto existing_ucc = soft_key_constraints.find(TableKeyConstraint{{column_id}, KeyConstraintType::UNIQUE});
-    if (existing_ucc != soft_key_constraints.end() && key_constraint_is_confidently_valid(table, *existing_ucc)) {
-      message << " [skipped (already known and guaranteed to be still VALID) in " << candidate_timer.lap_formatted()
-              << "]";
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      continue;
-    }
-
-    if (existing_ucc != soft_key_constraints.end() && key_constraint_is_confidently_invalid(table, *existing_ucc)) {
-      message << " [skipped (already known and guaranteed to be INVALID) in " << candidate_timer.lap_formatted() << "]";
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      continue;
+      // Check if MVCC data tells us that the existing UCC is guaranteed to be valid or invalid. If it is, we can
+      // skip the expensive revalidation attempt of the UCC. This also covers the case where the existing UCC is
+      // schema-given.
+      // We do not update the CommitID of the existing UCC. This could lead to currently running transactions not being
+      // able to see the updated UCC anymore. Even though the UCC was guaranteed to be valid, the new CommitID is
+      // larger so we lose the knowledge about this previous guarantee.
+      if (existing_ucc->key_type() == KeyConstraintType::UNIQUE) {
+        if (key_constraint_is_confidently_valid(table, *existing_ucc)) {
+          message << " [skipped (already known and guaranteed to be still VALID) in " << candidate_timer.lap_formatted()
+                  << "]";
+          Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+          continue;
+        }
+        if (key_constraint_is_confidently_invalid(table, *existing_ucc)) {
+          message << " [skipped (already known and guaranteed to be INVALID) in " << candidate_timer.lap_formatted()
+                  << "]";
+          Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+          continue;
+        }
+      }
     }
 
     // If no UCC already exists or the existing UCC is not guaranteed to be still valid, we have to now (re-)validate
@@ -242,12 +255,13 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
     const std::shared_ptr<TransactionContext>& transaction_context) {
   // `distinct_values_across_segments` collects the segment values from all chunks.
   auto distinct_values_across_segments = std::unordered_set<ColumnDataType>{};
-  auto unmodified_chunks = std::vector<ChunkID>();
+  auto unmodified_chunks = std::vector<ChunkID>{};
 
   const auto chunk_count = table->chunk_count();
 
-  // Iterate through all unmodified chunks and collect their distinct values. If a segment does not add the expected
-  // number of distinct values, we know that a duplicate exists in the segment / column and can return early.
+  // For all segments we now want to verify if they contain duplicates. If a segment does not add the expected number
+  // of distinct values, we know that a duplicate exists in the segment / column and can return early. We start by
+  // handling the unmodified dictionary segments.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto source_chunk = table->get_chunk(chunk_id);
     if (!source_chunk) {
@@ -256,28 +270,24 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
       continue;
     }
     const auto source_segment = source_chunk->get_segment(column_id);
-
-    if (source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable()) {
-      // The set of distinct values across all segments should grow by the number of rows in the segment because,
-      // if it does not, it means some value must have been inserted twice -> duplicate detected.
-      // In this case, the UCC is violated.
-      const auto expected_distinct_value_count = distinct_values_across_segments.size() + source_segment->size();
-
+    // Were values inserted into the chunk (inserted or updated rows)? If not and it is a dictionary segment, we can
+    // directly add all distinct values to the set of distinct values.
+    if ((source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable())) {
       // If we enter this branch, we know that this segment has not been modified since its creation. Therefore we can
       // directly add all of its values to the set of distinct values.
-      if (const auto& dictionary_segment =
-              std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(source_segment)) {
-        // Directly insert dictionary entries.
-        const auto& dictionary = dictionary_segment->dictionary();
-        distinct_values_across_segments.insert(dictionary->cbegin(), dictionary->cend());
-      } else {
-        segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto end) {
-          while (it != end) {
-            distinct_values_across_segments.insert(it->value());
-            ++it;
-          }
-        });
+      const auto& dictionary_segment =
+          std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(source_segment);
+      if (!dictionary_segment) {
+        continue;
       }
+
+      // The set of distinct values across all segments should grow by the number of rows in the segment. Otherwise,
+      // some value must have been inserted twice, and we detected a duplicate that violates the UCC.
+      const auto expected_distinct_value_count = distinct_values_across_segments.size() + source_segment->size();
+
+      // Directly insert dictionary entries.
+      const auto& dictionary = dictionary_segment->dictionary();
+      distinct_values_across_segments.insert(dictionary->cbegin(), dictionary->cend());
 
       if (distinct_values_across_segments.size() != expected_distinct_value_count) {
         return false;
@@ -297,8 +307,8 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
   validate_table->execute();
   const auto& table_view = validate_table->get_output();
 
-  // Check all chunks that we could not exclude for duplicates. Note that the loop below will only contain these chunks,
-  // as we have excluded the others when executing the GetTable operator.
+  // Check all chunks that we could not handle in the previous loop. Note that the loop below will only contain these
+  // chunks, as we have excluded the others when executing the GetTable operator.
   const auto validated_chunk_count = table_view->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < validated_chunk_count; ++chunk_id) {
     const auto source_chunk = table_view->get_chunk(chunk_id);

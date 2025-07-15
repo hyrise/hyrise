@@ -40,7 +40,7 @@ class Optimizer final {
   void add_rule(std::unique_ptr<AbstractRule> rule);
 
   /**
-   * Returns optimized version of @param input.
+   * Returns optimized version of @param input LQP and whether the result is safe to cache.
    * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
    */
   std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable> optimize(

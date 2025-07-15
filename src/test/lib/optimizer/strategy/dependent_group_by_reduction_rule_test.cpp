@@ -102,7 +102,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     const auto expected_lqp = _lqp->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -113,7 +113,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     const auto expected_lqp = _lqp->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -134,8 +134,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(
-        static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
+    EXPECT_EQ(is_cacheable, IsCacheable::No);  // Not cacheable because FD derived from non-schema-given UCC was used.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   {
@@ -152,8 +151,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(
-        static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
+    EXPECT_EQ(is_cacheable, IsCacheable::No);  // Not cacheable because FD derived from non-schema-given UCC was used.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -169,7 +167,7 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -184,7 +182,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -203,7 +201,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because used FD was derived from schema-given UCC.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because used FD was derived from schema-given UCC.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -222,8 +220,7 @@ TEST_F(DependentGroupByReductionRuleTest, SchemaGivenFDNotCacheable) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_FALSE(
-      static_cast<bool>(is_cacheable));  // Not cacheable because used FD was derived from non-schema-given UCC.
+  EXPECT_EQ(is_cacheable, IsCacheable::No);  // Not cacheable because used FD was derived from non-schema-given UCC.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -267,8 +264,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_FALSE(
-      static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
+  EXPECT_EQ(is_cacheable, IsCacheable::No);  // Not cacheable because FD derived from non-schema-given UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -307,7 +303,7 @@ TEST_F(DependentGroupByReductionRuleTest, AggregateButNoChanges) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -327,8 +323,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_FALSE(
-      static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
+  EXPECT_EQ(is_cacheable, IsCacheable::No);  // Not cacheable because FD derived from non-schema-given UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -350,8 +345,7 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_FALSE(
-      static_cast<bool>(is_cacheable));  // Not cacheable because FD derived from non-schema-given UCC was used.
+  EXPECT_EQ(is_cacheable, IsCacheable::No);  // Not cacheable because FD derived from non-schema-given UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -368,7 +362,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   const auto expected_lqp = _lqp->deep_copy();
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -387,7 +381,7 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -419,7 +413,7 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
 
   const auto is_cacheable = _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -442,7 +436,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
     const auto expected_lqp = stored_table_node_a->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not schema-given.
+    EXPECT_EQ(is_cacheable, IsCacheable::No);  // Not cacheable because UCC used is not schema-given.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -462,8 +456,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(
-        static_cast<bool>(is_cacheable));  // Cacheable because used UCC is implied by query and thus schema-given.
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because used UCC is implied by query and thus schema-given.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -484,7 +477,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(static_cast<bool>(is_cacheable));  // Not cacheable because UCC used is not schema-given.
+    EXPECT_EQ(is_cacheable, IsCacheable::No);  // Not cacheable because UCC used is not schema-given.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -503,7 +496,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
 
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -521,7 +514,7 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
     const auto expected_lqp = _lqp->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -536,7 +529,7 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
     const auto expected_lqp = _lqp->deep_copy();
     const auto is_cacheable = _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(static_cast<bool>(is_cacheable));  // Cacheable because rule was not applied.
+    EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }

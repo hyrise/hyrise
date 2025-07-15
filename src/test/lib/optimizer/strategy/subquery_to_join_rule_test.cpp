@@ -1560,7 +1560,7 @@ TEST_F(SubqueryToJoinRuleTest, ComplexArithmeticExpression) {
 TEST_F(SubqueryToJoinRuleTest, CheckCacheability) {
   auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(in_(a_a, list_(1, 2, 3)), node_a));
   const auto is_cacheable = _apply_rule(_rule, input_lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

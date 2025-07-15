@@ -115,21 +115,25 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
 
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator) {
-  auto table_key_constraints = std::set<TableKeyConstraint>{};
+  auto table_key_constraints =
+      std::set<TableKeyConstraint>{table->soft_key_constraints().begin(), table->soft_key_constraints().end()};
   // We only print key constraints that are marked as valid. Note that this has a different meaning
-  // than "confidently valid". See TableKeyConstraint::is_valid() for details.
-  for (const auto& constraint : table->soft_key_constraints()) {
-    if (!constraint.is_valid()) {
-      continue;
-    }
-    table_key_constraints.emplace(constraint);
-  }
+  // than "confidently valid". See `TableKeyConstraint::last_validation_result()` for details.
   if (table_key_constraints.empty()) {
     return;
   }
 
-  const auto& last_constraint = *std::prev(table_key_constraints.cend());
+  auto first = true;
   for (const auto& constraint : table_key_constraints) {
+    if (constraint.last_validation_result() == ValidationResultType::INVALID) {
+      continue;
+    }
+
+    if (!first) {
+      stream << separator;
+    }
+    first = false;
+
     stream << magic_enum::enum_name(constraint.key_type()) << "(";
     const auto& columns = constraint.columns();
     Assert(!columns.empty(), "Did not expect useless constraint.");
@@ -141,9 +145,6 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
       }
     }
     stream << ")";
-    if (constraint != last_constraint) {
-      stream << separator;
-    }
   }
 }
 

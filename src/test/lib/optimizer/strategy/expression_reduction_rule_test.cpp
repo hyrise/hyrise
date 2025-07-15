@@ -375,7 +375,7 @@ TEST_F(ExpressionReductionRuleTest, CheckCacheability) {
       AggregateNode::make(expression_vector(), expression_vector(sum_(b), count_star_(mock_node), avg_(b)),  // NOLINT
                           mock_node));
   const auto is_cacheable = _apply_rule(rule, lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

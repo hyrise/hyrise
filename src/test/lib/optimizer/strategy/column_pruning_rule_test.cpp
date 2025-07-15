@@ -461,7 +461,7 @@ TEST_F(ColumnPruningRuleTest, CheckCacheability) {
       ExportNode::make("dummy.csv", FileType::Auto, PredicateNode::make(greater_than_(a, 5), node_abc)));
 
   const auto is_cacheable = _apply_rule(rule, lqp);
-  EXPECT_TRUE(static_cast<bool>(is_cacheable));
+  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise
