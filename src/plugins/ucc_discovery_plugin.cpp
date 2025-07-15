@@ -259,8 +259,9 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
 
   const auto chunk_count = table->chunk_count();
 
-  // Iterate through all unmodified chunks and collect their distinct values. If a segment does not add the expected
-  // number of distinct values, we know that a duplicate exists in the segment / column and can return early.
+  // For all segments we now want to verify if they contain duplicates. If a segment does not add the expected number
+  // of distinct values, we know that a duplicate exists in the segment / column and can return early. We start by
+  // handling the unmodified dictionary segments.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto source_chunk = table->get_chunk(chunk_id);
     if (!source_chunk) {
@@ -306,8 +307,8 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
   validate_table->execute();
   const auto& table_view = validate_table->get_output();
 
-  // Check all chunks that we could not exclude for duplicates. Note that the loop below will only contain these chunks,
-  // as we have excluded the others when executing the GetTable operator.
+  // Check all chunks that we could not handle in the previous loop. Note that the loop below will only contain these 
+  // chunks, as we have excluded the others when executing the GetTable operator.
   const auto validated_chunk_count = table_view->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < validated_chunk_count; ++chunk_id) {
     const auto source_chunk = table_view->get_chunk(chunk_id);
