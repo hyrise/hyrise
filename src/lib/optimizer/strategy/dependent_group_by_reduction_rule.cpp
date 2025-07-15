@@ -14,6 +14,7 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -78,7 +79,7 @@ std::string DependentGroupByReductionRule::name() const {
   return name;
 }
 
-void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
+IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
@@ -193,6 +194,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
+  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise
