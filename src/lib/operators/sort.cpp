@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <queue>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -585,7 +586,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             }
           });
         });
-      } // end of keygen
+      }  // end of keygen
 
       // start sorting the current chunk (i.e. the row_id PosList) as part of the current job
       auto chunk_start = row_id_offsets[chunk_id];
@@ -594,7 +595,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       boost::sort::pdqsort(row_ids.begin() + chunk_start, row_ids.begin() + chunk_start + chunk_size, compare_rows);
     }));
     jobs.back()->schedule();  // schedule job immediately
-  } // end of chunk iteration
+  }  // end of chunk iteration
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);  // wait for all chunks to be materialized
   auto key_generation_and_sorting_time = timer.lap();
@@ -608,12 +609,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   struct HeapNode {
     RowID val;
-    size_t next; // index of next element in the original partition
-    size_t end; // one-past-end index of the run
+    size_t next;  // index of next element in the original partition
+    size_t end;  // one-past-end index of the run
   };
 
   auto heap_cmp = [&](const HeapNode &node_a, const HeapNode &node_b) {
-    //std::priority_queue is a max-heap; invert the comparator to get min-heap behavior
+    // std::priority_queue is a max-heap; invert the comparator to get min-heap behavior
     // TODO(someone): might be smart to create a second compare lambda upfront with sign switched to avoid double call
     return compare_rows(node_b.val, node_a.val);
   };
@@ -627,7 +628,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     const auto begin = row_id_offsets[index];
     const auto end = begin + chunk_sizes[index];
     if (begin < end) {
-      priority_queue.push(HeapNode{.val=row_ids[begin], .next=begin + 1, .end=end});
+      priority_queue.push(HeapNode{.val = row_ids[begin], .next = begin + 1, .end = end});
     }
   }
 
@@ -638,7 +639,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     tmp.emplace_back(val);
 
     if (next < end) {
-      priority_queue.push(HeapNode{.val=row_ids[next], .next=next + 1, .end=end});
+      priority_queue.push(HeapNode{.val = row_ids[next], .next = next + 1, .end = end});
     }
   }
 
