@@ -348,7 +348,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     // Remove the AVG() expression from the AggregateNode
     auto& expressions = aggregate_node->node_expressions;
     const auto [erase_begin, erase_end] = std::ranges::remove_if(expressions, [&](const auto& expression) {
-      return replacements.find(expression) != replacements.end();
+      return replacements.contains(expression);
     });
     expressions.erase(erase_begin, erase_end);
   }

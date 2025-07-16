@@ -63,7 +63,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
    * TODO(anybody) Maybe use mmap() in the future. The current approach needs to have the entire file in RAM, mmap might
    *               be cleverer, dunno.
    */
-    csvfile.seekg(0, std::ios::end);
+  csvfile.seekg(0, std::ios::end);
   const auto csvfile_size = csvfile.tellg();
   auto content = std::string(csvfile_size, ' ');
   csvfile.seekg(0);

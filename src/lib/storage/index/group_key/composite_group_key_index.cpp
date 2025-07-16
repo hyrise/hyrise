@@ -173,9 +173,10 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
 AbstractChunkIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(
     const VariableLengthKey& key) const {
-  // Get an iterator pointing to the search-key in the keystore
-  // (use always lower_bound() since the search method is already handled within creation of composite key).
-  const auto key_it = std::lower_bound(_keys.begin(), _keys.end(), key);  // NOLINT(modernize-use-ranges)
+  // Get an iterator pointing to the search-key in the keystore (use always lower_bound() since the search method is
+  // already handled within creation of composite key).
+  // NOLINTNEXTLINE(modernize-use-ranges): iterator is not std::ranges-complaint.
+  const auto key_it = std::lower_bound(_keys.begin(), _keys.end(), key);
   if (key_it == _keys.cend()) {
     return _position_list.cend();
   }

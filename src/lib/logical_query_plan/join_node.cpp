@@ -75,7 +75,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
   output_expressions.resize(left_expressions.size() + right_expressions.size());
 
   auto left_copy_result = std::ranges::copy(left_expressions, output_expressions.begin());
-  std::ranges::copy(right_expressions.begin(), right_expressions.end(), left_copy_result.out);
+  std::ranges::copy(right_expressions, left_copy_result.out);
 
   return output_expressions;
 }

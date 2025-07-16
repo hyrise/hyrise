@@ -159,10 +159,11 @@ auto erase_type_from_iterable(const UnerasedIterable& iterable) {
 
 template <typename UnerasedIterable>
 decltype(auto) erase_type_from_iterable_if_debug(const UnerasedIterable& iterable) {
- if constexpr (HYRISE_DEBUG) {
+#if HYRISE_DEBUG
   return erase_type_from_iterable(iterable);
- }
+#else
   return iterable;
+#endif
 }
 
 namespace detail {
