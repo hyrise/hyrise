@@ -355,14 +355,13 @@ TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
   auto optimizer = Optimizer{};
   optimizer.add_rule(std::make_unique<JoinToSemiJoinRule>());
 
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("column0", DataType::Int, false);
+  auto column_definitions = TableColumnDefinitions{{"column0", DataType::Int, false}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
   Hyrise::get().storage_manager.add_table("table", table);
 
   // Add a non-schema-given UCC.
-  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
 
   const auto stored_table_node = StoredTableNode::make("table");
   const auto column0 = stored_table_node->get_column("column0");
@@ -378,7 +377,7 @@ TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
   static_cast<JoinNode&>(*lqp1->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto optimize_results1 = optimizer.optimize(std::move(lqp1));
 
-  EXPECT_FALSE(static_cast<bool>(optimize_results1.second));
+  EXPECT_EQ(optimize_results1.second, IsCacheable::No);
 }
 
 TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {

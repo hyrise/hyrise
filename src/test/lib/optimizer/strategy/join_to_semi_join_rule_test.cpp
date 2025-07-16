@@ -55,7 +55,7 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
     sm.add_table("table", table);
 
     // Non-schema-given UCC
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -96,7 +96,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -143,7 +143,8 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
     sm.add_table("table", table);
 
     // Non-schema-given UCC
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}});
+    table->add_soft_constraint(
+        TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");

@@ -28,7 +28,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
 
     // Non-schema-given UCC. In practice, primary key constraints will always be schema-given (because they are given by
     // the schema), but we want this constraint to be non-schema-given in order to test query plan cacheability.
-    table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{1}});
+    table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
     storage_manager.add_table("table_a", table_a);
     stored_table_node_a = StoredTableNode::make("table_a");
     column_a_0 = stored_table_node_a->get_column("column0");
@@ -70,7 +70,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     table_f = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
     table_f->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
     table_f->add_soft_constraint(
-        TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE, CommitID{0}});
+        TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
     storage_manager.add_table("table_f", table_f);
     stored_table_node_f = StoredTableNode::make("table_f");
     column_f_0 = stored_table_node_f->get_column("column0");
@@ -207,7 +207,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
 }
 
 // Test that usage of non-schema-given FD leads to the result not being cacheable.
-TEST_F(DependentGroupByReductionRuleTest, SchemaGivenFDNotCacheable) {
+TEST_F(DependentGroupByReductionRuleTest, NonSchemaGivenFDNotCacheable) {
   // clang-format off
   _lqp =
   AggregateNode::make(expression_vector(column_f_1, column_f_2, column_f_3), expression_vector(sum_(column_f_0)),
