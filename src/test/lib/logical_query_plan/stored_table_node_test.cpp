@@ -14,6 +14,7 @@
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
@@ -432,7 +433,7 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsValidityNotGuaranteed) {
 
   // Prepare UCCs.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
-  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE, CommitID{0}};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID};
   _table_a->add_soft_constraint(key_constraint_a_b);
   _table_a->add_soft_constraint(key_constraint_c);
   const auto& table_key_constraints = _table_a->soft_key_constraints();

@@ -137,7 +137,7 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeValid) {
   EXPECT_TRUE(key_constraint_is_confidently_valid(_table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID}));
 
   EXPECT_FALSE(key_constraint_is_confidently_valid(
-      _table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}, CommitID{0}}));
+      _table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID, INITIAL_COMMIT_ID}));
 
   // Manually modify the `max_begin_cid` of the chunk to simulate an insert to the table.
   _table_b->append({0, 1});
@@ -156,7 +156,7 @@ TEST_F(ConstraintUtilsTest, CheckIfTableKeyConstraintIsKnownToBeInvalid) {
   EXPECT_FALSE(key_constraint_is_confidently_invalid(
       _table_b, {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY, MAX_COMMIT_ID, MAX_COMMIT_ID}));
   EXPECT_TRUE(key_constraint_is_confidently_invalid(
-      _table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, CommitID{0}, CommitID{0}}));
+      _table_b, {{ColumnID{1}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID, INITIAL_COMMIT_ID}));
 
   // Manually modify the `max_end_cid` of the chunk to simulate a delete to the table.
   _table_b->append({0, 1});

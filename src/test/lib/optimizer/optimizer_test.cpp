@@ -351,7 +351,8 @@ TEST_F(OptimizerTest, OptimizationWithoutKeyConstraintCacheable) {
 }
 
 TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
-  // The optimization uses a `TableKeyConstraint` valid for commit 0. This should lead to the plan being not cacheable.
+  // The optimization uses a `TableKeyConstraint` valid for commit INITIAL_COMMIT_ID. This should lead to the plan
+  // being not cacheable.
   auto optimizer = Optimizer{};
   optimizer.add_rule(std::make_unique<JoinToSemiJoinRule>());
 
