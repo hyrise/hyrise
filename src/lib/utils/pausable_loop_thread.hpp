@@ -29,6 +29,6 @@ struct PausableLoopThread {
   std::mutex _mutex;
   std::condition_variable _cv;
   std::thread _loop_thread;
-  std::chrono::milliseconds _loop_sleep_time;
+  std::atomic<std::size_t> _loop_sleep_time_ms;
 };
 }  // namespace hyrise
