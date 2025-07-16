@@ -439,6 +439,49 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   key_buffer.reserve(total_buffer_size);  // reserve space for all keys
   auto preparation_time = timer.lap();
 
+  /**************************************************************************************************************
+   ************************************ Key-Generation and sorting of chunks ************************************
+   **************************************************************************************************************/
+
+  // Custom comparator function used for sorting
+  auto compare_rows = [&](const RowID a, const RowID b) {
+    auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
+    auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
+
+    int compare = memcmp(key_a, key_b, key_width);
+    if (compare != 0)
+      return compare < 0;
+
+    // fallback to full comparison for string columns
+    // other columns are already compared correctly by the key buffer
+    for (auto index : string_columns) {
+      auto comparison_result = int32_t{0};
+
+      const auto accessorA = create_segment_accessor<pmr_string>(
+          input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[index].column));
+      const auto accessorB = create_segment_accessor<pmr_string>(
+          input_table->get_chunk(b.chunk_id)->get_segment(_sort_definitions[index].column));
+
+      const auto& valA = accessorA->access(a.chunk_offset);
+      const auto& valB = accessorB->access(b.chunk_offset);
+
+      // can only compare if neither value is null
+      if (valA.has_value() && valB.has_value()) {
+        comparison_result = valA < valB;
+      }
+
+      if (comparison_result != 0) {
+        if (_sort_definitions[index].sort_mode == SortMode::AscendingNullsFirst ||
+            _sort_definitions[index].sort_mode == SortMode::AscendingNullsLast) {
+          return comparison_result < 0;
+            } else {
+              return comparison_result > 0;
+            }
+      }
+    }
+    return false;  // completely equal
+  };
+
   // job queue for generating keys in parallel
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(static_cast<size_t>(chunk_count));
@@ -464,7 +507,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
             const auto row = val.chunk_offset();       // get the row offset in the chunk
             auto* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
-            auto dest = key_ptr + key_offsets[index];  // pointer to the destination in the key buffer for this column
+            auto* dest = key_ptr + key_offsets[index];  // pointer to the destination in the key buffer for this column
 
             const ColumnDataType value = val.value();
             const auto data_length =
@@ -479,7 +522,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
             // encode the value into the key based on the data type
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              auto string_len = std::min(value.size(), size_t(STRING_PREFIX));
+              auto string_len = std::min(value.size(), static_cast<size_t>(STRING_PREFIX));
               memcpy(dest + 1, value.data(), string_len);
               memset(dest + 1 + string_len, 0, STRING_PREFIX - string_len);  // pad with zeroes
               dest[1 + STRING_PREFIX] = static_cast<uint8_t>(value.size());  // store actual string length
@@ -542,62 +585,72 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             }
           });
         });
-      }
+      } // end of keygen
+
+      // start sorting the current chunk (i.e. the row_id PosList) as part of the current job
+      auto chunk_start = row_id_offsets[chunk_id];
+      auto chunk_size = chunk_sizes[chunk_id];
+      // TODO(someone): use better sorting algorithm, e.g. merge sort
+      boost::sort::pdqsort(row_ids.begin() + chunk_start, row_ids.begin() + chunk_start + chunk_size, compare_rows);
     }));
     jobs.back()->schedule();  // schedule job immediately
-  }
+  } // end of chunk iteration
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);  // wait for all chunks to be materialized
-  auto key_generation_time = timer.lap();
+  auto key_generation_and_sorting_time = timer.lap();
 
-  // Sort the buffer
-  auto compare_rows = [&](const RowID a, const RowID b) {
-    auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
-    auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
+  /**************************************************************************************************************
+   ************************************************** Merging ***************************************************
+   **************************************************************************************************************/
 
-    int compare = memcmp(key_a, key_b, key_width);
-    if (compare != 0)
-      return compare < 0;
+  // TODO(someone): use a multi-threaded approach for merging as well
+  // Naivë sequential k-way heap merge - replace with e.g. Merge-Path partitioning
 
-    // fallback to full comparison for string columns
-    // other columns are already compared correctly by the key buffer
-    for (auto index : string_columns) {
-      auto comparison_result = int32_t{0};
-
-      const auto accessorA = create_segment_accessor<pmr_string>(
-          input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[index].column));
-      const auto accessorB = create_segment_accessor<pmr_string>(
-          input_table->get_chunk(b.chunk_id)->get_segment(_sort_definitions[index].column));
-
-      const auto& valA = accessorA->access(a.chunk_offset);
-      const auto& valB = accessorB->access(b.chunk_offset);
-
-      // can only compare if neither value is null
-      if (valA.has_value() && valB.has_value()) {
-        comparison_result = valA < valB;
-      }
-
-      if (comparison_result != 0) {
-        if (_sort_definitions[index].sort_mode == SortMode::AscendingNullsFirst ||
-            _sort_definitions[index].sort_mode == SortMode::AscendingNullsLast) {
-          return comparison_result < 0;
-        } else {
-          return comparison_result > 0;
-        }
-      }
-    }
-
-    return false;  // completely equal
+  struct HeapNode {
+    RowID val;
+    size_t next; // index of next element in the original partition
+    size_t end; // one-past-end index of the run
   };
 
-  // TODO(someone): use better sorting algorithm, e.g. merge sort
-  boost::sort::pdqsort(row_ids.begin(), row_ids.end(), compare_rows);
-  auto sort_time = timer.lap();
+  auto heap_cmp = [&](const HeapNode &node_a, const HeapNode &node_b) {
+    //std::priority_queue is a max-heap; invert the comparator to get min-heap behavior
+    // TODO(someone): might be smart to create a second compare lambda upfront with sign switched to avoid double call
+    return compare_rows(node_b.val, node_a.val);
+  };
+
+  auto priority_queue = std::priority_queue<HeapNode, std::vector<HeapNode>, decltype(heap_cmp)>{heap_cmp};
+
+  auto tmp = std::vector<RowID>();
+  tmp.reserve(row_count);
+
+  for (auto index = size_t{0}; index < chunk_count; ++index) {
+    const auto begin = row_id_offsets[index];
+    const auto end = begin + chunk_sizes[index];
+    if (begin < end) {
+      priority_queue.push(HeapNode{.val=row_ids[begin], .next=begin + 1, .end=end});
+    }
+  }
+
+  while (!priority_queue.empty()) {
+    const auto [val, next, end] = priority_queue.top();
+    priority_queue.pop();
+
+    tmp.emplace_back(val);
+
+    if (next < end) {
+      priority_queue.push(HeapNode{.val=row_ids[next], .next=next + 1, .end=end});
+    }
+  }
+
+  assert(tmp.size() == row_ids.size() && "We lost a comrade along the way");
+  row_ids.assign(tmp.begin(), tmp.end());  // overwrite input with globally sorted output
+
+  auto merge_sort_time = timer.lap();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::Preparation, preparation_time);
-  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, key_generation_time);
-  step_performance_data.set_step_runtime(OperatorSteps::Sort, sort_time);
+  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, key_generation_and_sorting_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Sort, merge_sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
