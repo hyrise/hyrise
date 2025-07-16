@@ -20,6 +20,11 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   friend class AbstractScheduler;
 
  public:
+  /**
+   * Returns a shared pointer to the current worker, when called from a worker. When called from another context, a
+   * nullptr is returned. This can happen when the ImmediateExecutionScheduler is used or when the main thread calls
+   * this function (e.g., when testing).
+   */
   static std::shared_ptr<Worker> get_this_thread_worker();
 
   Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id);

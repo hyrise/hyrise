@@ -1,6 +1,5 @@
 #include "abstract_task.hpp"
 
-#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -53,29 +52,29 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // Since OperatorTasks can be reused by, e.g., uncorrelated subqueries, this function may already have been called
   // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
   // The following guard prevents adding duplicate successors/predecessors:
-  if (std::ranges::find(_successors, successor) != _successors.cend()) {
-    return;
+  for (const auto& present_successor : _successors) {
+    if (&present_successor.get() == &*successor) {
+      return;
+    }
   }
 
-  _successors.emplace_back(successor);
-  successor->_predecessors.emplace_back(shared_from_this());
+  _successors.emplace_back(std::ref(*successor));
+  successor->_predecessors.emplace_back(std::ref(*this));
 
   // A task that is already done will not call _on_predecessor_done at the successor. Consequently, the successor's
   // _pending_predecessors count will not decrement. To avoid starvation at the successor, we do not increment its
   // _pending_predecessors count in the first place when this task is already done.
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
   // is called before _pending_predecessors++ has executed.
-  auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
-  if (!is_done()) {
-    successor->_pending_predecessors++;
-  }
+  Assert(!is_scheduled(), "Dependencies of already scheduled task modified.");
+  ++successor->_pending_predecessors;
 }
 
-const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const {
+const std::vector<std::reference_wrapper<AbstractTask>>& AbstractTask::predecessors() const {
   return _predecessors;
 }
 
-const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const {
+const std::vector<std::reference_wrapper<AbstractTask>>& AbstractTask::successors() const {
   return _successors;
 }
 
@@ -103,7 +102,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
   // executed by an unrelated thread. Thus, we add a memory barrier.
   //
   // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
-  // _done_condition_variable.
+  // _task_done.
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
   // Atomically marks the task as scheduled or returns if another thread has already scheduled it.
@@ -111,19 +110,17 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
     return;
   }
 
-  Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
+  Hyrise::get().scheduler()->_schedule(shared_from_this(), preferred_node_id, _priority);
 }
 
 void AbstractTask::_join() {
-  auto lock = std::unique_lock<std::mutex>{_done_condition_variable_mutex};
   if (is_done()) {
     return;
   }
 
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for.");
-  _done_condition_variable.wait(lock, [&]() {
-    return is_done();
-  });
+  _task_done.wait(false);
+  Assert(is_done(), "Unexpected state of Done.");
 }
 
 void AbstractTask::execute() {
@@ -142,23 +139,32 @@ void AbstractTask::execute() {
 
   _on_execute();
 
-  {
-    const auto success_done = _try_transition_to(TaskState::Done);
-    Assert(success_done, "Expected successful transition to TaskState::Done.");
+  for (auto& successor : _successors) {
+    // macOS silently ignores non-reachable successors (see `SuccessorExpired` test). Thus, we obtain a shared pointer
+    // here which also causes macOS to recognize that the successor is not accessible (note, the following line fails
+    // with an std::bad_weak_ptr exception before testing the assertion).
+    DebugAssert(successor.get().shared_from_this(), "Cannot obtain successor.");
+
+    // The task creator is responsible to ensure that successor tasks are available whenever an executed task tries to
+    // execute/accesss its successors.
+    successor.get()._on_predecessor_done();
   }
 
-  for (auto& successor : _successors) {
-    successor->_on_predecessor_done();
+  {
+    // We set the task's state to done after informing all successors. It can happen that a successor (that
+    // cannot be executed until its predessors are done) is both scheduled and pulled by a worker and at the same time
+    // executed here by the current worker.
+    // Note, informing successors does not block the current task (unless we use the ImmediateExecutionScheduler).
+    const auto success_done = _try_transition_to(TaskState::Done);
+    Assert(success_done, "Expected successful transition to TaskState::Done.");
   }
 
   if (_done_callback) {
     _done_callback();
   }
 
-  {
-    const auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
-    _done_condition_variable.notify_all();
-  }
+  _task_done.store(true);
+  _task_done.notify_all();
 }
 
 TaskState AbstractTask::state() const {
