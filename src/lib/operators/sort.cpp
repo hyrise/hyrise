@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <bit>
 #include <chrono>
+#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -26,6 +27,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <random>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -591,6 +593,209 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
+template <typename It, typename RNG>
+void selectSample(It begin, It end, int sample_size, RNG& gen,
+                  typename std::iterator_traits<It>::difference_type total_len) {
+
+    using Diff = typename std::iterator_traits<It>::difference_type;
+
+      Assert(total_len >= 0, "Total length must be non-negative");
+      Assert(sample_size >= 0, "Sample size must be non-negative");
+      Assert(sample_size <= total_len, "Cannot sample more elements than available");
+
+      It current = begin;
+      Diff remaining_len = total_len;
+      std::uniform_int_distribution<Diff> dist; // Distribution for random indices
+      using std::swap;
+
+        for (int i = 0; i < sample_size; ++i) {
+            dist.param(typename decltype(dist)::param_type(0, remaining_len - 1));
+            Diff random_index = dist(gen);
+
+            It target_it = std::next(begin, random_index);
+
+            // Swap the randomly selected element to the front of the range to form the sample
+            swap(*current, *target_it);
+
+            ++current;
+            --remaining_len;
+        }
+}
+
+template <typename It>
+void printNRows(It begin, int n) {
+    std::cout << n << " Row IDs: "<< std::endl;
+    for (int i = 0; i < n; ++i) {
+        std::cout << (begin + i)->row_id << " "<< std::endl;
+    }
+    std::cout << std::endl;
+}
+
+template <typename It>
+std::vector<typename std::iterator_traits<It>::value_type> getSplitters(It begin, int sample_size, int num_buckets) {
+
+  Assert(sample_size >= num_buckets - 1, "Sample size must be at least (num_buckets - 1)");
+  Assert(num_buckets > 1, "Number of buckets must be greater than 1");  
+
+  using ValueType = typename std::iterator_traits<It>::value_type;
+    std::vector<ValueType> splitters;
+    splitters.reserve(num_buckets - 1);
+    // Select splitters evenly spaced across the sampled elements
+    for (int i = 1; i < num_buckets; ++i) {
+        int idx = i * sample_size / num_buckets;
+        splitters.push_back(*(begin + idx));
+    }
+
+    return splitters;
+}
+template <typename ValueType>
+void build_classifier_tree(const ValueType* left, const ValueType* right,
+                           std::vector<ValueType>& tree, int pos) {
+
+  Assert(pos < static_cast<int>(tree.size()), "build_classifier_tree: tree position out of bounds");
+  if (left >= right) return;
+  
+  const ValueType* mid = left + (right - left) / 2;
+  tree[pos] = *mid;
+
+  
+  if (2 * pos < static_cast<int>(tree.size())) {
+    build_classifier_tree(left, mid, tree, 2 * pos);
+    build_classifier_tree(mid + 1, right, tree, 2 * pos + 1);
+  }
+}
+
+template <typename ValueType>
+int classify_value(const ValueType& value, const std::vector<ValueType>& tree,
+                   int num_splitters, size_t normalized_key_size) {
+    int pos = 1; 
+    while (2 * pos < static_cast<int>(tree.size())) {
+        if (value.less_than(tree[pos], normalized_key_size)) {
+            pos = 2 * pos;
+        } else {
+            pos = 2 * pos + 1;
+        }
+    }
+    const int bucket_index = pos - (1 << static_cast<int>(std::log2(num_splitters + 1)));
+    return std::max(0, std::min(bucket_index, num_splitters));
+}
+
+template <typename It, typename ValueType>
+void ips4o_sort_recursive(It begin, It end, 
+                          const std::vector<ValueType>& classifier_tree,
+                          int num_splitters, size_t normalized_key_size,
+                          size_t recursion_threshold = 32 ) {
+
+    const int num_buckets = num_splitters + 1;
+    std::vector<std::vector<ValueType>> buckets(num_buckets);
+    // Classify each value into a bucket based on the classifier tree.
+    for (It it = begin; it != end; ++it) {
+        int bucket = classify_value(*it, classifier_tree, num_splitters, normalized_key_size);
+        std::cout << "Row " << it->row_id << " → bucket " << bucket << std::endl;
+        buckets[bucket].push_back(*it);
+    }
+    
+    // Sort each bucket individually.
+    for (auto& bucket : buckets) {
+        if (bucket.size() > recursion_threshold) {
+            // Recursive sort
+            ips4o_sort_recursive(bucket.begin(), bucket.end(), classifier_tree, num_splitters, normalized_key_size);
+        } else {
+            // Fallback to std::sort for small buckets
+            std::sort(bucket.begin(), bucket.end(), [&](const auto& a, const auto& b) {
+                return a.less_than(b, normalized_key_size);
+            });
+        }
+    }
+    // Naive approach: Copy sorted buckets back to the original range.
+    // This can be optimized further by using a more efficient merging strategy.
+    It out_it = begin;
+    for (const auto& bucket : buckets) {
+        for (const auto& val : bucket) {
+            *out_it++ = val;
+        }
+    }
+}
+
+/**
+ * Sorts the range [begin, end) using the IPS4O (In-place Parallel Super Scalar Samplesort) algorithm.
+ *
+ * @tparam It        Iterator type for the elements to sort.
+ * @param begin      Iterator pointing to the start of the range to sort.
+ * @param end        Iterator pointing to one past the end of the range to sort.
+ * @param normalized_key_size  Size in bytes of the normalized key used for comparison during sorting.
+ *
+ * This function performs a very basic in-place sort leveraging normalized keys to speed up comparisons.
+ * It first samples the input range to select splitters, which are then used to classify the elements into buckets.
+ * The elements are then sorted within each bucket, and finally, the buckets are concatenated back into the original range.
+ * TODO: Fix Implementation
+ * TODO: Optimization
+ */
+template <class It>
+void ips4oSort(It begin, It end, size_t normalized_key_size) {
+  using Diff = typename std::iterator_traits<It>::difference_type;
+
+    Diff total_len = std::distance(begin, end);
+    if (total_len <= 1) return;
+
+    // Determine the bucket size dynamically based on the total length of the data.
+    // Currently, bucket size is set to the square root of total_len, which provides a balance
+    // between the number of buckets and the input.
+    // Usually the bucket size is a power of 2.
+    //
+    // The oversampling factor is set to 2, meaning we sample twice as many elements as the number of buckets.
+    // Typically, this oversampling factor is between 16 and 32 to ensure good splitter selection.
+    //
+    // The sample size is calculated as the minimum of:
+    //   - oversampling factor * (num_buckets - 1), which ensures enough samples for splitter selection, and
+    //   - total_len / 2, which avoids overly large samples for small datasets.
+
+    const auto num_buckets = static_cast<int>(std::floor(std::sqrt(static_cast<double>(total_len))));
+    const auto oversampling_factor = 2;
+    const int sample_size = std::min(
+      static_cast<int>(oversampling_factor * (num_buckets - 1)),
+      static_cast<int>(total_len / 2)
+    );
+    std::mt19937 gen(std::random_device{}());
+
+    std::cout << "Total_len: " << total_len << std::endl
+              << "Buckets: " << num_buckets << std::endl
+              << "Sample_size: " << sample_size << std::endl
+              << "normalized_key_size: " << normalized_key_size << std::endl;
+
+    // Sample the input range to select splitters.
+    selectSample(begin, end, sample_size, gen, total_len);
+            
+    using ValueType = typename std::iterator_traits<It>::value_type;
+
+      // Get the splitters from the sampled range.
+      std::vector<ValueType> splitters = getSplitters(begin, sample_size, num_buckets);
+      int num_splitters = static_cast<int>(splitters.size());
+
+      // Sort the splitters based on their normalized keys.
+      std::sort(splitters.begin(), splitters.end(),
+            [&](const auto& lhs, const auto& rhs) {
+              return lhs.less_than(rhs, normalized_key_size);
+            });
+
+      std::cout << "Number of splitters: " << num_splitters << std::endl;
+      std::cout << "Splitters: " << std::endl;
+      printNRows(splitters.begin(), num_splitters);
+
+
+      // Allocate enough space for the binary tree
+      const auto tree_size = 2 * num_splitters + 2; 
+      std::cout << "tree_size: " << tree_size << std::endl;
+
+      std::vector<ValueType> classifier_tree(tree_size);
+
+      // Build the classifier tree from the splitters.
+      build_classifier_tree(splitters.data(), splitters.data() + num_splitters, classifier_tree, 1);
+
+      // Recursively sort the input range using the classifier tree.
+      ips4o_sort_recursive(begin, end, classifier_tree, num_splitters, normalized_key_size, 32 /*recursion_threshold*/);
+}
+
 std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT("sort", "execute");
   auto timer = Timer{};
@@ -761,12 +966,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   const auto materialization_time = timer.lap();
 
   TRACE_EVENT_BEGIN("sort", "sort");
-
-  // TODO(student): Use pdqsort
-  std::sort(std::execution::par_unseq, materialized_rows.begin(), materialized_rows.end(),
+  // IN PROGRESS
+  ips4oSort(materialized_rows.begin(), materialized_rows.end(), normalized_key_size);
+  /*std::sort(materialized_rows.begin(), materialized_rows.end(),
             [&](const auto& lhs, const auto& rhs) {
               return lhs.less_than(rhs, normalized_key_size);
-            });
+            });*/
 
   TRACE_EVENT_END("sort");
 
