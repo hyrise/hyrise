@@ -78,10 +78,10 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
 
       // Determine which node to use for Semi-Join-filtering and check for the required uniqueness guarantees.
       if (*join_node->prunable_input_side() == LQPInputSide::Left) {
-        const auto opt_matching_ucc_cacheable =
-            join_node->left_input()->find_ucc_cacheability(equals_predicate_expressions_left);
-        if (opt_matching_ucc_cacheable) {
-          cacheable = cacheable && *opt_matching_ucc_cacheable;
+        const auto [has_matching_ucc, ucc_cacheable] =
+            join_node->left_input()->has_matching_ucc(equals_predicate_expressions_left);
+        if (has_matching_ucc) {
+          cacheable = cacheable && ucc_cacheable;
 
           join_node->join_mode = JoinMode::Semi;
           const auto temp = join_node->left_input();
@@ -89,10 +89,10 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
           join_node->set_right_input(temp);
         }
       } else if (*join_node->prunable_input_side() == LQPInputSide::Right) {
-        const auto opt_matching_ucc_cacheable =
-            join_node->right_input()->find_ucc_cacheability(equals_predicate_expressions_right);
-        if (opt_matching_ucc_cacheable) {
-          cacheable = cacheable && *opt_matching_ucc_cacheable;
+        const auto [has_matching_ucc, ucc_cacheable] =
+            join_node->right_input()->has_matching_ucc(equals_predicate_expressions_right);
+        if (has_matching_ucc) {
+          cacheable = cacheable && ucc_cacheable;
 
           join_node->join_mode = JoinMode::Semi;
         }

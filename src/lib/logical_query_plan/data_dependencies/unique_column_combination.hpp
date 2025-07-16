@@ -33,6 +33,8 @@ struct UniqueColumnCombination final {
   ExpressionUnorderedSet expressions;
 
  private:
+  // `_is_schema_given` is mutable to allow setting a UCC as schema-given (with set_schema_given()`) after its
+  // creation, e.g. in an AggregateNode.
   mutable bool _is_schema_given;
 };
 

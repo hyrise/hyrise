@@ -8,6 +8,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
@@ -467,29 +468,33 @@ TEST_F(StoredTableNodeTest, GetMatchingUniqueColumnCombination) {
 
   // Negative test.
   // Columns are empty.
-  EXPECT_THROW(_stored_table_node->find_ucc_cacheability({}), std::logic_error);
+  EXPECT_THROW(_stored_table_node->has_matching_ucc({}), std::logic_error);
 
   // There is no matching UCC.
-  EXPECT_FALSE(_stored_table_node->find_ucc_cacheability({_b}));
-  EXPECT_FALSE(_stored_table_node->find_ucc_cacheability({_c}));
-  EXPECT_FALSE(_stored_table_node->find_ucc_cacheability({_b, _c}));
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b}).first);
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_c}).first);
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b, _c}).first);
 
   if constexpr (HYRISE_DEBUG) {
     // Columns are not part of output_expressions() (i.e., pruned).
     _stored_table_node->set_pruned_column_ids({ColumnID{0}});
-    EXPECT_THROW(_stored_table_node->find_ucc_cacheability({_a}), std::logic_error);
+    EXPECT_THROW(_stored_table_node->has_matching_ucc({_a}), std::logic_error);
   }
 
   // Test exact match.
   _stored_table_node->set_pruned_column_ids({});
-  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a}) &&
-              static_cast<bool>(_stored_table_node->find_ucc_cacheability({_a})));
+  const auto [has_matching_ucc_a, matching_ucc_cacheable_a] = _stored_table_node->has_matching_ucc({_a});
+  EXPECT_TRUE(has_matching_ucc_a);
+  EXPECT_EQ(matching_ucc_cacheable_a, IsCacheable::Yes);
 
   // Test superset of column ids.
-  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a, _b}) &&
-              static_cast<bool>(_stored_table_node->find_ucc_cacheability({_a, _b})));
-  EXPECT_TRUE(_stored_table_node->find_ucc_cacheability({_a, _c}) &&
-              static_cast<bool>(_stored_table_node->find_ucc_cacheability({_a, _c})));
+  const auto [has_matching_ucc_ab, matching_ucc_cacheable_ab] = _stored_table_node->has_matching_ucc({_a, _b});
+  EXPECT_TRUE(has_matching_ucc_ab);
+  EXPECT_EQ(matching_ucc_cacheable_ab, IsCacheable::Yes);
+
+  const auto [has_matching_ucc_ac, matching_ucc_cacheable_ac] = _stored_table_node->has_matching_ucc({_a, _c});
+  EXPECT_TRUE(has_matching_ucc_ac);
+  EXPECT_EQ(matching_ucc_cacheable_ac, IsCacheable::Yes);
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {

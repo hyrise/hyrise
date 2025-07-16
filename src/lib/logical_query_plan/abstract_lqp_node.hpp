@@ -6,6 +6,7 @@
 #include <ostream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
@@ -192,10 +193,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return Searchs for a unique column combination (UCC) matching the given subset of output expressions (i.e.,
    *         the rows are guaranteed to be unique). This is preferred over calling
-   *         `find_ucc_if_exists(unique_column_combinations(), ...)` as it performs additional
-   *         sanity checks. Returns `std::nullopt` if no matching UCC is found.
+   *         `find_ucc(unique_column_combinations(), ...)` as it performs additional
+   *         sanity checks. Provides a pair<bool, IsCacheable> indicating whether a UCC was found and whether it is
+   *         cacheable.
    */
-  std::optional<IsCacheable> find_ucc_cacheability(const ExpressionUnorderedSet& expressions) const;
+  std::pair<bool, IsCacheable> has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.

@@ -156,7 +156,7 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
     if (unique_column_combinations.empty()) {
       unique_column_combinations.emplace(std::move(group_by_columns), /*is_schema_given=*/true);
     } else {
-      const auto existing_ucc = find_ucc_if_exists(unique_column_combinations, group_by_columns);
+      const auto existing_ucc = find_ucc(unique_column_combinations, group_by_columns);
       if (existing_ucc == unique_column_combinations.end()) {
         unique_column_combinations.emplace(std::move(group_by_columns), /*is_schema_given=*/true);
       } else if (existing_ucc != unique_column_combinations.end() &&

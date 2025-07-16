@@ -59,7 +59,7 @@ void gather_rewrite_info(
          "Neither column of the join predicate could be evaluated on the removable input.");
 
   // Check for uniqueness.
-  if (!removable_subtree->find_ucc_cacheability({exchangeable_column_expression})) {
+  if (!removable_subtree->has_matching_ucc({exchangeable_column_expression}).first) {
     return;
   }
 
@@ -82,8 +82,8 @@ void gather_rewrite_info(
       return LQPVisitation::VisitInputs;
     }
 
-    // Only predicates in the form `column = value` are useful to our optimization. These conditions have the
-    // potential (given filtered column is a UCC) to emit at most one result tuple.
+    // Only predicates in the form `column = value` are useful to our optimization. These conditions have the potential
+    // (given filtered column is a UCC) to emit at most one result tuple.
     if (candidate_expression->predicate_condition != PredicateCondition::Equals) {
       return LQPVisitation::VisitInputs;
     }
@@ -111,13 +111,13 @@ void gather_rewrite_info(
     if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
       return LQPVisitation::VisitInputs;
     }
-    const auto opt_matching_ucc_cacheable = removable_subtree->find_ucc_cacheability({candidate_column_expression});
-    if (!opt_matching_ucc_cacheable) {
+    const auto [matching_ucc, ucc_cacheable] = removable_subtree->has_matching_ucc({candidate_column_expression});
+    if (!matching_ucc) {
       return LQPVisitation::VisitInputs;
     }
 
     rewrite_predicate = candidate;
-    cacheable = cacheable && *opt_matching_ucc_cacheable;
+    cacheable = cacheable && ucc_cacheable;
     return LQPVisitation::DoNotVisitInputs;
   });
 

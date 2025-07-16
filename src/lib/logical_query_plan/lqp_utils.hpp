@@ -247,11 +247,12 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
     const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
 
 /**
- * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param
- *         expressions. A unique column combination matches if it covers a subset of @param expressions.
+ * @return A `const_iterator` that points to the UCC in the given set of @param unique_column_combinations matching
+ *         the given set of @param expressions. A unique column combination matches if it covers a subset of @param
+ *         expressions. If no such UCC exists, the end iterator is returned.
  */
-UniqueColumnCombinations::const_iterator find_ucc_if_exists(const UniqueColumnCombinations& unique_column_combinations,
-                                                            const ExpressionUnorderedSet& expressions);
+UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations& unique_column_combinations,
+                                                  const ExpressionUnorderedSet& expressions);
 
 /**
  * @return A set of FDs, derived from the given @param unique_column_combinations and based on the output expressions of

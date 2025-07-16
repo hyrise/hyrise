@@ -288,21 +288,21 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-std::optional<IsCacheable> AbstractLQPNode::find_ucc_cacheability(const ExpressionUnorderedSet& expressions) const {
+std::pair<bool, IsCacheable> AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
   Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
   const auto& unique_column_combinations = this->unique_column_combinations();
   if (unique_column_combinations.empty()) {
-    return {};
+    return {false, IsCacheable::No};
   }
 
-  const auto existic_ucc = find_ucc_if_exists(unique_column_combinations, expressions);
+  const auto existic_ucc = find_ucc(unique_column_combinations, expressions);
   if (existic_ucc == unique_column_combinations.end()) {
-    return {};
+    return {false, IsCacheable::No};
   }
-  return existic_ucc->is_schema_given() ? IsCacheable::Yes : IsCacheable::No;
+  return {true, existic_ucc->is_schema_given() ? IsCacheable::Yes : IsCacheable::No};
 }
 
 bool AbstractLQPNode::has_matching_od(
