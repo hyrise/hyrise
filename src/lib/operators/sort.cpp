@@ -56,50 +56,6 @@ bool is_nulls_first(const SortMode& mode) {
   return mode == SortMode::AscendingNullsFirst || mode == SortMode::DescendingNullsFirst;
 }
 
-void hybrid_radix_sort_rowids_msb(const std::vector<uint8_t>& keys, RowIDPosList& rowids,
-                                  std::vector<size_t>& row_id_offsets, size_t key_width,
-                                  const std::function<bool(const RowID&, const RowID&)>& cmp) {
-  if (rowids.empty())
-    return;
-  constexpr size_t RADIX = 256;
-  // constexpr size_t msb_index = 0;  // which byte to bucket on (0 = most significant)
-
-  // 1) Create empty buckets
-  std::array<std::vector<RowID>, RADIX> buckets;
-
-  // 2) Distribute by MSB
-  for (auto& rid : rowids) {
-    size_t idx = row_id_offsets[rid.chunk_id] * key_width + rid.chunk_offset * key_width;
-    uint8_t b = keys[idx + 1];  // get second byte of the key (first byte of actual data)
-    buckets[b].push_back(rid);
-  }
-
-  // 3) Sort each bucket in parallel
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(static_cast<size_t>(RADIX));
-
-  for (size_t b = 0; b < RADIX; ++b) {
-    if (buckets[b].empty())
-      continue;
-    // spawn a thread up to hw
-    jobs.emplace_back(std::make_shared<JobTask>([&buckets, b, &cmp]() {
-      auto& bucket = buckets[b];
-      boost::sort::pdqsort(bucket.begin(), bucket.end(), cmp);
-    }));
-    jobs.back()->schedule();  // schedule job immediately
-  }
-
-  // wait on any worker threads
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);  // wait for all chunks to be materialized
-
-  // 4) Gather back in bucket order
-  rowids.clear();
-  for (size_t b = 0; b < RADIX; ++b) {
-    auto& bucket = buckets[b];
-    rowids.insert(rowids.end(), std::make_move_iterator(bucket.begin()), std::make_move_iterator(bucket.end()));
-  }
-}
-
 /**
  *        ____  _  _  __  ____  ____   __  ____   ___
  *       (    \( \/ )/  \(    \(___ \ /  \(___ \ / __)
@@ -595,7 +551,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto key_generation_time = timer.lap();
 
   // Sort the buffer
-  auto compare_rows = [&](const RowID& a, const RowID& b) {
+  auto compare_rows = [&](const RowID a, const RowID b) {
     auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
     auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
 
@@ -634,7 +590,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return false;  // completely equal
   };
 
-  hybrid_radix_sort_rowids_msb(key_buffer, row_ids, row_id_offsets, key_width, compare_rows);
+  // TODO(someone): use better sorting algorithm, e.g. merge sort
+  boost::sort::pdqsort(row_ids.begin(), row_ids.end(), compare_rows);
   auto sort_time = timer.lap();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
