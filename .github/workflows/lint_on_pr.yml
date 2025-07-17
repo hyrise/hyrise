@@ -40,7 +40,7 @@ jobs:
 
       - name: Run format.sh
         run: |
-          ./scripts/format.sh all
+          ./scripts/format.sh
           # Fail if formatting produced diffs:
           if ! git diff --quiet; then
             echo "::error::Formatting changes detected. Please run ./scripts/format.sh all locally and commit the results."
