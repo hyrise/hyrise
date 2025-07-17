@@ -8,9 +8,10 @@ class RowIdIterator : public std::iterator<std::input_iterator_tag, const RowID>
   uint64_t _tuple_key_size;
   uint64_t _current_offset;
 
- public:
-  RowIdIterator(const std::vector<unsigned char>& buffer, uint64_t tuple_key_size);
   RowIdIterator(const std::vector<unsigned char>& buffer, uint64_t tuple_key_size, uint64_t current_offset);
+
+ public:
+  RowIdIterator(const std::vector<unsigned char>& buffer, uint64_t tuple_key_size, bool is_end = false);
   RowIdIterator& operator++();    // prefix
   RowIdIterator operator++(int);  // postfix
   value_type operator*() const;

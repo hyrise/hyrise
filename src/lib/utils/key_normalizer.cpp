@@ -230,8 +230,8 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::convert_table(
 
 RowIdIteratorWithEnd KeyNormalizer::get_iterators(const std::vector<unsigned char>& buffer,
                                                  const uint64_t tuple_key_size) {
-  return RowIdIteratorWithEnd{.iterator = RowIdIterator{buffer, tuple_key_size},
-                              .end = RowIdIterator{buffer, tuple_key_size, buffer.size()}};
+  return RowIdIteratorWithEnd{.iterator = RowIdIterator{buffer, tuple_key_size, false},
+                              .end = RowIdIterator{buffer, tuple_key_size, true}};
 }
 
 // PRIVATE
