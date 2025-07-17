@@ -475,9 +475,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         if (_sort_definitions[index].sort_mode == SortMode::AscendingNullsFirst ||
             _sort_definitions[index].sort_mode == SortMode::AscendingNullsLast) {
           return comparison_result < 0;
-            } else {
-              return comparison_result > 0;
-            }
+        } else {
+          return comparison_result > 0;
+        }
       }
     }
     return false;  // completely equal
@@ -506,8 +506,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           using ColumnDataType = typename decltype(type)::type;
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
-            const auto row = val.chunk_offset();       // get the row offset in the chunk
-            auto* key_ptr = &buffer[row * key_width];  // pointer to the start of the key for this row
+            const auto row = val.chunk_offset();        // get the row offset in the chunk
+            auto* key_ptr = &buffer[row * key_width];   // pointer to the start of the key for this row
             auto* dest = key_ptr + key_offsets[index];  // pointer to the destination in the key buffer for this column
 
             const ColumnDataType value = val.value();
@@ -595,7 +595,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       boost::sort::pdqsort(row_ids.begin() + chunk_start, row_ids.begin() + chunk_start + chunk_size, compare_rows);
     }));
     jobs.back()->schedule();  // schedule job immediately
-  }  // end of chunk iteration
+  }                           // end of chunk iteration
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);  // wait for all chunks to be materialized
   auto key_generation_and_sorting_time = timer.lap();
@@ -610,10 +610,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   struct HeapNode {
     RowID val;
     size_t next;  // index of next element in the original partition
-    size_t end;  // one-past-end index of the run
+    size_t end;   // one-past-end index of the run
   };
 
-  auto heap_cmp = [&](const HeapNode &node_a, const HeapNode &node_b) {
+  auto heap_cmp = [&](const HeapNode& node_a, const HeapNode& node_b) {
     // std::priority_queue is a max-heap; invert the comparator to get min-heap behavior
     // TODO(someone): might be smart to create a second compare lambda upfront with sign switched to avoid double call
     return compare_rows(node_b.val, node_a.val);
@@ -621,14 +621,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto priority_queue = std::priority_queue<HeapNode, std::vector<HeapNode>, decltype(heap_cmp)>{heap_cmp};
 
-  auto tmp = std::vector<RowID>();
-  tmp.reserve(row_count);
+  RowIDPosList sorted_row_ids;
+  sorted_row_ids.reserve(row_count);
 
   for (auto index = size_t{0}; index < chunk_count; ++index) {
     const auto begin = row_id_offsets[index];
     const auto end = begin + chunk_sizes[index];
     if (begin < end) {
-      priority_queue.push(HeapNode{.val = row_ids[begin], .next = begin + 1, .end = end});
+      priority_queue.emplace(row_ids[begin], begin + 1, end);
     }
   }
 
@@ -636,15 +636,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     const auto [val, next, end] = priority_queue.top();
     priority_queue.pop();
 
-    tmp.emplace_back(val);
+    sorted_row_ids.emplace_back(val);
 
     if (next < end) {
-      priority_queue.push(HeapNode{.val = row_ids[next], .next = next + 1, .end = end});
+      priority_queue.emplace(row_ids[next], next + 1, end);
     }
   }
 
-  assert(tmp.size() == row_ids.size() && "We lost a comrade along the way");
-  row_ids.assign(tmp.begin(), tmp.end());  // overwrite input with globally sorted output
+  assert(sorted_row_ids.size() == row_ids.size() && "We lost a comrade along the way");
 
   auto merge_sort_time = timer.lap();
 
@@ -687,9 +686,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   if (must_materialize) {
-    sorted_table = write_materialized_output_table(input_table, std::move(row_ids), _output_chunk_size);
+    sorted_table = write_materialized_output_table(input_table, std::move(sorted_row_ids), _output_chunk_size);
   } else {
-    sorted_table = write_reference_output_table(input_table, std::move(row_ids), _output_chunk_size);
+    sorted_table = write_reference_output_table(input_table, std::move(sorted_row_ids), _output_chunk_size);
   }
 
   const auto& final_sort_definition = _sort_definitions[0];
