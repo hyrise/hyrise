@@ -93,8 +93,8 @@ void KeyNormalizer::append_row_id(uint64_t row_id) {
   _append_integral(std::optional(row_id), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
 }
 
-void KeyNormalizer::insert_row_id(std::vector<unsigned char>& buffer, const ChunkOffset row_id, const uint64_t offset) {
-  _insert_integral(buffer, static_cast<uint64_t>(row_id), offset, NormalizedSortMode::Ascending);
+void KeyNormalizer::insert_row_id(std::vector<unsigned char>& buffer, const RowID row_id, const uint64_t offset) {
+  std::memcpy(&buffer[offset], &row_id, sizeof(ChunkID) + sizeof(ChunkOffset));
 }
 
 void KeyNormalizer::append_chunk(const std::shared_ptr<const Chunk>& chunk,
@@ -150,8 +150,8 @@ void KeyNormalizer::append_chunk(const std::shared_ptr<const Chunk>& chunk,
 }
 
 void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
-                                 const std::vector<SortColumnDefinition>& sort_definitions, const uint64_t offset,
-                                 const ChunkOffset last_row_id, const uint32_t tuple_key_size,
+                                 const std::vector<SortColumnDefinition>& sort_definitions,
+                                 const uint64_t buffer_offset, const ChunkID chunk_id, const uint32_t tuple_key_size,
                                  const uint32_t string_prefix_length, const ChunkOffset chunk_size) {
   for (const auto sort_definition : sort_definitions) {
     const auto sort_mode = sort_definition.sort_mode;
@@ -162,7 +162,7 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
     const auto nulls_mode = (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::DescendingNullsFirst)
                                 ? NullsMode::NullsFirst
                                 : NullsMode::NullsLast;
-    auto current_offset = offset;
+    auto current_offset = buffer_offset;
 
     segment_iterate(*chunk->get_segment(sort_definition.column), [&](const auto segment_position) {
       const bool is_null = segment_position.is_null();
@@ -172,8 +172,10 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
     });
   }
 
-  for (auto i = ChunkOffset{0}; i < chunk_size; ++i) {
-    insert_row_id(buffer, ChunkOffset{last_row_id + i}, offset + (i + 1) * tuple_key_size - sizeof(ChunkOffset));
+  auto offset = uint64_t{tuple_key_size - sizeof(RowID)};
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_offset + offset);
+    offset += tuple_key_size;
   }
 }
 
@@ -187,9 +189,9 @@ void KeyNormalizer::append_table(const std::shared_ptr<const Table>& table,
   }
 }
 
-std::vector<unsigned char> KeyNormalizer::convert_table(const std::shared_ptr<const Table>& table,
-                                                        const std::vector<SortColumnDefinition>& sort_definitions,
-                                                        const uint32_t string_prefix_length) {
+std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::convert_table(
+    const std::shared_ptr<const Table>& table, const std::vector<SortColumnDefinition>& sort_definitions,
+    const uint32_t string_prefix_length) {
   const auto num_rows = table->row_count();
   const auto num_columns = table->column_count();
   const auto data_types = table->column_data_types();
@@ -206,24 +208,30 @@ std::vector<unsigned char> KeyNormalizer::convert_table(const std::shared_ptr<co
       });
     }
   }
-  // Add one byte for each column for the NULL prefix and add the size of one ChunkOffset for the row id.
-  tuple_key_size += num_columns + sizeof(ChunkOffset);
+  // Add one byte for each column for the NULL prefix and add the size of one RowID for the row id.
+  tuple_key_size += num_columns + sizeof(RowID);
 
   auto result_buffer = std::vector<unsigned char>(tuple_key_size * num_rows);
 
   const auto chunk_count = table->chunk_count();
-  auto row_id = ChunkOffset{0};
+  auto table_offset = uint64_t{0};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto current_chunk = table->get_chunk(chunk_id);
     const auto chunk_size = current_chunk->size();
 
-    insert_chunk(result_buffer, current_chunk, sort_definitions, row_id * tuple_key_size, row_id, tuple_key_size,
-                 string_prefix_length, chunk_size);
+    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset * tuple_key_size, chunk_id,
+                 tuple_key_size, string_prefix_length, chunk_size);
 
-    row_id += chunk_size;
+    table_offset += chunk_size;
   }
 
-  return result_buffer;
+  return {result_buffer, tuple_key_size};
+}
+
+RowIdIteratorWithEnd KeyNormalizer::get_iterators(const std::vector<unsigned char>& buffer,
+                                                 const uint64_t tuple_key_size) {
+  return RowIdIteratorWithEnd{.iterator = RowIdIterator{buffer, tuple_key_size},
+                              .end = RowIdIterator{buffer, tuple_key_size, buffer.size()}};
 }
 
 // PRIVATE

@@ -8,6 +8,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "RowIdIterator.h"
+
 namespace hyrise {
 
 enum class NormalizedSortMode : uint8_t { Ascending, Descending };
@@ -45,7 +47,7 @@ class KeyNormalizer {
 
   void append_row_id(uint64_t row_id);
 
-  static void insert_row_id(std::vector<unsigned char>& buffer, ChunkOffset row_id, uint64_t offset);
+  static void insert_row_id(std::vector<unsigned char>& buffer, RowID row_id, uint64_t offset);
 
   static void insert_null_prefix(std::vector<unsigned char>& buffer, bool is_null, uint64_t offset,
                                  NullsMode nulls_mode);
@@ -54,16 +56,18 @@ class KeyNormalizer {
                     const std::vector<SortColumnDefinition>& sort_definitions);
 
   static void insert_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
-                           const std::vector<SortColumnDefinition>& sort_definitions, uint64_t offset,
-                           ChunkOffset last_row_id, uint32_t tuple_key_size, uint32_t string_prefix_length,
+                           const std::vector<SortColumnDefinition>& sort_definitions, uint64_t buffer_offset,
+                           ChunkID chunk_id, uint32_t tuple_key_size, uint32_t string_prefix_length,
                            ChunkOffset chunk_size);
 
   void append_table(const std::shared_ptr<const Table>& table,
                     const std::vector<SortColumnDefinition>& sort_definitions);
 
-  static std::vector<unsigned char> convert_table(const std::shared_ptr<const Table>& table,
-                                                  const std::vector<SortColumnDefinition>& sort_definitions,
-                                                  uint32_t string_prefix_length = 12);
+  static std::pair<std::vector<unsigned char>, uint64_t> convert_table(
+      const std::shared_ptr<const Table>& table, const std::vector<SortColumnDefinition>& sort_definitions,
+      uint32_t string_prefix_length = 12);
+
+  static RowIdIteratorWithEnd get_iterators(const std::vector<unsigned char>& buffer, uint64_t tuple_key_size);
 
  private:
   std::vector<unsigned char>& _buffer;
