@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  lint:
+  format_lint:
     runs-on: ubuntu-latest
     defaults:
       run:
