@@ -639,7 +639,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     tmp.emplace_back(val);
 
     if (next < end) {
-      priority_queue.push(HeapNode{.val = row_ids[next], .next = next + 1, .end = end});
+      priority_queue.push(HeapNode{.val=row_ids[next], .next=next + 1, .end=end});
     }
   }
 
