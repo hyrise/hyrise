@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -134,11 +135,10 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     const auto& soft_key_constraints = table->soft_key_constraints();
 
     // Skip already discovered UCCs.
-    if (std::any_of(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
-                    [&column_id](const auto& key_constraint) {
-                      const auto& columns = key_constraint.columns();
-                      return columns.size() == 1 && *columns.cbegin() == column_id;
-                    })) {
+    if (std::ranges::any_of(soft_key_constraints, [&column_id](const auto& key_constraint) {
+          const auto& columns = key_constraint.columns();
+          return columns.size() == 1 && *columns.cbegin() == column_id;
+        })) {
       message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
       continue;
@@ -235,7 +235,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(const std::shared_ptr
     } else {
       // Fallback: Iterate the whole segment and decode its values.
       auto distinct_value_count = distinct_values.size();
-      segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto end) {
+      segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto& end) {
         while (it != end) {
           if (it->is_null()) {
             break;

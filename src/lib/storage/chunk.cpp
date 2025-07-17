@@ -88,7 +88,7 @@ ChunkOffset Chunk::size() const {
     return ChunkOffset{0};
   }
   const auto first_segment = get_segment(ColumnID{0});
-  return static_cast<ChunkOffset>(first_segment->size());
+  return first_segment->size();
 }
 
 bool Chunk::has_mvcc_data() const {
@@ -102,7 +102,7 @@ std::shared_ptr<MvccData> Chunk::mvcc_data() const {
 std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<AbstractChunkIndex>>();
-  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result), [&](const auto& index) {
+  std::ranges::copy_if(_indexes, std::back_inserter(result), [&](const auto& index) {
     return index->is_index_for(segments);
   });
   return result;
@@ -135,7 +135,7 @@ std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(const std::v
 
 std::shared_ptr<AbstractChunkIndex> Chunk::get_index(
     const ChunkIndexType index_type, const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
-  auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
+  auto index_it = std::ranges::find_if(_indexes, [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
   });
 
@@ -149,7 +149,7 @@ std::shared_ptr<AbstractChunkIndex> Chunk::get_index(const ChunkIndexType index_
 }
 
 void Chunk::remove_index(const std::shared_ptr<AbstractChunkIndex>& index) {
-  auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
+  auto it = std::ranges::find(_indexes, index);
   DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index.");
   _indexes.erase(it);
 }
@@ -230,7 +230,7 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
 
   auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());
-  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments), [&](const auto& column_id) {
+  std::ranges::transform(column_ids, std::back_inserter(segments), [&](const auto& column_id) {
     return get_segment(column_id);
   });
   return segments;
@@ -274,7 +274,7 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
         break;
       }
 
-      segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
+      segment_with_iterators(*sorted_segment, [&](const auto& begin, const auto& end) {
         Assert(std::is_sorted(begin, end,
                               [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
                                 // is_sorted evaluates the segment by calling the lambda with the SegmentPositions at

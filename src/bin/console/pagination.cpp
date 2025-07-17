@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ncurses.h"
+#include "utils/assert.hpp"
 
 constexpr auto CURSES_CTRL_C = static_cast<uint32_t>('c') & uint32_t{31};
 
@@ -207,13 +208,14 @@ void Pagination::_print_help_screen() {
   wrefresh(help_screen);
 
   auto key_pressed = int{};
-  while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {}
+  while ((key_pressed = getch()) != 'q' && std::cmp_not_equal(key_pressed, CURSES_CTRL_C)) {}
 
   delwin(help_screen);
 }
 
 void Pagination::push_ctrl_c() {
-  ungetch(CURSES_CTRL_C);
+  const auto return_code = ungetch(CURSES_CTRL_C);
+  Assert(return_code != 0, "Unexpected result code returned from ungetch().");
 }
 
 }  // namespace hyrise
