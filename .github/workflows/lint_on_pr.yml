@@ -1,4 +1,4 @@
-name: Lint
+name: Format Lint
 
 on:
   pull_request:
@@ -30,6 +30,9 @@ jobs:
 
       - name: Make lint.sh executable
         run: chmod +x ./scripts/lint.sh
+
+      - name: Run Format
+        run: ./scripts/format.sh
 
       - name: Run lint
         run: ./scripts/lint.sh
