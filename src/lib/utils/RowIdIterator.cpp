@@ -1,8 +1,10 @@
 #include "RowIdIterator.h"
 
 namespace hyrise {
-RowIdIterator::RowIdIterator(const std::vector<unsigned char>& buffer, const uint64_t tuple_key_size)
-    : _buffer(buffer), _tuple_key_size(tuple_key_size), _current_offset(tuple_key_size - sizeof(RowID)) {}
+RowIdIterator::RowIdIterator(const std::vector<unsigned char>& buffer, const uint64_t tuple_key_size, const bool is_end)
+    : _buffer(buffer),
+      _tuple_key_size(tuple_key_size),
+      _current_offset(is_end ? buffer.size() + tuple_key_size - sizeof(RowID) : tuple_key_size - sizeof(RowID)) {}
 
 RowIdIterator::RowIdIterator(const std::vector<unsigned char>& buffer, const uint64_t tuple_key_size,
                              const uint64_t current_offset)
