@@ -48,7 +48,7 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
   using InternalType = std::remove_reference_t<decltype(*data.get())>;
   std::fill_n(data.get(), data.bytes() / sizeof(InternalType), InternalType{0});
 
-  // NOLINTNEXTLINE(modernize-use-ranges): iterator is not std::ranges-complaint.
+  // NOLINTNEXTLINE(modernize-use-ranges): iterator is not std::ranges-compliant.
   std::copy(vector.cbegin(), vector.cend(), data.begin());
 
   return std::make_unique<BitPackingVector>(std::move(data));
