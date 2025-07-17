@@ -268,7 +268,7 @@ static void DuckDBSynthetic(const bool type_is_integer) {
     const auto sort_definitions = std::vector{SortColumnDefinition{ColumnID{0}}};
     const auto [runtime_sum, runtimes] = measure_runtime(RUN_COUNT, [&]() {
       auto sort =
-          std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes);
+          std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No);
       sort->execute();
     });
 
@@ -292,7 +292,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Existing file " << FILENAME << " deleted.\n";
   }
 
-  auto out_file = std::ofstream(FILENAME);
+  auto out_file = std::ofstream{FILENAME};
   out_file << "EXPERIMENT,SCALE,ENCODING,NOTE,RUN_ID,RUNTIME_US\n";
   out_file.close();
 

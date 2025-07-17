@@ -103,7 +103,7 @@ jobs:
 
       - name: Run Hidden Benchmarks
         run: |
-          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation hidden
+          numactl -m 0 -N 0 ./${BUILD_DIR_RELEASE}/hyriseDYODEvaluation hidden &> /dev/null
           $CURL_CMD -F "file=@$BM_RESULT_FILE" -F benchmark_name=Hidden $LEADERBOARD/deliver_benchmark
           exit $EXIT_CODE
 

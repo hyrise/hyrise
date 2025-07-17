@@ -1,5 +1,6 @@
 #include "base_test.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 
@@ -47,7 +48,14 @@ TEST_P(SortTest, Sort) {
     }
   }
 
-  auto sort = Sort{input, param.sort_columns, param.output_chunk_size, param.force_materialization};
+  auto pqp_column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  for (const auto& sort_column : param.sort_columns) {
+    pqp_column_expressions.emplace_back(PQPColumnExpression::from_table(*input->get_output(), sort_column.column));
+  }
+  auto projection = std::make_shared<Projection>(input, pqp_column_expressions);
+  projection->execute();
+
+  auto sort = Sort{projection, param.sort_columns, param.output_chunk_size, param.force_materialization};
   sort.execute();
 
   const auto expected_table = load_table(std::string{"resources/test_data/tbl/sort/"} + param.expected_filename);
