@@ -614,7 +614,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   };
 
   auto heap_cmp = [&](const HeapNode& node_a, const HeapNode& node_b) {
-    //std::priority_queue is a max-heap; invert the comparator to get min-heap behavior
+    // std::priority_queue is a max-heap; invert the comparator to get min-heap behavior
     // TODO(someone): might be smart to create a second compare lambda upfront with sign switched to avoid double call
     return compare_rows(node_b.val, node_a.val);
   };
