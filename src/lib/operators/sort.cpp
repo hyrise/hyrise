@@ -336,7 +336,7 @@ int static_memcmp(std::byte* left, std::byte* right, size_t len) {
 }
 
 struct NormalizedKeyRow {
-  std::byte* key_head;
+  std::byte* key_head = nullptr;
   RowID row_id;
 
   bool less_than(const NormalizedKeyRow& other, size_t expected_size) const {
@@ -561,160 +561,110 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
   });
 }
 
-}  // namespace
-
-namespace hyrise {
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
-           const std::vector<SortColumnDefinition>& sort_definitions, const ChunkOffset output_chunk_size,
-           const ForceMaterialization force_materialization)
-    : AbstractReadOnlyOperator(OperatorType::Sort, input_operator, nullptr,
-                               std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
-      _sort_definitions(sort_definitions),
-      _output_chunk_size(output_chunk_size),
-      _force_materialization(force_materialization) {
-  DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
+auto div_ceil(const auto left, const auto right) {
+  return (left + right - 1) / right;
 }
 
-const std::vector<SortColumnDefinition>& Sort::sort_definitions() const {
-  return _sort_definitions;
+/**
+ * Select sampling size many values from the array. And sorts them accordingly.
+ */
+std::vector<NormalizedKeyRow> select_sample(const auto begin, const auto end, size_t sampling_size) {
+  const auto total_len = static_cast<size_t>(std::distance(begin, end));
+
+  Assert(total_len >= 0, "Total length must be non-negative");
+  Assert(sampling_size >= 0, "Sample size must be non-negative");
+  Assert(sampling_size <= total_len, "Cannot sample more elements than available");
+
+  auto samples = std::vector<NormalizedKeyRow>(sampling_size);
+  for (auto counter = size_t{0}; counter < sampling_size; ++counter) {
+    const auto index = (counter * (total_len - 1)) / (sampling_size - 1);
+    samples.push_back(*std::next(begin, index));
+  }
+
+  return samples;
 }
 
-const std::string& Sort::name() const {
-  static const auto name = std::string{"Sort"};
-  return name;
+void print_n_rows(const auto begin, const auto end) {
+  std::cout << std::distance(begin, end) << " Row IDs: \n";
+  for (auto it = begin; it != end; ++it) {
+    std::cout << it->row_id << " \n";
+  }
+  std::cout << "\n";
 }
 
-std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  return std::make_shared<Sort>(copied_left_input, _sort_definitions, _output_chunk_size, _force_materialization);
+int classify_value(const NormalizedKeyRow& value, const std::vector<NormalizedKeyRow>& classifiers,
+                   size_t normalized_key_size) {
+  const auto it = std::ranges::lower_bound(classifiers, value, [&](const auto& lhs, const auto& rhs) {
+    return lhs.less_than(rhs, normalized_key_size);
+  });
+  return std::distance(classifiers.begin(), it);
 }
 
-void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+/*
+template <typename It, typename ValueType>
+void ips4o_sort_recursive(It begin, It end, const std::vector<ValueType>& classifier_tree, int num_splitters,
+                          size_t normalized_key_size, size_t recursion_threshold = 32) {
+  const int num_buckets = num_splitters + 1;
+  std::vector<std::vector<ValueType>> buckets(num_buckets);
+  // Classify each value into a bucket based on the classifier tree.
+  for (It it = begin; it != end; ++it) {
+    int bucket = classify_value(*it, classifier_tree, num_splitters, normalized_key_size);
+    std::cout << "Row " << it->row_id << " → bucket " << bucket << std::endl;
+    buckets[bucket].push_back(*it);
+  }
 
-template <typename It, typename RNG>
-void selectSample(It begin, It end, int sample_size, RNG& gen,
-                  typename std::iterator_traits<It>::difference_type total_len) {
-
-    using Diff = typename std::iterator_traits<It>::difference_type;
-
-      Assert(total_len >= 0, "Total length must be non-negative");
-      Assert(sample_size >= 0, "Sample size must be non-negative");
-      Assert(sample_size <= total_len, "Cannot sample more elements than available");
-
-      It current = begin;
-      Diff remaining_len = total_len;
-      std::uniform_int_distribution<Diff> dist; // Distribution for random indices
-      using std::swap;
-
-        for (int i = 0; i < sample_size; ++i) {
-            dist.param(typename decltype(dist)::param_type(0, remaining_len - 1));
-            Diff random_index = dist(gen);
-
-            It target_it = std::next(begin, random_index);
-
-            // Swap the randomly selected element to the front of the range to form the sample
-            swap(*current, *target_it);
-
-            ++current;
-            --remaining_len;
-        }
-}
-
-template <typename It>
-void printNRows(It begin, int n) {
-    std::cout << n << " Row IDs: "<< std::endl;
-    for (int i = 0; i < n; ++i) {
-        std::cout << (begin + i)->row_id << " "<< std::endl;
+  // Sort each bucket individually.
+  for (auto& bucket : buckets) {
+    if (bucket.size() > recursion_threshold) {
+      // Recursive sort
+      ips4o_sort_recursive(bucket.begin(), bucket.end(), classifier_tree, num_splitters, normalized_key_size);
+    } else {
+      // Fallback to std::sort for small buckets
+      std::sort(bucket.begin(), bucket.end(), [&](const auto& a, const auto& b) {
+        return a.less_than(b, normalized_key_size);
+      });
     }
-    std::cout << std::endl;
-}
-
-template <typename It>
-std::vector<typename std::iterator_traits<It>::value_type> getSplitters(It begin, int sample_size, int num_buckets) {
-
-  Assert(sample_size >= num_buckets - 1, "Sample size must be at least (num_buckets - 1)");
-  Assert(num_buckets > 1, "Number of buckets must be greater than 1");  
-
-  using ValueType = typename std::iterator_traits<It>::value_type;
-    std::vector<ValueType> splitters;
-    splitters.reserve(num_buckets - 1);
-    // Select splitters evenly spaced across the sampled elements
-    for (int i = 1; i < num_buckets; ++i) {
-        int idx = i * sample_size / num_buckets;
-        splitters.push_back(*(begin + idx));
+  }
+  // Naive approach: Copy sorted buckets back to the original range.
+  // This can be optimized further by using a more efficient merging strategy.
+  It out_it = begin;
+  for (const auto& bucket : buckets) {
+    for (const auto& val : bucket) {
+      *out_it++ = val;
     }
-
-    return splitters;
-}
-template <typename ValueType>
-void build_classifier_tree(const ValueType* left, const ValueType* right,
-                           std::vector<ValueType>& tree, int pos) {
-
-  Assert(pos < static_cast<int>(tree.size()), "build_classifier_tree: tree position out of bounds");
-  if (left >= right) return;
-  
-  const ValueType* mid = left + (right - left) / 2;
-  tree[pos] = *mid;
-
-  
-  if (2 * pos < static_cast<int>(tree.size())) {
-    build_classifier_tree(left, mid, tree, 2 * pos);
-    build_classifier_tree(mid + 1, right, tree, 2 * pos + 1);
   }
 }
 
-template <typename ValueType>
-int classify_value(const ValueType& value, const std::vector<ValueType>& tree,
-                   int num_splitters, size_t normalized_key_size) {
-    int pos = 1; 
-    while (2 * pos < static_cast<int>(tree.size())) {
-        if (value.less_than(tree[pos], normalized_key_size)) {
-            pos = 2 * pos;
-        } else {
-            pos = 2 * pos + 1;
-        }
-    }
-    const int bucket_index = pos - (1 << static_cast<int>(std::log2(num_splitters + 1)));
-    return std::max(0, std::min(bucket_index, num_splitters));
-}
+*/
 
-template <typename It, typename ValueType>
-void ips4o_sort_recursive(It begin, It end, 
-                          const std::vector<ValueType>& classifier_tree,
-                          int num_splitters, size_t normalized_key_size,
-                          size_t recursion_threshold = 32 ) {
-
-    const int num_buckets = num_splitters + 1;
-    std::vector<std::vector<ValueType>> buckets(num_buckets);
-    // Classify each value into a bucket based on the classifier tree.
-    for (It it = begin; it != end; ++it) {
-        int bucket = classify_value(*it, classifier_tree, num_splitters, normalized_key_size);
-        std::cout << "Row " << it->row_id << " → bucket " << bucket << std::endl;
-        buckets[bucket].push_back(*it);
-    }
-    
-    // Sort each bucket individually.
+struct Ip4soLocalStorage {
+  explicit Ip4soLocalStorage(const Sort::Config config) : buckets(config.sampling_size + 1) {
     for (auto& bucket : buckets) {
-        if (bucket.size() > recursion_threshold) {
-            // Recursive sort
-            ips4o_sort_recursive(bucket.begin(), bucket.end(), classifier_tree, num_splitters, normalized_key_size);
-        } else {
-            // Fallback to std::sort for small buckets
-            std::sort(bucket.begin(), bucket.end(), [&](const auto& a, const auto& b) {
-                return a.less_than(b, normalized_key_size);
-            });
-        }
+      bucket.reserve(config.block_size);
     }
-    // Naive approach: Copy sorted buckets back to the original range.
-    // This can be optimized further by using a more efficient merging strategy.
-    It out_it = begin;
-    for (const auto& bucket : buckets) {
-        for (const auto& val : bucket) {
-            *out_it++ = val;
-        }
+  }
+
+  std::vector<std::vector<NormalizedKeyRow>> buckets;
+};
+
+/**
+ * Classifies all elements to its correct bucket (see classify value). A bucket contains at most block many elements. A full bucket is written back to the input array.
+ */
+auto ip4so_classification(auto begin, const auto end, const std::vector<NormalizedKeyRow>& classifiers,
+                          Ip4soLocalStorage& local_storage, size_t normalized_key_size, const Sort::Config config) {
+  for (const auto& key : std::ranges::subrange(begin, end)) {
+    const auto bucket_index = classify_value(key, classifiers, normalized_key_size);
+    DebugAssert(bucket_index < local_storage.buckets.size(), "Bucket index out of range");
+    auto& bucket = local_storage.buckets[bucket_index];
+    bucket.push_back(key);
+    DebugAssert(bucket.size() <= config.block_size, "Bucket oversized");
+    if (bucket.size() == config.block_size) {
+      std::ranges::copy(bucket, begin);
+      begin = std::next(begin, bucket.size());
+      bucket.clear();
     }
+  }
+  return begin;
 }
 
 /**
@@ -731,70 +681,92 @@ void ips4o_sort_recursive(It begin, It end,
  * TODO: Fix Implementation
  * TODO: Optimization
  */
-template <class It>
-void ips4oSort(It begin, It end, size_t normalized_key_size) {
-  using Diff = typename std::iterator_traits<It>::difference_type;
+void ip4so_sort(const auto begin, const auto end, size_t normalized_key_size, const Sort::Config config) {
+  const auto total_len = static_cast<size_t>(std::distance(begin, end));
+  if (total_len <= 1)
+    return;
 
-    Diff total_len = std::distance(begin, end);
-    if (total_len <= 1) return;
+  // Determine the bucket size dynamically based on the total length of the data.
+  // Currently, bucket size is set to the square root of total_len, which provides a balance
+  // between the number of buckets and the input.
+  // Usually the bucket size is a power of 2.
+  //
+  // The oversampling factor is set to 2, meaning we sample twice as many elements as the number of buckets.
+  // Typically, this oversampling factor is between 16 and 32 to ensure good splitter selection.
+  //
+  // The sample size is calculated as the minimum of:
+  //   - oversampling factor * (num_buckets - 1), which ensures enough samples for splitter selection, and
+  //   - total_len / 2, which avoids overly large samples for small datasets.
 
-    // Determine the bucket size dynamically based on the total length of the data.
-    // Currently, bucket size is set to the square root of total_len, which provides a balance
-    // between the number of buckets and the input.
-    // Usually the bucket size is a power of 2.
-    //
-    // The oversampling factor is set to 2, meaning we sample twice as many elements as the number of buckets.
-    // Typically, this oversampling factor is between 16 and 32 to ensure good splitter selection.
-    //
-    // The sample size is calculated as the minimum of:
-    //   - oversampling factor * (num_buckets - 1), which ensures enough samples for splitter selection, and
-    //   - total_len / 2, which avoids overly large samples for small datasets.
+  const auto num_blocks = div_ceil(total_len, config.block_size);
+  const auto num_buckets = config.sampling_size + 1;
+  const auto sampling_size = config.sampling_size;
 
-    const auto num_buckets = static_cast<int>(std::floor(std::sqrt(static_cast<double>(total_len))));
-    const auto oversampling_factor = 2;
-    const int sample_size = std::min(
-      static_cast<int>(oversampling_factor * (num_buckets - 1)),
-      static_cast<int>(total_len / 2)
-    );
-    std::mt19937 gen(std::random_device{}());
+  std::cout << "Total_len: " << total_len << '\n'
+            << "Buckets: " << num_buckets << '\n'
+            << "Sample_size: " << sampling_size << '\n'
+            << "normalized_key_size: " << normalized_key_size << '\n';
 
-    std::cout << "Total_len: " << total_len << std::endl
-              << "Buckets: " << num_buckets << std::endl
-              << "Sample_size: " << sample_size << std::endl
-              << "normalized_key_size: " << normalized_key_size << std::endl;
+  // Sample the input range to select splitters.
+  auto splitters = select_sample(begin, end, sampling_size);
+  boost::sort::pdqsort(splitters.begin(), splitters.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs.less_than(rhs, normalized_key_size);
+  });
 
-    // Sample the input range to select splitters.
-    selectSample(begin, end, sample_size, gen, total_len);
-            
-    using ValueType = typename std::iterator_traits<It>::value_type;
+  std::cout << "Number of splitters: " << splitters.size() << "\n";
+  std::cout << "Splitters: \n";
+  print_n_rows(splitters.begin(), splitters.end());
 
-      // Get the splitters from the sampled range.
-      std::vector<ValueType> splitters = getSplitters(begin, sample_size, num_buckets);
-      int num_splitters = static_cast<int>(splitters.size());
+  const auto blocks_per_stripe = std::max(div_ceil(num_blocks, config.max_parallelism), config.min_blocks_per_stripe);
+  const auto num_stripes = div_ceil(num_blocks, blocks_per_stripe);
+  auto stripe_local_storage = std::vector(num_stripes, Ip4soLocalStorage(config));
+  for (auto stripe = size_t{0}; stripe < num_stripes; ++stripe) {
+    const auto begin_index = stripe * blocks_per_stripe * config.block_size;
+    const auto end_index = std::min((stripe + 1) * blocks_per_stripe * config.block_size, total_len);
+    DebugAssert(begin_index < end_index, "Invalid indicies");
+    DebugAssert(begin_index < total_len, "Begin index out of total length");
+    DebugAssert(end_index < total_len, "End index out of total length");
 
-      // Sort the splitters based on their normalized keys.
-      std::sort(splitters.begin(), splitters.end(),
-            [&](const auto& lhs, const auto& rhs) {
-              return lhs.less_than(rhs, normalized_key_size);
-            });
-
-      std::cout << "Number of splitters: " << num_splitters << std::endl;
-      std::cout << "Splitters: " << std::endl;
-      printNRows(splitters.begin(), num_splitters);
-
-
-      // Allocate enough space for the binary tree
-      const auto tree_size = 2 * num_splitters + 2; 
-      std::cout << "tree_size: " << tree_size << std::endl;
-
-      std::vector<ValueType> classifier_tree(tree_size);
-
-      // Build the classifier tree from the splitters.
-      build_classifier_tree(splitters.data(), splitters.data() + num_splitters, classifier_tree, 1);
-
-      // Recursively sort the input range using the classifier tree.
-      ips4o_sort_recursive(begin, end, classifier_tree, num_splitters, normalized_key_size, 32 /*recursion_threshold*/);
+    const auto stripe_begin = std::next(begin, begin_index);
+    const auto stripe_end = std::next(begin, end_index);
+    ip4so_classification(stripe_begin, stripe_end, splitters, stripe_local_storage[stripe], normalized_key_size,
+                         config);
+  }
 }
+
+}  // namespace
+
+namespace hyrise {
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
+           const std::vector<SortColumnDefinition>& sort_definitions, const ChunkOffset output_chunk_size,
+           const ForceMaterialization force_materialization, const Config config)
+    : AbstractReadOnlyOperator(OperatorType::Sort, input_operator, nullptr,
+                               std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
+      _sort_definitions(sort_definitions),
+      _output_chunk_size(output_chunk_size),
+      _force_materialization(force_materialization),
+      _config(config) {
+  DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
+}
+
+const std::vector<SortColumnDefinition>& Sort::sort_definitions() const {
+  return _sort_definitions;
+}
+
+const std::string& Sort::name() const {
+  static const auto name = std::string{"Sort"};
+  return name;
+}
+
+std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
+  return std::make_shared<Sort>(copied_left_input, _sort_definitions, _output_chunk_size, _force_materialization,
+                                _config);
+}
+
+void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT("sort", "execute");
@@ -967,7 +939,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   TRACE_EVENT_BEGIN("sort", "sort");
   // IN PROGRESS
-  ips4oSort(materialized_rows.begin(), materialized_rows.end(), normalized_key_size);
+  ip4so_sort(materialized_rows.begin(), materialized_rows.end(), normalized_key_size, _config);
   /*std::sort(materialized_rows.begin(), materialized_rows.end(),
             [&](const auto& lhs, const auto& rhs) {
               return lhs.less_than(rhs, normalized_key_size);
@@ -1095,5 +1067,11 @@ void perfetto_run(const std::shared_ptr<const Table>& input_table,
 #endif
   }
 }
+
+Sort::Config::Config()
+    : max_parallelism(std::thread::hardware_concurrency()),
+      block_size(128),
+      sampling_size(31),
+      min_blocks_per_stripe(32) {}
 
 }  // namespace hyrise
