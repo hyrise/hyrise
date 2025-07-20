@@ -600,43 +600,6 @@ size_t classify_value(const NormalizedKeyRow& value, const std::vector<Normalize
   return std::distance(classifiers.begin(), it);
 }
 
-/*
-template <typename It, typename ValueType>
-void ips4o_sort_recursive(It begin, It end, const std::vector<ValueType>& classifier_tree, int num_splitters,
-                          size_t normalized_key_size, size_t recursion_threshold = 32) {
-  const int num_buckets = num_splitters + 1;
-  std::vector<std::vector<ValueType>> buckets(num_buckets);
-  // Classify each value into a bucket based on the classifier tree.
-  for (It it = begin; it != end; ++it) {
-    int bucket = classify_value(*it, classifier_tree, num_splitters, normalized_key_size);
-    std::cout << "Row " << it->row_id << " → bucket " << bucket << std::endl;
-    buckets[bucket].push_back(*it);
-  }
-
-  // Sort each bucket individually.
-  for (auto& bucket : buckets) {
-    if (bucket.size() > recursion_threshold) {
-      // Recursive sort
-      ips4o_sort_recursive(bucket.begin(), bucket.end(), classifier_tree, num_splitters, normalized_key_size);
-    } else {
-      // Fallback to std::sort for small buckets
-      std::sort(bucket.begin(), bucket.end(), [&](const auto& a, const auto& b) {
-        return a.less_than(b, normalized_key_size);
-      });
-    }
-  }
-  // Naive approach: Copy sorted buckets back to the original range.
-  // This can be optimized further by using a more efficient merging strategy.
-  It out_it = begin;
-  for (const auto& bucket : buckets) {
-    for (const auto& val : bucket) {
-      *out_it++ = val;
-    }
-  }
-}
-
-*/
-
 namespace ip4so {
 
 struct StripeLocalStorage {
@@ -693,7 +656,7 @@ void classify_stripe(const auto range, const std::vector<NormalizedKeyRow>& clas
  * is in.
  */
 void fix_buckets_crossing_stripes(const auto& full_range, const std::vector<StripeLocalStorage>& stripes,
-                                  const size_t stripe_index, std::vector<size_t>& read_pointers,
+                                  const size_t stripe_index, std::vector<std::atomic<int64_t>>& read_pointers,
                                   const std::vector<size_t>& bucket_delimiter, const Sort::Config& config) {
   DebugAssert(stripes.size() > 1, "Should run on multiple process or fallback to pdqsort");
   const auto num_buckets = bucket_delimiter.size() - 1;  // The delimiter contains also an initial 0.
@@ -738,10 +701,13 @@ void fix_buckets_crossing_stripes(const auto& full_range, const std::vector<Stri
         last_full_block_start -= config.block_size;
       }
       if (num_blocks_to_move <= num_blocks_next_stripe) {
-        read_pointers[last_bucket_index - 1] = last_full_block_start;
+        read_pointers[last_bucket_index - 1].store(static_cast<int64_t>(last_full_block_start),
+                                                   std::memory_order_relaxed);
       } else {
-        read_pointers[last_bucket_index - 1] =
-            stripe.begin_index + (stripe.num_written_blocks + num_blocks_to_move - 1) * config.block_size;
+        read_pointers[last_bucket_index - 1].store(
+            static_cast<int64_t>(stripe.begin_index +
+                                 ((stripe.num_written_blocks + num_blocks_to_move - 1) * config.block_size)),
+            std::memory_order_relaxed);
       }
     } else {
       // The bucket stretches above multiple chunks. To avoid race conditions
@@ -752,22 +718,81 @@ void fix_buckets_crossing_stripes(const auto& full_range, const std::vector<Stri
 
   const auto first_bucket_iter = std::ranges::lower_bound(bucket_delimiter, stripe.begin_index);
   const auto first_bucket_index = static_cast<size_t>(std::distance(bucket_delimiter.begin(), first_bucket_iter));
+  DebugAssert(first_bucket_index, "First bucket index should never be 0");
   for (auto bucket_index = first_bucket_index;
        bucket_index <= num_buckets && bucket_delimiter[bucket_index] <= stripe.end_index; ++bucket_index) {
     // Initialize the read and write pointer for all non crossing buckets in this stripe.
     const auto previous_block = div_ceil(bucket_delimiter[bucket_index], config.block_size) - 1;
     const auto previous_block_end = previous_block * config.block_size;
-    read_pointers[bucket_index - 1] = previous_block_end;
+    read_pointers[bucket_index - 1].store(static_cast<int64_t>(previous_block_end), std::memory_order_relaxed);
   }
 }
 
 /**
  * Move blocks into the correct bucket.
  */
-void block_permutation(const std::vector<StripeLocalStorage>& stripes, const size_t stripe_index,
-                       std::vector<size_t>& write_pointers, std::vector<size_t>& read_pointers,
-                       const std::vector<size_t>& bucket_size_prefix_sum) {
-  // TODO(ro)
+void block_permutation(const auto begin, size_t initial_bucket_index, const std::vector<NormalizedKeyRow>& classifiers,
+                       std::vector<std::atomic<int64_t>>& write_pointers,
+                       std::vector<std::atomic<int64_t>>& read_pointers,
+                       std::vector<std::atomic<int64_t>>& pending_reads, size_t normalized_key_size,
+                       const Sort::Config& config) {
+  const auto block_ssize = static_cast<int64_t>(config.block_size);
+  DebugAssert(write_pointers.size() == read_pointers.size(),
+              "Each bucket should contains one read and one write pointer");
+  DebugAssert(write_pointers.size() == pending_reads.size(), "Each bucket should track pending reads");
+  const auto num_buckets = write_pointers.size();
+  auto move_buffer = std::vector<NormalizedKeyRow>(config.block_size);
+  auto tmp_buffer = std::vector<NormalizedKeyRow>(config.block_size);
+
+  // Cycle through all buckets. Break after one cycle is complete.
+  bool initial_bucket = true;
+  for (auto bucket_index = initial_bucket_index; bucket_index != initial_bucket_index && !initial_bucket;
+       bucket_index = (bucket_index + 1) % num_buckets, initial_bucket = false) {
+    auto& read_pointer = read_pointers[bucket_index];
+    auto& write_pointer = write_pointers[bucket_index];
+    auto& pending_read_counter = pending_reads[bucket_index];
+
+    // Repeat until the read pointer is before the write pointer.
+    while (write_pointer.load(std::memory_order_relaxed) <= read_pointer.load(std::memory_order_relaxed)) {
+      // Try to read an unprocessed block into the primary bucket.
+      pending_read_counter.fetch_add(1, std::memory_order_relaxed);
+      const auto unprocessed_block_index = read_pointer.fetch_sub(block_ssize, std::memory_order_relaxed);
+      if (write_pointer.load(std::memory_order_relaxed) > unprocessed_block_index) {
+        pending_read_counter.fetch_sub(1, std::memory_order_relaxed);
+        continue;
+      }
+
+      const auto unprocessed_block_begin = std::next(begin, unprocessed_block_index);
+      const auto unprocessed_block_end = std::next(unprocessed_block_begin, config.block_size);
+      std::copy(unprocessed_block_begin, unprocessed_block_end, move_buffer.begin());
+      pending_read_counter.fetch_sub(1, std::memory_order_relaxed);  // Mark the read as complete
+
+      // Repeat until the first swap buffer is empty.
+      while (true) {
+        // Classify block
+        const auto dest_bucket_index = classify_value(move_buffer[0], classifiers, normalized_key_size);
+        DebugAssert(dest_bucket_index < read_pointers.size(), "Bucket index out of bounds");
+
+        auto& dest_read_pointer = read_pointers[dest_bucket_index];
+        auto& dest_write_pointer = write_pointers[dest_bucket_index];
+        auto& dest_pending_read_counter = pending_reads[dest_bucket_index];
+
+        const auto write_index = dest_write_pointer.fetch_add(block_ssize);
+        const auto dest_block_begin = std::next(begin, write_index);
+        const auto dest_block_end = std::next(dest_block_begin, config.block_size);
+        if (write_index <= dest_read_pointer.load(std::memory_order_relaxed)) {
+          std::copy(dest_block_begin, dest_block_end, tmp_buffer.begin());
+          std::copy(move_buffer.begin(), move_buffer.end(), dest_block_begin);
+          std::swap(move_buffer, tmp_buffer);
+        } else {
+          // Wait until all pending reads are complete.
+          while (dest_pending_read_counter.load(std::memory_order_relaxed) != 0) {}
+          std::copy(move_buffer.begin(), move_buffer.end(), dest_block_begin);
+          break;
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -871,18 +896,10 @@ void sort(auto begin, const auto end, size_t normalized_key_size, const Sort::Co
   }
   delimiter[num_buckets] = total_len;
 
-  auto write_pointers = std::vector<size_t>(num_buckets);
-  auto read_pointers = std::vector<size_t>(num_buckets);
-  auto bucket_index = size_t{0};
-  for (auto stripe_index = size_t{0}; stripe_index < num_stripes; ++stripe_index) {
-    const auto stripe_begin_index = stripe_local_storage[stripe_index].begin_index;
-    const auto stripe_end_index = stripe_local_storage[stripe_index].end_index;
-    const auto stripe_written_blocks = stripe_local_storage[stripe_index].num_written_blocks;
-    for (; bucket_index < num_buckets && stripe_end_index <= aggregated_bucket_sizes[bucket_index]; ++bucket_index) {
-      write_pointers[bucket_index] = delimiter[bucket_index];
-      const auto stripe_first_empty_block = stripe_begin_index + (stripe_written_blocks * config.block_size);
-      read_pointers[bucket_index] = std::min(stripe_first_empty_block, delimiter[bucket_index + 1]);
-    }
+  auto write_pointers = std::vector<std::atomic<int64_t>>(num_buckets);
+  auto read_pointers = std::vector<std::atomic<int64_t>>(num_buckets);
+  for (auto bucket_index = size_t{0}; bucket_index < num_buckets; ++bucket_index) {
+    write_pointers[bucket_index].store(static_cast<int64_t>(delimiter[bucket_index]), std::memory_order_relaxed);
   }
   TRACE_EVENT_END("sort");
 
@@ -895,9 +912,10 @@ void sort(auto begin, const auto end, size_t normalized_key_size, const Sort::Co
   TRACE_EVENT_END("sort");
 
   TRACE_EVENT_BEGIN("sort", "ip4so block permutations");
-  for (auto stripe_index = size_t{0}; stripe_index < num_stripes; ++stripe_index) {
+  for (auto task_index = size_t{0}; task_index < std::min(num_stripes, num_buckets); ++task_index) {
     TRACE_EVENT("sort", "ip4so block permutation", "stripe", stripe_index);
-    block_permutation(stripe_local_storage, stripe_index, write_pointers, read_pointers, aggregated_bucket_sizes);
+    const auto inital_bucket_index = task_index;
+    block_permutation(inital_bucket_index, write_pointers, read_pointers, delimiter, config);
   }
   TRACE_EVENT_END("sort");
 
