@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "ncurses.h"
@@ -47,7 +48,7 @@ void Pagination::display() {
   _print_page(current_line, current_column);
 
   auto key_pressed = int{};
-  while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {
+  while ((key_pressed = getch()) != 'q' && std::cmp_not_equal(key_pressed, CURSES_CTRL_C)) {
     switch (key_pressed) {
       case 'j':
       case KEY_DOWN: {
