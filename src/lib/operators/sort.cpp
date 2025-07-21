@@ -625,19 +625,20 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto* dst = &work_buffer;
 
   //  Merging Step
-  //  Width 1 here means merging two single chunks. Width 2 means merging two partitions of 2 chunks each, etc.
-  for (auto width = size_t{1}; width <= runs.size(); width <<= 1u) {
+  //  Width 1 here means merging single chunks. Width 2 means merging partitions of 2 chunks each, etc.
+  auto width = size_t{1};
+
+  while (runs.size() > 1) {
     //  one Job per run pair, basically a generic ceil(number of runs * 1/2)
     auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     merge_jobs.reserve((runs.size() + (width << 1u) - 1u) / (width << 1u));
 
     for (auto index = size_t{0}; index + width < runs.size(); index += width << 1u) {
       //  schedule merging of two partitions
-
       const auto left_part = runs[index];
       const auto right_part = runs[index + width];
 
-      merge_jobs.emplace_back(std::make_shared<JobTask>([&] {
+      merge_jobs.emplace_back(std::make_shared<JobTask>([&, left_part, right_part] {
         std::merge(src->begin() + left_part.begin, src->begin() + left_part.end, src->begin() + right_part.begin,
                    src->begin() + right_part.end, dst->begin() + left_part.begin, compare_rows);
       }));
@@ -662,6 +663,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       next_runs.emplace_back(Run{begin, end});
     }
     runs.swap(next_runs);
+
+    //  (width * 2)
+    width <<= 1u;
   }
 
   auto& sorted_row_ids = *src;
