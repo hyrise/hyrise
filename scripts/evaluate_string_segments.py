@@ -18,7 +18,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-DEFAULT_ENCODINGS = ["Unencoded", "Dictionary", "RunLength", "FixedStringDictionary", "LZ4"]
+DEFAULT_ENCODINGS = ["Unencoded", "Dictionary", "RunLength", "FixedStringDictionary"]
 
 
 def print_error(*args, **kwargs) -> None:
@@ -242,6 +242,7 @@ def plot_stats(
 def plot_query_timings(
     stats: list[Runtimes], *, benchmark_name: str, path: str, figsize: tuple[int, int] = (30, 10)
 ) -> None:
+    print(path)
     stats = [stat for stat in stats if stat.threading == "ST"]
     grouped: dict[str, list[Runtimes]] = Evaluation.group_by(stats, "encoding")
     stats_grouped_by_encoding = {
