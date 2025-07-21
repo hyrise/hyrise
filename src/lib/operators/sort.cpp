@@ -484,12 +484,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   };
 
   // job queue for generating keys in parallel
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(static_cast<size_t>(chunk_count));
+  auto keygen_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  keygen_jobs.reserve(static_cast<size_t>(chunk_count));
   // for each chunk in table
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // spawn thread to generate keys
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+    keygen_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
       auto chunk = input_table->get_chunk(chunk_id);
 
       // buffer points to the start of this chunk's keys in the global key_buffer
@@ -594,57 +594,79 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       // TODO(someone): use better sorting algorithm, e.g. merge sort
       boost::sort::pdqsort(row_ids.begin() + chunk_start, row_ids.begin() + chunk_start + chunk_size, compare_rows);
     }));
-    jobs.back()->schedule();  // schedule job immediately
+    keygen_jobs.back()->schedule();  // schedule job immediately
   }  // end of chunk iteration
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);  // wait for all chunks to be materialized
+  Hyrise::get().scheduler()->wait_for_tasks(keygen_jobs);  // wait for all chunks to be materialized
   auto key_generation_and_sorting_time = timer.lap();
 
   /**************************************************************************************************************
    ************************************************** Merging ***************************************************
    **************************************************************************************************************/
 
-  // TODO(someone): use a multi-threaded approach for merging as well
-  // Naivë sequential k-way heap merge - replace with e.g. Merge-Path partitioning
+  //  Prepare first round or runs of chunks [A][B][C][D]->[AB][CD]
+  struct Run {
+    size_t begin;
+    size_t end;
+  };  // [begin,end)
 
-  struct HeapNode {
-    RowID val;
-    size_t next;  // index of next element in the original partition
-    size_t end;   // one-past-end index of the run
-  };
-
-  auto heap_cmp = [&](const HeapNode& node_a, const HeapNode& node_b) {
-    // std::priority_queue is a max-heap; invert the comparator to get min-heap behavior
-    // TODO(someone): might be smart to create a second compare lambda upfront with sign switched to avoid double call
-    return compare_rows(node_b.val, node_a.val);
-  };
-
-  auto priority_queue = std::priority_queue<HeapNode, std::vector<HeapNode>, decltype(heap_cmp)>{heap_cmp};
-
-  auto sorted_row_ids = RowIDPosList{};
-  sorted_row_ids.reserve(row_count);
+  auto runs = std::vector<Run>{};
+  runs.reserve(chunk_count);
 
   for (auto index = size_t{0}; index < chunk_count; ++index) {
     const auto begin = row_id_offsets[index];
     const auto end = begin + chunk_sizes[index];
-    if (begin < end) {
-      priority_queue.emplace(row_ids[begin], begin + 1, end);
-    }
+    runs.emplace_back(Run{begin, end});
   }
 
-  while (!priority_queue.empty()) {
-    const auto [val, next, end] = priority_queue.top();
-    priority_queue.pop();
+  auto work_buffer = RowIDPosList{};
+  work_buffer.resize(row_count);
+  auto* src = &row_ids;
+  auto* dst = &work_buffer;
 
-    sorted_row_ids.emplace_back(val);
+  //  Merging Step
+  //  Width 1 here means merging two single chunks. Width 2 means merging two partitions of 2 chunks each, etc.
+  for (auto width = size_t{1}; width <= runs.size(); width <<= 1u) {
+    //  one Job per run pair, basically a generic ceil(number of runs * 1/2)
+    auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    merge_jobs.reserve((runs.size() + (width << 1u) - 1u) / (width << 1u));
 
-    if (next < end) {
-      priority_queue.emplace(row_ids[next], next + 1, end);
+    for (auto index = size_t{0}; index + width < runs.size(); index += width << 1u) {
+      //  schedule merging of two partitions
+
+      const auto left_part = runs[index];
+      const auto right_part = runs[index + width];
+
+      merge_jobs.emplace_back(std::make_shared<JobTask>([&] {
+        std::merge(src->begin() + left_part.begin, src->begin() + left_part.end, src->begin() + right_part.begin,
+                   src->begin() + right_part.end, dst->begin() + left_part.begin, compare_rows);
+      }));
+      merge_jobs.back()->schedule();
     }
+
+    //  odd tail, copy unchanged
+    if ((runs.size() / width) & 1u) {
+      const auto tail = runs.back();
+      std::copy(src->begin() + tail.begin, src->begin() + tail.end, dst->begin() + tail.begin);
+    }
+
+    Hyrise::get().scheduler()->wait_for_tasks(merge_jobs);
+    std::swap(src, dst);
+
+    //  rebuild runs for the next pass (width * 2)
+    auto next_runs = std::vector<Run>{};
+    next_runs.reserve((runs.size() + (width << 1u) - 1u) / (width << 1u));
+    for (auto idx = size_t{0}; idx < runs.size(); idx += width << 1u) {
+      const auto begin = runs[idx].begin;
+      const auto end = (idx + width < runs.size()) ? runs[idx + width].end : runs[idx].end;
+      next_runs.emplace_back(Run{begin, end});
+    }
+    runs.swap(next_runs);
   }
+
+  auto& sorted_row_ids = *src;
 
   assert(sorted_row_ids.size() == row_ids.size() && "We lost a comrade along the way");
-
   auto merge_sort_time = timer.lap();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
