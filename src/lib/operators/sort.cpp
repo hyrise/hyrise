@@ -343,6 +343,8 @@ struct NormalizedKeyRow {
     if (expected_size == 0) {
       return false;
     }
+    DebugAssert(key_head, "NormalizedKey is not valid");
+    DebugAssert(other.key_head, "NormalizedKey is not valid");
     return static_memcmp<1, 32>(key_head, other.key_head, expected_size) < 0;
   }
 };
@@ -565,6 +567,12 @@ auto div_ceil(const auto left, const auto right) {
   return (left + right - 1) / right;
 }
 
+auto next_multiple(const auto value, const auto multiple) {
+  return div_ceil(value, multiple) * multiple;
+}
+
+namespace ip4so {
+
 /**
  * Select sampling size many values from the array. And sorts them accordingly.
  */
@@ -576,20 +584,23 @@ std::vector<NormalizedKeyRow> select_sample(const auto begin, const auto end, si
   Assert(sampling_size <= total_len, "Cannot sample more elements than available");
 
   auto samples = std::vector<NormalizedKeyRow>(sampling_size);
-  for (auto counter = size_t{0}; counter < sampling_size; ++counter) {
+  samples[0] = *begin;
+  for (auto counter = size_t{1}; counter < sampling_size; ++counter) {
     const auto index = (counter * (total_len - 1)) / (sampling_size - 1);
-    samples.push_back(*std::next(begin, index));
+    samples[index] = *std::next(begin, index);
   }
 
   return samples;
 }
 
-void print_n_rows(const auto begin, const auto end) {
-  std::cout << std::distance(begin, end) << " Row IDs: \n";
-  for (auto it = begin; it != end; ++it) {
-    std::cout << it->row_id << " \n";
+void debug_print_keys(const auto& name, const auto range) {
+  if constexpr (HYRISE_DEBUG) {
+    std::cout << name << " ";
+    for (const auto& row : range) {
+      std::cout << std::hex << "0x" << static_cast<int32_t>(row.key_head[0]) << " ";
+    }
+    std::cout << "\n";
   }
-  std::cout << "\n";
 }
 
 size_t classify_value(const NormalizedKeyRow& value, const std::vector<NormalizedKeyRow>& classifiers,
@@ -599,8 +610,6 @@ size_t classify_value(const NormalizedKeyRow& value, const std::vector<Normalize
   });
   return std::distance(classifiers.begin(), it);
 }
-
-namespace ip4so {
 
 struct StripeLocalStorage {
   explicit StripeLocalStorage(const Sort::Config config)
@@ -614,9 +623,9 @@ struct StripeLocalStorage {
     DebugAssert(begin_index < end_index, "Stripe should contain at least one element");
     const auto dist = static_cast<size_t>(std::distance(begin, end));
     DebugAssert(begin_index < dist, "Begin index out of range");
-    DebugAssert(end_index < dist, "Begin index out of range");
+    DebugAssert(end_index <= dist, "End index out of range");
     const auto stripe_begin = std::next(begin, begin_index);
-    const auto stripe_end = std::next(end, end_index);
+    const auto stripe_end = std::next(begin, end_index);
     return std::ranges::subrange(stripe_begin, stripe_end);
   }
 
@@ -718,7 +727,7 @@ void fix_buckets_crossing_stripes(const auto& full_range, const std::vector<Stri
 
   const auto first_bucket_iter = std::ranges::lower_bound(bucket_delimiter, stripe.begin_index);
   const auto first_bucket_index = static_cast<size_t>(std::distance(bucket_delimiter.begin(), first_bucket_iter));
-  DebugAssert(first_bucket_index, "First bucket index should never be 0");
+  // DebugAssert(first_bucket_index > 0, "First bucket index should never be 0");
   for (auto bucket_index = first_bucket_index;
        bucket_index <= num_buckets && bucket_delimiter[bucket_index] <= stripe.end_index; ++bucket_index) {
     // Initialize the read and write pointer for all non crossing buckets in this stripe.
@@ -844,19 +853,18 @@ void sort(auto begin, const auto end, size_t normalized_key_size, const Sort::Co
   TRACE_EVENT_END("sort", "sampling");
 
   std::cout << "Number of splitters: " << splitters.size() << "\n";
-  std::cout << "Splitters: \n";
-  print_n_rows(splitters.begin(), splitters.end());
+  debug_print_keys("splitters", splitters);
 
   // Calculate stripe ranges.
-  const auto blocks_per_stripe = std::max(div_ceil(num_blocks, config.max_parallelism), config.min_blocks_per_stripe);
-  const auto num_stripes = div_ceil(num_blocks, blocks_per_stripe);
+  const auto num_stripes = std::min(config.max_parallelism, div_ceil(num_blocks, config.min_blocks_per_stripe));
+  const auto blocks_per_stripe = div_ceil(num_blocks, num_stripes);
   auto stripe_local_storage = std::vector(num_stripes, StripeLocalStorage(config));
   for (auto stripe_index = size_t{0}; stripe_index < num_stripes; ++stripe_index) {
     const auto begin_index = stripe_index * blocks_per_stripe * config.block_size;
     const auto end_index = std::min((stripe_index + 1) * blocks_per_stripe * config.block_size, total_len);
     DebugAssert(begin_index < end_index, "Invalid indicies");
     DebugAssert(begin_index < total_len, "Begin index out of total length");
-    DebugAssert(end_index < total_len, "End index out of total length");
+    DebugAssert(end_index <= total_len, "End index out of total length");
     stripe_local_storage[stripe_index].begin_index = begin_index;
     stripe_local_storage[stripe_index].end_index = end_index;
   }
@@ -866,6 +874,7 @@ void sort(auto begin, const auto end, size_t normalized_key_size, const Sort::Co
   for (auto stripe_index = size_t{0}; stripe_index < num_stripes; ++stripe_index) {
     TRACE_EVENT("sort", "classify stripe", "stripe", stripe);
     const auto stripe_range = stripe_local_storage[stripe_index].subrange(begin, end);
+    debug_print_keys("stripe", stripe_range);
     classify_stripe(stripe_range, splitters, stripe_local_storage[stripe_index], normalized_key_size, config);
   }
   TRACE_EVENT_END("sort");
@@ -888,9 +897,8 @@ void sort(auto begin, const auto end, size_t normalized_key_size, const Sort::Co
 
   auto delimiter = std::vector<size_t>(num_buckets + 1);
   delimiter[0] = 0;
-  for (auto bucket_index = size_t{1}; bucket_index < num_buckets; ++bucket_index) {
-    const auto aligned_block_start =
-        div_ceil(aggregated_bucket_sizes[bucket_index], config.block_size) * config.block_size;
+  for (auto bucket_index = size_t{1}; bucket_index < num_buckets - 1; ++bucket_index) {
+    const auto aligned_block_start = next_multiple(aggregated_bucket_sizes[bucket_index], config.block_size);
     DebugAssert(aligned_block_start < total_len, "Delimiter is out of bucket range");
     delimiter[bucket_index] = aligned_block_start;
   }
@@ -898,10 +906,14 @@ void sort(auto begin, const auto end, size_t normalized_key_size, const Sort::Co
 
   auto write_pointers = std::vector<std::atomic<int64_t>>(num_buckets);
   auto read_pointers = std::vector<std::atomic<int64_t>>(num_buckets);
+  auto pending_reads = std::vector<std::atomic<int64_t>>(num_buckets);
   for (auto bucket_index = size_t{0}; bucket_index < num_buckets; ++bucket_index) {
     write_pointers[bucket_index].store(static_cast<int64_t>(delimiter[bucket_index]), std::memory_order_relaxed);
+    pending_reads[bucket_index].store(0, std::memory_order_relaxed);
   }
   TRACE_EVENT_END("sort");
+
+  // TODO(student): Allocate overflow bucket?
 
   TRACE_EVENT_BEGIN("sort", "ip4so fix buckets crossing stripes");
   for (auto stripe_index = size_t{0}; stripe_index < num_stripes; ++stripe_index) {
@@ -912,14 +924,52 @@ void sort(auto begin, const auto end, size_t normalized_key_size, const Sort::Co
   TRACE_EVENT_END("sort");
 
   TRACE_EVENT_BEGIN("sort", "ip4so block permutations");
-  for (auto task_index = size_t{0}; task_index < std::min(num_stripes, num_buckets); ++task_index) {
+  for (auto stripe_index = size_t{0}; stripe_index < std::min(num_stripes, num_buckets); ++stripe_index) {
     TRACE_EVENT("sort", "ip4so block permutation", "stripe", stripe_index);
-    const auto inital_bucket_index = task_index;
-    block_permutation(inital_bucket_index, write_pointers, read_pointers, delimiter, config);
+    const auto inital_bucket_index = stripe_index;
+    block_permutation(begin, inital_bucket_index, splitters, write_pointers, read_pointers, pending_reads,
+                      normalized_key_size, config);
   }
   TRACE_EVENT_END("sort");
 
-  // TODO(student): Overflow bucket?
+  // Fix a bucket at a time. This should not be parallelized as each bucket depends on a fixed previous bucket.
+  TRACE_EVENT_BEGIN("sort", "ip4so cleanup");
+  for (auto bucket_index = size_t{0}; bucket_index < num_buckets; ++bucket_index) {
+    TRACE_EVENT("sort", "ip4so cleanup bucket", "bucket", bucket_index);
+
+    // Move elements overflowing the bucket to the begin of that bucket.
+
+    auto bucket_begin = std::next(begin, delimiter[bucket_index]);
+    auto bucket_end = std::next(begin, write_pointers[bucket_index]);
+    auto num_initial_elements = delimiter[bucket_index + 1] - aggregated_bucket_sizes[bucket_index];
+    const auto num_overflowing_elements = write_pointers[bucket_index].load(std::memory_order_relaxed) -
+                                          static_cast<int64_t>(delimiter[bucket_index - 1]);
+    DebugAssert(num_overflowing_elements <= static_cast<int64_t>(num_initial_elements),
+                "Can not write more elements than space is available");
+    if (num_overflowing_elements > 0) {
+      auto overflow_begin = std::next(begin, delimiter[bucket_index]);
+      const auto overflow_end = std::next(begin, write_pointers[bucket_index]);
+      std::copy(overflow_begin, overflow_end, bucket_begin);
+      bucket_begin = std::next(bucket_begin, num_overflowing_elements);
+    }
+
+    // Write all values from the stripe local storage to the buckets.
+    for (auto stripe_index = size_t{0}; stripe_index < num_stripes; ++stripe_index) {
+      const auto& stripe = stripe_local_storage[stripe_index];
+      const auto& stripe_bucket = stripe.buckets[stripe_index];
+      if (num_initial_elements > 0) {
+        if (num_initial_elements < stripe_bucket.size()) {
+        } else {
+          std::ranges::copy(stripe_bucket, bucket_begin);
+          num_initial_elements -= stripe_bucket.size();
+        }
+      } else {
+        std::ranges::copy(stripe_bucket, bucket_end);
+        bucket_end = std::next(bucket_end, stripe_bucket.size());
+      }
+    }
+  }
+  TRACE_EVENT_END("sort");
 }
 
 }  // namespace ip4so
