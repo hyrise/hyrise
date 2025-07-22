@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -36,6 +37,7 @@
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
@@ -134,11 +136,10 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     message << "Checking candidate " << candidate.table_name << "." << table->column_name(column_id);
 
     const auto& soft_key_constraints = table->soft_key_constraints();
-    const auto candidate_columns = std::unordered_set<ColumnID>{column_id};
+    const auto candidate_columns = std::set<ColumnID>{column_id};
     const auto existing_ucc =
         std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(), [&](const auto& key_constraint) {
-          return std::includes(key_constraint.columns().cbegin(), key_constraint.columns().cend(),
-                               candidate_columns.cbegin(), candidate_columns.cend());
+          return std::ranges::includes(key_constraint.columns(), candidate_columns);
         });
 
     if (existing_ucc != soft_key_constraints.end()) {
@@ -259,7 +260,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
 
   const auto chunk_count = table->chunk_count();
 
-  // For all segments we now want to verify if they contain duplicates. If a segment does not add the expected number
+  // For all segments, we now want to verify if they contain duplicates. If a segment does not add the expected number
   // of distinct values, we know that a duplicate exists in the segment / column and can return early. We start by
   // handling the unmodified dictionary segments.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -270,24 +271,28 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
       continue;
     }
     const auto source_segment = source_chunk->get_segment(column_id);
-    // Were values inserted into the chunk (inserted or updated rows)? If not and it is a dictionary segment, we can
-    // directly add all distinct values to the set of distinct values.
+    // Were values deleted or updated in this chunk? If not, we can directly use range insertion.
     if ((source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable())) {
       // If we enter this branch, we know that this segment has not been modified since its creation. Therefore we can
       // directly add all of its values to the set of distinct values.
-      const auto& dictionary_segment =
-          std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(source_segment);
-      if (!dictionary_segment) {
-        continue;
-      }
 
       // The set of distinct values across all segments should grow by the number of rows in the segment. Otherwise,
       // some value must have been inserted twice, and we detected a duplicate that violates the UCC.
       const auto expected_distinct_value_count = distinct_values_across_segments.size() + source_segment->size();
 
-      // Directly insert dictionary entries.
-      const auto& dictionary = dictionary_segment->dictionary();
-      distinct_values_across_segments.insert(dictionary->cbegin(), dictionary->cend());
+      const auto dictionary_segment =
+          std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(source_segment);
+      const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(source_segment);
+      if (dictionary_segment) {
+        // Directly insert dictionary entries.
+        const auto& dictionary = dictionary_segment->dictionary();
+        distinct_values_across_segments.insert(dictionary->cbegin(), dictionary->cend());
+      } else if (value_segment && !value_segment->is_nullable()) {
+        const auto& values = value_segment->values();
+        distinct_values_across_segments.insert(values.cbegin(), values.cend());
+      } else {
+        continue;
+      }
 
       if (distinct_values_across_segments.size() != expected_distinct_value_count) {
         return false;
