@@ -285,7 +285,6 @@ static void HiddenTest2() {}
 
 static void HiddenTest3() {}
 
-
 int main(int argc, char* argv[]) {
   if (std::filesystem::exists(FILENAME)) {
     std::filesystem::remove(FILENAME);
