@@ -248,17 +248,7 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
 TEST_F(SortTest, NullsLast) {
   auto test_sort = [&](const std::vector<SortColumnDefinition>& sort_column_definitions, const bool input_is_reference,
                        const Sort::ForceMaterialization force_materialization, const std::string& result_filename) {
-    auto input = input_table_wrapper;
-
-    // As sort results are not required to be stable, we project out all columns which are not sorted.
-    auto pqp_column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (const auto& sort_column : sort_column_definitions) {
-      pqp_column_expressions.emplace_back(PQPColumnExpression::from_table(*input->get_output(), sort_column.column));
-    }
-    auto projection = std::make_shared<Projection>(input, pqp_column_expressions);
-    projection->execute();
-
-    auto sort = Sort{projection, sort_column_definitions, Chunk::DEFAULT_SIZE, force_materialization};
+    auto sort = Sort{input_table_wrapper, sort_column_definitions, Chunk::DEFAULT_SIZE, force_materialization};
     sort.execute();
 
     const auto expected_table = load_table(std::string{"resources/test_data/tbl/sort/"} + result_filename);
@@ -266,7 +256,7 @@ TEST_F(SortTest, NullsLast) {
     EXPECT_TABLE_EQ_ORDERED(result, expected_table);
 
     // Verify type of result table.
-    if (force_materialization == Sort::ForceMaterialization::Yes && !input_is_reference) {
+    if (force_materialization == Sort::ForceMaterialization::Yes) {
       EXPECT_EQ(result->type(), TableType::Data);
     } else {
       EXPECT_EQ(result->type(), TableType::References);
