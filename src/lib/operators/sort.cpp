@@ -624,19 +624,15 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto* src = &row_ids;
   auto* dst = &work_buffer;
 
-  //  Merging Step
-  //  Width 1 here means merging single chunks. Width 2 means merging partitions of 2 chunks each, etc.
-  auto width = size_t{1};
-
   while (runs.size() > 1) {
-    //  one Job per run pair, basically a generic ceil(number of runs * 1/2)
+    //  one Job per run pair
     auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    merge_jobs.reserve((runs.size() + (width << 1u) - 1u) / (width << 1u));
+    merge_jobs.reserve(runs.size() / 2);
 
-    for (auto index = size_t{0}; index + width < runs.size(); index += width << 1u) {
+    for (auto index = size_t{0}; index + 1 < runs.size(); index += 2) {
       //  schedule merging of two partitions
       const auto left_part = runs[index];
-      const auto right_part = runs[index + width];
+      const auto right_part = runs[index + 1];
 
       merge_jobs.emplace_back(std::make_shared<JobTask>([&, left_part, right_part] {
         std::merge(src->begin() + left_part.begin, src->begin() + left_part.end, src->begin() + right_part.begin,
@@ -646,7 +642,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     }
 
     //  odd tail, copy unchanged
-    if ((runs.size() / width) & 1u) {
+    if (runs.size() % 2 == 1) {
       const auto tail = runs.back();
       std::copy(src->begin() + tail.begin, src->begin() + tail.end, dst->begin() + tail.begin);
     }
@@ -654,18 +650,15 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     Hyrise::get().scheduler()->wait_for_tasks(merge_jobs);
     std::swap(src, dst);
 
-    //  rebuild runs for the next pass (width * 2)
+    //  rebuild runs for the next pass
     auto next_runs = std::vector<Run>{};
-    next_runs.reserve((runs.size() + (width << 1u) - 1u) / (width << 1u));
-    for (auto idx = size_t{0}; idx < runs.size(); idx += width << 1u) {
-      const auto begin = runs[idx].begin;
-      const auto end = (idx + width < runs.size()) ? runs[idx + width].end : runs[idx].end;
+    next_runs.reserve((runs.size() +  1) / 2);
+    for (auto index = size_t{0}; index < runs.size(); index += 2) {
+      const auto begin = runs[index].begin;
+      const auto end = (index + 1 < runs.size()) ? runs[index + 1].end : runs[index].end;
       next_runs.emplace_back(Run{begin, end});
     }
     runs.swap(next_runs);
-
-    //  (width * 2)
-    width <<= 1u;
   }
 
   auto& sorted_row_ids = *src;
