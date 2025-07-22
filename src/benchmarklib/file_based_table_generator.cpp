@@ -43,7 +43,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
   for (const auto& directory_entry : list_directory(_path)) {
     const auto extension = directory_entry.extension();
 
-    if (table_extensions.find(extension) == table_extensions.end()) {
+    if (!table_extensions.contains(extension)) {
       continue;
     }
 

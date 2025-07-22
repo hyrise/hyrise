@@ -62,8 +62,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_item_table() {
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "I_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
         auto data = _random_gen.astring(26, 50);
-        const auto is_original = original_ids.find(indices[0]) != original_ids.end();
-        if (is_original) {
+        if (original_ids.contains(indices[0])) {
           const auto original_string = std::string{"ORIGINAL"};
           const auto start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
           data.replace(start_pos, original_string.length(), original_string);
@@ -186,8 +185,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "S_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
         auto data = _random_gen.astring(26, 50);
-        const auto is_original = original_ids.find(indices[1]) != original_ids.end();
-        if (is_original) {
+        if (original_ids.contains(indices[1])) {
           const auto original_string = std::string{"ORIGINAL"};
           const auto start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
           data.replace(start_pos, original_string.length(), original_string);
@@ -340,7 +338,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
                        });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_CREDIT", cardinalities,
                           [&](const std::vector<size_t>& indices) {
-                            const auto is_original = original_ids.find(indices[2]) != original_ids.end();
+                            const auto is_original = original_ids.contains(indices[2]);
                             return pmr_string{is_original ? "BC" : "GC"};
                           });
   _add_column<float>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
@@ -548,7 +546,8 @@ void TPCCTableGenerator::_add_order_line_column(
       [&](const std::vector<size_t>& indices) {
         return _generate_inner_order_line_column(indices, order_line_counts, generator_function);
       };
-  _add_column<T>(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
+  _add_column<T>(segments_by_chunk, column_definitions, std::move(name), std::move(cardinalities),
+                 wrapped_generator_function);
 }
 
 std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
