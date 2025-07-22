@@ -137,8 +137,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     const auto candidate_columns = std::unordered_set<ColumnID>{column_id};
     const auto existing_ucc =
         std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(), [&](const auto& key_constraint) {
-          return std::includes(key_constraint.columns().cbegin(), key_constraint.columns().cend(),
-                               candidate_columns.cbegin(), candidate_columns.cend());
+          return std::ranges::includes(key_constraint.columns(), candidate_columns);
         });
 
     if (existing_ucc != soft_key_constraints.end()) {
@@ -259,7 +258,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
 
   const auto chunk_count = table->chunk_count();
 
-  // For all segments we now want to verify if they contain duplicates. If a segment does not add the expected number
+  // For all segments, we now want to verify if they contain duplicates. If a segment does not add the expected number
   // of distinct values, we know that a duplicate exists in the segment / column and can return early. We start by
   // handling the unmodified dictionary segments.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {

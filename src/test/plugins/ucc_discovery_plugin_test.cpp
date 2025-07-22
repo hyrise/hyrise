@@ -354,7 +354,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateIn
   ASSERT_NE(constraint_A_1, constraints_A.end());
   EXPECT_EQ(constraint_A_1->last_validation_result(), ValidationResultType::VALID);
 
-  // Insert single row into table A that has a duplicate value regarding column 1. Do not commit to first test that UCC
+  // Insert single row into table A that adds a duplicate value in column 1. Do not commit to first test that UCC
   // stays valid.
   auto transaction_context = _insert_row(_table_name_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
 
@@ -370,7 +370,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateIn
   // Commit transaction and re-validate UCCs.
   transaction_context->commit();
 
-  // Validate for a second time. This time the UCC should be invalid.
+  // Validate for a second time. This time, the UCC should be invalid.
   _validate_ucc_candidates(ucc_candidates);
 
   EXPECT_EQ(constraints_A.size(), 1);
@@ -385,7 +385,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 0);  // No constraints known for the table yet.
 
-  // Delete row of _table_A that had a duplicate value regarding column 1 such that column 1 is unique afterwards.
+  // Delete row of _table_A that had a duplicate value in column 1. Column 1 is unique afterwards.
   _delete_row(_table_A, 3);
 
   // We are only interested in column 1, since it was not unique before the deletion but should be now.
