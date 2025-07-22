@@ -3,6 +3,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -69,6 +70,10 @@ TEST_F(UpdateNodeTest, NoUniqueColumnCombinations) {
 
 TEST_F(UpdateNodeTest, NoOrderDependencies) {
   EXPECT_THROW(_update_node->order_dependencies(), std::logic_error);
+}
+
+TEST_F(UpdateNodeTest, ColumnNullable) {
+EXPECT_THROW(_update_node->is_column_nullable(ColumnID{0}), std::logic_error);
 }
 
 }  // namespace hyrise
