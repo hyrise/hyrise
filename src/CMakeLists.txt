@@ -76,7 +76,7 @@ if (ENABLE_CLANG_TIDY)
         message(ERROR "clang-tidy is only available for Clang builds.")
     endif()
 
-    # Get the full clang-tidy path (helps with macOS builds). We disable tidy'ing system headers.
+    # Get the full clang-tidy path (helps with macOS builds).
     set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy")
     message(STATUS "clang-tidy enabled")
 endif()

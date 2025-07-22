@@ -114,7 +114,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _key_offsets.shrink_to_fit();
 
   // Remove duplicated keys.
-  // NOLINTNEXTLINE(modernize-use-ranges): ranges requires additional comparators. Keep it simple here.
+  // NOLINTNEXTLINE(modernize-use-ranges): std::ranges::unique requires additional comparators. Keep it simple here.
   const auto unique_keys_end = std::unique(_keys.begin(), _keys.end());
   _keys.erase(unique_keys_end, _keys.end());
   _keys.shrink_to_fit();
@@ -181,7 +181,7 @@ AbstractChunkIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_
     return _position_list.cend();
   }
 
-  // Get the start position in the position-vector, ie the offset, by getting the offset_iterator for the key
+  // Get the start position in the position vector, i.e., the offset, by getting the offset_iterator for the key
   // (which is at the same position as the iterator for the key in the keystore).
   auto offset_it = _key_offsets.cbegin();
   std::advance(offset_it, std::distance(_keys.cbegin(), key_it));

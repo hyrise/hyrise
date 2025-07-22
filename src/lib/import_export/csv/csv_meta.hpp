@@ -73,7 +73,7 @@ void from_json(const nlohmann::json& json, CsvMeta& meta);
 void to_json(nlohmann::json& json, const CsvMeta& meta);
 
 /*
- * Equals-operators for convenience and use in tests.
+ * Equals operators for convenience and use in tests.
  */
 bool operator==(const ColumnMeta& left, const ColumnMeta& right);
 bool operator==(const CsvMeta& left, const CsvMeta& right);

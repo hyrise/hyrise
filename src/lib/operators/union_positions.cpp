@@ -265,8 +265,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
          "UnionPositions does not support non-reference tables yet.");
 
   /**
-   * Identify the ColumnClusters (verification that this is the same for all chunks happens in the `if HYRISE_DEBUG`
-   * block below).
+   * Identify the ColumnClusters (verification that this is the same for all chunks happens in the
+   * `if constexpr HYRISE_DEBUG` block below).
    */
   const auto add = [&](const auto& table) {
     const auto column_count = table->column_count();
@@ -292,7 +292,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the tables referenced in each ColumnCluster (verification that this is the same for all chunks happens
-   * in the `if HYRISE_DEBUG` block below).
+   * in the `if constexpr HYRISE_DEBUG` block below).
    */
   const auto first_chunk_left = left_input_table()->get_chunk(ChunkID{0});
   for (const auto& cluster_begin : _column_cluster_offsets) {
@@ -303,7 +303,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the column_ids referenced by each column (verification that this is the same for all chunks happens
-   * in the `if HYRISE_DEBUG` block below).
+   * in the `if constexpr HYRISE_DEBUG` block below).
    */
   for (auto column_id = ColumnID{0}; column_id < left_input_table()->column_count(); ++column_id) {
     const auto segment = first_chunk_left->get_segment(column_id);

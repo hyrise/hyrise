@@ -51,10 +51,10 @@ bool JoinIndex::supports(const JoinConfiguration config) {
     }
 
     if (index_side_table_type == TableType::References && config.join_mode != JoinMode::Inner) {
-      return false;  // non-inner index joins on reference tables are not supported
+      return false;  // Non-inner index joins on reference tables are not supported.
     }
 
-    return !config.secondary_predicates;  // multi predicate index joins are not supported
+    return !config.secondary_predicates;  // Multi-predicate index joins are not supported.
   }
 }
 
@@ -355,7 +355,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
     }
 
     auto mutable_ref_seg_pos_list = RowIDPosList(reference_segment_pos_list->size());
-    // NOLINTNEXTLINE(modernize-use-ranges): PosList iterators do not filful requirements of ranges.
+    // NOLINTNEXTLINE(modernize-use-ranges): PosList iterators do not filful requirements of std::ranges.
     std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(), mutable_ref_seg_pos_list.begin());
     std::ranges::sort(mutable_ref_seg_pos_list);
     std::ranges::sort(index_scan_pos_list);
