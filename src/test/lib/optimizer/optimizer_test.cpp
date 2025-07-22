@@ -343,7 +343,7 @@ TEST_F(OptimizerTest, OptimizationWithoutKeyConstraintCacheable) {
   auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
                                   PredicateNode::make(greater_than_(a, subquery_b), node_a));
   const auto [_, cacheable] = optimizer->optimize(std::move(lqp));
-  EXPECT_TRUE(static_cast<bool>(cacheable));
+  EXPECT_EQ(cacheable, IsCacheable::Yes);
 }
 
 TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {

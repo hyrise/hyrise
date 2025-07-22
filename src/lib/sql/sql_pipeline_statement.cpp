@@ -116,9 +116,9 @@ const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
   return _translation_info;
 }
 
-const std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable>& SQLPipelineStatement::get_optimized_logical_plan() {
+const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
   if (_optimized_logical_plan.first) {
-    return _optimized_logical_plan;
+    return _optimized_logical_plan.first;
   }
 
   // Handle logical query plan if statement has been cached
@@ -132,7 +132,7 @@ const std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable>& SQLPipelineState
         // and concurrent translations might conflict.
         // Note that the plan we have received here was cached, so it is obviously cacheable.
         _optimized_logical_plan = {plan->deep_copy(), IsCacheable::Yes};
-        return _optimized_logical_plan;
+        return _optimized_logical_plan.first;
       }
     }
   }
@@ -155,11 +155,11 @@ const std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable>& SQLPipelineState
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache && _translation_info.cacheable && static_cast<bool>(_optimized_logical_plan.second)) {
+  if (lqp_cache && _translation_info.cacheable && _optimized_logical_plan.second == IsCacheable::Yes) {
     lqp_cache->set(_sql_string, _optimized_logical_plan.first);
   }
 
-  return _optimized_logical_plan;
+  return _optimized_logical_plan.first;
 }
 
 const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan() {
@@ -195,7 +195,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     const auto& optimization_result = get_optimized_logical_plan();
     // Reset time to exclude previous pipeline steps
     started = std::chrono::steady_clock::now();
-    _physical_plan = LQPTranslator{}.translate_node(optimization_result.first);
+    _physical_plan = LQPTranslator{}.translate_node(optimization_result);
   }
 
   done = std::chrono::steady_clock::now();
@@ -206,7 +206,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   // Cache newly created plan for the according sql statement (only if not already cached).
   if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable &&
-      static_cast<bool>(_optimized_logical_plan.second)) {
+      _optimized_logical_plan.second == IsCacheable::Yes) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
