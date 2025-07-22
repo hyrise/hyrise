@@ -14,6 +14,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
+#include "types.hpp"
 
 namespace {
 // This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinOrderingRule and
@@ -39,7 +40,7 @@ class SQLPipelineStatementTest : public BaseTest {
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     _table_a->add_soft_constraint(
-        TableKeyConstraint{{_table_a->column_id_by_name("a")}, KeyConstraintType::UNIQUE, CommitID{0}});
+        TableKeyConstraint{{_table_a->column_id_by_name("a")}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
@@ -343,6 +344,42 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
   const auto validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
   EXPECT_TRUE(lqp_is_validated(*validated_cached_lqp));
+}
+
+TEST_F(SQLPipelineStatementTest, OptimizedQPCachedWhenUsingCacheableOptimization) {
+  // Expect cache to be empty.
+  EXPECT_FALSE(_lqp_cache->has(_select_query_a));
+
+  auto validated_sql_pipeline =
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).with_pqp_cache(_pqp_cache).create_pipeline();
+  const auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
+
+  const auto& validated_lqp = validated_statement->get_optimized_logical_plan().first;
+  EXPECT_TRUE(lqp_is_validated(validated_lqp));
+  // We need to call this method to generate and cache the PQP.
+  validated_statement->get_physical_plan();
+  // Expect cache to validated LQP as we ran a query that used a cacheable optimization.
+  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_pqp_cache->has(_select_query_a));
+}
+
+TEST_F(SQLPipelineStatementTest, OptimizedQPNotCachedWhenNotCacheableOptimizationUsed) {
+  // Expect cache to be empty.
+  EXPECT_FALSE(_lqp_cache->has(_select_query_using_join_to_semi_join_optimization_a));
+
+  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_using_join_to_semi_join_optimization_a}
+                                    .with_lqp_cache(_lqp_cache)
+                                    .with_pqp_cache(_pqp_cache)
+                                    .create_pipeline();
+  const auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
+
+  const auto& validated_lqp = validated_statement->get_optimized_logical_plan().first;
+  EXPECT_TRUE(lqp_is_validated(validated_lqp));
+  // We need to call this method to generate the PQP that would be cached if the logical query plan were cacheable.
+  validated_statement->get_physical_plan();
+  // Expect cache to still not contain validated LQP as we ran a query that used a non-cacheable optimization.
+  EXPECT_FALSE(_lqp_cache->has(_select_query_using_join_to_semi_join_optimization_a));
+  EXPECT_FALSE(_pqp_cache->has(_select_query_using_join_to_semi_join_optimization_a));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) {
