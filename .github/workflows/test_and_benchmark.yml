@@ -58,8 +58,8 @@ jobs:
 
       - name: Run Basic Tests
         run: |
-          ${BUILD_DIR_DEBUG}/hyriseTest
-          $CURL_CMD $LEADERBOARD/deliver_basic --gtest_filter="-SortTest.NullsLast"
+          ${BUILD_DIR_DEBUG}/hyriseTest --gtest_filter="-SortTest.NullsLast"
+          $CURL_CMD $LEADERBOARD/deliver_basic
 
       - name: Run NULLS LAST Tests
         run: |
