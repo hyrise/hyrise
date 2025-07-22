@@ -40,6 +40,8 @@ requires(std::is_same_v<T, pmr_string>) class VariableStringDictionarySegment : 
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
   std::optional<pmr_string> get_typed_value(const ChunkOffset chunk_offset) const {
+    ++access_counter[SegmentAccessCounter::AccessType::Point];
+
     // Performance critical - not in cpp to help with inlining.
     const auto value_id = _decompressor->get(chunk_offset);
     if (value_id == null_value_id()) {
@@ -98,7 +100,10 @@ requires(std::is_same_v<T, pmr_string>) class VariableStringDictionarySegment : 
 
   static std::string_view get_string(const pmr_vector<uint32_t>& offset_vector, const pmr_vector<char>& dictionary,
                                      ValueID value_id) {
+    // We do not increase the access counters here as we can do it more efficiently in the iterable and in this
+    // function's callers.
     DebugAssert(value_id < offset_vector.size(), "Invalid value_id.");
+
     const auto offset = offset_vector[value_id];
     auto next_offset = size_t{0};
 

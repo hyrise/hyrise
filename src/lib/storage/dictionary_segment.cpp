@@ -118,7 +118,7 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
 
 template <typename T>
 AllTypeVariant DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
-  DebugAssert(value_id < _dictionary.size(), "ValueID out of bounds");
+  DebugAssert(value_id < _dictionary.size(), "ValueID out of bounds.");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
   return _dictionary[value_id];
 }
