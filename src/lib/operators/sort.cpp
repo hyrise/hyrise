@@ -627,7 +627,18 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   while (runs.size() > 1) {
     //  one Job per run pair
     auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    merge_jobs.reserve(runs.size() / 2);
+    //  odd tail, copy unchanged
+    if (runs.size() & 1u) {
+      merge_jobs.reserve((runs.size() / 2) + 1);
+      const auto tail = runs.back();
+      std::copy(src->begin() + tail.begin, src->begin() + tail.end, dst->begin() + tail.begin);
+      merge_jobs.emplace_back(std::make_shared<JobTask>([&, tail] {
+        std::copy(src->begin() + tail.begin, src->begin() + tail.end, dst->begin() + tail.begin);
+      }));
+      merge_jobs.back()->schedule();
+    } else {
+      merge_jobs.reserve(runs.size() / 2);
+    }
 
     for (auto index = size_t{0}; index + 1 < runs.size(); index += 2) {
       //  schedule merging of two partitions
@@ -639,12 +650,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                    src->begin() + right_part.end, dst->begin() + left_part.begin, compare_rows);
       }));
       merge_jobs.back()->schedule();
-    }
-
-    //  odd tail, copy unchanged
-    if (runs.size() % 2 == 1) {
-      const auto tail = runs.back();
-      std::copy(src->begin() + tail.begin, src->begin() + tail.end, dst->begin() + tail.begin);
     }
 
     Hyrise::get().scheduler()->wait_for_tasks(merge_jobs);
