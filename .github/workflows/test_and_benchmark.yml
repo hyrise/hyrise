@@ -11,7 +11,7 @@ env:
 
   LEADERBOARD: http://vm-appleton.eaalab.hpi.uni-potsdam.de
 
-  CURL_CMD: "curl -X POST --fail-with-body -F github_user=${{github.actor}} -F ci_id=1 -F github_repository=${{github.repository}} -F project_id=1 -F secret=${{secrets.DYOD_SECRET}} -F git_commit=${{github.sha}}"
+  CURL_CMD: "curl -X POST --fail-with-body -F github_user=${{github.actor}} -F ci_id=2 -F github_repository=${{github.repository}} -F project_id=1 -F secret=${{secrets.DYOD_SECRET}} -F git_commit=${{github.sha}}"
 
   BM_RESULT_FILE: RESULTS.csv
 
@@ -56,10 +56,15 @@ jobs:
       - name: Build (Debug)
         run: ninja -C ${BUILD_DIR_DEBUG}
 
-      - name: Run Tests
+      - name: Run Basic Tests
         run: |
           ${BUILD_DIR_DEBUG}/hyriseTest
-          $CURL_CMD $LEADERBOARD/deliver_basic
+          $CURL_CMD $LEADERBOARD/deliver_basic --gtest_filter="-SortTest.NullsLast"
+
+      - name: Run NULLS LAST Tests
+        run: |
+          ${BUILD_DIR_DEBUG}/hyriseTest --gtest_filter="SortTest.NullsLast"
+          $CURL_CMD $LEADERBOARD/deliver_advanced
 
       - name: Setup CMake (Release)
         run: cmake -B ${BUILD_DIR_RELEASE} -DCMAKE_BUILD_TYPE=Release -DNO_LTO=TRUE -G Ninja

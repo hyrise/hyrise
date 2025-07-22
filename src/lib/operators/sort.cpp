@@ -437,15 +437,14 @@ class Sort::SortImpl {
     const auto sort_with_comparator = [&](auto comparator) {
       if (is_last_column) {
         // Sorting the last column does not need to be stable (helps especially in single-column sorting cases).
-        std::ranges::sort(_row_id_value_vector,
-                             [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
-                               return comparator(lhs.second, rhs.second);
-                             });
+        std::ranges::sort(_row_id_value_vector, [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
+          return comparator(lhs.second, rhs.second);
+        });
       } else {
         std::ranges::stable_sort(_row_id_value_vector,
-                              [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
-                                return comparator(lhs.second, rhs.second);
-                              });
+                                 [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
+                                   return comparator(lhs.second, rhs.second);
+                                 });
       }
     };
     if (_sort_mode == SortMode::AscendingNullsFirst) {
