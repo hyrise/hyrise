@@ -63,9 +63,9 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentInt) {
 
   // Test sorting
   auto dict = dict_segment->dictionary();
-  EXPECT_EQ((*dict)[0], 3);
-  EXPECT_EQ((*dict)[1], 4);
-  EXPECT_EQ((*dict)[2], 5);
+  EXPECT_EQ(dict[0], 3);
+  EXPECT_EQ(dict[1], 4);
+  EXPECT_EQ(dict[2], 5);
 }
 
 TEST_P(StorageDictionarySegmentTest, CompressSegmentString) {
@@ -88,10 +88,10 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentString) {
 
   // Test sorting
   auto dict = dict_segment->dictionary();
-  EXPECT_EQ((*dict)[0], "Alexander");
-  EXPECT_EQ((*dict)[1], "Bill");
-  EXPECT_EQ((*dict)[2], "Hasso");
-  EXPECT_EQ((*dict)[3], "Steve");
+  EXPECT_EQ(dict[0], "Alexander");
+  EXPECT_EQ(dict[1], "Bill");
+  EXPECT_EQ(dict[2], "Hasso");
+  EXPECT_EQ(dict[3], "Steve");
 }
 
 TEST_P(StorageDictionarySegmentTest, CompressSegmentDouble) {
@@ -114,9 +114,9 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentDouble) {
 
   // Test sorting
   auto dict = dict_segment->dictionary();
-  EXPECT_EQ((*dict)[0], 0.9);
-  EXPECT_EQ((*dict)[1], 1.0);
-  EXPECT_EQ((*dict)[2], 1.1);
+  EXPECT_EQ(dict[0], 0.9);
+  EXPECT_EQ(dict[1], 1.0);
+  EXPECT_EQ(dict[2], 1.1);
 }
 
 TEST_P(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
@@ -141,8 +141,8 @@ TEST_P(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
 
   // Test sorting
   auto dict = dict_segment->dictionary();
-  EXPECT_EQ((*dict)[0], 3);
-  EXPECT_EQ((*dict)[1], 4);
+  EXPECT_EQ(dict[0], 3);
+  EXPECT_EQ(dict[1], 4);
 
   // Test retrieval of null value
   EXPECT_TRUE(variant_is_null((*dict_segment)[ChunkOffset{4}]));
@@ -156,13 +156,13 @@ TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerVectorSize) {
   auto segment = ChunkEncoder::encode_segment(
       vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
-  auto attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint8_t>>(dict_segment->attribute_vector());
-  auto attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint16_t>>(dict_segment->attribute_vector());
+  // auto attribute_vector_uint8_t =
+  //     std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint8_t>>(dict_segment->attribute_vector());
+  // auto attribute_vector_uint16_t =
+  //     std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint16_t>>(dict_segment->attribute_vector());
 
-  EXPECT_NE(attribute_vector_uint8_t, nullptr);
-  EXPECT_EQ(attribute_vector_uint16_t, nullptr);
+  EXPECT_EQ(dict_segment->attribute_vector()->type(), CompressedVectorType::FixedWidthInteger1Byte);
+  EXPECT_NE(dict_segment->attribute_vector()->type(), CompressedVectorType::FixedWidthInteger2Byte);
 
   for (int i = 3; i < 257; ++i) {
     vs_int->append(i);
@@ -171,13 +171,13 @@ TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerVectorSize) {
   segment = ChunkEncoder::encode_segment(
       vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
-  attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint8_t>>(dict_segment->attribute_vector());
-  attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint16_t>>(dict_segment->attribute_vector());
+  // attribute_vector_uint8_t =
+  //     std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint8_t>>(dict_segment->attribute_vector());
+  // attribute_vector_uint16_t =
+  //     std::dynamic_pointer_cast<const FixedWidthIntegerVector<uint16_t>>(dict_segment->attribute_vector());
 
-  EXPECT_EQ(attribute_vector_uint8_t, nullptr);
-  EXPECT_NE(attribute_vector_uint16_t, nullptr);
+  EXPECT_NE(dict_segment->attribute_vector()->type(), CompressedVectorType::FixedWidthInteger1Byte);
+  EXPECT_EQ(dict_segment->attribute_vector()->type(), CompressedVectorType::FixedWidthInteger2Byte);
 }
 
 TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerMemoryUsageEstimation) {

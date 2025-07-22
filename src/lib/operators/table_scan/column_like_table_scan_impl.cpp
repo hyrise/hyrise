@@ -15,6 +15,10 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
+// NOLINTBEGIN(misc-include-cleaner): VariableStringDictionary is accessed in `_find_matches_in_dictionary`.
+#include "storage/variable_string_dictionary/variable_string_vector.hpp"
+#include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
+// NOLINTEND(misc-include-cleaner)
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -49,8 +53,8 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
-    // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
-    // via position_filter
+    // Do not instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled via
+    // position_filter.
     if constexpr (!is_reference_segment_iterable_v<typename decltype(iter)::IterableType>) {
       using ColumnDataType = typename decltype(iter)::ValueType;
 
@@ -62,10 +66,10 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
           _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
         });
       } else {
-        Fail("Can only handle strings");
+        Fail("Can only handle strings.");
       }
     } else {
-      Fail("ReferenceSegments have their own code paths and should be handled there");
+      Fail("ReferenceSegments have their own code paths and should be handled there.");
     }
   });
 }
@@ -76,14 +80,27 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   // First, build a bitmap containing 1s/0s for matching/non-matching dictionary values. Second, iterate over the
   // attribute vector and check against the bitmap. If too many input rows have already been removed (are not part of
   // position_filter), this optimization is detrimental. See caller for that case.
-  std::pair<size_t, std::vector<bool>> result;
+  auto result = std::pair<size_t, std::vector<bool>>{};
 
-  if (segment.encoding_type() == EncodingType::Dictionary) {
-    const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
-    result = _find_matches_in_dictionary(*typed_segment.dictionary());
-  } else {
-    const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
-    result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
+  switch (segment.encoding_type()) {
+    case EncodingType::Dictionary: {
+      const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
+      result = _find_matches_in_dictionary(typed_segment.dictionary());
+      break;
+    }
+    case EncodingType::FixedStringDictionary: {
+      const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
+      result = _find_matches_in_dictionary(typed_segment.fixed_string_dictionary());
+      break;
+    }
+    case EncodingType::VariableStringDictionary: {
+      const auto& typed_segment = static_cast<const VariableStringDictionarySegment<pmr_string>&>(segment);
+      result = _find_matches_in_dictionary(typed_segment.variable_string_dictionary());
+      break;
+    }
+    default: {
+      Fail("Segment is either not dictionary-encoded or encoding specialization is not implemented.");
+    }
   }
 
   const auto& match_count = result.first;
@@ -103,8 +120,8 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     return;
   }
 
-  // LIKE matches no rows
-  if (match_count == 0u) {
+  // LIKE matches no rows.
+  if (match_count == 0) {
     ++num_chunks_with_early_out;
     return;
   }
@@ -125,21 +142,23 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   auto& count = result.first;
   auto& dictionary_matches = result.second;
 
-  count = 0u;
-  dictionary_matches.reserve(dictionary.size());
+  count = 0;
+  dictionary_matches.resize(dictionary.size());
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
 #ifdef __clang__
-// For the loop through the dictionary, we want to use const auto& for DictionarySegments. However,
-// FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
-// error about a potential copy for the loop value.
+// For the loop through the dictionary, we want to use const auto& for DictionarySegments. However, FixedStringVector
+// iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis error about a potential
+// copy for the loop value.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrange-loop-analysis"
 #endif
+    auto index = size_t{0};
     for (const auto& value : dictionary) {
-      const auto matches = matcher(value);
-      count += static_cast<size_t>(matches);
-      dictionary_matches.push_back(matches);
+      const auto match_result = matcher(value);
+      count += static_cast<size_t>(match_result);
+      dictionary_matches[index] = match_result;
+      ++index;
     }
 
 #ifdef __clang__

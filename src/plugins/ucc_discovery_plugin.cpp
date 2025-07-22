@@ -231,7 +231,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(const std::shared_ptr
                    std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
       // Directly insert dictionary entries.
       const auto& dictionary = dictionary_segment->dictionary();
-      distinct_values.insert(dictionary->cbegin(), dictionary->cend());
+      distinct_values.insert(dictionary.cbegin(), dictionary.cend());
     } else {
       // Fallback: Iterate the whole segment and decode its values.
       auto distinct_value_count = distinct_values.size();

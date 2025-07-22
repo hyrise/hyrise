@@ -11,6 +11,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 
 namespace hyrise {
 
@@ -221,6 +222,10 @@ class BinaryWriter {
    */
   template <typename T>
   static void _write_segment(const LZ4Segment<T>& lz4_segment, bool /*column_is_nullable*/, std::ofstream& ofstream);
+
+  template <typename T>
+  static void _write_segment(const VariableStringDictionarySegment<T>& dictionary_segment, bool /*column_is_nullable*/,
+                             std::ofstream& ofstream);
 
   template <typename T>
   static CompressedVectorTypeID _compressed_vector_type_id(const AbstractEncodedSegment& abstract_encoded_segment);

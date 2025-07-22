@@ -1,3 +1,6 @@
+#include <unordered_set>
+#include <vector>
+
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
@@ -16,7 +19,11 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "storage/dictionary_segment/dictionary_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/segment_encoding_utils.hpp"
+#include "storage/segment_iterate.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
@@ -328,7 +335,257 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
   });
 }
 
+BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemManualDictionaryEncoding)(benchmark::State& state) {
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
+
+  const auto& sm = Hyrise::get().storage_manager;
+  const auto& lineitem_table = sm.get_table("lineitem");
+  const auto chunk_count = lineitem_table->chunk_count();
+
+  // std::cout << "Encoding entire lineitem table as Unencoded ... ";
+  ChunkEncoder::encode_all_chunks(lineitem_table, SegmentEncodingSpec{EncodingType::Unencoded});
+  // std::cout << "done\n";
+
+  const auto column_data_type = lineitem_table->column_data_type(column_id);
+
+  auto useless_sum = size_t{0};
+
+  resolve_data_type(column_data_type, [&](auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+    for (auto _ : state) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& chunk = lineitem_table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(column_id);
+        const auto chunk_size = chunk->size();
+
+        auto materialized_offets_and_values = std::vector<std::tuple<size_t, bool, ColumnDataType>>{};
+        segment_with_iterators<ColumnDataType>(*segment, [&](auto iter, const auto end) {
+          auto offset = size_t{0};
+          for (; iter != end; ++iter, ++offset) {
+            materialized_offets_and_values.emplace_back(offset, iter->is_null(),
+                                                        iter->is_null() ? ColumnDataType{} : iter->value());
+            if (iter->is_null()) {
+              std::cerr << "WWWWWWOW\n";
+            }
+          }
+
+          // std::cout << "\n\nBEFORE SORTING\n";
+          // for (const auto& narf : materialized_offets_and_values) {
+          //   std::cout << std::get<0>(narf) << " - " << std::get<1>(narf) << " - " << std::get<2>(narf) << "\n";
+          // }
+
+          // Using a stable sort to have a somewhat sequential write pattern when writing the offset later (can be the
+          // case with increasing keys or few distinct values, which both regularly occur).
+          std::stable_sort(materialized_offets_and_values.begin(), materialized_offets_and_values.end(),
+                           [](const auto& lhs, const auto& rhs) {
+                             return std::get<1>(rhs) || std::get<2>(lhs) < std::get<2>(rhs);
+                           });
+
+          // std::cout << "\n\nAFTER SORTING\n";
+          // for (const auto& narf : materialized_offets_and_values) {
+          //   std::cout << std::get<0>(narf) << " - " << std::get<1>(narf) << " - " << std::get<2>(narf) << "\n";
+          // }
+
+          if (std::get<1>(materialized_offets_and_values[0])) {
+            // All values are NULL.
+            // TODO(Bossl): Create repeated NULLed AV.
+          }
+
+          auto dictionary_values = pmr_vector<ColumnDataType>{};
+          auto attribute_vector = pmr_vector<uint32_t>{};
+          dictionary_values.reserve(chunk_size / 2);
+          attribute_vector.resize(chunk_size);
+
+          auto dictionary_offset = size_t{0};
+          auto av_offset = size_t{0};
+
+          auto previous_value = std::get<2>(materialized_offets_and_values[0]);
+          dictionary_values.emplace_back(previous_value);
+
+          for (const auto& item : materialized_offets_and_values) {
+            const auto& offset = std::get<0>(item);
+            const auto& is_null = std::get<1>(item);
+
+            if (is_null) {
+              // All following values are NULLs as well.
+              attribute_vector[offset] = dictionary_values.size();
+              continue;
+            }
+
+            const auto& value = std::get<2>(item);
+            if (value != previous_value) {
+              ++dictionary_offset;
+              dictionary_values.emplace_back(value);
+              previous_value = value;
+            }
+
+            attribute_vector[av_offset] = dictionary_offset;
+          }
+          dictionary_values.shrink_to_fit();
+          // if (chunk_id == ChunkID{0})
+          //   std::cout << "dict size: " << dictionary_values.size() << "\n";
+
+          const auto encoded_segment =
+              DictionarySegment(std::move(dictionary_values),
+                                compress_vector(attribute_vector, VectorCompressionType::FixedWidthInteger,
+                                                PolymorphicAllocator<ColumnDataType>{}, {dictionary_values.size()}));
+          useless_sum += encoded_segment.size();
+        });
+      }
+    }
+  });
+}
+
+BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemManualStringOptimizedDictionaryEncoding)
+(benchmark::State& state) {
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
+
+  const auto& sm = Hyrise::get().storage_manager;
+  const auto& lineitem_table = sm.get_table("lineitem");
+  const auto chunk_count = lineitem_table->chunk_count();
+
+  // std::cout << "Encoding entire lineitem table as Unencoded ... ";
+  ChunkEncoder::encode_all_chunks(lineitem_table, SegmentEncodingSpec{EncodingType::Unencoded});
+  // std::cout << "done\n";
+
+  const auto column_data_type = lineitem_table->column_data_type(column_id);
+
+  auto useless_sum = size_t{0};
+
+  resolve_data_type(column_data_type, [&](auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+    for (auto _ : state) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& chunk = lineitem_table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(column_id);
+        const auto chunk_size = chunk->size();
+
+        const auto segment_encoding_spec = get_segment_encoding_spec(segment);
+
+        using ValueType =
+            std::conditional_t<std::is_same_v<ColumnDataType, pmr_string>, std::string_view, ColumnDataType>;
+
+        // We are using the STL garantees of stable item pointers here.
+        [[maybe_unused]] auto string_set = std::unordered_set<pmr_string>{};
+        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+          if (segment_encoding_spec != SegmentEncodingSpec{EncodingType::Unencoded}) {
+            string_set.reserve(chunk_size / 2);
+          }
+        }
+
+        auto materialized_offets_and_values = std::vector<std::tuple<size_t, bool, ValueType>>{};
+        segment_with_iterators<ColumnDataType>(*segment, [&](auto iter, const auto end) {
+          auto offset = size_t{0};
+          for (; iter != end; ++iter, ++offset) {
+            auto value = ValueType{};
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+              if (!iter->is_null()) {
+                if (segment_encoding_spec == SegmentEncodingSpec{EncodingType::Unencoded}) {
+                  const auto& vs = static_cast<ValueSegment<pmr_string>&>(*segment);
+                  value = std::string_view{vs.values()[offset]};
+                } else {
+                  const auto [set_iter, _] = string_set.emplace(iter->value());
+                  value = std::string_view{*set_iter};
+                }
+              }
+            } else {
+              if (!iter->is_null()) {
+                value = iter->value();
+              }
+            }
+            materialized_offets_and_values.emplace_back(offset, iter->is_null(), std::move(value));
+            if (iter->is_null()) {
+              std::cerr << "WWWWWWOW\n";
+            }
+          }
+          // Using a stable sort to have a somewhat sequential write pattern when writing the offset later (can be the
+          // case with increasing keys or few distinct values, which both regularly occur).
+          std::stable_sort(materialized_offets_and_values.begin(), materialized_offets_and_values.end(),
+                           [](const auto& lhs, const auto& rhs) {
+                             return std::get<1>(rhs) || std::get<2>(lhs) < std::get<2>(rhs);
+                           });
+
+          if (std::get<1>(materialized_offets_and_values[0])) {
+            // All values are NULL.
+            // TODO(Bossl): Create repeated NULLed AV.
+          }
+
+          auto dictionary_values = pmr_vector<ColumnDataType>{};
+          auto attribute_vector = pmr_vector<uint32_t>{};
+          dictionary_values.reserve(chunk_size / 2);
+          attribute_vector.resize(chunk_size);
+
+          auto dictionary_offset = size_t{0};
+          auto av_offset = size_t{0};
+
+          auto previous_value = std::get<2>(materialized_offets_and_values[0]);
+          dictionary_values.emplace_back(previous_value);
+
+          for (const auto& item : materialized_offets_and_values) {
+            const auto& offset = std::get<0>(item);
+            const auto& is_null = std::get<1>(item);
+
+            if (is_null) {
+              // All following values are NULLs as well.
+              attribute_vector[offset] = dictionary_values.size();
+              continue;
+            }
+
+            const auto& value = std::get<2>(item);
+            if (value != previous_value) {
+              ++dictionary_offset;
+              dictionary_values.emplace_back(value);
+              previous_value = value;
+            }
+
+            attribute_vector[av_offset] = dictionary_offset;
+          }
+          dictionary_values.shrink_to_fit();
+          // std::cout << "dict size: " << dictionary_values.size() << "\n";
+
+          const auto encoded_segment =
+              DictionarySegment(std::move(dictionary_values),
+                                compress_vector(attribute_vector, VectorCompressionType::FixedWidthInteger,
+                                                PolymorphicAllocator<ColumnDataType>{}, {dictionary_values.size()}));
+          useless_sum += encoded_segment.size();
+        });
+      }
+    }
+  });
+}
+
+BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemDictionaryEncoding)(benchmark::State& state) {
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
+
+  const auto& sm = Hyrise::get().storage_manager;
+  const auto& lineitem_table = sm.get_table("lineitem");
+  const auto chunk_count = lineitem_table->chunk_count();
+
+  // std::cout << "Encoding entire lineitem table as Unencoded ... ";
+  ChunkEncoder::encode_all_chunks(lineitem_table, SegmentEncodingSpec{EncodingType::Unencoded});
+  // std::cout << "done\n";
+
+  const auto column_data_type = lineitem_table->column_data_type(column_id);
+
+  resolve_data_type(column_data_type, [&](auto type) {
+    for (auto _ : state) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& chunk = lineitem_table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(column_id);
+
+        ChunkEncoder::encode_segment(segment, column_data_type, SegmentEncodingSpec{EncodingType::Dictionary});
+      }
+    }
+  });
+}
+
 constexpr auto LINEITEM_COLUMN_COUNT = 15;
 BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, LINEITEM_COLUMN_COUNT);
+BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemManualDictionaryEncoding)
+    ->DenseRange(0, LINEITEM_COLUMN_COUNT);
+BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemManualStringOptimizedDictionaryEncoding)
+    ->DenseRange(0, LINEITEM_COLUMN_COUNT);
+BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemDictionaryEncoding)
+    ->DenseRange(0, LINEITEM_COLUMN_COUNT);
 
 }  // namespace hyrise

@@ -26,6 +26,7 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
@@ -37,7 +38,7 @@
 namespace hyrise {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
-  std::ifstream file;
+  auto file = std::ifstream{};
   file.open(filename, std::ios::binary);
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
@@ -149,7 +150,7 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
 
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                                DataType data_type, bool column_is_nullable) {
-  std::shared_ptr<AbstractSegment> result;
+  auto result = std::shared_ptr<AbstractSegment>{};
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     result = _import_segment<ColumnDataType>(file, row_count, column_is_nullable);
@@ -173,8 +174,10 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
                                                 hana::type_c<ColumnDataType>)) {
         return _import_fixed_string_dictionary_segment(file, row_count);
       } else {
-        Fail("Unsupported data type for FixedStringDictionary encoding");
+        Fail("Unsupported data type for FixedStringDictionary encoding.");
       }
+    case EncodingType::VariableStringDictionary:
+      return _import_variable_string_length_segment<pmr_string>(file, row_count);
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
     case EncodingType::FrameOfReference:
@@ -182,13 +185,13 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
                                                 hana::type_c<ColumnDataType>)) {
         return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);
       } else {
-        Fail("Unsupported data type for FOR encoding");
+        Fail("Unsupported data type for FrameOfReference encoding.");
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
   }
 
-  Fail("Invalid EncodingType");
+  Fail("Invalid EncodingType.");
 }
 
 template <typename T>
@@ -212,21 +215,41 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
                                                                                ChunkOffset row_count) {
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size));
-
+  auto dictionary = _read_values<T>(file, dictionary_size);
   auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
 
-  return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
+  return std::make_shared<DictionarySegment<T>>(std::move(dictionary), std::move(attribute_vector));
+}
+
+template <typename T>
+std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variable_string_length_segment(
+    std::ifstream& file, ChunkOffset row_count) {
+  // Read attribute vector compression type and use it to decompress.
+  const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
+  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
+
+  // Read offset vector.
+  const auto offset_vector_size = _read_value<uint32_t>(file);
+  auto offset_vector = _read_values<uint32_t>(file, offset_vector_size);
+
+  // Read dictionary.
+  const auto dictionary_size = _read_value<uint32_t>(file);
+  auto dictionary = _read_values<char>(file, dictionary_size);
+
+  return std::make_shared<VariableStringDictionarySegment<pmr_string>>(
+      std::move(dictionary), std::move(attribute_vector), std::move(offset_vector));
 }
 
 std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(
     std::ifstream& file, ChunkOffset row_count) {
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  auto dictionary = _import_fixed_string_vector(file, dictionary_size);
+
+  auto fixed_string_vector = _import_fixed_string_vector(file, dictionary_size);
   auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
 
-  return std::make_shared<FixedStringDictionarySegment<pmr_string>>(dictionary, attribute_vector);
+  return std::make_shared<FixedStringDictionarySegment<pmr_string>>(std::move(fixed_string_vector),
+                                                                    std::move(attribute_vector));
 }
 
 template <typename T>
@@ -303,18 +326,18 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
                                          block_size, last_block_size, compressed_size, num_elements);
 }
 
-std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
+std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_attribute_vector(
     std::ifstream& file, const ChunkOffset row_count, const CompressedVectorTypeID compressed_vector_type_id) {
   const auto compressed_vector_type = static_cast<CompressedVectorType>(compressed_vector_type_id);
   switch (compressed_vector_type) {
     case CompressedVectorType::BitPacking:
-      return std::make_shared<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
+      return std::make_unique<const BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     case CompressedVectorType::FixedWidthInteger1Byte:
-      return std::make_shared<FixedWidthIntegerVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
+      return std::make_unique<const FixedWidthIntegerVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
     case CompressedVectorType::FixedWidthInteger2Byte:
-      return std::make_shared<FixedWidthIntegerVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
+      return std::make_unique<const FixedWidthIntegerVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case CompressedVectorType::FixedWidthInteger4Byte:
-      return std::make_shared<FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+      return std::make_unique<const FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
       Fail("Cannot import attribute vector with compressed vector type id: " +
            std::to_string(compressed_vector_type_id));
@@ -339,11 +362,11 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
   }
 }
 
-std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
+FixedStringVector BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
   const auto string_length = _read_value<uint32_t>(file);
-  pmr_vector<char> values(string_length * count);
+  auto values = pmr_vector<char>(string_length * count);
   file.read(values.data(), static_cast<int64_t>(values.size()));
-  return std::make_shared<FixedStringVector>(std::move(values), string_length);
+  return FixedStringVector{std::move(values), string_length};
 }
 
 }  // namespace hyrise

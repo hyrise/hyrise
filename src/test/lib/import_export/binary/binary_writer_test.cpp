@@ -35,7 +35,7 @@ INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryWriterMultiEncodingTest,
                          enum_formatter<EncodingType>);
 
 TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("FirstColumn", DataType::Int, false);
   column_definitions.emplace_back("SecondColumn", DataType::String, false);
 
@@ -48,7 +48,7 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
 }
 
 TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
@@ -67,7 +67,7 @@ TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
 }
 
 TEST_F(BinaryWriterTest, FixedStringDictionaryNullValue) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
@@ -88,7 +88,7 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryNullValue) {
 }
 
 TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
@@ -106,8 +106,67 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
+TEST_F(BinaryWriterTest, VariableStringDictionarySingleChunk) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
+TEST_F(BinaryWriterTest, VariableStringDictionaryNullValue) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({NULL_VALUE});
+  table->append({"test"});
+  table->append({NULL_VALUE});
+
+  table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
+TEST_F(BinaryWriterTest, VariableStringDictionaryMultipleChunks) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->set_immutable();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
 TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
@@ -129,7 +188,7 @@ TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
 // A table with reference segments is materialized while exporting. The content of the export file should not be differ-
 // ent from an exported table with ValueSegments and the same content.
 TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, true);
   column_definitions.emplace_back("b", DataType::Int, false);
   column_definitions.emplace_back("c", DataType::Long, false);
@@ -171,7 +230,7 @@ TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
 }
 
 TEST_F(BinaryWriterTest, SingleChunkFrameOfReferenceSegment) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
@@ -192,7 +251,7 @@ TEST_F(BinaryWriterTest, SingleChunkFrameOfReferenceSegment) {
 }
 
 TEST_F(BinaryWriterTest, MultipleChunksFrameOfReferenceSegment) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
@@ -213,7 +272,7 @@ TEST_F(BinaryWriterTest, MultipleChunksFrameOfReferenceSegment) {
 }
 
 TEST_F(BinaryWriterTest, AllNullFrameOfReferenceSegment) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
@@ -235,7 +294,7 @@ TEST_F(BinaryWriterTest, AllNullFrameOfReferenceSegment) {
 
 TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
   // Export more rows than minimum block size of 16384
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
   column_definitions.emplace_back("c", DataType::Long, false);
@@ -262,7 +321,7 @@ TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
 }
 
 TEST_F(BinaryWriterTest, SortColumnDefinitions) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
 
@@ -301,7 +360,7 @@ TEST_F(BinaryWriterTest, SortColumnDefinitions) {
 // TEST_P for all supported encoding types
 
 TEST_P(BinaryWriterMultiEncodingTest, RepeatedInt) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
@@ -322,7 +381,7 @@ TEST_P(BinaryWriterMultiEncodingTest, RepeatedInt) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, SingleChunkSingleFloatColumn) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Float, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{5});
@@ -341,7 +400,7 @@ TEST_P(BinaryWriterMultiEncodingTest, SingleChunkSingleFloatColumn) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, MultipleChunkSingleFloatColumn) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Float, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
@@ -358,7 +417,7 @@ TEST_P(BinaryWriterMultiEncodingTest, MultipleChunkSingleFloatColumn) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, StringSegment) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
@@ -378,7 +437,7 @@ TEST_P(BinaryWriterMultiEncodingTest, StringSegment) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentSorted) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
   column_definitions.emplace_back("c", DataType::Long, false);
@@ -403,7 +462,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentSorted) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentUnsorted) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
   column_definitions.emplace_back("c", DataType::Long, false);
@@ -428,7 +487,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentUnsorted) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, AllTypesMixColumn) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
   column_definitions.emplace_back("c", DataType::Long, false);
@@ -452,7 +511,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesMixColumn) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, EmptyStringsSegment) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
@@ -473,7 +532,7 @@ TEST_P(BinaryWriterMultiEncodingTest, EmptyStringsSegment) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, true);
   column_definitions.emplace_back("b", DataType::Float, true);
   column_definitions.emplace_back("c", DataType::Long, true);
@@ -499,7 +558,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, true);
   column_definitions.emplace_back("b", DataType::Float, true);
   column_definitions.emplace_back("c", DataType::Long, true);
@@ -526,7 +585,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
 }
 
 TEST_P(BinaryWriterMultiEncodingTest, RunNullValues) {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});

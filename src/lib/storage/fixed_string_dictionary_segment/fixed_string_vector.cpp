@@ -19,7 +19,7 @@ FixedStringVector::FixedStringVector(const FixedStringVector& other, const Polym
 }
 
 void FixedStringVector::push_back(const pmr_string& string) {
-  Assert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector");
+  Assert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector.");
 
   if (_string_length > 0) {
     const auto pos = _chars.size();
@@ -124,6 +124,10 @@ void FixedStringVector::shrink_to_fit() {
 
 PolymorphicAllocator<FixedString> FixedStringVector::get_allocator() {
   return _chars.get_allocator();
+}
+
+FixedStringVector FixedStringVector::copy_using_memory_resource(MemoryResource& memory_resource) const {
+  return FixedStringVector{pmr_vector<char>{_chars, &memory_resource}, _string_length};
 }
 
 void FixedStringVector::reserve(const size_t size) {

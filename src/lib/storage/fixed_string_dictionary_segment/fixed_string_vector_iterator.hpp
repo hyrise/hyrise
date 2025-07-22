@@ -13,7 +13,7 @@
 namespace hyrise {
 
 // We need a custom iterator for this vector, since we have to perform jumps when iterating over the vector.
-// Depending on OnConstStorage, it either returns a (mutable) FixedString or an (immutable) std::string_view
+// Depending on OnConstStorage, it either returns a (mutable) FixedString or an (immutable) std::string_view.
 template <bool OnConstStorage,
           typename Storage = std::conditional_t<OnConstStorage, const pmr_vector<char>, pmr_vector<char>>,
           typename DereferenceValue = std::conditional_t<OnConstStorage, const std::string_view, FixedString>>

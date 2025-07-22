@@ -18,6 +18,9 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
+
 #include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -1200,30 +1203,31 @@ write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& r
                        std::vector<pmr_vector<AggregateType>>& value_vectors,
                        std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
-  split_results_chunk_wise(
-      true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
-        auto& null_values = null_vectors[chunk_id];
+  split_results_chunk_wise(true, results, value_vectors, null_vectors,
+                           [&](auto begin, const auto end, const ChunkID chunk_id) {
+                             auto& values = value_vectors[chunk_id];
+                             auto& null_values = null_vectors[chunk_id];
 
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
+                             for (; begin != end; ++begin) {
+                               const auto& result = *begin;
 
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
+                               if (result.row_id.is_null()) {
+                                 continue;
+                               }
 
-          if (result.aggregate_count > 0) {
-            values.emplace_back(result.accumulator);
-            null_values.emplace_back(false);
-          } else {
-            values.emplace_back();
-            null_values.emplace_back(true);
-            null_written = true;
-          }
-        }
-      });
+                               if (result.aggregate_count > 0) {
+                                 values.emplace_back(result.accumulator);
+                                 null_values.emplace_back(false);
+                               } else {
+                                 values.emplace_back();
+                                 null_values.emplace_back(true);
+                                 null_written = true;
+                               }
+                             }
+                           });
   return null_written;
 }
 
@@ -1232,22 +1236,23 @@ template <typename ColumnDataType, typename AggregateType, WindowFunction aggreg
 std::enable_if_t<aggregate_func == WindowFunction::Count, bool> write_aggregate_values(
     const AggregateResults<ColumnDataType, aggregate_func>& results,
     std::vector<pmr_vector<AggregateType>>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors) {
-  split_results_chunk_wise(
-      false, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
+  split_results_chunk_wise(false, results, value_vectors, null_vectors,
+                           [&](auto begin, const auto end, const ChunkID chunk_id) {
+                             auto& values = value_vectors[chunk_id];
 
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
+                             for (; begin != end; ++begin) {
+                               const auto& result = *begin;
 
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
+                               if (result.row_id.is_null()) {
+                                 continue;
+                               }
 
-          values.emplace_back(result.aggregate_count);
-        }
-      });
+                               values.emplace_back(result.aggregate_count);
+                             }
+                           });
   return false;
 }
 
@@ -1256,22 +1261,23 @@ template <typename ColumnDataType, typename AggregateType, WindowFunction aggreg
 std::enable_if_t<aggregate_func == WindowFunction::CountDistinct, bool> write_aggregate_values(
     const AggregateResults<ColumnDataType, aggregate_func>& results,
     std::vector<pmr_vector<AggregateType>>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors) {
-  split_results_chunk_wise(
-      false, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
+  split_results_chunk_wise(false, results, value_vectors, null_vectors,
+                           [&](auto begin, const auto end, const ChunkID chunk_id) {
+                             auto& values = value_vectors[chunk_id];
 
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
+                             for (; begin != end; ++begin) {
+                               const auto& result = *begin;
 
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
+                               if (result.row_id.is_null()) {
+                                 continue;
+                               }
 
-          values.emplace_back(result.accumulator.size());
-        }
-      });
+                               values.emplace_back(result.accumulator.size());
+                             }
+                           });
   return false;
 }
 
@@ -1325,31 +1331,32 @@ write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& r
                        std::vector<pmr_vector<AggregateType>>& value_vectors,
                        std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
-  split_results_chunk_wise(
-      true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
-        auto& values = value_vectors[chunk_id];
-        auto& null_values = null_vectors[chunk_id];
+  split_results_chunk_wise(true, results, value_vectors, null_vectors,
+                           [&](auto begin, const auto end, const ChunkID chunk_id) {
+                             auto& values = value_vectors[chunk_id];
+                             auto& null_values = null_vectors[chunk_id];
 
-        for (; begin != end; ++begin) {
-          const auto& result = *begin;
+                             for (; begin != end; ++begin) {
+                               const auto& result = *begin;
 
-          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
-          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-          if (result.row_id.is_null()) {
-            continue;
-          }
+                               // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap
+                               // (in the case of an unused immediate key) or the result of overallocating the result
+                               // vector. As such, it must be skipped.
+                               if (result.row_id.is_null()) {
+                                 continue;
+                               }
 
-          if (result.aggregate_count > 1) {
-            values.emplace_back(result.accumulator[3]);
-            null_values.emplace_back(false);
-          } else {
-            // STDDEV_SAMP is undefined for lists with less than two elements.
-            values.emplace_back();
-            null_values.emplace_back(true);
-            null_written = true;
-          }
-        }
-      });
+                               if (result.aggregate_count > 1) {
+                                 values.emplace_back(result.accumulator[3]);
+                                 null_values.emplace_back(false);
+                               } else {
+                                 // STDDEV_SAMP is undefined for lists with less than two elements.
+                                 values.emplace_back();
+                                 null_values.emplace_back(true);
+                                 null_written = true;
+                               }
+                             }
+                           });
   return null_written;
 }
 
