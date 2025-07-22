@@ -65,6 +65,8 @@
          x();
        }
     ```
+  * In test cases, prefer `EXPECT` over `ASSERT`. Thus, the test case continues execution and can output multiple issues in one pass.
+    Only use `ASSERT` if it prevents segmentation faults in the following test code, e.g., by guaranteeing the size of a vector if we later access its individual members.
 
 
 # Formatting and Naming

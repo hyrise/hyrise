@@ -72,7 +72,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Mark all chunks of the table as immutable.
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
-    auto& table = table_info_by_name[table_name].table;
+    auto& table = table_info.table;
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
@@ -92,7 +92,7 @@ void AbstractTableGenerator::generate_and_store() {
       // necessary to avoid loading sorted binary data (created with a clustering configuration) in a run that is
       // supposed to be unclustered.
       for (auto& [table_name, table_info] : table_info_by_name) {
-        auto& table = table_info_by_name[table_name].table;
+        auto& table = table_info.table;
         const auto chunk_count = table->chunk_count();
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           const auto& chunk = table->get_chunk(chunk_id);
