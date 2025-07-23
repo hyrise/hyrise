@@ -41,14 +41,11 @@ TEST_F(ChangeMetaTableNodeTest, Copy) {
   EXPECT_EQ(*_change_meta_table_node, *_change_meta_table_node->deep_copy());
 }
 
-TEST_F(ChangeMetaTableNodeTest, NoUniqueColumnCombinations) {
+TEST_F(ChangeMetaTableNodeTest, NoDataDependencies) {
   // Non-query nodes should not be asked for data dependencies.
   EXPECT_THROW(_change_meta_table_node->unique_column_combinations(), std::logic_error);
-}
-
-TEST_F(ChangeMetaTableNodeTest, NoOrderDependencies) {
-  // Non-query nodes should not be asked for data dependencies.
   EXPECT_THROW(_change_meta_table_node->order_dependencies(), std::logic_error);
+  EXPECT_THROW(_change_meta_table_node->inclusion_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise
