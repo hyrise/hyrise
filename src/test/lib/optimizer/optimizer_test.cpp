@@ -11,7 +11,6 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 
