@@ -9,6 +9,7 @@
 
 #include <boost/variant/get.hpp>
 
+#include "abstract_rule.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
@@ -38,7 +39,7 @@ std::string ExpressionReductionRule::name() const {
   return name;
 }
 
-void ExpressionReductionRule::_apply_to_plan_without_subqueries(
+IsCacheable ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
@@ -66,6 +67,8 @@ void ExpressionReductionRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
+
+  return IsCacheable::Yes;
 }
 
 const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distributivity(

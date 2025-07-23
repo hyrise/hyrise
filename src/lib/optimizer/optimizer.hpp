@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "cost_estimation/cost_estimator_logical.hpp"
@@ -39,10 +40,10 @@ class Optimizer final {
   void add_rule(std::unique_ptr<AbstractRule> rule);
 
   /**
-   * Returns optimized version of @param input.
+   * Returns optimized version of @param input LQP and whether the result is safe to cache.
    * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
    */
-  std::shared_ptr<AbstractLQPNode> optimize(
+  std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable> optimize(
       std::shared_ptr<AbstractLQPNode> input,
       const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
 

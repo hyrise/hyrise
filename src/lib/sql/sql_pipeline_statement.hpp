@@ -11,6 +11,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/operator_task.hpp"
@@ -125,7 +126,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
   std::shared_ptr<AbstractLQPNode> _unoptimized_logical_plan;
-  std::shared_ptr<AbstractLQPNode> _optimized_logical_plan;
+  std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable> _optimized_logical_plan;
   std::shared_ptr<AbstractOperator> _physical_plan;
 
   std::shared_ptr<OperatorTask> _root_operator_task;
