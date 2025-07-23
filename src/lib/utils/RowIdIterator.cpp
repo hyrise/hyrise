@@ -10,10 +10,6 @@ RowIdIterator::RowIdIterator(std::vector<unsigned char>& buffer, const uint64_t 
                              const uint64_t current_offset)
     : _buffer(buffer), _tuple_key_size(tuple_key_size), _current_offset(current_offset) {}
 
- RowIdIterator::RowIdIterator(const RowIdIterator& other) = default;
-
-RowIdIterator& RowIdIterator::operator=(const RowIdIterator& other) = default;
-
 RowID RowIdIterator::operator*() const {
   auto result = RowID{};
   std::memcpy(&result, &_buffer[_current_offset], sizeof(RowID));
