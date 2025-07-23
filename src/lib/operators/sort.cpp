@@ -27,6 +27,7 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/key_normalizer.h"
 #include "utils/timer.hpp"
 
 namespace {
@@ -327,23 +328,47 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
   auto total_sort_time = std::chrono::nanoseconds{};
 
-  const auto sort_step_count = _sort_definitions.size();
+  // const auto sort_step_count = _sort_definitions.size();
+  //
+  // for (auto sort_step = static_cast<int64_t>(sort_step_count - 1); sort_step >= 0; --sort_step) {
+  //   const auto& sort_definition = _sort_definitions[sort_step];
+  //   const auto data_type = input_table->column_data_type(sort_definition.column);
+  //
+  //   resolve_data_type(data_type, [&](auto type) {
+  //     using ColumnDataType = typename decltype(type)::type;
+  //
+  //     auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
+  //     previously_sorted_pos_list =
+  //         sort_impl.sort(previously_sorted_pos_list, sort_step == static_cast<int64_t>(sort_step_count - 1));
+  //
+  //     total_materialization_time += sort_impl.materialization_time;
+  //     total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
+  //     total_sort_time += sort_impl.sort_time;
+  //   });
+  // }
 
-  for (auto sort_step = static_cast<int64_t>(sort_step_count - 1); sort_step >= 0; --sort_step) {
-    const auto& sort_definition = _sort_definitions[sort_step];
-    const auto data_type = input_table->column_data_type(sort_definition.column);
+  auto [normalized_keys, tuple_key_size] = KeyNormalizer::convert_table(input_table, _sort_definitions);
 
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
+  auto [iterator, end_iterator] = KeyNormalizer::get_iterators(normalized_keys, tuple_key_size);
 
-      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
-      previously_sorted_pos_list =
-          sort_impl.sort(previously_sorted_pos_list, sort_step == static_cast<int64_t>(sort_step_count - 1));
+  std::vector<unsigned char*> pointers{};
+  pointers.reserve(input_table->row_count());
+  auto* current_pointer = &normalized_keys.front();
+  std::generate_n(std::back_inserter(pointers), input_table->row_count(), [&] {
+    auto* result = current_pointer;
+    current_pointer += tuple_key_size;
+    return result;
+  });
 
-      total_materialization_time += sort_impl.materialization_time;
-      total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
-      total_sort_time += sort_impl.sort_time;
-    });
+  std::ranges::stable_sort(pointers, [tuple_key_size](const unsigned char* lhs, const unsigned char* rhs) {
+    return std::memcmp(lhs, rhs, tuple_key_size) < 0;
+  });
+
+  previously_sorted_pos_list.emplace();
+  previously_sorted_pos_list->reserve(input_table->row_count());
+  while (iterator != end_iterator) {
+    previously_sorted_pos_list->push_back(*iterator);
+    ++iterator;
   }
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);

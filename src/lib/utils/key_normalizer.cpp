@@ -97,10 +97,10 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
     }
   }
 
-  const auto row_id_offset_in_tuple = tuple_key_size - sizeof(RowID);
+  auto offset = uint64_t{tuple_key_size - sizeof(RowID)};
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-    const auto buffer_row_start = (buffer_offset + chunk_offset) * tuple_key_size;
-    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_row_start + row_id_offset_in_tuple);
+    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_offset + offset);
+    offset += tuple_key_size;
   }
 }
 
