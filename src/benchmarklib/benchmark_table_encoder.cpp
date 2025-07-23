@@ -73,7 +73,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   const auto& column_mapping_it = custom_mapping.find(table_name);
   const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
 
-  ChunkEncodingSpec chunk_encoding_spec;
+  auto chunk_encoding_spec = ChunkEncodingSpec{};
 
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     // Check if a column specific encoding was specified
@@ -122,6 +122,8 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
       const auto chunk = table->get_chunk(ChunkID{chunk_id});
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
       if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
+        // ChunkEncoder encodes the chunk using the provided encoding specification and creates pruning statistics (if
+        // not added before).
         ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
         encoding_performed = true;
       }

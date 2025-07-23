@@ -216,6 +216,10 @@ class Table : private Noncopyable {
    */
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
+  /**
+   * NOTE: All key constraints are currently stored. If a constraint is invalidated it is not deleted. To check if a 
+   * key constraint is guaranteed to be valid, use `key_constraint_is_confidently_valid`.
+   */
   const TableKeyConstraints& soft_key_constraints() const;
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;

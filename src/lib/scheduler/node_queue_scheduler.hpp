@@ -48,32 +48,23 @@ class UidAllocator;
 /**
  * Schedules Tasks
  */
-class NodeQueueScheduler : public AbstractScheduler {
+class NodeQueueScheduler final : public AbstractScheduler {
  public:
   NodeQueueScheduler();
-  ~NodeQueueScheduler() override;
+  ~NodeQueueScheduler() final;
 
   /**
    * Create a TaskQueue on every node and a worker for every core.
    */
-  void begin() override;
+  void begin() final;
 
-  void finish() override;
+  void finish() final;
 
-  bool active() const override;
+  bool active() const final;
 
-  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
+  const std::vector<std::shared_ptr<TaskQueue>>& queues() const final;
 
   const std::vector<std::shared_ptr<Worker>>& workers() const;
-
-  /**
-   * @param task
-   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other nodes due
-   *                          to task stealing in NUMA environments.
-   * @param priority
-   */
-  void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                SchedulePriority priority = SchedulePriority::Default) override;
 
   /**
    * @param preferred_node_id
@@ -83,7 +74,7 @@ class NodeQueueScheduler : public AbstractScheduler {
    */
   NodeID determine_queue_id(const NodeID preferred_node_id) const;
 
-  void wait_for_all_tasks() override;
+  void wait_for_all_tasks() final;
 
   const std::atomic_int64_t& active_worker_count() const;
 
@@ -91,7 +82,16 @@ class NodeQueueScheduler : public AbstractScheduler {
   static constexpr auto NUM_GROUPS = 10;
 
  protected:
-  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
+  /**
+   * @param task
+   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other nodes due
+   *                          to task stealing in NUMA environments.
+   * @param priority
+   */
+  void _schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
+                 SchedulePriority priority = SchedulePriority::Default) final;
+
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
 
  private:
   std::atomic<TaskID::base_type> _task_counter{0};
