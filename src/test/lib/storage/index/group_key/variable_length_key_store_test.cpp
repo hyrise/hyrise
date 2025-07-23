@@ -199,4 +199,10 @@ TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
   EXPECT_THROW(*_store.begin() = long_key, std::logic_error);
 }
 
+TEST_F(VariableLengthKeyStoreTest, Resize) {
+  EXPECT_EQ(_store.size(), ChunkOffset{4});
+  _store.resize(ChunkOffset{8});
+  EXPECT_EQ(_store.size(), ChunkOffset{8});
+}
+
 }  // namespace hyrise
