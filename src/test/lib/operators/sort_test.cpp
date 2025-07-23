@@ -302,4 +302,33 @@ TEST_F(SortTest, NegativeFloatSorting) {
   EXPECT_EQ(last, float{7});
 }
 
+TEST_F(SortTest, NullsLast) {
+  auto test_sort = [&](const std::vector<SortColumnDefinition>& sort_column_definitions, const bool input_is_reference,
+                       const Sort::ForceMaterialization force_materialization, const std::string& result_filename) {
+    auto sort = Sort{input_table_wrapper, sort_column_definitions, Chunk::DEFAULT_SIZE, force_materialization};
+    sort.execute();
+
+    const auto expected_table = load_table(std::string{"resources/test_data/tbl/sort/"} + result_filename);
+    const auto& result = sort.get_output();
+    EXPECT_TABLE_EQ_ORDERED(result, expected_table);
+
+    // Verify type of result table.
+    if (force_materialization == Sort::ForceMaterialization::Yes) {
+      EXPECT_EQ(result->type(), TableType::Data);
+    } else {
+      EXPECT_EQ(result->type(), TableType::References);
+    }
+  };
+
+  test_sort({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsLast},
+             SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsLast}},
+            false, Sort::ForceMaterialization::No, "b_asc_nl_a_desc_nl.tbl");  // NOLINT
+  test_sort({SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast},
+             SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}},
+            false, Sort::ForceMaterialization::No, "b_desc_nl_a_asc_nl.tbl");  // NOLINT
+  test_sort({SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast},
+             SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}},
+            true, Sort::ForceMaterialization::Yes, "b_desc_nl_a_asc_nl.tbl");  // NOLINT
+}
+
 }  // namespace hyrise

@@ -265,28 +265,43 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
   // Currently, we assume that set_individually_sorted_by is called only once at most.
   // As such, there should be no existing sorting and the new sorting should contain at least one column.
   // Feel free to remove this assertion if necessary.
+  // Another important restriction is that we only check the first sort column (in debug mode only).
   Assert(!sorted_by.empty() && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
 
   if constexpr (HYRISE_DEBUG) {
-    for (const auto& sorted_by_column : sorted_by) {
-      const auto& sorted_segment = get_segment(sorted_by_column.column);
-      if (sorted_segment->size() < 2) {
-        break;
-      }
-
-      segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
+    const auto& sorted_by_column = sorted_by[0];
+    const auto& sorted_segment = get_segment(sorted_by_column.column);
+    if (sorted_segment->size() > 1) {
+      segment_with_iterators(*sorted_segment, [&](const auto& begin, const auto& end) {
         Assert(std::is_sorted(begin, end,
-                              [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
-                                // is_sorted evaluates the segment by calling the lambda with the SegmentPositions at
-                                // it+n and it (n being non-negative), which needs to evaluate to false.
-                                if (right.is_null()) {
-                                  return false;  // handles right side is NULL and both are NULL
+                              [sort_mode = sorted_by_column.sort_mode](const auto& right, const auto& left) {
+                                // `is_sorted` evaluates the segment by iteratively calling the lambda with the
+                                // SegmentPositions at `iter + 1` and `iter`, which needs to evaluate to false.
+                                if (left.is_null() && right.is_null()) {
+                                  return false;
                                 }
-                                if (left.is_null()) {
-                                  return true;
+
+                                if (sort_mode == SortMode::AscendingNullsFirst ||
+                                    sort_mode == SortMode::DescendingNullsFirst) {
+                                  // NULLs in the beginning.
+                                  if (left.is_null()) {
+                                    return false;  // Handles right side is NULL and both are NULL.
+                                  }
+                                  if (right.is_null()) {
+                                    return true;
+                                  }
+                                } else {
+                                  // NULLs in the end.
+                                  if (left.is_null()) {
+                                    return true;  // Handles right side is NULL and both are NULL.
+                                  }
+                                  if (right.is_null()) {
+                                    return false;
+                                  }
                                 }
-                                const auto ascending = sort_mode == SortMode::AscendingNullsFirst;
-                                return ascending ? left.value() < right.value() : left.value() > right.value();
+                                const auto ascending = sort_mode == SortMode::AscendingNullsFirst ||
+                                                       sort_mode == SortMode::AscendingNullsLast;
+                                return ascending ? right.value() < left.value() : left.value() < right.value();
                               }),
                "Setting a sort order for a segment which is not sorted accordingly.");
       });
