@@ -159,7 +159,6 @@ template <typename T>
 requires(std::is_same_v<T, pmr_string>)
     pmr_string VariableStringDictionarySegment<T>::typed_value_of_value_id(const ValueID value_id)
 const {
-
   DebugAssert(value_id < _offset_vector.size(), "ValueID out of bounds.");
   return pmr_string{get_string(_offset_vector, _dictionary, value_id)};
 }
