@@ -463,7 +463,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
 
       _insert_nodes(current_node, input_side, candidate_nodes);
       return {};
-    } break;
+    }
 
     case LQPNodeType::Alias:
     case LQPNodeType::Predicate:
@@ -483,7 +483,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
 
       _insert_nodes(current_node, input_side, blocked_nodes);
       return pull_up_nodes;
-    } break;
+    }
 
     default:
       // No pull up past all other node types.
