@@ -12,6 +12,8 @@ class RowIdIterator {
 
  public:
   RowIdIterator(std::vector<unsigned char>& buffer, uint64_t tuple_key_size, bool is_end = false);
+  RowIdIterator(const RowIdIterator& other);
+  RowIdIterator& operator=(const RowIdIterator& other);
   RowIdIterator& operator++();    // prefix
   RowIdIterator operator++(int);  // postfix
   RowID operator*() const;
