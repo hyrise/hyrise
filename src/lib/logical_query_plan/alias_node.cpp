@@ -42,8 +42,8 @@ std::string AliasNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions() const {
-  return node_expressions;
+void AliasNode::_set_output_expressions() const {
+  _output_expressions = node_expressions;
 }
 
 UniqueColumnCombinations AliasNode::unique_column_combinations() const {

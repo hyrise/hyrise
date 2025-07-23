@@ -26,8 +26,8 @@ std::string IntersectNode::description(const DescriptionMode /*mode*/) const {
   return "[IntersectNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> IntersectNode::output_expressions() const {
-  return left_input()->output_expressions();
+void IntersectNode::_set_output_expressions() const {
+  _output_expressions = left_input()->output_expressions();
 }
 
 bool IntersectNode::is_column_nullable(const ColumnID column_id) const {

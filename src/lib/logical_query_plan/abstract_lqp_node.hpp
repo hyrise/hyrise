@@ -137,7 +137,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *         LQPColumnExpression and `a + 5` is an ArithmeticExpression. Avoid "column expression" if you do not mean
    *         a column that comes from an actual table.
    */
-  virtual std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const;
+  virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_expressions() const;
+  void clear_output_expressions() const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it cannot be found. Note that because COUNT(*)
@@ -288,6 +289,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
    */
   static AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode);
+
+  virtual void _set_output_expressions() const;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
 
  private:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;

@@ -19,8 +19,9 @@ std::string DummyTableNode::description(const DescriptionMode /*mode*/) const {
   return "[DummyTable]";
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> DummyTableNode::output_expressions() const {
-  return {};
+const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::output_expressions() const {
+  const static auto output_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  return output_expressions;
 }
 
 bool DummyTableNode::is_column_nullable(const ColumnID /*column_id*/) const {

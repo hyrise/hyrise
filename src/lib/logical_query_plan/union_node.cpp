@@ -26,7 +26,7 @@ std::string UnionNode::description(const DescriptionMode /*mode*/) const {
   return "[UnionNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
+void UnionNode::_set_output_expressions() const {
   const auto& left_expressions = left_input()->output_expressions();
   /**
    * Asserting matching table schemas leads to multiple fetches of a subplan's output expressions. Though this does not
@@ -34,7 +34,7 @@ std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions()
    * `DebugAssert`.
    */
   Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match.");
-  return left_expressions;
+  _output_expressions = left_expressions;
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {

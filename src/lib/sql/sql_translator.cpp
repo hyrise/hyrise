@@ -190,12 +190,13 @@ std::shared_ptr<AbstractLQPNode> add_expressions_if_unavailable(
     return node;
   }
 
-  const auto output_expressions = node->output_expressions();
+  const auto& output_expressions = node->output_expressions();
   projection_expressions.insert(projection_expressions.end(), output_expressions.cbegin(), output_expressions.cend());
 
   // If the current LQP already is a ProjectionNode, do not add another one.
   if (node->type == LQPNodeType::Projection) {
     node->node_expressions = projection_expressions;
+    node->clear_output_expressions();
     return node;
   }
 
@@ -501,7 +502,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
 
   // Save mappings: ColumnID -> ColumnName
   auto column_names = std::unordered_map<ColumnID, std::string>{};
-  const auto output_expressions = lqp->output_expressions();
+  const auto& output_expressions = lqp->output_expressions();
   const auto output_expression_count = output_expressions.size();
   for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
     for (const auto& identifier : with_translator._inflated_select_list_elements[column_id].identifiers) {
@@ -771,7 +772,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         lqp = lqp_view->lqp;
 
         // Add all named columns to the IdentifierContext
-        const auto output_expressions = lqp_view->lqp->output_expressions();
+        const auto& output_expressions = lqp_view->lqp->output_expressions();
         const auto output_expression_count = output_expressions.size();
         for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
           const auto& expression = output_expressions[column_id];
@@ -796,7 +797,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         /**
          * Add all named columns from the view to the IdentifierContext
          */
-        const auto output_expressions = view->lqp->output_expressions();
+        const auto& output_expressions = view->lqp->output_expressions();
         const auto output_expression_count = output_expressions.size();
         for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
           const auto& expression = output_expressions[column_id];
@@ -839,7 +840,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         identifiers.emplace_back(element.identifiers);
       }
 
-      const auto output_expressions = lqp->output_expressions();
+      const auto& output_expressions = lqp->output_expressions();
       const auto output_expression_count = output_expressions.size();
       Assert(identifiers.size() == output_expression_count,
              "There have to be as many identifier lists as output expressions");
@@ -1051,6 +1052,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
+  result_state.lqp->clear_output_expressions();
   result_state.lqp = lqp;
   return result_state;
 }
@@ -1120,6 +1122,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
   }
 
   auto lqp = JoinNode::make(join_mode, join_predicates, left_state.lqp, right_state.lqp);
+  left_state.lqp->clear_output_expressions();
   left_state.lqp = lqp;
   return left_state;
 }
@@ -1189,6 +1192,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
   }
 
   // Create output TableSourceState
+  result_state.lqp->clear_output_expressions();
   result_state.lqp = lqp;
 
   return result_state;
@@ -1468,7 +1472,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 
 void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
   const auto& left_input_lqp = _current_lqp;
-  const auto left_output_expressions = left_input_lqp->output_expressions();
+  const auto& left_output_expressions = left_input_lqp->output_expressions();
 
   // The right-hand side of the set operation has to be translated independently and must not access SQL identifiers
   // from the left-hand side. To ensure this, we create a new SQLTranslator with its own SQLIdentifierResolver.

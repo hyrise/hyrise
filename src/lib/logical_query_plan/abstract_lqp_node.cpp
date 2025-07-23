@@ -258,10 +258,29 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
   return _on_shallow_equals(rhs, node_mapping);
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::output_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::output_expressions() const {
+  if (!_output_expressions) {
+    _set_output_expressions();
+  }
+
+  return *_output_expressions;
+}
+
+void AbstractLQPNode::_set_output_expressions() const {
   Assert(left_input() && !right_input(),
          "Can only forward input expressions iff there is a left input and no right input");
-  return left_input()->output_expressions();
+  _output_expressions = left_input()->output_expressions();
+}
+
+void AbstractLQPNode::clear_output_expressions() const {
+  if (_output_expressions) {
+    _output_expressions.reset();
+    for (const auto& output_weak_ptr : _outputs) {
+      const auto output = output_weak_ptr.lock();
+      DebugAssert(output, "Failed to lock output.");
+      output->clear_output_expressions();
+    }
+  }
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {

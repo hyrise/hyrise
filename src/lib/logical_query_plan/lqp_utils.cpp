@@ -197,6 +197,7 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   DebugAssert(replacement_node->outputs().empty(), "Node cannot have outputs.");
   DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(),
               "Replacement node cannot have inputs.");
+  replacement_node->clear_output_expressions();
 
   const auto outputs = original_node->outputs();
   const auto input_sides = original_node->get_input_sides();
@@ -213,6 +214,7 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   const auto output_count = outputs.size();
   for (auto output_idx = size_t{0}; output_idx < output_count; ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], replacement_node);
+    outputs[output_idx]->clear_output_expressions();
   }
 
   /**
@@ -238,6 +240,7 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRi
    */
   auto left_input = node->left_input();
   node->set_left_input(nullptr);
+  node->clear_output_expressions();
 
   /**
    * Tie this node's previous outputs with this nodes previous left input
@@ -256,8 +259,11 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
               "Expected node without a right input.");
   DebugAssert(node_to_insert->output_count() == 0, "Expected node without outputs.");
 
+  node_to_insert->clear_output_expressions();
+
   const auto old_input = parent_node->input(input_side);
   parent_node->set_input(input_side, node_to_insert);
+  parent_node->clear_output_expressions();
   node_to_insert->set_left_input(old_input);
 }
 
@@ -268,12 +274,14 @@ void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
   DebugAssert(!node_to_insert->right_input() || allow_right_input == AllowRightInput::Yes,
               "Expected node without a right input.");
   DebugAssert(node_to_insert->output_count() == 0, "Expected node without outputs.");
+  node_to_insert->clear_output_expressions();
 
   // Re-link @param node's outputs to @param node_to_insert
   const auto node_outputs = node->outputs();
   for (const auto& output_node : node_outputs) {
     const LQPInputSide input_side = node->get_input_side(output_node);
     output_node->set_input(input_side, node_to_insert);
+    output_node->clear_output_expressions();
   }
 
   // Place @param node_to_insert above @param node

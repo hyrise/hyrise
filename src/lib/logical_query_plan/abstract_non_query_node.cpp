@@ -12,8 +12,9 @@
 
 namespace hyrise {
 
-std::vector<std::shared_ptr<AbstractExpression>> AbstractNonQueryNode::output_expressions() const {
-  return {};
+const std::vector<std::shared_ptr<AbstractExpression>>& AbstractNonQueryNode::output_expressions() const {
+  const static auto output_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  return output_expressions;
 }
 
 UniqueColumnCombinations AbstractNonQueryNode::unique_column_combinations() const {

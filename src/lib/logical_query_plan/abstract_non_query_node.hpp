@@ -16,7 +16,7 @@ class AbstractNonQueryNode : public AbstractLQPNode {
  public:
   using AbstractLQPNode::AbstractLQPNode;
 
-  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& output_expressions() const final;
 
   UniqueColumnCombinations unique_column_combinations() const override;
 

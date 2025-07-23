@@ -16,7 +16,6 @@ class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNo
   explicit ExceptNode(const SetOperationMode init_operation_mode);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // Forwards unique column combinations from the left input node.
@@ -33,5 +32,6 @@ class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNo
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
+  void _set_output_expressions() const final;
 };
 }  // namespace hyrise

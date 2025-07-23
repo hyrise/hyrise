@@ -27,8 +27,8 @@ std::string ProjectionNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::output_expressions() const {
-  return node_expressions;
+void ProjectionNode::_set_output_expressions() const {
+  _output_expressions = node_expressions;
 }
 
 bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {

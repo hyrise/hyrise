@@ -35,7 +35,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   const ColumnDefinitions& column_definitions() const;
 
-  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // Generates UCCs from table's key constraints and drops UCCs that include pruned columns.
@@ -74,10 +73,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
+  void _set_output_expressions() const final;
 
  private:
-  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
-
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;

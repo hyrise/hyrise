@@ -62,29 +62,25 @@ const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
   return _column_definitions;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> MockNode::output_expressions() const {
+void MockNode::_set_output_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
-  if (!_output_expressions) {
-    _output_expressions.emplace(_column_definitions.size() - _pruned_column_ids.size());
+  _output_expressions.emplace(_column_definitions.size() - _pruned_column_ids.size());
 
-    auto pruned_column_ids_iter = _pruned_column_ids.begin();
+  auto pruned_column_ids_iter = _pruned_column_ids.begin();
 
-    auto output_column_id = ColumnID{0};
-    for (auto stored_column_id = ColumnID{0}; stored_column_id < _column_definitions.size(); ++stored_column_id) {
-      // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
-      if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
-        ++pruned_column_ids_iter;
-        continue;
-      }
-
-      (*_output_expressions)[output_column_id] =
-          std::make_shared<LQPColumnExpression>(shared_from_this(), stored_column_id);
-      ++output_column_id;
+  auto output_column_id = ColumnID{0};
+  for (auto stored_column_id = ColumnID{0}; stored_column_id < _column_definitions.size(); ++stored_column_id) {
+    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
+    if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
+      ++pruned_column_ids_iter;
+      continue;
     }
-  }
 
-  return *_output_expressions;
+    (*_output_expressions)[output_column_id] =
+        std::make_shared<LQPColumnExpression>(shared_from_this(), stored_column_id);
+    ++output_column_id;
+  }
 }
 
 bool MockNode::is_column_nullable(const ColumnID column_id) const {
@@ -100,8 +96,8 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
 
   _pruned_column_ids = pruned_column_ids;
 
-  // Rebuilding this lazily the next time `output_expressions()` is called
-  _output_expressions.reset();
+  // Rebuilding this lazily the next time `output_expressions()` is called.
+  clear_output_expressions();
 }
 
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const {

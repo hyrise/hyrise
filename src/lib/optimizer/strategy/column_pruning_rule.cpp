@@ -316,6 +316,7 @@ void prune_projection_node(
   }
 
   projection_node->node_expressions = new_node_expressions;
+  projection_node->clear_output_expressions();
 }
 
 }  // namespace

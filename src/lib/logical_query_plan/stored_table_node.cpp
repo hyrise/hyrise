@@ -76,7 +76,7 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
   _pruned_column_ids = pruned_column_ids;
 
-  _set_output_expressions();
+  clear_output_expressions();
 }
 
 const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
@@ -113,14 +113,6 @@ std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
   stream << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
 
   return stream.str();
-}
-
-std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::output_expressions() const {
-  if (!_output_expressions) {
-    _set_output_expressions();
-  }
-
-  return *_output_expressions;
 }
 
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {

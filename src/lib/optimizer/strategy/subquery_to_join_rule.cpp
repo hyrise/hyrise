@@ -149,7 +149,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         DebugAssert(!node->right_input(), "PredicateNodes should not have right inputs.");
       }
       if (!join_predicates.empty()) {
-        result.pulled_predicate_node_count++;
+        ++result.pulled_predicate_node_count;
         result.join_predicates.insert(result.join_predicates.end(), join_predicates.begin(), join_predicates.end());
         for (const auto& join_predicate : join_predicates) {
           const auto& expression = join_predicate->right_operand();
@@ -166,16 +166,19 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
       result.adapted_lqp = SubqueryToJoinRule::adapt_aggregate_node(std::static_pointer_cast<AggregateNode>(node),
                                                                     result.required_output_expressions);
       result.adapted_lqp->set_left_input(left_input_adapted);
+      result.adapted_lqp->clear_output_expressions();
       break;
     case LQPNodeType::Alias:
       result.adapted_lqp = SubqueryToJoinRule::adapt_alias_node(std::static_pointer_cast<AliasNode>(node),
                                                                 result.required_output_expressions);
       result.adapted_lqp->set_left_input(left_input_adapted);
+      result.adapted_lqp->clear_output_expressions();
       break;
     case LQPNodeType::Projection:
       result.adapted_lqp = SubqueryToJoinRule::adapt_projection_node(std::static_pointer_cast<ProjectionNode>(node),
                                                                      result.required_output_expressions);
       result.adapted_lqp->set_left_input(left_input_adapted);
+      result.adapted_lqp->clear_output_expressions();
       break;
     case LQPNodeType::Sort: {
       const auto& sort_node = std::static_pointer_cast<SortNode>(node);

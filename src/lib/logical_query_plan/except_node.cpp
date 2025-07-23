@@ -26,8 +26,8 @@ std::string ExceptNode::description(const DescriptionMode /*mode*/) const {
   return "[ExceptNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> ExceptNode::output_expressions() const {
-  return left_input()->output_expressions();
+void ExceptNode::_set_output_expressions() const {
+  _output_expressions = left_input()->output_expressions();
 }
 
 bool ExceptNode::is_column_nullable(const ColumnID column_id) const {

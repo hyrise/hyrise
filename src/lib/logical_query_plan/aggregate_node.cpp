@@ -77,23 +77,21 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressions() const {
+void AggregateNode::_set_output_expressions() const {
   // We do not return node_expressions directly here, because we do not want to expose ANY() to the following LQP
   // nodes. This way, we execute ANY() as intended, but do not have to traverse the LQP upwards and adapt nodes
   // that reference the ANY'd column.
-  auto output_expressions = node_expressions;
+  _output_expressions.emplace(node_expressions);
 
-  const auto output_expression_count = output_expressions.size();
+  const auto output_expression_count = _output_expressions->size();
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expression_count;
        ++expression_idx) {
-    auto& output_expression = output_expressions[expression_idx];
+    auto& output_expression = (*_output_expressions)[expression_idx];
     const auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*output_expression);
     if (aggregate_expression.window_function == WindowFunction::Any) {
       output_expression = output_expression->arguments[0];
     }
   }
-
-  return output_expressions;
 }
 
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
@@ -132,7 +130,7 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
 
   // Check each UCC for applicability.  Aggregated expressions have the form `avg_(a)` and, thus, are not equal to the
   // expression `a` in the input UCC. `output_expressions()` translates pseudo-aggregates `avg_(a)` back to `a`.
-  const auto output_expressions = this->output_expressions();
+  const auto& output_expressions = this->output_expressions();
   const auto input_unique_column_combinations = left_input()->unique_column_combinations();
   for (const auto& input_unique_constraint : input_unique_column_combinations) {
     if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
@@ -177,7 +175,7 @@ OrderDependencies AggregateNode::order_dependencies() const {
   // the form `avg_(a)` and, thus, are not equal to the expression `a` in the input OD. `output_expressions()`
   // translates pseudo-aggregates `avg_(a)` back to `a`.
   const auto input_order_dependencies = left_input()->order_dependencies();
-  const auto output_expressions = this->output_expressions();
+  const auto& output_expressions = this->output_expressions();
   for (const auto& input_order_dependency : input_order_dependencies) {
     if (!(contains_all_expressions(input_order_dependency.ordering_expressions, output_expressions) &&
           contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {

@@ -49,19 +49,16 @@ std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_expressions() const {
+void StaticTableNode::_set_output_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain
   // that in the constructor
-  if (!_output_expressions) {
-    const auto column_count = table->column_count();
-    _output_expressions.emplace(column_count);
 
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      (*_output_expressions)[column_id] = std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
-    }
+  const auto column_count = table->column_count();
+  _output_expressions.emplace(column_count);
+
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    (*_output_expressions)[column_id] = std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
   }
-
-  return *_output_expressions;
 }
 
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {

@@ -43,10 +43,9 @@ std::string WindowNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> WindowNode::output_expressions() const {
-  auto output_expressions = left_input()->output_expressions();
-  output_expressions.emplace_back(node_expressions.front());
-  return output_expressions;
+void WindowNode::_set_output_expressions() const {
+  _output_expressions = left_input()->output_expressions();
+  _output_expressions->emplace_back(node_expressions.front());
 }
 
 bool WindowNode::is_column_nullable(const ColumnID column_id) const {

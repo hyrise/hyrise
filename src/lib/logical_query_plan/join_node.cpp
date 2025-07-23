@@ -55,7 +55,7 @@ std::string JoinNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() const {
+void JoinNode::_set_output_expressions() const {
   Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions");
 
   /**
@@ -67,17 +67,16 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
   const auto& left_expressions = left_input()->output_expressions();
   const auto output_both_inputs = !is_semi_or_anti_join(join_mode);
   if (!output_both_inputs) {
-    return left_expressions;
+    _output_expressions = left_expressions;
+    return;
   }
 
   const auto& right_expressions = right_input()->output_expressions();
-  auto output_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  output_expressions.resize(left_expressions.size() + right_expressions.size());
+  _output_expressions.emplace(left_expressions.size() + right_expressions.size());
+  // _output_expressions->reserve(left_expressions.size() + right_expressions.size());
 
-  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), output_expressions.begin());
+  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _output_expressions->begin());
   std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
-
-  return output_expressions;
 }
 
 UniqueColumnCombinations JoinNode::unique_column_combinations() const {

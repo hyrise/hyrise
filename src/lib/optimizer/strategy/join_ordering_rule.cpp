@@ -102,6 +102,7 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   // Join ordering might change the output column order, let us fix that.
   if (!expressions_equal(expected_column_order, result_lqp->output_expressions())) {
     result_lqp = ProjectionNode::make(expected_column_order, result_lqp);
+    lqp_root->clear_output_expressions();
   }
 
   lqp_root->set_left_input(result_lqp);

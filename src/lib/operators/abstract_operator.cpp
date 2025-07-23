@@ -152,6 +152,24 @@ void AbstractOperator::execute() {
         // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
         // We cannot check the name of the column as LQP expressions do not know their alias.
         const auto column_count = _output->column_count();
+        if (column_count != lqp_expressions.size()) {
+          std::cout << "expected "
+                    << expression_descriptions(lqp_expressions, AbstractExpression::DescriptionMode::Detailed)
+                    << "\ngot ";
+          auto init = false;
+          for (const auto& tdef : _output->column_definitions()) {
+            if (init) {
+              std::cout << ", ";
+
+            } else {
+              init = true;
+            }
+
+            std::cout << tdef;
+          }
+
+          std::cout << "\n";
+        }
         Assert(column_count == lqp_expressions.size(),
                std::string{"Mismatching number of output columns for "} + name());
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {

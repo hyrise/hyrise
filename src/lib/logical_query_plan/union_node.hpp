@@ -21,7 +21,6 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   explicit UnionNode(const SetOperationMode init_set_operation_mode);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
@@ -43,5 +42,7 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
+  void _set_output_expressions() const final;
 };
+
 }  // namespace hyrise
