@@ -43,7 +43,7 @@ TEST_F(MvccDataTest, GetCIDsAndTIDs) {
   EXPECT_EQ(_mvcc_data->get_tid(ChunkOffset{1}), TransactionID{1});
 
   EXPECT_EQ(_mvcc_data->get_begin_cid(ChunkOffset{2}), CommitID{1});
-  EXPECT_EQ(_mvcc_data->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_mvcc_data->get_end_cid(ChunkOffset{2}), MAX_COMMIT_ID);
   EXPECT_EQ(_mvcc_data->get_tid(ChunkOffset{2}), INVALID_TRANSACTION_ID);
 
   if constexpr (HYRISE_DEBUG) {
@@ -57,7 +57,7 @@ TEST_F(MvccDataTest, SetCIDsAndTIDs) {
   // Profound testing of MVCC functionality is part of the Insert/Delete tests. Concurrency tests can be found in
   // `stress_test.cpp`
   EXPECT_EQ(_mvcc_data->get_begin_cid(ChunkOffset{2}), CommitID{1});
-  EXPECT_EQ(_mvcc_data->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_mvcc_data->get_end_cid(ChunkOffset{2}), MAX_COMMIT_ID);
   EXPECT_EQ(_mvcc_data->get_tid(ChunkOffset{2}), INVALID_TRANSACTION_ID);
 
   _mvcc_data->set_begin_cid(ChunkOffset{2}, CommitID{5});
@@ -101,8 +101,8 @@ TEST_F(MvccDataTest, Description) {
 }
 
 TEST_F(MvccDataTest, MaxBeginAndEndCID) {
-  EXPECT_EQ(_mvcc_data->max_begin_cid.load(), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_mvcc_data->max_end_cid.load(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_mvcc_data->max_begin_cid.load(), MAX_COMMIT_ID);
+  EXPECT_EQ(_mvcc_data->max_end_cid.load(), MAX_COMMIT_ID);
 
   _mvcc_data->max_begin_cid = CommitID{1};
   _mvcc_data->max_end_cid = CommitID{2};
