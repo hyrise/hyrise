@@ -35,6 +35,11 @@ df = grouped.agg(
 # Add combined median times
 df['combined_median_time_ns'] = df['median_build_time_ns'] + df['median_probe_time_ns']
 
+# Convert nanoseconds to milliseconds for better readability
+df['median_build_time_ms'] = df['median_build_time_ns'] / 1_000_000
+df['median_probe_time_ms'] = df['median_probe_time_ns'] / 1_000_000
+df['combined_median_time_ms'] = df['combined_median_time_ns'] / 1_000_000
+
 # print(df.to_string())  # Print the aggregated DataFrame for verification
 
 # exit(0)
@@ -63,9 +68,9 @@ for vector_size in vector_sizes:
         ]
 
         for time_metric, y_label, file_suffix in [
-            ('median_build_time_ns', 'Build Time (ns)', 'build_time'),
-            ('median_probe_time_ns', 'Probe Time (ns)', 'probe_time'),
-            ('combined_median_time_ns', 'Combined Time (ns)', 'combined_time')
+            ('median_build_time_ms', 'Build Time (ms)', 'build_time'),
+            ('median_probe_time_ms', 'Probe Time (ms)', 'probe_time'),
+            ('combined_median_time_ms', 'Combined Time (ms)', 'combined_time')
         ]:
             # Create facet grid
             g = sns.FacetGrid(
@@ -96,6 +101,8 @@ for vector_size in vector_sizes:
             # Add titles and labels
             g.set_titles(row_template="Overlap: {row_name}", col_template="Filter Size: {col_name}")
             g.set_axis_labels("Filter Rate", y_label)
+            
+            # Add legend with both hash function and k information
             g.add_legend(title="Hash Function / k")
 
             # Save the plot to a PDF
