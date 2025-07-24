@@ -25,7 +25,7 @@ raw_df = pd.read_csv(csv_file)
 grouped_df = raw_df.groupby(['vector_size', 'distinctiveness', 'overlap', 'filter_size', 'hash_function', 'k'])
 
 # Compute filter rate
-raw_df['filter_rate'] = raw_df['hits'] / raw_df['filter_size']
+raw_df['filter_rate'] = 1 - (raw_df['hits'] / raw_df['vector_size'])
 
 # Map hash function IDs to names
 hash_function_names = {
