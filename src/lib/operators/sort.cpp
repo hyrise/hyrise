@@ -344,9 +344,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
            "Sort: Column ID is greater than table's column count");
-    Assert(column_sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
-               column_sort_definition.sort_mode == SortMode::DescendingNullsFirst,
-           "Sort does not support NULLS LAST.");
   }
 
   // edge case: empty input table
@@ -657,7 +654,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
     //  rebuild runs for the next pass
     auto next_runs = std::vector<Run>{};
-    next_runs.reserve((runs.size() +  1) / 2);
+    next_runs.reserve((runs.size() + 1) / 2);
     for (auto index = size_t{0}; index < runs.size(); index += 2) {
       const auto begin = runs[index].begin;
       const auto end = (index + 1 < runs.size()) ? runs[index + 1].end : runs[index].end;
