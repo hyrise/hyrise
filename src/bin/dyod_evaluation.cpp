@@ -279,11 +279,91 @@ static void DuckDBSynthetic(const bool type_is_integer) {
   node_queue_scheduler->finish();
 }
 
+static void StringPrefix() {
+  const auto chunk_count = ChunkID{8};  // ~524k rows.
+  const auto sort_count = size_t{50};
+  const auto thread_count = size_t{2};
+
+  auto pseudorandom_engine = std::mt19937{17};
+  auto probability_dist = std::uniform_int_distribution{1, 31};
+
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  auto column_definitions = TableColumnDefinitions{
+      {"col_0", DataType::Int, true}, {"col_1", DataType::String, true}, {"col_2", DataType::Long, true}};
+  auto sort_definitions = std::vector<SortColumnDefinition>{
+      SortColumnDefinition{ColumnID{1}}, SortColumnDefinition{ColumnID{2}}, SortColumnDefinition{ColumnID{0}}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto col_0_segment = pmr_vector<int32_t>{};
+    auto col_1_segment = pmr_vector<pmr_string>{};
+    auto col_2_segment = pmr_vector<int64_t>{};
+
+    for (auto row_id = ChunkOffset{0}; row_id < Chunk::DEFAULT_SIZE; ++row_id) {
+      col_0_segment.emplace_back(static_cast<int32_t>(probability_dist(pseudorandom_engine)));
+      col_1_segment.emplace_back("2025-07-" + std::format("{:02} 12:{:02}:17", probability_dist(pseudorandom_engine), probability_dist(pseudorandom_engine)));
+      col_2_segment.emplace_back(static_cast<int64_t>(probability_dist(pseudorandom_engine)));
+    }
+
+    auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
+    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(std::move(col_0_segment)));
+    segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(std::move(col_1_segment)));
+    segments.emplace_back(std::make_shared<ValueSegment<int64_t>>(std::move(col_2_segment)));
+
+    table->append_chunk(segments);
+    table->last_chunk()->set_immutable();
+  }
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  // We measure the time it takes to sort the input table `sort_count` times.
+  auto runtimes = std::vector<size_t>{};
+  for (auto run_id = size_t{0}; run_id < RUN_COUNT; ++run_id) {
+    auto threads = std::vector<std::thread>{};
+    auto stop_flag = std::atomic_flag{};
+
+    auto sort_counter = std::atomic<size_t>{};
+    const auto start = std::chrono::steady_clock::now();
+    auto end = std::chrono::steady_clock::now();
+
+    for (auto thread_id = size_t{0}; thread_id < thread_count; ++thread_id) {
+      threads.emplace_back([&]() {
+        while (!stop_flag.test()) {
+          auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE);
+          sort->execute();
+          const auto old_count = sort_counter++;
+
+          if (old_count == sort_count - 1) {
+            stop_flag.test_and_set();
+            end = std::chrono::steady_clock::now();
+          }
+        }
+      });
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+    runtimes.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+  }
+
+  append_to_csv("StringPrefix", table->row_count(), "Unencoded", runtimes, "multi-threaded");
+
+  Hyrise::get().scheduler()->finish();
+}
+
 static void HiddenTest1() {}
 
 static void HiddenTest2() {}
 
 static void HiddenTest3() {}
+
+static void HiddenTest4() {}
 
 int main(int argc, char* argv[]) {
   if (std::filesystem::exists(FILENAME)) {
@@ -313,9 +393,11 @@ int main(int argc, char* argv[]) {
         std::cerr << "Unexpected argument\n";
         return 1;
       }
+
       HiddenTest1();
       HiddenTest2();
       HiddenTest3();
+      HiddenTest4();
     }
 
     return 0;
@@ -323,6 +405,7 @@ int main(int argc, char* argv[]) {
 
   DuckDBSynthetic(true);
   DuckDBSynthetic(false);
+  StringPrefix();
 
   return 0;
 }
