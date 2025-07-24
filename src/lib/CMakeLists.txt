@@ -254,7 +254,6 @@ set(
     operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
-    operators/reduce.cpp
     operators/reduce.hpp
     operators/legacy_reduce.hpp
     operators/legacy_reduce.cpp
