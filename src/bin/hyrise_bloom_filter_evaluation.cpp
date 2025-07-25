@@ -28,11 +28,11 @@ inline uint64_t MurmurHash64(int32_t input) {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000, 10'000'000, 100'000'000};
-std::vector<double> distinctivenesses = {0.01, 0.1, 0.5, 1.0, 2.0, 3.0};
+std::vector<double> distinctivenesses = {0.01, 0.5, 1.0, 2.0};
 std::vector<double> overlaps = {0.0, 0.25, 0.5, 0.75, 1.0};
 uint8_t hash_functions = 4; // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
 uint16_t min_runs = 10;
-uint16_t max_runs = 2000;
+uint16_t max_runs = 1;
 int64_t min_time_ns = 30'000'000'000;
 
 struct BenchmarkResult {
@@ -47,6 +47,7 @@ struct BenchmarkResult {
   int64_t probe_time_ns;
   int32_t hits;
   double saturation;
+  std::string bit_distribution;
 };
 
 std::pair<std::vector<int32_t>, std::vector<int32_t>> generate_data(const int32_t vector_size,
@@ -185,13 +186,14 @@ void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec,
 
     total_time += build_time + probe_time;
     BenchmarkResult result{static_cast<int32_t>(vector_size), distinctiveness, overlap, FilterSize, K,
-                           hash_function, run, build_time, probe_time, hits, bloom_filter.saturation()};
+                           hash_function, run, build_time, probe_time, hits, bloom_filter.saturation(), bloom_filter.bit_distribution()};
 
     // Append result to CSV file
     out << result.vector_size << "," << result.distinctiveness << "," << result.overlap << ","
         << static_cast<int>(result.filter_size) << "," << static_cast<int>(result.k) << ","
         << static_cast<int>(result.hash_function) << "," << result.run << "," << result.build_time_ns << ","
-        << result.probe_time_ns << "," << result.hits << "," << result.saturation << "\n";
+        << result.probe_time_ns << "," << result.hits << "," << result.saturation << ","
+        << result.bit_distribution << "\n";
 
     ++run;
   }
@@ -218,7 +220,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   out << "vector_size,distinctiveness,overlap,filter_size,k,hash_function,run,build_time_ns,probe_time_ns,hits,"
-         "saturation\n";
+         "saturation,bit_distribution\n";
   out.close();
 
 #define RUN_EVALUATION(filter_size, k)                                                                           \

@@ -36,6 +36,33 @@ class BloomFilter {
     return static_cast<double>(set_bits) / (array_size * 64);
   }
 
+  std::string bit_distribution() const {
+    std::array<uint32_t, 100> distribution{};
+    constexpr uint32_t bits_per_bucket = (array_size * 64) / 100;
+
+    for (uint32_t i = 0; i < array_size * 64; ++i) {
+      uint32_t array_index = i >> 6;   // i / 64
+      uint32_t bit_offset = i & 0x3F;  // i % 64
+      if ((_filter[array_index] >> bit_offset) & 1ULL) {
+        uint32_t bucket_index = i / bits_per_bucket;
+        if (bucket_index == 100) {
+          bucket_index = 99;  // Ensure we don't go out of bounds
+        }
+        Assert(bucket_index < 100, "Bucket index out of range");
+        ++distribution[bucket_index];
+      }
+    }
+
+    std::string csv_output;
+    for (size_t i = 0; i < 100; ++i) {
+      csv_output += std::to_string(distribution[i]);
+      if (i < 99) {
+        csv_output += ":";
+      }
+    }
+    return csv_output;
+  }
+
  protected:
   void _set_bit(uint32_t bit_index) {
     uint32_t array_index = bit_index >> 6;   // bit_index / 64

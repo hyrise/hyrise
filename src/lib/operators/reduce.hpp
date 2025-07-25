@@ -7,6 +7,9 @@
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
 
+#include "utils/bloom_filter.hpp"
+#include "utils/min_max_filter.hpp"
+
 namespace hyrise {
 
 class Reduce : public AbstractReadOnlyOperator {
