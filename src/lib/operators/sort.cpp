@@ -27,7 +27,6 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/key_normalizer.h"
 #include "utils/timer.hpp"
 
 namespace {
@@ -46,7 +45,7 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
  *        ) D ( )  /(  O )) D ( / __/(  0 )/ __/(___ \
  *       (____/(__/  \__/(____/(____) \__/(____)(____/
  *
- * 
+ *
  * Notes on Segment Accessors:
  *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
  *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
@@ -328,47 +327,23 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
   auto total_sort_time = std::chrono::nanoseconds{};
 
-  // const auto sort_step_count = _sort_definitions.size();
-  //
-  // for (auto sort_step = static_cast<int64_t>(sort_step_count - 1); sort_step >= 0; --sort_step) {
-  //   const auto& sort_definition = _sort_definitions[sort_step];
-  //   const auto data_type = input_table->column_data_type(sort_definition.column);
-  //
-  //   resolve_data_type(data_type, [&](auto type) {
-  //     using ColumnDataType = typename decltype(type)::type;
-  //
-  //     auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
-  //     previously_sorted_pos_list =
-  //         sort_impl.sort(previously_sorted_pos_list, sort_step == static_cast<int64_t>(sort_step_count - 1));
-  //
-  //     total_materialization_time += sort_impl.materialization_time;
-  //     total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
-  //     total_sort_time += sort_impl.sort_time;
-  //   });
-  // }
+  const auto sort_step_count = _sort_definitions.size();
 
-  auto [normalized_keys, tuple_key_size] = KeyNormalizer::convert_table(input_table, _sort_definitions);
+  for (auto sort_step = static_cast<int64_t>(sort_step_count - 1); sort_step >= 0; --sort_step) {
+    const auto& sort_definition = _sort_definitions[sort_step];
+    const auto data_type = input_table->column_data_type(sort_definition.column);
 
-  auto [iterator, end_iterator] = KeyNormalizer::get_iterators(normalized_keys, tuple_key_size);
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
 
-  std::vector<unsigned char*> pointers{};
-  pointers.reserve(input_table->row_count());
-  auto* current_pointer = &normalized_keys.front();
-  std::generate_n(std::back_inserter(pointers), input_table->row_count(), [&] {
-    auto* result = current_pointer;
-    current_pointer += tuple_key_size;
-    return result;
-  });
+      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
+      previously_sorted_pos_list =
+          sort_impl.sort(previously_sorted_pos_list, sort_step == static_cast<int64_t>(sort_step_count - 1));
 
-  std::ranges::stable_sort(pointers, [tuple_key_size](const unsigned char* lhs, const unsigned char* rhs) {
-    return std::memcmp(lhs, rhs, tuple_key_size) < 0;
-  });
-
-  previously_sorted_pos_list.emplace();
-  previously_sorted_pos_list->reserve(input_table->row_count());
-  while (iterator != end_iterator) {
-    previously_sorted_pos_list->push_back(*iterator);
-    ++iterator;
+      total_materialization_time += sort_impl.materialization_time;
+      total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
+      total_sort_time += sort_impl.sort_time;
+    });
   }
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
@@ -462,14 +437,15 @@ class Sort::SortImpl {
     const auto sort_with_comparator = [&](auto comparator) {
       if (is_last_column) {
         // Sorting the last column does not need to be stable (helps especially in single-column sorting cases).
-        std::ranges::sort(_row_id_value_vector, [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
-          return comparator(lhs.second, rhs.second);
-        });
+        std::ranges::sort(_row_id_value_vector,
+                             [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
+                               return comparator(lhs.second, rhs.second);
+                             });
       } else {
         std::ranges::stable_sort(_row_id_value_vector,
-                                 [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
-                                   return comparator(lhs.second, rhs.second);
-                                 });
+                              [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
+                                return comparator(lhs.second, rhs.second);
+                              });
       }
     };
     if (_sort_mode == SortMode::AscendingNullsFirst) {
