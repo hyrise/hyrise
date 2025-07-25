@@ -1,5 +1,7 @@
 #include "key_normalizer.h"
 
+#include "resolve_type.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace hyrise {
 // Portable byte swap implementation for 32-bit integer
@@ -43,64 +45,62 @@ void KeyNormalizer::insert_row_id(std::vector<unsigned char>& buffer, const RowI
   std::memcpy(&buffer[offset], &row_id, sizeof(ChunkID) + sizeof(ChunkOffset));
 }
 
+size_t data_type_size(const DataType data_type) {
+  switch (data_type) {
+    case DataType::Int:
+      return sizeof(int32_t);
+    case DataType::Long:
+      return sizeof(int64_t);
+    case DataType::Float:
+      return sizeof(float);
+    case DataType::Double:
+      return sizeof(double);
+    case DataType::String:
+      return sizeof(pmr_string);
+    case DataType::Null:
+      return 0;
+  }
+  Fail("Unsupported data type encountered");
+}
+
 void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
                                  const std::vector<SortColumnDefinition>& sort_definitions,
-                                 const uint64_t start_row_index, const ChunkID chunk_id, const uint32_t tuple_key_size,
+                                 const uint64_t buffer_offset, const ChunkID chunk_id, const uint32_t tuple_key_size,
                                  const uint32_t string_prefix_length, const ChunkOffset chunk_size) {
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-    // Calculate the starting byte position for the current row's key.
-    const auto buffer_row_start = (start_row_index + chunk_offset) * tuple_key_size;
-    auto key_offset_in_tuple = uint32_t{0};
+  auto key_component_offset = uint32_t{0};
+  for (const auto sort_definition : sort_definitions) {
+    const auto sort_mode = sort_definition.sort_mode;
+    const auto column_id = sort_definition.column;
+    const auto segment = chunk->get_segment(column_id);
+    const auto data_type = segment->data_type();
 
-    // For each row, build the composite key from the specified sort columns.
-    for (const auto& sort_definition : sort_definitions) {
-      const auto column_id = sort_definition.column;
-      const auto segment = chunk->get_segment(column_id);
-      const auto value_variant = (*segment)[chunk_offset];  // Get value at current row.
+    const auto normalized_sort_mode =
+        (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::AscendingNullsLast)
+            ? NormalizedSortMode::Ascending
+            : NormalizedSortMode::Descending;
+    const auto nulls_mode = (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::DescendingNullsFirst)
+                                ? NullsMode::NullsFirst
+                                : NullsMode::NullsLast;
 
-      const auto normalized_sort_mode = (sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
-                                         sort_definition.sort_mode == SortMode::AscendingNullsLast)
-                                            ? NormalizedSortMode::Ascending
-                                            : NormalizedSortMode::Descending;
-      const auto nulls_mode = (sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
-                               sort_definition.sort_mode == SortMode::DescendingNullsFirst)
-                                  ? NullsMode::NullsFirst
-                                  : NullsMode::NullsLast;
+    segment_iterate(*segment, [&](const auto segment_position) {
+      const auto buffer_row_start = (buffer_offset + segment_position.chunk_offset()) * tuple_key_size;
+      const auto buffer_write_pos = buffer_row_start + key_component_offset;
+      const bool is_null = segment_position.is_null();
+      insert_null_prefix(buffer, is_null, buffer_write_pos, nulls_mode);
+      insert(buffer, segment_position.value(), buffer_write_pos + 1, normalized_sort_mode, string_prefix_length);
+    });
 
-      // 1. Insert NULL prefix.
-      const bool is_null = variant_is_null(value_variant);
-      insert_null_prefix(buffer, is_null, buffer_row_start + key_offset_in_tuple, nulls_mode);
-      key_offset_in_tuple += 1;
-
-      // 2. Insert the normalized value.
-      const auto column_data_type = segment->data_type();
-      auto value_size = 0u;
-
-      // Determine the size of the value to correctly advance the offset.
-      if (column_data_type == DataType::String) {
-        value_size = string_prefix_length;
-      } else {
-        resolve_data_type(column_data_type, [&](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
-          value_size = sizeof(ColumnDataType);
-        });
-      }
-
-      if (!is_null) {
-        // Use boost::get to extract the value and insert it.
-        resolve_data_type(column_data_type, [&](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
-          insert<ColumnDataType>(buffer, boost::get<ColumnDataType>(value_variant),
-                                 buffer_row_start + key_offset_in_tuple, normalized_sort_mode, string_prefix_length);
-        });
-      } else {
-        // For NULLs, pad the key with zeros to maintain a fixed width.
-        std::memset(buffer.data() + buffer_row_start + key_offset_in_tuple, 0, value_size);
-      }
-      key_offset_in_tuple += value_size;
+    if (data_type == DataType::String) {
+      key_component_offset += string_prefix_length + 1;
+    } else {
+      key_component_offset += data_type_size(data_type) + 1;
     }
+  }
 
-    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_row_start + key_offset_in_tuple);
+  const auto row_id_offset_in_tuple = tuple_key_size - sizeof(RowID);
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+    const auto buffer_row_start = (buffer_offset + chunk_offset) * tuple_key_size;
+    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_row_start + row_id_offset_in_tuple);
   }
 }
 
@@ -109,7 +109,6 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::convert_table(
     const uint32_t string_prefix_length) {
   const auto num_rows = table->row_count();
 
-  // Calculate tuple_key_size based only on the columns we are sorting.
   auto tuple_key_size = uint32_t{0};
   for (const auto& sort_definition : sort_definitions) {
     const auto column_id = sort_definition.column;
@@ -127,19 +126,19 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::convert_table(
       });
     }
   }
-
+  // Add space for the RowID at the end of the key
   tuple_key_size += sizeof(RowID);
 
   auto result_buffer = std::vector<unsigned char>(tuple_key_size * num_rows);
+
   const auto chunk_count = table->chunk_count();
   auto table_offset = uint64_t{0};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto current_chunk = table->get_chunk(chunk_id);
     const auto chunk_size = current_chunk->size();
 
-    // The start offset for this chunk is the number of rows we've already processed.
-    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset, chunk_id, tuple_key_size,
-                 string_prefix_length, chunk_size);
+    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset * tuple_key_size, chunk_id,
+                 tuple_key_size, string_prefix_length, chunk_size);
 
     table_offset += chunk_size;
   }
