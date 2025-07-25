@@ -72,9 +72,6 @@ template class BloomFilter<19, 1>;
 template class BloomFilter<20, 1>;
 template class BloomFilter<21, 1>;
 template class BloomFilter<22, 1>;
-template class BloomFilter<23, 1>;
-template class BloomFilter<24, 1>;
-template class BloomFilter<25, 1>;
 template class BloomFilter<16, 2>;
 template class BloomFilter<17, 2>;
 template class BloomFilter<18, 2>;
@@ -82,8 +79,10 @@ template class BloomFilter<19, 2>;
 template class BloomFilter<20, 2>;
 template class BloomFilter<21, 2>;
 template class BloomFilter<22, 2>;
-template class BloomFilter<23, 2>;
-template class BloomFilter<24, 2>;
-template class BloomFilter<25, 2>;
-
+template class BloomFilter<16, 3>;
+template class BloomFilter<17, 3>;
+template class BloomFilter<18, 3>;
+template class BloomFilter<19, 3>;
+template class BloomFilter<20, 3>;
+template class BloomFilter<21, 3>;
 }  // namespace hyrise
