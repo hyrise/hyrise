@@ -65,7 +65,7 @@ size_t data_type_size(const DataType data_type) {
 
 void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
                                  const std::vector<SortColumnDefinition>& sort_definitions,
-                                 const uint64_t buffer_offset, const ChunkID chunk_id, const uint32_t tuple_key_size,
+                                 const uint64_t start_row_offset, const ChunkID chunk_id, const uint32_t tuple_key_size,
                                  const uint32_t string_prefix_length, const ChunkOffset chunk_size) {
   auto key_component_offset = uint32_t{0};
   for (const auto sort_definition : sort_definitions) {
@@ -83,7 +83,7 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
                                 : NullsMode::NullsLast;
 
     segment_iterate(*segment, [&](const auto segment_position) {
-      const auto buffer_row_start = (buffer_offset + segment_position.chunk_offset()) * tuple_key_size;
+      const auto buffer_row_start = (start_row_offset + segment_position.chunk_offset()) * tuple_key_size;
       const auto buffer_write_pos = buffer_row_start + key_component_offset;
       const bool is_null = segment_position.is_null();
       insert_null_prefix(buffer, is_null, buffer_write_pos, nulls_mode);
@@ -99,8 +99,8 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
 
   auto offset = uint64_t{tuple_key_size - sizeof(RowID)};
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_offset + offset);
-    offset += tuple_key_size;
+    const auto buffer_row_start = (start_row_offset + chunk_offset) * tuple_key_size;
+    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_row_start + row_id_offset_in_tuple);
   }
 }
 
@@ -137,7 +137,7 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::convert_table(
     const auto current_chunk = table->get_chunk(chunk_id);
     const auto chunk_size = current_chunk->size();
 
-    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset * tuple_key_size, chunk_id,
+    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset, chunk_id,
                  tuple_key_size, string_prefix_length, chunk_size);
 
     table_offset += chunk_size;

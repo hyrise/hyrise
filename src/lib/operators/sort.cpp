@@ -46,7 +46,7 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
  *        ) D ( )  /(  O )) D ( / __/(  0 )/ __/(___ \
  *       (____/(__/  \__/(____/(____) \__/(____)(____/
  *
- *
+ * 
  * Notes on Segment Accessors:
  *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
  *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
