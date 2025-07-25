@@ -35,10 +35,10 @@ hash_function_names = {
     3: "duckdb's MurmurHash"
 }
 
-# Aggregate mean, geometric mean, min, and max filter rates for each hash function
+# Aggregate mean, squared mean, min, and max filter rates for each hash function
 aggregated_df = raw_df.groupby('hash_function')['filter_rate'].agg(
     mean_filter_rate='mean',
-    geometric_mean_filter_rate=lambda x: gmean(x + 1e-9),  # Add small value to avoid log(0)
+    squared_mean_filter_rate=lambda x: ((x**2).mean())**0.5,
     min_filter_rate='min',
     max_filter_rate='max'
 ).reset_index()
@@ -46,5 +46,30 @@ aggregated_df = raw_df.groupby('hash_function')['filter_rate'].agg(
 # Add hash function names to the result and drop the hash_function column
 aggregated_df['hash_function'] = aggregated_df['hash_function'].map(hash_function_names)
 
+# Compute stats for the impact of different choices of k on filter rate (overall)
+k_impact_overall_df = raw_df.groupby('k')['filter_rate'].agg(
+    mean_filter_rate='mean',
+    squared_mean_filter_rate=lambda x: ((x**2).mean())**0.5,
+    min_filter_rate='min',
+    max_filter_rate='max'
+).reset_index()
+
+# Compute stats for the impact of different choices of k on filter rate (per hash function)
+k_impact_per_hash_df = raw_df.groupby(['hash_function', 'k'])['filter_rate'].agg(
+    mean_filter_rate='mean',
+    squared_mean_filter_rate=lambda x: ((x**2).mean())**0.5,
+    min_filter_rate='min',
+    max_filter_rate='max'
+).reset_index()
+
+# Add hash function names to the per-hash-function result
+k_impact_per_hash_df['hash_function'] = k_impact_per_hash_df['hash_function'].map(hash_function_names)
+
+# Print results
+print("Aggregated filter rate stats per hash function:")
 print(aggregated_df)
+print("\nImpact of k on filter rate (overall):")
+print(k_impact_overall_df)
+print("\nImpact of k on filter rate (per hash function):")
+print(k_impact_per_hash_df)
 
