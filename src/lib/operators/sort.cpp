@@ -37,7 +37,7 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
-#define STRING_PREFIX 8
+#define STRING_PREFIX 32
 
 namespace {
 
@@ -592,7 +592,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       boost::sort::pdqsort(row_ids.begin() + chunk_start, row_ids.begin() + chunk_start + chunk_size, compare_rows);
     }));
     keygen_jobs.back()->schedule();  // schedule job immediately
-  }                                  // end of chunk iteration
+  }  // end of chunk iteration
 
   Hyrise::get().scheduler()->wait_for_tasks(keygen_jobs);  // wait for all chunks to be materialized
   auto key_generation_and_sorting_time = timer.lap();
