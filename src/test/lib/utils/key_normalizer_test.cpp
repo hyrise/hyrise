@@ -3,7 +3,7 @@
 
 namespace hyrise {
 
-class KeyNormalizerTest : public ::testing::Test {
+class KeyNormalizerTest : public BaseTest {
  protected:
   void SetUp() override {
     TableColumnDefinitions column_definitions;
