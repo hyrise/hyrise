@@ -37,8 +37,6 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
-#define STRING_PREFIX 32
-
 namespace {
 
 using namespace hyrise;  // NOLINT
@@ -377,8 +375,23 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        field_width.emplace_back(STRING_PREFIX + 1);  // store size of the string prefix
-        string_columns.emplace_back(index);           // keep track of string columns for fallback comparisons
+        string_columns.emplace_back(index);  // keep track of string columns for fallback comparisons
+
+        // iterate over all chunks to find the longest string in the column
+        auto max_string_length = size_t{0};
+        for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          const auto abstract_segment = input_table->get_chunk(chunk_id)->get_segment(sort_col);
+          segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
+            if (!val.is_null()) {
+              const auto string_length = val.value().size();
+              if (string_length > max_string_length) {
+                max_string_length = string_length;
+              }
+            }
+          });
+        }
+
+        field_width.emplace_back(max_string_length + 2);  // store size of the string prefix + 2 for string length
       } else if constexpr (std::is_same_v<ColumnDataType, float>) {
         field_width.push_back(sizeof(double));  // encode float as double for sorting
       } else {
@@ -446,38 +459,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
     auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
 
-    int compare = memcmp(key_a, key_b, key_width);
-    if (compare != 0)
-      return compare < 0;
-
-    // fallback to full comparison for string columns
-    // other columns are already compared correctly by the key buffer
-    for (auto index : string_columns) {
-      auto comparison_result = int32_t{0};
-
-      const auto accessorA = create_segment_accessor<pmr_string>(
-          input_table->get_chunk(a.chunk_id)->get_segment(_sort_definitions[index].column));
-      const auto accessorB = create_segment_accessor<pmr_string>(
-          input_table->get_chunk(b.chunk_id)->get_segment(_sort_definitions[index].column));
-
-      const auto& valA = accessorA->access(a.chunk_offset);
-      const auto& valB = accessorB->access(b.chunk_offset);
-
-      // can only compare if neither value is null
-      if (valA.has_value() && valB.has_value()) {
-        comparison_result = valA < valB;
-      }
-
-      if (comparison_result != 0) {
-        if (_sort_definitions[index].sort_mode == SortMode::AscendingNullsFirst ||
-            _sort_definitions[index].sort_mode == SortMode::AscendingNullsLast) {
-          return comparison_result < 0;
-        } else {
-          return comparison_result > 0;
-        }
-      }
-    }
-    return false;  // completely equal
+    return memcmp(key_a, key_b, key_width) < 0;
   };
 
   // job queue for generating keys in parallel
@@ -508,8 +490,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             auto* dest = key_ptr + key_offsets[index];  // pointer to the destination in the key buffer for this column
 
             const ColumnDataType value = val.value();
-            const auto data_length =
-                std::is_same_v<ColumnDataType, pmr_string> ? STRING_PREFIX : sizeof(ColumnDataType);
+            const auto data_length = field_width[index];
 
             // Set the first byte to indicate if the value is null or not
             auto null_byte = !val.is_null() ? 0x00 : 0xFF;
@@ -520,10 +501,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
             // encode the value into the key based on the data type
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              auto string_len = std::min(value.size(), static_cast<size_t>(STRING_PREFIX));
-              memcpy(dest + 1, value.data(), string_len);
-              memset(dest + 1 + string_len, 0, STRING_PREFIX - string_len);  // pad with zeroes
-              dest[1 + STRING_PREFIX] = static_cast<uint8_t>(value.size());  // store actual string length
+              auto string_len = value.size();
+              memset(dest + 1, 0, data_length);            // set all bytes to 0
+              memcpy(dest + 1, value.data(), string_len);  // copy the string data into the key buffer
+              memset(dest + 1 + data_length - 2, static_cast<uint16_t>(string_len), 2);  // store actual string length
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
               // Encode double value; reinterpret double as raw 64-bit bits
               auto bits = uint64_t{0};
@@ -589,7 +570,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       auto chunk_start = row_id_offsets[chunk_id];
       auto chunk_size = chunk_sizes[chunk_id];
       // TODO(someone): use better sorting algorithm, e.g. merge sort
-      boost::sort::pdqsort(row_ids.begin() + chunk_start, row_ids.begin() + chunk_start + chunk_size, compare_rows);
+      boost::sort::pdqsort_branchless(row_ids.begin() + chunk_start, row_ids.begin() + chunk_start + chunk_size,
+                                      compare_rows);
     }));
     keygen_jobs.back()->schedule();  // schedule job immediately
   }  // end of chunk iteration
