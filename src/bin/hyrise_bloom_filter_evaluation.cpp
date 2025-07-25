@@ -27,10 +27,10 @@ inline uint64_t MurmurHash64(int32_t input) {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000, 10'000'000, 100'000'000};
-std::vector<double> distinctivenesses = {0.01, 0.1, 0.5, 1.0, 2.0, 3.0};
+std::vector<int32_t> vector_sizes = {1'000'000, 10'000'000, 100'000'000};
+std::vector<double> distinctivenesses = {0.01, 0.5, 1.0, 2.0};
 std::vector<double> overlaps = {0.0, 0.25, 0.5, 0.75, 1.0};
-uint8_t hash_functions = 4; // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
+uint8_t hash_functions = 4;  // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
 uint16_t min_runs = 10;
 uint16_t max_runs = 2000;
 int64_t min_time_ns = 30'000'000'000;
@@ -239,18 +239,20 @@ int main(int argc, char* argv[]) {
           RUN_EVALUATION(19, 1)
           RUN_EVALUATION(20, 1)
           RUN_EVALUATION(21, 1)
+          RUN_EVALUATION(22, 1)
+          RUN_EVALUATION(23, 1)
+          RUN_EVALUATION(24, 1)
+          RUN_EVALUATION(25, 1)
           RUN_EVALUATION(16, 2)
           RUN_EVALUATION(17, 2)
           RUN_EVALUATION(18, 2)
           RUN_EVALUATION(19, 2)
           RUN_EVALUATION(20, 2)
           RUN_EVALUATION(21, 2)
-          RUN_EVALUATION(16, 3)
-          RUN_EVALUATION(17, 3)
-          RUN_EVALUATION(18, 3)
-          RUN_EVALUATION(19, 3)
-          RUN_EVALUATION(20, 3)
-          RUN_EVALUATION(21, 3)
+          RUN_EVALUATION(22, 2)
+          RUN_EVALUATION(23, 2)
+          RUN_EVALUATION(24, 2)
+          RUN_EVALUATION(25, 2)
         }
       }
     }
