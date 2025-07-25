@@ -4,6 +4,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <oneapi/tbb/concurrent_unordered_set.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
+
 #include "abstract_table_constraint.hpp"
 
 namespace hyrise {
@@ -51,7 +53,7 @@ class ForeignKeyConstraint final : public AbstractTableConstraint {
   std::weak_ptr<Table> _primary_key_table;
 };
 
-using ForeignKeyConstraints = std::unordered_set<ForeignKeyConstraint>;
+using ForeignKeyConstraints = tbb::concurrent_unordered_set<ForeignKeyConstraint>;
 
 }  // namespace hyrise
 

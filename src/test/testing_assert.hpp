@@ -130,3 +130,13 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
     }                                                                                                        \
   }                                                                                                          \
   static_assert(true, "End call of macro with a semicolon")
+
+#define EXPECT_TASKS_EQ(lhs, rhs)                                 \
+  {                                                               \
+    ASSERT_EQ(lhs.size(), rhs.size());                            \
+                                                                  \
+    for (auto index = size_t{0}; index < lhs.size(); ++index) {   \
+      EXPECT_EQ(lhs[index].get().shared_from_this(), rhs[index]); \
+    }                                                             \
+  }                                                               \
+  static_assert(true, "End call of macro with a semicolon")

@@ -8,7 +8,7 @@ namespace hyrise {
 class FixedStringVectorTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::vector<pmr_string> strings = {"foo", "barbaz", "str3"};
+    auto strings = {"foo", "barbaz", "str3"};
     fixed_string_vector = std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u));
   }
 
@@ -16,7 +16,7 @@ class FixedStringVectorTest : public BaseTest {
 };
 
 TEST_F(FixedStringVectorTest, IteratorConstructor) {
-  std::vector<pmr_string> v1 = {"abc", "def", "ghi"};
+  auto v1 = {"abc", "def", "ghi"};
   auto v2 = FixedStringVector{v1.begin(), v1.end(), 3};
 
   EXPECT_EQ(v2[2u], "ghi");
@@ -45,7 +45,7 @@ TEST_F(FixedStringVectorTest, GetStringAtOperator) {
 }
 
 TEST_F(FixedStringVectorTest, Iterator) {
-  std::vector<char> helper = {'a', 'b', 'c', 'd', 'e'};
+  auto helper = std::vector{'a', 'b', 'c', 'd', 'e'};
   auto fixed_string = FixedString(&helper[0], 5u);
 
   for (auto it = fixed_string_vector->begin(); it != fixed_string_vector->end(); ++it) {
@@ -56,7 +56,7 @@ TEST_F(FixedStringVectorTest, Iterator) {
 }
 
 TEST_F(FixedStringVectorTest, RangeIterator) {
-  std::vector<pmr_string> v = {"abc", "def", "ghi"};
+  auto v = std::vector<pmr_string>{"abc", "def", "ghi"};
   auto fs_vector = FixedStringVector{v.cbegin(), v.cend(), 3};
 
   auto counter = size_t{0};
@@ -84,11 +84,23 @@ TEST_F(FixedStringVectorTest, IteratorConst) {
 }
 
 TEST_F(FixedStringVectorTest, ReverseIterator) {
-  std::vector<pmr_string> v = {"abc", "def", "ghi"};
+  auto v = std::vector<pmr_string>{"abc", "def", "ghi"};
   auto fs_vector = FixedStringVector{v.cbegin(), v.cend(), 3};
 
   for (const auto& fixed_string : fs_vector) {
     EXPECT_EQ(fixed_string.size(), 3u);
+  }
+}
+
+TEST_F(FixedStringVectorTest, ReverseIteratorsExplicit) {
+  const auto vector = std::vector<pmr_string>{"abc", "def", "ghi"};
+  auto fs_vector = FixedStringVector{vector.cbegin(), vector.cend(), 3};
+
+  const auto rend = fs_vector.rend();
+  auto expected = std::vector<pmr_string>{"ghi", "def", "abc"};
+  auto expected_it = expected.begin();
+  for (auto reverse_it = fs_vector.rbegin(); reverse_it != rend; ++reverse_it, ++expected_it) {
+    EXPECT_EQ(*reverse_it, *expected_it);
   }
 }
 
@@ -104,6 +116,16 @@ TEST_F(FixedStringVectorTest, Erase) {
 
   EXPECT_EQ(fixed_string_vector->size(), 1u);
   EXPECT_EQ((*fixed_string_vector)[0u], "foo");
+}
+
+TEST_F(FixedStringVectorTest, EraseWithZeroStringLength) {
+  auto strings = std::vector<pmr_string>{"", ""};
+  auto vec = FixedStringVector(strings.begin(), strings.end(), 0);
+
+  vec.erase(vec.begin(), vec.end());
+
+  // Actually 0 would be the expected size here, but there is a bug. See ticket #2713
+  EXPECT_EQ(vec.size(), 2);
 }
 
 TEST_F(FixedStringVectorTest, Shrink) {
@@ -124,13 +146,13 @@ TEST_F(FixedStringVectorTest, ConstFixedStringVector) {
 }
 
 TEST_F(FixedStringVectorTest, ConstIteratorConstructor) {
-  std::vector<pmr_string> v1 = {"abc", "def", "ghi"};
+  auto v1 = std::vector<pmr_string>{"abc", "def", "ghi"};
   auto v2 = FixedStringVector{v1.cbegin(), v1.cend(), 3};
 
   EXPECT_EQ(v2[0u], "abc");
   EXPECT_EQ(v2.size(), 3u);
 
-  std::vector<pmr_string> v3 = {};
+  auto v3 = std::vector<pmr_string>{};
   auto v4 = FixedStringVector{v3.cbegin(), v3.cend(), 0};
 
   EXPECT_EQ(v4.size(), 0u);
@@ -147,7 +169,7 @@ TEST_F(FixedStringVectorTest, Reserve) {
 }
 
 TEST_F(FixedStringVectorTest, Sort) {
-  std::vector<pmr_string> strings = {"Larry", "Bill", "Alexander", "Mark", "Hasso"};
+  auto strings = std::vector<pmr_string>{"Larry", "Bill", "Alexander", "Mark", "Hasso"};
   auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 10u);
 
   std::sort(fixed_string_vector1.begin(), fixed_string_vector1.end());
@@ -158,7 +180,7 @@ TEST_F(FixedStringVectorTest, Sort) {
 
 // FixedStringsVectors of empty strings have a special handling which needs to be tested.
 TEST_F(FixedStringVectorTest, StringLengthZero) {
-  std::vector<pmr_string> strings = {"", ""};
+  auto strings = {"", ""};
   auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 0u);
   EXPECT_EQ(fixed_string_vector1.size(), 2u);
   EXPECT_EQ(fixed_string_vector1[0u], "");
@@ -206,6 +228,13 @@ TEST_F(FixedStringVectorTest, MemoryLayout) {
   EXPECT_EQ(*(fixed_string_vector->data() + 15), '3');
   EXPECT_EQ(*(fixed_string_vector->data() + 16), '\0');
   EXPECT_EQ(*(fixed_string_vector->data() + 17), '\0');
+}
+
+TEST_F(FixedStringVectorTest, GetAllocator) {
+  const auto alloc = PolymorphicAllocator<char>{};
+  const auto strings = {"", ""};
+  auto fs_vector = FixedStringVector(strings.begin(), strings.end(), 0, alloc);
+  EXPECT_EQ(alloc.resource(), fs_vector.get_allocator().resource());
 }
 
 }  // namespace hyrise
