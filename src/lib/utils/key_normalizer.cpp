@@ -1,6 +1,5 @@
 #include "key_normalizer.h"
 
-#include "storage/segment_iterate.hpp"
 
 namespace hyrise {
 // Portable byte swap implementation for 32-bit integer
@@ -26,56 +25,7 @@ T portable_bswap(T val) {
   return val;
 }
 
-KeyNormalizer::KeyNormalizer(std::vector<unsigned char>& buffer) : _buffer(buffer) {}
-
-void KeyNormalizer::append(const std::optional<int32_t>& value, const NormalizedSortMode desc,
-                           const NullsMode nulls_first) {
-  _append_integral(value, desc, nulls_first);
-}
-
-void KeyNormalizer::append(const std::optional<int64_t>& value, const NormalizedSortMode desc,
-                           const NullsMode nulls_first) {
-  _append_integral(value, desc, nulls_first);
-}
-
-void KeyNormalizer::append(const std::optional<float>& value, const NormalizedSortMode desc,
-                           const NullsMode nulls_first) {
-  _append_floating_point(value, desc, nulls_first);
-}
-
-void KeyNormalizer::append(const std::optional<double>& value, const NormalizedSortMode desc,
-                           const NullsMode nulls_first) {
-  _append_floating_point(value, desc, nulls_first);
-}
-
-void KeyNormalizer::append(const std::optional<pmr_string>& value, const NormalizedSortMode desc,
-                           const NullsMode nulls_first, const size_t prefix_size) {
-  _append_null_prefix(value.has_value(), nulls_first);
-  if (!value.has_value()) {
-    _buffer.resize(_buffer.size() + prefix_size, 0x00);
-    return;
-  }
-
-  const auto& str = value.value();
-  const auto len_to_copy = std::min(str.length(), prefix_size);
-
-  const auto current_size = _buffer.size();
-  _buffer.resize(current_size + prefix_size);
-
-  std::memcpy(_buffer.data() + current_size, str.data(), len_to_copy);
-
-  // Pad with 0s if the string is shorter than the prefix to ensure fixed width.
-  if (len_to_copy < prefix_size) {
-    std::memset(_buffer.data() + current_size + len_to_copy, 0, prefix_size - len_to_copy);
-  }
-
-  // For descending order, we simply invert all bits of the value's representation.
-  if (desc == NormalizedSortMode::Descending) {
-    for (size_t i = 0; i < prefix_size; ++i) {
-      _buffer[current_size + i] = ~_buffer[current_size + i];
-    }
-  }
-}
+KeyNormalizer::KeyNormalizer(std::vector<unsigned char>& buffer) {}
 
 template <typename T>
 void KeyNormalizer::insert(std::vector<unsigned char>& buffer, const T value, const uint64_t offset,
@@ -89,103 +39,68 @@ void KeyNormalizer::insert(std::vector<unsigned char>& buffer, const T value, co
   }
 }
 
-void KeyNormalizer::append_row_id(uint64_t row_id) {
-  _append_integral(std::optional(row_id), NormalizedSortMode::Ascending, NullsMode::NullsFirst);
-}
-
 void KeyNormalizer::insert_row_id(std::vector<unsigned char>& buffer, const RowID row_id, const uint64_t offset) {
   std::memcpy(&buffer[offset], &row_id, sizeof(ChunkID) + sizeof(ChunkOffset));
 }
 
-void KeyNormalizer::append_chunk(const std::shared_ptr<const Chunk>& chunk,
-                                 const std::vector<SortColumnDefinition>& sort_definitions) {
-  struct SegmentInformationAndAccessor {
-    std::unique_ptr<BaseSegmentAccessor> accessor;
-    DataType data_type;
-    NormalizedSortMode sort_mode;
-    NullsMode nulls_mode;
-  };
-
-  const auto num_rows = chunk->size();
-
-  auto segment_information_and_accessors = std::unordered_map<ColumnID, SegmentInformationAndAccessor>{};
-  segment_information_and_accessors.reserve(sort_definitions.size());
-  for (const auto [column_id, sort_mode] : sort_definitions) {
-    const auto segment = chunk->get_segment(column_id);
-    const auto data_type = segment->data_type();
-
-    resolve_data_type(data_type, [&](const auto type) {
-      using Type = typename decltype(type)::type;
-
-      segment_information_and_accessors.emplace(
-          column_id, SegmentInformationAndAccessor{
-                         std::move(create_segment_accessor<Type>(segment)), data_type,
-                         (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::AscendingNullsLast)
-                             ? NormalizedSortMode::Ascending
-                             : NormalizedSortMode::Descending,
-                         (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::DescendingNullsFirst)
-                             ? NullsMode::NullsFirst
-                             : NullsMode::NullsLast});
-    });
-  }
-
-  for (auto row_id = ChunkOffset(0); row_id < num_rows; ++row_id) {
-    for (const auto [column_id, sort_mode] : sort_definitions) {
-      const auto data_type = segment_information_and_accessors[column_id].data_type;
-
-      // There is a method resolve_data_and_segment_type() which will probably be useful here
-      resolve_data_type(data_type, [&](const auto type) {
-        using Type = typename decltype(type)::type;
-
-        const auto& segment_info = segment_information_and_accessors[column_id];
-
-        const auto& accessor = dynamic_cast<const AbstractSegmentAccessor<Type>&>(*segment_info.accessor);
-
-        append(accessor.access(row_id), segment_info.sort_mode, segment_info.nulls_mode);
-      });
-
-      append_row_id(row_id);
-    }
-  }
-}
-
 void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
                                  const std::vector<SortColumnDefinition>& sort_definitions,
-                                 const uint64_t buffer_offset, const ChunkID chunk_id, const uint32_t tuple_key_size,
+                                 const uint64_t start_row_index, const ChunkID chunk_id, const uint32_t tuple_key_size,
                                  const uint32_t string_prefix_length, const ChunkOffset chunk_size) {
-  for (const auto sort_definition : sort_definitions) {
-    const auto sort_mode = sort_definition.sort_mode;
-    const auto normalized_sort_mode =
-        (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::AscendingNullsLast)
-            ? NormalizedSortMode::Ascending
-            : NormalizedSortMode::Descending;
-    const auto nulls_mode = (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::DescendingNullsFirst)
-                                ? NullsMode::NullsFirst
-                                : NullsMode::NullsLast;
-    auto current_offset = buffer_offset;
-
-    segment_iterate(*chunk->get_segment(sort_definition.column), [&](const auto segment_position) {
-      const bool is_null = segment_position.is_null();
-      insert_null_prefix(buffer, is_null, current_offset, nulls_mode);
-      insert(buffer, segment_position.value(), current_offset + 1, normalized_sort_mode, string_prefix_length);
-      current_offset += tuple_key_size;
-    });
-  }
-
-  auto offset = uint64_t{tuple_key_size - sizeof(RowID)};
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_offset + offset);
-    offset += tuple_key_size;
-  }
-}
+    // Calculate the starting byte position for the current row's key.
+    const auto buffer_row_start = (start_row_index + chunk_offset) * tuple_key_size;
+    auto key_offset_in_tuple = uint32_t{0};
 
-void KeyNormalizer::append_table(const std::shared_ptr<const Table>& table,
-                                 const std::vector<SortColumnDefinition>& sort_definitions) {
-  const auto chunk_count = table->chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto current_chunk = table->get_chunk(chunk_id);
+    // For each row, build the composite key from the specified sort columns.
+    for (const auto& sort_definition : sort_definitions) {
+      const auto column_id = sort_definition.column;
+      const auto segment = chunk->get_segment(column_id);
+      const auto value_variant = (*segment)[chunk_offset];  // Get value at current row.
 
-    append_chunk(current_chunk, sort_definitions);
+      const auto normalized_sort_mode = (sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
+                                         sort_definition.sort_mode == SortMode::AscendingNullsLast)
+                                            ? NormalizedSortMode::Ascending
+                                            : NormalizedSortMode::Descending;
+      const auto nulls_mode = (sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
+                               sort_definition.sort_mode == SortMode::DescendingNullsFirst)
+                                  ? NullsMode::NullsFirst
+                                  : NullsMode::NullsLast;
+
+      // 1. Insert NULL prefix.
+      const bool is_null = variant_is_null(value_variant);
+      insert_null_prefix(buffer, is_null, buffer_row_start + key_offset_in_tuple, nulls_mode);
+      key_offset_in_tuple += 1;
+
+      // 2. Insert the normalized value.
+      const auto column_data_type = segment->data_type();
+      auto value_size = 0u;
+
+      // Determine the size of the value to correctly advance the offset.
+      if (column_data_type == DataType::String) {
+        value_size = string_prefix_length;
+      } else {
+        resolve_data_type(column_data_type, [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
+          value_size = sizeof(ColumnDataType);
+        });
+      }
+
+      if (!is_null) {
+        // Use boost::get to extract the value and insert it.
+        resolve_data_type(column_data_type, [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
+          insert<ColumnDataType>(buffer, boost::get<ColumnDataType>(value_variant),
+                                 buffer_row_start + key_offset_in_tuple, normalized_sort_mode, string_prefix_length);
+        });
+      } else {
+        // For NULLs, pad the key with zeros to maintain a fixed width.
+        std::memset(buffer.data() + buffer_row_start + key_offset_in_tuple, 0, value_size);
+      }
+      key_offset_in_tuple += value_size;
+    }
+
+    insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_row_start + key_offset_in_tuple);
   }
 }
 
@@ -193,34 +108,38 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::convert_table(
     const std::shared_ptr<const Table>& table, const std::vector<SortColumnDefinition>& sort_definitions,
     const uint32_t string_prefix_length) {
   const auto num_rows = table->row_count();
-  const auto num_columns = table->column_count();
-  const auto data_types = table->column_data_types();
 
+  // Calculate tuple_key_size based only on the columns we are sorting.
   auto tuple_key_size = uint32_t{0};
-  for (const auto data_type : data_types) {
+  for (const auto& sort_definition : sort_definitions) {
+    const auto column_id = sort_definition.column;
+    const auto data_type = table->column_data_type(column_id);
+
+    // Add 1 byte for the NULL prefix for each sorted column.
+    tuple_key_size += 1;
+
     if (data_type == DataType::String) {
       tuple_key_size += string_prefix_length;
     } else {
       resolve_data_type(data_type, [&](const auto type) {
         using Type = typename decltype(type)::type;
-
         tuple_key_size += sizeof(Type);
       });
     }
   }
-  // Add one byte for each column for the NULL prefix and add the size of one RowID for the row id.
-  tuple_key_size += num_columns + sizeof(RowID);
+
+  tuple_key_size += sizeof(RowID);
 
   auto result_buffer = std::vector<unsigned char>(tuple_key_size * num_rows);
-
   const auto chunk_count = table->chunk_count();
   auto table_offset = uint64_t{0};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto current_chunk = table->get_chunk(chunk_id);
     const auto chunk_size = current_chunk->size();
 
-    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset * tuple_key_size, chunk_id,
-                 tuple_key_size, string_prefix_length, chunk_size);
+    // The start offset for this chunk is the number of rows we've already processed.
+    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset, chunk_id, tuple_key_size,
+                 string_prefix_length, chunk_size);
 
     table_offset += chunk_size;
   }
@@ -228,23 +147,12 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::convert_table(
   return {result_buffer, tuple_key_size};
 }
 
-RowIdIteratorWithEnd KeyNormalizer::get_iterators(const std::vector<unsigned char>& buffer,
-                                                 const uint64_t tuple_key_size) {
+RowIdIteratorWithEnd KeyNormalizer::get_iterators(std::vector<unsigned char>& buffer, const uint64_t tuple_key_size) {
   return RowIdIteratorWithEnd{.iterator = RowIdIterator{buffer, tuple_key_size, false},
                               .end = RowIdIterator{buffer, tuple_key_size, true}};
 }
 
 // PRIVATE
-
-void KeyNormalizer::_append_null_prefix(const bool has_value, const NullsMode nulls_first) const {
-  unsigned char null_byte;
-  if (nulls_first == NullsMode::NullsFirst) {
-    null_byte = has_value ? 1 : 0;
-  } else {
-    null_byte = has_value ? 0 : 1;
-  }
-  _buffer.push_back(null_byte);
-}
 
 void KeyNormalizer::insert_null_prefix(std::vector<unsigned char>& buffer, const bool is_null, const uint64_t offset,
                                        const NullsMode nulls_mode) {
@@ -252,46 +160,6 @@ void KeyNormalizer::insert_null_prefix(std::vector<unsigned char>& buffer, const
                                                       ((nulls_mode == NullsMode::NullsLast) & is_null));
 
   buffer[offset] = null_prefix;
-}
-
-template <typename T>
-void KeyNormalizer::_append_integral(const std::optional<T>& value, NormalizedSortMode desc, NullsMode nulls_first) {
-  _append_null_prefix(value.has_value(), nulls_first);
-  if (!value.has_value()) {
-    // If the value is NULL, we just pad with zeros to maintain a fixed key width.
-    _buffer.resize(_buffer.size() + sizeof(T), 0x00);
-    return;
-  }
-
-  T val = value.value();
-
-  // For signed integers, the sign bit must be flipped. This maps the range of signed
-  // values (e.g., -128 to 127) to an unsigned range (0 to 255) in a way that
-  // preserves their order for a lexicographical byte comparison.
-  if constexpr (std::is_signed_v<T>) {
-    val ^= (T(1) << (sizeof(T) * 8 - 1));
-  }
-
-  // Ensure the byte order is big-endian before writing to the buffer. If not, we swap.
-  if constexpr (std::endian::native == std::endian::little) {
-    if constexpr (sizeof(T) == 4) {
-      val = portable_bswap_32(val);
-    }
-    if constexpr (sizeof(T) == 8) {
-      val = portable_bswap_64(val);
-    }
-  }
-
-  const size_t current_size = _buffer.size();
-  _buffer.resize(current_size + sizeof(T));
-  std::memcpy(_buffer.data() + current_size, &val, sizeof(T));
-
-  // For descending order, we simply invert all bits of the value's representation.
-  if (desc == NormalizedSortMode::Descending) {
-    for (size_t i = 0; i < sizeof(T); ++i) {
-      _buffer[current_size + i] = ~_buffer[current_size + i];
-    }
-  }
 }
 
 template <class T>
@@ -322,32 +190,6 @@ void KeyNormalizer::_insert_integral(std::vector<unsigned char>& buffer, T value
   std::memcpy(buffer.data() + offset, &value, sizeof(T));
 }
 
-template <typename T>
-void KeyNormalizer::_append_floating_point(const std::optional<T>& value, NormalizedSortMode desc,
-                                           NullsMode nulls_first) {
-  static_assert(std::is_floating_point_v<T>, "T must be a floating point type");
-  using I = std::conditional_t<sizeof(T) == 4, uint32_t, uint64_t>;
-
-  std::optional<I> int_value;
-  if (value.has_value()) {
-    I reinterpreted_val;
-    std::memcpy(&reinterpreted_val, &(*value), sizeof(T));
-
-    // If the float is negative (sign bit is 1), we flip all bits to reverse the sort order.
-    // If the float is positive (sign bit is 0), we flip only the sign bit to make it sort after all negatives.
-    if (reinterpreted_val & (I(1) << (sizeof(I) * 8 - 1))) {
-      reinterpreted_val = ~reinterpreted_val;
-    } else {
-      reinterpreted_val ^= (I(1) << (sizeof(I) * 8 - 1));
-    }
-    int_value = reinterpreted_val;
-  }
-
-  // Now, call append_integral with the correctly transformed bits. Since `I` is unsigned,
-  // the signed-integer logic inside append_integral will be skipped.
-  _append_integral(int_value, desc, nulls_first);
-}
-
 template <class T>
   requires std::is_floating_point_v<T>
 void KeyNormalizer::_insert_floating_point(std::vector<unsigned char>& buffer, T value, uint64_t offset,
@@ -372,7 +214,7 @@ void KeyNormalizer::_insert_floating_point(std::vector<unsigned char>& buffer, T
 
 void KeyNormalizer::_insert_string(std::vector<unsigned char>& buffer, const pmr_string value, const uint64_t offset,
                                    const NormalizedSortMode sort_mode, const uint32_t string_prefix_length) {
-  const auto len_to_copy = std::min(value.size(), static_cast<uint64_t>(string_prefix_length));
+  const auto len_to_copy = std::min(value.size(), static_cast<u_long>(string_prefix_length));
   std::memcpy(buffer.data() + offset, value.data(), len_to_copy);
 
   // Pad with 0s if the string is shorter than the prefix to ensure fixed width.

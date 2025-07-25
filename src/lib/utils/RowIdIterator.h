@@ -2,20 +2,20 @@
 
 namespace hyrise {
 
-class RowIdIterator : public std::iterator<std::input_iterator_tag, const RowID> {
+class RowIdIterator {
  protected:
-  const std::vector<unsigned char>& _buffer;
+  std::vector<unsigned char>& _buffer;
   uint64_t _tuple_key_size;
   uint64_t _current_offset;
 
-  RowIdIterator(const std::vector<unsigned char>& buffer, uint64_t tuple_key_size, uint64_t current_offset);
+  RowIdIterator(std::vector<unsigned char>& buffer, uint64_t tuple_key_size, uint64_t current_offset);
 
  public:
-  RowIdIterator(const std::vector<unsigned char>& buffer, uint64_t tuple_key_size, bool is_end = false);
+  RowIdIterator(std::vector<unsigned char>& buffer, uint64_t tuple_key_size, bool is_end = false);
   RowIdIterator& operator++();    // prefix
   RowIdIterator operator++(int);  // postfix
-  value_type operator*() const;
-  pointer operator->() const;
+  RowID operator*() const;
+  const RowID* operator->() const;
   friend bool operator==(const RowIdIterator& lhs, const RowIdIterator& rhs);
   friend bool operator!=(const RowIdIterator& lhs, const RowIdIterator& rhs);
 };
