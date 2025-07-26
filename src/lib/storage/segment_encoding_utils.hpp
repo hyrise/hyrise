@@ -32,7 +32,7 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
 
 ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
                                                   const std::vector<bool>& column_values_are_unique);
-SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type,
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type,
                                                       const bool segment_values_are_unique = false);
 
 }  // namespace hyrise

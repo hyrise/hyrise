@@ -90,9 +90,14 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
   return chunk_encoding_spec;
 }
 
-SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType& type, const bool segment_values_are_unique) {
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique) {
   switch (type) {
     case DataType::Int:
+      if (segment_values_are_unique) {
+        return SegmentEncodingSpec{EncodingType::Unencoded};
+      } else {
+        return SegmentEncodingSpec{EncodingType::FrameOfReference};
+      }
     case DataType::String:
     case DataType::Long:
     case DataType::Double:
