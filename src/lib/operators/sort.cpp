@@ -826,8 +826,7 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
     num_moveable_blocks -= num_already_moved_blocks;
     const auto blocks_to_move = std::min(num_moveable_blocks, move_num_blocks);
 
-    auto stripe_full_begin =
-        std::next(last_stripe->begin(), (num_blocks_written - num_already_moved_blocks - 1) * block_size);
+    auto stripe_full_begin = std::next(last_stripe->begin(), (num_moveable_blocks - 1) * block_size);
     for (auto counter = ssize_t{0}; counter < blocks_to_move; ++counter) {
       const auto block_end = std::next(stripe_full_begin, block_size);
       std::cout << "move " << std::distance(sort_range.begin(), stripe_full_begin) << "\n";
