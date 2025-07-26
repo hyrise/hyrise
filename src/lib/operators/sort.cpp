@@ -704,7 +704,6 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
     task->schedule();
   Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
 
-  // Zig-zag merging
   bool zigzag = false;
   while (ranges.size() > 1) {
     size_t num_pairs = ranges.size() / 2;
@@ -712,36 +711,35 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
     std::vector<std::pair<Iter, Iter>> new_ranges(new_size);
 
     if (zigzag) {
-      ssize_t merge_idx = static_cast<ssize_t>(num_pairs) - 1;
+      auto merge_idx = static_cast<ssize_t>(new_size) - 1;
       for (ssize_t i = static_cast<ssize_t>(ranges.size()) - 2; i >= 0; i -= 2) {
         auto [begin1, end1] = ranges[i + 1];
         auto [begin2, end2] = ranges[i];
 
-        std::vector<typename Iter::value_type> buffer(std::distance(begin2, end1));
+        const auto size = std::distance(begin2, end1);
+        std::vector<typename Iter::value_type> buffer(size);
         std::move(begin2, end1, buffer.begin());
 
         auto it1 = buffer.begin();
-        auto mid = it1 + std::distance(begin2, begin1);
+        auto mid = it1 + std::distance(begin2, end2);
         auto it2 = mid;
         auto out = begin2;
-
         while (it1 != mid && it2 != buffer.end()) {
           bool left_less = it2->less_than(*it1, normalized_key_size);
           bool right_less = 1 - left_less;
           const auto& chosen = left_less ? *it2 : *it1;
           *out++ = chosen;
-          it1 += left_less;
-          it2 += right_less;
+          it1 += right_less;
+          it2 += left_less;
         }
 
-        std::move(it1, mid, out);
-        std::move(it2, buffer.end(), out + std::distance(it1, mid));
+        out = std::move(it1, mid, out);
+        out = std::move(it2, buffer.end(), out);
 
         new_ranges[merge_idx--] = {begin2, end1};
       }
       if (ranges.size() % 2 == 1)
         new_ranges[0] = ranges[0];
-
     } else {
       size_t merge_idx = 0;
       for (size_t i = 0; i + 1 < ranges.size(); i += 2) {
@@ -761,17 +759,17 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
           bool right_less = 1 - left_less;
           const auto& chosen = left_less ? *it2 : *it1;
           *out++ = chosen;
-          it1 += left_less;
-          it2 += right_less;
+          it1 += right_less;
+          it2 += left_less;
         }
 
-        std::move(it1, mid, out);
-        std::move(it2, buffer.end(), out + std::distance(it1, mid));
+        out = std::move(it1, mid, out);
+        out = std::move(it2, buffer.end(), out);
 
         new_ranges[merge_idx++] = {begin1, end2};
       }
       if (ranges.size() % 2 == 1)
-        new_ranges.emplace_back(ranges.back());
+        new_ranges.back() = ranges.back();
     }
 
     ranges = std::move(new_ranges);
