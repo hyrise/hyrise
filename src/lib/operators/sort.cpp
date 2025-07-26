@@ -643,8 +643,8 @@ void debug_print_keys(const auto& name, const NormalizedKeyRange auto& range) {
     std::cout << name << " " << std::hex;
     for (const auto& row : range) {
       std::cout << "0x";
-      for (auto counter = size_t{0}; counter < 1; ++counter) {
-        std::cout << static_cast<int32_t>(row.key_head[counter]);
+      for (auto counter = size_t{0}; counter < 2; ++counter) {
+        std::cout << std::setfill('0') << std::setw(2) << static_cast<int32_t>(row.key_head[counter]);
       }
       std::cout << " ";
     }
@@ -982,6 +982,10 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   DebugAssert(num_blocks > 0, "At least one block is required.");
   DebugAssert(num_buckets > 0, "At least one bucket is required.");
 
+  std::cout << "total_size " << total_size << "\n";
+  std::cout << "block_size " << block_size << "\n";
+  std::cout << "num_blocks " << num_blocks << "\n";
+
   // Calculate the number of blocks assigned to each stripe.
   const auto max_num_stripes = div_ceil(num_blocks, min_blocks_per_stripe);
   if (max_num_stripes <= 1) {
@@ -992,6 +996,9 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   const auto num_stripes = std::min(max_num_stripes, max_parallelism);
   const auto max_blocks_per_stripe = div_ceil(num_blocks, num_stripes);
 
+  std::cout << "num_stripes " << num_stripes << "\n";
+  std::cout << "max_blocks_per_stripe " << max_blocks_per_stripe << "\n";
+
   // Select the elements for the sample sort.
   const auto classifiers = select_classifiers(sort_range, num_classifiers);
 
@@ -1000,6 +1007,9 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
 
   // Create an array of elements assigned to each stripe. Equally distribute the blocks to each stripe.
   auto num_max_sized_stripes = num_blocks % num_stripes;
+  if (num_max_sized_stripes == 0) {
+    num_max_sized_stripes = num_stripes;
+  }
   auto stripes = std::vector<std::ranges::subrange<RangeIterator>>(num_stripes);
   auto stripe_begin = std::ranges::begin(sort_range);
   for (auto stripe = size_t{0}; stripe < num_stripes - 1; ++stripe) {
@@ -1008,6 +1018,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
       stripe_size += block_size;
       --num_max_sized_stripes;
     }
+    std::cout << "stripe size " << stripe_size << "\n";
     auto stripe_end = std::next(stripe_begin, stripe_size);
     stripes[stripe] = std::ranges::subrange(stripe_begin, stripe_end);
     stripe_begin = stripe_end;
