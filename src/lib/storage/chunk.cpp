@@ -79,7 +79,7 @@ std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
-const Segments& Chunk::get_segments() const {
+const Segments& Chunk::segments() const {
   return _segments;
 }
 

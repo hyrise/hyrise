@@ -55,8 +55,11 @@ std::shared_ptr<const Table> Import::_on_execute() {
   switch (_file_type) {
     case FileType::Csv: {
       auto csv_meta = CsvMeta{};
-      if (Hyrise::get().storage_manager.has_table(_tablename)) {
-        if (std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
+      const auto meta_filename = filename + CsvMeta::META_FILE_EXTENSION;
+      const auto meta_file_exists = std::filesystem::exists(meta_filename);
+      const auto table_exists = Hyrise::get().storage_manager.has_table(_tablename);
+      if (table_exists) {
+        if (meta_file_exists) {
           std::cerr << "Warning: Ignoring " << filename << CsvMeta::META_FILE_EXTENSION << " because table "
                     << _tablename << " already exists.\n";
         }
@@ -70,7 +73,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
           csv_meta.columns[column_id].type = data_type_to_string.left.at(column_definitions[column_id].data_type);
           csv_meta.columns[column_id].nullable = column_definitions[column_id].nullable;
         }
-      } else if (std::filesystem::exists(filename + CsvMeta::META_FILE_EXTENSION)) {
+      } else if (meta_file_exists) {
         csv_meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
       } else {
         Fail("Cannot load table from csv. No table definition source found.");
@@ -113,26 +116,27 @@ std::shared_ptr<const Table> Import::_on_execute() {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
-  if (Hyrise::get().storage_manager.has_table(_tablename)) {
-    const auto existing_table = Hyrise::get().storage_manager.get_table(_tablename);
-    const auto append_lock = existing_table->acquire_append_mutex();
-    if (existing_table->chunk_count() > 0 && existing_table->last_chunk()->is_mutable()) {
-      existing_table->last_chunk()->set_immutable();
-    }
-
-    const auto chunk_count = table->chunk_count();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
-      existing_table->append_chunk(chunk->get_segments(), chunk->mvcc_data());
-    }
-
-    table->set_table_statistics(TableStatistics::from_table(*table));
-    generate_chunk_pruning_statistics(table);
-  } else {
+  if (!Hyrise::get().storage_manager.has_table(_tablename)) {
     // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
     // and their creation benefits from dictionary encoding, we add the tables after they are encoded.
     Hyrise::get().storage_manager.add_table(_tablename, table);
+    return nullptr;
   }
+
+  const auto existing_table = Hyrise::get().storage_manager.get_table(_tablename);
+  const auto append_lock = existing_table->acquire_append_mutex();
+  if (existing_table->chunk_count() > 0 && existing_table->last_chunk()->is_mutable()) {
+    existing_table->last_chunk()->set_immutable();
+  }
+
+  const auto chunk_count = table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    existing_table->append_chunk(chunk->segments(), chunk->mvcc_data());
+  }
+
+  table->set_table_statistics(TableStatistics::from_table(*table));
+  generate_chunk_pruning_statistics(table);
 
   // We must match ImportNode::output_expressions.
   return nullptr;

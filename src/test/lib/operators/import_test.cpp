@@ -215,9 +215,9 @@ TEST_F(OperatorsImportTest, AppendToExistingTable) {
   Hyrise::get().storage_manager.add_table("a", existing_table);
 
   auto expected_table = load_table("resources/test_data/tbl/float.tbl");
-  Assert(expected_table->chunk_count() == 1, "Testing code was only written to support one chunk tables");
+  Assert(expected_table->chunk_count() == 1, "Testing code was only written to support single chunk tables");
   const auto chunk = expected_table->get_chunk(ChunkID{0});
-  expected_table->append_chunk(chunk->get_segments(), chunk->mvcc_data());
+  expected_table->append_chunk(chunk->segments(), chunk->mvcc_data());
 
   auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
   importer->execute();
