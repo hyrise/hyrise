@@ -79,6 +79,10 @@ std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
+const Segments& Chunk::segments() const {
+  return _segments;
+}
+
 ColumnCount Chunk::column_count() const {
   return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())};
 }
