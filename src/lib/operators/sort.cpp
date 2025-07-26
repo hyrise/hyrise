@@ -642,7 +642,11 @@ void debug_print_keys(const auto& name, const NormalizedKeyRange auto& range) {
   if constexpr (HYRISE_DEBUG) {
     std::cout << name << " " << std::hex;
     for (const auto& row : range) {
-      std::cout << "0x" << static_cast<int32_t>(row.key_head[0]) << " ";
+      std::cout << "0x";
+      for (auto counter = size_t{0}; counter < 1; ++counter) {
+        std::cout << static_cast<int32_t>(row.key_head[counter]);
+      }
+      std::cout << " ";
     }
     std::cout << "\n" << std::dec;
   }
@@ -740,7 +744,7 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
                                 const std::ranges::range auto& stripe_ranges,
                                 const std::ranges::range auto& stripe_results,
                                 const std::ranges::range auto& bucket_delimiter, const size_t block_size) {
-  std::cout << "stripe_index " << stripe_index << "\n";
+  std::cout << "--- Stripe " << stripe_index << " ---\n";
   const auto stripe_result = std::next(stripe_results.begin(), stripe_index);
   const auto stripe_range_iter = std::next(stripe_ranges.begin(), stripe_index);
   const auto stripe_end = stripe_range_iter->end();
@@ -761,6 +765,7 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
         return std::distance(sort_range.begin(), stripe_range.end());
       });
   const auto last_bucket_first_stripe_index = std::distance(stripe_ranges.begin(), last_bucket_first_stripe);
+  std::cout << "last_bucket " << last_bucket_index << "\n";
 
   // Check if the bucket starts in the next stripe. This can happen if the bucket delimiter aligns with the stripe end.
   if (static_cast<ssize_t>(stripe_index) < last_bucket_first_stripe_index) {
@@ -777,10 +782,11 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
     num_already_moved_blocks +=
         count_empty_blocks(stripe_size, stripe_end, last_bucket_begin, *stripe_result_iter, block_size);
   }
+  std::cout << "num_already_moved_blocks " << num_already_moved_blocks << "\n";
 
   // Calculate the number of blocks which must be filled by this stripe.
   const auto stripe_size = std::ranges::size(*stripe_range_iter);
-  const auto move_num_blocks = static_cast<ssize_t>(
+  auto move_num_blocks = static_cast<ssize_t>(
       count_empty_blocks(stripe_size, stripe_end_index, last_bucket_begin, *stripe_result, block_size));
   auto stripe_empty_begin = std::next(stripe_range_iter->begin(), stripe_result->num_blocks_written * block_size);
 
@@ -795,10 +801,11 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
   DebugAssert(last_stripe != stripe_ranges.end(), "Bucket should end in last stripe");
   const auto last_stripe_index = std::distance(stripe_ranges.begin(), last_stripe);
   auto last_stripe_result = std::next(stripe_results.begin(), last_stripe_index);
+  std::cout << "last_stripe " << last_stripe_index << "\n";
 
   // Copy the last blocks in the bucket to the empty blocks of this stripe. Skip num_already_moved_blocks before moving
   // blocks from the end into the empty blocks, because they are already processed by previous stripes.
-  for (; last_stripe != stripe_range_iter; --last_stripe, --last_stripe_result) {
+  for (; last_stripe != stripe_range_iter && move_num_blocks > 0; --last_stripe, --last_stripe_result) {
     const auto begin_index = std::distance(sort_range.begin(), last_stripe->begin());
     DebugAssert(begin_index % block_size == 0, "Wrong alignment");
     const auto stripe_end_index = std::distance(sort_range.begin(), last_stripe->end());
@@ -808,23 +815,29 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
     const auto bucket_num_blocks = (end_index - begin_index) / block_size;
     const auto num_blocks_written = last_stripe_result->num_blocks_written;
     auto num_moveable_blocks = static_cast<ssize_t>(std::min(bucket_num_blocks, num_blocks_written));
-    DebugAssert(num_moveable_blocks > 0, "At least on moveable block is required");
+
+    std::cout << "stripe " << std::distance(stripe_ranges.begin(), last_stripe) << " required " << move_num_blocks
+              << " moveable " << num_moveable_blocks << " complete " << num_already_moved_blocks << "\n";
 
     if (num_already_moved_blocks >= num_moveable_blocks) {
       num_already_moved_blocks -= num_moveable_blocks;
       continue;
     }
     num_moveable_blocks -= num_already_moved_blocks;
-    num_already_moved_blocks = 0;
     const auto blocks_to_move = std::min(num_moveable_blocks, move_num_blocks);
 
-    auto stripe_full_begin = last_stripe->begin();
+    auto stripe_full_begin =
+        std::next(last_stripe->begin(), (num_blocks_written - num_already_moved_blocks - 1) * block_size);
     for (auto counter = ssize_t{0}; counter < blocks_to_move; ++counter) {
       const auto block_end = std::next(stripe_full_begin, block_size);
+      std::cout << "move " << std::distance(sort_range.begin(), stripe_full_begin) << "\n";
+      debug_print_keys("move block ", std::ranges::subrange(stripe_full_begin, block_end));
       std::copy(stripe_full_begin, block_end, stripe_empty_begin);
       stripe_empty_begin = std::next(stripe_empty_begin, block_size);
-      stripe_full_begin = std::next(stripe_full_begin, block_size);
+      stripe_full_begin = std::next(stripe_full_begin, -block_size);
     }
+    move_num_blocks -= blocks_to_move;
+    num_already_moved_blocks = 0;
   }
 }
 
@@ -861,50 +874,46 @@ void permute_blocks(const NormalizedKeyRange auto& classifiers, const size_t ini
       pending_reads[bucket].fetch_sub(1, std::memory_order_relaxed);
 
       // Repeat as long as a block is stored in the target buffer.
-      bool target_buffer_is_empty = false;
-      while (!target_buffer_is_empty) {
-        std::cout << "--- Bucket " << bucket << " ---\n";
-        // Classify the block.
-        const auto target_bucket = classify_value(target_buffer[0], classifiers, comp);
-        // Acquire a block to write the buffer to. If the target block is not in the correct bucket both blocks are swapped.
-        while (true) {
-          const auto target_block = ++write_pointers[target_bucket];
-          DebugAssert(std::ranges::size(target_block) == block_size, "Block expected to be block size");
-          std::cout << "dist " << std::distance(target_block.begin(), read_pointers[target_bucket].base) << " "
-                    << read_pointers[target_bucket].offset.load() << "\n";
-          if (target_block > read_pointers[target_bucket]) {
-            // Read and write pointers has crossed each other. To avoid any race conditions, we wait until all reads are
-            // complete.
-            while (pending_reads[target_bucket].load(std::memory_order_relaxed) > 0) {}
+      std::cout << "--- Bucket " << bucket << " ---\n";
+      // Classify the block.
+      auto target_bucket = classify_value(target_buffer[0], classifiers, comp);
+      // Acquire a block to write the buffer to. If the target block is not in the correct bucket both blocks are swapped.
+      while (true) {
+        const auto target_block = ++write_pointers[target_bucket];
+        DebugAssert(std::ranges::size(target_block) == block_size, "Block expected to be block size");
+        if (target_block > read_pointers[target_bucket]) {
+          // Read and write pointers has crossed each other. To avoid any race conditions, we wait until all reads are
+          // complete.
+          while (pending_reads[target_bucket].load(std::memory_order_relaxed) > 0) {}
 
-            if (target_block.begin() == overflow_bucket_begin) {
-              // Special Case: Let assume we have the following array to sort: [a a b c c]. In addition, we assume that the
-              // bucket size is 2. A array with delimiter may look like [a a|b _|c c], but this is array is one element longer
-              // than the original array. Because of that we provide an overflow bucket, which can be written to in this case.
-              overflow_bucket.resize(block_size);
-              debug_print_keys("write[overflow]", target_buffer);
-              std::ranges::copy(target_buffer, overflow_bucket.begin());
-            } else {
-              debug_print_keys("write[array]", target_buffer);
-              std::ranges::copy(target_buffer, target_block.begin());
-            }
-            target_buffer_is_empty = true;
-            break;
+          if (target_block.begin() == overflow_bucket_begin) {
+            // Special Case: Let assume we have the following array to sort: [a a b c c]. In addition, we assume that the
+            // bucket size is 2. A array with delimiter may look like [a a|b _|c c], but this is array is one element longer
+            // than the original array. Because of that we provide an overflow bucket, which can be written to in this case.
+            overflow_bucket.resize(block_size);
+            debug_print_keys("write[overflow]", target_buffer);
+            std::ranges::copy(target_buffer, overflow_bucket.begin());
           } else {
-            const auto swap_block_bucket = classify_value(*target_block.begin(), classifiers, comp);
-            if (swap_block_bucket == target_bucket) {
-              // This block is already in the correct bucket. Try the next block.
-              continue;
-            }
-            debug_print_keys("copy[swap]", target_block);
-            std::ranges::copy(target_block, swap_buffer.begin());
-            debug_print_keys("write[array]", target_buffer);
+            debug_print_keys("write[final]", target_buffer);
             std::ranges::copy(target_buffer, target_block.begin());
-            std::swap(target_buffer, swap_buffer);
           }
           break;
         }
+
+        auto swap_block_bucket = classify_value(*target_block.begin(), classifiers, comp);
+        if (swap_block_bucket == target_bucket) {
+          // This block is already in the correct bucket. Try the next block.
+          debug_print_keys("skip", target_block);
+          continue;
+        }
+        debug_print_keys("copy[swap]", target_block);
+        std::ranges::copy(target_block, swap_buffer.begin());
+        debug_print_keys("write[array]", target_buffer);
+        std::ranges::copy(target_buffer, target_block.begin());
+        std::swap(target_buffer, swap_buffer);
+        target_bucket = swap_block_bucket;
       }
+      std::cout << "--- END ---\n";
     }
   }
 }
@@ -1015,7 +1024,15 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
 
   debug_print_keys("classification", sort_range);
 
-  std::cout << "===\n";
+  std::cout << "=== Classification Result ===\n";
+  for (auto stripe = size_t{0}; stripe < num_stripes; ++stripe) {
+    std::cout << "--- Stripe " << stripe << " ---\n";
+    for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
+      std::cout << "bucket[" << bucket << "] len=" << classification_results[stripe].bucket_sizes[bucket];
+      debug_print_keys("", classification_results[stripe].buckets[bucket]);
+    }
+  }
+  std::cout << "=== End ===\n";
 
   // Prepare permuting classified blocks into the correct position. This preparation is done in the following:
   // 1. We create the prefix sum of all buckets. As a result, we receive a list of bucket end indices.
@@ -1145,6 +1162,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
     const auto bucket_end_index = static_cast<ssize_t>(aggregated_bucket_sizes[bucket]);
     const auto bucket_block_end = static_cast<ssize_t>(aligned_bucket_sizes[bucket]);
     auto bucket_written_end_index = write_pointers[bucket].distance_to_start(sort_range);
+    std::cout << "bucket_written_end_index " << bucket_written_end_index << "\n";
 
     if (bucket + 1 == num_buckets && !overflow_bucket.empty()) {
       bucket_written_end_index -= block_size;
