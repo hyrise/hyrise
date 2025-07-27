@@ -996,7 +996,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   // same bucket and followed by empty blocks.
   TRACE_EVENT_BEGIN("sort", "ips4o::classify");
   auto classification_results = std::vector<StripeClassificationResult>(num_stripes);
-  const auto classification_tasks = run_parallel_batched(num_stripes, num_stripes, [&](auto stripe) {
+  const auto classification_tasks = run_parallel_batched(num_stripes, 1, [&](auto stripe) {
     classification_results[stripe] = classify_stripe(stripes[stripe], classifiers, block_size, comp);
   });
   Hyrise::get().scheduler()->wait_for_tasks(classification_tasks);
@@ -1021,7 +1021,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   }
 
   TRACE_EVENT_BEGIN("sort", "ip4so::prepare_permutations");
-  const auto prepare_tasks = run_parallel_batched(num_stripes, num_stripes, [&](auto stripe) {
+  const auto prepare_tasks = run_parallel_batched(num_stripes, 1, [&](auto stripe) {
     prepare_block_permutations(sort_range, stripe, stripes, classification_results, aligned_bucket_sizes, block_size);
   });
   Hyrise::get().scheduler()->wait_for_tasks(prepare_tasks);
@@ -1152,6 +1152,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   }
   TRACE_EVENT_END("sort");
 
+  TRACE_EVENT_BEGIN("sort", "ip4so::write_back");
   // Copy all partial blocks from the classification result into the output buffer.
   for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
     for (auto stripe = size_t{0}; stripe < num_stripes; ++stripe) {
@@ -1165,14 +1166,19 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   if (!overflow_bucket.empty()) {
     write_to_ranges(overflow_bucket, bucket_empty_start.back(), bucket_empty_tail.back());
   }
+  TRACE_EVENT_END("sort");
 
   // Sort each bucket for now.
-  auto bucket_start = sort_range.begin();
-  for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
-    auto bucket_end = std::next(sort_range.begin(), aggregated_bucket_sizes[bucket]);
-    boost::sort::pdqsort(bucket_start, bucket_end, comp);
-    bucket_start = bucket_end;
-  }
+  TRACE_EVENT_BEGIN("sort", "ip4so::pdqsort");
+  const auto sort_task = run_parallel_batched(num_buckets, 1, [&](auto bucket) {
+    const auto bucket_start_index = (bucket > 0) ? aggregated_bucket_sizes[bucket - 1] : 0;
+    const auto bucket_end_index = aggregated_bucket_sizes[bucket];
+    const auto bucket_begin = std::next(sort_range.begin(), bucket_start_index);
+    const auto bucket_end = std::next(sort_range.begin(), bucket_end_index);
+    boost::sort::pdqsort(bucket_begin, bucket_end, comp);
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(sort_task);
+  TRACE_EVENT_END("sort");
 }
 
 }  // namespace ips4o
