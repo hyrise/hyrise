@@ -24,6 +24,9 @@ TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyCo
       _last_validated_on{last_validated_on},
       _last_invalidated_on{last_invalidated_on} {
   Assert(!_columns.empty(), "Did not expect useless constraint.");
+  Assert(key_type != KeyConstraintType::PRIMARY_KEY ||
+             (last_validated_on == MAX_COMMIT_ID && last_invalidated_on == MAX_COMMIT_ID),
+         "A key constraint of type PRIMARY_KEY must be schema-given.");
 }
 
 TableKeyConstraint::TableKeyConstraint(const TableKeyConstraint& other)
@@ -73,12 +76,15 @@ bool TableKeyConstraint::can_become_invalid() const {
   return _last_validated_on.load() != MAX_COMMIT_ID;
 }
 
-bool TableKeyConstraint::is_valid() const {
+ValidationResultType TableKeyConstraint::last_validation_result() const {
   const auto last_invalidated = _last_invalidated_on.load();
   const auto last_validated = _last_validated_on.load();
 
-  return !can_become_invalid() || last_invalidated == MAX_COMMIT_ID ||
-         (last_validated != MAX_COMMIT_ID && last_validated > last_invalidated);
+  if (!can_become_invalid() || last_invalidated == MAX_COMMIT_ID ||
+      (last_validated != MAX_COMMIT_ID && last_validated > last_invalidated)) {
+    return ValidationResultType::VALID;
+  }
+  return ValidationResultType::INVALID;
 }
 
 CommitID TableKeyConstraint::last_validated_on() const {

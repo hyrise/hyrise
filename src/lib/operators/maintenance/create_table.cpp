@@ -80,7 +80,8 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     Hyrise::get().storage_manager.add_table(table_name, table);
 
-    for (const auto& table_key_constraint : _left_input->get_output()->soft_key_constraints()) {
+    const auto& table_key_constraints = _left_input->get_output()->soft_key_constraints();
+    for (const auto& table_key_constraint : table_key_constraints) {
       table->add_soft_constraint(table_key_constraint);
     }
 
