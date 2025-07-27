@@ -1,5 +1,7 @@
 #include "sort.hpp"
 
+#include <iostream>
+
 #ifdef ENABLE_PERFETTO
 #include <perfetto.h>
 #else
@@ -73,6 +75,8 @@ using namespace hyrise;  // NOLINT
 constexpr size_t RADIX = 256;
 constexpr size_t INSERTION_SORT_THRESHOLD = 32;
 constexpr size_t MSD_RADIX_SORT_SIZE_THRESHOLD = 4;
+
+constexpr size_t PARALLEL_THRESHOLD = 10000;
 
 // Ceiling of integer division
 size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
@@ -676,21 +680,90 @@ void radix_sort(auto begin, auto end, size_t normalized_key_size) {
   radix_sort_msd(begin, end, 0, normalized_key_size, buffer);
 }
 
+void merge_partition(NormalizedKeyIter begin1, NormalizedKeyIter end1, NormalizedKeyIter begin2, NormalizedKeyIter end2,
+                     size_t normalized_key_size) {
+  auto total_size = std::distance(begin1, end1) + std::distance(begin2, end2);
+  auto buffer = pmr_vector<NormalizedKeyRow>(total_size);
+  std::move(begin1, end2, buffer.begin());
+  auto it1 = buffer.begin();
+  auto mid = it1 + std::distance(begin1, end1);
+  auto it2 = mid;
+  auto out = begin1;
+
+  while (it1 != mid && it2 != buffer.end()) {
+    bool left_less = it2->less_than(*it1, normalized_key_size);
+    bool right_less = 1 - left_less;
+    const auto& chosen = left_less ? *it2 : *it1;
+    *out++ = chosen;
+    it1 += right_less;
+    it2 += left_less;
+  }
+
+  out = std::move(it1, mid, out);
+  out = std::move(it2, buffer.end(), out);
+}
+
+std::pair<NormalizedKeyIter, NormalizedKeyIter> merge_path_search(NormalizedKeyIter begin1, NormalizedKeyIter end1,
+                                                                  NormalizedKeyIter begin2, NormalizedKeyIter end2,
+                                                                  size_t diag, size_t normalized_key_size) {
+  using Diff = std::ptrdiff_t;
+
+  const Diff a_len = std::distance(begin1, end1);
+  std::cout << "a_len: " << a_len << "\n";
+  const Diff b_len = std::distance(begin2, end2);
+  std::cout << "b_len: " << b_len << "\n";
+  const Diff merge_index = static_cast<Diff>(diag);
+  std::cout << "merge_index: " << merge_index << "\n";
+  Diff low = std::max<Diff>(0, merge_index - b_len);
+  std::cout << "low: " << low << "\n";
+  Diff high = std::min<Diff>(merge_index, a_len);
+  std::cout << "high: " << high << "\n";
+  while (low < high) {
+    Diff a_index = (low + high) / 2;
+    Diff b_index = merge_index - a_index;
+
+    if (a_index < a_len && b_index > 0 &&
+        std::next(begin1, a_index)->less_than(*std::next(begin2, b_index - 1), normalized_key_size)) {
+      low = a_index + 1;
+    } else {
+      high = a_index;
+    }
+
+    std::cout << "Binary search iteration: low = " << low << ", high = " << high << " a_index = " << a_index
+              << ", b_index = " << b_index << "\n";
+  }
+
+  std::cout << "Final x: " << low << ", y: " << (merge_index - low) << "\n";
+  std::cout << "final Y: " << (merge_index - low) << "\n";
+  return {begin1 + low, begin2 + (merge_index - low)};
+}
+
 void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_key_size) {
   const size_t total_size = sort_range.size();
   if (total_size <= 1 || normalized_key_size == 0)
     return;
+  auto begin = sort_range.begin();
+  auto end = sort_range.end();
+
+  if (total_size < INSERTION_SORT_THRESHOLD) {
+    const auto comparator = [&](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
+      return lhs.less_than(rhs, normalized_key_size);
+    };
+
+    insertion_sort(begin, end, comparator);
+    return;
+  }
 
   const auto num_threads = std::thread::hardware_concurrency();
   const size_t min_block_size = (total_size + num_threads - 1) / num_threads;
 
   using Iter = typename std::remove_cvref_t<decltype(sort_range)>::iterator;
-  auto begin = sort_range.begin();
-  auto end = sort_range.end();
+  using Value = typename Iter::value_type;
 
   std::vector<std::shared_ptr<AbstractTask>> sort_tasks;
   std::vector<std::pair<Iter, Iter>> ranges;
 
+  // Sort blocks in parallel
   for (size_t i = 0; i < total_size; i += min_block_size) {
     auto chunk_begin = begin + i;
     auto chunk_end = (i + min_block_size < total_size) ? (chunk_begin + min_block_size) : end;
@@ -700,53 +773,25 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
     }));
   }
 
+  std::cerr << "Number of ranges: " << ranges.size() << ", number of tasks: " << sort_tasks.size() << "\n";
+
   for (auto& task : sort_tasks)
     task->schedule();
   Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
 
-  bool zigzag = false;
   while (ranges.size() > 1) {
-    size_t num_pairs = ranges.size() / 2;
-    size_t new_size = num_pairs + (ranges.size() % 2);
-    std::vector<std::pair<Iter, Iter>> new_ranges(new_size);
+    const size_t num_pairs = ranges.size() / 2;
+    const size_t new_size = num_pairs + (ranges.size() % 2);
+    std::vector<std::pair<Iter, Iter>> new_ranges;
+    new_ranges.reserve(new_size);
 
-    if (zigzag) {
-      auto merge_idx = static_cast<ssize_t>(new_size) - 1;
-      for (ssize_t i = static_cast<ssize_t>(ranges.size()) - 2; i >= 0; i -= 2) {
-        auto [begin1, end1] = ranges[i + 1];
-        auto [begin2, end2] = ranges[i];
+    for (size_t i = 0; i + 1 < ranges.size(); i += 2) {
+      auto [begin1, end1] = ranges[i];
+      auto [begin2, end2] = ranges[i + 1];
+      const size_t total_len = std::distance(begin1, end2);
 
-        const auto size = std::distance(begin2, end1);
-        std::vector<typename Iter::value_type> buffer(size);
-        std::move(begin2, end1, buffer.begin());
-
-        auto it1 = buffer.begin();
-        auto mid = it1 + std::distance(begin2, end2);
-        auto it2 = mid;
-        auto out = begin2;
-        while (it1 != mid && it2 != buffer.end()) {
-          bool left_less = it2->less_than(*it1, normalized_key_size);
-          bool right_less = 1 - left_less;
-          const auto& chosen = left_less ? *it2 : *it1;
-          *out++ = chosen;
-          it1 += right_less;
-          it2 += left_less;
-        }
-
-        out = std::move(it1, mid, out);
-        out = std::move(it2, buffer.end(), out);
-
-        new_ranges[merge_idx--] = {begin2, end1};
-      }
-      if (ranges.size() % 2 == 1)
-        new_ranges[0] = ranges[0];
-    } else {
-      size_t merge_idx = 0;
-      for (size_t i = 0; i + 1 < ranges.size(); i += 2) {
-        auto [begin1, end1] = ranges[i];
-        auto [begin2, end2] = ranges[i + 1];
-
-        std::vector<typename Iter::value_type> buffer(std::distance(begin1, end2));
+      if (total_len < PARALLEL_THRESHOLD) {
+        auto buffer = std::vector<typename Iter::value_type>(std::distance(begin1, end2));
         std::move(begin1, end2, buffer.begin());
 
         auto it1 = buffer.begin();
@@ -763,17 +808,53 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
           it2 += left_less;
         }
 
-        out = std::move(it1, mid, out);
-        out = std::move(it2, buffer.end(), out);
+        std::move(it1, mid, out);
+        std::move(it2, buffer.end(), out);
 
-        new_ranges[merge_idx++] = {begin1, end2};
+        new_ranges.emplace_back(begin1, end2);
+      } else {
+        std::vector<std::shared_ptr<AbstractTask>> merge_tasks;
+        auto buffer = pmr_vector<Value>(total_len);
+        std::move(begin1, end2, buffer.begin());
+
+        auto a_begin = buffer.begin();
+        auto a_end = a_begin + std::distance(begin1, end1);
+        auto b_begin = a_end;
+        auto b_end = buffer.end();
+
+        // Precompute all partition points at once
+        std::vector<std::pair<Iter, Iter>> partitions(num_threads + 1);
+        for (size_t thread_index = 0; thread_index <= num_threads; ++thread_index) {
+          const size_t diag = (thread_index * total_len) / num_threads;
+          partitions[thread_index] = merge_path_search(a_begin, a_end, b_begin, b_end, diag, normalized_key_size);
+          std::cout << "Length A: " << std::distance(a_begin, a_end) << ", Length B: " << std::distance(b_begin, b_end)
+                    << ", diag: " << diag << "\n";
+          std::cout << "Thread " << thread_index << ": "
+                    << "A : [" << std::distance(a_begin, partitions[thread_index].first) << "], "
+                    << "B : [" << std::distance(b_begin, partitions[thread_index].second) << "]\n";
+        }
+
+        // Create merge tasks
+        for (size_t thread_index = 0; thread_index < num_threads; ++thread_index) {
+          auto [a_it_begin, b_it_begin] = partitions[thread_index];
+          auto [a_it_end, b_it_end] = partitions[thread_index + 1];
+
+          merge_tasks.emplace_back(std::make_shared<JobTask>([&] {
+            merge_partition(a_it_begin, a_it_end, b_it_begin, b_it_end, normalized_key_size);
+          }));
+        }
+
+        for (auto& task : merge_tasks)
+          task->schedule();
+        Hyrise::get().scheduler()->wait_for_tasks(merge_tasks);
+
+        new_ranges.emplace_back(begin1, end2);
       }
-      if (ranges.size() % 2 == 1)
-        new_ranges.back() = ranges.back();
     }
-
+    if (ranges.size() % 2 == 1) {
+      new_ranges.emplace_back(ranges.back());
+    }
     ranges = std::move(new_ranges);
-    zigzag = !zigzag;
   }
 }
 
