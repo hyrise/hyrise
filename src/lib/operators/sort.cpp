@@ -680,27 +680,17 @@ void radix_sort(auto begin, auto end, size_t normalized_key_size) {
   radix_sort_msd(begin, end, 0, normalized_key_size, buffer);
 }
 
-void merge_partition(NormalizedKeyIter begin1, NormalizedKeyIter end1, NormalizedKeyIter begin2, NormalizedKeyIter end2,
-                     size_t normalized_key_size) {
-  auto total_size = std::distance(begin1, end1) + std::distance(begin2, end2);
-  auto buffer = pmr_vector<NormalizedKeyRow>(total_size);
-  std::move(begin1, end2, buffer.begin());
-  auto it1 = buffer.begin();
-  auto mid = it1 + std::distance(begin1, end1);
-  auto it2 = mid;
-  auto out = begin1;
-
-  while (it1 != mid && it2 != buffer.end()) {
-    bool left_less = it2->less_than(*it1, normalized_key_size);
-    bool right_less = 1 - left_less;
-    const auto& chosen = left_less ? *it2 : *it1;
-    *out++ = chosen;
-    it1 += right_less;
-    it2 += left_less;
+void merge_partition(NormalizedKeyIter out_begin, NormalizedKeyIter a_begin, NormalizedKeyIter a_end,
+                     NormalizedKeyIter b_begin, NormalizedKeyIter b_end, size_t normalized_key_size) {
+  while (a_begin != a_end && b_begin != b_end) {
+    if (b_begin->less_than(*a_begin, normalized_key_size)) {
+      *out_begin++ = *b_begin++;
+    } else {
+      *out_begin++ = *a_begin++;
+    }
   }
-
-  out = std::move(it1, mid, out);
-  out = std::move(it2, buffer.end(), out);
+  out_begin = std::move(a_begin, a_end, out_begin);
+  out_begin = std::move(b_begin, b_end, out_begin);
 }
 
 std::pair<NormalizedKeyIter, NormalizedKeyIter> merge_path_search(NormalizedKeyIter begin1, NormalizedKeyIter end1,
@@ -817,30 +807,28 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
         auto buffer = pmr_vector<Value>(total_len);
         std::move(begin1, end2, buffer.begin());
 
-        auto a_begin = buffer.begin();
-        auto a_end = a_begin + std::distance(begin1, end1);
-        auto b_begin = a_end;
-        auto b_end = buffer.end();
+        auto a_begin_buf = buffer.begin();
+        auto a_end_buf = a_begin_buf + std::distance(begin1, end1);
+        auto b_begin_buf = a_end_buf;
+        auto b_end_buf = buffer.end();
 
-        // Precompute all partition points at once
-        std::vector<std::pair<Iter, Iter>> partitions(num_threads + 1);
-        for (size_t thread_index = 0; thread_index <= num_threads; ++thread_index) {
-          const size_t diag = (thread_index * total_len) / num_threads;
-          partitions[thread_index] = merge_path_search(a_begin, a_end, b_begin, b_end, diag, normalized_key_size);
-          std::cout << "Length A: " << std::distance(a_begin, a_end) << ", Length B: " << std::distance(b_begin, b_end)
-                    << ", diag: " << diag << "\n";
-          std::cout << "Thread " << thread_index << ": "
-                    << "A : [" << std::distance(a_begin, partitions[thread_index].first) << "], "
-                    << "B : [" << std::distance(b_begin, partitions[thread_index].second) << "]\n";
+        // Precompute partitions
+        std::vector<std::pair<decltype(a_begin_buf), decltype(b_begin_buf)>> partitions(num_threads + 1);
+        for (size_t thread_idx = 0; thread_idx <= num_threads; ++thread_idx) {
+          size_t diag = (thread_idx * total_len) / num_threads;
+          partitions[thread_idx] =
+              merge_path_search(a_begin_buf, a_end_buf, b_begin_buf, b_end_buf, diag, normalized_key_size);
         }
 
-        // Create merge tasks
-        for (size_t thread_index = 0; thread_index < num_threads; ++thread_index) {
-          auto [a_it_begin, b_it_begin] = partitions[thread_index];
-          auto [a_it_end, b_it_end] = partitions[thread_index + 1];
+        for (size_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+          auto [a_start, b_start] = partitions[thread_idx];
+          auto [a_end_part, b_end_part] = partitions[thread_idx + 1];
 
-          merge_tasks.emplace_back(std::make_shared<JobTask>([&] {
-            merge_partition(a_it_begin, a_it_end, b_it_begin, b_it_end, normalized_key_size);
+          // Compute output position in original range.
+          auto out_begin = begin1 + ((thread_idx * total_len) / num_threads);
+
+          merge_tasks.emplace_back(std::make_shared<JobTask>([=] {
+            merge_partition(out_begin, a_start, a_end_part, b_start, b_end_part, normalized_key_size);
           }));
         }
 
