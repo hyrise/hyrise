@@ -573,7 +573,7 @@ concept NormalizedKeyRange = std::ranges::range<T> && std::ranges::random_access
 template <typename Func>
 concept NormalizedKeyComparator = requires(Func func, const NormalizedKeyRow& row) {
   { func(row, row) } -> std::same_as<bool>;
-}
+};
 
 void insertion_sort(auto begin, auto end, const NormalizedKeyComparator auto& comp) {
   for (auto it = begin + 1; it < end; ++it) {
@@ -763,8 +763,9 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
     new_ranges.reserve(new_size);
 
     for (size_t i = 0; i + 1 < ranges.size(); i += 2) {
-      auto [begin1, end1] = ranges[i];
-      auto [begin2, end2] = ranges[i + 1];
+      auto begin1 = ranges[i].first;
+      auto end1 = ranges[i].second;
+      auto end2 = ranges[i + 1].second;
       const size_t total_len = std::distance(begin1, end2);
 
       std::vector<std::shared_ptr<AbstractTask>> merge_tasks;
@@ -785,10 +786,13 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
       }
 
       for (size_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-        auto [a_start, b_start] = partitions[thread_idx];
-        auto [a_end_part, b_end_part] = partitions[thread_idx + 1];
+        auto partition_start = partitions[thread_idx];
+        auto a_start = partition_start.first;
+        auto b_start = partition_start.second;
 
-        // Compute output position in original range.
+        auto partition_end = partitions[thread_idx + 1];
+        auto a_end_part = partition_end.first;
+        auto b_end_part = partition_end.second;
         auto out_begin = begin1 + ((thread_idx * total_len) / num_threads);
 
         merge_tasks.emplace_back(std::make_shared<JobTask>([=] {
