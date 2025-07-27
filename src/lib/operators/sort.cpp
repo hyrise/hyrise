@@ -367,7 +367,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // based on the sizes of the columns to be sorted by, e.g. if sorting by int, string it should be [4, 8]
   auto field_width = std::vector<size_t>();
   field_width.reserve(sort_definitions_size);
-  auto string_columns = std::vector<size_t>();  // indices of sort_definitions that sort columns of type string
 
   for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
     const auto& def = _sort_definitions[index];
@@ -375,8 +374,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        string_columns.emplace_back(index);  // keep track of string columns for fallback comparisons
-
         // iterate over all chunks to find the longest string in the column
         auto max_string_length = size_t{0};
         for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -392,8 +389,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         }
 
         field_width.emplace_back(max_string_length + 2);  // store size of the string prefix + 2 for string length
-      } else if constexpr (std::is_same_v<ColumnDataType, float>) {
-        field_width.push_back(sizeof(double));  // encode float as double for sorting
       } else {
         field_width.push_back(
             sizeof(ColumnDataType));  // store size of the column type, e.g. 4 for int, 8 for double, etc.
@@ -522,23 +517,19 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                 dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
               }
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
-              // Encode float value
-              const double value_as_double = val.is_null() ? double() : static_cast<double>(value);
-              // Reinterpret double as raw 64-bit bits
-              auto bits = uint64_t{0};
-              // static_assert(sizeof(double) == sizeof(uint64_t), "Size mismatch");
-              memcpy(&bits, &value_as_double, sizeof(bits));
+              auto bits = uint32_t{0};
+              memcpy(&bits, &value, sizeof(bits));
 
               // Flip the bits to ensure lexicographic order matches numeric order
-              if (std::signbit(value_as_double)) {
+              if (std::signbit(value)) {
                 bits = ~bits;  // Negative values are bitwise inverted
               } else {
-                bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
+                bits ^= 0x80000000;  // Flip the sign bit for positive values
               }
 
               // Write to buffer in big-endian order (MSB first)
-              for (auto byte_idx = uint32_t{0}; byte_idx < 8; ++byte_idx) {
-                dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
+              for (auto byte_idx = uint32_t{0}; byte_idx < 4; ++byte_idx) {
+                dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((3 - byte_idx) * 8));
               }
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
               // encode int value
