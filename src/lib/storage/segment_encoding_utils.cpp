@@ -78,26 +78,29 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
 }
 
 ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
-                                                  const std::vector<bool>& column_values_are_unique) {
-  DebugAssert(types.size() == column_values_are_unique.size(), "The length of the two passed vectors has to match");
+                                                  const std::vector<bool>& chunk_values_are_unique,
+                                                  const std::vector<bool>& chunk_values_are_key_part) {
+  DebugAssert(types.size() == chunk_values_are_unique.size() && types.size() == chunk_values_are_key_part.size(),
+              "The length of the passed vectors has to match");
 
   const auto size = types.size();
   auto chunk_encoding_spec = ChunkEncodingSpec{};
   for (auto column_id = ColumnID{0}; column_id < size; ++column_id) {
-    chunk_encoding_spec.push_back(
-        auto_select_segment_encoding_spec(types[column_id], column_values_are_unique[column_id]));
+    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(
+        types[column_id], chunk_values_are_unique[column_id], chunk_values_are_key_part[column_id]));
   }
   return chunk_encoding_spec;
 }
 
-SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique) {
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique,
+                                                      const bool segment_values_are_key_part) {
+  if (segment_values_are_key_part) {
+    return SegmentEncodingSpec{EncodingType::Unencoded};
+  }
+
   switch (type) {
     case DataType::Int:
-      if (segment_values_are_unique) {
-        return SegmentEncodingSpec{EncodingType::Unencoded};
-      } else {
-        return SegmentEncodingSpec{EncodingType::FrameOfReference};
-      }
+      return SegmentEncodingSpec{EncodingType::FrameOfReference};
     case DataType::String:
     case DataType::Long:
     case DataType::Double:

@@ -1,7 +1,9 @@
 #include "constraint_utils.hpp"
 
 #include <cstdint>
+#include <iterator>
 #include <memory>
+#include <ranges>
 #include <set>
 #include <string>
 #include <utility>
@@ -141,14 +143,63 @@ bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column
       continue;
     }
 
-    for (const auto& constraint_column_id : key_constraint.columns()) {
-      if (constraint_column_id == column_id) {
-        return true;
-      }
+    const auto& columns = key_constraint.columns();
+    if (columns.size() == 1 && columns.contains(column_id)) {
+      return true;
     }
   }
 
   return false;
+}
+
+std::vector<bool> columns_are_unique(const std::shared_ptr<Table>& table) {
+  const auto column_count = table->column_count();
+  std::vector<bool> are_unique(column_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    are_unique[column_id] = column_is_unique(table, column_id);
+  }
+  return are_unique;
+}
+
+bool column_is_key_part(const std::shared_ptr<Table>& table, const ColumnID column_id) {
+  DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
+  for (const auto& key_constraint : table->soft_key_constraints()) {
+    if (key_constraint.can_become_invalid()) {
+      continue;
+    }
+
+    const auto& key_type = key_constraint.key_type();
+    if (key_type != KeyConstraintType::PRIMARY_KEY) {
+      continue;
+    }
+
+    const auto& columns = key_constraint.columns();
+    if (columns.contains(column_id)) {
+      return true;
+    }
+  }
+
+  for (const auto& fk_constraint : table->soft_foreign_key_constraints()) {
+    if (fk_constraint.foreign_key_table() != table) {
+      continue;
+    }
+
+    const auto& columns = fk_constraint.foreign_key_columns();
+    if (std::ranges::find(columns, column_id) != columns.end()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::vector<bool> columns_are_key_part(const std::shared_ptr<Table>& table) {
+  const auto column_count = table->column_count();
+  std::vector<bool> are_key_part(column_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    are_key_part[column_id] = column_is_key_part(table, column_id);
+  }
+  return are_key_part;
 }
 
 }  // namespace hyrise

@@ -8,6 +8,7 @@
 #include "hyrise.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -39,7 +40,10 @@ void ChunkCompressionTask::_on_execute() {
   if (_chunk_encoding_spec.has_value()) {
     chunk_encoding_spec = *_chunk_encoding_spec;
   } else {
-    chunk_encoding_spec = auto_select_chunk_encoding_spec(table->column_data_types(), table->columns_are_nullable());
+    const auto chunk_values_are_unique = columns_are_unique(table);
+    const auto chunk_values_are_key_part = columns_are_key_part(table);
+    chunk_encoding_spec =
+        auto_select_chunk_encoding_spec(table->column_data_types(), chunk_values_are_unique, chunk_values_are_key_part);
   }
 
   for (const auto chunk_id : _chunk_ids) {

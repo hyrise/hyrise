@@ -11,6 +11,7 @@
 #include "resolve_type.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_segment_encoder.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -164,8 +165,10 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 }
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids) {
+  const auto chunk_values_are_unique = columns_are_unique(table);
+  const auto chunk_values_are_key_part = columns_are_key_part(table);
   const auto chunk_encoding_spec =
-      auto_select_chunk_encoding_spec(table->column_data_types(), table->columns_are_nullable());
+      auto_select_chunk_encoding_spec(table->column_data_types(), chunk_values_are_unique, chunk_values_are_key_part);
   encode_chunks(table, chunk_ids, chunk_encoding_spec);
 }
 
@@ -213,8 +216,10 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 }
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table) {
+  const auto chunk_values_are_unique = columns_are_unique(table);
+  const auto chunk_values_are_key_part = columns_are_key_part(table);
   const auto chunk_encoding_spec =
-      auto_select_chunk_encoding_spec(table->column_data_types(), table->columns_are_nullable());
+      auto_select_chunk_encoding_spec(table->column_data_types(), chunk_values_are_unique, chunk_values_are_key_part);
   encode_all_chunks(table, chunk_encoding_spec);
 }
 
