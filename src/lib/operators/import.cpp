@@ -60,7 +60,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
       const auto table_exists = Hyrise::get().storage_manager.has_table(_tablename);
       if (table_exists) {
         if (meta_file_exists) {
-          std::cerr << "Warning: Ignoring " << filename << CsvMeta::META_FILE_EXTENSION << " because table "
+          std::cerr << "Warning: Ignoring " << meta_filename << " because table "
                     << _tablename << " already exists.\n";
         }
 
@@ -74,7 +74,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
           csv_meta.columns[column_id].nullable = column_definitions[column_id].nullable;
         }
       } else if (meta_file_exists) {
-        csv_meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
+        csv_meta = process_csv_meta_file(meta_filename);
       } else {
         Fail("Cannot load table from csv. No table definition source found.");
       }
