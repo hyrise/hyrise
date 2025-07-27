@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstring>
 #include <format>
+#include <fstream>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -677,9 +678,9 @@ auto next_multiple(const auto value, const auto multiple) {
 
 // Select the classifiers for the sample sort. At the moment this selects first num classifiers many keys.
 std::vector<NormalizedKeyRow> select_classifiers(const NormalizedKeyRange auto& sort_range, size_t num_classifiers) {
+  TRACE_EVENT("sort", "ips4o::select_classifiers");
   DebugAssert(num_classifiers > 0, "At least on classifier is required");
-  const auto size = std::ranges::size(sort_range);
-  DebugAssert(num_classifiers <= size, "Cannot select more classifiers than elements");
+  DebugAssert(num_classifiers <= std::ranges::size(sort_range), "Cannot select more classifiers than elements");
   auto classifiers = std::vector<NormalizedKeyRow>();
   classifiers.reserve(num_classifiers);
   for (const auto& row : sort_range | std::views::take(num_classifiers)) {
@@ -703,6 +704,7 @@ size_t classify_value(const NormalizedKeyRow& value, const NormalizedKeyRange au
 StripeClassificationResult classify_stripe(NormalizedKeyRange auto& stripe_range,
                                            const NormalizedKeyRange auto& classifiers, const size_t block_size,
                                            const NormalizedKeyComparator auto& comp) {
+  TRACE_EVENT("sort", "ips4o::classify_stripe");
   const auto num_buckets = std::ranges::size(classifiers) + 1;
   DebugAssert(num_buckets > 0, "At least one bucket is required");
   DebugAssert(block_size > 0, "Invalid bock size");
@@ -903,8 +905,7 @@ auto split_range_n(std::ranges::range auto& range, size_t index) {
 
 // Removes the first index many elements.
 auto cut_range_n(std::ranges::range auto& range, size_t index) {
-  const auto size = std::ranges::size(range);
-  DebugAssert(index <= size, "Split index out of range");
+  DebugAssert(index <= std::ranges::size(range), "Split index out of range");
   auto mid = std::next(range.begin(), index);
   return std::ranges::subrange(mid, range.end());
 }
@@ -916,8 +917,8 @@ auto cut_range_n(std::ranges::range auto& range, size_t index) {
 void write_to_ranges(std::ranges::range auto& input, std::ranges::range auto& first, std::ranges::range auto& second) {
   const auto input_size = std::ranges::size(input);
   const auto first_size = std::ranges::size(first);
-  const auto second_size = std::ranges::size(second);
-  DebugAssert(input_size <= first_size + second_size, "Cannot copy more values than first and second can hold");
+  DebugAssert(input_size <= first_size + std::ranges::size(second),
+              "Cannot copy more values than first and second can hold");
 
   const auto copy_to_first = std::min(input_size, first_size);
   const auto [input_first, input_second] = split_range_n(input, copy_to_first);
@@ -946,6 +947,7 @@ void write_to_ranges(std::ranges::range auto& input, std::ranges::range auto& fi
  */
 void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, const size_t block_size,
           const size_t min_blocks_per_stripe, size_t max_parallelism, const NormalizedKeyComparator auto& comp) {
+  TRACE_EVENT("sort", "ips4o");
   using RangeIterator = decltype(std::ranges::begin(sort_range));
   // The following terms are used in this algorithm:
   // - *block* A number of sequential elements. The sort_range is split up into these blocks.
@@ -992,10 +994,13 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
 
   // Classify all stripes. After this step each stripe consists of blocks where all elements are classified into the
   // same bucket and followed by empty blocks.
+  TRACE_EVENT_BEGIN("sort", "ips4o::classify");
   auto classification_results = std::vector<StripeClassificationResult>(num_stripes);
-  for (auto stripe = size_t{0}; stripe < num_stripes; ++stripe) {
+  const auto classification_tasks = run_parallel_batched(num_stripes, num_stripes, [&](auto stripe) {
     classification_results[stripe] = classify_stripe(stripes[stripe], classifiers, block_size, comp);
-  }
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(classification_tasks);
+  TRACE_EVENT_END("sort");
 
   // Prepare permuting classified blocks into the correct position. This preparation is done in the following:
   // 1. We create the prefix sum of all buckets. As a result, we receive a list of bucket end indices.
@@ -1015,9 +1020,12 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
     aligned_bucket_sizes[bucket_index] = next_multiple(buckets_total_size, block_size);
   }
 
-  for (auto stripe = size_t{0}; stripe < num_stripes; ++stripe) {
+  TRACE_EVENT_BEGIN("sort", "ip4so::prepare_permutations");
+  const auto prepare_tasks = run_parallel_batched(num_stripes, num_stripes, [&](auto stripe) {
     prepare_block_permutations(sort_range, stripe, stripes, classification_results, aligned_bucket_sizes, block_size);
-  }
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(prepare_tasks);
+  TRACE_EVENT_END("sort");
 
   auto written_blocks_per_stripe = std::vector<size_t>(num_stripes);
   auto empty_blocks_per_stripe = std::vector<size_t>(num_stripes);
@@ -1033,6 +1041,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   // The write pointer is initialized to the first block of each bucket and the read pointer is initialized to the last
   // non-empty block of each bucket. Because each bucket, contains the classified elements first, all elements between
   // the write and read pointer (inclusive) are classified.
+  TRACE_EVENT_BEGIN("sort", "ips4o::setup_pointers");
   auto write_pointers = std::vector<AtomicIteratorHelper<RangeIterator>>(num_buckets);
   auto read_pointers = std::vector<AtomicIteratorHelper<RangeIterator>>(num_buckets);
   auto pending_reads = std::vector<std::atomic_size_t>(num_buckets);
@@ -1075,29 +1084,33 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
     read_pointers[bucket].init(bucket_begin, read_pointer_offset, block_size);
     bucket_begin = std::next(sort_range.begin(), delimiter_end);
   }
+  TRACE_EVENT_END("sort");
 
+  TRACE_EVENT_BEGIN("sort", "ips4o::permute_blocks");
   const auto overflow_bucket_offset = (std::ranges::size(sort_range) / block_size) * block_size;
   const auto overflow_bucket_begin = std::next(sort_range.begin(), overflow_bucket_offset);
   auto overflow_bucket = std::vector<NormalizedKeyRow>();
 
   // Move blocks into the correct bucket (based on the aligned bucket delimiter).
-  for (auto stripe = size_t{0}; stripe < num_stripes; ++stripe) {
+  const auto permute_blocks_tasks = run_parallel_batched(num_stripes, num_stripes, [&](auto stripe) {
     const auto initial_bucket = stripe % num_buckets;
     permute_blocks(classifiers, initial_bucket, write_pointers, read_pointers, pending_reads, comp, block_size,
                    overflow_bucket, overflow_bucket_begin);
-  }
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(permute_blocks_tasks);
+  TRACE_EVENT_END("sort");
 
   // Until this point all buckets are aligned to the block_size and there still some classified elements in the stripe
   // local buffer left. Because of that, we know move elements overflowing the bucket to the start of that bucket and
   // copy the values from the stripe classification result to empty elements at the buffer begin/end.
 
-  // Create a range of empty elements at the start of each bucket.
+  TRACE_EVENT_BEGIN("sort", "ips4o::prepare_cleanup");
+  // Create a range of empty elements at the start of each bucket. This cannot be done in parallel.
   auto bucket_empty_start = std::vector<std::ranges::subrange<RangeIterator>>(num_buckets);
   for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
     const auto bucket_start_index = (bucket == 0) ? 0 : aggregated_bucket_sizes[bucket - 1];
     const auto bucket_block_start = (bucket == 0) ? 0 : aligned_bucket_sizes[bucket - 1];
-    const auto num_elements_start = bucket_block_start - bucket_start_index;
-    DebugAssert(num_elements_start <= std::ranges::size(sort_range), "Size overflow");
+    DebugAssert(bucket_block_start - bucket_start_index <= std::ranges::size(sort_range), "Size overflow");
 
     auto bucket_start_begin = std::next(sort_range.begin(), bucket_start_index);
     const auto bucket_start_end = std::next(sort_range.begin(), bucket_block_start);
@@ -1109,7 +1122,6 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
     const auto bucket_end_index = static_cast<ssize_t>(aggregated_bucket_sizes[bucket]);
     const auto bucket_block_begin = (bucket > 0) ? static_cast<size_t>(aligned_bucket_sizes[bucket - 1]) : 0;
-    const auto bucket_block_end = static_cast<ssize_t>(aligned_bucket_sizes[bucket]);
     auto bucket_written_end_index = write_pointers[bucket].distance_to_start(sort_range);
 
     if (bucket + 1 == num_buckets && !overflow_bucket.empty()) {
@@ -1123,9 +1135,9 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
     } else if (bucket_written_end_index > bucket_end_index) {
       DebugAssert(bucket + 1 == num_buckets, "This case should not happen for the last bucket");
       // Bucket overflows actual size. Because of that we move the overflowing elements to the start of that bucket.
-      DebugAssert(bucket_written_end_index <= bucket_block_end, "More blocks written than bucket should contains");
-      const auto overflow_size = bucket_written_end_index - bucket_end_index;
-      DebugAssert(overflow_size <= std::ranges::ssize(bucket_empty_start[bucket]),
+      DebugAssert(bucket_written_end_index <= static_cast<ssize_t>(aligned_bucket_sizes[bucket]),
+                  "More blocks written than bucket should contains");
+      DebugAssert(bucket_written_end_index - bucket_end_index <= std::ranges::ssize(bucket_empty_start[bucket]),
                   "Unexpected number of bucket elements");
       const auto overflow_begin = std::next(sort_range.begin(), bucket_end_index);
       const auto overflow_end = std::next(sort_range.begin(), bucket_written_end_index);
@@ -1138,6 +1150,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
       bucket_empty_tail[bucket] = std::ranges::subrange(bucket_written_end, bucket_end);
     }
   }
+  TRACE_EVENT_END("sort");
 
   // Copy all partial blocks from the classification result into the output buffer.
   for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
