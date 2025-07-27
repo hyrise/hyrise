@@ -573,7 +573,7 @@ concept NormalizedKeyRange = std::ranges::range<T> && std::ranges::random_access
 template <typename Func>
 concept NormalizedKeyComparator = requires(Func func, const NormalizedKeyRow& row) {
   { func(row, row) } -> std::same_as<bool>;
-};
+}
 
 void insertion_sort(auto begin, auto end, const NormalizedKeyComparator auto& comp) {
   for (auto it = begin + 1; it < end; ++it) {
