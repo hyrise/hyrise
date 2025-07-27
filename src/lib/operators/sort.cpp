@@ -960,14 +960,10 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
 
   // Calculate the number of blocks assigned to each stripe.
   const auto max_num_stripes = div_ceil(num_blocks, min_blocks_per_stripe);
-  if (total_size <= block_size) {
+  if (total_size <= block_size || max_num_stripes <= 1) {
+    // Fallback to pdqsort.
     boost::sort::pdqsort(sort_range.begin(), sort_range.end(), comp);
     return;
-  }
-  if (max_num_stripes <= 1) {
-    // Fallback to pdqsort.
-    // boost::sort::pdqsort(sort_range.begin(), sort_range.end(), comp);
-    // return;
   }
   const auto num_stripes = std::min(max_num_stripes, max_parallelism);
   const auto max_blocks_per_stripe = div_ceil(num_blocks, num_stripes);
