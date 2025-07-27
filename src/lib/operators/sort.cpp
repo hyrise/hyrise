@@ -1014,7 +1014,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   // TODO(student): Use pdqsort
 
-  parallel_merge_sort(materialized_rows, padded_key_size);
+  parallel_merge_sort(materialized_rows, normalized_key_size);
 
   TRACE_EVENT_END("sort");
 
