@@ -60,8 +60,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
       const auto table_exists = Hyrise::get().storage_manager.has_table(_tablename);
       if (table_exists) {
         if (meta_file_exists) {
-          std::cerr << "Warning: Ignoring " << meta_filename << " because table "
-                    << _tablename << " already exists.\n";
+          std::cerr << "Warning: Ignoring " << meta_filename << " because table " << _tablename << " already exists.\n";
         }
 
         const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();

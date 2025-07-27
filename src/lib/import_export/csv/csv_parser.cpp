@@ -71,6 +71,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   auto field_ends = std::vector<size_t>{};
   auto append_chunk_mutex = std::mutex{};
+  const auto escaped_linebreak =
+      std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
   while (_find_fields_in_chunk(content_view, *table, field_ends, csv_meta)) {
     // Create empty chunk
     segments_by_chunks.emplace_back();
@@ -81,9 +83,6 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMe
 
     // Remove processed part of the CSV content
     content_view = content_view.substr(field_ends.back() + 1);
-
-    const auto escaped_linebreak =
-        std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
 
     // Create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends = std::move(field_ends), &table,
