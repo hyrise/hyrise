@@ -1,5 +1,7 @@
 #include "sort.hpp"
 
+#include <iostream>
+
 #ifdef ENABLE_PERFETTO
 #include <perfetto.h>
 #else
@@ -69,6 +71,12 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 namespace {
 
 using namespace hyrise;  // NOLINT
+
+constexpr size_t RADIX = 256;
+constexpr size_t INSERTION_SORT_THRESHOLD = 32;
+constexpr size_t MSD_RADIX_SORT_SIZE_THRESHOLD = 4;
+
+// constexpr size_t PARALLEL_THRESHOLD = 10000;
 
 // Ceiling of integer division
 size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
@@ -559,6 +567,248 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
   });
 }
 
+template <typename T>
+concept NormalizedKeyRange = std::ranges::range<T> && std::ranges::random_access_range<T> &&
+                             std::same_as<std::ranges::range_value_t<T>, NormalizedKeyRow>;
+template <typename Func>
+concept NormalizedKeyComparator = requires(Func func, const NormalizedKeyRow& row) {
+  { func(row, row) } -> std::same_as<bool>;
+};
+
+void insertion_sort(auto begin, auto end, const NormalizedKeyComparator auto& comp) {
+  for (auto it = begin + 1; it < end; ++it) {
+    auto current = *it;
+    auto insert_pos = it;
+    while (insert_pos != begin && comp(current, *(insert_pos - 1))) {
+      *insert_pos = *(insert_pos - 1);
+      --insert_pos;
+    }
+    *insert_pos = current;
+  }
+}
+
+void radix_sort_lsd(auto begin, auto end, size_t normalized_key_size) {
+  const auto total_size = static_cast<size_t>(std::distance(begin, end));
+  if (total_size <= 1 || normalized_key_size == 0)
+    return;
+
+  auto counts = std::array<size_t, RADIX>{};
+  auto offsets = std::array<size_t, RADIX>{};
+  auto buffer = pmr_vector<NormalizedKeyRow>(total_size);
+
+  for (ssize_t r = static_cast<ssize_t>(normalized_key_size) - 1; r >= 0; --r) {
+    std::ranges::fill(counts, 0);
+
+    for (auto it = begin; it != end; ++it)
+      ++counts[static_cast<uint8_t>(it->key_head[r])];
+
+    offsets[0] = 0;
+    for (size_t i = 1; i < RADIX; ++i)
+      offsets[i] = offsets[i - 1] + counts[i - 1];
+
+    for (auto it = begin; it != end; ++it)
+      buffer[offsets[static_cast<uint8_t>(it->key_head[r])]++] = *it;
+
+    std::copy(buffer.begin(), buffer.end(), begin);
+  }
+}
+
+void radix_sort_msd(auto begin, auto end, size_t byte_index, size_t max_key_size,
+                    pmr_vector<NormalizedKeyRow>& buffer) {
+  const auto total_size = static_cast<size_t>(std::distance(begin, end));
+  if (total_size <= 1 || byte_index >= max_key_size)
+    return;
+
+  auto counts = std::array<size_t, RADIX>{};
+  auto offsets = std::array<size_t, RADIX>{};
+
+  for (auto it = begin; it != end; ++it)
+    ++counts[static_cast<uint8_t>(it->key_head[byte_index])];
+
+  offsets[0] = 0;
+  for (auto i = size_t{1}; i < RADIX; ++i)
+    offsets[i] = offsets[i - 1] + counts[i - 1];
+
+  for (auto it = begin; it != end; ++it)
+    buffer[offsets[static_cast<uint8_t>(it->key_head[byte_index])]++] = *it;
+
+  std::copy(buffer.begin(), buffer.begin() + static_cast<std::ptrdiff_t>(total_size), begin);
+
+  auto current_offset = size_t{0};
+  for (auto i = size_t{0}; i < RADIX; ++i) {
+    auto radix_count = counts[i];
+    if (radix_count <= 1) {
+      current_offset += radix_count;
+      continue;
+    }
+
+    auto subrange_begin = begin + static_cast<std::ptrdiff_t>(current_offset);
+    auto subrange_end = subrange_begin + static_cast<std::ptrdiff_t>(radix_count);
+
+    if (radix_count < INSERTION_SORT_THRESHOLD) {
+      insertion_sort(subrange_begin, subrange_end, [&](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
+        return lhs.less_than(rhs, max_key_size);
+      });
+    } else {
+      radix_sort_msd(subrange_begin, subrange_end, byte_index + 1, max_key_size, buffer);
+    }
+
+    current_offset += radix_count;
+  }
+}
+
+void radix_sort(auto begin, auto end, size_t normalized_key_size) {
+  const auto total_size = static_cast<size_t>(std::distance(begin, end));
+  if (total_size <= 1 || normalized_key_size == 0)
+    return;
+
+  const auto comparator = [&](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
+    return lhs.less_than(rhs, normalized_key_size);
+  };
+
+  if (total_size < INSERTION_SORT_THRESHOLD) {
+    insertion_sort(begin, end, comparator);
+    return;
+  }
+
+  if (normalized_key_size <= MSD_RADIX_SORT_SIZE_THRESHOLD) {
+    radix_sort_lsd(begin, end, normalized_key_size);
+    return;
+  }
+
+  auto buffer = pmr_vector<NormalizedKeyRow>(total_size);
+  radix_sort_msd(begin, end, 0, normalized_key_size, buffer);
+}
+
+void merge_partition(NormalizedKeyIter out_begin, NormalizedKeyIter a_begin, NormalizedKeyIter a_end,
+                     NormalizedKeyIter b_begin, NormalizedKeyIter b_end, size_t normalized_key_size) {
+  while (a_begin != a_end && b_begin != b_end) {
+    if (b_begin->less_than(*a_begin, normalized_key_size)) {
+      *out_begin++ = *b_begin++;
+    } else {
+      *out_begin++ = *a_begin++;
+    }
+  }
+  out_begin = std::move(a_begin, a_end, out_begin);
+  out_begin = std::move(b_begin, b_end, out_begin);
+}
+
+std::pair<NormalizedKeyIter, NormalizedKeyIter> merge_path_search(NormalizedKeyIter begin1, NormalizedKeyIter end1,
+                                                                  NormalizedKeyIter begin2, NormalizedKeyIter end2,
+                                                                  size_t diag, size_t normalized_key_size) {
+  using Diff = std::ptrdiff_t;
+
+  const Diff a_len = std::distance(begin1, end1);
+  const Diff b_len = std::distance(begin2, end2);
+  const Diff merge_index = static_cast<Diff>(diag);
+  Diff low = std::max<Diff>(0, merge_index - b_len);
+  Diff high = std::min<Diff>(merge_index, a_len);
+  while (low < high) {
+    Diff a_index = (low + high) / 2;
+    Diff b_index = merge_index - a_index;
+
+    if (a_index < a_len && b_index > 0 &&
+        std::next(begin1, a_index)->less_than(*std::next(begin2, b_index - 1), normalized_key_size)) {
+      low = a_index + 1;
+    } else {
+      high = a_index;
+    }
+  }
+  return {begin1 + low, begin2 + (merge_index - low)};
+}
+
+void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_key_size) {
+  const size_t total_size = sort_range.size();
+  if (total_size <= 1 || normalized_key_size == 0)
+    return;
+  auto begin = sort_range.begin();
+  auto end = sort_range.end();
+
+  if (total_size < INSERTION_SORT_THRESHOLD) {
+    const auto comparator = [&](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
+      return lhs.less_than(rhs, normalized_key_size);
+    };
+
+    insertion_sort(begin, end, comparator);
+    return;
+  }
+
+  const auto num_threads = std::thread::hardware_concurrency();
+  const size_t min_block_size = (total_size + num_threads - 1) / num_threads;
+
+  using Iter = typename std::remove_cvref_t<decltype(sort_range)>::iterator;
+  using Value = typename Iter::value_type;
+
+  std::vector<std::shared_ptr<AbstractTask>> sort_tasks;
+  std::vector<std::pair<Iter, Iter>> ranges;
+
+  // Sort blocks in parallel
+  for (size_t i = 0; i < total_size; i += min_block_size) {
+    auto chunk_begin = begin + i;
+    auto chunk_end = (i + min_block_size < total_size) ? (chunk_begin + min_block_size) : end;
+    ranges.emplace_back(chunk_begin, chunk_end);
+    sort_tasks.emplace_back(std::make_shared<JobTask>([chunk_begin, chunk_end, normalized_key_size]() {
+      radix_sort(chunk_begin, chunk_end, normalized_key_size);
+    }));
+  }
+
+  for (auto& task : sort_tasks)
+    task->schedule();
+  Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
+
+  while (ranges.size() > 1) {
+    const size_t num_pairs = ranges.size() / 2;
+    const size_t new_size = num_pairs + (ranges.size() % 2);
+    std::vector<std::pair<Iter, Iter>> new_ranges;
+    new_ranges.reserve(new_size);
+
+    for (size_t i = 0; i + 1 < ranges.size(); i += 2) {
+      auto [begin1, end1] = ranges[i];
+      auto [begin2, end2] = ranges[i + 1];
+      const size_t total_len = std::distance(begin1, end2);
+
+      std::vector<std::shared_ptr<AbstractTask>> merge_tasks;
+      auto buffer = pmr_vector<Value>(total_len);
+      std::move(begin1, end2, buffer.begin());
+
+      auto a_begin_buf = buffer.begin();
+      auto a_end_buf = a_begin_buf + std::distance(begin1, end1);
+      auto b_begin_buf = a_end_buf;
+      auto b_end_buf = buffer.end();
+
+      // Precompute partitions
+      std::vector<std::pair<decltype(a_begin_buf), decltype(b_begin_buf)>> partitions(num_threads + 1);
+      for (size_t thread_idx = 0; thread_idx <= num_threads; ++thread_idx) {
+        size_t diag = (thread_idx * total_len) / num_threads;
+        partitions[thread_idx] =
+            merge_path_search(a_begin_buf, a_end_buf, b_begin_buf, b_end_buf, diag, normalized_key_size);
+      }
+
+      for (size_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+        auto [a_start, b_start] = partitions[thread_idx];
+        auto [a_end_part, b_end_part] = partitions[thread_idx + 1];
+
+        // Compute output position in original range.
+        auto out_begin = begin1 + ((thread_idx * total_len) / num_threads);
+
+        merge_tasks.emplace_back(std::make_shared<JobTask>([=] {
+          merge_partition(out_begin, a_start, a_end_part, b_start, b_end_part, normalized_key_size);
+        }));
+      }
+
+      for (auto& task : merge_tasks)
+        task->schedule();
+      Hyrise::get().scheduler()->wait_for_tasks(merge_tasks);
+
+      new_ranges.emplace_back(begin1, end2);
+    }
+    if (ranges.size() % 2 == 1) {
+      new_ranges.emplace_back(ranges.back());
+    }
+    ranges = std::move(new_ranges);
+  }
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -760,10 +1010,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_BEGIN("sort", "sort");
 
   // TODO(student): Use pdqsort
-  std::sort(std::execution::par_unseq, materialized_rows.begin(), materialized_rows.end(),
-            [&](const auto& lhs, const auto& rhs) {
-              return lhs.less_than(rhs, normalized_key_size);
-            });
+
+  parallel_merge_sort(materialized_rows, normalized_key_size);
 
   TRACE_EVENT_END("sort");
 
