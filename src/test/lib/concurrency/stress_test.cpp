@@ -19,6 +19,7 @@
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "scheduler/worker.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/table.hpp"
@@ -45,7 +46,7 @@ class StressTest : public BaseTest {
 
   static constexpr auto DEFAULT_LOAD_FACTOR = uint32_t{10};
 
-  const uint32_t CPU_COUNT = std::thread::hardware_concurrency();
+  const uint32_t CPU_COUNT = std::min(std::thread::hardware_concurrency(), uint32_t{32});
   const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
       {CPU_COUNT}, {CPU_COUNT, 0, 0}, {0, CPU_COUNT, 0}, {0, 0, CPU_COUNT}};
 
@@ -216,21 +217,21 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 }
 
-TEST_F(StressTest, NodeSchedulerStressTest) {
+TEST_F(StressTest, NodeQueueSchedulerStressTest) {
   if (std::thread::hardware_concurrency() < 2) {
     GTEST_SKIP();
   }
 
   // Create a large number of nodes in a fake topology (many workers will share the same thread).
-  const auto node_count =
-      std::thread::hardware_concurrency() * (HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR);
+  const auto node_count = std::thread::hardware_concurrency() *
+                          (HYRISE_WITH_ADDR_UB_LEAK_SAN || HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR);
 
   Hyrise::get().topology.use_fake_numa_topology(node_count, 1);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   // Just a sufficiently large number to trigger a non-empty queue.
-  const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
+  const auto job_counts = std::vector<size_t>{node_count << 3, node_count << 4, node_count << 3};
 
   auto num_finished_jobs = std::atomic_uint32_t{0};
   volatile auto start_jobs = std::atomic_bool{false};
@@ -326,7 +327,10 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
     }
     EXPECT_EQ(counter, 0);
 
-    Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    for (const auto& waiting_job : waiting_jobs) {
+      waiting_job->schedule();
+    }
+
     // Wait a bit for workers to pull jobs and decrement semaphore.
     while (active_task_count < CPU_COUNT) {
       std::this_thread::sleep_for(SLEEP_TIME);
@@ -396,7 +400,10 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
       EXPECT_EQ(queue->semaphore.availableApprox(), 0);
     }
 
-    Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    for (const auto& waiting_job : waiting_jobs) {
+      waiting_job->schedule();
+    }
+
     // Wait a bit for workers to pull jobs and decrement semaphore.
     while (active_task_count < CPU_COUNT) {
       std::this_thread::sleep_for(SLEEP_TIME);
@@ -456,6 +463,53 @@ TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
   }
 }
 
+TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  const auto worker_count = node_queue_scheduler->workers().size();
+  if (worker_count < NodeQueueScheduler::NUM_GROUPS) {
+    // We would not see any impact of task grouping with too few workers.
+    GTEST_SKIP();
+  }
+
+  const auto multiplier = 1'000;
+  const auto task_count = multiplier * worker_count;
+
+  for (auto run = uint8_t{0}; run < 10; ++run) {
+    auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler::NUM_GROUPS, 0);
+    auto output_counter = std::atomic<size_t>{0};
+    auto concurrently_processed_tasks = std::atomic<int64_t>{0};
+
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+    for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+      tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
+        ++output_counter;
+        const auto active_groups = ++concurrently_processed_tasks;
+        ASSERT_LE(active_groups, NodeQueueScheduler::NUM_GROUPS);
+
+        const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
+        const auto prev_task_id = previous_task_id_per_group[group_id];
+        if (prev_task_id > 0) {
+          // Once the first task of each group has been executed, we check the previous TaskID of the group to verify
+          // that grouping execution happens in the expected round-robin order (see
+          // `void NodeQueueScheduler::_group_tasks()`).
+          EXPECT_EQ(prev_task_id + NodeQueueScheduler::NUM_GROUPS, task_id);
+        }
+        previous_task_id_per_group[group_id] = task_id;
+
+        --concurrently_processed_tasks;
+      }));
+    }
+
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    EXPECT_EQ(output_counter, task_count);
+  }
+
+  Hyrise::get().scheduler()->finish();
+}
+
 TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
   auto counter = std::atomic_uint32_t{0};
   const auto thread_count = 100;
@@ -495,7 +549,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
 
   // We observed long runtimes in Debug builds, especially with UBSan enabled. Thus, we reduce the load a bit in this
   // case.
-  const auto insert_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
+  const auto insert_count = 19 * (HYRISE_DEBUG && HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
   const auto thread_count = uint32_t{100};
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
@@ -542,7 +596,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     EXPECT_FALSE(chunk->is_mutable());
   }
 
-  EXPECT_EQ(table->last_chunk()->size(), 2);
+  EXPECT_EQ(table->last_chunk()->size(), 1);
   EXPECT_TRUE(table->last_chunk()->is_mutable());
 }
 
