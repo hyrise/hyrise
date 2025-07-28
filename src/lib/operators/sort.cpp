@@ -1197,7 +1197,7 @@ void ips4o_sort(NormalizedKeyRange auto& sort_range, const size_t num_buckets, c
     auto range = std::ranges::subrange(bucket_begin, bucket_end);
 
     ips4o_sort(range, num_buckets, samples_per_classifiers, block_size, min_blocks_per_stripe,
-               div_ceil(max_parallelism, 2), comp);
+               div_ceil(max_parallelism, 4), comp);
   });
   Hyrise::get().scheduler()->wait_for_tasks(sort_task);
   TRACE_EVENT_END("sort");
@@ -1545,8 +1545,8 @@ void perfetto_run(const std::shared_ptr<const Table>& input_table,
 
 Sort::Config::Config()
     : max_parallelism(std::thread::hardware_concurrency()),
-      block_size(128),
-      bucket_count(32),
+      block_size(256),
+      bucket_count(max_parallelism * 2),
       samples_per_classifier(4),
       min_blocks_per_stripe(32) {
   if constexpr (HYRISE_DEBUG) {
