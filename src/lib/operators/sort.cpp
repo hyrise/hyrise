@@ -802,7 +802,8 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
        ++stripe_iter, ++stripe_result_iter) {
     const auto stripe_size = std::ranges::size(*stripe_iter);
     const auto stripe_end = std::distance(std::ranges::begin(sort_range), stripe_iter->end());
-    // At these empty to blocks to the number of already processed blocks, because they are processed by different threads.
+    // At these empty to blocks to the number of already processed blocks, because they are processed by different
+    // threads.
     num_already_moved_blocks +=
         count_empty_blocks(stripe_size, stripe_end, last_bucket_begin, *stripe_result_iter, block_size);
   }
@@ -895,9 +896,10 @@ void permute_blocks(const NormalizedKeyRange auto& classifiers, const size_t ini
           while (pending_reads[target_bucket].load(std::memory_order_relaxed) > 0) {}
 
           if (target_block.begin() == overflow_bucket_begin) {
-            // Special Case: Let assume we have the following array to sort: [a a b c c]. In addition, we assume that the
-            // bucket size is 2. A array with delimiter may look like [a a|b _|c c], but this is array is one element longer
-            // than the original array. Because of that we provide an overflow bucket, which can be written to in this case.
+            // Special Case: Let assume we have the following array to sort: [a a b c c]. In addition, we assume that
+            // the bucket size is 2. A array with delimiter may look like [a a|b _|c c], but this is array is one
+            // element longer than the original array. Because of that we provide an overflow bucket, which can be
+            // written to in this case.
             overflow_bucket.resize(block_size);
             std::ranges::copy(target_buffer, overflow_bucket.begin());
           } else {
@@ -1092,7 +1094,8 @@ void ips4o_sort(NormalizedKeyRange auto& sort_range, const size_t num_buckets, c
       DebugAssert(stripe_written_end % block_size == 0, "Stripe end is misaligned");
 
       const auto written_begin = std::max(stripe_begin, delimiter_begin);
-      // The delimiter may start after the last block is written. To avoid negative values we set the minimal value to the delimiter_begin.
+      // The delimiter may start after the last block is written. To avoid negative values we set the minimal value to
+      // the delimiter_begin.
       const auto written_end = std::max(std::min(stripe_written_end, delimiter_end), delimiter_begin);
 
       const auto num_written = (written_end - written_begin);
