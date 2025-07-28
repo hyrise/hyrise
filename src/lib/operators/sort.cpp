@@ -976,9 +976,6 @@ void ips4o_sort(NormalizedKeyRange auto& sort_range, const size_t num_buckets, c
   const auto total_size = std::ranges::size(sort_range);
   const auto num_blocks = div_ceil(total_size, block_size);
   const auto num_classifiers = num_buckets - 1;
-  DebugAssert(num_blocks > 0, "At least one block is required.");
-  DebugAssert(num_buckets > 0, "At least one bucket is required.");
-
   // Calculate the number of blocks assigned to each stripe.
   const auto max_num_stripes = div_ceil(num_blocks, min_blocks_per_stripe);
   const auto num_stripes = std::min(max_num_stripes, max_parallelism);
@@ -988,6 +985,9 @@ void ips4o_sort(NormalizedKeyRange auto& sort_range, const size_t num_buckets, c
     return;
   }
   const auto max_blocks_per_stripe = div_ceil(num_blocks, num_stripes);
+
+  DebugAssert(num_blocks > 0, "At least one block is required.");
+  DebugAssert(num_buckets > 0, "At least one bucket is required.");
 
   // Select the elements for the sample sort.
   const auto classifiers = select_classifiers(sort_range, num_classifiers, samples_per_classifiers, comp);
