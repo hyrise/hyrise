@@ -1,5 +1,7 @@
 #include "sort.hpp"
 
+#include <iostream>
+
 #ifdef ENABLE_PERFETTO
 #include <perfetto.h>
 #else
@@ -70,6 +72,12 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 namespace {
 
 using namespace hyrise;  // NOLINT
+
+constexpr size_t RADIX = 256;
+constexpr size_t INSERTION_SORT_THRESHOLD = 32;
+constexpr size_t MSD_RADIX_SORT_SIZE_THRESHOLD = 4;
+
+// constexpr size_t PARALLEL_THRESHOLD = 10000;
 
 // Ceiling of integer division
 size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
@@ -1250,9 +1258,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
            "Sort: Column ID is greater than table's column count");
-    Assert(column_sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
-               column_sort_definition.sort_mode == SortMode::DescendingNullsFirst,
-           "Sort does not support NULLS LAST.");
   }
 
   if (input_table->row_count() == 0) {
@@ -1290,6 +1295,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   TRACE_EVENT_BEGIN("sort", "scan");
 
+  auto contains_string_column = false;
   auto tasks_per_column = std::vector(search_column_count, std::vector<std::shared_ptr<AbstractTask>>());
   for (auto column_index = size_t{0}; column_index < search_column_count; ++column_index) {
     const auto column_id = _sort_definitions[column_index].column;
@@ -1297,6 +1303,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     const auto batch_size = opt_batch_size(chunk_count, 8, (10 + search_column_count - 1) / search_column_count);
     resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
+
+      contains_string_column = contains_string_column || std::is_same_v<ColumnDataType, pmr_string>;
 
       if constexpr (std::is_same_v<ColumnDataType, float> || std::is_same_v<ColumnDataType, double>) {
         // Always the same with.
