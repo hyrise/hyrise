@@ -30,7 +30,8 @@ class Sort : public AbstractReadOnlyOperator {
 
     size_t max_parallelism;
     size_t block_size;
-    size_t sampling_size;
+    size_t bucket_count;
+    size_t samples_per_classifier;
     size_t min_blocks_per_stripe;
   };
 
@@ -68,6 +69,6 @@ class Sort : public AbstractReadOnlyOperator {
 };
 
 void perfetto_run(const std::shared_ptr<const Table>& input_table,
-                  const std::vector<SortColumnDefinition>& sort_definition);
+                  const std::vector<SortColumnDefinition>& sort_definition, const Sort::Config& config);
 
 }  // namespace hyrise

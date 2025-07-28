@@ -677,15 +677,32 @@ auto next_multiple(const auto value, const auto multiple) {
 }
 
 // Select the classifiers for the sample sort. At the moment this selects first num classifiers many keys.
-std::vector<NormalizedKeyRow> select_classifiers(const NormalizedKeyRange auto& sort_range, size_t num_classifiers) {
+std::vector<NormalizedKeyRow> select_classifiers(const NormalizedKeyRange auto& sort_range, size_t num_classifiers,
+                                                 size_t samples_per_classifier,
+                                                 const NormalizedKeyComparator auto& comp) {
   TRACE_EVENT("sort", "ips4o::select_classifiers");
-  DebugAssert(num_classifiers > 0, "At least on classifier is required");
-  DebugAssert(num_classifiers <= std::ranges::size(sort_range), "Cannot select more classifiers than elements");
-  auto classifiers = std::vector<NormalizedKeyRow>();
-  classifiers.reserve(num_classifiers);
-  for (const auto& row : sort_range | std::views::take(num_classifiers)) {
-    classifiers.push_back(row);
+
+  const auto size = std::ranges::size(sort_range);
+  const auto num_samples = num_classifiers * samples_per_classifier;
+  const auto elements_per_sample = size / num_samples;
+  const auto offset = elements_per_sample / 2;
+
+  auto samples = std::vector<NormalizedKeyRow>(num_samples);
+  for (auto sample = size_t{0}; sample < num_samples; ++sample) {
+    const auto index = (sample * elements_per_sample) + offset;
+    DebugAssert(index < size, "Index out of range");
+    samples[sample] = *std::next(sort_range.begin(), index);
   }
+  boost::sort::pdqsort(samples.begin(), samples.end(), comp);
+
+  const auto samples_offset = samples_per_classifier / 2;
+  auto classifiers = std::vector<NormalizedKeyRow>(num_classifiers);
+  for (auto classifier = size_t{0}; classifier < num_classifiers; ++classifier) {
+    const auto sample = (classifier * samples_per_classifier) + samples_offset;
+    DebugAssert(sample < num_samples, "Index out of range");
+    classifiers[classifier] = samples[sample];
+  }
+
   return classifiers;
 }
 
@@ -945,8 +962,10 @@ void write_to_ranges(std::ranges::range auto& input, std::ranges::range auto& fi
  * @param max_parallelism        Maximum number of parallel tasks to spawn.
  * @param comp                   Comparator
  */
-void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, const size_t block_size,
-          const size_t min_blocks_per_stripe, size_t max_parallelism, const NormalizedKeyComparator auto& comp) {
+void ips4o_sort(NormalizedKeyRange auto& sort_range, const size_t num_buckets, const size_t samples_per_classifiers,
+                const size_t block_size, const size_t min_blocks_per_stripe, size_t max_parallelism,
+                const NormalizedKeyComparator auto& comp) {
+  Assert(num_buckets > 1, "At least two buckets are required");
   TRACE_EVENT("sort", "ips4o");
   using RangeIterator = decltype(std::ranges::begin(sort_range));
   // The following terms are used in this algorithm:
@@ -956,22 +975,22 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   DebugAssert(block_size > 0, "A block must contains at least one element.");
   const auto total_size = std::ranges::size(sort_range);
   const auto num_blocks = div_ceil(total_size, block_size);
-  const auto num_buckets = num_classifiers + 1;
+  const auto num_classifiers = num_buckets - 1;
   DebugAssert(num_blocks > 0, "At least one block is required.");
   DebugAssert(num_buckets > 0, "At least one bucket is required.");
 
   // Calculate the number of blocks assigned to each stripe.
   const auto max_num_stripes = div_ceil(num_blocks, min_blocks_per_stripe);
-  if (total_size <= block_size || max_num_stripes <= 1) {
+  const auto num_stripes = std::min(max_num_stripes, max_parallelism);
+  if (total_size <= block_size || num_stripes <= 1) {
     // Fallback to pdqsort.
     boost::sort::pdqsort(sort_range.begin(), sort_range.end(), comp);
     return;
   }
-  const auto num_stripes = std::min(max_num_stripes, max_parallelism);
   const auto max_blocks_per_stripe = div_ceil(num_blocks, num_stripes);
 
   // Select the elements for the sample sort.
-  const auto classifiers = select_classifiers(sort_range, num_classifiers);
+  const auto classifiers = select_classifiers(sort_range, num_classifiers, samples_per_classifiers, comp);
 
   // Create an array of elements assigned to each stripe. Equally distribute the blocks to each stripe.
   auto num_max_sized_stripes = num_blocks % num_stripes;
@@ -1020,7 +1039,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
     aligned_bucket_sizes[bucket_index] = next_multiple(buckets_total_size, block_size);
   }
 
-  TRACE_EVENT_BEGIN("sort", "ip4so::prepare_permutations");
+  TRACE_EVENT_BEGIN("sort", "ips4o::prepare_permutations");
   const auto prepare_tasks = run_parallel_batched(num_stripes, 1, [&](auto stripe) {
     prepare_block_permutations(sort_range, stripe, stripes, classification_results, aligned_bucket_sizes, block_size);
   });
@@ -1152,7 +1171,7 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   }
   TRACE_EVENT_END("sort");
 
-  TRACE_EVENT_BEGIN("sort", "ip4so::write_back");
+  TRACE_EVENT_BEGIN("sort", "ips4o::write_back");
   // Copy all partial blocks from the classification result into the output buffer.
   for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
     for (auto stripe = size_t{0}; stripe < num_stripes; ++stripe) {
@@ -1169,13 +1188,16 @@ void sort(NormalizedKeyRange auto& sort_range, const size_t num_classifiers, con
   TRACE_EVENT_END("sort");
 
   // Sort each bucket for now.
-  TRACE_EVENT_BEGIN("sort", "ip4so::pdqsort");
+  TRACE_EVENT_BEGIN("sort", "ips4o::pdqsort");
   const auto sort_task = run_parallel_batched(num_buckets, 1, [&](auto bucket) {
     const auto bucket_start_index = (bucket > 0) ? aggregated_bucket_sizes[bucket - 1] : 0;
     const auto bucket_end_index = aggregated_bucket_sizes[bucket];
-    const auto bucket_begin = std::next(sort_range.begin(), bucket_start_index);
-    const auto bucket_end = std::next(sort_range.begin(), bucket_end_index);
-    boost::sort::pdqsort(bucket_begin, bucket_end, comp);
+    auto bucket_begin = std::next(sort_range.begin(), bucket_start_index);
+    auto bucket_end = std::next(sort_range.begin(), bucket_end_index);
+    auto range = std::ranges::subrange(bucket_begin, bucket_end);
+
+    ips4o_sort(range, num_buckets, samples_per_classifiers, block_size, min_blocks_per_stripe,
+               div_ceil(max_parallelism, 2), comp);
   });
   Hyrise::get().scheduler()->wait_for_tasks(sort_task);
   TRACE_EVENT_END("sort");
@@ -1391,8 +1413,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   const auto comp = [normalized_key_size](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
     return lhs.less_than(rhs, normalized_key_size);
   };
-  ips4o::sort(materialized_rows, _config.sampling_size, _config.block_size, _config.min_blocks_per_stripe,
-              _config.max_parallelism, comp);
+  ips4o::ips4o_sort(materialized_rows, _config.bucket_count, _config.samples_per_classifier, _config.block_size,
+                    _config.min_blocks_per_stripe, _config.max_parallelism, comp);
   /*std::sort(materialized_rows.begin(), materialized_rows.end(),
             [&](const auto& lhs, const auto& rhs) {
               return lhs.less_than(rhs, normalized_key_size);
@@ -1477,12 +1499,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 }
 
 void perfetto_run(const std::shared_ptr<const Table>& input_table,
-                  const std::vector<SortColumnDefinition>& sort_definitions) {
+                  const std::vector<SortColumnDefinition>& sort_definitions, const Sort::Config& config) {
   for (auto index = size_t{0}; index < 5; ++index) {
     const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
     table_wrapper->execute();
-    const auto sort_operator =
-        std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No);
+    const auto sort_operator = std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE,
+                                                      Sort::ForceMaterialization::No, config);
 
 #ifdef ENABLE_PERFETTO
     auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
@@ -1524,11 +1546,13 @@ void perfetto_run(const std::shared_ptr<const Table>& input_table,
 Sort::Config::Config()
     : max_parallelism(std::thread::hardware_concurrency()),
       block_size(128),
-      sampling_size(31),
+      bucket_count(32),
+      samples_per_classifier(4),
       min_blocks_per_stripe(32) {
   if constexpr (HYRISE_DEBUG) {
     block_size = 4;
-    sampling_size = 1;
+    bucket_count = 2;
+    samples_per_classifier = 1;
     min_blocks_per_stripe = 4;
   }
 }
