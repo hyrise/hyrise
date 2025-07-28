@@ -24,6 +24,9 @@ int main() {
   TPCDSTableGenerator(10, benchmark_config).generate_and_store();
   std::cout.rdbuf(initial_buffer);
 
+  auto config = Sort::Config();
+  config.block_size = 256;
+
   auto cs_table = storage_manager.get_table("catalog_sales");
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   const auto sort_columns =
@@ -35,7 +38,7 @@ int main() {
   std::cout << "Size of table to sort: " << cs_table->row_count()
             << ". Memory Usage: " << cs_table->memory_usage(MemoryUsageCalculationMode::Sampled) << ".\n";
 
-  perfetto_run(cs_table, sort_definitions);
+  perfetto_run(cs_table, sort_definitions, config);
 
   node_queue_scheduler->finish();
 
