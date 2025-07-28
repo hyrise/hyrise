@@ -657,7 +657,7 @@ void radix_sort_msd(auto begin, auto end, size_t byte_index, size_t max_key_size
   }
 }
 
-void radix_sort(auto begin, auto end, size_t normalized_key_size) {
+void radix_sort(auto begin, auto end, size_t normalized_key_size, bool contains_string) {
   const auto total_size = static_cast<size_t>(std::distance(begin, end));
   if (total_size <= 1 || normalized_key_size == 0)
     return;
@@ -665,6 +665,11 @@ void radix_sort(auto begin, auto end, size_t normalized_key_size) {
   const auto comparator = [&](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
     return lhs.less_than(rhs, normalized_key_size);
   };
+
+  if (contains_string) {
+    boost::sort::pdqsort(begin, end, comparator);
+    return;
+  }
 
   if (total_size < INSERTION_SORT_THRESHOLD) {
     insertion_sort(begin, end, comparator);
@@ -717,7 +722,8 @@ std::pair<NormalizedKeyIter, NormalizedKeyIter> merge_path_search(NormalizedKeyI
   return {begin1 + low, begin2 + (merge_index - low)};
 }
 
-void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_key_size) {
+void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_key_size, bool contains_string) {
+  TRACE_EVENT("sort", "parallel_merge_sort");
   const size_t total_size = sort_range.size();
   if (total_size <= 1 || normalized_key_size == 0)
     return;
@@ -739,23 +745,20 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
   using Iter = typename std::remove_cvref_t<decltype(sort_range)>::iterator;
   using Value = typename Iter::value_type;
 
-  std::vector<std::shared_ptr<AbstractTask>> sort_tasks;
-  std::vector<std::pair<Iter, Iter>> ranges;
+  const auto num_partitions = (total_size + min_block_size - 1) / min_block_size;
+  std::vector<std::pair<Iter, Iter>> ranges(num_partitions);
+  const auto sort_tasks = run_parallel_batched(num_partitions, 1, [&](auto index) {
+    const auto offset = index * min_block_size;
+    auto chunk_begin = begin + offset;
+    auto chunk_end = (offset + min_block_size < total_size) ? (chunk_begin + min_block_size) : end;
+    ranges[index] = {chunk_begin, chunk_end};
 
-  // Sort blocks in parallel
-  for (size_t i = 0; i < total_size; i += min_block_size) {
-    auto chunk_begin = begin + i;
-    auto chunk_end = (i + min_block_size < total_size) ? (chunk_begin + min_block_size) : end;
-    ranges.emplace_back(chunk_begin, chunk_end);
-    sort_tasks.emplace_back(std::make_shared<JobTask>([chunk_begin, chunk_end, normalized_key_size]() {
-      radix_sort(chunk_begin, chunk_end, normalized_key_size);
-    }));
-  }
-
-  for (auto& task : sort_tasks)
-    task->schedule();
+    radix_sort(chunk_begin, chunk_end, normalized_key_size, contains_string);
+  });
   Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
 
+  auto buffer = pmr_vector<Value>();
+  buffer.reserve(std::ranges::size(sort_range));
   while (ranges.size() > 1) {
     const size_t num_pairs = ranges.size() / 2;
     const size_t new_size = num_pairs + (ranges.size() % 2);
@@ -767,25 +770,38 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
       auto end1 = ranges[i].second;
       auto end2 = ranges[i + 1].second;
       const size_t total_len = std::distance(begin1, end2);
-
-      std::vector<std::shared_ptr<AbstractTask>> merge_tasks;
-      auto buffer = pmr_vector<Value>(total_len);
-      std::move(begin1, end2, buffer.begin());
+      TRACE_EVENT_BEGIN("sort", "copy");
+      if (total_len > 100000) {
+        const auto block_size = total_len / num_threads;
+        const auto copy_tasks = run_parallel_batched(num_threads, 1, [&](const auto index) {
+          const auto total_offset = block_size * index;
+          const auto block_begin = begin1 + (block_size * index);
+          const auto block_end = (index + 1 == num_threads) ? end2 : block_begin + block_size;
+          std::move(block_begin, block_end, buffer.begin() + total_offset);
+        });
+        Hyrise::get().scheduler()->wait_for_tasks(copy_tasks);
+      } else {
+        std::move(begin1, end2, buffer.begin());
+      }
+      TRACE_EVENT_END("sort");
 
       auto a_begin_buf = buffer.begin();
       auto a_end_buf = a_begin_buf + std::distance(begin1, end1);
       auto b_begin_buf = a_end_buf;
-      auto b_end_buf = buffer.end();
+      auto b_end_buf = buffer.begin() + total_len;
 
       // Precompute partitions
+      TRACE_EVENT_BEGIN("sort", "precompute partitions");
       std::vector<std::pair<decltype(a_begin_buf), decltype(b_begin_buf)>> partitions(num_threads + 1);
       for (size_t thread_idx = 0; thread_idx <= num_threads; ++thread_idx) {
         size_t diag = (thread_idx * total_len) / num_threads;
         partitions[thread_idx] =
             merge_path_search(a_begin_buf, a_end_buf, b_begin_buf, b_end_buf, diag, normalized_key_size);
       }
+      TRACE_EVENT_END("sort");
 
-      for (size_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+      TRACE_EVENT_BEGIN("sort", "merge");
+      const auto merge_tasks = run_parallel_batched(num_threads, 1, [&](auto thread_idx) {
         auto partition_start = partitions[thread_idx];
         auto a_start = partition_start.first;
         auto b_start = partition_start.second;
@@ -795,14 +811,10 @@ void parallel_merge_sort(NormalizedKeyRange auto& sort_range, size_t normalized_
         auto b_end_part = partition_end.second;
         auto out_begin = begin1 + ((thread_idx * total_len) / num_threads);
 
-        merge_tasks.emplace_back(std::make_shared<JobTask>([=] {
-          merge_partition(out_begin, a_start, a_end_part, b_start, b_end_part, normalized_key_size);
-        }));
-      }
-
-      for (auto& task : merge_tasks)
-        task->schedule();
+        merge_partition(out_begin, a_start, a_end_part, b_start, b_end_part, normalized_key_size);
+      });
       Hyrise::get().scheduler()->wait_for_tasks(merge_tasks);
+      TRACE_EVENT_END("sort");
 
       new_ranges.emplace_back(begin1, end2);
     }
@@ -893,6 +905,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   TRACE_EVENT_BEGIN("sort", "scan");
 
+  auto contains_string_column = false;
   auto tasks_per_column = std::vector(search_column_count, std::vector<std::shared_ptr<AbstractTask>>());
   for (auto column_index = size_t{0}; column_index < search_column_count; ++column_index) {
     const auto column_id = _sort_definitions[column_index].column;
@@ -900,6 +913,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     const auto batch_size = opt_batch_size(chunk_count, 8, (10 + search_column_count - 1) / search_column_count);
     resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
+
+      contains_string_column = contains_string_column || std::is_same_v<ColumnDataType, pmr_string>;
 
       if constexpr (std::is_same_v<ColumnDataType, float> || std::is_same_v<ColumnDataType, double>) {
         // Always the same with.
@@ -1015,7 +1030,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   // TODO(student): Use pdqsort
 
-  parallel_merge_sort(materialized_rows, normalized_key_size);
+  parallel_merge_sort(materialized_rows, normalized_key_size, contains_string_column);
 
   TRACE_EVENT_END("sort");
 
