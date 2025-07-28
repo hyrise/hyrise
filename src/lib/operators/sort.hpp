@@ -22,6 +22,19 @@ namespace hyrise {
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
+  /**
+   * Configuration parameters for sorting.
+   */
+  struct Config {
+    Config();
+
+    size_t max_parallelism;
+    size_t block_size;
+    size_t bucket_count;
+    size_t samples_per_classifier;
+    size_t min_blocks_per_stripe;
+  };
+
   enum class ForceMaterialization : bool { Yes = true, No = false };
 
   enum class OperatorSteps : uint8_t { MaterializeSortColumns, Sort, TemporaryResultWriting, WriteOutput };
@@ -29,7 +42,7 @@ class Sort : public AbstractReadOnlyOperator {
   Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
        const std::vector<SortColumnDefinition>& sort_definitions,
        const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE,
-       const ForceMaterialization force_materialization = ForceMaterialization::No);
+       const ForceMaterialization force_materialization = ForceMaterialization::No, const Config config = Config());
 
   const std::vector<SortColumnDefinition>& sort_definitions() const;
 
@@ -52,9 +65,10 @@ class Sort : public AbstractReadOnlyOperator {
   const std::vector<SortColumnDefinition> _sort_definitions;
   const ChunkOffset _output_chunk_size;
   const ForceMaterialization _force_materialization;
+  const Config _config;
 };
 
 void perfetto_run(const std::shared_ptr<const Table>& input_table,
-                  const std::vector<SortColumnDefinition>& sort_definition);
+                  const std::vector<SortColumnDefinition>& sort_definition, const Sort::Config& config);
 
 }  // namespace hyrise
