@@ -73,18 +73,6 @@ namespace {
 
 using namespace hyrise;  // NOLINT
 
-constexpr size_t RADIX = 256;
-constexpr size_t INSERTION_SORT_THRESHOLD = 32;
-constexpr size_t MSD_RADIX_SORT_SIZE_THRESHOLD = 4;
-
-// constexpr size_t PARALLEL_THRESHOLD = 10000;
-
-// Ceiling of integer division
-size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
-  DebugAssert(rhs > 0, "Divisor must be larger than 0.");
-  return (lhs + rhs - 1u) / rhs;
-}
-
 /**
  *        ____  _  _  __  ____  ____   __  ____   ___
  *       (    \( \/ )/  \(    \(___ \ /  \(___ \ / __)
@@ -96,6 +84,16 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
  *   As discussed on June 30th, you do not need to use segment accessors. They can be handy, but for almost all cases,
  *   using segment_iterate (which will use SegmentAccessors in the background) will be the better option.
  */
+
+// Divide left by right and round up to the next larger integer.
+auto div_ceil(const auto left, const auto right) {
+  return (left + right - 1) / right;
+}
+
+// Returns the next multiple. If value is already a multiple, then return value.
+auto next_multiple(const auto value, const auto multiple) {
+  return div_ceil(value, multiple) * multiple;
+}
 
 size_t opt_batch_size(size_t count, size_t min_batch_size, size_t max_tasks_per_thread) {
   const auto hardware_concurrency = std::thread::hardware_concurrency();
@@ -673,16 +671,6 @@ void debug_print_values(const auto& name, const std::ranges::range auto& range) 
 }
 
 */
-
-// Divide left by right and round up to the next larger integer.
-auto div_ceil(const auto left, const auto right) {
-  return (left + right - 1) / right;
-}
-
-// Returns the next multiple. If value is already a multiple, then return value.
-auto next_multiple(const auto value, const auto multiple) {
-  return div_ceil(value, multiple) * multiple;
-}
 
 // Select the classifiers for the sample sort. At the moment this selects first num classifiers many keys.
 std::vector<NormalizedKeyRow> select_classifiers(const NormalizedKeyRange auto& sort_range, size_t num_classifiers,
