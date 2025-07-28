@@ -105,8 +105,10 @@ std::shared_ptr<const Table> Import::_on_execute() {
   // For binary files, the default is the encoding of the file.
   if (_file_type != FileType::Binary) {
     auto chunk_encoding_spec = ChunkEncodingSpec{};
+    const auto column_count = table->column_count();
+    chunk_encoding_spec.reserve(column_count);
 
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       // If a target encoding is specified and supported, use it. Otherwise, select the encoding automatically.
       const auto& column_data_type = table->column_data_type(column_id);
       if (_target_encoding && encoding_supports_data_type(*_target_encoding, column_data_type)) {

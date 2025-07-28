@@ -542,7 +542,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        */
       if (key.encoding_type != EncodingType::Unencoded) {
         auto chunk_encoding_spec = ChunkEncodingSpec{};
-        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
+        const auto column_count = data_table->column_count();
+        chunk_encoding_spec.reserve(column_count);
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (encoding_supports_data_type(key.encoding_type, data_table->column_data_type(column_id))) {
             chunk_encoding_spec.push_back(SegmentEncodingSpec{key.encoding_type});
           } else {

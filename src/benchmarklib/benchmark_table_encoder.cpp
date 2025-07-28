@@ -24,8 +24,10 @@ using namespace hyrise;  // NOLINT
 
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{};
+  const auto column_count = chunk.column_count();
+  chunk_encoding_spec.reserve(column_count);
 
-  for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto& abstract_segment = chunk.get_segment(column_id);
     chunk_encoding_spec.push_back(get_segment_encoding_spec(abstract_segment));
   }

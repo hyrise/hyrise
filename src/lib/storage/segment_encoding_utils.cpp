@@ -85,6 +85,7 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
 
   const auto size = types.size();
   auto chunk_encoding_spec = ChunkEncodingSpec{};
+  chunk_encoding_spec.reserve(size);
   for (auto column_id = ColumnID{0}; column_id < size; ++column_id) {
     chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(
         types[column_id], chunk_values_are_unique[column_id], chunk_values_are_key_part[column_id]));
