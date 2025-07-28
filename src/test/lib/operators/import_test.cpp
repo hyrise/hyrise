@@ -1,5 +1,6 @@
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 
@@ -7,6 +8,7 @@
 
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_parser.hpp"
 #include "import_export/file_type.hpp"
 #include "operators/import.hpp"
 #include "resolve_type.hpp"
@@ -19,6 +21,7 @@
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -196,12 +199,29 @@ TEST_F(OperatorsImportTest, UnknownFileExtension) {
   EXPECT_THROW(std::make_shared<Import>("not_existing_file.mp3", "a"), std::exception);
 }
 
-TEST_F(OperatorsImportTest, ReplaceExistingTable) {
-  auto old_table = load_table("resources/test_data/tbl/float.tbl");
-  Hyrise::get().storage_manager.add_table("a", old_table);
+TEST_F(OperatorsImportTest, RetrieveCsvMetaFromEmptyTable) {
+  auto existing_table = CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json");
 
-  auto expected_table = load_table("resources/test_data/tbl/int.tbl");
-  auto importer = std::make_shared<Import>("resources/test_data/tbl/int.tbl", "a");
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+}
+
+TEST_F(OperatorsImportTest, AppendToExistingTable) {
+  auto existing_table = load_table("resources/test_data/tbl/float.tbl");
+
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
+  Assert(expected_table->chunk_count() == 1, "Testing code was only written to support single chunk tables");
+  const auto chunk = expected_table->get_chunk(ChunkID{0});
+  expected_table->append_chunk(chunk->segments(), chunk->mvcc_data());
+
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
