@@ -2,17 +2,6 @@
 # Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
 # scope
 include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
-include(FetchContent)
-FetchContent_Declare(
-        tracy
-        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-        GIT_TAG        v0.11.1
-        GIT_SHALLOW    TRUE
-        GIT_PROGRESS   TRUE
-)
-
-FetchContent_MakeAvailable(tracy)
-option(TRACY_ENABLE "" ON)
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
@@ -758,8 +747,6 @@ if(NOT APPLE)
     # not be the top-level CMake project (e.g., if it is used as a submodule in a Hyrise plugin repository).
     target_include_directories(hyrise_impl SYSTEM PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
 endif()
-
-target_link_libraries(hyrise_impl PUBLIC TracyClient)
 
 target_link_libraries_system(
     hyrise_impl
