@@ -14,6 +14,7 @@
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -109,7 +110,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
         if (extension == ".tbl") {
           table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
         } else if (extension == ".csv") {
-          table_info.table = CsvParser::parse(*table_info.text_file_path, _benchmark_config->chunk_size);
+          table_info.table = CsvParser::parse(
+              *table_info.text_file_path,
+              process_csv_meta_file(table_info.text_file_path->string() + CsvMeta::META_FILE_EXTENSION),
+              _benchmark_config->chunk_size);
         } else {
           Fail("Unknown textual file format. This should have been caught earlier.");
         }
