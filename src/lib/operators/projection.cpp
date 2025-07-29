@@ -285,6 +285,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       // originate from the same sorted input column.
       for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
         const auto iter = std::ranges::find_if(sorted_by, [&](const auto& sort) {
+          // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): False positive by clang tidy.
           return input_column_id == sort.column;
         });
         if (iter != sorted_by.end()) {
