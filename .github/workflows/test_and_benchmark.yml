@@ -9,7 +9,7 @@ env:
   CC: clang-17
   CXX: clang++-17
 
-  LEADERBOARD: http://vm-appleton.eaalab.hpi.uni-potsdam.de
+  LEADERBOARD: http://192.168.30.164
 
   CURL_CMD: "curl -X POST --fail-with-body -F github_user=${{github.actor}} -F ci_id=3 -F github_repository=${{github.repository}} -F project_id=1 -F secret=${{secrets.DYOD_SECRET}} -F git_commit=${{github.sha}}"
 
