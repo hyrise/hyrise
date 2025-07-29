@@ -23,7 +23,8 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     rule = std::make_shared<JoinOrderingRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
 
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.

@@ -64,7 +64,8 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_e_3 = stored_table_node_e->get_column("column3");
 
     rule = std::make_shared<DependentGroupByReductionRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<DependentGroupByReductionRule> rule;

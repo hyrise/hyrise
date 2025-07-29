@@ -24,6 +24,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "resolve_type.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
@@ -123,13 +124,13 @@ std::string InExpressionRewriteRule::name() const {
 }
 
 void InExpressionRewriteRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
-                                                                OptimizationContext& /*optimization_context*/) const {
+                                                                OptimizationContext& optimization_context) const {
   if (strategy == Strategy::ExpressionEvaluator) {
     // This is the default anyway, i.e., what the SQLTranslator gave us
     return;
   }
 
-  const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
+  const auto& cardinality_estimator = optimization_context.cost_estimator->cardinality_estimator;
   visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type != LQPNodeType::Predicate) {
       // This rule only rewrites IN if it is part of a predicate (not, e.g., `SELECT a IN (1, 2) AS foo`)

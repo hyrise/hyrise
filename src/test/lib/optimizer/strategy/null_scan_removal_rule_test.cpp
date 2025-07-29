@@ -27,7 +27,8 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
     table_node = StoredTableNode::make("table");
     nullable_table_node_column = lqp_column_(nullable_table_node, ColumnID{0});
     table_node_column = lqp_column_(table_node, ColumnID{0});
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> mock_node;

@@ -29,7 +29,8 @@ class PredicateSplitUpRuleTest : public StrategyBaseTest {
     b_b = node_b->get_column("b");
 
     rule = std::make_shared<PredicateSplitUpRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> node_a;

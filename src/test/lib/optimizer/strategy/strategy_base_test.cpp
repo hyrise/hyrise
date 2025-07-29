@@ -20,11 +20,6 @@ void StrategyBaseTest::_apply_rule(const std::shared_ptr<AbstractRule>& rule, st
   const auto root_node = LogicalPlanRootNode::make();
   root_node->set_left_input(input);
 
-  // Create estimators.
-  const auto cardinality_estimator = std::make_shared<CardinalityEstimator>();
-  const auto cost_estimator = std::make_shared<CostEstimatorLogical>(cardinality_estimator);
-  rule->cost_estimator = cost_estimator;
-
   rule->apply_to_plan(root_node, optimization_context);
 
   // The optimizer rules can remove the original input node completely from the plan, so we replace it by the top

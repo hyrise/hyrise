@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "base_test.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 
@@ -36,7 +37,8 @@ class StrategyBaseTest : public BaseTest {
    * PredicateNode.
    */
   std::shared_ptr<AbstractLQPNode> _lqp;
-  OptimizationContext _optimization_context = OptimizationContext{};
+  OptimizationContext _optimization_context = OptimizationContext{std::make_shared<CostEstimatorLogical>(
+      std::make_shared<CardinalityEstimator>())};  // Default cost estimator, can be overwritten in tests
 };
 
 }  // namespace hyrise

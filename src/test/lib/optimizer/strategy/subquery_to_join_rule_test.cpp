@@ -107,7 +107,8 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     s_nationkey = supplier->get_column("nationkey");
 
     _rule = std::make_shared<SubqueryToJoinRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<SubqueryToJoinRule> _rule;

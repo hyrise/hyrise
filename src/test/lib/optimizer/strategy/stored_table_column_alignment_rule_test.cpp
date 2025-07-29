@@ -27,7 +27,8 @@ class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
     _union_node->set_right_input(_stored_table_node_right);
 
     _rule = std::make_shared<StoredTableColumnAlignmentRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<StoredTableColumnAlignmentRule> _rule;

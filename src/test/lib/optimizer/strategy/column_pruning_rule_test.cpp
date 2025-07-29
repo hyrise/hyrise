@@ -39,7 +39,8 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
     w = node_uvw->get_column("w");
 
     rule = std::make_shared<ColumnPruningRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   const std::shared_ptr<MockNode> pruned(const std::shared_ptr<MockNode> node,

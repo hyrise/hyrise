@@ -34,7 +34,8 @@ class IndexScanRuleTest : public StrategyBaseTest {
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("a"));
 
     rule = std::make_shared<IndexScanRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
 
     stored_table_node = StoredTableNode::make("a");
     a = stored_table_node->get_column("a");

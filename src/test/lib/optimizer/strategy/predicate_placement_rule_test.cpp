@@ -56,7 +56,8 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     _e_a = _stored_table_e->get_column("a");
 
     _rule = std::make_shared<PredicatePlacementRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
 
     {
       // Initialization of projection pushdown LQP.

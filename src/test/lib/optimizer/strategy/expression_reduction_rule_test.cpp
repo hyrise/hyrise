@@ -46,7 +46,8 @@ class ExpressionReductionRuleTest : public StrategyBaseTest {
     a_join = equals_(mock_node_for_join->get_column("a"), 0);
 
     rule = std::make_shared<ExpressionReductionRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> mock_node;

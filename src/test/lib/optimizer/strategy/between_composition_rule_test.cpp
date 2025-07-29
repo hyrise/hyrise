@@ -24,7 +24,8 @@ class BetweenCompositionRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     _rule = std::make_shared<BetweenCompositionRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
 
     _node_a =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});

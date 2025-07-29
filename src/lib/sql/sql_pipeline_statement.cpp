@@ -23,6 +23,7 @@
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -117,8 +118,8 @@ const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
 }
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
-  if (_optimized_logical_plan.first) {
-    return _optimized_logical_plan.first;
+  if (_optimized_logical_plan) {
+    return _optimized_logical_plan;
   }
 
   // Handle logical query plan if statement has been cached
@@ -131,8 +132,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached output_expressions)
         // and concurrent translations might conflict.
         // Note that the plan we have received here was cached, so it is obviously cacheable.
-        _optimized_logical_plan = {plan->deep_copy(), OptimizationContext{}};
-        return _optimized_logical_plan.first;
+        _optimized_logical_plan = plan->deep_copy();
+        return _optimized_logical_plan;
       }
     }
   }
@@ -148,18 +149,21 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
 
-  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
+  const auto [result_lqp, result_context] =
+      _optimizer->optimize_with_context(std::move(unoptimized_lqp), optimizer_rule_durations);
+  _optimized_logical_plan = result_lqp;
+  _optimization_context = result_context;
 
   const auto done = std::chrono::steady_clock::now();
   _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache && _translation_info.cacheable && _optimized_logical_plan.second.is_cacheable()) {
-    lqp_cache->set(_sql_string, _optimized_logical_plan.first);
+  if (lqp_cache && _translation_info.cacheable && _optimization_context->is_cacheable()) {
+    lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
 
-  return _optimized_logical_plan.first;
+  return _optimized_logical_plan;
 }
 
 const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan() {
@@ -206,7 +210,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   // Cache newly created plan for the according sql statement (only if not already cached).
   if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable &&
-      _optimized_logical_plan.second.is_cacheable()) {
+      _optimization_context->is_cacheable()) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 

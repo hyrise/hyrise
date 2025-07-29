@@ -29,7 +29,8 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
 
     // Reducing the minimum_union_count so that plans are merged earlier, making the test cases shorter.
     rule->minimum_union_count = 1;
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> node_a, node_b;

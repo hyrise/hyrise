@@ -9,6 +9,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
@@ -302,7 +303,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   auto optimizer = Optimizer{};
   optimizer.add_rule(std::move(rule));
 
-  const auto optimized_lqp = optimizer.optimize(std::move(lqp)).first;
+  const auto optimized_lqp = optimizer.optimize(std::move(lqp));
   lqp = nullptr;
 
   /**
@@ -342,8 +343,8 @@ TEST_F(OptimizerTest, OptimizationWithoutKeyConstraintCacheable) {
 
   auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
                                   PredicateNode::make(greater_than_(a, subquery_b), node_a));
-  const auto [_, optimization_context] = optimizer->optimize(std::move(lqp));
-  EXPECT_TRUE(optimization_context.is_cacheable());
+  const auto [_, optimization_context] = optimizer->optimize_with_context(std::move(lqp));
+  EXPECT_TRUE(optimization_context->is_cacheable());
 }
 
 TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {

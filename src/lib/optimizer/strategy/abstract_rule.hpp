@@ -10,23 +10,7 @@ class AbstractCostEstimator;
 class AbstractLQPNode;
 class LogicalPlanRootNode;
 class LQPSubqueryExpression;
-
-/**
- * OptimizationContext is used to track metadata about the optimization process / resulting LQP. Currently, it only
- * tracks whether the resulting LQP is cacheable or not. If it is not cacheable, the SQLPipeline will not cache the
- * optimized LQP.
- */
-class OptimizationContext {
- public:
-  OptimizationContext() = default;
-
-  void set_not_cacheable();
-
-  bool is_cacheable() const;
-
- private:
-  bool _is_cacheable{true};  // Indicates whether the optimizer can cache the optimized LQP.
-};
+struct OptimizationContext;
 
 class AbstractRule {
  public:
@@ -59,8 +43,6 @@ class AbstractRule {
                              OptimizationContext& optimization_context) const;
 
   virtual std::string name() const = 0;
-
-  std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
  protected:
   /**

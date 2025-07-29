@@ -24,7 +24,8 @@ class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     _rule = std::make_shared<JoinPredicateOrderingRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
 
     node_a = create_mock_node_with_statistics(
         MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}, {DataType::Int, "z"}}, 100,

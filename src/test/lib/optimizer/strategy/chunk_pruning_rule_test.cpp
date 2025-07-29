@@ -61,7 +61,8 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
     }
 
     _rule = std::make_shared<ChunkPruningRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
 
     storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{10}));
   }

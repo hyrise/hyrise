@@ -11,6 +11,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -23,7 +24,7 @@ std::string JoinPredicateOrderingRule::name() const {
 }
 
 void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
-                                                                  OptimizationContext& /*optimization_context*/) const {
+                                                                  OptimizationContext& optimization_context) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     // Check if this is a multi predicate join.
     if (node->type != LQPNodeType::Join || node->node_expressions.size() <= 1) {
@@ -33,8 +34,9 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(const std::sha
     DebugAssert(std::dynamic_pointer_cast<JoinNode>(node), "LQPNodeType::Join should only be set for JoinNode.");
     const auto join_mode = std::static_pointer_cast<JoinNode>(node)->join_mode;
 
-    DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
-    const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+    DebugAssert(optimization_context.cost_estimator, "JoinOrderingRule requires cost estimator to be set");
+    const auto caching_cardinality_estimator =
+        optimization_context.cost_estimator->cardinality_estimator->new_instance();
 
     // Estimate join selectivity of a predicate by creating a new join node joining only on that one predicate and
     //  estimating that join node's cardinality.

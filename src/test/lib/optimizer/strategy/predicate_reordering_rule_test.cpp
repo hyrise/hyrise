@@ -33,7 +33,8 @@ class PredicateReorderingTest : public StrategyBaseTest {
     a = node->get_column("a");
     b = node->get_column("b");
     c = node->get_column("c");
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> node;

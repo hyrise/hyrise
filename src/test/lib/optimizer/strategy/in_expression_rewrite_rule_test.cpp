@@ -17,7 +17,8 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
     rule = std::make_shared<InExpressionRewriteRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
 
     // col_a has 1000 entries across 200 values linearly distributed between 1 and 200
     node = create_mock_node_with_statistics(

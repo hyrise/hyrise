@@ -9,14 +9,6 @@
 
 namespace hyrise {
 
-void OptimizationContext::set_not_cacheable() {
-  _is_cacheable = false;
-}
-
-bool OptimizationContext::is_cacheable() const {
-  return _is_cacheable;
-}
-
 void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root,
                                  OptimizationContext& optimization_context) const {
   // (1) Optimize root LQP.

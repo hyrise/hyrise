@@ -38,7 +38,8 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
     w = node_b->get_column("w");
 
     rule = std::make_shared<JoinToPredicateRewriteRule>();
-    _optimization_context = OptimizationContext{};
+    _optimization_context =
+        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<JoinToPredicateRewriteRule> rule;
