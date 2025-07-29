@@ -75,10 +75,10 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
     const auto data_type = segment->data_type();
 
     const auto normalized_sort_mode =
-        (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::AscendingNullsLast)
+        (sort_mode == SortMode::AscendingNullsFirst) | (sort_mode == SortMode::AscendingNullsLast)
             ? NormalizedSortMode::Ascending
             : NormalizedSortMode::Descending;
-    const auto nulls_mode = (sort_mode == SortMode::AscendingNullsFirst | sort_mode == SortMode::DescendingNullsFirst)
+    const auto nulls_mode = (sort_mode == SortMode::AscendingNullsFirst) | (sort_mode == SortMode::DescendingNullsFirst)
                                 ? NullsMode::NullsFirst
                                 : NullsMode::NullsLast;
 
@@ -97,7 +97,7 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
     }
   }
 
-  auto offset = uint64_t{tuple_key_size - sizeof(RowID)};
+  auto row_id_offset_in_tuple = uint64_t{tuple_key_size - sizeof(RowID)};
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
     const auto buffer_row_start = (start_row_offset + chunk_offset) * tuple_key_size;
     insert_row_id(buffer, RowID{chunk_id, chunk_offset}, buffer_row_start + row_id_offset_in_tuple);

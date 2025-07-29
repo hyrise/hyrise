@@ -1,34 +1,19 @@
 #include "sort.hpp"
 
 #include <algorithm>
-#include <chrono>
-#include <cstddef>
 #include <cstdint>
-#include <functional>
+#include <cstring>
 #include <memory>
-#include <optional>
-#include <string>
-#include <unordered_map>
-#include <utility>
+#include <numeric>
 #include <vector>
 
-#include "all_type_variant.hpp"
-#include "operators/abstract_operator.hpp"
-#include "operators/abstract_read_only_operator.hpp"
-#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
-#include "storage/abstract_segment.hpp"
-#include "storage/base_segment_accessor.hpp"
-#include "storage/chunk.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
-#include "storage/value_segment.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/key_normalizer.h"
-#include "utils/timer.hpp"
 
 namespace {
 
@@ -304,262 +289,87 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
            "Sort: Column ID is greater than table's column count");
-    Assert(column_sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
-               column_sort_definition.sort_mode == SortMode::DescendingNullsFirst,
-           "Sort does not support NULLS LAST.");
+  }
+
+  if (_sort_definitions.empty()) {
+    return input_table;
   }
 
   if (input_table->row_count() == 0) {
     if (_force_materialization == ForceMaterialization::Yes && input_table->type() == TableType::References) {
       return Table::create_dummy_table(input_table->column_definitions());
     }
-
     return input_table;
   }
 
-  auto sorted_table = std::shared_ptr<Table>{};
+  auto [normalized_keys, key_size] = KeyNormalizer::convert_table(input_table, _sort_definitions);
 
-  // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
-  // been determined so far. This is not a completely proper PosList on the input table as it might point to
-  // ReferenceSegments.
-  auto previously_sorted_pos_list = std::optional<RowIDPosList>{};
-
-  auto total_materialization_time = std::chrono::nanoseconds{};
-  auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
-  auto total_sort_time = std::chrono::nanoseconds{};
-
-  // const auto sort_step_count = _sort_definitions.size();
-  //
-  // for (auto sort_step = static_cast<int64_t>(sort_step_count - 1); sort_step >= 0; --sort_step) {
-  //   const auto& sort_definition = _sort_definitions[sort_step];
-  //   const auto data_type = input_table->column_data_type(sort_definition.column);
-  //
-  //   resolve_data_type(data_type, [&](auto type) {
-  //     using ColumnDataType = typename decltype(type)::type;
-  //
-  //     auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
-  //     previously_sorted_pos_list =
-  //         sort_impl.sort(previously_sorted_pos_list, sort_step == static_cast<int64_t>(sort_step_count - 1));
-  //
-  //     total_materialization_time += sort_impl.materialization_time;
-  //     total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
-  //     total_sort_time += sort_impl.sort_time;
-  //   });
-  // }
-
-  auto [normalized_keys, tuple_key_size] = KeyNormalizer::convert_table(input_table, _sort_definitions);
-
-  auto [iterator, end_iterator] = KeyNormalizer::get_iterators(normalized_keys, tuple_key_size);
-
-  std::vector<unsigned char*> pointers{};
-  pointers.reserve(input_table->row_count());
-  auto* current_pointer = &normalized_keys.front();
-  std::generate_n(std::back_inserter(pointers), input_table->row_count(), [&] {
-    auto* result = current_pointer;
-    current_pointer += tuple_key_size;
-    return result;
-  });
-
-  std::ranges::stable_sort(pointers, [tuple_key_size](const unsigned char* lhs, const unsigned char* rhs) {
-    return std::memcmp(lhs, rhs, tuple_key_size) < 0;
-  });
-
-  previously_sorted_pos_list.emplace();
-  previously_sorted_pos_list->reserve(input_table->row_count());
-  while (iterator != end_iterator) {
-    previously_sorted_pos_list->push_back(*iterator);
-    ++iterator;
+  std::vector<const unsigned char*> key_pointers;
+  key_pointers.reserve(input_table->row_count());
+  for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
+    key_pointers.push_back(&normalized_keys[i]);
   }
 
-  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
-  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, total_temporary_result_writing_time);
-  step_performance_data.set_step_runtime(OperatorSteps::Sort, total_sort_time);
+  const auto comparison_key_size = key_size - sizeof(RowID);
 
-  // We have to materialize the output (i.e., write ValueSegments) if
-  //  (a) it is requested by the user,
-  //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
-  //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
-  // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
-  auto timer = Timer{};
-  auto must_materialize = _force_materialization == ForceMaterialization::Yes;
-  const auto input_chunk_count = input_table->chunk_count();
-  if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
-    const auto input_column_count = input_table->column_count();
+  std::sort(key_pointers.begin(), key_pointers.end(), [comparison_key_size](const unsigned char* a, const unsigned char* b) {
+    return std::memcmp(a, b, comparison_key_size) < 0;
+  });
 
-    for (auto input_column_id = ColumnID{0}; input_column_id < input_column_count; ++input_column_id) {
-      const auto& first_segment = input_table->get_chunk(ChunkID{0})->get_segment(input_column_id);
-      const auto& first_reference_segment = static_cast<ReferenceSegment&>(*first_segment);
+  const auto row_id_offset = key_size - sizeof(RowID);
+  RowIDPosList sorted_pos_list;
+  sorted_pos_list.reserve(input_table->row_count());
+  for (const auto* key_ptr : key_pointers) {
+    sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(key_ptr + row_id_offset));
+  }
 
-      const auto& common_referenced_table = first_reference_segment.referenced_table();
-      const auto& common_referenced_column_id = first_reference_segment.referenced_column_id();
+  auto sorted_table = std::shared_ptr<Table>{};
+  auto must_materialize = _force_materialization == Sort::ForceMaterialization::Yes;
 
-      for (auto input_chunk_id = ChunkID{1}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-        const auto& segment = input_table->get_chunk(input_chunk_id)->get_segment(input_column_id);
-        const auto& referenced_table = static_cast<ReferenceSegment&>(*segment).referenced_table();
-        const auto& referenced_column_id = static_cast<ReferenceSegment&>(*segment).referenced_column_id();
+  {
+    const auto input_chunk_count = input_table->chunk_count();
+    if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
+      const auto input_column_count = input_table->column_count();
 
-        if (common_referenced_table != referenced_table || common_referenced_column_id != referenced_column_id) {
-          must_materialize = true;
-          break;
+      for (auto input_column_id = ColumnID{0}; input_column_id < input_column_count; ++input_column_id) {
+        const auto& first_segment = input_table->get_chunk(ChunkID{0})->get_segment(input_column_id);
+        const auto& first_reference_segment = static_cast<ReferenceSegment&>(*first_segment);
+
+        const auto& common_referenced_table = first_reference_segment.referenced_table();
+        const auto& common_referenced_column_id = first_reference_segment.referenced_column_id();
+
+        for (auto input_chunk_id = ChunkID{1}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
+          const auto& segment = input_table->get_chunk(input_chunk_id)->get_segment(input_column_id);
+          const auto& referenced_table = static_cast<ReferenceSegment&>(*segment).referenced_table();
+          const auto& referenced_column_id = static_cast<ReferenceSegment&>(*segment).referenced_column_id();
+
+          if (common_referenced_table != referenced_table || common_referenced_column_id != referenced_column_id) {
+            must_materialize = true;
+            break;
+          }
         }
-      }
-      if (must_materialize) {
-        break;
       }
     }
   }
 
   if (must_materialize) {
-    sorted_table =
-        write_materialized_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
+    std::cout << "Creating materialized output\n";
+    sorted_table = write_materialized_output_table(input_table, std::move(sorted_pos_list), _output_chunk_size);
   } else {
-    sorted_table =
-        write_reference_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
+    std::cout << "Creating reference output\n";
+    sorted_table = write_reference_output_table(input_table, std::move(sorted_pos_list), _output_chunk_size);
   }
 
-  const auto& final_sort_definition = _sort_definitions[0];
-  // Set the sorted_by attribute of the output's chunks according to the most significant sort operation, which is the
-  // column the table was sorted by last.
-  const auto output_chunk_count = sorted_table->chunk_count();
-  for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
-    const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
-    output_chunk->set_immutable();
-    output_chunk->set_individually_sorted_by(final_sort_definition);
+  {
+    const auto output_chunk_count = sorted_table->chunk_count();
+    for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
+      const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
+      output_chunk->set_immutable();
+      output_chunk->set_individually_sorted_by(_sort_definitions);
+    }
   }
 
-  step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
   return sorted_table;
 }
-
-template <typename SortColumnType>
-class Sort::SortImpl {
- public:
-  using RowIDValuePair = std::pair<RowID, SortColumnType>;
-
-  std::chrono::nanoseconds materialization_time{};
-  std::chrono::nanoseconds temporary_result_writing_time{};
-  std::chrono::nanoseconds sort_time{};
-
-  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
-           const SortMode sort_mode = SortMode::AscendingNullsFirst)
-      : _table_in(table_in), _column_id(column_id), _sort_mode(sort_mode) {
-    const auto row_count = _table_in->row_count();
-    _row_id_value_vector.reserve(row_count);
-    _null_value_rows.reserve(row_count);
-  }
-
-  // Sorts table_in, potentially taking the pre-existing order of previously_sorted_pos_list into account.
-  // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
-  // output table.
-  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list, const bool is_last_column) {
-    auto timer = Timer{};
-    // 1. Prepare Sort: Creating RowID-value-Structure
-    _materialize_sort_column(previously_sorted_pos_list);
-    materialization_time = timer.lap();
-
-    // 2. After we got our ValueRowID Map we sort the map by the value of the pair
-    const auto sort_with_comparator = [&](auto comparator) {
-      if (is_last_column) {
-        // Sorting the last column does not need to be stable (helps especially in single-column sorting cases).
-        std::ranges::sort(_row_id_value_vector, [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
-          return comparator(lhs.second, rhs.second);
-        });
-      } else {
-        std::ranges::stable_sort(_row_id_value_vector,
-                                 [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
-                                   return comparator(lhs.second, rhs.second);
-                                 });
-      }
-    };
-    if (_sort_mode == SortMode::AscendingNullsFirst) {
-      sort_with_comparator(std::less<>{});
-    } else {
-      sort_with_comparator(std::greater<>{});
-    }
-    sort_time = timer.lap();
-
-    // 2b. Insert null rows in front of all non-NULL rows
-    if (!_null_value_rows.empty()) {
-      // NULLs come before all values. The SQL standard allows for this to be implementation-defined. We used to have
-      // a NULLS LAST mode, but never used it over multiple years. Different databases have different behaviors, and
-      // storing NULLs first even for descending orders is somewhat uncommon:
-      //   https://docs.mendix.com/refguide/ordering-behavior#null-ordering-behavior
-      // For Hyrise, we found that storing NULLs first is the method that requires the least amount of code.
-      _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
-    }
-
-    auto pos_list = RowIDPosList{};
-    pos_list.reserve(_row_id_value_vector.size());
-    for (const auto& [row_id, _] : _row_id_value_vector) {
-      pos_list.emplace_back(row_id);
-    }
-    temporary_result_writing_time = timer.lap();
-    return pos_list;
-  }
-
- protected:
-  // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    // If there was no PosList passed, this is the first sorting run and we simply fill our values and nulls data
-    // structures from our input table. Otherwise we will materialize according to the PosList which is the result of
-    // the last run.
-    if (previously_sorted_pos_list) {
-      _materialize_column_from_pos_list(*previously_sorted_pos_list);
-    } else {
-      const auto chunk_count = _table_in->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = _table_in->get_chunk(chunk_id);
-        Assert(chunk, "Did not expect deleted chunk here.");  // see https://github.com/hyrise/hyrise/issues/1686
-
-        auto abstract_segment = chunk->get_segment(_column_id);
-
-        segment_iterate<SortColumnType>(*abstract_segment, [&](const auto& position) {
-          if (position.is_null()) {
-            _null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
-          } else {
-            _row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
-          }
-        });
-      }
-    }
-  }
-
-  // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
-  void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
-    const auto input_chunk_count = _table_in->chunk_count();
-    auto accessor_by_chunk_id =
-        std::vector<std::unique_ptr<AbstractSegmentAccessor<SortColumnType>>>(input_chunk_count);
-    for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-      const auto& abstract_segment = _table_in->get_chunk(input_chunk_id)->get_segment(_column_id);
-      accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<SortColumnType>(abstract_segment);
-    }
-
-    for (auto row_id : pos_list) {
-      const auto [chunk_id, chunk_offset] = row_id;
-
-      auto& accessor = accessor_by_chunk_id[chunk_id];
-      const auto typed_value = accessor->access(chunk_offset);
-      if (!typed_value) {
-        _null_value_rows.emplace_back(row_id, SortColumnType{});
-      } else {
-        _row_id_value_vector.emplace_back(row_id, typed_value.value());
-      }
-    }
-  }
-
-  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::shared_ptr<const Table> _table_in;
-
-  // Column to sort by.
-  const ColumnID _column_id;
-  const SortMode _sort_mode;
-  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
-
-  std::vector<RowIDValuePair> _row_id_value_vector;
-
-  // Stored as RowIDValuePair for better type compatibility even if value is unused.
-  std::vector<RowIDValuePair> _null_value_rows;
-};
 
 }  // namespace hyrise
