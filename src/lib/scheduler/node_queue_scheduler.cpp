@@ -84,7 +84,7 @@ void NodeQueueScheduler::begin() {
     // Tracked per node as core restrictions can lead to unbalanced core counts.
     _workers_per_node.emplace_back(topology_node.cpus.size());
 
-    // Only create queues for nodes with CPUs assigned. Otherwise, no workers are active on these nodes and we might
+    // Only create queues for nodes with CPUs assigned. Otherwise, no workers are active on these nodes, and we might
     // add tasks to these queues that can never be directly pulled and must be stolen by other nodes' workers. As
     // ShutdownTasks are not stealable, placing tasks on nodes without workers can lead to failing shutdowns.
     if (!topology_node.cpus.empty()) {
@@ -254,7 +254,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   auto min_load_node_id = _active_nodes[0];
   auto min_load = _queues[min_load_node_id]->estimate_load();
 
-  // When the load of the initial node is small (less tasks than threads on first node), do not check other queues.
+  // When the load of the initial node is small (fewer tasks than threads on first node), do not check other queues.
   if (min_load < _workers_per_node[min_load_node_id]) {
     return min_load_node_id;
   }
@@ -285,7 +285,7 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
   // revisited (see check for common NodeID in _group_tasks()).
   const auto first_task_node_id = tasks[0]->node_id();
 
-  // Ensure short cuts taken below to test for node_id are valid.
+  // Ensure shortcuts taken below to test for node_id are valid.
   DebugAssert(INVALID_NODE_ID == std::numeric_limits<NodeID::base_type>::max(),
               "Unexpected value for INVALID_NODE_ID.");
   DebugAssert(CURRENT_NODE_ID == INVALID_NODE_ID - 1, "Unexpected value for CURRENT_NODE_ID.");
@@ -302,7 +302,7 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
   // Using max() for small machines where NUM_GROUPS_MIN_FACTOR * cores can yield group_counts smaller one.
   const auto group_count =
       std::max(size_t{2}, static_cast<size_t>(static_cast<float>(_worker_count) * group_count_factor));
-  // If the resulting groups are smaller then 4 tasks, skip grouping.
+  // If the resulting groups are smaller than 4 tasks, skip grouping.
   if ((task_count / group_count) < 4) {
     return std::nullopt;
   }
@@ -366,7 +366,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   for (auto task_offset = static_cast<int32_t>(task_count - 1); task_offset >= 0; --task_offset) {
     const auto& task = tasks[task_offset];
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
-      // Do not group tasks that either have precessors/successors or are ShutdownTasks.
+      // Do not group tasks that either have predecessors/successors or are ShutdownTasks.
       return;
     }
 
