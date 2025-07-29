@@ -251,7 +251,10 @@ TEST_F(KeyNormalizerTest, DebugFloats) {
 
   const auto sort_definitions =
       std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
-  auto [normalized_keys, key_size] = KeyNormalizer::convert_table(float_table, sort_definitions);
+  const auto convert_result = KeyNormalizer::convert_table(float_table, sort_definitions);
+  const auto& normalized_keys = convert_result.first;
+  const auto& key_size = convert_result.second;
+
 
   print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for -10.5f:");
   print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for   2.0f:");
@@ -285,7 +288,9 @@ TEST_F(KeyNormalizerTest, DebugSignedInts) {
 
   const auto sort_definitions =
       std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
-  auto [normalized_keys, key_size] = KeyNormalizer::convert_table(int_table, sort_definitions);
+  const auto convert_result  = KeyNormalizer::convert_table(int_table, sort_definitions);
+  const auto& normalized_keys = convert_result.first;
+  const auto& key_size = convert_result.second;
 
   print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for   5:");
   print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for  -2:");
