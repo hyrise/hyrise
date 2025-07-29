@@ -324,7 +324,9 @@ TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
       std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}},
                                         {SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast}}};
 
-  auto [normalized_keys, key_size] = KeyNormalizer::convert_table(multi_table, sort_definitions);
+  const auto convert_result = KeyNormalizer::convert_table(multi_table, sort_definitions);
+  const auto& normalized_keys = convert_result.first;
+  const auto& key_size = convert_result.second;
 
   print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for {5, 'apple'}:");
   print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for {10, 'zoo'}:");
