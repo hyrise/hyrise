@@ -160,55 +160,58 @@ void CardinalityEstimator::do_not_prune_unused_statistics() const {
 void CardinalityEstimator::assert_required_statistics(const ColumnID column_id,
                                                       const std::shared_ptr<AbstractLQPNode>& input_node,
                                                       const std::shared_ptr<const TableStatistics>& input_statistics) {
-  // Case (i): If input statistics are available, everything is fine.
   const auto& column_statistics = input_statistics->column_statistics[column_id];
   Assert(column_statistics, "Expected input statistics.");
   const auto* const is_dummy_object = dynamic_cast<const DummyStatistics*>(&*column_statistics);
 
-  // Case (ii): There might not be statistics available if the required expression is not an LQPColumnExpression.
+  // Case (i): There might not be statistics available if the required expression is not an LQPColumnExpression.
   const auto input_expression = input_node->output_expressions()[column_id];
-  const auto input_is_column = input_expression->type == ExpressionType::LQPColumn;
-
-  // Case (iii): Even for columns, original statistics might not be set (e.g., for StaticTableNode or in tests).
-  auto base_statistics_for_column = true;
-  if (input_is_column) {
-    auto base_statistics = std::shared_ptr<TableStatistics>{};
-    const auto& column_expression = static_cast<const LQPColumnExpression&>(*input_expression);
-    const auto original_node = column_expression.original_node.lock();
-    const auto original_column_id = column_expression.original_column_id;
-    Assert(original_node, "LQPColumnExpression's original node expired. LQP is invalid.");
-    switch (original_node->type) {
-      case LQPNodeType::Mock: {
-        const auto& mock_node = static_cast<const MockNode&>(*original_node);
-        base_statistics = mock_node.table_statistics();
-      } break;
-      case LQPNodeType::StaticTable:
-        base_statistics = static_cast<const StaticTableNode&>(*original_node).table->table_statistics();
-        break;
-      case LQPNodeType::StoredTable: {
-        const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
-        if (stored_table_node.table_statistics) {
-          base_statistics = stored_table_node.table_statistics;
-          break;
-        }
-
-        const auto table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
-        base_statistics = table->table_statistics();
-      } break;
-      default:
-        Fail("Unexpected orignal node for LQPColumnExpression.");
-    }
-
-    Assert(!base_statistics || base_statistics->column_statistics.size() > original_column_id,
-           "TableStatistics miss columns.");
-    base_statistics_for_column = base_statistics && base_statistics->column_statistics[original_column_id];
-  } else {
-    // Fail if we have statistics for expressions other than LQPColumnExrpessions. Thus, we notice if we add estimates
+  if (input_expression->type != ExpressionType::LQPColumn) {
+    // Fail if we have statistics for expressions other than LQPColumnExpressions. Thus, we notice if we add estimates
     // for them but forget to add assertions here.
     Assert(is_dummy_object, "There are statistics for an expression other than LQPColumnExpression. Add a check!");
+    return;
   }
 
-  Assert(!is_dummy_object || !input_is_column || !base_statistics_for_column,
+  // Case (ii): If input statistics are available, everything is fine.
+  if (!is_dummy_object) {
+    return;
+  }
+
+  // Case (iii): Even for columns, original statistics might not be set (e.g., for StaticTableNode or in tests).
+  auto base_statistics = std::shared_ptr<TableStatistics>{};
+  const auto& column_expression = static_cast<const LQPColumnExpression&>(*input_expression);
+  const auto original_node = column_expression.original_node.lock();
+  Assert(original_node, "LQPColumnExpression's original node expired. LQP is invalid.");
+  switch (original_node->type) {
+    case LQPNodeType::Mock: {
+      const auto& mock_node = static_cast<const MockNode&>(*original_node);
+      base_statistics = mock_node.table_statistics();
+    } break;
+    case LQPNodeType::StaticTable:
+      base_statistics = static_cast<const StaticTableNode&>(*original_node).table->table_statistics();
+      break;
+    case LQPNodeType::StoredTable: {
+      const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
+      if (stored_table_node.table_statistics) {
+        base_statistics = stored_table_node.table_statistics;
+        break;
+      }
+
+      const auto table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
+      base_statistics = table->table_statistics();
+    } break;
+    default:
+      Fail("Unexpected orignal node for LQPColumnExpression.");
+  }
+
+  if (!base_statistics) {
+    return;
+  }
+
+  const auto original_column_id = column_expression.original_column_id;
+  Assert(base_statistics->column_statistics.size() > original_column_id, "TableStatistics miss columns.");
+  Assert(!base_statistics->column_statistics[original_column_id],
          "Missing AttributeStatistics for required column. Have they been pruned?");
 }
 

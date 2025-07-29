@@ -1184,16 +1184,20 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   // Ensure required but pruned expressions are noticed.
   if constexpr (HYRISE_DEBUG) {
     // Because the cardinality estimator collects the required columns during estimation, we sneak in empty cached
-    // statistics. We trick the estimator to believe `node_a` was the entire LQP so it prunes all statistics and caches
-    // these completely pruned statistics for `node_a`. Any estimation that actually requires statistics should notice
-    // that statistics are missing.
+    // statistics. We trick the estimator to believe `node_a` was the entire LQP.
     estimator.guarantee_bottom_up_construction(node_a);
+
+    // Now, the cardinality estimator prunes all statistics and caches these completely pruned statistics for `node_a`.
     estimator.estimate_cardinality(node_a);
     estimator.estimate_cardinality(node_b);
+
+    // Any estimation that actually requires statistics should notice that statistics are missing.
     EXPECT_THROW(estimator.estimate_statistics(lqp), std::logic_error);
     const auto projection = lqp->left_input();
     lqp->set_left_input(node_a);
     EXPECT_THROW(estimator.estimate_statistics(lqp), std::logic_error);
+
+    // Restore the LQP and the caches.
     lqp->set_left_input(projection);
     estimator.cardinality_estimation_cache.statistics_by_lqp.reset();
     estimator.cardinality_estimation_cache.required_column_expressions.reset();
@@ -1210,10 +1214,14 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   // Estimate with caching.
   auto statistics = estimator.estimate_statistics(lqp);
   ASSERT_EQ(statistics->column_statistics.size(), 5);
+  // The first column is a computed projection `add_(a_a, 1)` that does not have statistics. It is also not required
+  // by any predicate further up in the LQP.
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[0]));
+  // Columns a_a, a_b, and b_b were required to estimate the PredicateNode and the JoinNode.
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[1]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[2]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[3]));
+  // Column b_b was not required by any predicate and, thus, was pruned.
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[4]));
 
   // After invocation, the required columns should be populated.
@@ -1368,8 +1376,9 @@ TEST_F(CardinalityEstimatorTest, AssertRequiredStatistics) {
 
 
 TEST_F(CardinalityEstimatorTest, AssertRequiredStatisticsOnComputedExpressions) {
-  // Note if statistics for other expressions than LQPColumnExpressions are present so we do not forget to add a check
-  // if we estimate them.
+  // If we have statistics for any expressions that are not simple columns (e.g., aggregates, window functions),
+  // `assert_required_statistics()` should throw an error. Thus, we notice that we added actual estimations for these
+  // cases. If we do so, we must not forget to add a check in the method.
   auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                             FrameBound{0, FrameBoundType::CurrentRow, false}};
   const auto window =
@@ -1394,7 +1403,7 @@ TEST_F(CardinalityEstimatorTest, AssertRequiredStatisticsOnComputedExpressions) 
   // The first column still is an LQPColumnExpression.
   estimator.assert_required_statistics(ColumnID{0}, lqp, statistics);
 
-  // All other column are no LQPColumnExpressions. We should notice that there are unexpected statistics.
+  // All other columns are no LQPColumnExpressions. We should notice that there are unexpected statistics.
   for (auto column_id = ColumnID{1}; column_id < column_count; ++column_id) {
     EXPECT_THROW(estimator.assert_required_statistics(column_id, lqp, statistics), std::logic_error)
         << " ColumnID: " << column_id << ", " << magic_enum::enum_name(output_expressions[column_id]->type)
