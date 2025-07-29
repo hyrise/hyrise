@@ -50,6 +50,7 @@ class UidAllocator;
  */
 class NodeQueueScheduler final : public AbstractScheduler {
   friend class SchedulerTest;
+  friend class StressTest;
 
  public:
   NodeQueueScheduler();
@@ -104,7 +105,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
    * @param tasks: list of tasks to group
    */
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
-  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count) const;
+  static void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count);
 
   /**
    * @param task

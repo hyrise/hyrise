@@ -52,6 +52,14 @@ class StressTest : public BaseTest {
 
   const std::vector<std::vector<uint32_t>> FAKE_MULTI_NODE_NUMA_TOPOLOGIES = {
       {CPU_COUNT, CPU_COUNT, 0, 0}, {0, CPU_COUNT, CPU_COUNT, 0}, {0, 0, CPU_COUNT, CPU_COUNT}};
+
+  // Used to access protected friend members of scheduler.
+  static void group_and_schedule_tasks(const std::shared_ptr<NodeQueueScheduler>& node_queue_scheduler,
+                                       const std::vector<std::shared_ptr<AbstractTask>>& tasks,
+                                       const size_t group_count) {
+    node_queue_scheduler->_group_tasks(tasks, group_count);
+    node_queue_scheduler->_schedule_tasks(tasks);
+  }
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
@@ -468,49 +476,34 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto worker_count = node_queue_scheduler->workers().size();
-  // if (worker_count < NodeQueueScheduler::NUM_GROUPS) {
-  if (worker_count < 10) {
-    // We would not see any impact of task grouping with too few workers.
+  if (worker_count < 16) {
+    // Stress test expects a somewhat bigger machine.
     GTEST_SKIP();
   }
 
-  auto NodeQueueScheduler_NUM_GROUPS = size_t{10};
-
-  const auto multiplier = 1'000;
+  const auto multiplier = 5'000;
   const auto task_count = multiplier * worker_count;
 
-  for (auto run = uint8_t{0}; run < 10; ++run) {
-    auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler_NUM_GROUPS, 0);
-    auto output_counter = std::atomic<size_t>{0};
-    auto concurrently_processed_tasks = std::atomic<int64_t>{0};
+  for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
+   auto output_counter = std::atomic<size_t>{0};
+   auto concurrently_processed_groups = std::atomic<int64_t>{0};
 
-    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
-    for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
-      tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
-        ++output_counter;
-        const auto active_groups = ++concurrently_processed_tasks;
-        ASSERT_LE(active_groups, NodeQueueScheduler_NUM_GROUPS);
+   for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+     tasks.emplace_back(std::make_shared<JobTask>([&] {
+       ++output_counter;
+       const auto active_groups = ++concurrently_processed_groups;
+       ASSERT_LE(active_groups, group_count);
+       --concurrently_processed_groups;
+     }));
+   }
 
-        const auto group_id = task_id % NodeQueueScheduler_NUM_GROUPS;
-        const auto prev_task_id = previous_task_id_per_group[group_id];
-        if (prev_task_id > 0) {
-          // Once the first task of each group has been executed, we check the previous TaskID of the group to verify
-          // that grouping execution happens in the expected round-robin order (see
-          // `void NodeQueueScheduler::_group_tasks()`).
-          EXPECT_EQ(prev_task_id + NodeQueueScheduler_NUM_GROUPS, task_id);
-        }
-        previous_task_id_per_group[group_id] = task_id;
+   group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
+   node_queue_scheduler->wait_for_tasks(tasks);
 
-        --concurrently_processed_tasks;
-      }));
-    }
-
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-    EXPECT_EQ(output_counter, task_count);
+   EXPECT_EQ(output_counter, task_count);
   }
-
-  Hyrise::get().scheduler()->finish();
 }
 
 TEST_F(StressTest, AtomicMaxConcurrentUpdate) {

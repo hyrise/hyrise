@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -17,7 +16,6 @@
 
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
-#include "job_task.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
 #include "types.hpp"
@@ -341,7 +339,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks,
-                                      const size_t group_count) const {
+                                      const size_t group_count) {
   // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
   // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
   // concurrently. The current value has been found with a divining rod.
