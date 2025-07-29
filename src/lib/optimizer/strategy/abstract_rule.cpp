@@ -9,9 +9,18 @@
 
 namespace hyrise {
 
-IsCacheable AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const {
+void OptimizationContext::set_not_cacheable() {
+  _is_cacheable = false;
+}
+
+bool OptimizationContext::is_cacheable() const {
+  return _is_cacheable;
+}
+
+void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root,
+                                 OptimizationContext& optimization_context) const {
   // (1) Optimize root LQP.
-  auto cacheable = _apply_to_plan_without_subqueries(lqp_root);
+  _apply_to_plan_without_subqueries(lqp_root, optimization_context);
 
   // (2) Optimize distinct subquery LQPs, one-by-one.
   const auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(lqp_root);
@@ -24,7 +33,7 @@ IsCacheable AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
 
     // (2.1) Optimize subplan.
     const auto local_lqp_root = LogicalPlanRootNode::make(lqp);
-    cacheable = cacheable && _apply_to_plan_without_subqueries(local_lqp_root);
+    _apply_to_plan_without_subqueries(local_lqp_root, optimization_context);
 
     // (2.2) Assign optimized subplan to all corresponding SubqueryExpressions.
     for (const auto& subquery_expression : subquery_expressions) {
@@ -34,8 +43,6 @@ IsCacheable AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
     // (2.3) Untie the root node before it goes out of scope so that the outputs of the LQP remain correct.
     local_lqp_root->set_left_input(nullptr);
   }
-
-  return cacheable;
 }
 
 }  // namespace hyrise

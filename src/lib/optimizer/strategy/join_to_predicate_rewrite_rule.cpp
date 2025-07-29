@@ -26,7 +26,7 @@ using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 void gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
     std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables,
-    IsCacheable& cacheable) {  // NOLINT(misc-unused-parameters)
+    OptimizationContext& optimization_context) {  // NOLINT(misc-unused-parameters)
   const auto prunable_side = join_node->prunable_input_side();
   if (!prunable_side) {
     return;
@@ -163,16 +163,15 @@ std::string JoinToPredicateRewriteRule::name() const {
   return name;
 }
 
-IsCacheable JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                   OptimizationContext& optimization_context) const {
   // `rewritables finally contains all rewritable join nodes, their unused input side, and the predicates to be used for
   // the rewrites.
   auto rewritables = std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>{};
-  auto cacheable = IsCacheable::Yes;
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
-      gather_rewrite_info(join_node, rewritables, cacheable);
+      gather_rewrite_info(join_node, rewritables, optimization_context);
     }
     return LQPVisitation::VisitInputs;
   });
@@ -180,8 +179,6 @@ IsCacheable JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
   for (const auto& [join_node, prunable_side, rewrite_predicate] : rewritables) {
     perform_rewrite(join_node, prunable_side, rewrite_predicate);
   }
-
-  return cacheable;
 }
 
 }  // namespace hyrise

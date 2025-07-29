@@ -22,8 +22,8 @@ std::string JoinPredicateOrderingRule::name() const {
   return name;
 }
 
-IsCacheable JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                  OptimizationContext& /*optimization_context*/) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     // Check if this is a multi predicate join.
     if (node->type != LQPNodeType::Join || node->node_expressions.size() <= 1) {
@@ -73,8 +73,6 @@ IsCacheable JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
-
-  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

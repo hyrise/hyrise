@@ -79,8 +79,8 @@ std::string DependentGroupByReductionRule::name() const {
   return name;
 }
 
-IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root, OptimizationContext& /*optimization_context*/) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
@@ -194,7 +194,6 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
-  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

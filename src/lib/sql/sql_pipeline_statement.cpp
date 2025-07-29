@@ -131,7 +131,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached output_expressions)
         // and concurrent translations might conflict.
         // Note that the plan we have received here was cached, so it is obviously cacheable.
-        _optimized_logical_plan = {plan->deep_copy(), IsCacheable::Yes};
+        _optimized_logical_plan = {plan->deep_copy(), OptimizationContext{}};
         return _optimized_logical_plan.first;
       }
     }
@@ -155,7 +155,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache && _translation_info.cacheable && _optimized_logical_plan.second == IsCacheable::Yes) {
+  if (lqp_cache && _translation_info.cacheable && _optimized_logical_plan.second.is_cacheable()) {
     lqp_cache->set(_sql_string, _optimized_logical_plan.first);
   }
 
@@ -206,7 +206,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   // Cache newly created plan for the according sql statement (only if not already cached).
   if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable &&
-      _optimized_logical_plan.second == IsCacheable::Yes) {
+      _optimized_logical_plan.second.is_cacheable()) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 

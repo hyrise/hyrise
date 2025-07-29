@@ -26,7 +26,8 @@ class PredicatePlacementRule : public AbstractRule {
   std::string name() const override;
 
  protected:
-  IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 
  private:
   // Traverse the LQP and perform push downs of predicates.

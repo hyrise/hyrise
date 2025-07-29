@@ -64,11 +64,13 @@ namespace hyrise {
 
 class StoredTableColumnAlignmentRule : public AbstractRule {
  public:
-  IsCacheable apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node) const override;
+  void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node,
+                     OptimizationContext& optimization_context) const override;
   std::string name() const override;
 
  protected:
-  IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/,
+                                         OptimizationContext& /*optimization_context*/) const override;
 };
 
 }  // namespace hyrise

@@ -87,7 +87,8 @@ std::string IndexScanRule::name() const {
   return name;
 }
 
-IsCacheable IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                      OptimizationContext& /*optimization_context*/) const {
   DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set.");
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
@@ -110,8 +111,6 @@ IsCacheable IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_p
 
     return LQPVisitation::VisitInputs;
   });
-
-  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

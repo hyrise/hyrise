@@ -107,6 +107,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     s_nationkey = supplier->get_column("nationkey");
 
     _rule = std::make_shared<SubqueryToJoinRule>();
+    _optimization_context = OptimizationContext{};
   }
 
   std::shared_ptr<SubqueryToJoinRule> _rule;
@@ -799,8 +800,9 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
       node_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -827,8 +829,9 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToSemiJoin) {
       node_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -854,8 +857,9 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsToSemiJoin) {
     node_b);
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -884,8 +888,9 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsWithAlias) {
       node_e)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -916,8 +921,9 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedExistsToSemiJoin) {
       node_e));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -946,8 +952,9 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
       node_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -982,8 +989,9 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
           node_c))));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1008,8 +1016,9 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNotInToAntiJoin) {
       node_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1042,8 +1051,9 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
       node_e));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1070,8 +1080,9 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedComparatorToSemiJoin) {
       node_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1099,8 +1110,9 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedComparatorToSemiJoin) {
       node_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1133,8 +1145,9 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
       node_e));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1159,7 +1172,9 @@ TEST_F(SubqueryToJoinRuleTest, MultipliedCorrelatedComparatorToSemiJoin) {
         AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
           node_b)));
 
-_apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -1182,7 +1197,9 @@ _apply_rule(_rule, _lqp);
         AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
           node_b)));
 
-_apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -1205,7 +1222,9 @@ _apply_rule(_rule, _lqp);
         AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
           node_b)));
 
-_apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -1228,7 +1247,9 @@ _apply_rule(_rule, _lqp);
         AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
           node_b)));
 
-_apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   // clang-format on
@@ -1261,8 +1282,9 @@ TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredic
         node_e)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1313,8 +1335,9 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH17) {
                 lineitem)))))));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1396,8 +1419,9 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
             nation)))));
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1424,8 +1448,9 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfOr) {
   const auto expected_lqp = _lqp->deep_copy();
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1440,8 +1465,9 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
   const auto expected_lqp = _lqp->deep_copy();
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1463,8 +1489,9 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
     const auto expected_lqp = _lqp->deep_copy();
     // clang-format on
 
-    _apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp, _optimization_context);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -1489,8 +1516,9 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNotIn) {
   const auto expected_lqp = _lqp->deep_copy();
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1514,8 +1542,9 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
   const auto expected_lqp = _lqp->deep_copy();
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1553,14 +1582,14 @@ TEST_F(SubqueryToJoinRuleTest, ComplexArithmeticExpression) {
     node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _lqp, _optimization_context);
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(SubqueryToJoinRuleTest, CheckCacheability) {
   auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(in_(a_a, list_(1, 2, 3)), node_a));
-  const auto is_cacheable = _apply_rule(_rule, input_lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
+  _apply_rule(_rule, input_lqp, _optimization_context);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 
 }  // namespace hyrise

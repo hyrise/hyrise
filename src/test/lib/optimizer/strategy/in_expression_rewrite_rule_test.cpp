@@ -17,6 +17,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
     rule = std::make_shared<InExpressionRewriteRule>();
+    _optimization_context = OptimizationContext{};
 
     // col_a has 1000 entries across 200 values linearly distributed between 1 and 200
     node = create_mock_node_with_statistics(
@@ -122,28 +123,36 @@ TEST_F(InExpressionRewriteRuleTest, ExpressionEvaluatorStrategy) {
   {
     _lqp = PredicateNode::make(single_element_in_expression, node);
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     _lqp = PredicateNode::make(five_element_in_expression, node);
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     _lqp = PredicateNode::make(five_element_not_in_expression, node);
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     _lqp = PredicateNode::make(hundred_element_in_expression, node);
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -153,56 +162,63 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
 
   {
     _lqp = PredicateNode::make(single_element_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
     const auto expected_lqp = PredicateNode::make(equals_(col_a, 1), node);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     _lqp = PredicateNode::make(five_element_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_TRUE(check_disjunction(_lqp, col_a, {1, 2, 3, 4, 5}));
   }
 
   {
     _lqp = PredicateNode::make(five_element_not_in_expression, node);
-    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
+    EXPECT_THROW(_apply_rule(rule, _lqp, _optimization_context), std::logic_error);
   }
 
   {
     _lqp = PredicateNode::make(duplicate_element_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
     // clang-format off
     const auto expected_lqp =
       UnionNode::make(SetOperationMode::All,
         PredicateNode::make(equals_(col_a, 2), node),
         PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     _lqp = PredicateNode::make(different_types_on_left_and_right_side_expression, node);
-    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
+    EXPECT_THROW(_apply_rule(rule, _lqp, _optimization_context), std::logic_error);
   }
 
   {
     _lqp = PredicateNode::make(different_types_on_right_side_expression, node);
-    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
+    EXPECT_THROW(_apply_rule(rule, _lqp, _optimization_context), std::logic_error);
   }
 
   {
     // Generally, we could get the rule to throw out predicates that compare to NULL, but since those queries are
     // stupid anyway, we don't write the additional code. Test that it does not break:
     _lqp = PredicateNode::make(null_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
     // clang-format off
     const auto expected_lqp =
       UnionNode::make(SetOperationMode::All,
         PredicateNode::make(equals_(col_a, NULL_VALUE), node),
         PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -212,7 +228,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
 
   {
     _lqp = PredicateNode::make(single_element_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -221,13 +237,14 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
 
   {
     _lqp = PredicateNode::make(five_element_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -240,13 +257,14 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
 
   {
     _lqp = PredicateNode::make(five_element_not_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -260,6 +278,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto expected_lqp =
         JoinNode::make(JoinMode::AntiNullAsTrue, equals_(col_a, right_col), node, static_table_node);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
@@ -269,17 +288,17 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
 
   {
     _lqp = PredicateNode::make(different_types_on_left_and_right_side_expression, node);
-    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
+    EXPECT_THROW(_apply_rule(rule, _lqp, _optimization_context), std::logic_error);
   }
 
   {
     _lqp = PredicateNode::make(different_types_on_right_side_expression, node);
-    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
+    EXPECT_THROW(_apply_rule(rule, _lqp, _optimization_context), std::logic_error);
   }
 
   {
     _lqp = PredicateNode::make(null_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -288,6 +307,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
@@ -299,8 +319,10 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   {
     // Disjunction for single element.
     _lqp = PredicateNode::make(single_element_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
     const auto expected_lqp = PredicateNode::make(equals_(col_a, 1), node);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
 
     EXPECT_DOUBLE_EQ(cardinality_estimator.estimate_cardinality(_lqp), 1000.0 / 200 * 1);
@@ -310,7 +332,9 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     // ExpressionEvaluator for five elements.
     _lqp = PredicateNode::make(five_element_in_expression, node);
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
 
     // No cardinality check here, as an IN expression with 5 elements will not be touched (see
@@ -322,14 +346,16 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     // ExpressionEvaluator for differing types.
     _lqp = PredicateNode::make(different_types_on_right_side_expression, node);
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     // Join for 100 elements.
     _lqp = PredicateNode::make(hundred_element_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -340,6 +366,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
 
@@ -349,7 +376,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   {
     // Join for 100 elements even if table is large.
     _lqp = PredicateNode::make(hundred_element_in_expression_large_input, many_row_node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -361,6 +388,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto expected_lqp =
         JoinNode::make(JoinMode::Semi, equals_(col_large, right_col), many_row_node, static_table_node);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
@@ -368,21 +396,24 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   {
     // Disjunction for two elements, even if one is NULL.
     _lqp = PredicateNode::make(null_in_expression, node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
     // clang-format off
     const auto expected_lqp =
     UnionNode::make(SetOperationMode::All,
       PredicateNode::make(equals_(col_a, NULL_VALUE), node),
       PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     // Disjunction for five elements, if table is large.
     _lqp = PredicateNode::make(in_(col_large, list_(1, 2, 3, 4, 5)), many_row_node);
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_TRUE(check_disjunction(_lqp, col_large, {1, 2, 3, 4, 5}));
   }
 
@@ -390,8 +421,9 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     // ExpressionEvaluator, despite table is large and elements below threshold if FunctionExpression contained.
     _lqp = PredicateNode::make(two_element_functional_in_expression, many_row_node);
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp);
+    _apply_rule(rule, _lqp, _optimization_context);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -400,7 +432,7 @@ TEST_F(InExpressionRewriteRuleTest, CheckCacheability) {
   auto rule = std::make_shared<InExpressionRewriteRule>();
   rule->strategy = InExpressionRewriteRule::Strategy::ExpressionEvaluator;
   auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(single_element_in_expression, node));
-  const auto is_cacheable = _apply_rule(rule, input_lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
+  _apply_rule(rule, input_lqp, _optimization_context);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 }  // namespace hyrise

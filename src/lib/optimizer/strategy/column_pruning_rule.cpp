@@ -328,8 +328,8 @@ std::string ColumnPruningRule::name() const {
   return name;
 }
 
-IsCacheable ColumnPruningRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                          OptimizationContext& /*optimization_context*/) const {
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its
   // successors (i.e., nodes to which this node is an input). After collecting this information, we walk through all
   // identified nodes and perform the pruning.
@@ -393,8 +393,6 @@ IsCacheable ColumnPruningRule::_apply_to_plan_without_subqueries(
         break;  // Node cannot be pruned
     }
   }
-
-  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

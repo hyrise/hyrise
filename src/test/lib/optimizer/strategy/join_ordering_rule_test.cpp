@@ -23,6 +23,7 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     rule = std::make_shared<JoinOrderingRule>();
+    _optimization_context = OptimizationContext{};
 
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
@@ -62,7 +63,7 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
               node_d,
               node_c))))));
 
-  _apply_rule(rule, _lqp);
+  _apply_rule(rule, _lqp, _optimization_context);
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
@@ -75,6 +76,7 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
       node_a));
   // clang-format on
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -88,8 +90,8 @@ TEST_F(JoinOrderingRuleTest, CheckCacheability) {
                                         PredicateNode::make(equals_(d_d, c_c),
                                                             JoinNode::make(JoinMode::Cross, node_d, node_c)))))));
 
-  const auto is_cacheable = _apply_rule(rule, input_lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
+  _apply_rule(rule, input_lqp, _optimization_context);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 
 }  // namespace hyrise

@@ -86,8 +86,8 @@ std::string JoinOrderingRule::name() const {
   return name;
 }
 
-IsCacheable JoinOrderingRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                         OptimizationContext& /*optimization_context*/) const {
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set.");
 
   /**
@@ -107,8 +107,6 @@ IsCacheable JoinOrderingRule::_apply_to_plan_without_subqueries(
   }
 
   lqp_root->set_left_input(result_lqp);
-
-  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

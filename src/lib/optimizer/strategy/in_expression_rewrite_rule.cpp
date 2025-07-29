@@ -122,11 +122,11 @@ std::string InExpressionRewriteRule::name() const {
   return name;
 }
 
-IsCacheable InExpressionRewriteRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void InExpressionRewriteRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                OptimizationContext& /*optimization_context*/) const {
   if (strategy == Strategy::ExpressionEvaluator) {
     // This is the default anyway, i.e., what the SQLTranslator gave us
-    return IsCacheable::Yes;
+    return;
   }
 
   const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
@@ -199,8 +199,6 @@ IsCacheable InExpressionRewriteRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
-
-  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

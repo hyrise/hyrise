@@ -177,8 +177,8 @@ std::string PredicateReorderingRule::name() const {
   return name;
 }
 
-IsCacheable PredicateReorderingRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void PredicateReorderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                OptimizationContext& /*optimization_context*/) const {
   // We reorder recursively from leaves to root. Thus, the CardinalityEstimator may cache already estimated statistics.
   const auto caching_cost_estimator = cost_estimator->new_instance();
   caching_cost_estimator->cardinality_estimator->guarantee_bottom_up_construction();
@@ -186,8 +186,6 @@ IsCacheable PredicateReorderingRule::_apply_to_plan_without_subqueries(
   // We keep track of visited nodes, so that this rule touches nodes once only.
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   reorder_predicates_recursively(lqp_root, caching_cost_estimator, visited_nodes);
-
-  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

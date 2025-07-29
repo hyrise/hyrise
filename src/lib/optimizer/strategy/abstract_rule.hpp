@@ -11,11 +11,22 @@ class AbstractLQPNode;
 class LogicalPlanRootNode;
 class LQPSubqueryExpression;
 
-enum class IsCacheable : bool { Yes = true, No = false };
+/**
+ * OptimizationContext is used to track metadata about the optimization process / resulting LQP. Currently, it only
+ * tracks whether the resulting LQP is cacheable or not. If it is not cacheable, the SQLPipeline will not cache the
+ * optimized LQP.
+ */
+class OptimizationContext {
+ public:
+  OptimizationContext() = default;
 
-constexpr IsCacheable operator&&(IsCacheable lhs, IsCacheable rhs) {
-  return lhs == IsCacheable::Yes && rhs == IsCacheable::Yes ? IsCacheable::Yes : IsCacheable::No;
-}
+  void set_not_cacheable();
+
+  bool is_cacheable() const;
+
+ private:
+  bool _is_cacheable{true};  // Indicates whether the optimizer can cache the optimized LQP.
+};
 
 class AbstractRule {
  public:
@@ -41,13 +52,11 @@ class AbstractRule {
    *      !!!
    *
    * Rules can define their own strategy of optimizing subquery LQPs by overriding this function. See, for example, the
-   * StoredTableColumnAlignmentRule.
-   *
-   * @return Whether the resulting optimized LQP can be cached by the optimizer. A plan may only be cached if the root
-   *    LQP and all subquery LQPs are cacheable. An optimized plan might be not cacheable for example if we used a UCC
-   *    for optimization of which we cannot be sure that it will still be valid the next time the same query occurs.
+   * StoredTableColumnAlignmentRule. A rule is also obliged to modify the OptimizationContext in case it changes the
+   * cacheability of the LQP.
    */
-  virtual IsCacheable apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const;
+  virtual void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root,
+                             OptimizationContext& optimization_context) const;
 
   virtual std::string name() const = 0;
 
@@ -67,7 +76,8 @@ class AbstractRule {
    *    cacheable for example if we used a UCC for optimization of which we cannot be sure that it will still be valid
    *    the next time the same query comes around.
    */
-  virtual IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const = 0;
+  virtual void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                 OptimizationContext& optimization_context) const = 0;
 };
 
 }  // namespace hyrise

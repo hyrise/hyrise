@@ -43,7 +43,7 @@ class Optimizer final {
    * Returns optimized version of @param input LQP and whether the result is safe to cache.
    * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
    */
-  std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable> optimize(
+  std::pair<std::shared_ptr<AbstractLQPNode>, OptimizationContext> optimize(
       std::shared_ptr<AbstractLQPNode> input,
       const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
 
