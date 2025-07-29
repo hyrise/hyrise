@@ -689,11 +689,17 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // Set the sorted_by attribute of the output's chunks according to the most significant sort operation, which is the
   // column the table was sorted by last.
   const auto output_chunk_count = sorted_table->chunk_count();
+  auto write_output_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  write_output_jobs.reserve(static_cast<size_t>(output_chunk_count));
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
-    const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
-    output_chunk->set_immutable();
-    output_chunk->set_individually_sorted_by(final_sort_definition);
+    write_output_jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id] {
+      const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
+      output_chunk->set_immutable();
+      output_chunk->set_individually_sorted_by(final_sort_definition);
+    }));
   }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(write_output_jobs);
 
   auto write_output_time = timer.lap();
   step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, write_output_time);
