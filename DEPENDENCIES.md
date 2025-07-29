@@ -5,9 +5,9 @@
 | autoconf                  | 2.69             |    All   |                                     No |
 | bc                        | any              |    All   |                   Yes (coverage in CI) |
 | boost                     | 1.81.0           |    All   |                                     No |
-| clang                     | 17.0             |    All   |                  Yes, if gcc installed |
-| clang-format              | 17.0             |    All   |                       Yes (formatting) |
-| clang-tidy                | 17.0             |    All   |                          Yes (linting) |
+| clang                     | 19.0             |    All   |                  Yes, if gcc installed |
+| clang-format              | 19.0             |    All   |                       Yes (formatting) |
+| clang-tidy                | 19.0             |    All   |                          Yes (linting) |
 | coreutils                 | any              |    Mac   |                          Yes (scripts) |
 | cmake                     | 3.18             |    All   |                                     No |
 | dos2unix                  | any              |    All   |                          Yes (linting) |
