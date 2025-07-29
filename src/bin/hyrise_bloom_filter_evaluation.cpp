@@ -32,7 +32,7 @@ std::vector<double> distinctivenesses = {0.01, 0.5, 1.0, 2.0};
 std::vector<double> overlaps = {0.0, 0.25, 0.5, 0.75, 1.0};
 uint8_t hash_functions = 4; // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
 uint16_t min_runs = 10;
-uint16_t max_runs = 1;
+uint16_t max_runs = 2000;
 int64_t min_time_ns = 30'000'000'000;
 
 struct BenchmarkResult {
