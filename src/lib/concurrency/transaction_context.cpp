@@ -138,12 +138,11 @@ void TransactionContext::_mark_as_conflicted() {
 }
 
 void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
-  DebugAssert(([this]() {
-                return std::ranges::all_of(_read_write_operators, [](const auto& op) {
-                  return op->state() == ReadWriteOperatorState::RolledBack;
-                });
-              }()),
-              "All read/write operators need to have been rolled back.");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& op : _read_write_operators) {
+      Assert(op->state() == ReadWriteOperatorState::RolledBack, "All read/write operators must have been rolled back.");
+    }
+  }
 
   if (rollback_reason == RollbackReason::User) {
     _transition(TransactionPhase::Active, TransactionPhase::RolledBackByUser);

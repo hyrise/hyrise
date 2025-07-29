@@ -48,6 +48,7 @@ void Pagination::display() {
   _print_page(current_line, current_column);
 
   auto key_pressed = int{};
+  // `std::cmp_not_equal` ensures correct comparisons of negative signed and unsigned integers.
   while ((key_pressed = getch()) != 'q' && std::cmp_not_equal(key_pressed, CURSES_CTRL_C)) {
     switch (key_pressed) {
       case 'j':

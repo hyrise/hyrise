@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -20,7 +19,6 @@
 #include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
 #include "tpch/tpch_constants.hpp"
-#include "tpch_constants.hpp"
 
 extern "C" {
 #include "tpch_dbgen.h"
@@ -57,11 +55,9 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _scale_factor(scale_factor),
       _clustering_configuration(clustering_configuration),
       _items(items) {
-  Assert(std::ranges::all_of(_items,
-                             [&](const auto benchmark_item_id) {
-                               return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;
-                             }),
-         "Invalid TPC-H item ID.");
+  for (const auto& benchmark_item_id : _items) {
+    Assert(benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22, "Invalid TPC-H item ID.");
+  }
 }
 
 const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const {
@@ -137,7 +133,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       std::vector{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34};
 
   // Random distributions for all strings defined by the TPC-H benchmark. Each query in Chapter 2.4 has a
-  // "Substition Parameters" section. For example, 2.4.1.3 states "DELTA is randomly selected within [60. 120]."
+  // "Substitution Parameters" section. For example, 2.4.1.3 states "DELTA is randomly selected within [60. 120]."
   // For other generation rules, check section 2.4.[query-id].3
   //
   // uniform_int_distributions should not be modified when they are used, but because we have no explicit thread safety
@@ -157,7 +153,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
   auto parameters = std::vector<std::string>{};
 
   switch (item_id) {
-    // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
+    // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not.
     case 1 - 1: {  // NOLINT(misc-redundant-expression)
       auto date_diff_dist = std::uniform_int_distribution<>{60, 120};
       const auto date =
@@ -381,7 +377,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto partial_type = std::string(full_type, 0, full_type.find_last_of(' '));
 
       auto sizes_copy = sizes;
-      std::shuffle(sizes_copy.begin(), sizes_copy.end(), random_engine);
+      std::ranges::shuffle(sizes_copy, random_engine);
 
       parameters.emplace_back("'Brand#" + std::to_string(brand) + "'");
       parameters.emplace_back("'" + partial_type + "%'");
@@ -456,7 +452,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
     case 22 - 1: {
       auto country_codes_copy = country_codes;
-      std::shuffle(country_codes_copy.begin(), country_codes_copy.end(), random_engine);
+      std::ranges::shuffle(country_codes_copy, random_engine);
 
       // We need the same country code twice - have a look at the query
       for (auto parameter_index = size_t{0}; parameter_index < 7; ++parameter_index) {
@@ -475,7 +471,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
   return _substitute_placeholders(item_id, parameters);
 }  // NOLINT
 
-std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkItemID item_id) {
+std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkItemID item_id) const {
   DebugAssert(item_id < 22, "There are only 22 TPC-H queries.");
 
   if (item_id + 1 == 15) {

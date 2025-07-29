@@ -47,10 +47,11 @@
 namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-/*
-The following template functions write the aggregated values for the different aggregate functions.
-They are separate and templated to avoid compiler errors for invalid type/function combinations.
-*/
+/**
+ * The following template functions write the aggregated values for the different aggregate functions. They are separate
+ * and templated to avoid compiler errors for invalid type/function combinations.
+ */
+
 // MIN, MAX, SUM, ANY write the current aggregated value.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::Min || aggregate_func == WindowFunction::Max ||

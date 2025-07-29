@@ -24,7 +24,6 @@ extern "C" {
 #include "storage/constraints/constraint_utils.hpp"
 #include "table_builder.hpp"
 #include "tpch/tpch_constants.hpp"
-#include "tpch_constants.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

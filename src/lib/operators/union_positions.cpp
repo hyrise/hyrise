@@ -94,7 +94,6 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   }
 
   const auto& left_in_table = *left_input_table();
-  const auto left_in_table_column_count = left_in_table.column_count();
 
   /**
    * For each input, create a ReferenceMatrix
@@ -156,10 +155,18 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   const auto pos_list_count = pos_lists.size();
 
+  // Adds the row `row_idx` from `reference_matrix` to the pos_lists we are currently building.
+  const auto emit_row = [&](const ReferenceMatrix& reference_matrix, size_t row_idx) {
+    for (auto pos_list_idx = size_t{0}; pos_list_idx < pos_list_count; ++pos_list_idx) {
+      pos_lists[pos_list_idx]->emplace_back(reference_matrix[pos_list_idx][row_idx]);
+    }
+  };
+
   // Turn `pos_lists` into a new chunk and append it to the table.
   const auto emit_chunk = [&]() {
     auto output_segments = Segments{};
 
+    const auto left_in_table_column_count = left_in_table.column_count();
     for (auto pos_lists_idx = size_t{0}; pos_lists_idx < pos_list_count; ++pos_lists_idx) {
       const auto cluster_column_id_begin = _column_cluster_offsets[pos_lists_idx];
       const auto cluster_column_id_end = pos_lists_idx >= _column_cluster_offsets.size() - 1
@@ -176,22 +183,13 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     out_table->append_chunk(output_segments);
   };
 
+  auto chunk_row_idx = size_t{0};
+
   /**
    * This loop merges reference_matrix_left and reference_matrix_right into the result table. The implementation is
    * derived from std::set_union() and only differs from it insofar as that it builds the output table at the same
    * time as merging the two ReferenceMatrices
    */
-
-  const auto out_chunk_size = Chunk::DEFAULT_SIZE;
-
-  // Adds the row `row_idx` from `reference_matrix` to the pos_lists we are currently building.
-  const auto emit_row = [&](const ReferenceMatrix& reference_matrix, size_t row_idx) {
-    for (auto pos_list_idx = size_t{0}; pos_list_idx < pos_list_count; ++pos_list_idx) {
-      pos_lists[pos_list_idx]->emplace_back(reference_matrix[pos_list_idx][row_idx]);
-    }
-  };
-
-  auto chunk_row_idx = size_t{0};
   for (; left_idx < num_rows_left || right_idx < num_rows_right;) {
     /**
      * Begin derived from std::union()
@@ -221,8 +219,9 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
      */
 
     /**
-     * Emit a completed chunk
+     * Emit a completed chunk.
      */
+    const auto out_chunk_size = Chunk::DEFAULT_SIZE;
     if (chunk_row_idx == out_chunk_size && out_chunk_size != 0) {
       emit_chunk();
 
@@ -266,7 +265,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the ColumnClusters (verification that this is the same for all chunks happens in the
-   * `if constexpr HYRISE_DEBUG` block below).
+   * `if constexpr (HYRISE_DEBUG)` block below).
    */
   const auto add = [&](const auto& table) {
     const auto column_count = table->column_count();
@@ -292,7 +291,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the tables referenced in each ColumnCluster (verification that this is the same for all chunks happens
-   * in the `if constexpr HYRISE_DEBUG` block below).
+   * in the `if constexpr (HYRISE_DEBUG)` block below).
    */
   const auto first_chunk_left = left_input_table()->get_chunk(ChunkID{0});
   for (const auto& cluster_begin : _column_cluster_offsets) {
@@ -303,7 +302,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the column_ids referenced by each column (verification that this is the same for all chunks happens
-   * in the `if constexpr HYRISE_DEBUG` block below).
+   * in the `if constexpr (HYRISE_DEBUG)` block below).
    */
   for (auto column_id = ColumnID{0}; column_id < left_input_table()->column_count(); ++column_id) {
     const auto segment = first_chunk_left->get_segment(column_id);
@@ -317,7 +316,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
      * segments in the first chunk of the left input table reference
      */
     const auto verify_column_clusters_in_all_chunks = [&](const auto& table) {
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto current_pos_list = std::shared_ptr<const AbstractPosList>();
         auto next_cluster_id = size_t{0};
         const auto chunk = table->get_chunk(chunk_id);
@@ -366,7 +366,7 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
     pos_list.reserve(input_table->row_count());
   }
 
-  auto chunk_count = input_table->chunk_count();
+  const auto chunk_count = input_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = input_table->get_chunk(ChunkID{chunk_id});
 
