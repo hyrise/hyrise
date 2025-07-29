@@ -65,6 +65,57 @@ k_impact_per_hash_df = raw_df.groupby(['hash_function', 'k'])['filter_rate'].agg
 # Add hash function names to the per-hash-function result
 k_impact_per_hash_df['hash_function'] = k_impact_per_hash_df['hash_function'].map(hash_function_names)
 
+# Compute global aggregated stats
+global_aggregated_df = raw_df['filter_rate'].agg(
+    mean_filter_rate='mean',
+    squared_mean_filter_rate=lambda x: ((x**2).mean())**0.5,
+    min_filter_rate='min',
+    max_filter_rate='max'
+)
+
+# Compute aggregated stats per filter size
+filter_size_aggregated_df = raw_df.groupby('filter_size')['filter_rate'].agg(
+    mean_filter_rate='mean',
+    squared_mean_filter_rate=lambda x: ((x**2).mean())**0.5,
+    min_filter_rate='min',
+    max_filter_rate='max'
+).reset_index()
+
+# Compute stats per filter size and hash function
+filter_size_hash_df = raw_df.groupby(['filter_size', 'hash_function'])['filter_rate'].agg(
+    mean_filter_rate='mean',
+    squared_mean_filter_rate=lambda x: ((x**2).mean())**0.5,
+    min_filter_rate='min',
+    max_filter_rate='max'
+).reset_index()
+
+# Add hash function names to the result
+filter_size_hash_df['hash_function'] = filter_size_hash_df['hash_function'].map(hash_function_names)
+
+# Compute stats per filter size and k
+filter_size_k_df = raw_df.groupby(['filter_size', 'k'])['filter_rate'].agg(
+    mean_filter_rate='mean',
+    squared_mean_filter_rate=lambda x: ((x**2).mean())**0.5,
+    min_filter_rate='min',
+    max_filter_rate='max'
+).reset_index()
+
+# Compute stats per filter size, hash function, and k
+filter_size_hash_k_df = raw_df.groupby(['filter_size', 'hash_function', 'k'])['filter_rate'].agg(
+    mean_filter_rate='mean',
+    squared_mean_filter_rate=lambda x: ((x**2).mean())**0.5,
+    min_filter_rate='min',
+    max_filter_rate='max'
+).reset_index()
+
+# Add hash function names to the result
+filter_size_hash_k_df['hash_function'] = filter_size_hash_k_df['hash_function'].map(hash_function_names)
+
+# Ensure full DataFrame display for large outputs
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+
 # Print results
 print("Aggregated filter rate stats per hash function:")
 print(aggregated_df)
@@ -72,4 +123,21 @@ print("\nImpact of k on filter rate (overall):")
 print(k_impact_overall_df)
 print("\nImpact of k on filter rate (per hash function):")
 print(k_impact_per_hash_df)
+
+# Print global results
+print("\nGlobal aggregated filter rate stats:")
+print(global_aggregated_df)
+
+# Print results per filter size
+print("\nAggregated filter rate stats per filter size:")
+print(filter_size_aggregated_df)
+
+print("\nAggregated filter rate stats per filter size and hash function:")
+print(filter_size_hash_df)
+
+print("\nAggregated filter rate stats per filter size and k:")
+print(filter_size_k_df)
+
+print("\nAggregated filter rate stats per filter size, hash function, and k:")
+print(filter_size_hash_k_df)
 
