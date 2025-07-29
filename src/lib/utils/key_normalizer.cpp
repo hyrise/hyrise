@@ -75,10 +75,10 @@ void KeyNormalizer::insert_chunk(std::vector<unsigned char>& buffer, const std::
     const auto data_type = segment->data_type();
 
     const auto normalized_sort_mode =
-        (sort_mode == SortMode::AscendingNullsFirst) | (sort_mode == SortMode::AscendingNullsLast)
+        sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::AscendingNullsLast
             ? NormalizedSortMode::Ascending
             : NormalizedSortMode::Descending;
-    const auto nulls_mode = (sort_mode == SortMode::AscendingNullsFirst) | (sort_mode == SortMode::DescendingNullsFirst)
+    const auto nulls_mode = sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst
                                 ? NullsMode::NullsFirst
                                 : NullsMode::NullsLast;
 
