@@ -137,8 +137,8 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::convert_table(
     const auto current_chunk = table->get_chunk(chunk_id);
     const auto chunk_size = current_chunk->size();
 
-    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset, chunk_id,
-                 tuple_key_size, string_prefix_length, chunk_size);
+    insert_chunk(result_buffer, current_chunk, sort_definitions, table_offset, chunk_id, tuple_key_size,
+                 string_prefix_length, chunk_size);
 
     table_offset += chunk_size;
   }

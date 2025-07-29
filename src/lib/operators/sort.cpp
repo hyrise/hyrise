@@ -312,9 +312,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   const auto comparison_key_size = key_size - sizeof(RowID);
 
-  std::sort(key_pointers.begin(), key_pointers.end(), [comparison_key_size](const unsigned char* a, const unsigned char* b) {
-    return std::memcmp(a, b, comparison_key_size) < 0;
-  });
+  std::sort(key_pointers.begin(), key_pointers.end(),
+            [comparison_key_size](const unsigned char* a, const unsigned char* b) {
+              return std::memcmp(a, b, comparison_key_size) < 0;
+            });
 
   const auto row_id_offset = key_size - sizeof(RowID);
   RowIDPosList sorted_pos_list;

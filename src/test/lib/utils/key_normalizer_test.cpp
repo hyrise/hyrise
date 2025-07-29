@@ -244,105 +244,110 @@ void print_key(const std::vector<unsigned char>& key, const std::string& message
 }
 
 TEST_F(KeyNormalizerTest, DebugFloats) {
-    auto float_table = std::make_shared<Table>(TableColumnDefinitions{{"f", DataType::Float, false}}, TableType::Data);
-    float_table->append({-10.5f}); // Should be first
-    float_table->append({2.0f});   // Should be third
-    float_table->append({0.0f});   // Should be second
+  auto float_table = std::make_shared<Table>(TableColumnDefinitions{{"f", DataType::Float, false}}, TableType::Data);
+  float_table->append({-10.5f});  // Should be first
+  float_table->append({2.0f});    // Should be third
+  float_table->append({0.0f});    // Should be second
 
-    const auto sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
-    auto [normalized_keys, key_size] = KeyNormalizer::convert_table(float_table, sort_definitions);
+  const auto sort_definitions =
+      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
+  auto [normalized_keys, key_size] = KeyNormalizer::convert_table(float_table, sort_definitions);
 
-    print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for -10.5f:");
-    print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for   2.0f:");
-    print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for   0.0f:");
+  print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for -10.5f:");
+  print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for   2.0f:");
+  print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for   0.0f:");
 
-    std::vector<const unsigned char*> key_pointers;
-    for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
-        key_pointers.push_back(&normalized_keys[i]);
-    }
+  std::vector<const unsigned char*> key_pointers;
+  for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
+    key_pointers.push_back(&normalized_keys[i]);
+  }
 
-    std::sort(key_pointers.begin(), key_pointers.end(), [key_size](const auto* a, const auto* b) {
-        return std::memcmp(a, b, key_size) < 0;
-    });
+  std::sort(key_pointers.begin(), key_pointers.end(), [key_size](const auto* a, const auto* b) {
+    return std::memcmp(a, b, key_size) < 0;
+  });
 
-    RowIDPosList sorted_pos_list;
-    for (const auto* ptr : key_pointers) {
-        sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
-    }
+  RowIDPosList sorted_pos_list;
+  for (const auto* ptr : key_pointers) {
+    sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
+  }
 
-    const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{1}}};
-    EXPECT_EQ(sorted_pos_list, expected_order);
+  const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{2}},
+                                       RowID{ChunkID{0}, ChunkOffset{1}}};
+  EXPECT_EQ(sorted_pos_list, expected_order);
 }
 
 // Test case for signed integers.
 TEST_F(KeyNormalizerTest, DebugSignedInts) {
-    auto int_table = std::make_shared<Table>(TableColumnDefinitions{{"i", DataType::Int, false}}, TableType::Data);
-    int_table->append({5});   // Should be third
-    int_table->append({-2});  // Should be first
-    int_table->append({0});   // Should be second
+  auto int_table = std::make_shared<Table>(TableColumnDefinitions{{"i", DataType::Int, false}}, TableType::Data);
+  int_table->append({5});   // Should be third
+  int_table->append({-2});  // Should be first
+  int_table->append({0});   // Should be second
 
-    const auto sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
-    auto [normalized_keys, key_size] = KeyNormalizer::convert_table(int_table, sort_definitions);
+  const auto sort_definitions =
+      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
+  auto [normalized_keys, key_size] = KeyNormalizer::convert_table(int_table, sort_definitions);
 
-    print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for   5:");
-    print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for  -2:");
-    print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for   0:");
-    std::cout << "Expected Order: Key for -2 < Key for 0 < Key for 5\n";
+  print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for   5:");
+  print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for  -2:");
+  print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for   0:");
+  std::cout << "Expected Order: Key for -2 < Key for 0 < Key for 5\n";
 
-    std::vector<const unsigned char*> key_pointers;
-    for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
-        key_pointers.push_back(&normalized_keys[i]);
-    }
+  std::vector<const unsigned char*> key_pointers;
+  for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
+    key_pointers.push_back(&normalized_keys[i]);
+  }
 
-    std::sort(key_pointers.begin(), key_pointers.end(), [key_size](const auto* a, const auto* b) {
-        return std::memcmp(a, b, key_size) < 0;
-    });
+  std::sort(key_pointers.begin(), key_pointers.end(), [key_size](const auto* a, const auto* b) {
+    return std::memcmp(a, b, key_size) < 0;
+  });
 
-    RowIDPosList sorted_pos_list;
-    for (const auto* ptr : key_pointers) {
-        sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
-    }
+  RowIDPosList sorted_pos_list;
+  for (const auto* ptr : key_pointers) {
+    sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
+  }
 
-    const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}}};
-    EXPECT_EQ(sorted_pos_list, expected_order);
+  const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}},
+                                       RowID{ChunkID{0}, ChunkOffset{0}}};
+  EXPECT_EQ(sorted_pos_list, expected_order);
 }
 
 TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
-    auto multi_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::String, false}}, TableType::Data);
-    multi_table->append({5, "apple"});  // Sorted: {5, "banana"}, {5, "apple"} -> pos 1, pos 0
-    multi_table->append({10, "zoo"});   // Sorted: {10, "zoo"}, {10, "car"} -> pos 3, pos 2
-    multi_table->append({5, "banana"});
-    multi_table->append({10, "car"});
+  auto multi_table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::String, false}}, TableType::Data);
+  multi_table->append({5, "apple"});  // Sorted: {5, "banana"}, {5, "apple"} -> pos 1, pos 0
+  multi_table->append({10, "zoo"});   // Sorted: {10, "zoo"}, {10, "car"} -> pos 3, pos 2
+  multi_table->append({5, "banana"});
+  multi_table->append({10, "car"});
 
-    // ORDER BY a ASC, b DESC
-    const auto sort_definitions = std::vector<SortColumnDefinition>{
-        {SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}},
-        {SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast}}
-    };
+  // ORDER BY a ASC, b DESC
+  const auto sort_definitions =
+      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}},
+                                        {SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast}}};
 
-    auto [normalized_keys, key_size] = KeyNormalizer::convert_table(multi_table, sort_definitions);
+  auto [normalized_keys, key_size] = KeyNormalizer::convert_table(multi_table, sort_definitions);
 
-    print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for {5, 'apple'}:");
-    print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for {10, 'zoo'}:");
-    print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for {5, 'banana'}:");
-    print_key({normalized_keys.begin() + 3 * key_size, normalized_keys.begin() + 4 * key_size}, "Key for {10, 'car'}:");
+  print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for {5, 'apple'}:");
+  print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for {10, 'zoo'}:");
+  print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for {5, 'banana'}:");
+  print_key({normalized_keys.begin() + 3 * key_size, normalized_keys.begin() + 4 * key_size}, "Key for {10, 'car'}:");
 
-    std::vector<const unsigned char*> key_pointers;
-    for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
-        key_pointers.push_back(&normalized_keys[i]);
-    }
+  std::vector<const unsigned char*> key_pointers;
+  for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
+    key_pointers.push_back(&normalized_keys[i]);
+  }
 
-    std::sort(key_pointers.begin(), key_pointers.end(), [key_size](const auto* a, const auto* b) {
-        return std::memcmp(a, b, key_size) < 0;
-    });
+  std::sort(key_pointers.begin(), key_pointers.end(), [key_size](const auto* a, const auto* b) {
+    return std::memcmp(a, b, key_size) < 0;
+  });
 
-    RowIDPosList sorted_pos_list;
-    for (const auto* ptr : key_pointers) {
-        sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
-    }
+  RowIDPosList sorted_pos_list;
+  for (const auto* ptr : key_pointers) {
+    sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
+  }
 
-    const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}}};
-    EXPECT_EQ(sorted_pos_list, expected_order);
+  const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}},
+                                       RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}}};
+  EXPECT_EQ(sorted_pos_list, expected_order);
 }
 
 }  // namespace hyrise
