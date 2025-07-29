@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <numeric>
