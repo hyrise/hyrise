@@ -56,6 +56,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   OrderDependencies order_dependencies() const override;
 
+  InclusionDependencies inclusion_dependencies() const override;
+
   const std::string table_name;
 
   // By default, the StoredTableNode takes its statistics from the table. This field can be used to overwrite these
