@@ -29,6 +29,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class ChunkPruningRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     auto& storage_manager = Hyrise::get().storage_manager;
 
     auto compressed_table = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});

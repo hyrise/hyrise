@@ -11,6 +11,13 @@
 
 namespace hyrise {
 
+void StrategyBaseTest::SetUp() {
+  BaseTest::SetUp();
+  _optimization_context = OptimizationContext{};
+  _optimization_context.cost_estimator =
+      std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>());
+}
+
 void StrategyBaseTest::_apply_rule(const std::shared_ptr<AbstractRule>& rule, std::shared_ptr<AbstractLQPNode>& input) {
   // Make sure there is no reference to the input as an uncopied expected plan.
   Assert(input.use_count() == 1, "LQP is referenced multiple times. Did you mean to make a deep copy?");

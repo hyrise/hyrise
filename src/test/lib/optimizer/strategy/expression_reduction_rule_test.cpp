@@ -21,6 +21,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class ExpressionReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"},
                                                            {DataType::Int, "b"},
                                                            {DataType::Int, "c"},

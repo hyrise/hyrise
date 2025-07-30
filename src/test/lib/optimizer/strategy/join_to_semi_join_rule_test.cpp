@@ -24,6 +24,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class JoinToSemiJoinRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_b = MockNode::make(

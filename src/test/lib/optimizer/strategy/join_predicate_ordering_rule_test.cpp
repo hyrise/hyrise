@@ -23,6 +23,7 @@ namespace hyrise {
 class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     _rule = std::make_shared<JoinPredicateOrderingRule>();
 
     node_a = create_mock_node_with_statistics(

@@ -12,6 +12,7 @@ namespace hyrise {
 class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     Hyrise::get().storage_manager.add_table("t_a",
                                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
     Hyrise::get().storage_manager.add_table("t_b",

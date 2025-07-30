@@ -22,6 +22,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class JoinOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     rule = std::make_shared<JoinOrderingRule>();
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.

@@ -23,6 +23,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class SubqueryToJoinRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     // One size fits all - we only look at cardinalities, anyway.
     const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 100, 10);
     const auto string_histogram = GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 10);

@@ -16,6 +16,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class DependentGroupByReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     auto& storage_manager = Hyrise::get().storage_manager;
 
     TableColumnDefinitions column_definitions{{"column0", DataType::Int, false},

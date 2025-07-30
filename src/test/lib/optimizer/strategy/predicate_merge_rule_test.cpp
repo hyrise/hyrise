@@ -17,6 +17,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class PredicateMergeRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");

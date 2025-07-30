@@ -30,14 +30,15 @@ class StrategyBaseTest : public BaseTest {
    */
   void _apply_rule(const std::shared_ptr<AbstractRule>& rule, std::shared_ptr<AbstractLQPNode>& input);
 
+  void SetUp() override;
+
   /**
    * We declare a member variable of the abstract class to account for rewrites that replace nodes with nodes of a
    * different type. For example, we cannot declare `auto lqp = JoinNode::make(...);` and rewrite it to, e.g., a
    * PredicateNode.
    */
   std::shared_ptr<AbstractLQPNode> _lqp;
-  OptimizationContext _optimization_context =
-      OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
+  OptimizationContext _optimization_context;
 };
 
 }  // namespace hyrise

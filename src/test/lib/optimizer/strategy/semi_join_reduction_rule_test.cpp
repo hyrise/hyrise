@@ -13,6 +13,7 @@ class SemiJoinReductionRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     {
+      StrategyBaseTest::SetUp();
       const auto histogram_column_a = GenericHistogram<int32_t>::with_single_bin(1, 50, 40, 40);
       const auto histogram_column_b = GenericHistogram<int32_t>::with_single_bin(10, 15, 40, 5);
       _node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 40,

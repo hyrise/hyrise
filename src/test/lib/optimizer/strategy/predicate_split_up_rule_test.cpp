@@ -17,6 +17,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class PredicateSplitUpRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_a = MockNode::make(MockNode::ColumnDefinitions{
         {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::String, "c"}, {DataType::String, "d"}});
     a_a = node_a->get_column("a");

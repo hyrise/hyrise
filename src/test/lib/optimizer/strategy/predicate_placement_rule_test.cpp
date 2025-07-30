@@ -31,6 +31,7 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   }
 
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     Hyrise::get().storage_manager.add_table("a", _table_a);
     _stored_table_a = StoredTableNode::make("a");
     _a_a = _stored_table_a->get_column("a");

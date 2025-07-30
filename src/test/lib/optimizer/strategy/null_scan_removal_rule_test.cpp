@@ -15,6 +15,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class NullScanRemovalRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     rule = std::make_shared<NullScanRemovalRule>();
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
     mock_node_column = mock_node->get_column("a");

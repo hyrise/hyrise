@@ -26,6 +26,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class ColumnPruningRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_abc = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_uvw = MockNode::make(

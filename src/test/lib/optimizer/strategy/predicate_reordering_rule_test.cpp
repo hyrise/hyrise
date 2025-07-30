@@ -22,6 +22,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     _rule = std::make_shared<PredicateReorderingRule>();
 
     node = create_mock_node_with_statistics(

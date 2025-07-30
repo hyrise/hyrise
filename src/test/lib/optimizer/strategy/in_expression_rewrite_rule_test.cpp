@@ -16,6 +16,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     rule = std::make_shared<InExpressionRewriteRule>();
 
     // col_a has 1000 entries across 200 values linearly distributed between 1 and 200

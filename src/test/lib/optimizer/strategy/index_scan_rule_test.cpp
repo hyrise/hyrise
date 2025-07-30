@@ -29,6 +29,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class IndexScanRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     table = load_table("resources/test_data/tbl/int_float4.tbl");
     Hyrise::get().storage_manager.add_table("a", table);
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("a"));
