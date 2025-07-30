@@ -106,7 +106,7 @@ UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
     visit_lqp(root_node, [&](const auto& node) {
       const auto type = node->type;
       if (type != LQPNodeType::Join && type != LQPNodeType::Aggregate) {
-        // Only join and aggregate (Groupby) nodes are considered for optimization using UCCs.
+        // Only join and aggregate (groupby) nodes are considered for optimization using UCCs.
         return LQPVisitation::VisitInputs;
       }
 
@@ -139,7 +139,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     const auto& soft_key_constraints = table->soft_key_constraints();
     const auto candidate_columns = std::set<ColumnID>{column_id};
     const auto existing_ucc =
-        std::find_if(soft_key_constraints.cbegin(), soft_key_constraints.cend(), [&](const auto& key_constraint) {
+        std::ranges::find_if(soft_key_constraints, [&](const auto& key_constraint) {
           return std::ranges::includes(key_constraint.columns(), candidate_columns);
         });
 
@@ -217,8 +217,8 @@ template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shared_ptr<const Table>& table,
                                                                  const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
-  // Trigger an early-out if a dictionary-encoded segment's attribute vector is larger than the dictionary. This indica-
-  // tes that at least one duplicate value or a NULL value is contained.
+  // Trigger an early-out if a dictionary-encoded segment's attribute vector is larger than the dictionary. This
+  // indicates that at least one duplicate value or a NULL value is contained.
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto source_chunk = table->get_chunk(chunk_id);
     if (!source_chunk) {
@@ -274,7 +274,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
     const auto source_segment = source_chunk->get_segment(column_id);
     // Were values deleted or updated in this chunk? If not, we can directly use range insertion.
     if ((source_chunk->invalid_row_count() == 0 && !source_chunk->is_mutable())) {
-      // If we enter this branch, we know that this segment has not been modified since its creation. Therefore we can
+      // If we enter this branch, we know that this segment has not been modified since its creation. Therefore, we can
       // directly add all of its values to the set of distinct values.
 
       // The set of distinct values across all segments should grow by the number of rows in the segment. Otherwise,
@@ -322,7 +322,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
 
     const auto expected_distinct_value_count = distinct_values_across_segments.size() + source_segment->size();
     auto running_distinct_value_count = distinct_values_across_segments.size();
-    segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto end) {
+    segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto& end) {
       while (it != end) {
         if (it->is_null()) {
           break;
@@ -440,8 +440,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<co
 void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
     const std::shared_ptr<const AbstractLQPNode>& root_node,
     const std::shared_ptr<const LQPColumnExpression>& column_candidate, UccCandidates& ucc_candidates) {
-  // The input node may already be a nullptr in case we try to get the right input of node with only one input. The can-
-  // didate Column might be a nullptr when the join is not performed on bare columns but, e.g., on aggregates.
+  // The input node may already be a nullptr in case we try to get the right input of node with only one input. The
+  // candidate Column might be a nullptr when the join is not performed on bare columns but, e.g., on aggregates.
   if (!root_node || !column_candidate) {
     return;
   }
