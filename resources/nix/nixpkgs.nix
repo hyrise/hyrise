@@ -15,6 +15,6 @@ let
   };
 in
 
-import (fetchCommit "3563ebc663d7b75c7781085229ee13c17ea93d12") {
+import (fetchCommit "af0f7e3f6f6f9e4b96ffe7115b04d637819ecf40") {
   overlays = [];
 }
