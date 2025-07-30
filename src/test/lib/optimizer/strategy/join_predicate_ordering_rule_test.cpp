@@ -15,6 +15,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/join_predicate_ordering_rule.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
 #include "utils/load_table.hpp"
 

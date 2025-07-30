@@ -245,8 +245,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run the PredicatePlacementRule a third time to place semi-joins created by the SemiJoinReductionRule.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
-  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
-
   // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
@@ -257,7 +255,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
   optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
 
-  // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
+  // Order join predicates (again) by their selectivity. Do that after predicate placement and chunk pruning because
+  // both can impact the join predicates' selectivities.
+  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
+
+  // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired.
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   // Before the IN predicate is rewritten, it should have been moved to a good position. Also, while the IN predicate

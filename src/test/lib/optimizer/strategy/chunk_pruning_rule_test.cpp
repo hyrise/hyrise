@@ -17,6 +17,7 @@
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"

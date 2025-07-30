@@ -39,7 +39,7 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
   };
 
   const auto estimator = optimization_context.cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction();
+  estimator->guarantee_bottom_up_construction(lqp_root);
 
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Join) {

@@ -404,7 +404,6 @@ set(
     statistics/attribute_statistics.hpp
     statistics/base_attribute_statistics.cpp
     statistics/base_attribute_statistics.hpp
-    statistics/cardinality_estimation_cache.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
     statistics/generate_pruning_statistics.cpp
