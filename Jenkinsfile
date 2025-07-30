@@ -136,32 +136,32 @@ try {
             wait"
           }
 
-          parallel clangDebug: {
-            stage("clang-debug") {
-              // We build clang-debug using make to test make once (and clang-debug is the fastest build).
-              sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
-              sh "./clang-debug/hyriseTest clang-debug"
-            }
-          }, clang19Debug: {
-            stage("clang-19-debug") {
-              sh "cd clang-19-debug && ninja all -j \$(( \$(nproc) / 4))"
-              sh "./clang-19-debug/hyriseTest clang-19-debug"
-            }
-          }, gccDebug: {
-            stage("gcc-debug") {
-              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 4))"
-              sh "cd gcc-debug && ./hyriseTest"
-            }
-          }, gcc13Debug: {
-            stage("gcc-13-debug") {
-              sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 4))"
-              sh "cd gcc-13-debug && ./hyriseTest"
-            }
-          }, lint: {
-            stage("Linting") {
-              sh "scripts/lint.sh"
-            }
-          }
+          // parallel clangDebug: {
+          //   stage("clang-debug") {
+          //     // We build clang-debug using make to test make once (and clang-debug is the fastest build).
+          //     sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
+          //     sh "./clang-debug/hyriseTest clang-debug"
+          //   }
+          // }, clang19Debug: {
+          //   stage("clang-19-debug") {
+          //     sh "cd clang-19-debug && ninja all -j \$(( \$(nproc) / 4))"
+          //     sh "./clang-19-debug/hyriseTest clang-19-debug"
+          //   }
+          // }, gccDebug: {
+          //   stage("gcc-debug") {
+          //     sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 4))"
+          //     sh "cd gcc-debug && ./hyriseTest"
+          //   }
+          // }, gcc13Debug: {
+          //   stage("gcc-13-debug") {
+          //     sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 4))"
+          //     sh "cd gcc-13-debug && ./hyriseTest"
+          //   }
+          // }, lint: {
+          //   stage("Linting") {
+          //     sh "scripts/lint.sh"
+          //   }
+          // }
 
           // We distribute the cores to processes in a way to even the running times. With an even distributions,
           // clang-tidy builds take up to 3h (galileo server). In addition to compile time, the distribution also

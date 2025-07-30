@@ -39,7 +39,7 @@ pkgs.mkShell {
     python311Packages.pexpect
     readline
     sqlite
-    tbb_2021_11
+    tbb_2022
   ];
 
   hardeningDisable = [
