@@ -11,7 +11,7 @@
 let
   fetchCommit = commit: fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/${commit}.tar.gz";
-    sha256 = "0043xxvs81chfbn01irfj81pj8j9nzwnv4srmaqy38y3bzacv6ra";
+    sha256 = "0lgrjym6wgskgm9514zb4ccs584kzgixsa2c9ich61yf19vvcwq2";
   };
 in
 

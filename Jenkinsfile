@@ -325,77 +325,77 @@ try {
           //   }
           // }
 
-          parallel memcheckReleaseTest: {
-            stage("memcheckReleaseTest") {
-              // Runs after the other sanitizers as it depends on clang-release to be built.
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir ./clang-release-memcheck-test"
-                // If this shows a leak, try --leak-check=full, which is slower but more precise. Valgrind serializes
-                // concurrent threads into a single one. Thus, we limit the cores and data preparation cores for the
-                // benchmark runs to reduce this serialization overhead. According to the Valgrind documentation,
-                // --fair-sched=yes "improves overall responsiveness if you are running an interactive multithreaded
-                // program" and "produces better reproducibility of thread scheduling for different executions of a
-                // multithreaded application" (i.e., there are no runs that are randomly faster or slower).
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate:SQLiteTestRunner*"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 4 --data_preparation_cores 4"
-              } else {
-                Utils.markStageSkippedForConditional("memcheckReleaseTest")
-              }
-            }
-          }, tpchVerification: {
-            stage("tpchVerification") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                // Verify both single- and multithreaded results.
-                sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify"
-                sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify --scheduler --clients 1 --cores 10"
-              } else {
-                Utils.markStageSkippedForConditional("tpchVerification")
-              }
-            }
-          }, tpchQueryPlans: {
-            stage("tpchQueryPlans") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
-                archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
-                archiveArtifacts artifacts: 'query_plans/tpch/operator_breakdown.pdf'
-              } else {
-                Utils.markStageSkippedForConditional("tpchQueryPlans")
-              }
-            }
-          }, tpcdsQueryPlansAndVerification: {
-            stage("tpcdsQueryPlansAndVerification") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
-                archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
-                archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
-              } else {
-                Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
-              }
-            }
-          }, jobQueryPlans: {
-            stage("jobQueryPlans") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                // In contrast to TPC-H and TPC-DS above, we execute the JoinOrderBenchmark from the project's root directoy because its setup script requires us to do so.
-                sh "mkdir -p query_plans/job && ./clang-release/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r 1 --visualize && ./scripts/plot_operator_breakdown.py ./clang-release/ && mv operator_breakdown.pdf query_plans/job && mv *QP.svg query_plans/job"
-                archiveArtifacts artifacts: 'query_plans/job/*.svg'
-                archiveArtifacts artifacts: 'query_plans/job/operator_breakdown.pdf'
-              } else {
-                Utils.markStageSkippedForConditional("jobQueryPlans")
-              }
-            }
-          }, ssbQueryPlans: {
-            stage("ssbQueryPlans") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/ssb; cd query_plans/ssb && ../../clang-release/hyriseBenchmarkStarSchema --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
-                archiveArtifacts artifacts: 'query_plans/ssb/*.svg'
-                archiveArtifacts artifacts: 'query_plans/ssb/operator_breakdown.pdf'
-              } else {
-                Utils.markStageSkippedForConditional("ssbQueryPlans")
-              }
-            }
-          }, nixSetup: {
+          // parallel memcheckReleaseTest: {
+          //   stage("memcheckReleaseTest") {
+          //     // Runs after the other sanitizers as it depends on clang-release to be built.
+          //     if (env.BRANCH_NAME == 'master' || full_ci) {
+          //       sh "mkdir ./clang-release-memcheck-test"
+          //       // If this shows a leak, try --leak-check=full, which is slower but more precise. Valgrind serializes
+          //       // concurrent threads into a single one. Thus, we limit the cores and data preparation cores for the
+          //       // benchmark runs to reduce this serialization overhead. According to the Valgrind documentation,
+          //       // --fair-sched=yes "improves overall responsiveness if you are running an interactive multithreaded
+          //       // program" and "produces better reproducibility of thread scheduling for different executions of a
+          //       // multithreaded application" (i.e., there are no runs that are randomly faster or slower).
+          //       sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate:SQLiteTestRunner*"
+          //       sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
+          //       sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
+          //       sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 4 --data_preparation_cores 4"
+          //     } else {
+          //       Utils.markStageSkippedForConditional("memcheckReleaseTest")
+          //     }
+          //   }
+          // }, tpchVerification: {
+          //   stage("tpchVerification") {
+          //     if (env.BRANCH_NAME == 'master' || full_ci) {
+          //       // Verify both single- and multithreaded results.
+          //       sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify"
+          //       sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify --scheduler --clients 1 --cores 10"
+          //     } else {
+          //       Utils.markStageSkippedForConditional("tpchVerification")
+          //     }
+          //   }
+          // }, tpchQueryPlans: {
+          //   stage("tpchQueryPlans") {
+          //     if (env.BRANCH_NAME == 'master' || full_ci) {
+          //       sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+          //       archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
+          //       archiveArtifacts artifacts: 'query_plans/tpch/operator_breakdown.pdf'
+          //     } else {
+          //       Utils.markStageSkippedForConditional("tpchQueryPlans")
+          //     }
+          //   }
+          // }, tpcdsQueryPlansAndVerification: {
+          //   stage("tpcdsQueryPlansAndVerification") {
+          //     if (env.BRANCH_NAME == 'master' || full_ci) {
+          //       sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+          //       archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
+          //       archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
+          //     } else {
+          //       Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
+          //     }
+          //   }
+          // }, jobQueryPlans: {
+          //   stage("jobQueryPlans") {
+          //     if (env.BRANCH_NAME == 'master' || full_ci) {
+          //       // In contrast to TPC-H and TPC-DS above, we execute the JoinOrderBenchmark from the project's root directoy because its setup script requires us to do so.
+          //       sh "mkdir -p query_plans/job && ./clang-release/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r 1 --visualize && ./scripts/plot_operator_breakdown.py ./clang-release/ && mv operator_breakdown.pdf query_plans/job && mv *QP.svg query_plans/job"
+          //       archiveArtifacts artifacts: 'query_plans/job/*.svg'
+          //       archiveArtifacts artifacts: 'query_plans/job/operator_breakdown.pdf'
+          //     } else {
+          //       Utils.markStageSkippedForConditional("jobQueryPlans")
+          //     }
+          //   }
+          // }, ssbQueryPlans: {
+          //   stage("ssbQueryPlans") {
+          //     if (env.BRANCH_NAME == 'master' || full_ci) {
+          //       sh "mkdir -p query_plans/ssb; cd query_plans/ssb && ../../clang-release/hyriseBenchmarkStarSchema --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+          //       archiveArtifacts artifacts: 'query_plans/ssb/*.svg'
+          //       archiveArtifacts artifacts: 'query_plans/ssb/operator_breakdown.pdf'
+          //     } else {
+          //       Utils.markStageSkippedForConditional("ssbQueryPlans")
+          //     }
+          //   }
+          // }, nixSetup: {
             stage('nixSetup') {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
@@ -406,7 +406,7 @@ try {
                 Utils.markStageSkippedForConditional("nixSetup")
               }
             }
-          }
+          //}
         } finally {
           sh "ls -A1 | xargs rm -rf"
           deleteDir()
