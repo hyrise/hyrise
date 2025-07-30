@@ -30,15 +30,15 @@ const std::string& Product::name() const {
 }
 
 std::shared_ptr<const Table> Product::_on_execute() {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
 
-  // add columns from left table to output
+  // Add columns from left table to output.
   const auto left_input_column_count = left_input_table()->column_count();
   for (auto column_id = ColumnID{0}; column_id < left_input_column_count; ++column_id) {
     column_definitions.emplace_back(left_input_table()->column_definitions()[column_id]);
   }
 
-  // add columns from right table to output
+  // Add columns from right table to output.
   const auto right_input_column_count = right_input_table()->column_count();
   for (auto column_id = ColumnID{0}; column_id < right_input_column_count; ++column_id) {
     column_definitions.emplace_back(right_input_table()->column_definitions()[column_id]);
@@ -79,10 +79,10 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
   // we can first repeat each line on the left side #rightSide times and then repeat the ascending sequence for the
   // right side #leftSide times
 
-  std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>> calculated_pos_lists_left;
-  std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>> calculated_pos_lists_right;
+  auto calculated_pos_lists_left = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+  auto calculated_pos_lists_right = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
-  Segments output_segments;
+  auto output_segments = Segments{};
   auto is_left_side = true;
 
   for (const auto& chunk_in : {chunk_left, chunk_right}) {
@@ -110,7 +110,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
       // gets updated accordingly.
       auto& pos_list_out = (is_left_side ? calculated_pos_lists_left : calculated_pos_lists_right)[pos_list_in];
       if (!pos_list_out) {
-        // can't reuse
+        // Cannot reuse.
         const auto left_chunk_size = chunk_left->size();
         const auto right_chunk_size = chunk_right->size();
         const auto pos_list_size = static_cast<size_t>(left_chunk_size) * right_chunk_size;

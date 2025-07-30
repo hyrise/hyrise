@@ -565,7 +565,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
           const auto input_chunk = data_table->get_chunk(chunk_id);
 
-          Segments reference_segments;
+          auto reference_segments = Segments{};
 
           if (input_table_type == InputTableType::SharedPosList) {
             const auto pos_list = std::make_shared<RowIDPosList>();

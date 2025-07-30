@@ -132,7 +132,7 @@ bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
   }
 
   // As the columns are stored in a std::set, iteration is sorted and the result is not ambiguous.
-  return std::lexicographical_compare(_columns.cbegin(), _columns.cend(), rhs._columns.cbegin(), rhs._columns.cend());
+  return std::ranges::lexicographical_compare(_columns, rhs._columns);
 }
 
 }  // namespace hyrise

@@ -67,8 +67,8 @@ std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_memor
   auto new_block_minima = pmr_vector<T>(_block_minima, &memory_resource);
   auto new_offset_values = _offset_values->copy_using_memory_resource(memory_resource);
 
-  auto null_values = _null_values ? pmr_vector<bool>(*_null_values, &memory_resource) :
-    std::optional<pmr_vector<bool>>{};
+  auto null_values =
+      _null_values ? pmr_vector<bool>(*_null_values, &memory_resource) : std::optional<pmr_vector<bool>>{};
 
   auto copy = std::make_shared<FrameOfReferenceSegment>(std::move(new_block_minima), std::move(null_values),
                                                         std::move(new_offset_values));
@@ -80,7 +80,7 @@ template <typename T, typename U>
 size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
   // MemoryUsageCalculationMode ignored since full calculation is efficient.
   size_t segment_size =
-      sizeof(*this) + sizeof(T) * _block_minima.capacity() + _offset_values->data_size() + sizeof(_null_values);
+      sizeof(*this) + (sizeof(T) * _block_minima.capacity()) + _offset_values->data_size() + sizeof(_null_values);
 
   if (_null_values) {
     segment_size += _null_values->capacity() / CHAR_BIT;
