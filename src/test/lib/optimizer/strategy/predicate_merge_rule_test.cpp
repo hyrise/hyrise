@@ -29,8 +29,6 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
 
     // Reducing the minimum_union_count so that plans are merged earlier, making the test cases shorter.
     rule->minimum_union_count = 1;
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
@@ -53,7 +51,7 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicate) {
     node_a);
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -81,7 +79,7 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
     node_a);
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -101,7 +99,7 @@ TEST_F(PredicateMergeRuleTest, MergeSimpleDisjunction) {
     node_a);
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -127,7 +125,7 @@ TEST_F(PredicateMergeRuleTest, MergeComplexDisjunction) {
     node_a);
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -149,7 +147,7 @@ TEST_F(PredicateMergeRuleTest, MergeBelowProjection) {
       node_a));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -175,7 +173,7 @@ TEST_F(PredicateMergeRuleTest, MergeOnlyAboveLeftTable) {
       node_b));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -205,7 +203,7 @@ TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByProjection) {
         node_a)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -234,7 +232,7 @@ TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByJoin) {
       node_b));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -271,7 +269,7 @@ TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
       predicate_node));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -298,7 +296,7 @@ TEST_F(PredicateMergeRuleTest, MergeSimpleNestedConjunctionsAndDisjunctions) {
     node_a);
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -337,7 +335,7 @@ TEST_F(PredicateMergeRuleTest, MergeComplexNestedConjunctionsAndDisjunctions) {
         node_a)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -352,7 +350,7 @@ TEST_F(PredicateMergeRuleTest, NoRewriteSimplePredicate) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -369,7 +367,7 @@ TEST_F(PredicateMergeRuleTest, NoRewritePredicateChains) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -387,7 +385,7 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentTables) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -405,15 +403,15 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentSetOperationMode) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, CheckCacheability) {
-  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(less_than_(a_a, 10), node_a));
-  _apply_rule(rule, input_lqp, _optimization_context);
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(less_than_(a_a, 10), node_a));
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

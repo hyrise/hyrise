@@ -64,8 +64,6 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_e_3 = stored_table_node_e->get_column("column3");
 
     rule = std::make_shared<DependentGroupByReductionRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<DependentGroupByReductionRule> rule;
@@ -87,7 +85,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     _lqp = PredicateNode::make(equals_(column_a_0, 17), stored_table_node_a);
 
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -98,7 +96,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     _lqp = AggregateNode::make(expression_vector(column_d_0), expression_vector(sum_(column_d_0)), stored_table_node_d);
 
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -119,7 +117,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
         stored_table_node_a));
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -135,7 +133,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
       AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2), any_(column_a_1)),  // NOLINT(whitespace/line_length)
         stored_table_node_a));
     // clang-format on
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -151,7 +149,7 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -166,7 +164,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -184,7 +182,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
     AggregateNode::make(expression_vector(column_c_0, column_c_2), expression_vector(sum_(column_c_1), any_(column_c_1)),  // NOLINT(whitespace/line_length)
       stored_table_node_c));
   // clang-format on
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -209,7 +207,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
         stored_table_node_b)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -234,7 +232,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKeyNoEquiPredicate
         stored_table_node_b)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -249,7 +247,7 @@ TEST_F(DependentGroupByReductionRuleTest, AggregateButNoChanges) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -268,7 +266,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
     AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)),
       stored_table_node_a));
   // clang-format on
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -290,7 +288,7 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
         stored_table_node_a)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -307,7 +305,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -326,7 +324,7 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
       stored_table_node_e));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -358,7 +356,7 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
       mock_node));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -381,7 +379,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
     stored_table_node_a->set_pruned_column_ids({ColumnID{1}, ColumnID{2}, ColumnID{3}});
 
     const auto expected_lqp = stored_table_node_a->deep_copy();
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -401,7 +399,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
       stored_table_node_a);
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -422,7 +420,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
       stored_table_node_a);
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -441,7 +439,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
       stored_table_node_e);
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -459,7 +457,7 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
     // clang-format on
 
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -474,7 +472,7 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
     // clang-format on
 
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }

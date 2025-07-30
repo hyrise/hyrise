@@ -27,8 +27,6 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
     table_node = StoredTableNode::make("table");
     nullable_table_node_column = lqp_column_(nullable_table_node, ColumnID{0});
     table_node_column = lqp_column_(table_node, ColumnID{0});
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> mock_node;
@@ -43,7 +41,7 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
 TEST_F(NullScanRemovalRuleTest, LQPNodeTypeIsNotPredicate) {
   // The rule can't apply on a node that is not of type Predicate.
   _lqp = mock_node->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, mock_node);
@@ -53,7 +51,7 @@ TEST_F(NullScanRemovalRuleTest, PredicateIsNotNullExpression) {
   // The rule cannot apply to a predicate that is not a null expression.
   _lqp = PredicateNode::make(equals_(mock_node_column, 42), mock_node);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -63,7 +61,7 @@ TEST_F(NullScanRemovalRuleTest, PredicateConditionIsNotNull) {
   // The rule can't apply on a predicate which condition is not is not null.
   _lqp = PredicateNode::make(is_null_(mock_node_column), mock_node);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -73,7 +71,7 @@ TEST_F(NullScanRemovalRuleTest, PredicateOperandIsNotLQPColumnExpression) {
   // The rule cannot apply if the predicate operand is not a LQP Column expression.
   _lqp = PredicateNode::make(is_not_null_(42), mock_node);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -83,7 +81,7 @@ TEST_F(NullScanRemovalRuleTest, LQPColumnOriginalNodeIsNotStoredTableNode) {
   // The rule can't apply if the original node of the LQP Column expression is not a storage table node.
   _lqp = PredicateNode::make(is_not_null_(mock_node_column), mock_node);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -93,7 +91,7 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNullable) {
   // The rule cannot apply if the column is not nullable.
   _lqp = PredicateNode::make(is_not_null_(nullable_table_node_column), nullable_table_node);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -109,16 +107,15 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
   //   6. The column (referenced by the LQPColumnExpression) is not nullable.
   _lqp = PredicateNode::make(is_not_null_(table_node_column), table_node);
   const auto expected_lqp = table_node->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(NullScanRemovalRuleTest, CheckCacheability) {
-  auto input_lqp =
-      std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(is_not_null_(table_node_column), table_node));
-  _apply_rule(rule, input_lqp, _optimization_context);
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(is_not_null_(table_node_column), table_node));
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

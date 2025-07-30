@@ -37,8 +37,6 @@ class JoinToSemiJoinRuleTest : public StrategyBaseTest {
     w = node_b->get_column("w");
 
     rule = std::make_shared<JoinToSemiJoinRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<JoinToSemiJoinRule> rule;
@@ -79,7 +77,7 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
   // clang-format on
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -120,7 +118,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
   // clang-format on
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   // Not cacheable because UCC used is not permanent. Non-cacheability is added in #2600. This is why it is still
   // cacheable.
   EXPECT_TRUE(_optimization_context.is_cacheable());
@@ -167,7 +165,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
   // clang-format on
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   // Not cacheable because UCC used is not permanent. Non-cacheability is added in #2600. This is why it is still
   // cacheable.
   EXPECT_TRUE(_optimization_context.is_cacheable());
@@ -200,7 +198,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -230,7 +228,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -270,7 +268,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -302,7 +300,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }

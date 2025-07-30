@@ -56,9 +56,6 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     _e_a = _stored_table_e->get_column("a");
 
     _rule = std::make_shared<PredicatePlacementRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
-
     {
       // Initialization of projection pushdown LQP.
       const auto parameter_c = correlated_parameter_(ParameterID{0}, _a_a);
@@ -98,7 +95,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
     _stored_table_b);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -119,7 +116,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleOneSideJoinPushdownTest) {
     _stored_table_b);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -135,7 +132,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleBothSideJoinPushdownTest) {
   // clang-format on
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -154,7 +151,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
       _stored_table_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -188,7 +185,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
       expected_common_node));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -235,7 +232,7 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
           expected_common_node))));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -272,7 +269,7 @@ TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
       expected_common_node));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -302,7 +299,7 @@ TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
 
   // We apply the rule before defining the expected LQP. Otherwise, we would modify the outputs of _stored_table_c, and
   // thus affect the rule's outcome.
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   const auto expected_common_node2 =
   PredicateNode::make(equals_(_c_a, 10),                                // <-- 1st Predicate after pushdown.
@@ -364,7 +361,7 @@ TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
         expected_common_node));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -397,7 +394,7 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
       expected_sub_lqp));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -417,7 +414,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtUnion) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -461,7 +458,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
           expected_common_node))));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -492,7 +489,7 @@ TEST_F(PredicatePlacementRuleTest, ComplexBlockingPredicatesPushdownTest) {
         _stored_table_a)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -512,7 +509,7 @@ TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectio
        _stored_table_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -532,7 +529,7 @@ TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjecti
        _stored_table_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -548,7 +545,7 @@ TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTe
   // clang-format on
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -570,7 +567,7 @@ TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
           _stored_table_a)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -599,7 +596,7 @@ TEST_F(PredicatePlacementRuleTest, SemiPushDown) {
         _stored_table_c)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -639,7 +636,7 @@ TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
         _stored_table_c)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -684,7 +681,7 @@ TEST_F(PredicatePlacementRuleTest, HandleMultiPredicateBarrierPredicatePushdown)
         _stored_table_a)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -707,7 +704,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownPredicateThroughAggregate) {
         _stored_table_c)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -732,7 +729,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownAntiThroughAggregate) {
         _stored_table_b)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -755,7 +752,7 @@ TEST_F(PredicatePlacementRuleTest, PullUpPastProjection) {
       _stored_table_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -778,7 +775,7 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastProjectionThatPrunes) {
       _stored_table_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -800,7 +797,7 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastSort) {
       _stored_table_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -826,7 +823,7 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPa
     expected_predicate_node_with_multiple_outputs);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -860,7 +857,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
      _stored_table_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -885,7 +882,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
       _stored_table_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -911,7 +908,7 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnLeftSide) {
       _stored_table_e));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -937,7 +934,7 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnBothSides) {
         _stored_table_e)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -963,7 +960,7 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnlyWhereBeneficial) {
       _stored_table_e));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -981,7 +978,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfNonInner) {
   // clang-format on
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -1000,7 +997,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
   // clang-format on
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -1021,7 +1018,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
 
     const auto expected_lqp = _lqp->deep_copy();
 
-    _apply_rule(_rule, _lqp, _optimization_context);
+    _apply_rule(_rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -1029,10 +1026,15 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
 }
 
 TEST_F(PredicatePlacementRuleTest, CheckCacheability) {
-  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(
-      or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
-      JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a), _stored_table_d, _stored_table_e)));
-  _apply_rule(_rule, input_lqp, _optimization_context);
+  // clang-format off
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(
+      or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),
+      JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a),
+        _stored_table_d,
+        _stored_table_e)));
+  // clang-format on
+
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

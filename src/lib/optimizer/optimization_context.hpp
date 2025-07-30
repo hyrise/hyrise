@@ -13,8 +13,10 @@ namespace hyrise {
  * optimized LQP.
  */
 struct OptimizationContext {
-  explicit OptimizationContext(std::shared_ptr<AbstractCostEstimator> init_cost_estimator)
-      : cost_estimator{std::move(init_cost_estimator)} {}
+  OptimizationContext() = default;
+
+  explicit OptimizationContext(std::shared_ptr<AbstractCostEstimator> estimator)
+      : cost_estimator(std::move(estimator)) {}
 
   void set_not_cacheable() {
     _is_cacheable = false;

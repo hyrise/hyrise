@@ -285,7 +285,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   return optimize_with_context(std::move(input), rule_durations).first;
 }
 
-std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<OptimizationContext>> Optimizer::optimize_with_context(
+std::pair<std::shared_ptr<AbstractLQPNode>, std::unique_ptr<OptimizationContext>> Optimizer::optimize_with_context(
     std::shared_ptr<AbstractLQPNode> input,
     const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
@@ -303,7 +303,8 @@ std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<OptimizationContext>
     validate_lqp(root_node);
   }
 
-  auto optimization_context = std::make_shared<OptimizationContext>(_cost_estimator);
+  auto optimization_context = std::make_unique<OptimizationContext>();
+  optimization_context->cost_estimator = _cost_estimator;
 
   for (const auto& rule : _rules) {
     auto rule_timer = Timer{};
@@ -327,7 +328,7 @@ std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<OptimizationContext>
   auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
-  return {optimized_node, optimization_context};
+  return {optimized_node, std::move(optimization_context)};
 }
 
 void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) {

@@ -46,8 +46,6 @@ class ExpressionReductionRuleTest : public StrategyBaseTest {
     a_join = equals_(mock_node_for_join->get_column("a"), 0);
 
     rule = std::make_shared<ExpressionReductionRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> mock_node;
@@ -189,7 +187,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
           stored_table_node)));
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -210,7 +208,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
           stored_table_node)));
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -231,7 +229,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
           stored_table_node)));
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -246,7 +244,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // clang-format on
 
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -266,7 +264,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // clang-format on
 
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -281,7 +279,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // clang-format on
 
     const auto expected_lqp = _lqp->deep_copy();
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -304,7 +302,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
             stored_table_node))));
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -327,7 +325,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
           stored_table_node)));
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -383,17 +381,19 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
         mock_node)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ExpressionReductionRuleTest, CheckCacheability) {
-  auto lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
-      AggregateNode::make(expression_vector(), expression_vector(sum_(b), count_star_(mock_node), avg_(b)),  // NOLINT
-                          mock_node));
-  _apply_rule(rule, lqp, _optimization_context);
+  // clang-format off
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      AggregateNode::make(expression_vector(), expression_vector(sum_(b), count_star_(mock_node), avg_(b)),
+        mock_node));
+  // clang-format on
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

@@ -337,14 +337,30 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   }
 }
 
-TEST_F(OptimizerTest, OptimizationWithoutKeyConstraintCacheable) {
-  // The resulting optimized LQP should be cacheable if no KeyConstraints or FunctionalDependencies are used.
+TEST_F(OptimizerTest, NonCacheabilityIsReflectedInOptimizationContext) {
+  // Check that once a rule sets the OptimizationContext to not cacheable, this is also reflected in the
+  // OptimizationContext returned by the Optimizer.
+
+  class MockRule : public AbstractRule {
+   public:
+    std::string name() const override {
+      return "MockRule";
+    }
+
+   protected:
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                           OptimizationContext& optimization_context) const override {
+      optimization_context.set_not_cacheable();
+    }
+  };
+
   auto optimizer = Optimizer::create_default_optimizer();
+  optimizer->add_rule(std::make_unique<MockRule>());
 
   auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
                                   PredicateNode::make(greater_than_(a, subquery_b), node_a));
   const auto [_, optimization_context] = optimizer->optimize_with_context(std::move(lqp));
-  EXPECT_TRUE(optimization_context->is_cacheable());
+  EXPECT_FALSE(optimization_context->is_cacheable());
 }
 
 TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {

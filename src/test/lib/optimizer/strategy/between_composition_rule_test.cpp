@@ -24,8 +24,8 @@ class BetweenCompositionRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     _rule = std::make_shared<BetweenCompositionRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
+    _optimization_context.cost_estimator =
+        std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>());
 
     _node_a =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
@@ -60,7 +60,7 @@ TEST_F(BetweenCompositionRuleTest, ColumnExpressionLeft) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -78,7 +78,7 @@ TEST_F(BetweenCompositionRuleTest, ColumnExpressionRight) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -97,7 +97,7 @@ TEST_F(BetweenCompositionRuleTest, NoColumnRange) {
       _node_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -115,7 +115,7 @@ TEST_F(BetweenCompositionRuleTest, EmptyColumnRange) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -130,7 +130,7 @@ TEST_F(BetweenCompositionRuleTest, NoPullPastOrExpression) {
   const auto expected_lqp = _lqp->deep_copy();
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -148,7 +148,7 @@ TEST_F(BetweenCompositionRuleTest, PredicateChain) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -168,7 +168,7 @@ TEST_F(BetweenCompositionRuleTest, LongPredicateChain) {
       _node_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -186,7 +186,7 @@ TEST_F(BetweenCompositionRuleTest, LeftExclusive) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -204,7 +204,7 @@ TEST_F(BetweenCompositionRuleTest, RightExclusive) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -222,7 +222,7 @@ TEST_F(BetweenCompositionRuleTest, BothExclusive) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -245,7 +245,7 @@ TEST_F(BetweenCompositionRuleTest, TwoChains) {
           _node_a)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -262,7 +262,7 @@ TEST_F(BetweenCompositionRuleTest, NoPullPastAggregate) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -281,7 +281,7 @@ TEST_F(BetweenCompositionRuleTest, NoPullPastJoin) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -308,7 +308,7 @@ TEST_F(BetweenCompositionRuleTest, TwoChainsBeforeJoin) {
         _node_b)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -323,7 +323,7 @@ TEST_F(BetweenCompositionRuleTest, TwoColumnsNoMatch) {
   const auto expected_lqp = _lqp->deep_copy();
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -343,7 +343,7 @@ TEST_F(BetweenCompositionRuleTest, FindOptimalInclusiveBetween) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -363,7 +363,7 @@ TEST_F(BetweenCompositionRuleTest, FindOptimalExclusiveBetween) {
     _node_a);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -383,7 +383,7 @@ TEST_F(BetweenCompositionRuleTest, KeepRemainingPredicates) {
       _node_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -408,7 +408,7 @@ TEST_F(BetweenCompositionRuleTest, MultipleBetweensVariousLocations) {
         _node_a)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -428,7 +428,7 @@ TEST_F(BetweenCompositionRuleTest, NonBoundaryPredicate) {
       _node_a));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -451,7 +451,7 @@ TEST_F(BetweenCompositionRuleTest, NoPullPastDiamondPredicate) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -468,16 +468,20 @@ TEST_F(BetweenCompositionRuleTest, HandleMultipleEqualExpressions) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(BetweenCompositionRuleTest, CheckCacheability) {
-  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
-      PredicateNode::make(equals_(_a_a, 100), PredicateNode::make(equals_(_a_b, 100), _node_a)));
-  _apply_rule(_rule, input_lqp, _optimization_context);
+  // clang-format off
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      PredicateNode::make(equals_(_a_a, 100),
+          PredicateNode::make(equals_(_a_b, 100),
+            _node_a)));
+  // clang-format on
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

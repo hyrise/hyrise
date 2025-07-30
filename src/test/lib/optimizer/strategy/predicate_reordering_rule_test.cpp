@@ -33,8 +33,6 @@ class PredicateReorderingTest : public StrategyBaseTest {
     a = node->get_column("a");
     b = node->get_column("b");
     c = node->get_column("c");
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> node;
@@ -56,7 +54,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
       node));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -76,7 +74,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
         node)));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -103,7 +101,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
               node))))));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -124,7 +122,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
     // clang-format on
     const auto expected_lqp = _lqp->deep_copy();
 
-    _apply_rule(_rule, _lqp, _optimization_context);
+    _apply_rule(_rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -142,7 +140,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
         stored_table_node));
     // clang-format on
 
-    _apply_rule(_rule, _lqp, _optimization_context);
+    _apply_rule(_rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -199,7 +197,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
           table_1))));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -253,7 +251,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
     expected_sub_lqp);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -272,7 +270,7 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
       node));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -298,7 +296,7 @@ TEST_F(PredicateReorderingTest, DoNotReorderMultiPredicateSemiAndAntiJoins) {
 
     const auto expected_lqp = _lqp->deep_copy();
 
-    _apply_rule(_rule, _lqp, _optimization_context);
+    _apply_rule(_rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -329,16 +327,16 @@ TEST_F(PredicateReorderingTest, PreferPredicatesOverJoins) {
       node_b));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, CheckCacheability) {
-  auto input_lqp =
+  _lqp =
       std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(greater_than_(a, 60), ValidateNode::make(node)));
-  _apply_rule(_rule, input_lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

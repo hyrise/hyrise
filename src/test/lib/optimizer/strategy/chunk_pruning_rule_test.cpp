@@ -61,9 +61,6 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
     }
 
     _rule = std::make_shared<ChunkPruningRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
-
     storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{10}));
   }
 
@@ -79,7 +76,7 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
     stored_table_node);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -112,7 +109,7 @@ TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
     stored_table_node);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -140,7 +137,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
       common));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -168,7 +165,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
       common));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -182,7 +179,7 @@ TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
   _lqp = PredicateNode::make(between_inclusive_(lqp_column_(stored_table_node, ColumnID{1}), 350.0f, 351.0f));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -202,7 +199,7 @@ TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
   _lqp = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -219,7 +216,7 @@ TEST_F(ChunkPruningRuleTest, TwoOperatorPruningTest) {
   _lqp = PredicateNode::make(less_than_equals_(lqp_column_(stored_table_node, ColumnID{1}), 400.0f));
   _lqp->set_left_input(predicate_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -240,7 +237,7 @@ TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
   _lqp->set_left_input(predicate_node_0);
   _lqp->set_right_input(predicate_node_1);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -254,7 +251,7 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_GreaterThan) {
   _lqp = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 12345));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -268,7 +265,7 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_Equals) {
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{1}), 458.7f));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -282,7 +279,7 @@ TEST_F(ChunkPruningRuleTest, RangeFilterTest) {
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 50));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -296,7 +293,7 @@ TEST_F(ChunkPruningRuleTest, LotsOfRangesFilterTest) {
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2500));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -310,7 +307,7 @@ TEST_F(ChunkPruningRuleTest, RunLengthSegmentPruningTest) {
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -324,7 +321,7 @@ TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
   _lqp = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -348,7 +345,7 @@ TEST_F(ChunkPruningRuleTest, StringPruningTest) {
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -362,7 +359,7 @@ TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -385,7 +382,7 @@ TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
           stored_table_node))));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -409,7 +406,7 @@ TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
       PredicateNode::make(less_than_(table_2_a, 13000), stored_table_node_2)));  // Prune chunk 3 of table 2.
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -434,7 +431,7 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
     stored_table_node);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -458,7 +455,7 @@ TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
   PredicateNode::make(greater_than_(stored_table_node_1->get_column("a"), value_(200)),  // Prunes chunk 1.
     PredicateNode::make(equals_(stored_table_node_1->get_column("b"), lqp_subquery_(subquery_1)),
       stored_table_node_1));
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -470,7 +467,7 @@ TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
       stored_table_node_2));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -502,7 +499,7 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
       stored_table_node_1));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
 
@@ -513,11 +510,11 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
 TEST_F(ChunkPruningRuleTest, CheckCacheability) {
   const auto stored_table_node = StoredTableNode::make("fixed_string_compressed");
 
-  auto predicate_node = std::dynamic_pointer_cast<AbstractLQPNode>(
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
       PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz")));
-  predicate_node->set_left_input(stored_table_node);
+  _lqp->set_left_input(stored_table_node);
 
-  _apply_rule(_rule, predicate_node, _optimization_context);
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 
@@ -538,7 +535,7 @@ TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
     stored_table_node_1);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_EQ(stored_table_node_1->prunable_subquery_predicates().size(), 1);
@@ -570,7 +567,7 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
       stored_table_node_1));
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_TRUE(stored_table_node_1->prunable_subquery_predicates().empty());
@@ -593,7 +590,7 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansComplicatedPredicate) 
     stored_table_node_1);
   // clang-format on
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_TRUE(stored_table_node_1->prunable_subquery_predicates().empty());

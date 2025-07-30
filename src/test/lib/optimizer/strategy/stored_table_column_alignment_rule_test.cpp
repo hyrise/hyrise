@@ -27,8 +27,6 @@ class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
     _union_node->set_right_input(_stored_table_node_right);
 
     _rule = std::make_shared<StoredTableColumnAlignmentRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<StoredTableColumnAlignmentRule> _rule;
@@ -38,7 +36,7 @@ class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksEqualColumns) {
-  _apply_rule(_rule, _union_node, _optimization_context);
+  _apply_rule(_rule, _union_node);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
@@ -51,7 +49,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksDifferentColumns
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
   _union_node->set_right_input(_stored_table_node_right);
 
-  _apply_rule(_rule, _union_node, _optimization_context);
+  _apply_rule(_rule, _union_node);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
@@ -65,7 +63,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableDifferentChunksDifferentCol
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
   _union_node->set_right_input(_stored_table_node_right);
 
-  _apply_rule(_rule, _union_node, _optimization_context);
+  _apply_rule(_rule, _union_node);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
@@ -80,7 +78,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
   _union_node->set_right_input(_stored_table_node_right);
 
-  _apply_rule(_rule, _union_node, _optimization_context);
+  _apply_rule(_rule, _union_node);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
@@ -110,7 +108,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
   ASSERT_EQ(_stored_table_node_right->pruned_column_ids(), pruned_column_set_a);
   ASSERT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a_b);  // differs
 
-  _apply_rule(_rule, _lqp, _optimization_context);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), pruned_column_set_a);
@@ -119,8 +117,8 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, CheckCacheability) {
-  auto _union_node_abstract = _union_node->deep_copy();
-  _apply_rule(_rule, _union_node_abstract, _optimization_context);
+  _lqp = _union_node->deep_copy();
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

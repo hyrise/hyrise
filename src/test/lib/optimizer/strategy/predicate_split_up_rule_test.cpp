@@ -29,8 +29,6 @@ class PredicateSplitUpRuleTest : public StrategyBaseTest {
     b_b = node_b->get_column("b");
 
     rule = std::make_shared<PredicateSplitUpRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   std::shared_ptr<MockNode> node_a;
@@ -64,7 +62,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpConjunctionInPredicateNode) {
               node_a))))));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -85,7 +83,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleDisjunctionInPredicateNode) {
       node_a));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -112,7 +110,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexDisjunctionInPredicateNode) {
           node_a))));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -136,7 +134,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLike) {
       node_a));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -157,7 +155,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply1) {
       node_a));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -178,7 +176,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply2) {
       node_a));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -200,7 +198,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpMutuallyExclusiveInts) {
       node_a));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -224,7 +222,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitBelowProjection) {
         node_a)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -272,7 +270,7 @@ TEST_F(PredicateSplitUpRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
       union_node));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -300,7 +298,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions)
       lower_union_node));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -347,7 +345,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions
           sub_lqp))));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -359,15 +357,15 @@ TEST_F(PredicateSplitUpRuleTest, NoRewriteSimplePredicate) {
 
   const auto expected_lqp = _lqp->deep_copy();
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateSplitUpRuleTest, CheckCacheability) {
-  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(less_than_(a_a, value_(10)), node_a));
-  _apply_rule(rule, input_lqp, _optimization_context);
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(less_than_(a_a, value_(10)), node_a));
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

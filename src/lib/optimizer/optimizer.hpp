@@ -53,7 +53,7 @@ class Optimizer final {
    * The OptimizationContext contains metadata about the optimization process, such as whether the resulting LQP
    * is cacheable or not.
    */
-  std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<OptimizationContext>> optimize_with_context(
+  std::pair<std::shared_ptr<AbstractLQPNode>, std::unique_ptr<OptimizationContext>> optimize_with_context(
       std::shared_ptr<AbstractLQPNode> input,
       const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
 

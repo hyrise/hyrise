@@ -28,8 +28,7 @@ class StrategyBaseTest : public BaseTest {
    * Always use `EXPECT_LQP_EQ(...);` rather than `EXPECT_EQ(...);` to compare LQPs: the first macro checks that both
    * LQPs are equivalent, the second macro checks that both point to the same instance.
    */
-  void _apply_rule(const std::shared_ptr<AbstractRule>& rule, std::shared_ptr<AbstractLQPNode>& input,
-                   OptimizationContext& optimization_context);
+  void _apply_rule(const std::shared_ptr<AbstractRule>& rule, std::shared_ptr<AbstractLQPNode>& input);
 
   /**
    * We declare a member variable of the abstract class to account for rewrites that replace nodes with nodes of a
@@ -37,8 +36,8 @@ class StrategyBaseTest : public BaseTest {
    * PredicateNode.
    */
   std::shared_ptr<AbstractLQPNode> _lqp;
-  OptimizationContext _optimization_context = OptimizationContext{std::make_shared<CostEstimatorLogical>(
-      std::make_shared<CardinalityEstimator>())};  // Default cost estimator, can be overwritten in tests
+  OptimizationContext _optimization_context =
+      OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
 };
 
 }  // namespace hyrise

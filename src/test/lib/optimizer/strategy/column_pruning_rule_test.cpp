@@ -39,8 +39,6 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
     w = node_uvw->get_column("w");
 
     rule = std::make_shared<ColumnPruningRule>();
-    _optimization_context =
-        OptimizationContext{std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())};
   }
 
   const std::shared_ptr<MockNode> pruned(const std::shared_ptr<MockNode> node,
@@ -81,7 +79,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
           node_uvw))));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -116,7 +114,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
           pruned_node_abc)));
     // clang-format on
 
-    _apply_rule(rule, _lqp, _optimization_context);
+    _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -148,7 +146,7 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
            pruned_node_abc)))));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -174,7 +172,7 @@ TEST_F(ColumnPruningRuleTest, ProjectionDoesNotRecompute) {
         pruned_node_abc)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
@@ -215,7 +213,7 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
         expected_sub_lqp)));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
@@ -240,7 +238,7 @@ TEST_F(ColumnPruningRuleTest, SimpleAggregate) {
       pruned_node_abc));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -264,7 +262,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
       pruned_node_abc));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -288,7 +286,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStarAndSum) {
       pruned_node_abc));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -313,7 +311,7 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
       pruned_node_abc));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
 
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
@@ -335,7 +333,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -351,7 +349,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -367,7 +365,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneDeleteInputs) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -383,7 +381,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneExportInputs) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -404,7 +402,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
   // clang-format on
 
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -422,7 +420,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
     WindowNode::make(min_(c, window), node_abc));
   // clang-format on
   const auto expected_lqp = _lqp->deep_copy();
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -440,7 +438,7 @@ TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
     WindowNode::make(rank_(window), node_abc));
   // clang-format on
 
-  _apply_rule(rule, _lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(node_abc->pruned_column_ids(), std::vector<ColumnID>{ColumnID{2}});
 }
@@ -464,7 +462,7 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
           prunable_input_side == LQPInputSide::Left ? expression_vector(u, v) : expression_vector(a, b);
       _lqp = ProjectionNode::make(projections, join_node);
 
-      _apply_rule(rule, _lqp, _optimization_context);
+      _apply_rule(rule, _lqp);
       EXPECT_TRUE(_optimization_context.is_cacheable());
 
       SCOPED_TRACE("With JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
@@ -475,10 +473,14 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
 }
 
 TEST_F(ColumnPruningRuleTest, CheckCacheability) {
-  auto lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
-      ExportNode::make("dummy.csv", FileType::Auto, PredicateNode::make(greater_than_(a, 5), node_abc)));
+  // clang-format off
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
+      ExportNode::make("dummy.csv", FileType::Auto,
+          PredicateNode::make(greater_than_(a, 5),
+            node_abc)));
+  // clang-format on
 
-  _apply_rule(rule, lqp, _optimization_context);
+  _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 
