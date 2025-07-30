@@ -485,24 +485,24 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
   const auto task_count = multiplier * worker_count;
 
   for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
-   auto output_counter = std::atomic<size_t>{0};
-   auto concurrently_processed_groups = std::atomic<int64_t>{0};
+    auto output_counter = std::atomic<size_t>{0};
+    auto concurrently_processed_groups = std::atomic<int64_t>{0};
 
-   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
-   for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
-     tasks.emplace_back(std::make_shared<JobTask>([&] {
-       ++output_counter;
-       const auto active_groups = ++concurrently_processed_groups;
-       ASSERT_LE(active_groups, group_count);
-       --concurrently_processed_groups;
-     }));
-   }
+    for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+      tasks.emplace_back(std::make_shared<JobTask>([&] {
+        ++output_counter;
+        const auto active_groups = ++concurrently_processed_groups;
+        ASSERT_LE(active_groups, group_count);
+        --concurrently_processed_groups;
+      }));
+    }
 
-   group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
-   node_queue_scheduler->wait_for_tasks(tasks);
+    group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
+    node_queue_scheduler->wait_for_tasks(tasks);
 
-   EXPECT_EQ(output_counter, task_count);
+    EXPECT_EQ(output_counter, task_count);
   }
 }
 
