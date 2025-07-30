@@ -21,7 +21,7 @@ class KeyNormalizerTest : public BaseTest {
   std::vector<unsigned char> get_normalized_key(const std::vector<SortColumnDefinition>& sort_definitions,
                                                 uint32_t string_prefix_length = 12,
                                                 ChunkOffset row_offset = ChunkOffset{0}) const {
-    auto [buffer, key_size] = KeyNormalizer::convert_table(table, sort_definitions, string_prefix_length);
+    auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions, string_prefix_length);
 
     // Extract the key for the specified row
     const auto start = buffer.begin() + (row_offset * key_size);
@@ -54,7 +54,7 @@ TEST_F(KeyNormalizerTest, SingleColumnIntegerAsc) {
   const auto sort_definitions =
       std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}};
 
-  const auto [buffer, tuple_key_size] = KeyNormalizer::convert_table(table, sort_definitions);
+  const auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions);
 
   // The number of columns in the table is 3, so we expect the tuple_key_size to be:
   // (1 + sizeof(int32_t)) + (1 + sizeof(float)) + (1 + string_prefix_length) + sizeof(RowID)
@@ -171,7 +171,7 @@ TEST_F(KeyNormalizerTest, TwoColumnsIntFloat) {
   const std::vector sort_definitions = {SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},
                                         SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast}};
 
-  const auto [buffer, tuple_key_size] = KeyNormalizer::convert_table(table, sort_definitions);
+  const auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions);
 
   const auto expected_tuple_size = (sizeof(int32_t) + 1) + (sizeof(float) + 1) + sizeof(RowID);
   EXPECT_EQ(tuple_key_size, expected_tuple_size);
@@ -181,7 +181,7 @@ TEST_F(KeyNormalizerTest, StringColumnDescending) {
   const auto sort_definitions = std::vector{SortColumnDefinition{ColumnID{2}, SortMode::DescendingNullsFirst}};
   const uint32_t string_prefix_length = 8;
 
-  const auto [buffer, tuple_key_size] = KeyNormalizer::convert_table(table, sort_definitions, string_prefix_length);
+  const auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions, string_prefix_length);
 
   const auto expected_tuple_size = string_prefix_length + 1 + sizeof(RowID);
   EXPECT_EQ(tuple_key_size, expected_tuple_size);
@@ -191,7 +191,7 @@ TEST_F(KeyNormalizerTest, NullsFirst) {
   // Sort by column 'b' (float) with nulls first
   const auto sort_definitions = std::vector{SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}};
 
-  auto [buffer, tuple_key_size] = KeyNormalizer::convert_table(table, sort_definitions);
+  auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions);
 
   const auto sorted_row_ids = get_sorted_row_ids(buffer, tuple_key_size);
 
@@ -204,7 +204,7 @@ TEST_F(KeyNormalizerTest, NullsFirst) {
 TEST_F(KeyNormalizerTest, NullsLast) {
   // Sort by column 'b' (float) with nulls last
   const auto sort_definitions = std::vector{SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsLast}};
-  auto [buffer, tuple_key_size] = KeyNormalizer::convert_table(table, sort_definitions);
+  auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions);
 
   const auto sorted_row_ids = get_sorted_row_ids(buffer, tuple_key_size);
 
@@ -217,7 +217,7 @@ TEST_F(KeyNormalizerTest, ComplexSort) {
       std::vector{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},   // 'a' ASC
                   SortColumnDefinition{ColumnID{2}, SortMode::DescendingNullsLast}};  // 'c' DESC
 
-  auto [buffer, tuple_key_size] = KeyNormalizer::convert_table(table, sort_definitions);
+  auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions);
 
   const auto sorted_row_ids = get_sorted_row_ids(buffer, tuple_key_size);
 
@@ -251,7 +251,7 @@ TEST_F(KeyNormalizerTest, DebugFloats) {
 
   const auto sort_definitions =
       std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
-  const auto convert_result = KeyNormalizer::convert_table(float_table, sort_definitions);
+  const auto convert_result = KeyNormalizer::normalize_keys_for_table(float_table, sort_definitions);
   const auto& normalized_keys = convert_result.first;
   const auto& key_size = convert_result.second;
 
@@ -288,7 +288,7 @@ TEST_F(KeyNormalizerTest, DebugSignedInts) {
 
   const auto sort_definitions =
       std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
-  const auto convert_result  = KeyNormalizer::convert_table(int_table, sort_definitions);
+  const auto convert_result  = KeyNormalizer::normalize_keys_for_table(int_table, sort_definitions);
   const auto& normalized_keys = convert_result.first;
   const auto& key_size = convert_result.second;
 
@@ -329,7 +329,7 @@ TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
       std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}},
                                         {SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast}}};
 
-  const auto convert_result = KeyNormalizer::convert_table(multi_table, sort_definitions);
+  const auto convert_result = KeyNormalizer::normalize_keys_for_table(multi_table, sort_definitions);
   const auto& normalized_keys = convert_result.first;
   const auto& key_size = convert_result.second;
 

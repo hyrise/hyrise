@@ -302,12 +302,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return input_table;
   }
 
-  auto [normalized_keys, key_size] = KeyNormalizer::convert_table(input_table, _sort_definitions);
+  auto [normalized_keys, key_size] = KeyNormalizer::normalize_keys_for_table(input_table, _sort_definitions);
 
   std::vector<const unsigned char*> key_pointers;
   key_pointers.reserve(input_table->row_count());
-  for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
-    key_pointers.push_back(&normalized_keys[i]);
+  for (auto key_offset = size_t{0}; key_offset < normalized_keys.size(); key_offset += key_size) {
+    key_pointers.push_back(&normalized_keys[key_offset]);
   }
 
   const auto comparison_key_size = key_size - sizeof(RowID);
@@ -354,10 +354,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   if (must_materialize) {
-    std::cout << "Creating materialized output\n";
     sorted_table = write_materialized_output_table(input_table, std::move(sorted_pos_list), _output_chunk_size);
   } else {
-    std::cout << "Creating reference output\n";
     sorted_table = write_reference_output_table(input_table, std::move(sorted_pos_list), _output_chunk_size);
   }
 
