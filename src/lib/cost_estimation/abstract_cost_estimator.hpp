@@ -4,7 +4,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -43,10 +42,13 @@ class AbstractCostEstimator {
 
   /**
    * Promises to the CostEstimator (and underlying CardinalityEstimator) that it will only be used to estimate bottom-up
-   * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
-   * This enables the usage of a <lqp-ptr> -> <cost> cache (`cost_estimation_by_lqp_cache`).
+   * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes. This enables the usage
+   * of a <lqp-ptr> -> <cost> cache (`cost_estimation_by_lqp_cache`).
+   *
+   * The plan's root node is forwarded to the CardinalityEstimator to guarantee that no relevant statistics are pruned
+   * during cardinality estimation (see `CardinalityEstimator::guarantee_bottom_up_construction()` for more details).
    */
-  void guarantee_bottom_up_construction();
+  void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp);
 
   const std::shared_ptr<CardinalityEstimator> cardinality_estimator;
 
