@@ -57,7 +57,7 @@ pkgs.mkShell {
 		pkgs.lld
 		pkgs.sqlite
 		pkgs.stdenv.cc.cc.lib
-		pkgs.tbb_2021_11
+		pkgs.tbb_2022
 		pkgs.postgresql_16
 	]}:$LD_LIBRARY_PATH"
   '';
