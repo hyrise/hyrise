@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -21,8 +23,8 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class JoinOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     rule = std::make_shared<JoinOrderingRule>();
-
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
     const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 50, 20, 10);
@@ -74,7 +76,25 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
       node_a));
   // clang-format on
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(JoinOrderingRuleTest, CheckCacheability) {
+  // clang-format off
+  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(AggregateNode::make(expression_vector(a_a), expression_vector(),
+      PredicateNode::make(equals_(a_a, b_b),
+        JoinNode::make(JoinMode::Cross,
+          node_a,
+          JoinNode::make(JoinMode::Left, equals_(b_b, d_d),
+            node_b,
+            PredicateNode::make(equals_(d_d, c_c),
+              JoinNode::make(JoinMode::Cross,
+                node_d,
+                node_c)))))));
+  // clang-format on
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 
 }  // namespace hyrise
