@@ -5,6 +5,8 @@ include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+    operators/trace_categories.hpp
+    operators/trace_categories.cpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.cpp
@@ -689,6 +691,7 @@ set(
     sqlparser
     uninitialized_vector
     libzstd_static
+    perfetto-wrapper
     ${CMAKE_DL_LIBS}
     # Additional libraries added with target_link_libraries_system below
 )
