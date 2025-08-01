@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-class MetaTable;
+class AbstractMetaTable;
 class Table;
 
 class MetaTableManager : public Noncopyable {
@@ -19,15 +19,11 @@ class MetaTableManager : public Noncopyable {
 
   static bool is_meta_table_name(const std::string& name);
 
-  ObjectID meta_table_id(const std::string& name);
-
   // Returns a sorted list of all meta table names (without prefix)
   std::vector<std::string_view> table_names() const;
 
   // void add_table(const std::shared_ptr<AbstractMetaTable>& table);
-  ObjectID table_id(const std::string& name) const;
   bool has_table(const std::string& table_name) const;
-  std::shared_ptr<AbstractMetaTable> get_table(const ObjectID table_id) const;
   std::shared_ptr<AbstractMetaTable> get_table(const std::string& table_name) const;
 
   // Generates the meta table specified by table_name (which can include the prefix)
@@ -47,8 +43,7 @@ class MetaTableManager : public Noncopyable {
   MetaTableManager();
 
  private:
-  std::unordered_map<std::string, ObjectID> _meta_table_ids;
-  std::vector<std::shared_ptr<AbstractMetaTable>> _meta_tables;
+  std::unordered_map<std::string, std::shared_ptr<AbstractMetaTable>> _meta_tables;
 };
 
 }  // namespace hyrise

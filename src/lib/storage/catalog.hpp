@@ -19,7 +19,7 @@ class LQPView;
 class PreparedPlan;
 class Table;
 
-enum class ObjectType { Table, MetaTable, View, PreparedPlan };
+enum class ObjectType { Table, View, PreparedPlan };
 
 // The Catalog is responsible for providing metadata, e.g., for mapping table names to their unique IDs, or for
 // maintaining table constraints.
@@ -53,10 +53,6 @@ class Catalog : public Noncopyable {
   // We pre-allocate data structures to prevent costly re-allocations.
   static constexpr size_t INITIAL_SIZE = 100;
 
- protected:
-  Catalog() = default;
-  friend class Hyrise;
-
   struct ObjectMetadata {
     ObjectMetadata() = default;
     ObjectMetadata(ObjectMetadata&& other) noexcept;
@@ -66,6 +62,10 @@ class Catalog : public Noncopyable {
     tbb::concurrent_vector<std::string> names{INITIAL_SIZE};
     std::atomic<ObjectID::base_type> next_id{0};
   };
+
+ protected:
+  Catalog() = default;
+  friend class Hyrise;
 
   ObjectMetadata _tables;
   ObjectMetadata _views;

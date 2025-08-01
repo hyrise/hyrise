@@ -22,7 +22,6 @@
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/meta_table_manager.hpp"
 
 namespace hyrise {
 
@@ -87,11 +86,7 @@ void Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& t
   Hyrise::get().storage_manager._add_table(table_id, table);
 }
 
-std::pair<ObjectType, ObjectID> resolve_object(const std::string& name) {
-  if (MetaTableManager::is_meta_table_name(name)) {
-    return {ObjectType::MetaTable, Hyrise::get().meta_table_manager.meta_table_id(name)};
-  }
-
+std::pair<ObjectType, ObjectID> Catalog::resolve_object(const std::string& name) {
   const auto table_id = this->table_id(name);
   if (table_id != INVALID_OBJECT_ID) {
     return {ObjectType::Table, table_id};
