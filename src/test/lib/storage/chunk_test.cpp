@@ -234,7 +234,7 @@ TEST_F(StorageChunkTest, SetSortedInformationSingle) {
   const auto sorted_by = SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst);
   chunk->set_immutable();
   chunk->set_individually_sorted_by(sorted_by);
-  EXPECT_EQ(chunk->individually_sorted_by().size(), 1);
+  ASSERT_EQ(chunk->individually_sorted_by().size(), 1);
   EXPECT_EQ(chunk->individually_sorted_by().front(), sorted_by);
 }
 
@@ -256,16 +256,25 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
   }
 
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{17, 0, 1, 1},
-                                                                     pmr_vector<bool>{true, true, false, false});
+                                                                     pmr_vector<bool>{true, false, false, false});
   const auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->set_immutable();
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
-  EXPECT_NO_THROW(
-      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)));
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsLast)),
+      std::logic_error);
   EXPECT_THROW(
       chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)),
       std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsLast)),
+      std::logic_error);
+
+  const auto sort_definition = SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst};
+  chunk_with_nulls->set_individually_sorted_by(sort_definition);
+  ASSERT_EQ(chunk_with_nulls->individually_sorted_by().size(), 1);
+  EXPECT_EQ(chunk_with_nulls->individually_sorted_by().front(), sort_definition);
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
@@ -279,15 +288,23 @@ TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
   chunk_with_nulls->set_immutable();
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
-  // Currently, NULL values always come first when sorted.
-  EXPECT_NO_THROW(
-      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)));
   EXPECT_THROW(
       chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)),
       std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsLast)),
+      std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsLast)),
+      std::logic_error);
+
+  const auto sort_definition = SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsFirst};
+  chunk_with_nulls->set_individually_sorted_by(sort_definition);
+  ASSERT_EQ(chunk_with_nulls->individually_sorted_by().size(), 1);
+  EXPECT_EQ(chunk_with_nulls->individually_sorted_by().front(), sort_definition);
 }
 
-TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
+TEST_F(StorageChunkTest, SetSortedInformationNullsInBetween) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
@@ -298,33 +315,72 @@ TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
   chunk_with_nulls->set_immutable();
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
-  // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
+  // Sorted values, but NULL value in the middle of the segment.
   EXPECT_THROW(
       chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)),
       std::logic_error);
   EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsLast)),
+      std::logic_error);
+  EXPECT_THROW(
       chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)),
+      std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsLast)),
       std::logic_error);
 }
 
-TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
+TEST_F(StorageChunkTest, SetSortedInformationNullsAtEnds) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  const auto value_segment =
+      std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{true, false, true});
+  const auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
+  chunk_with_nulls->set_immutable();
+  EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
+
+  // Sorted values, but NULL values at both ends of the segment.
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)),
+      std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsLast)),
+      std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)),
+      std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsLast)),
+      std::logic_error);
+}
+
+TEST_F(StorageChunkTest, SetSortedInformationNullsLast) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
   const auto value_segment =
       std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{false, false, true});
-  const auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
-  chunk_with_nulls->set_immutable();
-  EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
-  // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
-  EXPECT_THROW(
-      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)),
-      std::logic_error);
-  EXPECT_THROW(
-      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)),
-      std::logic_error);
+  for (const auto sort_mode : {SortMode::AscendingNullsLast, SortMode::DescendingNullsLast}) {
+    const auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
+    chunk_with_nulls->set_immutable();
+    EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
+
+    EXPECT_THROW(
+        chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)),
+        std::logic_error);
+    EXPECT_THROW(
+        chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)),
+        std::logic_error);
+
+    const auto sort_definition = SortColumnDefinition{ColumnID{0}, sort_mode};
+    chunk_with_nulls->set_individually_sorted_by(sort_definition);
+    ASSERT_EQ(chunk_with_nulls->individually_sorted_by().size(), 1);
+    EXPECT_EQ(chunk_with_nulls->individually_sorted_by().front(), sort_definition);
+  }
 }
 
 TEST_F(StorageChunkTest, MemoryUsageEstimation) {
