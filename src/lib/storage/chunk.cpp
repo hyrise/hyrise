@@ -274,7 +274,7 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 
   if constexpr (HYRISE_DEBUG) {
     const auto& sorted_by_column = sorted_by[0];
-    const auto& sorted_segment = get_segment(sorted_by_column.column);
+    const auto sorted_segment = get_segment(sorted_by_column.column);
     if (sorted_segment->size() > 1) {
       segment_with_iterators(*sorted_segment, [&](const auto& begin, const auto& end) {
         Assert(std::is_sorted(begin, end,
