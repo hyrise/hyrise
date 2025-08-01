@@ -644,34 +644,6 @@ std::strong_ordering operator<=>(const std::ranges::subrange<It>& block, const A
   return offset <=> right.offset.load(std::memory_order_relaxed);
 }
 
-/*
-
-void debug_print_keys(const auto& name, const NormalizedKeyRange auto& range) {
-  if constexpr (HYRISE_DEBUG) {
-    std::cout << name << " " << std::hex;
-    for (const auto& row : range) {
-      std::cout << "0x";
-      for (auto counter = size_t{0}; counter < 2; ++counter) {
-        std::cout << std::setfill('0') << std::setw(2) << static_cast<int32_t>(row.key_head[counter]);
-      }
-      std::cout << " ";
-    }
-    std::cout << "\n" << std::dec;
-  }
-}
-
-void debug_print_values(const auto& name, const std::ranges::range auto& range) {
-  if constexpr (HYRISE_DEBUG) {
-    std::cout << name << " ";
-    for (const auto& value : range) {
-      std::cout << value << " ";
-    }
-    std::cout << "\n";
-  }
-}
-
-*/
-
 // Select the classifiers for the sample sort. At the moment this selects first num classifiers many keys.
 std::vector<NormalizedKeyRow> select_classifiers(const NormalizedKeyRange auto& sort_range, size_t num_classifiers,
                                                  size_t samples_per_classifier,
@@ -949,46 +921,47 @@ void write_to_ranges(std::ranges::range auto& input, std::ranges::range auto& fi
 }
 
 /**
- * Implementation of IPS4o (https://arxiv.org/pdf/2009.13569) with a few modifications:
- * 1. Instead of using single threaded IPS4o this algorithm falls back to pdqsort.
- * 2. Instead of allocating an overflow bucket the overflow elements are handled extra.
+ * Do a single pass of IPS4o and return an array of bucket delimiter. This past will first classify the input array
+ * into blocks. Therefore, the algorithm relies on a sample sort with the provided number of buckets. In a second
+ * stage this algorithm will move the block into the correct buckets and finally, it will cleanup the bucket border
+ * and add missing elements.
  *
  * @param sort_range             Range of values to sort.
- * @param num_samples            Number of classifiers to be used for the sample sort.
- * @param block_size             Number of sequential elements to group into a block.
- * @param min_blocks_per_stripe  Minimum number of extra blocks before creating a new stripe.
- * @param max_parallelism        Maximum number of parallel tasks to spawn.
- * @param comp                   Comparator
+ * @param num_buckets            Number of buckets to classify the elements into. At least to buckets are required.
+ * @param samples_per_classifier Number of samples per classifier to select from the array.
+ * @param block_size             Number of array elements per block.
+ * @param num_stripes            Number of stripes to distribute blocks on. This is equivalent to the maximum amount of
+ *								 parallelism.
+ * @param comp                   Function for comparing a < b.
+ *
+ * @return Returns the size of each bucket.
  */
-void ips4o_sort(NormalizedKeyRange auto& sort_range, const size_t num_buckets, const size_t samples_per_classifiers,
-                const size_t block_size, const size_t min_blocks_per_stripe, size_t max_parallelism,
-                const NormalizedKeyComparator auto& comp) {
+std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t num_buckets,
+                               const size_t samples_per_classifier, const size_t block_size, size_t num_stripes,
+                               const NormalizedKeyComparator auto& comp) {
   Assert(num_buckets > 1, "At least two buckets are required");
+  Assert(num_stripes > 1, "This function should be called with at least two 2 stripes. Use pdqsort instead");
+  Assert(std::ranges::size(sort_range) >= block_size, "Provide at least one block");
+  // TODO(): check sorting of single block arrays.
   TRACE_EVENT("sort", "ips4o");
   using RangeIterator = decltype(std::ranges::begin(sort_range));
+
   // The following terms are used in this algorithm:
   // - *block* A number of sequential elements. The sort_range is split up into these blocks.
-  // - *stripe* A stripe is a set of sequential blocks. Each stripe is executed in its own task.
+  // - *stripe* A stripe is a set of sequential blocks. Each stripe is executed in its own task/thread.
 
   DebugAssert(block_size > 0, "A block must contains at least one element.");
   const auto total_size = std::ranges::size(sort_range);
   const auto num_blocks = div_ceil(total_size, block_size);
   const auto num_classifiers = num_buckets - 1;
   // Calculate the number of blocks assigned to each stripe.
-  const auto max_num_stripes = div_ceil(num_blocks, min_blocks_per_stripe);
-  const auto num_stripes = std::min(max_num_stripes, max_parallelism);
-  if (total_size <= block_size || num_stripes <= 1) {
-    // Fallback to pdqsort.
-    boost::sort::pdqsort(sort_range.begin(), sort_range.end(), comp);
-    return;
-  }
   const auto max_blocks_per_stripe = div_ceil(num_blocks, num_stripes);
 
   DebugAssert(num_blocks > 0, "At least one block is required.");
   DebugAssert(num_buckets > 0, "At least one bucket is required.");
 
   // Select the elements for the sample sort.
-  const auto classifiers = select_classifiers(sort_range, num_classifiers, samples_per_classifiers, comp);
+  const auto classifiers = select_classifiers(sort_range, num_classifiers, samples_per_classifier, comp);
 
   // Create an array of elements assigned to each stripe. Equally distribute the blocks to each stripe.
   auto num_max_sized_stripes = num_blocks % num_stripes;
@@ -1186,6 +1159,10 @@ void ips4o_sort(NormalizedKeyRange auto& sort_range, const size_t num_buckets, c
   }
   TRACE_EVENT_END("sort");
 
+  return aggregated_bucket_sizes;
+
+  /*
+
   // Sort each bucket for now.
   TRACE_EVENT_BEGIN("sort", "ips4o::pdqsort");
   const auto sort_task = run_parallel_batched(num_buckets, 1, [&](auto bucket) {
@@ -1200,6 +1177,82 @@ void ips4o_sort(NormalizedKeyRange auto& sort_range, const size_t num_buckets, c
   });
   Hyrise::get().scheduler()->wait_for_tasks(sort_task);
   TRACE_EVENT_END("sort");
+  */
+}
+
+/**
+ * This sorting algorithm consists of two sorting strategies:
+ *
+ * 1. A single pass of IPS4o to divide the input array into smaller buckets, and
+ * 2. pdqsort to sort small enough buckets.
+ *
+ * A bucket is small enough, if it contains not enough elements to create at least two stripes (See config.min_batch_size).
+ */
+void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const NormalizedKeyComparator auto& comp) {
+  using RangeIterator = decltype(std::ranges::begin(sort_range));
+
+  const auto total_size = std::ranges::size(sort_range);
+  const auto total_num_blocks = div_ceil(total_size, config.block_size);
+  if (total_num_blocks < 2 * config.min_blocks_per_stripe) {
+    boost::sort::pdqsort(sort_range.begin(), sort_range.end(), comp);
+    return;
+  }
+
+  // Do an initial pass of IPS4o.
+  const auto num_stripes = total_num_blocks / config.min_blocks_per_stripe;
+  auto buckets = std::vector<std::ranges::subrange<RangeIterator>>();
+  buckets.reserve(config.bucket_count * config.bucket_count);
+  buckets.emplace_back(sort_range.begin(), sort_range.end());
+
+  auto unparsed_buckets = std::ranges::subrange(buckets.begin(), buckets.end());
+  const auto small_bucket_max_blocks = total_num_blocks / num_stripes;
+  const auto small_bucket_max_size =
+      std::max(small_bucket_max_blocks * config.block_size, config.max_parallelism * config.block_size);
+  auto counter = size_t{0};
+  while (true) {  // TODO(student): Limit number of passes
+    TRACE_EVENT("sort", "ips4o::split_large_buckets");
+    auto large_bucket_range = std::ranges::partition(unparsed_buckets, [&](const auto& range) {
+      return std::ranges::size(range) <= small_bucket_max_size;
+    });
+    auto large_buckets = std::vector(large_bucket_range.begin(), large_bucket_range.end());
+    std::cout << "round " << counter << " large buckets " << large_buckets.size() << "\n";
+    buckets.erase(large_bucket_range.begin(), large_bucket_range.end());
+    if (large_buckets.size() == 0) {
+      break;
+    }
+
+    const auto small_offset = buckets.size();
+    for (auto large_range : large_buckets) {
+      TRACE_EVENT("sort", "ips4o::pass");
+      DebugAssert(std::ranges::size(large_range) >= small_bucket_max_size, "Large bucket");
+
+      std::cout << "sort range " << std::distance(sort_range.begin(), large_range.begin()) << " "
+                << std::distance(sort_range.begin(), large_range.end()) << "\n";
+
+      const auto delimiter = ips4o_pass(large_range, config.bucket_count, config.samples_per_classifier,
+                                        config.block_size, num_stripes, comp);
+      auto bucket_begin_index = size_t{0};
+      for (const auto bucket_delimiter : delimiter) {
+        std::cout << "new range " << bucket_begin_index << " " << bucket_delimiter << "\n";
+        const auto begin = std::next(large_range.begin(), bucket_begin_index);
+        const auto end = std::next(large_range.begin(), bucket_delimiter);
+        if (std::distance(begin, end) > 0) {
+          buckets.emplace_back(begin, end);
+        }
+        bucket_begin_index = bucket_delimiter;
+      }
+    }
+    const auto small_begin = std::next(buckets.begin(), small_offset);
+    unparsed_buckets = std::ranges::subrange(small_begin, buckets.end());
+    ++counter;
+  }
+
+  TRACE_EVENT("sort", "sort::bucket");
+  const auto sort_tasks = run_parallel_batched(buckets.size(), 1, [&](const auto bucket) {
+    TRACE_EVENT("sort", "sort::bucket");
+    boost::sort::pdqsort(buckets[bucket].begin(), buckets[bucket].end(), comp);
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
 }
 
 }  // namespace ips4o
@@ -1412,8 +1465,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   const auto comp = [normalized_key_size](const NormalizedKeyRow& lhs, const NormalizedKeyRow& rhs) {
     return lhs.less_than(rhs, normalized_key_size);
   };
-  ips4o::ips4o_sort(materialized_rows, _config.bucket_count, _config.samples_per_classifier, _config.block_size,
-                    _config.min_blocks_per_stripe, _config.max_parallelism, comp);
+  ips4o::sort(materialized_rows, _config, comp);
   /*std::sort(materialized_rows.begin(), materialized_rows.end(),
             [&](const auto& lhs, const auto& rhs) {
               return lhs.less_than(rhs, normalized_key_size);
