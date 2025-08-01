@@ -15,7 +15,6 @@
 #include "operators/get_table.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
