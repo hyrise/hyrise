@@ -59,11 +59,12 @@ TEST_F(WindowNodeTest, Description) {
   EXPECT_EQ(_window_node->description(), "[Window] MIN(a) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)");
   auto frame_description = FrameDescription{FrameType::Rows, FrameBound{1, FrameBoundType::Preceding, false},
                                             FrameBound{2, FrameBoundType::Following, false}};
-  auto window = window_(expression_vector(_a), expression_vector(_b), std::vector<SortMode>{SortMode::Descending},
-                        std::move(frame_description));
+  auto window = window_(expression_vector(_a), expression_vector(_b),
+                        std::vector<SortMode>{SortMode::DescendingNullsFirst}, std::move(frame_description));
   auto window_node = WindowNode::make(rank_(window));
-  EXPECT_EQ(window_node->description(),
-            "[Window] RANK() OVER (PARTITION BY a ORDER BY b Descending ROWS BETWEEN 1 PRECEDING AND 2 FOLLOWING)");
+  EXPECT_EQ(
+      window_node->description(),
+      "[Window] RANK() OVER (PARTITION BY a ORDER BY b DescendingNullsFirst ROWS BETWEEN 1 PRECEDING AND 2 FOLLOWING)");
   frame_description = FrameDescription{FrameType::Rows, FrameBound{0, FrameBoundType::CurrentRow, false},
                                        FrameBound{0, FrameBoundType::Following, true}};
   window = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));

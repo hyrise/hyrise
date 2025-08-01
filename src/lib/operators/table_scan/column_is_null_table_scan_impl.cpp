@@ -85,7 +85,7 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(
 void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sorted_by) const {
-  const bool is_nulls_first = sorted_by == SortMode::Ascending || sorted_by == SortMode::Descending;
+  const bool is_nulls_first = sorted_by == SortMode::AscendingNullsFirst || sorted_by == SortMode::DescendingNullsFirst;
   const bool predicate_is_null = predicate_condition == PredicateCondition::IsNull;
   segment_with_iterators_filtered(segment, position_filter, [&](auto begin, auto end) {
     if (is_nulls_first) {
