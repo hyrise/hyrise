@@ -98,25 +98,15 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
 SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique,
                                                       const bool segment_values_are_key,
                                                       const bool segment_values_might_be_unique) {
-  if (segment_values_are_key) {
+  if (segment_values_might_be_unique) {
     return SegmentEncodingSpec{EncodingType::Unencoded};
   }
 
-  switch (type) {
-    case DataType::Int:
-      return SegmentEncodingSpec{EncodingType::FrameOfReference};
-    case DataType::String:
-    case DataType::Long:
-    case DataType::Double:
-    case DataType::Float:
-      if (segment_values_are_unique) {
-        return SegmentEncodingSpec{EncodingType::Unencoded};
-      } else {
-        return SegmentEncodingSpec{EncodingType::Dictionary};
-      }
-    default:
-      Fail("Unknown DataType when trying to select encoding for column.");
+  if (type == DataType::Int) {
+    return SegmentEncodingSpec{EncodingType::FrameOfReference};
   }
+
+  return SegmentEncodingSpec{EncodingType::Dictionary};
 }
 
 }  // namespace hyrise
