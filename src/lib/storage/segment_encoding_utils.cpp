@@ -98,16 +98,12 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
 SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique,
                                                       const bool segment_values_are_key,
                                                       const bool segment_values_might_be_unique) {
-  if (segment_values_are_key) {
+  if (segment_values_are_unique) {
     return SegmentEncodingSpec{EncodingType::Unencoded};
   }
 
   if (type == DataType::Int) {
     return SegmentEncodingSpec{EncodingType::FrameOfReference};
-  }
-
-  if (segment_values_are_unique) {
-    return SegmentEncodingSpec{EncodingType::Unencoded};
   }
 
   return SegmentEncodingSpec{EncodingType::Dictionary};
