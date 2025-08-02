@@ -47,6 +47,25 @@ class KeyNormalizerTest : public BaseTest {
     return sorted_row_ids;
   }
 
+  RowIDPosList get_sorted_pos_list(std::vector<unsigned char>& buffer, uint64_t key_size) {
+    std::vector<const unsigned char*> key_pointers;
+    key_pointers.reserve(buffer.size() / key_size);
+    for (size_t i = 0; i < buffer.size(); i += key_size) {
+      key_pointers.push_back(&buffer[i]);
+    }
+
+    std::sort(key_pointers.begin(), key_pointers.end(), [key_size](const auto* a, const auto* b) {
+      return std::memcmp(a, b, key_size) < 0;
+    });
+
+    RowIDPosList sorted_pos_list;
+    sorted_pos_list.reserve(key_pointers.size());
+    for (const auto* ptr : key_pointers) {
+      sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
+    }
+    return sorted_pos_list;
+  }
+
   std::shared_ptr<Table> table;
 };
 
@@ -181,7 +200,8 @@ TEST_F(KeyNormalizerTest, StringColumnDescending) {
   const auto sort_definitions = std::vector{SortColumnDefinition{ColumnID{2}, SortMode::DescendingNullsFirst}};
   const uint32_t string_prefix_length = 8;
 
-  const auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions, string_prefix_length);
+  const auto [buffer, tuple_key_size] =
+      KeyNormalizer::normalize_keys_for_table(table, sort_definitions, string_prefix_length);
 
   const auto expected_tuple_size = string_prefix_length + 1 + sizeof(RowID);
   EXPECT_EQ(tuple_key_size, expected_tuple_size);
@@ -255,7 +275,6 @@ TEST_F(KeyNormalizerTest, DebugFloats) {
   const auto& normalized_keys = convert_result.first;
   const auto& key_size = convert_result.second;
 
-
   print_key({normalized_keys.begin() + 0 * key_size, normalized_keys.begin() + 1 * key_size}, "Key for -10.5f:");
   print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for   2.0f:");
   print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for   0.0f:");
@@ -288,7 +307,7 @@ TEST_F(KeyNormalizerTest, DebugSignedInts) {
 
   const auto sort_definitions =
       std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
-  const auto convert_result  = KeyNormalizer::normalize_keys_for_table(int_table, sort_definitions);
+  const auto convert_result = KeyNormalizer::normalize_keys_for_table(int_table, sort_definitions);
   const auto& normalized_keys = convert_result.first;
   const auto& key_size = convert_result.second;
 
@@ -314,6 +333,56 @@ TEST_F(KeyNormalizerTest, DebugSignedInts) {
   const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}},
                                        RowID{ChunkID{0}, ChunkOffset{0}}};
   EXPECT_EQ(sorted_pos_list, expected_order);
+}
+
+TEST_F(KeyNormalizerTest, StringsWithSharedPrefixAscending) {
+  auto str_table = std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
+  str_table->append({"aa"});     // Should be second
+  str_table->append({"a"});      // Should be first
+  str_table->append({"aaaaa"});  // Should be third
+
+  const auto sort_definitions = std::vector{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
+  auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(str_table, sort_definitions);
+
+  auto sorted_ids = get_sorted_pos_list(buffer, key_size);
+  const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{0}},
+                                       RowID{ChunkID{0}, ChunkOffset{2}}};
+  EXPECT_EQ(sorted_ids, expected_order);
+}
+
+TEST_F(KeyNormalizerTest, StringsWithSharedPrefixDescending) {
+  auto str_table = std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
+  str_table->append({"aa"});     // Should be second
+  str_table->append({"a"});      // Should be third
+  str_table->append({"aaaaa"});  // Should be first
+
+  const auto sort_definitions = std::vector{{SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsLast}}};
+  auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(str_table, sort_definitions);
+
+  auto sorted_ids = get_sorted_pos_list(buffer, key_size);
+  const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}},
+                                       RowID{ChunkID{0}, ChunkOffset{1}}};
+  EXPECT_EQ(sorted_ids, expected_order);
+}
+
+TEST_F(KeyNormalizerTest, StringEdgeCases) {
+  auto str_table = std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
+  str_table->append({"b"});
+  str_table->append({""});  // Empty string
+  str_table->append({"a"});
+
+  // An actual string containing a null byte.
+  std::string s_with_null("a\0c", 3);
+  str_table->append({pmr_string(s_with_null)});
+
+  const auto sort_definitions = std::vector{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
+  auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(str_table, sort_definitions);
+
+  auto sorted_ids = get_sorted_pos_list(buffer, key_size);
+  // Expected: "", "a", "a\0c", "b"
+  const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}},
+                                       RowID{ChunkID{0}, ChunkOffset{3}}, RowID{ChunkID{0}, ChunkOffset{0}}};
+  EXPECT_EQ(sorted_ids, expected_order);
 }
 
 TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
@@ -347,7 +416,7 @@ TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
     return std::memcmp(a, b, key_size) < 0;
   });
 
-  RowIDPosList sorted_pos_list;
+  auto sorted_pos_list = RowIDPosList{};
   for (const auto* ptr : key_pointers) {
     sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
   }
@@ -355,6 +424,27 @@ TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
   const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}},
                                        RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}}};
   EXPECT_EQ(sorted_pos_list, expected_order);
+}
+
+TEST_F(KeyNormalizerTest, MultiColumnWithNullInFirstColumn) {
+  auto multi_null_table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::Int, true}}, TableType::Data);
+
+  multi_null_table->append({NULL_VALUE, 100});
+  multi_null_table->append({10, 20});
+  multi_null_table->append({NULL_VALUE, 50});
+
+  // ORDER BY a ASC NULLS FIRST, b ASC NULLS LAST
+  const auto sort_definitions =
+      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},
+                                        {SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsLast}}};
+
+  auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(multi_null_table, sort_definitions);
+
+  auto sorted_ids = get_sorted_pos_list(buffer, key_size);
+  const RowIDPosList expected_order = {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}},
+                                       RowID{ChunkID{0}, ChunkOffset{1}}};
+  EXPECT_EQ(sorted_ids, expected_order);
 }
 
 }  // namespace hyrise

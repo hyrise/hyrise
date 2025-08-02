@@ -116,6 +116,9 @@ void KeyNormalizer::insert_keys_for_chunk(std::vector<unsigned char>& buffer, co
     const auto descending = sort_mode == SortMode::DescendingNullsFirst || sort_mode == SortMode::DescendingNullsLast;
     const auto nulls_first = sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
 
+    const auto component_data_size = (data_type == DataType::String ? string_prefix_length : data_type_size(data_type));
+    const auto component_total_size = component_data_size + 1;
+
     resolve_data_type(data_type, [&](const auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
@@ -123,14 +126,13 @@ void KeyNormalizer::insert_keys_for_chunk(std::vector<unsigned char>& buffer, co
         const auto offset = (row_offset + pos.chunk_offset()) * tuple_key_size + component_offset;
         const auto is_null = pos.is_null();
 
-
         // Use 0x00 when NullsFirst and 0x01 when NullsLast
         buffer[offset] = static_cast<unsigned char>(is_null != nulls_first);
 
         if (!is_null) {
           _insert_normalized_value(buffer, pos.value(), offset + 1, descending, string_prefix_length);
         } else {
-          std::fill(&buffer[offset + 1], &buffer[offset + tuple_key_size - 1], 0x00);
+          std::fill(&buffer[offset + 1], &buffer[offset + component_total_size], 0x00);
         }
       });
     });
@@ -214,17 +216,14 @@ void KeyNormalizer::_insert_string(std::vector<unsigned char>& buffer, const pmr
   const auto prefix_length = std::min(static_cast<uint32_t>(value.size()), string_prefix_length);
   std::memcpy(&buffer[offset], value.data(), prefix_length);
 
-  // Flip bytes in-place if descending
+  unsigned char pad_char = 0x00;
+  std::fill(&buffer[offset + prefix_length], &buffer[offset + string_prefix_length], pad_char);
+
   if (descending) {
-    for (auto i = uint32_t{0}; i < prefix_length; ++i) {
-      buffer[offset + i] = static_cast<unsigned char>(~value[offset + i]);
+    for (auto i = uint32_t{0}; i < string_prefix_length; ++i) {
+      buffer[offset + i] = ~buffer[offset + i];
     }
   }
-
-  // Pad the rest with 0x01 or 0xFF depending on sort order
-  // todo: choose padding character to distinguish 0x00 from '\0'
-  unsigned char pad_char = descending ? 0x00 : 0xFF;
-  std::fill(&buffer[offset + prefix_length], &buffer[offset + string_prefix_length], pad_char);
 }
 
 template void KeyNormalizer::_insert_normalized_value<int32_t>(std::vector<unsigned char>& buffer, int32_t value,
