@@ -24,6 +24,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_segment_accessor.hpp"
 #include "storage/chunk.hpp"
@@ -36,6 +37,8 @@
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
+
+#define SMALL_ARRAY_THRESHOLD 10'000
 
 namespace {
 
@@ -53,6 +56,58 @@ bool is_descending(const SortMode& mode) {
 
 bool is_nulls_first(const SortMode& mode) {
   return mode == SortMode::AscendingNullsFirst || mode == SortMode::DescendingNullsFirst;
+}
+
+template <typename Compare>
+void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
+  TRACE_EVENT("Sort", "ParallelSortRowIDs");
+  auto row_count = rows.size();
+  auto is_multithreaded = Hyrise::get().is_multi_threaded();
+
+  if (!is_multithreaded || row_count < SMALL_ARRAY_THRESHOLD) {
+    TRACE_EVENT("Sort", "ParallelSortRowIDs::SmallArray");
+    std::sort(rows.begin(), rows.end(), comp);
+    return;
+  }
+
+  // 1) get number of workers and block size
+  auto scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
+  if (!scheduler) {
+    throw std::logic_error("Scheduler should be instance of NodeQueueScheduler.");
+  }
+  auto num_workers = scheduler->active_worker_count().load();
+  size_t block = (row_count + num_workers - 1) / num_workers;
+
+  // 2) sort each block in parallel
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(num_workers);
+  for (auto t = int16_t{0}; t < num_workers; ++t) {
+    size_t start = t * block;
+    size_t end = std::min(start + block, row_count);
+    if (start < end) {
+      jobs.emplace_back(std::make_shared<JobTask>([start, end, &rows, &comp]() {
+        TRACE_EVENT("Sort", "ParallelSortRowIDs::Sort");
+        std::sort(rows.begin() + start, rows.begin() + end, comp);
+      }));
+    }
+  }
+  scheduler->schedule_and_wait_for_tasks(jobs);
+
+  // 3) bottom-up merge sorted runs, doubling the run size each pass:
+  size_t run = block;
+  while (run < row_count) {
+    jobs.clear();
+    for (size_t left = 0; left + run < row_count; left += 2 * run) {
+      size_t mid = left + run;
+      size_t right = std::min(left + 2 * run, row_count);
+      jobs.emplace_back(std::make_shared<JobTask>([left, mid, right, &rows, &comp]() {
+        TRACE_EVENT("Sort", "ParallelSortRowIDs::Merge");
+        std::inplace_merge(rows.begin() + left, rows.begin() + mid, rows.begin() + right, comp);
+      }));
+    }
+    scheduler->schedule_and_wait_for_tasks(jobs);
+    run *= 2;
+  }
 }
 
 /**
@@ -368,7 +423,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   const auto row_count = input_table->row_count();
   const auto sort_definitions_size = _sort_definitions.size();
 
-  // === precompute field_width, key_width and key_offsets ===
+  /**************************************************************************************************************
+   ***************************************** Pre-compute offsets and other info *********************************
+   **************************************************************************************************************/
 
   // based on the sizes of the columns to be sorted by, e.g. if sorting by int, string it should be [4, 8]
   auto field_width = std::vector<size_t>();
@@ -420,43 +477,44 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;  // +1 for null byte
   }
 
-  TRACE_EVENT_BEGIN("Sort", "Execute::PrecomputeTableSize");
+  TRACE_EVENT_BEGIN("Sort", "Execute::PrecomputeChunkSizes");
   auto key_buffer = std::vector<uint8_t>();  // buffer to hold all keys for sorting
   auto total_buffer_size = size_t{0};        // total size of the key buffer
 
-  auto chunk_sizes = std::vector<size_t>();  // number of rows per chunk in the input table
-  chunk_sizes.reserve(chunk_count);          // reserve space for chunk sizes
+  // number of rows per chunk in the input table
+  auto chunk_sizes = std::vector<size_t>(chunk_count);
 
   auto row_ids = RowIDPosList{};  // vector to hold row IDs for each row in the table
   row_ids.reserve(row_count);     // reserve space for row IDs
+
+  auto row_id_offsets = std::vector<size_t>();  // offsets for each chunk's row IDs
+  row_id_offsets.reserve(chunk_count);          // reserve space for offsets
+  row_id_offsets.emplace_back(0);               // first chunk starts at offset 0
 
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = input_table->get_chunk(chunk_id);
     auto row_count_for_chunk = chunk->size();
 
-    chunk_sizes.emplace_back(row_count_for_chunk);
-    total_buffer_size += row_count_for_chunk * key_width;  // total size of the keys for this chunk
+    chunk_sizes[chunk_id] = row_count_for_chunk;
+
+    total_buffer_size += row_count_for_chunk * key_width;  // total size of the keys for all chunks
+
+    // offset for the next chunk
+    if (chunk_id > 0) {
+      row_id_offsets.emplace_back(row_id_offsets[chunk_id - 1] + chunk_sizes[chunk_id - 1]);
+    }
 
     for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
-      row_ids.emplace_back(chunk_id, row);  // build array of row ids
+      row_ids.emplace_back(chunk_id, row);  // build array of row ids for this chunk
     }
   }
   TRACE_EVENT_END("Sort");
-
-  auto row_id_offsets = std::vector<size_t>();  // offsets for each chunk's row IDs
-  row_id_offsets.reserve(chunk_count);          // reserve space for offsets
-
-  row_id_offsets.emplace_back(0);  // first chunk starts at offset 0
-  for (ChunkID chunk_id = ChunkID{1}; chunk_id < chunk_count; ++chunk_id) {
-    auto offset = row_id_offsets[chunk_id - 1] + chunk_sizes[chunk_id - 1];
-    row_id_offsets.emplace_back(offset);  // offset for the next chunk
-  }
 
   key_buffer.reserve(total_buffer_size);  // reserve space for all keys
   auto preparation_time = timer.lap();
 
   /**************************************************************************************************************
-   ************************************ Key-Generation and sorting of chunks ************************************
+   *********************************************** Key-Generation ***********************************************
    **************************************************************************************************************/
 
   // Custom comparator function used for sorting
@@ -467,23 +525,20 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return memcmp(key_a, key_b, key_width) < 0;
   };
 
-  TRACE_EVENT_BEGIN("Sort", "Execute::GenerateKeysAndSortChunks");
+  TRACE_EVENT_BEGIN("Sort", "Execute::GenerateKeys");
   // job queue for generating keys in parallel
   auto keygen_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  keygen_jobs.reserve(static_cast<size_t>(chunk_count));
+  keygen_jobs.reserve(static_cast<size_t>(chunk_count) * sort_definitions_size);
   // for each chunk in table
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    // spawn thread to generate keys
-    keygen_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      TRACE_EVENT_BEGIN("Sort", "Execute::GenerateKeysAndSortChunks::GenerateKeysForChunk", "ChunkID",
-                        static_cast<size_t>(chunk_id));
-      auto chunk = input_table->get_chunk(chunk_id);
+    auto chunk = input_table->get_chunk(chunk_id);
 
-      // buffer points to the start of this chunk's keys in the global key_buffer
-      auto* buffer = &key_buffer[row_id_offsets[chunk_id] * key_width];
+    // TODO(someone): How to handle huge number of keycolumns? maybe max. number for key generation
+    for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
+      keygen_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, index, chunk = chunk]() {
+        TRACE_EVENT("Sort", "Execute::GenerateKeys", "ChunkID", static_cast<size_t>(chunk_id), "ColumnID",
+                    static_cast<size_t>(_sort_definitions[index].column));
 
-      // TODO(someone): How to handle huge number of keycolumns? maybe max. number for key generation
-      for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
         auto sort_col = _sort_definitions[index].column;
         auto nulls_first = is_nulls_first(_sort_definitions[index].sort_mode);
         auto descending = is_descending(_sort_definitions[index].sort_mode);
@@ -493,9 +548,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           using ColumnDataType = typename decltype(type)::type;
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
-            const auto row = val.chunk_offset();        // get the row offset in the chunk
-            auto* key_ptr = &buffer[row * key_width];   // pointer to the start of the key for this row
-            auto* dest = key_ptr + key_offsets[index];  // pointer to the destination in the key buffer for this column
+            const auto row = val.chunk_offset();  // get the row offset in the chunk
+
+            // pointer to the destination in the key buffer for this column
+            auto* dest = &key_buffer[(row_id_offsets[chunk_id] + row) * key_width + key_offsets[index]];
 
             const ColumnDataType value = val.value();
             const auto data_length = field_width[index];
@@ -568,100 +624,24 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             }
           });
         });
-      }  // end of keygen
-
-      TRACE_EVENT_END("Sort");
-
-      TRACE_EVENT("Sort", "Execute::GenerateKeysAndSortChunks::SortChunk", "ChunkID", static_cast<size_t>(chunk_id));
-      // start sorting the current chunk (i.e. the row_id PosList) as part of the current job
-      auto chunk_start = row_id_offsets[chunk_id];
-      auto chunk_size = chunk_sizes[chunk_id];
-      boost::sort::pdqsort_branchless(row_ids.begin() + chunk_start, row_ids.begin() + chunk_start + chunk_size,
-                                      compare_rows);
-    }));
-  }  // end of chunk iteration
+      }));
+    }
+  }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(keygen_jobs);  // wait for all chunks to be materialized
   auto key_generation_and_sorting_time = timer.lap();
   TRACE_EVENT_END("Sort");
 
   /**************************************************************************************************************
-   ************************************************** Merging ***************************************************
+   ************************************************** Mergesort *************************************************
    **************************************************************************************************************/
 
-  TRACE_EVENT_BEGIN("Sort", "Execute::MergeSortedChunks");
-
-  //  Prepare first round or runs of chunks [A][B][C][D]->[AB][CD]
-  struct Run {
-    size_t begin;
-    size_t end;
-  };  // [begin,end)
-
-  auto runs = std::vector<Run>{};
-  runs.reserve(chunk_count);
-
-  for (auto index = size_t{0}; index < chunk_count; ++index) {
-    const auto begin = row_id_offsets[index];
-    const auto end = begin + chunk_sizes[index];
-    runs.emplace_back(Run{begin, end});
-  }
-
-  auto work_buffer = RowIDPosList{};
-  work_buffer.resize(row_count);
-  auto* src = &row_ids;
-  auto* dst = &work_buffer;
-
-  while (runs.size() > 1) {
-    TRACE_EVENT("Sort", "Execute::MergeSortedChunks::MergeRuns", "RunCount", runs.size());
-    //  one Job per run pair
-    auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    //  odd tail, copy unchanged
-    if (runs.size() & 1u) {
-      merge_jobs.reserve((runs.size() / 2) + 1);
-      const auto tail = runs.back();
-      std::copy(src->begin() + tail.begin, src->begin() + tail.end, dst->begin() + tail.begin);
-      merge_jobs.emplace_back(std::make_shared<JobTask>([&, tail] {
-        TRACE_EVENT("Sort", "Execute::MergeSortedChunks::CopyTail", "TailBegin", tail.begin, "TailEnd", tail.end);
-        std::copy(src->begin() + tail.begin, src->begin() + tail.end, dst->begin() + tail.begin);
-      }));
-      merge_jobs.back()->schedule();
-    } else {
-      merge_jobs.reserve(runs.size() / 2);
-    }
-
-    for (auto index = size_t{0}; index + 1 < runs.size(); index += 2) {
-      //  schedule merging of two partitions
-      const auto left_part = runs[index];
-      const auto right_part = runs[index + 1];
-
-      merge_jobs.emplace_back(std::make_shared<JobTask>([&, left_part, right_part] {
-        TRACE_EVENT("Sort", "Execute::MergeSortedChunks::MergeRuns", "LeftBegin", left_part.begin, "LeftEnd",
-                    left_part.end, "RightBegin", right_part.begin, "RightEnd", right_part.end);
-        std::merge(src->begin() + left_part.begin, src->begin() + left_part.end, src->begin() + right_part.begin,
-                   src->begin() + right_part.end, dst->begin() + left_part.begin, compare_rows);
-      }));
-      merge_jobs.back()->schedule();
-    }
-
-    Hyrise::get().scheduler()->wait_for_tasks(merge_jobs);
-    std::swap(src, dst);
-
-    //  rebuild runs for the next pass
-    auto next_runs = std::vector<Run>{};
-    next_runs.reserve((runs.size() + 1) / 2);
-    for (auto index = size_t{0}; index < runs.size(); index += 2) {
-      const auto begin = runs[index].begin;
-      const auto end = (index + 1 < runs.size()) ? runs[index + 1].end : runs[index].end;
-      next_runs.emplace_back(Run{begin, end});
-    }
-    runs.swap(next_runs);
-  }
-
-  auto& sorted_row_ids = *src;
-  TRACE_EVENT_END("Sort");
-
-  assert(sorted_row_ids.size() == row_ids.size() && "We lost a comrade along the way");
+  parallel_sort_rowids(row_ids, compare_rows);
   auto merge_sort_time = timer.lap();
+
+  /**************************************************************************************************************
+   ************************************************** Other work ************************************************
+   **************************************************************************************************************/
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::Preparation, preparation_time);
@@ -702,9 +682,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   if (must_materialize) {
-    sorted_table = write_materialized_output_table(input_table, std::move(sorted_row_ids), _output_chunk_size);
+    sorted_table = write_materialized_output_table(input_table, std::move(row_ids), _output_chunk_size);
   } else {
-    sorted_table = write_reference_output_table(input_table, std::move(sorted_row_ids), _output_chunk_size);
+    sorted_table = write_reference_output_table(input_table, std::move(row_ids), _output_chunk_size);
   }
 
   TRACE_EVENT("Sort", "Execute::SetIndividuallySortedBy");
@@ -716,6 +696,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   write_output_jobs.reserve(static_cast<size_t>(output_chunk_count));
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
     write_output_jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id] {
+      TRACE_EVENT("Sort", "Execute::SetIndividuallySortedBy::Chunk", "ChunkID", static_cast<size_t>(output_chunk_id));
       const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
       output_chunk->set_immutable();
       output_chunk->set_individually_sorted_by(final_sort_definition);
