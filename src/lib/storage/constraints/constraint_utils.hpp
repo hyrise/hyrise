@@ -54,7 +54,10 @@ bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
 bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id);
 std::vector<bool> columns_are_unique(const std::shared_ptr<Table>& table);
 
-bool column_is_key_part(const std::shared_ptr<Table>& table, const ColumnID column_id);
-std::vector<bool> columns_are_key_part(const std::shared_ptr<Table>& table);
+bool column_is_key(const std::shared_ptr<Table>& table, const ColumnID column_id);
+std::vector<bool> columns_are_key(const std::shared_ptr<Table>& table);
+
+bool column_might_be_unique(const std::shared_ptr<Table>& table, const ColumnID column_id);
+std::vector<bool> columns_might_be_unique(const std::shared_ptr<Table>& table);
 
 }  // namespace hyrise

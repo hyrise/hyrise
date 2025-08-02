@@ -41,9 +41,10 @@ void ChunkCompressionTask::_on_execute() {
     chunk_encoding_spec = *_chunk_encoding_spec;
   } else {
     const auto chunk_values_are_unique = columns_are_unique(table);
-    const auto chunk_values_are_key_part = columns_are_key_part(table);
-    chunk_encoding_spec =
-        auto_select_chunk_encoding_spec(table->column_data_types(), chunk_values_are_unique, chunk_values_are_key_part);
+    const auto chunk_values_are_key = columns_are_key(table);
+    const auto chunk_values_might_be_unique = columns_might_be_unique(table);
+    chunk_encoding_spec = auto_select_chunk_encoding_spec(table->column_data_types(), chunk_values_are_unique,
+                                                          chunk_values_are_key, chunk_values_might_be_unique);
   }
 
   for (const auto chunk_id : _chunk_ids) {

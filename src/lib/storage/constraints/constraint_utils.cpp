@@ -161,7 +161,7 @@ std::vector<bool> columns_are_unique(const std::shared_ptr<Table>& table) {
   return are_unique;
 }
 
-bool column_is_key_part(const std::shared_ptr<Table>& table, const ColumnID column_id) {
+bool column_is_key(const std::shared_ptr<Table>& table, const ColumnID column_id) {
   DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
   for (const auto& key_constraint : table->soft_key_constraints()) {
     if (key_constraint.can_become_invalid()) {
@@ -193,13 +193,43 @@ bool column_is_key_part(const std::shared_ptr<Table>& table, const ColumnID colu
   return false;
 }
 
-std::vector<bool> columns_are_key_part(const std::shared_ptr<Table>& table) {
+std::vector<bool> columns_are_key(const std::shared_ptr<Table>& table) {
   const auto column_count = table->column_count();
-  std::vector<bool> are_key_part(column_count);
+  std::vector<bool> are_key(column_count);
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    are_key_part[column_id] = column_is_key_part(table, column_id);
+    are_key[column_id] = column_is_key(table, column_id);
   }
-  return are_key_part;
+  return are_key;
+}
+
+bool column_might_be_unique(const std::shared_ptr<Table>& table, const ColumnID column_id) {
+  DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
+  for (const auto& key_constraint : table->soft_key_constraints()) {
+    if (key_constraint.can_become_invalid()) {
+      continue;
+    }
+
+    const auto& key_type = key_constraint.key_type();
+    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
+      continue;
+    }
+
+    const auto& columns = key_constraint.columns();
+    if (columns.contains(column_id)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::vector<bool> columns_might_be_unique(const std::shared_ptr<Table>& table) {
+  const auto column_count = table->column_count();
+  std::vector<bool> might_be_unique(column_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    might_be_unique[column_id] = column_might_be_unique(table, column_id);
+  }
+  return might_be_unique;
 }
 
 }  // namespace hyrise

@@ -79,23 +79,26 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
 
 ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
                                                   const std::vector<bool>& chunk_values_are_unique,
-                                                  const std::vector<bool>& chunk_values_are_key_part) {
-  DebugAssert(types.size() == chunk_values_are_unique.size() && types.size() == chunk_values_are_key_part.size(),
+                                                  const std::vector<bool>& chunk_values_are_key,
+                                                  const std::vector<bool>& chunk_values_might_be_unique) {
+  DebugAssert(types.size() == chunk_values_are_unique.size() && types.size() == chunk_values_are_key.size(),
               "The length of the passed vectors has to match");
 
   const auto size = types.size();
   auto chunk_encoding_spec = ChunkEncodingSpec{};
   chunk_encoding_spec.reserve(size);
   for (auto column_id = ColumnID{0}; column_id < size; ++column_id) {
-    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(
-        types[column_id], chunk_values_are_unique[column_id], chunk_values_are_key_part[column_id]));
+    chunk_encoding_spec.push_back(
+        auto_select_segment_encoding_spec(types[column_id], chunk_values_are_unique[column_id],
+                                          chunk_values_are_key[column_id], chunk_values_might_be_unique[column_id]));
   }
   return chunk_encoding_spec;
 }
 
 SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique,
-                                                      const bool segment_values_are_key_part) {
-  if (segment_values_are_key_part) {
+                                                      const bool segment_values_are_key,
+                                                      const bool segment_values_might_be_unique) {
+  if (segment_values_are_key) {
     return SegmentEncodingSpec{EncodingType::Unencoded};
   }
 
