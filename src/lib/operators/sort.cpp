@@ -67,7 +67,7 @@ PERFETTO_DEFINE_CATEGORIES(perfetto::Category("sort").SetDescription("Benchmark 
 
 PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
-#define DEBUG(v) #v "=" << v
+#define DEBUG(v) std::format(#v "={} ", v)
 
 namespace {
 
@@ -939,6 +939,9 @@ void write_to_ranges(std::ranges::range auto& input, std::ranges::range auto& fi
 std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t num_buckets,
                                const size_t samples_per_classifier, const size_t block_size, size_t num_stripes,
                                const NormalizedKeyComparator auto& comp) {
+  std::cout << "ips4o pass " << std::format("size={} ", std::ranges::size(sort_range)) << DEBUG(num_buckets)
+            << DEBUG(samples_per_classifier) << DEBUG(block_size) << DEBUG(num_stripes) << "\n";
+
   Assert(num_buckets > 1, "At least two buckets are required");
   Assert(num_stripes > 1, "This function should be called with at least two 2 stripes. Use pdqsort instead");
   Assert(std::ranges::size(sort_range) >= block_size, "Provide at least one block");
@@ -1199,23 +1202,22 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
   }
 
   // Do an initial pass of IPS4o.
-  const auto num_stripes = total_num_blocks / config.min_blocks_per_stripe;
+  const auto num_stripes = std::min(total_num_blocks / config.min_blocks_per_stripe, config.max_parallelism);
   auto buckets = std::vector<std::ranges::subrange<RangeIterator>>();
   buckets.reserve(config.bucket_count * config.bucket_count);
   buckets.emplace_back(sort_range.begin(), sort_range.end());
 
   auto unparsed_buckets = std::ranges::subrange(buckets.begin(), buckets.end());
-  const auto small_bucket_max_blocks = total_num_blocks / num_stripes;
+  const auto small_bucket_max_blocks = div_ceil(total_num_blocks, config.bucket_count);
   const auto small_bucket_max_size =
       std::max(small_bucket_max_blocks * config.block_size, config.max_parallelism * config.block_size);
   auto counter = size_t{0};
   while (true) {  // TODO(student): Limit number of passes
-    TRACE_EVENT("sort", "ips4o::split_large_buckets");
+    TRACE_EVENT("sort", "ips4o::split_large_buckets", "counter", counter);
     auto large_bucket_range = std::ranges::partition(unparsed_buckets, [&](const auto& range) {
       return std::ranges::size(range) <= small_bucket_max_size;
     });
     auto large_buckets = std::vector(large_bucket_range.begin(), large_bucket_range.end());
-    std::cout << "round " << counter << " large buckets " << large_buckets.size() << "\n";
     buckets.erase(large_bucket_range.begin(), large_bucket_range.end());
     if (large_buckets.size() == 0) {
       break;
@@ -1226,14 +1228,10 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
       TRACE_EVENT("sort", "ips4o::pass");
       DebugAssert(std::ranges::size(large_range) >= small_bucket_max_size, "Large bucket");
 
-      std::cout << "sort range " << std::distance(sort_range.begin(), large_range.begin()) << " "
-                << std::distance(sort_range.begin(), large_range.end()) << "\n";
-
       const auto delimiter = ips4o_pass(large_range, config.bucket_count, config.samples_per_classifier,
                                         config.block_size, num_stripes, comp);
       auto bucket_begin_index = size_t{0};
       for (const auto bucket_delimiter : delimiter) {
-        std::cout << "new range " << bucket_begin_index << " " << bucket_delimiter << "\n";
         const auto begin = std::next(large_range.begin(), bucket_begin_index);
         const auto end = std::next(large_range.begin(), bucket_delimiter);
         if (std::distance(begin, end) > 0) {
@@ -1247,10 +1245,16 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
     ++counter;
   }
 
+  // Sort buckets by size to first sort large buckets.
+  boost::sort::pdqsort(buckets.begin(), buckets.end(), [](const auto& left, const auto& right) {
+    return std::ranges::size(left) > std::ranges::size(right);
+  });
+
   TRACE_EVENT("sort", "sort::bucket");
   const auto sort_tasks = run_parallel_batched(buckets.size(), 1, [&](const auto bucket) {
-    TRACE_EVENT("sort", "sort::bucket");
+    TRACE_EVENT_BEGIN("sort", "sort::bucket");
     boost::sort::pdqsort(buckets[bucket].begin(), buckets[bucket].end(), comp);
+    TRACE_EVENT_END("sort");
   });
   Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
 }
@@ -1551,7 +1555,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
 void perfetto_run(const std::shared_ptr<const Table>& input_table,
                   const std::vector<SortColumnDefinition>& sort_definitions, const Sort::Config& config) {
-  for (auto index = size_t{0}; index < 5; ++index) {
+  for (auto index = size_t{0}; index < 1; ++index) {
     const auto table_wrapper = std::make_shared<TableWrapper>(input_table);
     table_wrapper->execute();
     const auto sort_operator = std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE,
