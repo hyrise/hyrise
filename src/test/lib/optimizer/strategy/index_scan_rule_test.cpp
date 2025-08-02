@@ -13,6 +13,7 @@
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/base_attribute_statistics.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
