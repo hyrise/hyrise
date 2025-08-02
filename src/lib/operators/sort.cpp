@@ -310,12 +310,61 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     key_pointers.push_back(&normalized_keys[key_offset]);
   }
 
-  const auto comparison_key_size = key_size - sizeof(RowID);
+  {
+    const auto& input_table_ref = *input_table;
 
-  std::sort(key_pointers.begin(), key_pointers.end(),
-            [comparison_key_size](const unsigned char* a, const unsigned char* b) {
-              return std::memcmp(a, b, comparison_key_size) < 0;
-            });
+    struct StableKeyComparator {
+      const size_t key_size;
+      const Table& table;
+      const std::vector<SortColumnDefinition>& sort_definitions;
+
+      bool operator()(const unsigned char* a_ptr, const unsigned char* b_ptr) const {
+        const RowID& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + key_size - sizeof(RowID));
+        const RowID& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + key_size - sizeof(RowID));
+
+        const auto val_a_debug =
+            (*table.get_chunk(a_row_id.chunk_id)->get_segment(sort_definitions[0].column))[a_row_id.chunk_offset];
+        const auto val_b_debug =
+            (*table.get_chunk(b_row_id.chunk_id)->get_segment(sort_definitions[0].column))[b_row_id.chunk_offset];
+
+        const int key_cmp = std::memcmp(a_ptr, b_ptr, key_size);
+
+        if (key_cmp != 0) {
+          return key_cmp < 0;
+        }
+
+        for (const auto& sort_def : sort_definitions) {
+          const auto& segment_a = table.get_chunk(a_row_id.chunk_id)->get_segment(sort_def.column);
+          const auto& segment_b = table.get_chunk(b_row_id.chunk_id)->get_segment(sort_def.column);
+
+          const auto val_a = (*segment_a)[a_row_id.chunk_offset];
+          const auto val_b = (*segment_b)[b_row_id.chunk_offset];
+
+          if (val_a == val_b) {
+            continue;
+          }
+
+          if (variant_is_null(val_a))
+            return sort_def.sort_mode == SortMode::AscendingNullsFirst ||
+                   sort_def.sort_mode == SortMode::DescendingNullsFirst;
+          if (variant_is_null(val_b))
+            return !(sort_def.sort_mode == SortMode::AscendingNullsFirst ||
+                     sort_def.sort_mode == SortMode::DescendingNullsFirst);
+
+          const auto ascending =
+              sort_def.sort_mode == SortMode::AscendingNullsFirst || sort_def.sort_mode == SortMode::AscendingNullsLast;
+
+          bool result = ascending ? val_a < val_b : val_b < val_a;
+          return result;
+        }
+
+        return false;
+      }
+    };
+
+    std::sort(key_pointers.begin(), key_pointers.end(),
+              StableKeyComparator{key_size, input_table_ref, _sort_definitions});
+  }
 
   const auto row_id_offset = key_size - sizeof(RowID);
   RowIDPosList sorted_pos_list;
