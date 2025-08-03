@@ -156,7 +156,7 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::AscendingNullsFirst},  // NOLINT(whitespace/line_length)
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
   // clang-format on
@@ -378,7 +378,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInOrderBy) {
       sql_to_lqp_helper("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
 
   const auto aliases = std::vector<std::string>({"x", "y"});
-  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>({SortMode::AscendingNullsFirst, SortMode::AscendingNullsFirst});
 
   // clang-format off
   const auto expected_lqp =
@@ -1028,7 +1028,7 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderBy) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(int_float_b), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(int_float_b), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(),
       stored_table_node_int_float));
   // clang-format on
@@ -1041,7 +1041,7 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjection) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::AscendingNullsFirst},  // NOLINT(whitespace/line_length)
     AggregateNode::make(expression_vector(add_(int_float_a, int_float_b)), expression_vector(),
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
@@ -1059,7 +1059,7 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjectionAndFurtherExpression) 
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(a_plus_b), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(a_plus_b), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     AggregateNode::make(expression_vector(a_plus_b, a_plus_c), expression_vector(),
       ProjectionNode::make(expression_vector(a_plus_c, a_plus_b, int_int_int_a, int_int_int_b, int_int_int_c),
         stored_table_node_int_int_int)));
@@ -1285,7 +1285,8 @@ TEST_F(SQLTranslatorTest, SubquerySelectList) {
 TEST_F(SQLTranslatorTest, OrderByTest) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a, a+b DESC, b ASC");
 
-  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>(
+      {SortMode::AscendingNullsFirst, SortMode::DescendingNullsFirst, SortMode::AscendingNullsFirst});
 
   // clang-format off
   const auto expected_lqp =
@@ -3176,16 +3177,16 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     IntersectNode::make(SetOperationMode::Unique,
       ProjectionNode::make(expression_vector(int_int_int_a),
-        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::Ascending},
+        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
                        stored_table_node_int_int_int)),
       LimitNode::make(value_(10),
         ExceptNode::make(SetOperationMode::Unique,
           ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c),
-            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{SortMode::Ascending},
+            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{SortMode::AscendingNullsFirst},
                            stored_table_node_int_int_int))))));
   // clang-format on
 
@@ -3469,7 +3470,7 @@ TEST_F(SQLTranslatorTest, BasicWindowFunction) {
   auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                 FrameBound{0, FrameBoundType::CurrentRow, false}};
   const auto window = window_(expression_vector(), expression_vector(int_float_a),
-                              std::vector<SortMode>{SortMode::Descending}, std::move(frame));
+                              std::vector<SortMode>{SortMode::DescendingNullsFirst}, std::move(frame));
   const auto expected_lqp = WindowNode::make(row_number_(window), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3497,7 +3498,7 @@ TEST_F(SQLTranslatorTest, WindowFunctionFrames) {
 
       auto frame = FrameDescription{frame_type, expected_starts[frame_bound_id], expected_ends[frame_bound_id]};
       const auto window = window_(expression_vector(), expression_vector(int_float_a),
-                                  std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+                                  std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame));
       const auto expected_lqp = WindowNode::make(row_number_(window), stored_table_node_int_float);
 
       EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3516,7 +3517,7 @@ TEST_F(SQLTranslatorTest, WindowDifferentFunctions) {
   auto partition_by_expressions = expression_vector(int_float_b);
   auto order_by_expressions = expression_vector(int_float_a);
   const auto window = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
-                              std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame));
   const auto expected_functions =
       expression_vector(rank_(window), dense_rank_(window), percent_rank_(window), cume_dist_(window),
                         row_number_(window), min_(int_float_a, window), max_(int_float_a, window),
@@ -3540,7 +3541,7 @@ TEST_F(SQLTranslatorTest, WindowFunctionWithProjections) {
   auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                 FrameBound{0, FrameBoundType::CurrentRow, false}};
   const auto window = window_(expression_vector(), expression_vector(add_(int_float_a, int_float_b)),
-                              std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame));
   const auto window_function = row_number_(window);
 
   // clang-format off
@@ -3563,7 +3564,7 @@ TEST_F(SQLTranslatorTest, MultipleWindowFunctions) {
   auto frame_b = frame_a;
   const auto window_a = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_a));
   const auto window_b = window_(expression_vector(), expression_vector(int_float_a),
-                                std::vector<SortMode>{SortMode::Ascending}, std::move(frame_b));
+                                std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame_b));
 
   // clang-format off
   const auto expected_lqp =

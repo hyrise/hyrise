@@ -54,7 +54,7 @@ TEST_F(CostEstimatorLogicalTest, StoredTableNode) {
 
 TEST_F(CostEstimatorLogicalTest, SortNode) {
   // Sorting is in n * log(n). Plus output writing.
-  const auto sort_node = SortNode::make(expression_vector(a_a), std::vector{SortMode::Ascending}, node_a);
+  const auto sort_node = SortNode::make(expression_vector(a_a), std::vector{SortMode::AscendingNullsFirst}, node_a);
 
   const auto expected_cost = 100.0 * std::log(100.0) + 100.0;
   EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(sort_node), expected_cost);
