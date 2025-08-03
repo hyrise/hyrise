@@ -7,6 +7,8 @@
 #include <numeric>
 #include <vector>
 
+#include <boost/sort/pdqsort/pdqsort.hpp>
+
 #include "resolve_type.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
@@ -321,14 +323,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       const Table& table;
       const std::vector<SortColumnDefinition>& sort_definitions;
 
-      bool operator()(const unsigned char* a_ptr, const unsigned char* b_ptr) const {
+      bool operator()(const unsigned char* const a_ptr, const unsigned char* const b_ptr) const {
         const RowID& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + key_size - sizeof(RowID));
         const RowID& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + key_size - sizeof(RowID));
-
-        const auto val_a_debug =
-            (*table.get_chunk(a_row_id.chunk_id)->get_segment(sort_definitions[0].column))[a_row_id.chunk_offset];
-        const auto val_b_debug =
-            (*table.get_chunk(b_row_id.chunk_id)->get_segment(sort_definitions[0].column))[b_row_id.chunk_offset];
 
         const int key_cmp = std::memcmp(a_ptr, b_ptr, key_size);
 
@@ -364,7 +361,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       }
     };
 
-    std::sort(key_pointers.begin(), key_pointers.end(),
+    boost::sort::pdqsort(key_pointers.begin(), key_pointers.end(),
               StableKeyComparator{key_size, input_table_ref, _sort_definitions});
   }
 
