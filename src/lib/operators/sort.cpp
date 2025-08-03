@@ -322,10 +322,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       const size_t key_size;
       const Table& table;
       const std::vector<SortColumnDefinition>& sort_definitions;
+      uint32_t offset_for_row_id = key_size - sizeof(RowID);
 
       bool operator()(const unsigned char* const a_ptr, const unsigned char* const b_ptr) const {
-        const RowID& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + key_size - sizeof(RowID));
-        const RowID& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + key_size - sizeof(RowID));
+        const RowID& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + offset_for_row_id);
+        const RowID& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + offset_for_row_id);
 
         const int key_cmp = std::memcmp(a_ptr, b_ptr, key_size);
 
