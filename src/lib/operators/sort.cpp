@@ -58,6 +58,63 @@ bool is_nulls_first(const SortMode& mode) {
   return mode == SortMode::AscendingNullsFirst || mode == SortMode::DescendingNullsFirst;
 }
 
+inline void encode_string(uint8_t* dest, const size_t data_length, const pmr_string& value) {
+  auto string_len = value.size();
+  memset(dest + 1, 0, data_length);                                          // set all bytes to 0
+  memcpy(dest + 1, value.data(), string_len);                                // copy the string data into the key buffer
+  memset(dest + 1 + data_length - 2, static_cast<uint16_t>(string_len), 2);  // store actual string length
+}
+
+inline void encode_double(uint8_t* dest, const double value) {
+  // Encode double value; reinterpret double as raw 64-bit bits
+  auto bits = uint64_t{0};
+  memcpy(&bits, &value, sizeof(bits));
+
+  // Flip the bits to ensure lexicographic order matches numeric order
+  if (std::signbit(value)) {
+    bits = ~bits;  // Negative values are bitwise inverted
+  } else {
+    bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
+  }
+
+  // Write to buffer in big-endian order (MSB first)
+  for (auto byte_idx = uint32_t{0}; byte_idx < 8; ++byte_idx) {
+    dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
+  }
+}
+
+inline void encode_float(uint8_t* dest, const float value) {
+  auto bits = uint32_t{0};
+  memcpy(&bits, &value, sizeof(bits));
+
+  // Flip the bits to ensure lexicographic order matches numeric order
+  if (std::signbit(value)) {
+    bits = ~bits;  // Negative values are bitwise inverted
+  } else {
+    bits ^= 0x80000000;  // Flip the sign bit for positive values
+  }
+
+  // Write to buffer in big-endian order (MSB first)
+  for (auto byte_idx = uint32_t{0}; byte_idx < 4; ++byte_idx) {
+    dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((3 - byte_idx) * 8));
+  }
+}
+
+template <typename T>
+inline void encode_integer(uint8_t* dest, const T value, const size_t data_length) {
+  // Bias the value to get a lexicographically sortable encoding
+  using UnsignedT = typename std::make_unsigned<T>::type;
+  UnsignedT biased = static_cast<UnsignedT>(value) ^ (UnsignedT(1) << (data_length * 8 - 1));  // flip sign bit
+
+  // Store bytes in big-endian order starting at dest[1]
+  for (auto byte_idx = size_t{0}; byte_idx < data_length; ++byte_idx) {
+    s dest[1 + byte_idx] = static_cast<uint8_t>(biased >> ((data_length - 1 - byte_idx) * 8));
+  }
+}
+
+template void encode_integer<int32_t>(uint8_t* dest, const int32_t value, const size_t data_length);
+template void encode_integer<int64_t>(uint8_t* dest, const int64_t value, const size_t data_length);
+
 template <typename Compare>
 void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
   TRACE_EVENT("Sort", "ParallelSortRowIDs");
@@ -526,52 +583,13 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
             // encode the value into the key based on the data type
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              auto string_len = value.size();
-              memset(dest + 1, 0, data_length);            // set all bytes to 0
-              memcpy(dest + 1, value.data(), string_len);  // copy the string data into the key buffer
-              memset(dest + 1 + data_length - 2, static_cast<uint16_t>(string_len), 2);  // store actual string length
+              encode_string(dest, data_length, value);
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
-              // Encode double value; reinterpret double as raw 64-bit bits
-              auto bits = uint64_t{0};
-              memcpy(&bits, &value, sizeof(bits));
-
-              // Flip the bits to ensure lexicographic order matches numeric order
-              if (std::signbit(value)) {
-                bits = ~bits;  // Negative values are bitwise inverted
-              } else {
-                bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
-              }
-
-              // Write to buffer in big-endian order (MSB first)
-              for (auto byte_idx = uint32_t{0}; byte_idx < 8; ++byte_idx) {
-                dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
-              }
+              encode_double(dest, value);
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
-              auto bits = uint32_t{0};
-              memcpy(&bits, &value, sizeof(bits));
-
-              // Flip the bits to ensure lexicographic order matches numeric order
-              if (std::signbit(value)) {
-                bits = ~bits;  // Negative values are bitwise inverted
-              } else {
-                bits ^= 0x80000000;  // Flip the sign bit for positive values
-              }
-
-              // Write to buffer in big-endian order (MSB first)
-              for (auto byte_idx = uint32_t{0}; byte_idx < 4; ++byte_idx) {
-                dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((3 - byte_idx) * 8));
-              }
+              encode_float(dest, value);
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
-              // encode int value
-              // Bias the value to get a lexicographically sortable encoding
-              using UnsignedT = typename std::make_unsigned<ColumnDataType>::type;
-              UnsignedT biased =
-                  static_cast<UnsignedT>(value) ^ (UnsignedT(1) << (data_length * 8 - 1));  // flip sign bit
-
-              // Store bytes in big-endian order starting at dest[1]
-              for (auto byte_idx = size_t{0}; byte_idx < data_length; ++byte_idx) {
-                dest[1 + byte_idx] = static_cast<uint8_t>(biased >> ((data_length - 1 - byte_idx) * 8));
-              }
+              encode_integer<ColumnDataType>(dest, value, data_length);
             } else {
               throw std::logic_error("Unsupported data type for sorting: " +
                                      std::string(typeid(ColumnDataType).name()));
@@ -590,8 +608,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(keygen_jobs);  // wait for all chunks to be materialized
-  auto key_generation_and_sorting_time = timer.lap();
   TRACE_EVENT_END("Sort");
+  auto key_generation_time = timer.lap();
 
   /**************************************************************************************************************
    ************************************************** Mergesort *************************************************
@@ -601,12 +619,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto merge_sort_time = timer.lap();
 
   /**************************************************************************************************************
-   ************************************************** Other work ************************************************
+   *********************************************** Output writing ***********************************************
    **************************************************************************************************************/
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::Preparation, preparation_time);
-  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, key_generation_and_sorting_time);
+  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, key_generation_time);
   step_performance_data.set_step_runtime(OperatorSteps::Sort, merge_sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
