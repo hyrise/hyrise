@@ -47,20 +47,18 @@ for vector_size in vector_sizes:
             ('probe_time_ms', 'Probe Time (ms)', 'probe_time'),
             ('combined_time_ms', 'Combined Time (ms)', 'combined_time')
         ]:
-            # Create relplot with individual data points
-            g = sns.relplot(
+            # Create boxplot instead of scatterplot
+            g = sns.catplot(
                 data=subset,
                 x="group_id",  # Use group_id for x-axis
                 y=time_metric,
                 hue="hash_function",
-                style="k",
                 row="overlap",
                 col="filter_size",
-                kind="scatter",
+                kind="box",
                 height=4,
                 aspect=1.5,
-                alpha=0.7,  # Make points slightly transparent to see overlapping points
-                s=50  # Point size
+                showfliers=False  # Hide outliers for cleaner plots
             )
 
             # Add titles and labels
@@ -69,18 +67,16 @@ for vector_size in vector_sizes:
 
             # Rotate x-axis labels for better readability
             for ax in g.axes.flat:
+                ax.xaxis.set_major_locator(plt.FixedLocator(range(len(ax.get_xticklabels()))))  # Fix tick positions
                 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 
             # Adjust layout to prevent clipping
             plt.tight_layout()
 
             # Save the plot to a PDF using the correct figure
-            pdf_filename = f"bloom_eval_{vector_size}_{distinctiveness}_{file_suffix}.pdf"
+            pdf_filename = f"boxplots_{vector_size}_{distinctiveness}_{file_suffix}.pdf"
             g.fig.savefig(pdf_filename)
             print(f"Saved plot to {pdf_filename}")
-
-            # Show the plot for debugging (optional, can be removed later)
-            # plt.show()
 
             # Close the figure to prevent memory issues
             plt.close(g.fig)
