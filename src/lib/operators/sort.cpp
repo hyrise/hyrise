@@ -295,7 +295,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return input_table;
   }
 
-  if (input_table->row_count() == 0) {
+  const auto row_count = input_table->row_count();
+
+  if (row_count == 0) {
     if (_force_materialization == ForceMaterialization::Yes && input_table->type() == TableType::References) {
       return Table::create_dummy_table(input_table->column_definitions());
     }
@@ -305,8 +307,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto [normalized_keys, key_size] = KeyNormalizer::normalize_keys_for_table(input_table, _sort_definitions);
 
   std::vector<const unsigned char*> key_pointers;
-  key_pointers.reserve(input_table->row_count());
-  for (auto key_offset = size_t{0}; key_offset < normalized_keys.size(); key_offset += key_size) {
+  key_pointers.reserve(row_count);
+  const auto num_bytes_of_normalized_keys= normalized_keys.size();
+  for (auto key_offset = size_t{0}; key_offset < num_bytes_of_normalized_keys; key_offset += key_size) {
     key_pointers.push_back(&normalized_keys[key_offset]);
   }
 
@@ -354,8 +357,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           const auto ascending =
               sort_def.sort_mode == SortMode::AscendingNullsFirst || sort_def.sort_mode == SortMode::AscendingNullsLast;
 
-          bool result = ascending ? val_a < val_b : val_b < val_a;
-          return result;
+          return ascending ? val_a < val_b : val_b < val_a;
         }
 
         return false;
@@ -368,7 +370,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   const auto row_id_offset = key_size - sizeof(RowID);
   RowIDPosList sorted_pos_list;
-  sorted_pos_list.reserve(input_table->row_count());
+  sorted_pos_list.reserve(row_count);
   for (const auto* key_ptr : key_pointers) {
     sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(key_ptr + row_id_offset));
   }
