@@ -108,7 +108,7 @@ inline void encode_integer(uint8_t* dest, const T value, const size_t data_lengt
 
   // Store bytes in big-endian order starting at dest[1]
   for (auto byte_idx = size_t{0}; byte_idx < data_length; ++byte_idx) {
-    s dest[1 + byte_idx] = static_cast<uint8_t>(biased >> ((data_length - 1 - byte_idx) * 8));
+    dest[1 + byte_idx] = static_cast<uint8_t>(biased >> ((data_length - 1 - byte_idx) * 8));
   }
 }
 
