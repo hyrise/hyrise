@@ -147,81 +147,52 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(output_column_count));
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(static_cast<size_t>(output_column_count));
+  jobs.reserve(output_chunk_count * output_column_count);
 
   for (auto column_id = ColumnID{0}; column_id < output_column_count; ++column_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, column_id]() {
-      TRACE_EVENT("Sort", "WriteMaterializedOutputTable::Column", "ColumnID", static_cast<size_t>(column_id));
-      const auto column_data_type = output->column_data_type(column_id);
-      const auto column_is_nullable = unsorted_table->column_is_nullable(column_id);
+    const auto column_data_type = output->column_data_type(column_id);
+    const auto column_is_nullable = unsorted_table->column_is_nullable(column_id);
 
-      resolve_data_type(column_data_type, [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
+    resolve_data_type(column_data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
 
-        auto output_chunk_id = size_t{0};
-        auto current_segment_size = size_t{0};
+      auto accessor_by_chunk_id =
+          std::vector<std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>(unsorted_table->chunk_count());
+      for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
+        const auto& abstract_segment = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
+        accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
+      }
 
-        auto value_segment_value_vector = pmr_vector<ColumnDataType>{};
-        auto value_segment_null_vector = pmr_vector<bool>{};
+      for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
+        jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, column_id,
+                                                     column_is_nullable = column_is_nullable,
+                                                     accessor_by_chunk_id = accessor_by_chunk_id]() {
+          TRACE_EVENT("Sort", "WriteMaterializedOutputTable::Column::Chunk", "ColumnID", static_cast<size_t>(column_id),
+                      "ChunkID", static_cast<size_t>(output_chunk_id));
 
-        {
-          const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count));
-          value_segment_value_vector.reserve(next_chunk_size);
+          auto value_segment_value_vector = pmr_vector<ColumnDataType>{};
+          auto value_segment_null_vector = pmr_vector<bool>{};
+
+          const auto chunk_size =
+              std::min(output_chunk_size, static_cast<ChunkOffset>(row_count - output_chunk_id * output_chunk_size));
+
+          value_segment_value_vector.reserve(chunk_size);
           if (column_is_nullable) {
-            value_segment_null_vector.reserve(next_chunk_size);
-          }
-        }
-
-        auto accessor_by_chunk_id =
-            std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(unsorted_table->chunk_count());
-        for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-          const auto& abstract_segment = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
-          accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
-        }
-
-        for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
-          const auto [chunk_id, chunk_offset] = pos_list[row_index];
-
-          auto& accessor = accessor_by_chunk_id[chunk_id];
-          const auto typed_value = accessor->access(chunk_offset);
-          const auto is_null = !typed_value;
-          value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
-          if (column_is_nullable) {
-            value_segment_null_vector.push_back(is_null);
+            value_segment_null_vector.reserve(chunk_size);
           }
 
-          ++current_segment_size;
+          for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
+            const auto [chunk_id, chunk_offset] = pos_list[output_chunk_size * output_chunk_id + row_index];
 
-          // Check if value segment is full
-          if (current_segment_size >= output_chunk_size) {
-            current_segment_size = 0;
-
-            std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
+            auto& accessor = accessor_by_chunk_id[chunk_id];
+            const auto typed_value = accessor->access(chunk_offset);
+            const auto is_null = !typed_value;
+            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
             if (column_is_nullable) {
-              value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
-                                                                             std::move(value_segment_null_vector));
-            } else {
-              value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
+              value_segment_null_vector.push_back(is_null);
             }
-
-            output_segments_by_chunk[output_chunk_id][column_id] = value_segment;
-            // segments_by_columns[column_id].push_back(value_segment);
-            value_segment_value_vector = pmr_vector<ColumnDataType>{};
-            value_segment_null_vector = pmr_vector<bool>{};
-
-            const auto next_chunk_size =
-                std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count - row_index));
-            value_segment_value_vector.reserve(next_chunk_size);
-            if (column_is_nullable) {
-              value_segment_null_vector.reserve(next_chunk_size);
-            }
-
-            ++output_chunk_id;
           }
-        }
 
-        // Last segment has not been added
-        if (current_segment_size > 0) {
           std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
           if (column_is_nullable) {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
@@ -229,11 +200,12 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
           } else {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
           }
+
           output_segments_by_chunk[output_chunk_id][column_id] = value_segment;
-        }
-      });
-    }));
-    jobs.back()->schedule();  // schedule job immediately
+        }));
+        jobs.back()->schedule();  // schedule immediately because job creation is somewhat expensive
+      }
+    });
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
