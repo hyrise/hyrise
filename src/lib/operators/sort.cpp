@@ -537,11 +537,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             }
           });
         }
-
-        field_width.emplace_back(max_string_length + 2);  // Store size of the string prefix + 2 for string length.
+        // Store size of the string prefix + 2 for string length.
+        field_width.emplace_back(max_string_length + 2);
       } else {
         field_width.push_back(
-            sizeof(ColumnDataType));  // Store size of the column type, e.g. 4 for int, 8 for double, etc.
+        // Store size of the column type, e.g. 4 for int, 8 for double, etc.
+            sizeof(ColumnDataType));
       }
     });
   }
@@ -550,7 +551,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // Total width of each normalized key is the width of all columns to be sorted by plus null bytes.
   auto key_width = size_t{0};
   for (const auto& column : field_width) {
-    key_width += column + 1;  // +1 for null byte
+    key_width += column + 1;
   }
 
   /**
@@ -558,32 +559,32 @@ std::shared_ptr<const Table> Sort::_on_execute() {
    * This means, that `buffer[key_offsets[i]]` is the location of the i-th column's value in the key.
   */
   auto key_offsets = std::vector<size_t>(sort_definitions_size);
-  key_offsets[0] = 0;  // First column starts at offset 0.
+  key_offsets[0] = 0;
   for (auto index = size_t{1}; index < sort_definitions_size; ++index) {
-    key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;  // +1 for null byte
+    key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;
   }
 
   TRACE_EVENT_BEGIN("Sort", "Execute::PrecomputeChunkSizes");
-  auto key_buffer = std::vector<uint8_t>();  // Buffer to hold all keys for sorting.
-  auto total_buffer_size = size_t{0};        // Total size of the key buffer.
+  auto key_buffer = std::vector<uint8_t>();
+  auto total_buffer_size = size_t{0};
 
   // Number of rows per chunk in the input table.
   auto chunk_sizes = std::vector<size_t>(chunk_count);
 
-  auto row_ids = RowIDPosList{};  // Vector to hold row IDs for each row in the table.
-  row_ids.reserve(row_count);     // Reserve space for row IDs.
+  auto row_ids = RowIDPosList{};
+  row_ids.reserve(row_count);
 
-  auto row_id_offsets = std::vector<size_t>();  // Offsets for each chunk's row IDs.
-  row_id_offsets.reserve(chunk_count);          // Reserve space for offsets.
-  row_id_offsets.emplace_back(0);               // First chunk starts at offset 0.
+  auto row_id_offsets = std::vector<size_t>();
+  row_id_offsets.reserve(chunk_count);
+  row_id_offsets.emplace_back(0);
 
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = input_table->get_chunk(chunk_id);
     auto row_count_for_chunk = chunk->size();
 
     chunk_sizes[chunk_id] = row_count_for_chunk;
-
-    total_buffer_size += row_count_for_chunk * key_width;  // Total size of the keys for all chunks.
+    // Total size of the keys for all chunks.
+    total_buffer_size += row_count_for_chunk * key_width;
 
     // Offset for the next chunk.
     if (chunk_id > 0) {
@@ -591,12 +592,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     }
 
     for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
-      row_ids.emplace_back(chunk_id, row);  // Build array of row ids for this chunk.
+      row_ids.emplace_back(chunk_id, row);
     }
   }
   TRACE_EVENT_END("Sort");
 
-  key_buffer.reserve(total_buffer_size);  // Reserve space for all keys.
+  key_buffer.reserve(total_buffer_size);
   auto preparation_time = timer.lap();
 
   /**************************************************************************************************************
@@ -604,7 +605,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
    **************************************************************************************************************/
 
   TRACE_EVENT_BEGIN("Sort", "Execute::GenerateKeys");
-  // Job queue for generating keys in parallel
+  // Job queue for generating keys in parallel.
   auto keygen_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   keygen_jobs.reserve(static_cast<size_t>(chunk_count) * sort_definitions_size);
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -624,7 +625,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           using ColumnDataType = typename decltype(type)::type;
 
           segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
-            const auto row = val.chunk_offset();  // get the row offset in the chunk
+            const auto row = val.chunk_offset();
 
             // Pointer to the destination in the key buffer for this column.
             auto* dest = &key_buffer[(row_id_offsets[chunk_id] + row) * key_width + key_offsets[index]];
@@ -665,7 +666,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(keygen_jobs);  // Wait for all chunks to be materialized.
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(keygen_jobs);
   TRACE_EVENT_END("Sort");
   auto key_generation_time = timer.lap();
 
