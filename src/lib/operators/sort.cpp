@@ -233,12 +233,12 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // 3) Bottom-up merge sorted runs, doubling the run size each pass:
-  size_t run = block;
+  auto run = block;
   while (run < row_count) {
     jobs.clear();
-    for (size_t left = 0; left + run < row_count; left += 2 * run) {
-      size_t mid = left + run;
-      size_t right = std::min(left + 2 * run, row_count);
+    for (auto left = 0; left + run < row_count; left += 2 * run) {
+      auto mid = left + run;
+      auto right = std::min(left + 2 * run, row_count);
 
       merge_path_parallel(rows, left, mid, right, comp, num_workers);
     }
@@ -519,8 +519,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   field_width.reserve(sort_definitions_size);
 
   TRACE_EVENT_BEGIN("Sort", "Execute::PrecomputeFieldWidth");
-  for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
-    const auto& def = _sort_definitions[index];
+  for (auto& def : _sort_definitions) {
     const auto sort_col = def.column;
     resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -575,7 +574,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   row_ids.reserve(row_count);     // Reserve space for row IDs.
 
   auto row_id_offsets = std::vector<size_t>();  // Offsets for each chunk's row IDs.
-  row_id_offsets.reserve(chunk_count);       // Reserve space for offsets.
+  row_id_offsets.reserve(chunk_count);          // Reserve space for offsets.
   row_id_offsets.emplace_back(0);               // First chunk starts at offset 0.
 
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -611,7 +610,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = input_table->get_chunk(chunk_id);
 
-    // TODO(someone): How to handle huge number of keycolumns? maybe max. number for key generation
     for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
       keygen_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, index, chunk = chunk]() {
         TRACE_EVENT("Sort", "Execute::GenerateKeys", "ChunkID", static_cast<size_t>(chunk_id), "ColumnID",
