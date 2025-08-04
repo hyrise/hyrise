@@ -46,7 +46,10 @@ target_compile_options(perfetto PUBLIC -fPIC)
 # Create wrapper
 add_library(perfetto-wrapper INTERFACE)
 target_link_libraries(perfetto-wrapper INTERFACE perfetto)
-target_link_libraries(perfetto-wrapper INTERFACE dl pthread rt)
+target_link_libraries(perfetto-wrapper INTERFACE dl pthread)
+if(UNIX AND NOT APPLE)
+  target_link_libraries(perfetto-wrapper INTERFACE rt)
+endif()
 target_compile_options(perfetto-wrapper INTERFACE -fPIC)
 
 
