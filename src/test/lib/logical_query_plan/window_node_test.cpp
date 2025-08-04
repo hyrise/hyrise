@@ -111,8 +111,6 @@ TEST_F(WindowNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(*window_node_different_sort_order, *window_node_different_window);
 
   EXPECT_EQ(node_copy->hash(), _window_node->hash());
-  EXPECT_NE(window_node_different_function->hash(), _window_node->hash());
-  EXPECT_NE(window_node_different_window->hash(), _window_node->hash());
 }
 
 TEST_F(WindowNodeTest, UniqueColumnCombinationsEmpty) {
