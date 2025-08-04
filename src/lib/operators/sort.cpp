@@ -236,8 +236,9 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
       size_t mid = left + run;
       size_t right = std::min(left + 2 * run, row_count);
 
-      const bool is_final_merge = (right == row_count) && (row_count - left == 2 * run);
+      const bool is_final_merge = run * 2 >= row_count;
       if (is_final_merge) {
+        std::cout << "test";
         merge_path_parallel(rows, left, mid, right, comp);
       } else {
         jobs.emplace_back(std::make_shared<JobTask>([left, mid, right, &rows, &comp]() {
