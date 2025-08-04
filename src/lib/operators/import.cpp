@@ -118,7 +118,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
   if (!Hyrise::get().storage_manager.has_table(_tablename)) {
     // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
     // and their creation benefits from dictionary encoding, we add the tables after they are encoded.
-    Hyrise::get().storage_manager.add_table(_tablename, table);
+    Hyrise::get().catalog.add_table(_tablename, table);
     return nullptr;
   }
 

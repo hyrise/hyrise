@@ -54,7 +54,7 @@ class MetaTableTest : public BaseTest {
   std::shared_ptr<Table> int_int_int_null;
 
   void SetUp() override {
-    auto& storage_manager = Hyrise::get().storage_manager;
+    auto& catalog = Hyrise::get().catalog;
 
     int_int = load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2});
     int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", ChunkOffset{100});
@@ -64,8 +64,8 @@ class MetaTableTest : public BaseTest {
                                 SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::BitPacking},
                                 SegmentEncodingSpec{EncodingType::Unencoded}});
 
-    storage_manager.add_table("int_int", int_int);
-    storage_manager.add_table("int_int_int_null", int_int_int_null);
+    catalog.add_table("int_int", int_int);
+    catalog.add_table("int_int_int_null", int_int_int_null);
   }
 
   void _add_meta_table(const MetaTable& table) const {
@@ -142,7 +142,7 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
   SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}.create_pipeline().get_result_table();
   if (GetParam()->name() == "chunk_sort_orders") {
     Hyrise::get()
-        .storage_manager.get_table("int_int")
+        .storage_manager.get_table(Hyrise::get().catalog.table_id("int_int"))
         ->get_chunk(ChunkID{0})
         ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
@@ -160,7 +160,7 @@ TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) {
   // consumption changes) low. Instead, we simply ensure that the meta table is generated without dereferencing said
   // nullptr.
 
-  const auto int_int = Hyrise::get().storage_manager.get_table("int_int");
+  const auto int_int = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("int_int"));
 
   SQLPipelineBuilder{"DELETE FROM int_int"}.create_pipeline().get_result_table();
   int_int->remove_chunk(ChunkID{0});

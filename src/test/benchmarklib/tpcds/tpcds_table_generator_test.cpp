@@ -71,7 +71,7 @@ TEST_F(TPCDSTableGeneratorTest, TableContentsFirstRows) {
 }
 
 TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCountsAndTableConstraints) {
-  EXPECT_EQ(Hyrise::get().storage_manager.tables().size(), 0);
+  EXPECT_EQ(Hyrise::get().catalog.tables().size(), 0);
   TPCDSTableGenerator{1, Chunk::DEFAULT_SIZE, 0}.generate_and_store();
 
   /**
@@ -106,7 +106,7 @@ TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCountsAndTableConstraints) {
                                                                     {"web_sales", {719620, 17}},
                                                                     {"web_site", {30, 2}}};
 
-  EXPECT_EQ(Hyrise::get().storage_manager.tables().size(), expected_table_info.size());
+  EXPECT_EQ(Hyrise::get().catalog.tables().size(), expected_table_info.size());
   for (const auto& [name, table_info] : expected_table_info) {
     SCOPED_TRACE("checking table " + name);
     const auto table = Hyrise::get().storage_manager.get_table(name);

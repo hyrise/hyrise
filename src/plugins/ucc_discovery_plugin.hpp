@@ -21,13 +21,13 @@ namespace hyrise {
  * first collect all candidates for UCC validation before actually validating them in the UccDiscoveryPlugin.
  */
 struct UccCandidate {
-  UccCandidate(const std::string& init_table_name, const ColumnID init_column_id);
+  UccCandidate(const ObjectID init_table_id, const ColumnID init_column_id);
 
   bool operator==(const UccCandidate& other) const;
   bool operator!=(const UccCandidate& other) const;
   size_t hash() const;
 
-  const std::string table_name;
+  const ObjectID table_id;
   const ColumnID column_id;
 
  private:
@@ -89,7 +89,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    */
   template <typename ColumnDataType>
   static bool _uniqueness_holds_across_segments(const std::shared_ptr<const Table>& table,
-                                                const std::string& table_name, const ColumnID column_id,
+                                                const ObjectID table_id, const ColumnID column_id,
                                                 const std::shared_ptr<TransactionContext>& transaction_context);
 
   /**

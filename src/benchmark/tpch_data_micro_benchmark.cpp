@@ -1,3 +1,5 @@
+#include <unordered_map>
+
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
@@ -31,19 +33,19 @@ class TableWrapper;
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
-    auto& sm = Hyrise::get().storage_manager;
+    auto& catalog = Hyrise::get().catalog;
     const auto scale_factor = 10.0f;
     const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
-    if (!sm.has_table("lineitem")) {
+    if (catalog.table_id("lineitem") == INVALID_OBJECT_ID) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and "
                 << benchmark_config->encoding_config.default_encoding_spec << " encoding:\n";
       TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, benchmark_config).generate_and_store();
     }
 
-    _table_wrapper_map = create_table_wrappers(sm);
+    _table_wrapper_map = create_table_wrappers(catalog);
 
-    auto lineitem_table = sm.get_table("lineitem");
+    const auto lineitem_table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("lineitem"));
 
     // Predicates as in TPC-H Q6, ordered by selectivity. Not necessarily the same order as determined by the optimizer
     _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
@@ -72,12 +74,12 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     _string_predicate =
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, _lshipinstruct_operand, value_("a"));
 
-    _orders_table_node = StoredTableNode::make("orders");
+    _orders_table_node = StoredTableNode::make(Hyrise::get().catalog.table_id("orders"));
     _orders_orderpriority = _orders_table_node->get_column("o_orderpriority");
     _orders_orderdate = _orders_table_node->get_column("o_orderdate");
     _orders_orderkey = _orders_table_node->get_column("o_orderkey");
 
-    _lineitem_table_node = StoredTableNode::make("lineitem");
+    _lineitem_table_node = StoredTableNode::make(Hyrise::get().catalog.table_id("lineitem"));
     _lineitem_orderkey = _lineitem_table_node->get_column("l_orderkey");
     _lineitem_commitdate = _lineitem_table_node->get_column("l_commitdate");
     _lineitem_receiptdate = _lineitem_table_node->get_column("l_receiptdate");
@@ -86,11 +88,11 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
   void TearDown(::benchmark::State& /*state*/) override {}
 
-  std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
-    std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
-    for (const auto& table_name : sm.table_names()) {
-      auto table = sm.get_table(std::string{table_name});
-      auto table_wrapper = std::make_shared<TableWrapper>(table);
+  std::unordered_map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(Catalog& catalog) {
+    auto wrapper_map = std::unordered_map<std::string, std::shared_ptr<TableWrapper>>{};
+    for (const auto& [table_name, table_id] : catalog.table_ids()) {
+      const auto table = Hyrise::get().storage_manager.get_table(table_id);
+      const auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->never_clear_output();
       table_wrapper->execute();
 
@@ -102,7 +104,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
   inline static bool _tpch_data_generated = false;
 
-  std::map<std::string, std::shared_ptr<TableWrapper>> _table_wrapper_map;
+  std::unordered_map<std::string, std::shared_ptr<TableWrapper>> _table_wrapper_map;
 
   std::shared_ptr<PQPColumnExpression> _lorderkey_operand;
   std::shared_ptr<BinaryPredicateExpression> _int_predicate;
@@ -313,8 +315,7 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
 
   const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
 
-  const auto& sm = Hyrise::get().storage_manager;
-  const auto& lineitem_table = sm.get_table("lineitem");
+  const auto& lineitem_table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("lineitem"));
 
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, lineitem_table->row_count() / 2'000));
 

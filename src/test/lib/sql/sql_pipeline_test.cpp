@@ -38,10 +38,10 @@ class SQLPipelineTest : public BaseTest {
   void SetUp() override {
     // We reload table_a every time since it is modified during the test case.
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_a", _table_a);
+    Hyrise::get().catalog.add_table("table_a", _table_a);
 
-    Hyrise::get().storage_manager.add_table("table_a_multi", _table_a_multi);
-    Hyrise::get().storage_manager.add_table("table_b", _table_b);
+    Hyrise::get().catalog.add_table("table_a_multi", _table_a_multi);
+    Hyrise::get().catalog.add_table("table_b", _table_b);
 
     _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   }

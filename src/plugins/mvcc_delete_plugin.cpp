@@ -77,7 +77,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
         // Calculate metric 2 – Chunk hotness.
         const auto highest_end_commit_id = chunk->mvcc_data()->max_end_cid.load();
-        Assert(highest_end_commit_id != MvccData::MAX_COMMIT_ID,
+        Assert(highest_end_commit_id != MAX_COMMIT_ID,
                "Chunk has deleted rows, but max_end_cid was not updated.");
 
         const auto criterion2 =

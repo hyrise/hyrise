@@ -158,10 +158,12 @@ TEST_F(CreateTableTest, ExecuteWithIfNotExists) {
 
 TEST_F(CreateTableTest, CreateTableAsSelect) {
   const auto table = load_table("resources/test_data/tbl/10_ints.tbl");
-  Hyrise::get().storage_manager.add_table("test", table);
+  Hyrise::get().catalog.add_table("test", table);
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  const auto get_table = std::make_shared<GetTable>("test");
+  const auto table_id_test = Hyrise::get().catalog.table_id("test");
+  EXPECT_NE(table_id_test, INVALID_OBJECT_ID);
+  const auto get_table = std::make_shared<GetTable>(table_id_test);
   get_table->set_transaction_context(context);
   get_table->execute();
 
@@ -174,20 +176,24 @@ TEST_F(CreateTableTest, CreateTableAsSelect) {
   EXPECT_NO_THROW(create_table_as->execute());
   context->commit();
 
-  const auto created_table = Hyrise::get().storage_manager.get_table("test_2");
+  const auto table_id_test_2 = Hyrise::get().catalog.table_id("test_2");
+  EXPECT_NE(table_id_test_2, INVALID_OBJECT_ID);
+  const auto created_table = Hyrise::get().storage_manager.get_table(table_id_test_2);
   EXPECT_TABLE_EQ_ORDERED(created_table, table);
 
-  Hyrise::get().storage_manager.drop_table("test");
+  Hyrise::get().catalog.drop_table("test");
 
   EXPECT_TABLE_EQ_ORDERED(created_table, table);
 }
 
 TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
   const auto table = load_table("resources/test_data/tbl/int_float.tbl");
-  Hyrise::get().storage_manager.add_table("test", table);
+  Hyrise::get().catalog.add_table("test", table);
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  const auto get_table = std::make_shared<GetTable>("test");
+  const auto table_id_test = Hyrise::get().catalog.table_id("test");
+  EXPECT_NE(table_id_test, INVALID_OBJECT_ID);
+  const auto get_table = std::make_shared<GetTable>(table_id_test);
   get_table->set_transaction_context(context);
   get_table->execute();
 
@@ -214,14 +220,16 @@ TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
 
 TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
   const auto table = load_table("resources/test_data/tbl/10_ints.tbl");
-  Hyrise::get().storage_manager.add_table("test", table);
+  Hyrise::get().catalog.add_table("test", table);
 
   const auto context_1 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto context_2 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto context_3 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  // Create table 1 with second context
-  const auto get_table_1 = std::make_shared<GetTable>("test");
+  // Create table 1 with second context.
+  const auto table_id_test = Hyrise::get().catalog.table_id("test");
+  EXPECT_NE(table_id_test, INVALID_OBJECT_ID);
+  const auto get_table_1 = std::make_shared<GetTable>(table_id_test);
   get_table_1->set_transaction_context(context_2);
   get_table_1->execute();
 
@@ -233,8 +241,10 @@ TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
   create_table_as_1->set_transaction_context(context_2);
   EXPECT_NO_THROW(create_table_as_1->execute());
 
-  // Create table 2 with first context, which should not see the rows of table 1
-  const auto get_table_2 = std::make_shared<GetTable>("test_2");
+  // Create table 2 with first context, which should not see the rows of table 1.
+  const auto table_id_test_2 = Hyrise::get().catalog.table_id("test_2");
+  EXPECT_NE(table_id_test_2, INVALID_OBJECT_ID);
+  const auto get_table_2 = std::make_shared<GetTable>(table_id_test_2);
   get_table_2->set_transaction_context(context_1);
   get_table_2->execute();
 
@@ -248,12 +258,14 @@ TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
 
   context_1->commit();
 
-  const auto table_3 = Hyrise::get().storage_manager.get_table("test_3");
+  const auto table_id_test_3 = Hyrise::get().catalog.table_id("test_3");
+  EXPECT_NE(table_id_test_3, INVALID_OBJECT_ID);
+  const auto table_3 = Hyrise::get().storage_manager.get_table(table_id_test_3);
   EXPECT_EQ(table_3->row_count(), 0);
 
   context_2->rollback(RollbackReason::User);
 
-  const auto get_table_3 = std::make_shared<GetTable>("test_2");
+  const auto get_table_3 = std::make_shared<GetTable>(table_id_test_2);
   get_table_3->set_transaction_context(context_3);
   get_table_3->execute();
 

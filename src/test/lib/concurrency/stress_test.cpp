@@ -60,7 +60,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of two. This will lead to a high number of transaction conflicts
   // and many chunks being created.
   const auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-  Hyrise::get().storage_manager.add_table("table_a", table_a);
+  Hyrise::get().catalog.add_table("table_a", table_a);
   auto initial_sum = int64_t{0};
 
   {
@@ -128,7 +128,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3}, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("table_b", table);
+  Hyrise::get().catalog.add_table("table_b", table);
 
   const auto iterations_per_thread = uint32_t{20};
 
@@ -175,7 +175,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, true);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("table_c", table);
+  Hyrise::get().catalog.add_table("table_c", table);
 
   const auto iterations_per_thread = uint32_t{200};
 
@@ -542,7 +542,7 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
 TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                              ChunkOffset{3}, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("table_a", table);
+  Hyrise::get().catalog.add_table("table_a", table);
 
   const auto values_to_insert =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
@@ -681,10 +681,10 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
   // table sizes). For that, we execute multiple short runs.
   for (auto test_run = size_t{0}; test_run < 10; ++test_run) {
     if (Hyrise::get().storage_manager.has_table(table_name)) {
-      Hyrise::get().storage_manager.drop_table(table_name);
+      Hyrise::get().catalog.drop_table(table_name);
     }
 
-    Hyrise::get().storage_manager.add_table(
+    Hyrise::get().catalog.add_table(
         table_name, std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                             Chunk::DEFAULT_SIZE, UseMvcc::Yes));
 
@@ -786,7 +786,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   table->append({2, 2, 2});
   table->append({3, 3, 1});
 
-  Hyrise::get().storage_manager.add_table("dummy_table", table);
+  Hyrise::get().catalog.add_table("dummy_table", table);
   /**
    * This test runs insertions and reads concurrently. Specifically, it tests the following functions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`

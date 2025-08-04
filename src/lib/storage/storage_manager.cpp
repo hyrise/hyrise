@@ -25,9 +25,9 @@
 
 namespace hyrise {
 
-void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
-  Hyrise::get().catalog.add_table(name, table);
-}
+// void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
+//   Hyrise::get().catalog.add_table(name, table);
+// }
 
 void StorageManager::_add_table(const ObjectID table_id, std::shared_ptr<Table> table) {
   const auto needs_growth = table_id >= _tables.size();
@@ -54,9 +54,9 @@ void StorageManager::_add_table(const ObjectID table_id, std::shared_ptr<Table> 
   _tables[table_id] = std::move(table);
 }
 
-void StorageManager::drop_table(const std::string& name) {
-  Hyrise::get().catalog.drop_table(name);
-}
+// void StorageManager::drop_table(const std::string& name) {
+//   Hyrise::get().catalog.drop_table(name);
+// }
 
 void StorageManager::_drop_table(const ObjectID table_id) {
   Assert(table_id < _tables.size() && _tables[table_id],
@@ -83,20 +83,6 @@ bool StorageManager::has_table(const std::string& name) const {
 
 bool StorageManager::has_table(const ObjectID table_id) const {
   return _tables[table_id] != nullptr;
-}
-
-std::vector<std::string_view> StorageManager::table_names() {
-  return Hyrise::get().catalog.table_names();
-}
-
-std::unordered_map<std::string_view, std::shared_ptr<Table>> StorageManager::tables() const {
-  auto result = std::unordered_map<std::string_view, std::shared_ptr<Table>>{};
-
-  for (const auto& [table_name, table_id] : Hyrise::get().catalog.table_ids()) {
-    result[table_name] = _tables[table_id];
-  }
-
-  return result;
 }
 
 void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
@@ -143,10 +129,6 @@ bool StorageManager::has_view(const std::string& name) const {
 
 bool StorageManager::has_view(const ObjectID view_id) const {
   return view_id < _views.size() && _views[view_id] != nullptr;
-}
-
-std::vector<std::string_view> StorageManager::view_names() {
-  return Hyrise::get().catalog.view_names();
 }
 
 std::unordered_map<std::string_view, std::shared_ptr<LQPView>> StorageManager::views() const {
@@ -215,56 +197,32 @@ std::unordered_map<std::string_view, std::shared_ptr<PreparedPlan>> StorageManag
   return result;
 }
 
-void StorageManager::export_all_tables_as_csv(const std::string& path) const {
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  tasks.reserve(_tables.size());
+// std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {
+//   stream << "==================\n";
+//   stream << "===== Tables =====\n\n";
 
-  for (const auto& table_name_and_id : Hyrise::get().catalog.table_ids()) {
-    const auto& name = table_name_and_id.first;
-    const auto table_id = table_name_and_id.second;
-    const auto table = _tables[table_id];
+//   for (const auto& [name, table_id] : Hyrise::get().catalog.table_ids()) {
+//     stream << "==== table >> " << name << " <<";
+//     const auto table = storage_manager.get_table(table_id);
+//     stream << " (" << table->column_count() << " columns, " << table->row_count() << " rows in " << table->chunk_count()
+//            << " chunks)\n";
+//   }
 
-    tasks.push_back(std::make_shared<JobTask>([name, table, &path]() {
-      const auto table_wrapper = std::make_shared<TableWrapper>(table);
-      table_wrapper->execute();
+//   stream << "==================\n";
+//   stream << "===== Views ======\n\n";
 
-      // NOLINTNEXTLINE(performance-inefficient-string-concatenation): not worth it, no performance-critical path.
-      const auto exporter =
-          std::make_shared<Export>(table_wrapper, path + "/" + std::string{name} + ".csv", FileType::Csv);
-      exporter->execute();
-    }));
-    tasks.back()->schedule();
-  }
+//   for (auto const& view : storage_manager.views()) {
+//     stream << "==== view >> " << view.first << " <<\n";
+//   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(tasks);
-}
+//   stream << "==================\n";
+//   stream << "= PreparedPlans ==\n\n";
 
-std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {
-  stream << "==================\n";
-  stream << "===== Tables =====\n\n";
+//   for (auto const& prepared_plan : storage_manager.prepared_plans()) {
+//     stream << "==== prepared plan >> " << prepared_plan.first << " <<\n";
+//   }
 
-  for (const auto& [name, table_id] : Hyrise::get().catalog.table_ids()) {
-    stream << "==== table >> " << name << " <<";
-    const auto table = storage_manager.get_table(table_id);
-    stream << " (" << table->column_count() << " columns, " << table->row_count() << " rows in " << table->chunk_count()
-           << " chunks)\n";
-  }
-
-  stream << "==================\n";
-  stream << "===== Views ======\n\n";
-
-  for (auto const& view : storage_manager.views()) {
-    stream << "==== view >> " << view.first << " <<\n";
-  }
-
-  stream << "==================\n";
-  stream << "= PreparedPlans ==\n\n";
-
-  for (auto const& prepared_plan : storage_manager.prepared_plans()) {
-    stream << "==== prepared plan >> " << prepared_plan.first << " <<\n";
-  }
-
-  return stream;
-}
+//   return stream;
+// }
 
 }  // namespace hyrise

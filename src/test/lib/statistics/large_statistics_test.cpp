@@ -125,7 +125,7 @@ TEST_F(LargeStatisticsTest, CorrectHistogramBins) {
 }
 
 TEST_F(LargeStatisticsTest, CostAndCardinalityEstimation) {
-  Hyrise::get().storage_manager.add_table("a", table);
+  Hyrise::get().catalog.add_table("a", table);
   const auto a = StoredTableNode::make("a");
 
   // clang-format off

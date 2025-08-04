@@ -21,7 +21,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class LQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    Hyrise::get().catalog.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
     int_float_node_a = StoredTableNode::make("int_float");
     a = int_float_node_a->get_column("a");

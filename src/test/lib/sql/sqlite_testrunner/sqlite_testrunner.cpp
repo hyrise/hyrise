@@ -141,11 +141,11 @@ void SQLiteTestRunner::SetUp() {
         ChunkEncoder::encode_all_chunks(reloaded_table, table_cache_entry.chunk_encoding_spec);
       }
 
-      Hyrise::get().storage_manager.add_table(table_name, reloaded_table);
+      Hyrise::get().catalog.add_table(table_name, reloaded_table);
       table_cache_entry.table = reloaded_table;
 
     } else {
-      Hyrise::get().storage_manager.add_table(table_name, table_cache_entry.table);
+      Hyrise::get().catalog.add_table(table_name, table_cache_entry.table);
     }
   }
 }

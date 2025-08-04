@@ -28,17 +28,21 @@ class OperatorTaskTest : public BaseTest {
 
   void SetUp() override {
     _test_table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_a", _test_table_a);
+    _table_id_a = Hyrise::get().catalog.add_table("table_a", _test_table_a);
 
     _test_table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_b", _test_table_b);
+    _table_id_b = Hyrise::get().catalog.add_table("table_b", _test_table_b);
   }
 
-  std::shared_ptr<Table> _test_table_a, _test_table_b;
+  std::shared_ptr<Table> _test_table_a;
+  std::shared_ptr<Table> _test_table_b;
+  ObjectID _table_id_a;
+  ObjectID _table_id_b;
+
 };
 
 TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
-  const auto gt = std::make_shared<GetTable>("table_a");
+  const auto gt = std::make_shared<GetTable>(_table_id_a);
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(gt);
 
   EXPECT_EQ(tasks.size(), 1);
@@ -48,7 +52,7 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
 }
 
 TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
-  const auto gt = std::make_shared<GetTable>("table_a");
+  const auto gt = std::make_shared<GetTable>(_table_id_a);
   const auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
   const auto ts = std::make_shared<TableScan>(gt, equals_(a, 1234));
 
@@ -63,8 +67,8 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
 }
 
 TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
-  const auto gt_a = std::make_shared<GetTable>("table_a");
-  const auto gt_b = std::make_shared<GetTable>("table_b");
+  const auto gt_a = std::make_shared<GetTable>(_table_id_a);
+  const auto gt_b = std::make_shared<GetTable>(_table_id_b);
   const auto join = std::make_shared<JoinHash>(
       gt_a, gt_b, JoinMode::Inner,
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
@@ -80,7 +84,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
 }
 
 TEST_F(OperatorTaskTest, MakeDiamondShape) {
-  const auto gt_a = std::make_shared<GetTable>("table_a");
+  const auto gt_a = std::make_shared<GetTable>(_table_id_a);
   const auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
   const auto b = PQPColumnExpression::from_table(*_test_table_a, "b");
   const auto scan_a = std::make_shared<TableScan>(gt_a, greater_than_equals_(a, 1234));
@@ -122,14 +126,14 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   // SELECT 1 + (SELECT  AVG(table_a.a) FROM table_a WHERE table_a.a > (SELECT MIN(table_b.a) FROM table_b));
 
   // SELECT MIN(table_b.a) FROM table_b
-  const auto gt_b = std::make_shared<GetTable>("table_b", std::vector<ChunkID>{}, std::vector<ColumnID>{0});
+  const auto gt_b = std::make_shared<GetTable>(_table_id_b, std::vector<ChunkID>{}, std::vector<ColumnID>{0});
   const auto b_a = PQPColumnExpression::from_table(*_test_table_b, "a");
   using WindowFunctionExpressions = std::vector<std::shared_ptr<WindowFunctionExpression>>;
   const auto aggregate_a =
       std::make_shared<AggregateHash>(gt_b, WindowFunctionExpressions{min_(b_a)}, std::vector<ColumnID>{});
 
   // SELECT AVG(table_a.a) FROM table_a WHERE table_a.a > <subquery_result>
-  const auto gt_a = std::make_shared<GetTable>("table_a");
+  const auto gt_a = std::make_shared<GetTable>(_table_id_a);
   const auto a_a = PQPColumnExpression::from_table(*_test_table_a, "a");
   const auto scan =
       std::make_shared<TableScan>(gt_a, greater_than_(a_a, pqp_subquery_(aggregate_a, DataType::Int, false)));
@@ -238,8 +242,8 @@ TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
   // subquery is executed first and the GetTable operator can use them for pruning during execution.
   // Example query used in this test case:
   //     SELECT ... FROM table_a WHERE a = (SELECT MIN(a) FROM table_b);
-  const auto get_table_a = std::make_shared<GetTable>("table_a");
-  const auto get_table_b = std::make_shared<GetTable>("table_b");
+  const auto get_table_a = std::make_shared<GetTable>(_table_id_a);
+  const auto get_table_b = std::make_shared<GetTable>(_table_id_b);
 
   const auto aggregate = std::make_shared<AggregateHash>(
       get_table_b, std::vector{min_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"))}, std::vector<ColumnID>{});
@@ -279,7 +283,7 @@ TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
     GTEST_SKIP();
   }
 
-  const auto get_table = std::make_shared<GetTable>("table_a");
+  const auto get_table = std::make_shared<GetTable>(_table_id_a);
 
   const auto aggregate = std::make_shared<AggregateHash>(
       get_table, std::vector{avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"))}, std::vector<ColumnID>{});
@@ -296,7 +300,7 @@ TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
 }
 
 TEST_F(OperatorTaskTest, SkipOperatorTask) {
-  const auto table = std::make_shared<GetTable>("table_a");
+  const auto table = std::make_shared<GetTable>(_table_id_a);
   table->execute();
 
   const auto task = std::make_shared<OperatorTask>(table);
@@ -305,14 +309,14 @@ TEST_F(OperatorTaskTest, SkipOperatorTask) {
 }
 
 TEST_F(OperatorTaskTest, NotExecutedOperatorTaskCannotBeSkipped) {
-  const auto table = std::make_shared<GetTable>("table_a");
+  const auto table = std::make_shared<GetTable>(_table_id_a);
 
   const auto task = std::make_shared<OperatorTask>(table);
   EXPECT_THROW(task->skip_operator_task(), std::logic_error);
 }
 
 TEST_F(OperatorTaskTest, DoNotSkipOperatorTaskWithMultiOwners) {
-  const auto table = std::make_shared<GetTable>("table_a");
+  const auto table = std::make_shared<GetTable>(_table_id_a);
   table->execute();
 
   const auto task = std::make_shared<OperatorTask>(table);

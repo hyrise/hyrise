@@ -15,9 +15,9 @@ class QueryPlanCacheTest : public BaseTest {
   void SetUp() override {
     // Load tables.
     auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_a", std::move(table_a));
+    Hyrise::get().catalog.add_table("table_a", std::move(table_a));
     auto table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_b", std::move(table_b));
+    Hyrise::get().catalog.add_table("table_b", std::move(table_b));
 
     _query_plan_cache_hits = 0;
 

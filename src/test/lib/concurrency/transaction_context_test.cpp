@@ -25,7 +25,7 @@ class TransactionContextTest : public BaseTest {
   void SetUp() override {
     auto t = load_table("resources/test_data/tbl/float_int.tbl");
     // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-    Hyrise::get().storage_manager.add_table(table_name, t);
+    Hyrise::get().catalog.add_table(table_name, t);
   }
 
   TransactionManager& manager() {

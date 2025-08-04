@@ -28,7 +28,7 @@ std::string DropTable::description(DescriptionMode description_mode) const {
 std::shared_ptr<const Table> DropTable::_on_execute() {
   // If IF EXISTS is not set and the table is not found, StorageManager throws an exception
   if (!if_exists || Hyrise::get().storage_manager.has_table(table_name)) {
-    Hyrise::get().storage_manager.drop_table(table_name);
+    Hyrise::get().catalog.drop_table(table_name);
   }
 
   return nullptr;

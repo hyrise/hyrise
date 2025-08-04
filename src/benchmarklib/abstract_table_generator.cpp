@@ -298,7 +298,7 @@ void AbstractTableGenerator::generate_and_store() {
    */
   {
     std::cout << "- Adding tables to StorageManager and generating table statistics\n" << std::flush;
-    auto& storage_manager = Hyrise::get().storage_manager;
+    auto& catalog = Hyrise::get().catalog;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
     for (auto& table_info_by_name_pair : table_info_by_name) {
@@ -307,10 +307,10 @@ void AbstractTableGenerator::generate_and_store() {
 
       const auto add_table = [&]() {
         auto per_table_timer = Timer{};
-        if (storage_manager.has_table(table_name)) {
-          storage_manager.drop_table(table_name);
+        if (catalog.table_id(table_name) != INVALID_OBJECT_ID) {
+          catalog.drop_table(table_name);
         }
-        storage_manager.add_table(table_name, table_info.table);
+        catalog.add_table(table_name, table_info.table);
         const auto output =
             std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
         std::cout << output << std::flush;

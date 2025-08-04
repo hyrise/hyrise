@@ -35,7 +35,7 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
   auto table = load_table("resources/test_data/tbl/float_int.tbl");
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   auto get_table = std::make_shared<GetTable>(table_name);
   get_table->execute();
@@ -69,11 +69,11 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
 
   // 3 Rows, chunk_size = 4
   auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{4});
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   // 10 Rows
   auto table2 = load_table("resources/test_data/tbl/10_ints.tbl");
-  Hyrise::get().storage_manager.add_table(table_name2, table2);
+  Hyrise::get().catalog.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
   get_table2->execute();
@@ -96,11 +96,11 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
 
   // 3 Rows
   auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{2});
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   // 10 Rows
   auto table2 = load_table("resources/test_data/tbl/10_ints.tbl", ChunkOffset{3});
-  Hyrise::get().storage_manager.add_table(table_name2, table2);
+  Hyrise::get().catalog.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
   get_table2->execute();
@@ -123,12 +123,12 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
 
   // 3 Rows
   auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{2});
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
   ChunkEncoder::encode_all_chunks(table);
 
   // 10 Rows
   auto table2 = load_table("resources/test_data/tbl/10_ints.tbl");
-  Hyrise::get().storage_manager.add_table(table_name2, table2);
+  Hyrise::get().catalog.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
   get_table2->execute();
@@ -148,7 +148,7 @@ TEST_F(OperatorsInsertTest, Rollback) {
   auto table_name = "test3";
 
   auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{4});
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   auto get_table1 = std::make_shared<GetTable>(table_name);
   get_table1->execute();
@@ -178,7 +178,7 @@ TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
 
   // Set Up
   auto t = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{10});
-  Hyrise::get().storage_manager.add_table(t_name, t);
+  Hyrise::get().catalog.add_table(t_name, t);
   auto row_count = t->row_count();
   EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->chunk_count(), 1);
 
@@ -208,10 +208,10 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   auto table_name2 = "test2";
 
   auto table = load_table("resources/test_data/tbl/string_with_null.tbl", ChunkOffset{4});
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   auto table2 = load_table("resources/test_data/tbl/string_with_null.tbl", ChunkOffset{4});
-  Hyrise::get().storage_manager.add_table(table_name2, table2);
+  Hyrise::get().catalog.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
   get_table2->execute();
@@ -234,10 +234,10 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   auto table_name2 = "test2";
 
   auto table = load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{3});
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   auto table2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{4});
-  Hyrise::get().storage_manager.add_table(table_name2, table2);
+  Hyrise::get().catalog.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
   get_table2->execute();
@@ -263,10 +263,10 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   auto table_name2 = "test2";
 
   auto table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{3});
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   auto table2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{4});
-  Hyrise::get().storage_manager.add_table(table_name2, table2);
+  Hyrise::get().catalog.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
   get_table2->execute();
@@ -282,7 +282,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto table_name = "test1";
 
   auto table = load_table("resources/test_data/tbl/float_with_null.tbl", ChunkOffset{4});
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   auto dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
   dummy_wrapper->execute();
@@ -311,7 +311,7 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
 
   const auto target_table =
       std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("target_table", target_table);
+  Hyrise::get().catalog.add_table("target_table", target_table);
 
   const auto table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
 
@@ -334,7 +334,7 @@ TEST_F(OperatorsInsertTest, SetMaxBeginCID) {
 
   const auto target_table =
       std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("target_table", target_table);
+  Hyrise::get().catalog.add_table("target_table", target_table);
 
   const auto table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
 
@@ -362,9 +362,9 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutable) {
     const auto target_table =
         std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
     if (Hyrise::get().storage_manager.has_table("target_table")) {
-      Hyrise::get().storage_manager.drop_table("target_table");
+      Hyrise::get().catalog.drop_table("target_table");
     }
-    Hyrise::get().storage_manager.add_table("target_table", target_table);
+    Hyrise::get().catalog.add_table("target_table", target_table);
 
     const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
     values_to_insert->append({int32_t{1}});
@@ -405,9 +405,9 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutableMultipleOperators) {
     const auto target_table =
         std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
     if (Hyrise::get().storage_manager.has_table("target_table")) {
-      Hyrise::get().storage_manager.drop_table("target_table");
+      Hyrise::get().catalog.drop_table("target_table");
     }
-    Hyrise::get().storage_manager.add_table("target_table", target_table);
+    Hyrise::get().catalog.add_table("target_table", target_table);
 
     EXPECT_EQ(target_table->chunk_count(), 0);
 
@@ -464,9 +464,9 @@ TEST_F(OperatorsInsertTest, MarkMultipleChunksImmutable) {
     const auto target_table =
         std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
     if (Hyrise::get().storage_manager.has_table("target_table")) {
-      Hyrise::get().storage_manager.drop_table("target_table");
+      Hyrise::get().catalog.drop_table("target_table");
     }
-    Hyrise::get().storage_manager.add_table("target_table", target_table);
+    Hyrise::get().catalog.add_table("target_table", target_table);
 
     const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
     for (auto value = int32_t{0}; value < 9; ++value) {

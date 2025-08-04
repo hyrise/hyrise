@@ -34,7 +34,7 @@ class TPCCTest : public BaseTest {
       const auto generated_table = table_info.table;
       auto isolated_table =
           std::make_shared<Table>(generated_table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
-      Hyrise::get().storage_manager.add_table(table_name, isolated_table);
+      Hyrise::get().catalog.add_table(table_name, isolated_table);
 
       auto table_wrapper = std::make_shared<TableWrapper>(generated_table);
       table_wrapper->execute();

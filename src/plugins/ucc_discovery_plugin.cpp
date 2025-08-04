@@ -46,11 +46,11 @@
 
 namespace hyrise {
 
-UccCandidate::UccCandidate(const std::string& init_table_name, const ColumnID init_column_id)
-    : table_name(init_table_name), column_id(init_column_id) {}
+UccCandidate::UccCandidate(const ObjectID init_table_id, const ColumnID init_column_id)
+    : table_id{init_table_id}, column_id{init_column_id} {}
 
 bool UccCandidate::operator==(const UccCandidate& other) const {
-  return (column_id == other.column_id) && (table_name == other.table_name);
+  return (column_id == other.column_id) && (table_id == other.table_id);
 }
 
 bool UccCandidate::operator!=(const UccCandidate& other) const {
@@ -59,7 +59,7 @@ bool UccCandidate::operator!=(const UccCandidate& other) const {
 
 size_t UccCandidate::hash() const {
   auto hash = size_t{0};
-  boost::hash_combine(hash, table_name);
+  boost::hash_combine(hash, table_id);
   boost::hash_combine(hash, column_id);
   return hash;
 }
@@ -129,11 +129,12 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
   for (const auto& candidate : ucc_candidates) {
     auto candidate_timer = Timer();
-    const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name);
+    const auto table = Hyrise::get().storage_manager.get_table(candidate.table_id);
     const auto column_id = candidate.column_id;
 
     auto message = std::stringstream{};
-    message << "Checking candidate " << candidate.table_name << "." << table->column_name(column_id);
+
+    message << "Checking candidate " << Hyrise::get().catalog.table_name(candidate.table_id) << "." << table->column_name(column_id);
 
     const auto& soft_key_constraints = table->soft_key_constraints();
     const auto candidate_columns = std::set<ColumnID>{column_id};
@@ -181,7 +182,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
       // If that does not allow us to reject the UCC right away, we have to run the more expensive
       // cross-segment duplicate check (next clause of the if-condition).
       if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id) ||
-          !_uniqueness_holds_across_segments<ColumnDataType>(table, candidate.table_name, column_id,
+          !_uniqueness_holds_across_segments<ColumnDataType>(table, candidate.table_id, column_id,
                                                              transaction_context)) {
         message << " [rejected in " << candidate_timer.lap_formatted() << "]";
 
@@ -252,7 +253,7 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shar
 
 template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
-    const std::shared_ptr<const Table>& table, const std::string& table_name, const ColumnID column_id,
+    const std::shared_ptr<const Table>& table, const ObjectID table_id, const ColumnID column_id,
     const std::shared_ptr<TransactionContext>& transaction_context) {
   // `distinct_values_across_segments` collects the segment values from all chunks.
   auto distinct_values_across_segments = std::unordered_set<ColumnDataType>{};
@@ -305,7 +306,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
 
   // Using the validate operator, we get a view of the current content of the table, filtering out overwritten and
   // deleted values.
-  const auto get_table = std::make_shared<GetTable>(table_name, unmodified_chunks, std::vector<ColumnID>());
+  const auto get_table = std::make_shared<GetTable>(table_id, unmodified_chunks, std::vector<ColumnID>());
   get_table->execute();
   const auto validate_table = std::make_shared<Validate>(get_table);
   validate_table->set_transaction_context(transaction_context);
@@ -359,7 +360,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(const std::shared_p
     }
     // Every ColumnExpression used as a GroupBy expression should be checked for uniqueness.
     const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_column_expression->original_node.lock());
-    ucc_candidates.insert(UccCandidate{stored_table_node.table_name, lqp_column_expression->original_column_id});
+    ucc_candidates.insert(UccCandidate{stored_table_node.table_id, lqp_column_expression->original_column_id});
   }
 }
 
@@ -411,7 +412,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<co
           continue;
         }
         const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
-        ucc_candidates.insert(UccCandidate{stored_table_node.table_name, lqp_column_expression->original_column_id});
+        ucc_candidates.insert(UccCandidate{stored_table_node.table_id, lqp_column_expression->original_column_id});
 
         _ucc_candidates_from_removable_join_input(subtree_root, lqp_column_expression, ucc_candidates);
       }
@@ -480,8 +481,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
 
     if (expression_table_node == candidate_table_node) {
       // Both columns should be in the same table.
-      ucc_candidates.emplace(expression_table_node->table_name, column_expression->original_column_id);
-      ucc_candidates.emplace(candidate_table_node->table_name, column_candidate->original_column_id);
+      ucc_candidates.emplace(expression_table_node->table_id, column_expression->original_column_id);
+      ucc_candidates.emplace(candidate_table_node->table_id, column_candidate->original_column_id);
     }
 
     return LQPVisitation::VisitInputs;

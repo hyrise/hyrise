@@ -75,7 +75,7 @@ Catalog::ObjectMetadata& Catalog::ObjectMetadata::operator=(Catalog::ObjectMetad
 Catalog::ObjectMetadata::ObjectMetadata(Catalog::ObjectMetadata&& other) noexcept
     : ids{std::move(other.ids)}, names{std::move(other.names)}, next_id{other.next_id.load()} {}
 
-void Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& table) {
+ObjectID Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& table) {
   const auto table_iter = _tables.ids.find(name);
   const auto view_iter = _views.ids.find(name);
   Assert(table_iter == _tables.ids.end() || table_iter->second == INVALID_OBJECT_ID,
@@ -84,6 +84,7 @@ void Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& t
          "Cannot add table " + name + " - a view with the same name already exists.");
   const auto table_id = add_object(name, _tables);
   Hyrise::get().storage_manager._add_table(table_id, table);
+  return table_id;
 }
 
 std::pair<ObjectType, ObjectID> Catalog::resolve_object(const std::string& name) {
@@ -138,7 +139,18 @@ std::unordered_map<std::string_view, ObjectID> Catalog::table_ids() const {
   return object_ids(_tables);
 }
 
-void Catalog::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
+std::unordered_map<std::string_view, std::shared_ptr<Table>> Catalog::tables() const {
+  auto tables = std::unordered_map<std::string_view, std::shared_ptr<Table>>{};
+
+  for (const auto& [name, table_id] : _tables.ids) {
+    if (table_id != INVALID_OBJECT_ID) {
+      tables[name] = Hyrise::get().storage_manager.get_table(table_id);
+    }
+  }
+  return tables;
+}
+
+ObjectID Catalog::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
   const auto table_iter = _tables.ids.find(name);
   const auto view_iter = _views.ids.find(name);
   Assert(table_iter == _tables.ids.end() || table_iter->second == INVALID_OBJECT_ID,
@@ -147,6 +159,7 @@ void Catalog::add_view(const std::string& name, const std::shared_ptr<LQPView>& 
          "Cannot add view " + name + " - a view with the same name already exists.");
   const auto view_id = add_object(name, _views);
   Hyrise::get().storage_manager._add_view(view_id, view);
+  return view_id;
 }
 
 void Catalog::drop_view(ObjectID view_id) {
@@ -182,12 +195,13 @@ std::unordered_map<std::string_view, ObjectID> Catalog::view_ids() const {
   return object_ids(_tables);
 }
 
-void Catalog::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
+ObjectID Catalog::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
   const auto iter = _prepared_plans.ids.find(name);
   Assert(iter == _prepared_plans.ids.end() || iter->second == INVALID_OBJECT_ID,
          "Cannot add prepared plan '" + name + "' - a prepared plan with the same name already exists.");
   const auto plan_id = add_object(name, _prepared_plans);
   Hyrise::get().storage_manager._add_prepared_plan(plan_id, prepared_plan);
+  return plan_id;
 }
 
 void Catalog::drop_prepared_plan(ObjectID plan_id) {

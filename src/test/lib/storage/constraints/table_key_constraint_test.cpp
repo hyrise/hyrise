@@ -10,7 +10,7 @@ namespace hyrise {
 class TableKeyConstraintTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto& storage_manager = Hyrise::get().storage_manager;
+    auto& catalog = Hyrise::get().catalog;
     {
       auto column_definitions = TableColumnDefinitions{};
       column_definitions.emplace_back("column0", DataType::Int, false);
@@ -19,7 +19,7 @@ class TableKeyConstraintTest : public BaseTest {
       column_definitions.emplace_back("column3", DataType::Int, false);
       _table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-      storage_manager.add_table("table", _table);
+      catalog.add_table("table", _table);
     }
 
     {
@@ -28,7 +28,7 @@ class TableKeyConstraintTest : public BaseTest {
       column_definitions.emplace_back("column1", DataType::Int, true);
       _table_nullable = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-      storage_manager.add_table("table_nullable", _table_nullable);
+      catalog.add_table("table_nullable", _table_nullable);
     }
   }
 

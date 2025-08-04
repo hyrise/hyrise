@@ -23,7 +23,7 @@ class PQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() override {
     _table = load_table("resources/test_data/tbl/int_float.tbl");
-    Hyrise::get().storage_manager.add_table("int_float", _table);
+    Hyrise::get().catalog.add_table("int_float", _table);
     _a = PQPColumnExpression::from_table(*_table, "a");
     _b = PQPColumnExpression::from_table(*_table, "b");
 

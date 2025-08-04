@@ -11,7 +11,7 @@ namespace hyrise {
 
 class SecondTestPlugin : public AbstractPlugin {
  public:
-  SecondTestPlugin() : storage_manager(Hyrise::get().storage_manager) {}
+  SecondTestPlugin() : catalog{Hyrise::get().catalog} {}
 
   std::string description() const final;
 
@@ -23,7 +23,7 @@ class SecondTestPlugin : public AbstractPlugin {
 
   void a_user_executable_function() const;
 
-  StorageManager& storage_manager;
+  Catalog& catalog;
 };
 
 }  // namespace hyrise

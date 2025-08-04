@@ -26,7 +26,7 @@ class ServerTestRunner : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_a", _table_a);
+    Hyrise::get().catalog.add_table("table_a", _table_a);
 
     auto server_runner = [](Server& server) {
       server.run();
@@ -86,7 +86,7 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
 
 TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
   const auto all_types_table = load_table("resources/test_data/tbl/all_data_types_sorted.tbl", ChunkOffset{2});
-  Hyrise::get().storage_manager.add_table("all_types_table", all_types_table);
+  Hyrise::get().catalog.add_table("all_types_table", all_types_table);
 
   auto connection = pqxx::connection{_connection_string};
 

@@ -21,12 +21,11 @@ using hsql::SQLParserResult;
 class SQLBenchmark : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(benchmark::State& st) override {
-    // Add tables to StorageManager.
-    // This is required for the translator to get the column names of a table.
-    auto& storage_manager = Hyrise::get().storage_manager;
-    storage_manager.add_table("customer", load_table("resources/test_data/tbl/tpch/minimal/customer.tbl"));
-    storage_manager.add_table("lineitem", load_table("resources/test_data/tbl/tpch/minimal/lineitem.tbl"));
-    storage_manager.add_table("orders", load_table("resources/test_data/tbl/tpch/minimal/orders.tbl"));
+    // Add tables to Catalog. This is required for the translator to get the column names of a table.
+    auto& catalog = Hyrise::get().catalog;
+    catalog.add_table("customer", load_table("resources/test_data/tbl/tpch/minimal/customer.tbl"));
+    catalog.add_table("lineitem", load_table("resources/test_data/tbl/tpch/minimal/lineitem.tbl"));
+    catalog.add_table("orders", load_table("resources/test_data/tbl/tpch/minimal/orders.tbl"));
   }
 
   // Run a benchmark that compiles the given SQL query.

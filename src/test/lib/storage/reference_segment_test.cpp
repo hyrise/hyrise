@@ -42,7 +42,7 @@ class ReferenceSegmentTest : public BaseTest {
 
     ChunkEncoder::encode_chunks(_test_table_dict, {ChunkID{0}, ChunkID{1}});
 
-    Hyrise::get().storage_manager.add_table("test_table_dict", _test_table_dict);
+    Hyrise::get().catalog.add_table("test_table_dict", _test_table_dict);
   }
 
  public:

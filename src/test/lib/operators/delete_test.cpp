@@ -35,9 +35,9 @@ class OperatorsDeleteTest : public BaseTest {
     _table3 = load_table("resources/test_data/tbl/25_ints_sorted.tbl", ChunkOffset{3});
 
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-    Hyrise::get().storage_manager.add_table(_table_name, _table);
-    Hyrise::get().storage_manager.add_table(_table2_name, _table2);
-    Hyrise::get().storage_manager.add_table(_table3_name, _table3);
+    Hyrise::get().catalog.add_table(_table_name, _table);
+    Hyrise::get().catalog.add_table(_table2_name, _table2);
+    Hyrise::get().catalog.add_table(_table3_name, _table3);
   }
 
   std::string _table_name;
@@ -229,7 +229,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
 
     auto values_to_insert = load_table("resources/test_data/tbl/int_float3.tbl");
     auto table_name_for_insert = "bla";
-    Hyrise::get().storage_manager.add_table(table_name_for_insert, values_to_insert);
+    Hyrise::get().catalog.add_table(table_name_for_insert, values_to_insert);
     auto insert_get_table = std::make_shared<GetTable>(table_name_for_insert);
     insert_get_table->execute();
 
@@ -269,7 +269,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
       context->commit();
     }
 
-    Hyrise::get().storage_manager.drop_table(table_name_for_insert);
+    Hyrise::get().catalog.drop_table(table_name_for_insert);
   }
 
   {

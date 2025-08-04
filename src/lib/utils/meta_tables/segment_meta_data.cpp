@@ -25,7 +25,7 @@
 namespace hyrise {
 
 void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+  for (const auto& [table_name, table] : Hyrise::get().catalog.tables()) {
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);

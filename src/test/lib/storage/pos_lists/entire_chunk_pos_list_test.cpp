@@ -34,18 +34,18 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   EXPECT_EQ(table->chunk_count(), 1);
   auto table_to_add_name = "test_table_to_add";
   auto table_to_add = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{10});
-  // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-  Hyrise::get().storage_manager.add_table(table_name, table);
-  Hyrise::get().storage_manager.add_table(table_to_add_name, table_to_add);
+  // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager/Catalog.
+  const auto table_id = Hyrise::get().catalog.add_table(table_name, table);
+  const auto table_table_to_add_id = Hyrise::get().catalog.add_table(table_to_add_name, table_to_add);
 
-  auto get_table = std::make_shared<GetTable>(table_name);
+  auto get_table = std::make_shared<GetTable>(table_id);
   get_table->execute();
   const auto chunk_id = ChunkID{0};
   const auto chunk_size = get_table->get_output()->get_chunk(chunk_id)->size();
   const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(chunk_id, chunk_size);
 
   const auto insert_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  auto get_table_to_add = std::make_shared<GetTable>(table_to_add_name);
+  auto get_table_to_add = std::make_shared<GetTable>(table_table_to_add_id);
   get_table_to_add->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table_to_add);

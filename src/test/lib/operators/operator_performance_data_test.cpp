@@ -330,7 +330,7 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
   const auto table = load_table("resources/test_data/tbl/int_float.tbl");
 
   // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-  Hyrise::get().storage_manager.add_table(table_name, table);
+  Hyrise::get().catalog.add_table(table_name, table);
 
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
 

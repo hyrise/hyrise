@@ -63,11 +63,11 @@ class SQLTranslatorTest : public BaseTest {
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
     stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
 
-    Hyrise::get().storage_manager.add_table("int_float", int_float);
-    Hyrise::get().storage_manager.add_table("int_string", int_string);
-    Hyrise::get().storage_manager.add_table("int_float2", int_float2);
-    Hyrise::get().storage_manager.add_table("int_float5", int_float5);
-    Hyrise::get().storage_manager.add_table("int_int_int", int_int_int);
+    Hyrise::get().catalog.add_table("int_float", int_float);
+    Hyrise::get().catalog.add_table("int_string", int_string);
+    Hyrise::get().catalog.add_table("int_float2", int_float2);
+    Hyrise::get().catalog.add_table("int_float5", int_float5);
+    Hyrise::get().catalog.add_table("int_int_int", int_int_int);
 
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");

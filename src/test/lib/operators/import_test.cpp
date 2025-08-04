@@ -200,7 +200,7 @@ TEST_F(OperatorsImportTest, UnknownFileExtension) {
 TEST_F(OperatorsImportTest, RetrieveCsvMetaFromEmptyTable) {
   auto existing_table = CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json");
 
-  Hyrise::get().storage_manager.add_table("a", existing_table);
+  Hyrise::get().catalog.add_table("a", existing_table);
 
   auto expected_table = load_table("resources/test_data/tbl/float.tbl");
   auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
@@ -212,7 +212,7 @@ TEST_F(OperatorsImportTest, RetrieveCsvMetaFromEmptyTable) {
 TEST_F(OperatorsImportTest, AppendToExistingTable) {
   auto existing_table = load_table("resources/test_data/tbl/float.tbl");
 
-  Hyrise::get().storage_manager.add_table("a", existing_table);
+  Hyrise::get().catalog.add_table("a", existing_table);
 
   auto expected_table = load_table("resources/test_data/tbl/float.tbl");
   Assert(expected_table->chunk_count() == 1, "Testing code was only written to support single chunk tables");

@@ -21,18 +21,17 @@ class OperatorClearOutputTest : public BaseTest {
  protected:
   void SetUp() override {
     _table = load_table("resources/test_data/tbl/int_int_int.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table(_table_name, _table);
+    const auto table_id = Hyrise::get().catalog.add_table("int_int_int", _table);
     _a = PQPColumnExpression::from_table(*_table, ColumnID{0});
     _b = PQPColumnExpression::from_table(*_table, ColumnID{1});
     _c = PQPColumnExpression::from_table(*_table, ColumnID{2});
 
-    _gt = std::make_shared<GetTable>(_table_name);
+    _gt = std::make_shared<GetTable>(table_id);
     _gt->execute();
 
     _ta_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   }
 
-  const std::string _table_name = "int_int_int";
   std::shared_ptr<Table> _table;
   std::shared_ptr<PQPColumnExpression> _a, _b, _c;
 

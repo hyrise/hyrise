@@ -24,8 +24,8 @@ class StoredTableNodeTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(_table_a);
     _table_b = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
 
-    Hyrise::get().storage_manager.add_table("t_a", _table_a);
-    Hyrise::get().storage_manager.add_table("t_b", _table_b);
+    Hyrise::get().catalog.add_table("t_a", _table_a);
+    Hyrise::get().catalog.add_table("t_b", _table_b);
 
     _table_a->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
     _table_a->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
@@ -328,7 +328,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
 
-    Hyrise::get().storage_manager.add_table("table_a", table);
+    Hyrise::get().catalog.add_table("table_a", table);
     const auto stored_table_node = StoredTableNode::make("table_a");
     const auto& a = stored_table_node->get_column("a");
     const auto& b = stored_table_node->get_column("b");
@@ -345,7 +345,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
 
-    Hyrise::get().storage_manager.add_table("table_b", table);
+    Hyrise::get().catalog.add_table("table_b", table);
     const auto& stored_table_node = StoredTableNode::make("table_b");
 
     EXPECT_EQ(stored_table_node->functional_dependencies().size(), 0);
@@ -356,7 +356,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE});
 
-    Hyrise::get().storage_manager.add_table("table_c", table);
+    Hyrise::get().catalog.add_table("table_c", table);
     const auto& stored_table_node = StoredTableNode::make("table_c");
     const auto& a = stored_table_node->get_column("a");
     const auto& b = stored_table_node->get_column("b");
@@ -373,7 +373,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
 
-    Hyrise::get().storage_manager.add_table("table_d", table);
+    Hyrise::get().catalog.add_table("table_d", table);
     const auto& stored_table_node = StoredTableNode::make("table_d");
 
     EXPECT_TRUE(stored_table_node->functional_dependencies().empty());
@@ -510,7 +510,7 @@ TEST_F(StoredTableNodeTest, HasMatchingOrderDependency) {
                                                   {"c", DataType::Float, false},
                                                   {"d", DataType::Float, false},
                                                   {"e", DataType::Float, false}});
-  Hyrise::get().storage_manager.add_table("t_c", table_c);
+  Hyrise::get().catalog.add_table("t_c", table_c);
   const auto stored_table_node = StoredTableNode::make("t_c");
   const auto a = stored_table_node->get_column("a");
   const auto b = stored_table_node->get_column("b");

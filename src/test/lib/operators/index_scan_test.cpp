@@ -54,8 +54,8 @@ class OperatorsIndexScanTest : public BaseTest {
     int_int_7->create_partial_hash_index(_column_id, _chunk_ids);
     int_int_5->create_partial_hash_index(_column_id, _chunk_ids_partly_compressed);
 
-    Hyrise::get().storage_manager.add_table("int_int_7", int_int_7);
-    Hyrise::get().storage_manager.add_table("int_int_5", int_int_5);
+    Hyrise::get().catalog.add_table("int_int_7", int_int_7);
+    Hyrise::get().catalog.add_table("int_int_5", int_int_5);
 
     _int_int = std::make_shared<GetTable>("int_int_7");
     _int_int->never_clear_output();
@@ -68,7 +68,7 @@ class OperatorsIndexScanTest : public BaseTest {
     const auto partially_indexed_table = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
     ChunkEncoder::encode_all_chunks(partially_indexed_table);
     const auto second_chunk = partially_indexed_table->get_chunk(ChunkID{1});
-    Hyrise::get().storage_manager.add_table("index_test_table", partially_indexed_table);
+    Hyrise::get().catalog.add_table("index_test_table", partially_indexed_table);
   }
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
@@ -192,7 +192,7 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
   std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
   table->create_partial_hash_index(ColumnID{0}, chunk_ids);
 
-  Hyrise::get().storage_manager.add_table("table", table);
+  Hyrise::get().catalog.add_table("table", table);
 
   const auto pruned_chunk_id_tests = std::vector<std::pair<std::vector<ChunkID>, std::vector<AllTypeVariant>>>{
       // Prunes chunks with values 6, 10, 12, and 14.
@@ -219,7 +219,7 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
     ASSERT_COLUMN_EQ(index_scan->get_output(), ColumnID{0}, result);
   }
 
-  Hyrise::get().storage_manager.drop_table("table");
+  Hyrise::get().catalog.drop_table("table");
 }
 
 TEST_F(OperatorsIndexScanTest, OperatorName) {

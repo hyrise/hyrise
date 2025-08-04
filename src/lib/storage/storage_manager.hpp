@@ -26,14 +26,12 @@ class StorageManager : public Noncopyable {
    * @defgroup Manage tables, this is only thread-safe for operations on tables with different names.
    * @{
    */
-  void add_table(const std::string& name, std::shared_ptr<Table> table);
-  void drop_table(const std::string& name);
+  //void add_table(const std::string& name, std::shared_ptr<Table> table);
+  // void drop_table(const std::string& name);
   std::shared_ptr<Table> get_table(const ObjectID table_id) const;
   std::shared_ptr<Table> get_table(const std::string& name) const;
   bool has_table(const ObjectID table_id) const;
   bool has_table(const std::string& name) const;
-  static std::vector<std::string_view> table_names();
-  std::unordered_map<std::string_view, std::shared_ptr<Table>> tables() const;
   /** @} */
 
   /**
@@ -46,7 +44,6 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
   bool has_view(const ObjectID object_id) const;
   bool has_view(const std::string& name) const;
-  static std::vector<std::string_view> view_names();
   std::unordered_map<std::string_view, std::shared_ptr<LQPView>> views() const;
   /** @} */
 
@@ -64,13 +61,12 @@ class StorageManager : public Noncopyable {
   std::unordered_map<std::string_view, std::shared_ptr<PreparedPlan>> prepared_plans() const;
   /** @} */
 
-  // For debugging purposes mostly, dump all tables as csv.
-  void export_all_tables_as_csv(const std::string& path) const;
-
  protected:
-  StorageManager() = default;
   friend class Hyrise;
   friend class Catalog;
+  friend class StorageManagerTest;
+
+  StorageManager() = default;
 
   void _add_table(const ObjectID table_id, std::shared_ptr<Table> table);
   void _drop_table(const ObjectID table_id);
@@ -86,6 +82,6 @@ class StorageManager : public Noncopyable {
   tbb::concurrent_vector<std::shared_ptr<PreparedPlan>> _prepared_plans{Catalog::INITIAL_SIZE};
 };
 
-std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
+// std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
 
 }  // namespace hyrise

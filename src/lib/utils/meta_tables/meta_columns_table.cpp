@@ -27,7 +27,7 @@ const std::string& MetaColumnsTable::name() const {
 std::shared_ptr<Table> MetaColumnsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+  for (const auto& [table_name, table] : Hyrise::get().catalog.tables()) {
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       output_table->append({pmr_string{table_name}, static_cast<pmr_string>(table->column_name(column_id)),
                             static_cast<pmr_string>(data_type_to_string.left.at(table->column_data_type(column_id))),

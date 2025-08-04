@@ -883,7 +883,7 @@ TEST_F(CardinalityEstimatorTest, Sort) {
 }
 
 TEST_F(CardinalityEstimatorTest, StoredTable) {
-  Hyrise::get().storage_manager.add_table("t", load_table("resources/test_data/tbl/int.tbl"));
+  Hyrise::get().catalog.add_table("t", load_table("resources/test_data/tbl/int.tbl"));
   EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make("t")), 3);
 }
 
@@ -1254,7 +1254,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   }
 
   // Adding the table to the StorageManager creates statistics.
-  Hyrise::get().storage_manager.add_table("table_u", table_u);
+  Hyrise::get().catalog.add_table("table_u", table_u);
   EXPECT_TRUE(table_u->table_statistics());
 
   // Round two: The node has base table statistics. There should not be statistics for pruned and unused columns. We
@@ -1320,7 +1320,7 @@ TEST_F(CardinalityEstimatorTest, AssertRequiredStatistics) {
   // for an aggregation) or no statistics are provided at all (e.g., for a StaticTableNode).
 
   const auto table_u = load_table("resources/test_data/tbl/int_float_double_string.tbl");
-  Hyrise::get().storage_manager.add_table("table_u", table_u);
+  Hyrise::get().catalog.add_table("table_u", table_u);
   // After adding to the StorageManager, the table should have statistics.
   const auto table_u_statistics = table_u->table_statistics();
   ASSERT_TRUE(table_u_statistics);

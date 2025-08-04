@@ -29,11 +29,9 @@ class OperatorsValidateTest : public BaseTest {
     invalidate_record(*_test_table, RowID{ChunkID{1}, ChunkOffset{0}}, CommitID{2});
 
     const auto _test_table2 = load_table("resources/test_data/tbl/int_int3.tbl", ChunkOffset{3});
+    const auto table_id = Hyrise::get().catalog.add_table("table_b", _test_table2);
 
-    // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-    Hyrise::get().storage_manager.add_table(_table2_name, _test_table2);
-
-    _gt = std::make_shared<GetTable>(_table2_name);
+    _gt = std::make_shared<GetTable>(table_id);
     _gt->never_clear_output();
     _gt->execute();
 

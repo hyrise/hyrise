@@ -30,27 +30,27 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   }
 
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("a", _table_a);
+    Hyrise::get().catalog.add_table("a", _table_a);
     _stored_table_a = StoredTableNode::make("a");
     _a_a = _stored_table_a->get_column("a");
     _a_b = _stored_table_a->get_column("b");
 
-    Hyrise::get().storage_manager.add_table("b", _table_b);
+    Hyrise::get().catalog.add_table("b", _table_b);
     _stored_table_b = StoredTableNode::make("b");
     _b_a = _stored_table_b->get_column("a");
     _b_b = _stored_table_b->get_column("b");
 
-    Hyrise::get().storage_manager.add_table("c", _table_c);
+    Hyrise::get().catalog.add_table("c", _table_c);
     _stored_table_c = StoredTableNode::make("c");
     _c_a = _stored_table_c->get_column("a");
     _c_b = _stored_table_c->get_column("b");
 
-    Hyrise::get().storage_manager.add_table("d", _table_d);
+    Hyrise::get().catalog.add_table("d", _table_d);
     _stored_table_d = StoredTableNode::make("d");
     _d_a = _stored_table_d->get_column("a");
     _d_b = _stored_table_d->get_column("b");
 
-    Hyrise::get().storage_manager.add_table("e", _table_e);
+    Hyrise::get().catalog.add_table("e", _table_e);
     _stored_table_e = StoredTableNode::make("e");
     _e_a = _stored_table_e->get_column("a");
 

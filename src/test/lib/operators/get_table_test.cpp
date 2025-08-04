@@ -22,9 +22,9 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("int_int_float",
+    Hyrise::get().catalog.add_table("int_int_float",
                                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
-    Hyrise::get().storage_manager.add_table(
+    Hyrise::get().catalog.add_table(
         "int_int_float_aliased", load_table("resources/test_data/tbl/int_int_float_aliased.tbl", ChunkOffset{2}));
 
     const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");

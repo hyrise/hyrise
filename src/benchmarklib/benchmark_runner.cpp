@@ -104,7 +104,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
     // Load the data into SQLite.
     sqlite_wrapper = std::make_shared<SQLiteWrapper>();
-    for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+    for (const auto& [table_name, table] : Hyrise::get().catalog.tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
       auto per_table_timer = Timer{};
       sqlite_wrapper->create_sqlite_table(*table, std::string{table_name});
@@ -511,7 +511,7 @@ nlohmann::json BenchmarkRunner::_create_report() const {
 
   // Gather information on the table size.
   auto table_size = size_t{0};
-  for (const auto& [_, table] : Hyrise::get().storage_manager.tables()) {
+  for (const auto& [_, table] : Hyrise::get().catalog.tables()) {
     table_size += table->memory_usage(MemoryUsageCalculationMode::Full);
   }
 

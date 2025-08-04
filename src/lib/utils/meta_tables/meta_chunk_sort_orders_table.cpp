@@ -32,7 +32,7 @@ const std::string& MetaChunkSortOrdersTable::name() const {
 std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+  for (const auto& [table_name, table] : Hyrise::get().catalog.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
       // Skip physically deleted chunks.

@@ -23,20 +23,17 @@ namespace hyrise {
 
 class MvccDeletePluginTest : public BaseTest {
  public:
-  static void SetUpTestCase() {
-    _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-  }
-
   void SetUp() override {
     const auto& table = load_table("resources/test_data/tbl/int3.tbl", _chunk_size);
-    Hyrise::get().storage_manager.add_table(_table_name, table);
+    Hyrise::get().catalog.add_table(_table_name, table);
+    _table_id = Hyrise::get().catalog.table_id(_table_name);
   }
 
  protected:
   void _increment_all_values_by_one() {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     // GetTable
-    auto get_table = std::make_shared<GetTable>(_table_name);
+    auto get_table = std::make_shared<GetTable>(_table_id);
     get_table->set_transaction_context(transaction_context);
     get_table->execute();
 
@@ -47,28 +44,28 @@ class MvccDeletePluginTest : public BaseTest {
     validate_table->execute();
 
     // Update
-    auto update_expressions = expression_vector(add_(_column_a, 1));
+    auto update_expressions = expression_vector(add_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"), 1));
     auto updated_values_projection = std::make_shared<Projection>(validate_table, update_expressions);
     updated_values_projection->execute();
-    auto update_table = std::make_shared<Update>(_table_name, validate_table, updated_values_projection);
+    auto update_table = std::make_shared<Update>(_table_id, validate_table, updated_values_projection);
     update_table->set_transaction_context(transaction_context);
     update_table->execute();
 
     transaction_context->commit();
   }
 
-  static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id) {
+  static bool _try_logical_delete(const ObjectID table_id, ChunkID chunk_id) {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-    return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id, transaction_context);
+    return MvccDeletePlugin::_try_logical_delete(table_id, chunk_id, transaction_context);
   }
 
-  static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id,
+  static bool _try_logical_delete(const ObjectID table_id, ChunkID chunk_id,
                                   std::shared_ptr<TransactionContext> transaction_context) {
-    return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id, transaction_context);
+    return MvccDeletePlugin::_try_logical_delete(table_id, chunk_id, transaction_context);
   }
 
-  static void _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
-    MvccDeletePlugin::_delete_chunk_physically(Hyrise::get().storage_manager.get_table(table_name), chunk_id);
+  static void _delete_chunk_physically(const ObjectID table_id, ChunkID chunk_id) {
+    MvccDeletePlugin::_delete_chunk_physically(Hyrise::get().storage_manager.get_table(table_id), chunk_id);
   }
 
   static int _get_int_value_from_table(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
@@ -80,7 +77,7 @@ class MvccDeletePluginTest : public BaseTest {
 
   const std::string _table_name{"mvccTestTable"};
   static constexpr auto _chunk_size = ChunkOffset{4};
-  inline static std::shared_ptr<AbstractExpression> _column_a;
+  ObjectID _table_id;
 };
 
 TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
@@ -103,7 +100,7 @@ TEST_F(MvccDeletePluginTest, Description) {
  * visible anymore for transactions.
  */
 TEST_F(MvccDeletePluginTest, LogicalDelete) {
-  const auto table = Hyrise::get().storage_manager.get_table(_table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(_table_id);
 
   // Prepare test
   // --- Check table structure
@@ -140,11 +137,11 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
   EXPECT_FALSE(table->get_chunk(ChunkID{2})->get_cleanup_commit_id());
 
   // Delete chunk 0 logically
-  EXPECT_TRUE(_try_logical_delete(_table_name, ChunkID{0}));
+  EXPECT_TRUE(_try_logical_delete(_table_id, ChunkID{0}));
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
 
   // Delete chunk 1 logically
-  EXPECT_TRUE(_try_logical_delete(_table_name, ChunkID{1}));
+  EXPECT_TRUE(_try_logical_delete(_table_id, ChunkID{1}));
   EXPECT_TRUE(table->get_chunk(ChunkID{1})->get_cleanup_commit_id());
   // The logical delete of chunk 1 should have changed the table structure
   // --- Expected: _, _, _ | _, _, _, _ | 4, 5, 3
@@ -156,7 +153,7 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
 
   // --- Check whether GetTable filters out logically deleted chunks
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  auto get_table = std::make_shared<GetTable>(_table_name);
+  auto get_table = std::make_shared<GetTable>(_table_id);
   get_table->set_transaction_context(transaction_context);
   get_table->execute();
   EXPECT_EQ(get_table->get_output()->chunk_count(), 1);
@@ -164,7 +161,7 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
 }
 
 TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
-  const auto table = Hyrise::get().storage_manager.get_table(_table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(_table_id);
 
   // Prepare test
   _increment_all_values_by_one();
@@ -182,7 +179,7 @@ TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
     (void)conflicting_sql_pipeline.get_result_table();
   }
 
-  EXPECT_FALSE(_try_logical_delete(_table_name, ChunkID{1}, transaction_context));
+  EXPECT_FALSE(_try_logical_delete(_table_id, ChunkID{1}, transaction_context));
   EXPECT_EQ(transaction_context->phase(), TransactionPhase::RolledBackAfterConflict);
 }
 
@@ -193,7 +190,7 @@ TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
  * the physical delete, the table returns a nullptr when getting the chunk.
  */
 TEST_F(MvccDeletePluginTest, PhysicalDelete) {
-  const auto table = Hyrise::get().storage_manager.get_table(_table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(_table_id);
 
   // Prepare the test
   ChunkID chunk_to_delete_id{0};
@@ -202,14 +199,14 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   _increment_all_values_by_one();
   // --- delete chunk logically
   EXPECT_FALSE(chunk->get_cleanup_commit_id());
-  EXPECT_TRUE(_try_logical_delete(_table_name, chunk_to_delete_id));
+  EXPECT_TRUE(_try_logical_delete(_table_id, chunk_to_delete_id));
 
   // Run the test
   // --- check pre-conditions
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
 
   // --- run physical delete
-  _delete_chunk_physically(_table_name, chunk_to_delete_id);
+  _delete_chunk_physically(_table_id, chunk_to_delete_id);
 
   // --- check post-conditions
   EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);

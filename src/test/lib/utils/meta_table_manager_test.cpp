@@ -19,13 +19,9 @@
 
 namespace hyrise {
 
-using MetaTable = std::shared_ptr<AbstractMetaTable>;
-using MetaTables = std::vector<MetaTable>;
-using MetaTableNames = std::vector<std::string>;
-
 class MetaTableManagerTest : public BaseTest {
  public:
-  static MetaTables meta_tables() {
+  static std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables() {
     return {std::make_shared<MetaChunksTable>(),
             std::make_shared<MetaChunkSortOrdersTable>(),
             std::make_shared<MetaColumnsTable>(),
@@ -40,8 +36,8 @@ class MetaTableManagerTest : public BaseTest {
             std::make_shared<MetaTablesTable>()};
   }
 
-  static MetaTableNames meta_table_names() {
-    MetaTableNames names;
+  static std::vector<std::string_view> meta_table_names() {
+    auto names = std::vector<std::string_view>{};
     for (auto& table : MetaTableManagerTest::meta_tables()) {
       names.push_back(table->name());
     }
@@ -62,9 +58,9 @@ class MetaTableManagerTest : public BaseTest {
   }
 };
 
-class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};
+class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<std::shared_ptr<AbstractMetaTable>> {};
 
-auto meta_table_manager_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
+const auto meta_table_manager_test_formatter = [](const auto& info) {
   auto stream = std::stringstream{};
   stream << info.param->name();
 

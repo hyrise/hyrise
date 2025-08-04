@@ -18,12 +18,12 @@ class UnionPositionsTest : public BaseTest {
  public:
   void SetUp() override {
     _table_10_ints = load_table("resources/test_data/tbl/10_ints.tbl", ChunkOffset{3});
-    Hyrise::get().storage_manager.add_table("10_ints", _table_10_ints);
-    Hyrise::get().storage_manager.add_table("10_ints_copy", _table_10_ints);
+    Hyrise::get().catalog.add_table("10_ints", _table_10_ints);
+    Hyrise::get().catalog.add_table("10_ints_copy", _table_10_ints);
 
     _table_int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", ChunkOffset{3});
-    Hyrise::get().storage_manager.add_table("int_float4", _table_int_float4);
-    Hyrise::get().storage_manager.add_table("int_int",
+    Hyrise::get().catalog.add_table("int_float4", _table_int_float4);
+    Hyrise::get().catalog.add_table("int_int",
                                             load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
 
     _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, false, "");

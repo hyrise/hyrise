@@ -20,7 +20,7 @@ class OperatorsPrintTest : public BaseTest {
     column_definitions.emplace_back("column_1", DataType::Int, true);
     column_definitions.emplace_back("column_2", DataType::String, false);
     _t = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size);
-    Hyrise::get().storage_manager.add_table(_table_name, _t);
+    Hyrise::get().catalog.add_table(_table_name, _t);
 
     _gt = std::make_shared<GetTable>(_table_name);
     _gt->never_clear_output();
@@ -313,7 +313,7 @@ TEST_F(OperatorsPrintTest, SegmentType) {
 
 TEST_F(OperatorsPrintTest, SQL) {
   auto table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1});
-  Hyrise::get().storage_manager.add_table("t", table);
+  Hyrise::get().catalog.add_table("t", table);
 
   Print::print("SELECT * FROM t WHERE a <= 1234", PrintFlags::None, output);
 

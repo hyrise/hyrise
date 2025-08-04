@@ -76,11 +76,9 @@ std::vector<std::string_view> MetaTableManager::table_names() const {
   return table_names;
 }
 
-// void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table) {
-//   _meta_tables[table->name()] = table;
-//   _table_names.push_back(table->name());
-//   std::sort(_table_names.begin(), _table_names.end());
-// }
+void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table) {
+  _meta_tables[table->name()] = table;
+}
 
 bool MetaTableManager::has_table(const std::string& table_name) const {
   return _meta_tables.contains(trim_table_name(table_name));

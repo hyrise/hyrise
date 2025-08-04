@@ -27,32 +27,32 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class ChunkPruningRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    auto& storage_manager = Hyrise::get().storage_manager;
+    auto& catalog = Hyrise::get().catalog;
 
     auto compressed_table = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
     ChunkEncoder::encode_all_chunks(compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("compressed", compressed_table);
+    _compressed_table_id = catalog.add_table("compressed", compressed_table);
 
     auto long_compressed_table = load_table("resources/test_data/tbl/25_ints_sorted.tbl", ChunkOffset{25});
     ChunkEncoder::encode_all_chunks(long_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("long_compressed", long_compressed_table);
+    _long_compressed_table_id = catalog.add_table("long_compressed", long_compressed_table);
 
     auto run_length_compressed_table = load_table("resources/test_data/tbl/10_ints.tbl", ChunkOffset{5});
     ChunkEncoder::encode_all_chunks(run_length_compressed_table, SegmentEncodingSpec{EncodingType::RunLength});
-    storage_manager.add_table("run_length_compressed", run_length_compressed_table);
+    _run_length_compressed_table_id = catalog.add_table("run_length_compressed", run_length_compressed_table);
 
     auto string_compressed_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{3});
     ChunkEncoder::encode_all_chunks(string_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("string_compressed", string_compressed_table);
+    _string_compressed_table_id = catalog.add_table("string_compressed", string_compressed_table);
 
     auto fixed_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{3});
     ChunkEncoder::encode_all_chunks(fixed_string_compressed_table,
                                     SegmentEncodingSpec{EncodingType::FixedStringDictionary});
-    storage_manager.add_table("fixed_string_compressed", fixed_string_compressed_table);
+    _fixed_string_compressed_table_id = catalog.add_table("fixed_string_compressed", fixed_string_compressed_table);
 
     auto int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", ChunkOffset{2});
     ChunkEncoder::encode_all_chunks(int_float4, SegmentEncodingSpec{EncodingType::Dictionary});
-    storage_manager.add_table("int_float4", int_float4);
+    _int_float4_table_id = catalog.add_table("int_float4", int_float4);
 
     for (const auto& [name, table] : storage_manager.tables()) {
       generate_chunk_pruning_statistics(table);
@@ -60,14 +60,15 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
 
     _rule = std::make_shared<ChunkPruningRule>();
 
-    storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{10}));
+    _uncompressed_table_id = catalog.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{10}));
   }
 
   std::shared_ptr<ChunkPruningRule> _rule;
+  ObjectID _compressed_table_id, _long_compressed_table_id, _run_length_compressed_table_id, _string_compressed_table_id, _fixed_string_compressed_table_id, _int_float4_table_id, _uncompressed_table_id;
 };
 
 TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   // clang-format off
   _lqp =
@@ -97,7 +98,7 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
   stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // clang-format off
@@ -114,7 +115,7 @@ TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
 
 TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
   // If a temporary table is used more than once, only prune for the predicates that apply to all paths.
-  const auto stored_table_node = StoredTableNode::make("int_float4");
+  const auto stored_table_node = StoredTableNode::make(_int_float4_table_id);
 
   const auto a = lqp_column_(stored_table_node, ColumnID{0});
   const auto b = lqp_column_(stored_table_node, ColumnID{1});
@@ -139,7 +140,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
 
 TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
   // Similar to MultipleOutputs1, but b > 700 is now part of one of the branches and can't be used for pruning anymore.
-  const auto stored_table_node = StoredTableNode::make("int_float4");
+  const auto stored_table_node = StoredTableNode::make(_int_float4_table_id);
 
   const auto a = lqp_column_(stored_table_node, ColumnID{0});
   const auto b = lqp_column_(stored_table_node, ColumnID{1});
@@ -163,7 +164,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
 }
 
 TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   _lqp = PredicateNode::make(between_inclusive_(lqp_column_(stored_table_node, ColumnID{1}), 350.0f, 351.0f));
   _lqp->set_left_input(stored_table_node);
@@ -175,13 +176,13 @@ TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
-  const auto table = Hyrise::get().storage_manager.get_table("uncompressed");
+  const auto table = Hyrise::get().storage_manager.get_table(_uncompressed_table_id);
   const auto chunk = table->get_chunk(ChunkID(0));
   EXPECT_TRUE(chunk->pruning_statistics());
   chunk->set_pruning_statistics(nullptr);
   EXPECT_FALSE(chunk->pruning_statistics());
 
-  const auto stored_table_node = StoredTableNode::make("uncompressed");
+  const auto stored_table_node = StoredTableNode::make(_uncompressed_table_id);
 
   _lqp = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   _lqp->set_left_input(stored_table_node);
@@ -193,7 +194,7 @@ TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
 }
 
 TEST_F(ChunkPruningRuleTest, TwoOperatorPruningTest) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   predicate_node->set_left_input(stored_table_node);
@@ -208,7 +209,7 @@ TEST_F(ChunkPruningRuleTest, TwoOperatorPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   const auto predicate_node_0 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -227,7 +228,7 @@ TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_GreaterThan) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   _lqp = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 12345));
   _lqp->set_left_input(stored_table_node);
@@ -239,7 +240,7 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_GreaterThan) {
 }
 
 TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_Equals) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{1}), 458.7f));
   _lqp->set_left_input(stored_table_node);
@@ -251,7 +252,7 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_Equals) {
 }
 
 TEST_F(ChunkPruningRuleTest, RangeFilterTest) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 50));
   _lqp->set_left_input(stored_table_node);
@@ -263,7 +264,7 @@ TEST_F(ChunkPruningRuleTest, RangeFilterTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, LotsOfRangesFilterTest) {
-  const auto stored_table_node = StoredTableNode::make("long_compressed");
+  const auto stored_table_node = StoredTableNode::make(_long_compressed_table_id);
 
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2500));
   _lqp->set_left_input(stored_table_node);
@@ -275,7 +276,7 @@ TEST_F(ChunkPruningRuleTest, LotsOfRangesFilterTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, RunLengthSegmentPruningTest) {
-  const auto stored_table_node = StoredTableNode::make("run_length_compressed");
+  const auto stored_table_node = StoredTableNode::make(_run_length_compressed_table_id);
 
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2));
   _lqp->set_left_input(stored_table_node);
@@ -287,7 +288,7 @@ TEST_F(ChunkPruningRuleTest, RunLengthSegmentPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   _lqp = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   _lqp->set_left_input(stored_table_node);
@@ -309,7 +310,7 @@ TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, StringPruningTest) {
-  const auto stored_table_node = StoredTableNode::make("string_compressed");
+  const auto stored_table_node = StoredTableNode::make(_string_compressed_table_id);
 
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   _lqp->set_left_input(stored_table_node);
@@ -321,7 +322,7 @@ TEST_F(ChunkPruningRuleTest, StringPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
-  const auto stored_table_node = StoredTableNode::make("fixed_string_compressed");
+  const auto stored_table_node = StoredTableNode::make(_fixed_string_compressed_table_id);
 
   _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   _lqp->set_left_input(stored_table_node);
@@ -333,7 +334,7 @@ TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   const auto a = stored_table_node->get_column("a");
   const auto b = stored_table_node->get_column("b");
@@ -354,8 +355,8 @@ TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
 }
 
 TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
-  const auto stored_table_node_1 = StoredTableNode::make("compressed");
-  const auto stored_table_node_2 = StoredTableNode::make("int_float4");
+  const auto stored_table_node_1 = StoredTableNode::make(_compressed_table_id);
+  const auto stored_table_node_2 = StoredTableNode::make(_int_float4_table_id);
 
   const auto table_1_a = stored_table_node_1->get_column("a");
   const auto table_2_a = stored_table_node_2->get_column("a");
@@ -384,7 +385,7 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
   // TODO(anybody) In the test LQP below, the ChunkPruningRule could convert the -3'000'000'000 to MIN_INT (but ONLY
   //               as long as the predicate_condition is >= and not >).
 
-  const auto stored_table_node = StoredTableNode::make("compressed");
+  const auto stored_table_node = StoredTableNode::make(_compressed_table_id);
 
   // clang-format off
   _lqp =
@@ -401,8 +402,8 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
 TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
   // Predicates that have uncorrelated subqueries as arguments cannot be used for pruning as we do not know the
   // predicate values yet. However, such predicates should not prevent us from pruning by other predicates.
-  const auto stored_table_node_1 = StoredTableNode::make("compressed");
-  const auto stored_table_node_2 = StoredTableNode::make("compressed");
+  const auto stored_table_node_1 = StoredTableNode::make(_compressed_table_id);
+  const auto stored_table_node_2 = StoredTableNode::make(_compressed_table_id);
 
   const auto subquery_1 = ProjectionNode::make(expression_vector(value_(1.1)), DummyTableNode::make());
   const auto subquery_2 = subquery_1->deep_copy();
@@ -435,8 +436,8 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
   // Similar to PredicateWithUncorrelatedSubquery, we cannot use predicates with correlated subqueries as arguments for
   // pruning because their values are not known before execution. However, pruning by other predicates is still
   // possible.
-  const auto stored_table_node_1 = StoredTableNode::make("compressed");
-  const auto stored_table_node_2 = StoredTableNode::make("int_float4");
+  const auto stored_table_node_1 = StoredTableNode::make(_compressed_table_id);
+  const auto stored_table_node_2 = StoredTableNode::make(_int_float4_table_id);
   const auto compressed_a = stored_table_node_1->get_column("a");
   const auto compressed_b = stored_table_node_1->get_column("b");
 
@@ -460,9 +461,9 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
 }
 
 TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
-  const auto stored_table_node_1 = StoredTableNode::make("compressed");
+  const auto stored_table_node_1 = StoredTableNode::make(_compressed_table_id);
   const auto stored_table_node_1_col_a = stored_table_node_1->get_column("a");
-  const auto stored_table_node_2 = StoredTableNode::make("long_compressed");
+  const auto stored_table_node_2 = StoredTableNode::make(_long_compressed_table_id);
   const auto stored_table_node_2_col_a = stored_table_node_2->get_column("a");
 
   // clang-format off
@@ -483,9 +484,9 @@ TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
 }
 
 TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
-  const auto stored_table_node_1 = StoredTableNode::make("compressed");
+  const auto stored_table_node_1 = StoredTableNode::make(_compressed_table_id);
   const auto stored_table_node_1_col_a = stored_table_node_1->get_column("a");
-  const auto stored_table_node_2 = StoredTableNode::make("long_compressed");
+  const auto stored_table_node_2 = StoredTableNode::make(_long_compressed_table_id);
   const auto stored_table_node_2_col_a = stored_table_node_2->get_column("a");
 
   // clang-format off
@@ -513,9 +514,9 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
 }
 
 TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansComplicatedPredicate) {
-  const auto stored_table_node_1 = StoredTableNode::make("compressed");
+  const auto stored_table_node_1 = StoredTableNode::make(_compressed_table_id);
   const auto stored_table_node_1_col_a = stored_table_node_1->get_column("a");
-  const auto stored_table_node_2 = StoredTableNode::make("long_compressed");
+  const auto stored_table_node_2 = StoredTableNode::make(_long_compressed_table_id);
   const auto stored_table_node_2_col_a = stored_table_node_2->get_column("a");
 
   // clang-format off

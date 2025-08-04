@@ -30,8 +30,8 @@ class ExpressionTest : public BaseTest {
   void SetUp() override {
     table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
     table_int_float_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
-    Hyrise::get().storage_manager.add_table("int_float", table_int_float);
-    Hyrise::get().storage_manager.add_table("int_float_with_null", table_int_float_with_null);
+    Hyrise::get().catalog.add_table("int_float", table_int_float);
+    Hyrise::get().catalog.add_table("int_float_with_null", table_int_float_with_null);
 
     int_float_node = StoredTableNode::make("int_float");
     a = int_float_node->get_column("a");

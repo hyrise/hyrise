@@ -22,8 +22,8 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
 
   // SQLite does not support adding primary keys to non-empty tables, so we rename the table, create an empty one from
   // the provided schema and copy the data.
-  for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
-    // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape it. No need to escape the
+  for (const auto& table_name : Hyrise::get().catalog.table_names()) {
+    // SQLite does not like an unescaped "ORDER" as a table name, thus we escape it. No need to escape the
     // "..._unindexed" name.
     const auto escaped_table_name = std::string{"\""} + std::string{table_name} + "\"";
 
@@ -34,14 +34,14 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
                                                           .append("_unindexed"));
   }
 
-  // Recreate tables using the passed schema sql file
+  // Recreate tables using the passed schema SQL file.
   auto schema_file = std::ifstream{schema_file_path};
   Assert(schema_file.good(), std::string{"Schema file "} + schema_file_path +
                                  " not found - try running the binary from the Hyrise root or the build directory.");
   const auto schema_sql = std::string{std::istreambuf_iterator<char>(schema_file), std::istreambuf_iterator<char>()};
   sqlite_wrapper->main_connection.raw_execute_query(schema_sql);
 
-  // If indices are not part of the schema file, add them here
+  // If indices are not part of the schema file, add them here.
   if (!create_indices_file_path.empty()) {
     std::ifstream create_indices_file(create_indices_file_path);
     Assert(create_indices_file.good(),
@@ -52,8 +52,8 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
     sqlite_wrapper->main_connection.raw_execute_query(create_indices_sql);
   }
 
-  // Copy over data
-  for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
+  // Copy over data.
+  for (const auto& table_name : Hyrise::get().catalog.table_names()) {
     auto per_table_time = Timer{};
     std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 

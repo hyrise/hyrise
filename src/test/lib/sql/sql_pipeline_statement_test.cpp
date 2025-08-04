@@ -40,13 +40,13 @@ class SQLPipelineStatementTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_a", _table_a);
+    Hyrise::get().catalog.add_table("table_a", _table_a);
 
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_b", _table_b);
+    Hyrise::get().catalog.add_table("table_b", _table_b);
 
     _table_int = load_table("resources/test_data/tbl/int_int_int.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_int", _table_int);
+    Hyrise::get().catalog.add_table("table_int", _table_int);
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);

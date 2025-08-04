@@ -54,7 +54,7 @@ void encode_table(const std::shared_ptr<Table>& table, const SegmentEncodingSpec
   ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
 }
 
-std::shared_ptr<TransactionContext> insert_row(const std::string& table_name,
+std::shared_ptr<TransactionContext> insert_row(const ObjectID table_id,
                                                const TableColumnDefinitions& column_definitions,
                                                const std::vector<AllTypeVariant>& values,
                                                const bool commit_transaction = true) {
@@ -66,7 +66,7 @@ std::shared_ptr<TransactionContext> insert_row(const std::string& table_name,
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
-  const auto insert_op = std::make_shared<Insert>(table_name, table_wrapper);
+  const auto insert_op = std::make_shared<Insert>(table_id, table_wrapper);
   insert_op->set_transaction_context(transaction_context);
   insert_op->execute();
 
@@ -107,11 +107,11 @@ class UccDiscoveryPluginTest : public BaseTest {
   void SetUp() override {
     _table_A = load_table("resources/test_data/tbl/uniqueness_test_A.tbl", _chunk_size);
     _table_B = load_table("resources/test_data/tbl/uniqueness_test_B.tbl", _chunk_size);
-    Hyrise::get().storage_manager.add_table(_table_name_A, _table_A);
-    Hyrise::get().storage_manager.add_table(_table_name_B, _table_B);
+    _table_id_A = Hyrise::get().catalog.add_table(_table_name_A, _table_A);
+    _table_id_B = Hyrise::get().catalog.add_table(_table_name_B, _table_B);
 
-    _table_node_A = StoredTableNode::make(_table_name_A);
-    _table_node_B = StoredTableNode::make(_table_name_B);
+    _table_node_A = StoredTableNode::make(_table_id_A);
+    _table_node_B = StoredTableNode::make(_table_id_B);
 
     _join_columnA = _table_node_A->get_column("A_a");
     _join_columnB = _table_node_B->get_column("B_a");
@@ -141,6 +141,8 @@ class UccDiscoveryPluginTest : public BaseTest {
 
   std::shared_ptr<Table> _table_A{};
   std::shared_ptr<Table> _table_B{};
+  ObjectID _table_id_A;
+  ObjectID _table_id_B;
   std::shared_ptr<StoredTableNode> _table_node_A{};
   std::shared_ptr<StoredTableNode> _table_node_B{};
   std::shared_ptr<LQPColumnExpression> _join_columnA{};
@@ -203,10 +205,10 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
     const auto expected_candidate_count = join_mode == JoinMode::Inner ? 4 : 2;
     EXPECT_EQ(ucc_candidates.size(), expected_candidate_count);
 
-    const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
-    const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
-    const auto join_column_B_candidate = UccCandidate{_table_name_B, _join_columnB->original_column_id};
-    const auto predicate_column_B_candidate = UccCandidate{_table_name_B, _predicate_column_B->original_column_id};
+    const auto join_column_A_candidate = UccCandidate{_table_id_A, _join_columnA->original_column_id};
+    const auto predicate_column_A_candidate = UccCandidate{_table_id_A, _predicate_column_A->original_column_id};
+    const auto join_column_B_candidate = UccCandidate{_table_id_B, _join_columnB->original_column_id};
+    const auto predicate_column_B_candidate = UccCandidate{_table_id_B, _predicate_column_B->original_column_id};
 
     EXPECT_TRUE(ucc_candidates.contains(join_column_B_candidate));
     EXPECT_TRUE(ucc_candidates.contains(predicate_column_B_candidate));
@@ -252,7 +254,7 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForComplexPredicates) {
 }
 
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
-  const auto table_node_A = StoredTableNode::make(_table_name_A);
+  const auto table_node_A = StoredTableNode::make(_table_id_A);
 
   // clang-format off
   const auto lqp =
@@ -264,8 +266,8 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
 
   auto ucc_candidates = _identify_ucc_candidates();
 
-  const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
-  const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
+  const auto join_column_A_candidate = UccCandidate{_table_id_A, _join_columnA->original_column_id};
+  const auto predicate_column_A_candidate = UccCandidate{_table_id_A, _predicate_column_A->original_column_id};
 
   EXPECT_EQ(ucc_candidates.size(), 1);
   EXPECT_TRUE(ucc_candidates.contains(join_column_A_candidate));
@@ -273,8 +275,8 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
 }
 
 TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
-  const auto table_node_A = StoredTableNode::make(_table_name_A);
-  const auto table_node_B = StoredTableNode::make(_table_name_B);
+  const auto table_node_A = StoredTableNode::make(_table_id_A);
+  const auto table_node_B = StoredTableNode::make(_table_id_B);
 
   // clang-format off
   const auto lqp =
@@ -295,11 +297,11 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   encode_table(_table_B, GetParam());
 
   // Insert all columns as candidates
-  auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}},
-                                      {"uniquenessTestTableA", ColumnID{1}},
-                                      {"uniquenessTestTableA", ColumnID{2}},
-                                      {"uniquenessTestTableB", ColumnID{0}},
-                                      {"uniquenessTestTableB", ColumnID{1}}};
+  const auto ucc_candidates = UccCandidates{{_table_id_A, ColumnID{0}},
+                                      {_table_id_A, ColumnID{1}},
+                                      {_table_id_A, ColumnID{2}},
+                                      {_table_id_B, ColumnID{0}},
+                                      {_table_id_B, ColumnID{1}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
@@ -345,7 +347,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateIn
   delete_row(_table_A, 3);
 
   // We are only interested in column 1, since it was not unique before the deletion but should be now.
-  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
+  const auto ucc_candidates = UccCandidates{{_table_id_A, ColumnID{1}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
@@ -356,7 +358,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateIn
 
   // Insert single row into table A that adds a duplicate value in column 1. Do not commit to first test that UCC
   // stays valid.
-  auto transaction_context = insert_row(_table_name_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
+  auto transaction_context = insert_row(_table_id_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
 
   // Re-validate UCCs.
   _validate_ucc_candidates(ucc_candidates);
@@ -389,7 +391,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
   delete_row(_table_A, 3);
 
   // We are only interested in column 1, since it was not unique before the deletion but should be now.
-  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
+  const auto ucc_candidates = UccCandidates{{_table_id_A, ColumnID{1}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
@@ -401,7 +403,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
   // Delete and then insert a row. After the delete was committed, the UCC should still be valid but after the insert
   // it should not.
   delete_row(_table_A, 2, true);
-  auto transaction_context = insert_row(_table_name_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
+  auto transaction_context = insert_row(_table_id_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
 
   // Re-validate UCCs.
   _validate_ucc_candidates(ucc_candidates);
@@ -435,7 +437,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   delete_row(_table_A, 3);
 
   const auto ucc_candidates =
-      UccCandidates{{"uniquenessTestTableA", ColumnID{0}}, {"uniquenessTestTableA", ColumnID{1}}};
+      UccCandidates{{_table_id_A, ColumnID{0}}, {_table_id_A, ColumnID{1}}};
   _validate_ucc_candidates(ucc_candidates);
 
   // Perform a transaction that does not affect table A but increments the global CommitID.

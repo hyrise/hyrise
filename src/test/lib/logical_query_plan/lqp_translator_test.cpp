@@ -69,12 +69,12 @@ class LQPTranslatorTest : public BaseTest {
     table_int_float5 = load_table("resources/test_data/tbl/int_float5.tbl");
     table_alias_name = load_table("resources/test_data/tbl/table_alias_name.tbl");
 
-    Hyrise::get().storage_manager.add_table("table_int_float", table_int_float);
-    Hyrise::get().storage_manager.add_table("table_int_string", table_int_string);
-    Hyrise::get().storage_manager.add_table("table_int_float2", table_int_float2);
-    Hyrise::get().storage_manager.add_table("table_int_float5", table_int_float5);
-    Hyrise::get().storage_manager.add_table("table_alias_name", table_alias_name);
-    Hyrise::get().storage_manager.add_table("int_float_chunked",
+    Hyrise::get().catalog.add_table("table_int_float", table_int_float);
+    Hyrise::get().catalog.add_table("table_int_string", table_int_string);
+    Hyrise::get().catalog.add_table("table_int_float2", table_int_float2);
+    Hyrise::get().catalog.add_table("table_int_float5", table_int_float5);
+    Hyrise::get().catalog.add_table("table_alias_name", table_alias_name);
+    Hyrise::get().catalog.add_table("int_float_chunked",
                                             load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1}));
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
 

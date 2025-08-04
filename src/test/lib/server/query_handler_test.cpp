@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
 #include "server/query_handler.hpp"
+#include "storage/prepared_plan.hpp"
 
 namespace hyrise {
 
@@ -8,7 +9,7 @@ class QueryHandlerTest : public BaseTest {
  protected:
   void SetUp() override {
     const auto& table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-    Hyrise::get().storage_manager.add_table("table_a", table_a);
+    Hyrise::get().catalog.add_table("table_a", table_a);
   }
 };
 

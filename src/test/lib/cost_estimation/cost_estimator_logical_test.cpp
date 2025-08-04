@@ -47,7 +47,7 @@ class CostEstimatorLogicalTest : public BaseTest {
 
 TEST_F(CostEstimatorLogicalTest, StoredTableNode) {
   // Does not actually process data, so we pretend it's for free.
-  Hyrise::get().storage_manager.add_table("table_a", load_table("resources/test_data/tbl/int_float.tbl"));
+  Hyrise::get().catalog.add_table("table_a", load_table("resources/test_data/tbl/int_float.tbl"));
   const auto stored_table_node = StoredTableNode::make("table_a");
   EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(stored_table_node), 0);
 }

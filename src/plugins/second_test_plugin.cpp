@@ -33,7 +33,7 @@ void SecondTestPlugin::a_user_executable_function() const {
   column_definitions.emplace_back("col_A", DataType::Int, false);
   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
-  storage_manager.add_table("TableOfSecondTestPlugin", table);
+  catalog.add_table("TableOfSecondTestPlugin", table);
 }
 
 EXPORT_PLUGIN(SecondTestPlugin);

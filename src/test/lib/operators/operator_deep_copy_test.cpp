@@ -39,8 +39,8 @@ class OperatorDeepCopyTest : public BaseTest {
     _b_a = PQPColumnExpression::from_table(*_table_b, "a");
     _b_b = PQPColumnExpression::from_table(*_table_b, "b");
 
-    Hyrise::get().storage_manager.add_table(_table_name_a, _table_a);
-    Hyrise::get().storage_manager.add_table(_table_name_b, _table_b);
+    Hyrise::get().catalog.add_table(_table_name_a, _table_a);
+    Hyrise::get().catalog.add_table(_table_name_b, _table_b);
 
     _table_wrapper_a =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
@@ -224,7 +224,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
   // this suite. The test would be very confusing and error-prone with explicit operators as above.
   const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", ChunkOffset{2});
-  Hyrise::get().storage_manager.add_table("table_3int", table);
+  Hyrise::get().catalog.add_table("table_3int", table);
 
   const auto subquery_query = std::string{"SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)"};
   const auto column_definitions =

@@ -49,11 +49,11 @@ class MvccDeletePluginSystemTest : public BaseTest {
       _table->last_chunk()->set_immutable();
       begin_value += CHUNK_SIZE;
     }
-    Hyrise::get().storage_manager.add_table(_t_name_test, _table);
+    Hyrise::get().catalog.add_table(_t_name_test, _table);
 
     // For some dummy inserts later on, we load an int table
     auto t = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{10});
-    Hyrise::get().storage_manager.add_table(_t_name_ints, t);
+    Hyrise::get().catalog.add_table(_t_name_ints, t);
   }
 
  protected:

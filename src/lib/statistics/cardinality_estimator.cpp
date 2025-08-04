@@ -198,7 +198,7 @@ void CardinalityEstimator::assert_required_statistics(const ColumnID column_id,
         break;
       }
 
-      const auto table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
+      const auto table = Hyrise::get().storage_manager.get_table(stored_table_node.table_id);
       base_statistics = table->table_statistics();
     } break;
     default:

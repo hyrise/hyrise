@@ -25,7 +25,7 @@ TEST_F(SSBTableGeneratorTest, GenerateAndStoreRowCounts) {
   std::filesystem::create_directories(test_data_path + "/ssb/sf-1");
   const auto data_path = std::filesystem::canonical(test_data_path + "/ssb/sf-1");
 
-  EXPECT_EQ(Hyrise::get().storage_manager.tables().size(), 0);
+  EXPECT_EQ(Hyrise::get().catalog.tables().size(), 0);
 
   SSBTableGenerator(_dbgen_path, _csv_meta_path, data_path, scale_factor).generate_and_store();
 
