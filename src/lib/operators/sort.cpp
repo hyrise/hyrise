@@ -541,7 +541,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         field_width.emplace_back(max_string_length + 2);
       } else {
         field_width.push_back(
-        // Store size of the column type, e.g. 4 for int, 8 for double, etc.
+            // Store size of the column type, e.g. 4 for int, 8 for double, etc.
             sizeof(ColumnDataType));
       }
     });
