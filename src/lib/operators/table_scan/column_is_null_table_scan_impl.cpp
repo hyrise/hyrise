@@ -111,7 +111,7 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(
       }
     }
 
-    size_t output_idx = matches.size();
+    auto output_idx = matches.size();
     matches.resize(matches.size() + std::distance(begin, end));
     for (auto segment_it = begin; segment_it != end; ++segment_it) {
       matches[output_idx++] = RowID{chunk_id, segment_it->chunk_offset()};
