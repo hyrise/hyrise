@@ -31,8 +31,8 @@ namespace hyrise {
 class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::testing::WithParamInterface<Params> {
  protected:
   void SetUp() override {
-    TestData test_data;
-    NullValueUsage null_value_usage;
+    auto test_data = TestData{};
+    auto null_value_usage = NullValueUsage::WithNulls;
     std::tie(test_data, _sorted_by, null_value_usage) = GetParam();
     _predicate_condition = test_data.predicate_condition;
     _search_value = test_data.search_value;
@@ -41,7 +41,8 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
     _nullable = null_value_usage != NullValueUsage::WithoutNulls;
     _all_values_null = null_value_usage == NullValueUsage::OnlyNulls;
 
-    const bool ascending = _sorted_by == SortMode::AscendingNullsFirst;
+    const auto ascending = _sorted_by == SortMode::AscendingNullsFirst || _sorted_by == SortMode::AscendingNullsLast;
+    const auto nulls_last = _sorted_by == SortMode::AscendingNullsLast || _sorted_by == SortMode::DescendingNullsLast;
 
     if (!ascending) {
       std::reverse(_expected.begin(), _expected.end());
@@ -49,7 +50,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
 
     _segment = std::make_unique<ValueSegment<int32_t>>(_nullable);
 
-    if (_nullable) {
+    if ((_nullable && !nulls_last) || _all_values_null) {
       _segment->append(NULL_VALUE);
       _segment->append(NULL_VALUE);
       _segment->append(NULL_VALUE);
@@ -63,6 +64,12 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
     for (int32_t row = 0; row < table_size; ++row) {
       _segment->append(ascending ? row : table_size - row - 1);
       _segment->append(ascending ? row : table_size - row - 1);
+    }
+
+    if (_nullable && nulls_last) {
+      _segment->append(NULL_VALUE);
+      _segment->append(NULL_VALUE);
+      _segment->append(NULL_VALUE);
     }
   }
 
@@ -155,7 +162,7 @@ INSTANTIATE_TEST_SUITE_P(
             TestData{"BetweenUpperExclusiveAboveRange", PredicateCondition::BetweenUpperExclusive, 5, 10, {}},
             TestData{"BetweenUpperExclusiveBelowRange", PredicateCondition::BetweenUpperExclusive, -5, 0, {}}),
 
-        ::testing::Values(SortMode::AscendingNullsFirst, SortMode::DescendingNullsFirst),
+        ::testing::Values(SortMode::AscendingNullsFirst, SortMode::DescendingNullsFirst, SortMode::AscendingNullsLast, SortMode::DescendingNullsLast),
         ::testing::Values(NullValueUsage::WithoutNulls, NullValueUsage::WithNulls, NullValueUsage::OnlyNulls)),
     table_scan_sorted_segment_search_test_formatter);
 
