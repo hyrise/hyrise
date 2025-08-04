@@ -84,7 +84,7 @@ class SQLTranslatorTest : public BaseTest {
 
   std::pair<std::shared_ptr<AbstractLQPNode>, SQLTranslationInfo> sql_to_lqp_helper(
       const std::string& query, const UseMvcc use_mvcc = UseMvcc::No) {
-    hsql::SQLParserResult parser_result;
+    auto parser_result = hsql::SQLParserResult{};
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
@@ -1299,6 +1299,51 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, OrderByNullOrdering) {
+  {
+    // (i) No ordering given. The default should be ASC NULLS FIRST.
+    const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a");
+    // clang-format off
+    const auto expected_lqp =
+    SortNode::make(expression_vector(int_float_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
+      stored_table_node_int_float);
+    // clang-format on
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // (ii) Ordering but no NULL ordering given. Our default should be ASC/DESC NULLS FIRST.
+    for (const auto ascending : {true, false}) {
+      const auto sort_mode = ascending ? SortMode::AscendingNullsFirst : SortMode::DescendingNullsFirst;
+      const auto sort_mode_str = ascending ? std::string{"ASC"} : std::string{"DESC"};
+      const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a " + sort_mode_str);
+      // clang-format off
+      const auto expected_lqp =
+      SortNode::make(expression_vector(int_float_a), std::vector<SortMode>{sort_mode},
+        stored_table_node_int_float);
+      // clang-format on
+      EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    }
+  }
+
+  {
+    // (iii) As of now, Hyrise supports only NULLS FIRST. Make sure that we notice when the parser supports explicitly
+    //       specifying NULLS FIRST/LAST. If it does, we fail here so we know we have to adapt the SQLTranslator code.
+    const auto statement_is_valid = [](const auto& statement) {
+      auto parser_result = hsql::SQLParserResult{};
+      hsql::SQLParser::parseSQLString(statement, &parser_result);
+      return parser_result.isValid();
+    };
+
+    EXPECT_FALSE(statement_is_valid("SELECT * FROM int_float ORDER BY a NULLS FIRST"));
+    EXPECT_FALSE(statement_is_valid("SELECT * FROM int_float ORDER BY a NULLS LAST"));
+    EXPECT_FALSE(statement_is_valid("SELECT * FROM int_float ORDER BY a ASC NULLS FIRST"));
+    EXPECT_FALSE(statement_is_valid("SELECT * FROM int_float ORDER BY a ASC NULLS LAST"));
+    EXPECT_FALSE(statement_is_valid("SELECT * FROM int_float ORDER BY a DESC NULLS FIRST"));
+    EXPECT_FALSE(statement_is_valid("SELECT * FROM int_float ORDER BY a DESC NULLS LAST"));
+  }
+}
+
 TEST_F(SQLTranslatorTest, InArray) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float WHERE a + 7 IN (1+2,3,4)");
 
@@ -1908,7 +1953,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
 
   const auto query = "SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float";
 
-  hsql::SQLParserResult parser_result;
+  auto parser_result = hsql::SQLParserResult{};
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
