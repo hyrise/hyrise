@@ -115,7 +115,7 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
 }
 
 TEST_F(NullScanRemovalRuleTest, CheckCacheability) {
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(is_not_null_(table_node_column), table_node));
+  _lqp = PredicateNode::make(is_not_null_(table_node_column), table_node);
   _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }

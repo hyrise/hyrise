@@ -738,10 +738,10 @@ TEST_F(SQLPipelineStatementTest, NonCacheablePlanNotCached) {
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
   statement->get_result_table();
 
-  EXPECT_EQ(_lqp_cache->size(), 0u);
+  EXPECT_EQ(_lqp_cache->size(), 0);
   EXPECT_FALSE(_lqp_cache->has(query));
 
-  EXPECT_EQ(_pqp_cache->size(), 0u);
+  EXPECT_EQ(_pqp_cache->size(), 0);
   EXPECT_FALSE(_pqp_cache->has(query));
 }
 
@@ -781,8 +781,8 @@ TEST_F(SQLPipelineStatementTest, CachedPlanStaysCached) {
                                         .with_optimizer(optimizer)
                                         .create_pipeline();
 
-  // Clear the PQPCache. Even though the new optimizer makes the plan non-cacheable, the previous plan should still be
-  // cached, because the optimizer is not invoked. Therefore the plan should now also appear in the PQP cache.
+  // Clear the PQP cache. Even though the new optimizer makes the plan non-cacheable, the previous plan should still be
+  // cached because the optimizer is not invoked. Thus, the new PQP should appear in the PQP cache again.
   _pqp_cache->clear();
 
   EXPECT_EQ(_lqp_cache->size(), 1u);

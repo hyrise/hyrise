@@ -151,10 +151,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
 
-  auto [result_lqp, result_context] =
+  [_optimized_logical_plan, _optimization_context] =
       _optimizer->optimize_with_context(std::move(unoptimized_lqp), optimizer_rule_durations);
-  _optimized_logical_plan = result_lqp;
-  _optimization_context = std::move(result_context);
 
   const auto done = std::chrono::steady_clock::now();
   _metrics->optimization_duration = done - started;
@@ -173,7 +171,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     return _physical_plan;
   }
 
-  // If we need a transaction context but haven't passed one in, this is the last point where we can create it.
+  // If we need a transaction context but have not passed one in, this is the last point where we can create it.
   if (!_transaction_context && _use_mvcc == UseMvcc::Yes) {
     _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
@@ -210,8 +208,8 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     _physical_plan->set_transaction_context_recursively(_transaction_context);
   }
 
-  // Cache the newly created plan for the according sql statement (only if not already cached). If LQP was cached
-  // `_optimization_context` is set to `nullptr`. If the LQP was cached we can also safely cache the PQP.
+  // Cache the newly created PQP for the according SQL statement (only if not already cached). If the LQP was cached
+  // (`_optimization_context` is set to `nullptr`), we can also safely cache the PQP.
   if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable &&
       (!_optimization_context || _optimization_context->is_cacheable())) {
     pqp_cache->set(_sql_string, _physical_plan);

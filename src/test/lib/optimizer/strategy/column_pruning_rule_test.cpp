@@ -475,10 +475,10 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
 
 TEST_F(ColumnPruningRuleTest, CheckCacheability) {
   // clang-format off
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
-      ExportNode::make("dummy.csv", FileType::Auto,
-          PredicateNode::make(greater_than_(a, 5),
-            node_abc)));
+  _lqp =
+  ExportNode::make("dummy.csv", FileType::Auto,
+    PredicateNode::make(greater_than_(a, 5),
+      node_abc));
   // clang-format on
 
   _apply_rule(rule, _lqp);

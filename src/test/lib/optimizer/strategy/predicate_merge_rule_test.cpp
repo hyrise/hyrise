@@ -411,7 +411,7 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentSetOperationMode) {
 }
 
 TEST_F(PredicateMergeRuleTest, CheckCacheability) {
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(less_than_(a_a, 10), node_a));
+  _lqp = PredicateNode::make(less_than_(a_a, 10), node_a);
   _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }

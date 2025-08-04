@@ -205,8 +205,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
 }
 
 TEST_F(IndexScanRuleTest, CheckCacheability) {
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(greater_than_(a, 10)));
-  _lqp->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(greater_than_(a, 10), stored_table_node);
 
   EXPECT_EQ(std::dynamic_pointer_cast<PredicateNode>(_lqp)->scan_type, ScanType::TableScan);
   _apply_rule(rule, _lqp);

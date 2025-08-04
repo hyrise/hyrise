@@ -82,16 +82,17 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
 
 TEST_F(JoinOrderingRuleTest, CheckCacheability) {
   // clang-format off
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(AggregateNode::make(expression_vector(a_a), expression_vector(),
-      PredicateNode::make(equals_(a_a, b_b),
-        JoinNode::make(JoinMode::Cross,
-          node_a,
-          JoinNode::make(JoinMode::Left, equals_(b_b, d_d),
-            node_b,
-            PredicateNode::make(equals_(d_d, c_c),
-              JoinNode::make(JoinMode::Cross,
-                node_d,
-                node_c)))))));
+  _lqp =
+  AggregateNode::make(expression_vector(a_a), expression_vector(),
+    PredicateNode::make(equals_(a_a, b_b),
+      JoinNode::make(JoinMode::Cross,
+        node_a,
+        JoinNode::make(JoinMode::Left, equals_(b_b, d_d),
+          node_b,
+          PredicateNode::make(equals_(d_d, c_c),
+            JoinNode::make(JoinMode::Cross,
+              node_d,
+              node_c))))));
   // clang-format on
   _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());

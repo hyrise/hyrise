@@ -431,8 +431,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
 TEST_F(InExpressionRewriteRuleTest, CheckCacheability) {
   auto rule = std::make_shared<InExpressionRewriteRule>();
-  rule->strategy = InExpressionRewriteRule::Strategy::ExpressionEvaluator;
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(single_element_in_expression, node));
+  _lqp = PredicateNode::make(single_element_in_expression, node);
   _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }

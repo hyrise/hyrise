@@ -512,9 +512,7 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
 TEST_F(ChunkPruningRuleTest, CheckCacheability) {
   const auto stored_table_node = StoredTableNode::make("fixed_string_compressed");
 
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
-      PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz")));
-  _lqp->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(stored_table_node->get_column("a"), "zzz"), stored_table_node);
 
   _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());

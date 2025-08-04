@@ -475,10 +475,10 @@ TEST_F(BetweenCompositionRuleTest, HandleMultipleEqualExpressions) {
 
 TEST_F(BetweenCompositionRuleTest, CheckCacheability) {
   // clang-format off
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
-      PredicateNode::make(equals_(_a_a, 100),
-          PredicateNode::make(equals_(_a_b, 100),
-            _node_a)));
+  _lqp =
+  PredicateNode::make(equals_(_a_a, 100),
+    PredicateNode::make(equals_(_a_b, 100),
+      _node_a));
   // clang-format on
   _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());

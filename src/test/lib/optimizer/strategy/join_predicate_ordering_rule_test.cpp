@@ -144,7 +144,7 @@ TEST_F(JoinPredicateOrderingRuleTest, CheckCacheability) {
 
   const auto predicates = expression_vector(greater_than_(a_y, b_y), less_than_(a_z, b_z));
 
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(JoinNode::make(JoinMode::Inner, predicates, node_a, node_b));
+  _lqp = JoinNode::make(JoinMode::Inner, predicates, node_a, node_b);
   _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }

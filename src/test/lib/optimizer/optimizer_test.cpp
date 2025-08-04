@@ -356,8 +356,12 @@ TEST_F(OptimizerTest, NonCacheabilityIsReflectedInOptimizationContext) {
   auto optimizer = Optimizer::create_default_optimizer();
   optimizer->add_rule(std::make_unique<MockRule>());
 
-  auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
-                                  PredicateNode::make(greater_than_(a, subquery_b), node_a));
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b), 
+      node_a));
+  // clang-format on
   const auto [_, optimization_context] = optimizer->optimize_with_context(std::move(lqp));
   EXPECT_FALSE(optimization_context->is_cacheable());
 }
