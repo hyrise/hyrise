@@ -248,6 +248,27 @@ TEST_F(StorageChunkTest, SetSortedInformationVector) {
 
   // Resetting the sorting information is not allowed
   EXPECT_THROW(chunk->set_individually_sorted_by(sorted_by_vector), std::logic_error);
+
+  if constexpr (HYRISE_DEBUG) {
+    const auto value_segment_a = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 2, 3});
+    const auto value_segment_b = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 2, 1});
+    chunk = std::make_shared<Chunk>(Segments{value_segment_a, value_segment_b});
+    chunk->set_immutable();
+    EXPECT_TRUE(chunk->individually_sorted_by().empty());
+
+    // There should be a check if passed sort definitions are actually correct. "Individually sorted by" means that all
+    // columns are sorted, not the combinations (as in `ORDER BY a` and `ORDER BY b` vs. `ORDER BY a, b`). The chunk is
+    // sorted by a, but not by b.
+    const auto sort_definition_a = SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst};
+    const auto sort_definition_b = SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst};
+
+    EXPECT_THROW(chunk->set_individually_sorted_by({sort_definition_b}), std::logic_error);
+    // The chunk is sorted by a, b (as in `ORDER BY a, b`), but b is not sorted on its own.
+    EXPECT_THROW(chunk->set_individually_sorted_by({sort_definition_a, sort_definition_b}), std::logic_error);
+    chunk->set_individually_sorted_by({sort_definition_a});
+    ASSERT_EQ(chunk->individually_sorted_by().size(), 1);
+    EXPECT_EQ(chunk->individually_sorted_by().front(), sort_definition_a);
+  }
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
