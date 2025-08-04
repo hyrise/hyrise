@@ -710,6 +710,38 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegm
   scan_for_null_values(table_wrapper, tests);
 }
 
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegmentsNullsLast) {
+  const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_nulls_last_2.tbl", ChunkOffset{4});
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsLast));
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {3, 4}},
+                                                                               {PredicateCondition::IsNotNull, {1, 2}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegmentsNullsLast) {
+  const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_nulls_last_2.tbl", ChunkOffset{4});
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsLast));
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {3, 4}},
+                                                                               {PredicateCondition::IsNotNull, {1, 2}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegmentWithoutNulls) {
   auto table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{4});
 
