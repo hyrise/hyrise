@@ -21,7 +21,6 @@
 #include <cstdint>
 #include <cstring>
 #include <format>
-#include <fstream>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -43,7 +42,6 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_performance_data.hpp"
-#include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -55,7 +53,6 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
-#include "storage/segment_iterables/segment_positions.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
@@ -883,7 +880,7 @@ void permute_blocks(const NormalizedKeyRange auto& sort_range, const NormalizedK
       if (std::distance(write_block.begin(), read_block.begin()) < 0) {
         block_iterators[bucket].complete_read();
         // Read iterator is before writer iterator: It follows, that no new blocks are left to read. We continue read
-        // from the next bucket.
+        // with the next bucket.
         break;
       }
       std::ranges::move(read_block, target_buffer.begin());
@@ -894,7 +891,7 @@ void permute_blocks(const NormalizedKeyRange auto& sort_range, const NormalizedK
         auto [write_block, read_block] = block_iterators[target_bucket].write();
         if (std::distance(write_block.begin(), read_block.begin()) < 0) {
           /// Wait until all reads are complete.
-          while (block_iterators[bucket].pending_reads()) {}
+          while (block_iterators[target_bucket].pending_reads()) {}
 
           if (write_block.begin() == overflow_bucket_begin) {
             // Special Case: Let assume we have the following array to sort: [a a b c c]. In addition, we assume that
