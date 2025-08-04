@@ -14,7 +14,7 @@ struct TestData {
   std::vector<int32_t> expected;
 };
 
-enum class NullValueUsage { WithNulls, WithoutNulls, OnlyNulls };
+enum class NullValueUsage { WithoutNulls, WithNulls, OnlyNulls };
 
 using Params = std::tuple<TestData, hyrise::SortMode, NullValueUsage>;
 
@@ -32,7 +32,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
  protected:
   void SetUp() override {
     auto test_data = TestData{};
-    auto null_value_usage = NullValueUsage::WithNulls;
+    auto null_value_usage = NullValueUsage::WithoutNulls;
     std::tie(test_data, _sorted_by, null_value_usage) = GetParam();
     _predicate_condition = test_data.predicate_condition;
     _search_value = test_data.search_value;
@@ -115,8 +115,8 @@ INSTANTIATE_TEST_SUITE_P(
             TestData{"LessThanEqualsBelowRange", PredicateCondition::LessThanEquals, -1, {}, {}},
             TestData{"LessThanEqualsRangeMinimum", PredicateCondition::LessThanEquals, 0, {}, {0, 0}},
             TestData{"LessThanEquals", PredicateCondition::LessThanEquals, 2, {}, {0, 0, 1, 1, 2, 2}},
-            TestData{"LessThanEqualsAboveRange", PredicateCondition::LessThanEquals, 5, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"LessThanEqualsRangeMaximum", PredicateCondition::LessThanEquals, 4, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
+            TestData{"LessThanEqualsAboveRange", PredicateCondition::LessThanEquals, 5, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"LessThanEqualsRangeMaximum", PredicateCondition::LessThanEquals, 4, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
 
             TestData{"GreaterThanBelowRange", PredicateCondition::GreaterThan, -1, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
             TestData{"GreaterThanRangeMinimum", PredicateCondition::GreaterThan, 0, {}, {1, 1, 2, 2, 3, 3, 4, 4}},
@@ -124,46 +124,46 @@ INSTANTIATE_TEST_SUITE_P(
             TestData{"GreaterThanAboveRange", PredicateCondition::GreaterThan, 5, {}, {}},
             TestData{"GreaterThanRangeMaximum", PredicateCondition::GreaterThan, 4, {}, {}},
 
-            TestData{"GreaterThanEqualsBelowRange", PredicateCondition::GreaterThanEquals, -1, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"GreaterThanEqualsRangeMinimum", PredicateCondition::GreaterThanEquals, 0, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
+            TestData{"GreaterThanEqualsBelowRange", PredicateCondition::GreaterThanEquals, -1, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"GreaterThanEqualsRangeMinimum", PredicateCondition::GreaterThanEquals, 0, {}, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
             TestData{"GreaterThanEquals", PredicateCondition::GreaterThanEquals, 2, {}, {2, 2, 3, 3, 4, 4}},
             TestData{"GreaterThanEqualsAboveRange", PredicateCondition::GreaterThanEquals, 5, {}, {}},
             TestData{"GreaterThanEqualsRangeMaximum", PredicateCondition::GreaterThanEquals, 4, {}, {4, 4}},
 
-            TestData{"BetweenInclusiveWiderRange", PredicateCondition::BetweenInclusive, -1, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"BetweenInclusiveExactRange", PredicateCondition::BetweenInclusive, 0, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"BetweenInclusiveRangeMinimum", PredicateCondition::BetweenInclusive, 0, 3, {0, 0, 1, 1, 2, 2, 3, 3}},  // NOLINT
+            TestData{"BetweenInclusiveWiderRange", PredicateCondition::BetweenInclusive, -1, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenInclusiveExactRange", PredicateCondition::BetweenInclusive, 0, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenInclusiveRangeMinimum", PredicateCondition::BetweenInclusive, 0, 3, {0, 0, 1, 1, 2, 2, 3, 3}},  // NOLINT(whitespace/line_length)
             TestData{"BetweenInclusiveRangeMaximum", PredicateCondition::BetweenInclusive, 2, 4, {2, 2, 3, 3, 4, 4}},
             TestData{"BetweenInclusive", PredicateCondition::BetweenInclusive, 1, 3, {1, 1, 2, 2, 3, 3}},
             TestData{"BetweenInclusiveAboveRange", PredicateCondition::BetweenInclusive, 5, 10, {}},
             TestData{"BetweenInclusiveBelowRange", PredicateCondition::BetweenInclusive, -5, -1, {}},
 
-            TestData{"BetweenExclusiveWiderRange", PredicateCondition::BetweenExclusive, -2, 6, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"BetweenExclusiveExactRange", PredicateCondition::BetweenExclusive, -1, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"BetweenExclusiveRangeMinimum", PredicateCondition::BetweenExclusive, -1, 4, {0, 0, 1, 1, 2, 2, 3, 3}},  // NOLINT
+            TestData{"BetweenExclusiveWiderRange", PredicateCondition::BetweenExclusive, -2, 6, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenExclusiveExactRange", PredicateCondition::BetweenExclusive, -1, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenExclusiveRangeMinimum", PredicateCondition::BetweenExclusive, -1, 4, {0, 0, 1, 1, 2, 2, 3, 3}},  // NOLINT(whitespace/line_length)
             TestData{"BetweenExclusiveRangeMaximum", PredicateCondition::BetweenExclusive, 1, 5, {2, 2, 3, 3, 4, 4}},
             TestData{"BetweenExclusive", PredicateCondition::BetweenExclusive, 0, 4, {1, 1, 2, 2, 3, 3}},
             TestData{"BetweenExclusiveAboveRange", PredicateCondition::BetweenExclusive, 4, 10, {}},
             TestData{"BetweenExclusiveBelowRange", PredicateCondition::BetweenExclusive, -5, 0, {}},
 
-            TestData{"BetweenLowerExclusiveWiderRange", PredicateCondition::BetweenLowerExclusive, -2, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"BetweenLowerExclusiveExactRange", PredicateCondition::BetweenLowerExclusive, -1, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"BetweenLowerExclusiveRangeMinimum", PredicateCondition::BetweenLowerExclusive, -1, 3, {0, 0, 1, 1, 2, 2, 3, 3}},  // NOLINT
-            TestData{"BetweenLowerExclusiveRangeMaximum", PredicateCondition::BetweenLowerExclusive, 1, 4, {2, 2, 3, 3, 4, 4}},  // NOLINT
+            TestData{"BetweenLowerExclusiveWiderRange", PredicateCondition::BetweenLowerExclusive, -2, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenLowerExclusiveExactRange", PredicateCondition::BetweenLowerExclusive, -1, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenLowerExclusiveRangeMinimum", PredicateCondition::BetweenLowerExclusive, -1, 3, {0, 0, 1, 1, 2, 2, 3, 3}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenLowerExclusiveRangeMaximum", PredicateCondition::BetweenLowerExclusive, 1, 4, {2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
             TestData{"BetweenLowerExclusive", PredicateCondition::BetweenLowerExclusive, 0, 3, {1, 1, 2, 2, 3, 3}},
             TestData{"BetweenLowerExclusiveAboveRange", PredicateCondition::BetweenLowerExclusive, 4, 10, {}},
             TestData{"BetweenLowerExclusiveBelowRange", PredicateCondition::BetweenLowerExclusive, -5, -1, {}},
 
-            TestData{"BetweenUpperExclusiveWiderRange", PredicateCondition::BetweenUpperExclusive, -1, 6, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"BetweenUpperExclusiveExactRange", PredicateCondition::BetweenUpperExclusive, 0, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"BetweenUpperExclusiveRangeMinimum", PredicateCondition::BetweenUpperExclusive, 0, 4, {0, 0, 1, 1, 2, 2, 3, 3}},  // NOLINT
-            TestData{"BetweenUpperExclusiveRangeMaximum", PredicateCondition::BetweenUpperExclusive, 2, 5, {2, 2, 3, 3, 4, 4}},  // NOLINT
+            TestData{"BetweenUpperExclusiveWiderRange", PredicateCondition::BetweenUpperExclusive, -1, 6, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenUpperExclusiveExactRange", PredicateCondition::BetweenUpperExclusive, 0, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenUpperExclusiveRangeMinimum", PredicateCondition::BetweenUpperExclusive, 0, 4, {0, 0, 1, 1, 2, 2, 3, 3}},  // NOLINT(whitespace/line_length)
+            TestData{"BetweenUpperExclusiveRangeMaximum", PredicateCondition::BetweenUpperExclusive, 2, 5, {2, 2, 3, 3, 4, 4}},  // NOLINT(whitespace/line_length)
             TestData{"BetweenUpperExclusive", PredicateCondition::BetweenUpperExclusive, 1, 4, {1, 1, 2, 2, 3, 3}},
             TestData{"BetweenUpperExclusiveAboveRange", PredicateCondition::BetweenUpperExclusive, 5, 10, {}},
             TestData{"BetweenUpperExclusiveBelowRange", PredicateCondition::BetweenUpperExclusive, -5, 0, {}}),
 
-        ::testing::Values(SortMode::AscendingNullsFirst, SortMode::DescendingNullsFirst, SortMode::AscendingNullsLast, SortMode::DescendingNullsLast),
-        ::testing::Values(NullValueUsage::WithoutNulls, NullValueUsage::WithNulls, NullValueUsage::OnlyNulls)),
+        ::testing::ValuesIn(magic_enum::enum_values<SortMode>()),
+        ::testing::ValuesIn(magic_enum::enum_values<NullValueUsage>())),
     table_scan_sorted_segment_search_test_formatter);
 
 // clang-format on
