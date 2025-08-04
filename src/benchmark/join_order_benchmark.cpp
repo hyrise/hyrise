@@ -143,7 +143,6 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
 }
 
 int main(int argc, char* argv[]) {
-  Hyrise::get().benchmark_name = "joinorder";
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Join Order Benchmark");
 
   const auto DEFAULT_TABLE_PATH = "imdb_data";

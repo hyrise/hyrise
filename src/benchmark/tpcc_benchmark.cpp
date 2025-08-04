@@ -35,7 +35,6 @@ void check_consistency(const size_t num_warehouses);
 }
 
 int main(int argc, char* argv[]) {
-  Hyrise::get().benchmark_name = "tpcc";
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-C Benchmark");
 
   // clang-format off
