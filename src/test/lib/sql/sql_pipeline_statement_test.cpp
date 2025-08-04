@@ -712,8 +712,8 @@ TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
 }
 
 TEST_F(SQLPipelineStatementTest, NonCacheablePlanNotCached) {
-  const auto query = "SELECT * FROM table_a";
-
+  // This rule marks the plan as non-cacheable. Therefore, the LQP and PQP caches should be empty after executing the
+  // pipeline.
   class MockRule : public AbstractRule {
    public:
     std::string name() const override {
@@ -727,9 +727,10 @@ TEST_F(SQLPipelineStatementTest, NonCacheablePlanNotCached) {
     }
   };
 
-  auto optimizer = Optimizer::create_default_optimizer();
+  const auto optimizer = Optimizer::create_default_optimizer();
   optimizer->add_rule(std::make_unique<MockRule>());
 
+  const auto query = "SELECT * FROM table_a";
   auto sql_pipeline = SQLPipelineBuilder{query}
                           .with_lqp_cache(_lqp_cache)
                           .with_pqp_cache(_pqp_cache)
@@ -747,7 +748,6 @@ TEST_F(SQLPipelineStatementTest, NonCacheablePlanNotCached) {
 
 TEST_F(SQLPipelineStatementTest, CachedPlanStaysCached) {
   const auto query = "SELECT * FROM table_a";
-
   auto sql_pipeline_cacheable =
       SQLPipelineBuilder{query}.with_lqp_cache(_lqp_cache).with_pqp_cache(_pqp_cache).create_pipeline();
   auto statement = get_sql_pipeline_statements(sql_pipeline_cacheable).at(0);
@@ -759,6 +759,8 @@ TEST_F(SQLPipelineStatementTest, CachedPlanStaysCached) {
   EXPECT_EQ(_pqp_cache->size(), 1u);
   EXPECT_TRUE(_pqp_cache->has(query));
 
+  // As above, this rule marks the plan as non-cacheable. However, since the optimizer is not invoked for the cached
+  // pipeline, the plan should still be cached in the LQP and PQP caches.
   class MockRule : public AbstractRule {
    public:
     std::string name() const override {

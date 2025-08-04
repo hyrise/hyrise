@@ -8,7 +8,7 @@
 namespace hyrise {
 
 /**
- * OptimizationContext is used to track metadata about the optimization process / resulting LQP. Currently, it only
+ * OptimizationContext is used to track metadata and state about the optimization process / resulting LQP during the optimization process. Currently, it only
  * tracks whether the resulting LQP is cacheable or not. If it is not cacheable, the SQLPipeline will not cache the
  * optimized LQP.
  */

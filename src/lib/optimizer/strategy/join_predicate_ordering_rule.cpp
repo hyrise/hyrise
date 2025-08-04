@@ -84,8 +84,8 @@ std::string JoinPredicateOrderingRule::name() const {
   return name;
 }
 
-void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root, OptimizationContext& optimization_context) const {
+void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                  OptimizationContext& optimization_context) const {
   // Cache cost of all intermediate operators and joins with reordered predicates.
   DebugAssert(optimization_context.cost_estimator, "JoinOrderingRule requires cost estimator to be set");
   const auto caching_cardinality_estimator = optimization_context.cost_estimator->cardinality_estimator->new_instance();

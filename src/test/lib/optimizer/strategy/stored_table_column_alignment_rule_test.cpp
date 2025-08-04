@@ -118,8 +118,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, CheckCacheability) {
-  _lqp = _union_node->deep_copy();
-  _apply_rule(_rule, _lqp);
+  _apply_rule(_rule, _union_node);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

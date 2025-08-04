@@ -205,10 +205,17 @@ TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
 }
 
 TEST_F(IndexScanRuleTest, CheckCacheability) {
-  _lqp = PredicateNode::make(greater_than_(a, 10), stored_table_node);
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
+
+  generate_mock_statistics(1'000'000);
+
+  _lqp = PredicateNode::make(equals_(b, 21), stored_table_node);
 
   EXPECT_EQ(std::dynamic_pointer_cast<PredicateNode>(_lqp)->scan_type, ScanType::TableScan);
   _apply_rule(rule, _lqp);
+  EXPECT_EQ(std::dynamic_pointer_cast<PredicateNode>(_lqp)->scan_type, ScanType::IndexScan);
   EXPECT_TRUE(_optimization_context.is_cacheable());
 }
 

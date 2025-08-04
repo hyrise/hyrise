@@ -12,7 +12,6 @@
 namespace hyrise {
 
 void StrategyBaseTest::SetUp() {
-  BaseTest::SetUp();
   _optimization_context = OptimizationContext{};
   _optimization_context.cost_estimator =
       std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>());

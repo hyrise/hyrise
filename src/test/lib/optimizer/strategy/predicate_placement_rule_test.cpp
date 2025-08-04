@@ -1028,11 +1028,11 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
 
 TEST_F(PredicatePlacementRuleTest, CheckCacheability) {
   // clang-format off
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(
-      or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),
+  _lqp = PredicateNode::make(
+      equals_(_d_b, 1),
       JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a),
         _stored_table_d,
-        _stored_table_e)));
+        _stored_table_e));
   // clang-format on
 
   _apply_rule(_rule, _lqp);

@@ -392,7 +392,7 @@ TEST_F(ExpressionReductionRuleTest, CheckCacheability) {
   // clang-format off
   _lqp =
   AggregateNode::make(expression_vector(), expression_vector(sum_(b), count_star_(mock_node), avg_(b)),
-    mock_node));
+    mock_node);
   // clang-format on
   _apply_rule(rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());

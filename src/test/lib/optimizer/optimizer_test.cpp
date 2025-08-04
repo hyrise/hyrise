@@ -167,14 +167,13 @@ TEST_F(OptimizerTest, VerifiesResults) {
 
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
-                                           OptimizationContext& optimization_context) const override {
+                                           OptimizationContext& /*optimization_context*/) const override {
       // Change the `b` expression in the projection to `u`, which is not part of the input LQP.
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
       if (!projection_node) {
-        optimization_context.set_not_cacheable();
-      } else {
-        projection_node->node_expressions[0] = _out_of_plan_expression;
+        return;
       }
+      projection_node->node_expressions[0] = _out_of_plan_expression;
     }
 
     std::shared_ptr<AbstractExpression> _out_of_plan_expression;
@@ -359,7 +358,7 @@ TEST_F(OptimizerTest, NonCacheabilityIsReflectedInOptimizationContext) {
   // clang-format off
   auto lqp =
   ProjectionNode::make(expression_vector(add_(b, subquery_a)),
-    PredicateNode::make(greater_than_(a, subquery_b), 
+    PredicateNode::make(greater_than_(a, subquery_b),
       node_a));
   // clang-format on
   const auto [_, optimization_context] = optimizer->optimize_with_context(std::move(lqp));
