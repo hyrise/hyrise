@@ -5,20 +5,18 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "operator_join_predicate.hpp"
-#include "types.hpp"
-
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
 #include "utils/bloom_filter.hpp"
 #include "utils/min_max_filter.hpp"
 
 namespace hyrise {
 
 class Reduce : public AbstractReadOnlyOperator {
-
  public:
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
                   const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate)
-                  : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _predicate{predicate} {
+      : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _predicate{predicate} {
     _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
     _min_max_filter = std::make_shared<MinMaxFilter>();
   }
@@ -81,7 +79,7 @@ class Reduce : public AbstractReadOnlyOperator {
           }
         });
 
-          if (!matches->empty()) {
+        if (!matches->empty()) {
           const auto column_count = input_table->column_count();
           auto out_segments = Segments{};
           out_segments.reserve(column_count);
@@ -94,7 +92,8 @@ class Reduce : public AbstractReadOnlyOperator {
                 out_segments.emplace_back(segment_in);
               }
             } else {
-              auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+              auto filtered_pos_lists =
+                  std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
               for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
                 const auto segment_in = chunk->get_segment(column_id);
@@ -134,9 +133,9 @@ class Reduce : public AbstractReadOnlyOperator {
             matches->guarantee_single_chunk();
 
             const auto output_pos_list = matches->size() == chunk->size()
-                                            ? static_cast<std::shared_ptr<AbstractPosList>>(
-                                                  std::make_shared<EntireChunkPosList>(chunk_index, chunk->size()))
-                                            : static_cast<std::shared_ptr<AbstractPosList>>(matches);
+                                             ? static_cast<std::shared_ptr<AbstractPosList>>(
+                                                   std::make_shared<EntireChunkPosList>(chunk_index, chunk->size()))
+                                             : static_cast<std::shared_ptr<AbstractPosList>>(matches);
 
             for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
               const auto ref_segment_out = std::make_shared<ReferenceSegment>(input_table, column_id, output_pos_list);
@@ -166,8 +165,8 @@ class Reduce : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override {
-        return std::make_shared<Reduce>(copied_left_input, copied_right_input, _predicate);
-      }
+    return std::make_shared<Reduce>(copied_left_input, copied_right_input, _predicate);
+  }
 
   const OperatorJoinPredicate _predicate;
   std::shared_ptr<BloomFilter<20, 2>> _bloom_filter;

@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cstdint>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -9,7 +10,6 @@
 #include <vector>
 
 #include <boost/functional/hash.hpp>
-#include <filesystem>
 
 #include "utils/assert.hpp"
 #include "utils/bloom_filter.hpp"
@@ -17,12 +17,12 @@
 
 inline uint64_t MurmurHash64(int32_t input) {
   auto x = static_cast<uint64_t>(input);
-	x ^= x >> 32;
-	x *= 0xd6e8feb86659fd93U;
-	x ^= x >> 32;
-	x *= 0xd6e8feb86659fd93U;
-	x ^= x >> 32;
-	return x;
+  x ^= x >> 32;
+  x *= 0xd6e8feb86659fd93U;
+  x ^= x >> 32;
+  x *= 0xd6e8feb86659fd93U;
+  x ^= x >> 32;
+  return x;
 }
 
 using namespace hyrise;  // NOLINT(build/namespaces)
@@ -30,7 +30,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000, 10'000'000, 100'000'000};
 std::vector<double> distinctivenesses = {0.01, 0.1, 0.5, 1.0, 2.0, 3.0};
 std::vector<double> overlaps = {0.0, 0.25, 0.5, 0.75, 1.0};
-uint8_t hash_functions = 4; // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
+uint8_t hash_functions = 4;  // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
 uint16_t min_runs = 10;
 uint16_t max_runs = 2000;
 int64_t min_time_ns = 30'000'000'000;
@@ -96,11 +96,9 @@ auto measure_duration(F&& f) {
 }
 
 template <uint8_t FilterSize, uint8_t K>
-void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec,
-                                 const std::vector<int32_t>& probe_vec,
-                                 const uint8_t hash_function, const size_t vector_size,
-                                 double distinctiveness, double overlap,
-                                 const std::string& csv_filename) {
+void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec, const std::vector<int32_t>& probe_vec,
+                                 const uint8_t hash_function, const size_t vector_size, double distinctiveness,
+                                 double overlap, const std::string& csv_filename) {
   std::cout << "Evaluation Bloom filter with size: " << std::to_string(FilterSize) << ", K: " << std::to_string(K)
             << ", and Hash: " << std::to_string(hash_function) << "\n";
 
@@ -185,15 +183,25 @@ void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec,
     }
 
     total_time += build_time + probe_time;
-    BenchmarkResult result{static_cast<int32_t>(vector_size), distinctiveness, overlap, FilterSize, K,
-                           hash_function, run, build_time, probe_time, hits, bloom_filter.saturation(), bloom_filter.bit_distribution()};
+    BenchmarkResult result{static_cast<int32_t>(vector_size),
+                           distinctiveness,
+                           overlap,
+                           FilterSize,
+                           K,
+                           hash_function,
+                           run,
+                           build_time,
+                           probe_time,
+                           hits,
+                           bloom_filter.saturation(),
+                           bloom_filter.bit_distribution()};
 
     // Append result to CSV file
     out << result.vector_size << "," << result.distinctiveness << "," << result.overlap << ","
         << static_cast<int>(result.filter_size) << "," << static_cast<int>(result.k) << ","
         << static_cast<int>(result.hash_function) << "," << result.run << "," << result.build_time_ns << ","
-        << result.probe_time_ns << "," << result.hits << "," << result.saturation << ","
-        << result.bit_distribution << "\n";
+        << result.probe_time_ns << "," << result.hits << "," << result.saturation << "," << result.bit_distribution
+        << "\n";
 
     ++run;
   }
@@ -223,10 +231,10 @@ int main(int argc, char* argv[]) {
          "saturation,bit_distribution\n";
   out.close();
 
-#define RUN_EVALUATION(filter_size, k)                                                                           \
-  {                                                                                                              \
-    run_bloom_filter_evaluation<filter_size, k>(build_vec, probe_vec, hash_function, vector_size,                \
-                                                distinctiveness, overlap, csv_filename);                        \
+#define RUN_EVALUATION(filter_size, k)                                                                             \
+  {                                                                                                                \
+    run_bloom_filter_evaluation<filter_size, k>(build_vec, probe_vec, hash_function, vector_size, distinctiveness, \
+                                                overlap, csv_filename);                                            \
   }
 
   for (const auto vector_size : vector_sizes) {

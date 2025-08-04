@@ -2,20 +2,19 @@
 #include <chrono>
 #include <cstdint>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <random>
 #include <string>
 #include <vector>
 
-#include <filesystem>
-
 #include "utils/assert.hpp"
 #include "utils/min_max_filter.hpp"
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000};//, 10'000'000, 100'000'000};
+std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000};  //, 10'000'000, 100'000'000};
 std::vector<double> distinctivenesses = {0.01, 0.1, 0.5, 1.0, 2.0, 3.0};
 std::vector<double> overlaps = {0.0, 0.25, 0.5, 0.75, 1.0};
 uint16_t min_runs = 5;
@@ -76,10 +75,8 @@ auto measure_duration(F&& f) {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();  // in ns
 }
 
-void run_min_max_filter_evaluation(const std::vector<int32_t>& build_vec,
-                                 const std::vector<int32_t>& probe_vec,
-                                 double distinctiveness, double overlap,
-                                 const std::string& csv_filename) {
+void run_min_max_filter_evaluation(const std::vector<int32_t>& build_vec, const std::vector<int32_t>& probe_vec,
+                                   double distinctiveness, double overlap, const std::string& csv_filename) {
   std::cout << "Evaluation MinMax filter\n";
 
   auto run = uint16_t{0};
@@ -110,13 +107,12 @@ void run_min_max_filter_evaluation(const std::vector<int32_t>& build_vec,
     });
 
     total_time += build_time + probe_time;
-    BenchmarkResult result{static_cast<int32_t>(build_vec.size()), distinctiveness, overlap,
-        run, build_time, probe_time, hits};
+    BenchmarkResult result{
+        static_cast<int32_t>(build_vec.size()), distinctiveness, overlap, run, build_time, probe_time, hits};
 
     // Append result to CSV file
-    out << result.vector_size << "," << result.distinctiveness << "," << result.overlap << ","
-        << result.run << "," << result.build_time_ns << ","
-        << result.probe_time_ns << "," << result.hits << "\n";
+    out << result.vector_size << "," << result.distinctiveness << "," << result.overlap << "," << result.run << ","
+        << result.build_time_ns << "," << result.probe_time_ns << "," << result.hits << "\n";
 
     ++run;
   }
