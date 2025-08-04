@@ -95,11 +95,20 @@ TEST_F(WindowNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(*window_node_different_function, *_window_node);
 
   auto frame_description = _window->frame_description;
-  const auto window =
-      window_(expression_vector(_a), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
+  const auto window = window_(expression_vector(_a), expression_vector(_b),
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame_description));
   const auto window_node_different_window = WindowNode::make(rank_(window), _mock_node);
   EXPECT_NE(*window_node_different_window, *_window_node);
   EXPECT_NE(*window_node_different_window, *window_node_different_function);
+
+  frame_description = _window->frame_description;
+  const auto window_different_sort_order =
+      window_(expression_vector(_a), expression_vector(_b), std::vector<SortMode>{SortMode::AscendingNullsLast},
+              std::move(frame_description));
+  const auto window_node_different_sort_order = WindowNode::make(rank_(window_different_sort_order), _mock_node);
+  EXPECT_NE(*window_node_different_sort_order, *_window_node);
+  EXPECT_NE(*window_node_different_sort_order, *window_node_different_function);
+  EXPECT_NE(*window_node_different_sort_order, *window_node_different_window);
 
   EXPECT_EQ(node_copy->hash(), _window_node->hash());
   EXPECT_NE(window_node_different_function->hash(), _window_node->hash());
