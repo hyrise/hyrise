@@ -310,7 +310,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   std::vector<const unsigned char*> key_pointers;
   key_pointers.reserve(row_count);
-  const auto num_bytes_of_normalized_keys= normalized_keys.size();
+  const auto num_bytes_of_normalized_keys = normalized_keys.size();
   for (auto key_offset = size_t{0}; key_offset < num_bytes_of_normalized_keys; key_offset += key_size) {
     key_pointers.push_back(&normalized_keys[key_offset]);
   }
@@ -363,7 +363,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     };
 
     boost::sort::pdqsort(key_pointers.begin(), key_pointers.end(),
-              StableKeyComparator{key_size, input_table_ref, _sort_definitions});
+                         StableKeyComparator{key_size, input_table_ref, _sort_definitions});
   }
 
   const auto row_id_offset = key_size - sizeof(RowID);
