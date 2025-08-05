@@ -68,7 +68,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
  *         Note that FDs that do not share the schema-given values are not merged. As a result, FDs become deflated as
- *          follows (assuming all FDs are schema-given):
+ *         follows (assuming all FDs are schema-given):
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}
