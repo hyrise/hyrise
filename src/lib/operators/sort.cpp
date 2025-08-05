@@ -201,18 +201,20 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
   auto row_count = rows.size();
   auto is_multithreaded = Hyrise::get().is_multi_threaded();
 
-  if (!is_multithreaded || row_count < SMALL_ARRAY_THRESHOLD) {
+  if (!HYRISE_DEBUG && (!is_multithreaded || row_count < SMALL_ARRAY_THRESHOLD)) {
     TRACE_EVENT("Sort", "ParallelSortRowIDs::SmallArray");
     boost::sort::pdqsort(rows.begin(), rows.end(), comp);
     return;
   }
 
   // 1) get number of workers and block size
-  auto scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
-  if (!scheduler) {
-    throw std::logic_error("Scheduler should be instance of NodeQueueScheduler.");
+  auto num_workers = size_t{1};  // default to single-threaded execution
+
+  auto nq_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
+  if (nq_scheduler) {
+    num_workers = static_cast<size_t>(nq_scheduler->active_worker_count().load());
   }
-  const auto num_workers = static_cast<size_t>(scheduler->active_worker_count().load());
+
   const auto block = (row_count + num_workers - 1) / num_workers;  // no auto because of call to std::min later
 
   // 2) sort each block in parallel
@@ -228,7 +230,7 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
       }));
     }
   }
-  scheduler->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // 3) bottom-up merge sorted runs, doubling the run size each pass:
   size_t run = block;
@@ -241,7 +243,7 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
       merge_path_parallel(rows, left, mid, right, comp, num_workers);
     }
     if (!jobs.empty()) {
-      scheduler->schedule_and_wait_for_tasks(jobs);
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
     }
     run *= 2;
   }
