@@ -15,6 +15,7 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -79,10 +80,8 @@ std::string DependentGroupByReductionRule::name() const {
   return name;
 }
 
-IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  auto cacheable = IsCacheable::Yes;
-
+void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                      OptimizationContext& optimization_context) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
@@ -109,7 +108,9 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     if (group_by_columns.size() == node->node_expressions.size()) {
       const auto [has_matching_ucc, ucc_cacheable] = node->left_input()->has_matching_ucc(group_by_columns);
       if (has_matching_ucc) {
-        cacheable = cacheable && ucc_cacheable;
+        if (!ucc_cacheable) {
+          optimization_context.set_not_cacheable();
+        }
 
         const auto& output_expressions = aggregate_node.output_expressions();
         // Remove the AggregateNode if it does not limit or reorder the output expressions.
@@ -187,7 +188,9 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       if (success) {
         // Functional dependencies are derived from UCCs. In case we encounter a non-schema-given FD, this means we
         // encountered an underlying non-schema-given UCC as well.
-        cacheable = cacheable && (fd.is_schema_given() ? IsCacheable::Yes : IsCacheable::No);
+        if (!fd.is_schema_given()) {
+          optimization_context.set_not_cacheable();
+        }
 
         // Refresh data structures correspondingly.
         group_by_list_changed = true;
@@ -209,8 +212,6 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
-
-  return cacheable;
 }
 
 }  // namespace hyrise

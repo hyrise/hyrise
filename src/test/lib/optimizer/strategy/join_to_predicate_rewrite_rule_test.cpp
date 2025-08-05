@@ -27,6 +27,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_b = MockNode::make(
@@ -86,11 +87,11 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   if (GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) {
     expected_lqp = _lqp->deep_copy();
   }
-  const auto is_cacheable = _apply_rule(rule, _lqp);
+  _apply_rule(rule, _lqp);
 
   // The rule should only rewrite inner and semi joins. The UCC is not schema-given. Therefore, the result should not
   // be cacheable in this case.
-  EXPECT_TRUE((GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) || is_cacheable == IsCacheable::No);
+  EXPECT_TRUE((GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) || !_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -110,10 +111,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
-  const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -133,10 +135,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
-  const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -155,10 +158,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
-  const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -179,10 +183,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
-  const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -206,10 +211,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, Union) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
-  const auto is_cacheable = _apply_rule(rule, _lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);  // Cacheable because rule was not applied.
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

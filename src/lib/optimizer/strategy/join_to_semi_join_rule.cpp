@@ -9,6 +9,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 
@@ -19,9 +20,8 @@ std::string JoinToSemiJoinRule::name() const {
   return name;
 }
 
-IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  auto cacheable = IsCacheable::Yes;
+void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                           OptimizationContext& optimization_context) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
     // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
@@ -81,7 +81,9 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
         const auto [has_matching_ucc, ucc_cacheable] =
             join_node->left_input()->has_matching_ucc(equals_predicate_expressions_left);
         if (has_matching_ucc) {
-          cacheable = cacheable && ucc_cacheable;
+          if (!ucc_cacheable) {
+            optimization_context.set_not_cacheable();
+          }
 
           join_node->join_mode = JoinMode::Semi;
           const auto temp = join_node->left_input();
@@ -92,7 +94,9 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
         const auto [has_matching_ucc, ucc_cacheable] =
             join_node->right_input()->has_matching_ucc(equals_predicate_expressions_right);
         if (has_matching_ucc) {
-          cacheable = cacheable && ucc_cacheable;
+          if (!ucc_cacheable) {
+            optimization_context.set_not_cacheable();
+          }
 
           join_node->join_mode = JoinMode::Semi;
         }
@@ -101,8 +105,6 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
-
-  return cacheable;
 }
 
 }  // namespace hyrise

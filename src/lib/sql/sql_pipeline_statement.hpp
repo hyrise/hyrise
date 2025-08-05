@@ -10,6 +10,7 @@
 #include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -79,7 +80,7 @@ class SQLPipelineStatement : public Noncopyable {
   const SQLTranslationInfo& get_sql_translation_info();
 
   // Returns the optimized LQP for this statement.
-  const std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable>& get_optimized_logical_plan();
+  const std::shared_ptr<AbstractLQPNode>& get_optimized_logical_plan();
 
   // Returns the PQP for this statement.
   // The physical plan is either retrieved from the SQLPhysicalPlanCache or, if unavailable, translated from the
@@ -126,7 +127,8 @@ class SQLPipelineStatement : public Noncopyable {
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
   std::shared_ptr<AbstractLQPNode> _unoptimized_logical_plan;
-  std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable> _optimized_logical_plan;
+  std::shared_ptr<AbstractLQPNode> _optimized_logical_plan;
+  std::unique_ptr<OptimizationContext> _optimization_context;
   std::shared_ptr<AbstractOperator> _physical_plan;
 
   std::shared_ptr<OperatorTask> _root_operator_task;

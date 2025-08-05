@@ -12,6 +12,7 @@ namespace hyrise {
 class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     Hyrise::get().storage_manager.add_table("t_a",
                                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
     Hyrise::get().storage_manager.add_table("t_b",
@@ -38,6 +39,7 @@ class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
 TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksEqualColumns) {
   _apply_rule(_rule, _union_node);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_left->hash(), _stored_table_node_right->hash());
@@ -50,6 +52,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksDifferentColumns
 
   _apply_rule(_rule, _union_node);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_left->hash(), _stored_table_node_right->hash());
@@ -63,6 +66,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableDifferentChunksDifferentCol
 
   _apply_rule(_rule, _union_node);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}, ColumnID{1}}));
   EXPECT_NE(_stored_table_node_left->hash(), _stored_table_node_right->hash());
@@ -77,6 +81,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
 
   _apply_rule(_rule, _union_node);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}, ColumnID{1}}));
   EXPECT_NE(_stored_table_node_left->hash(), _stored_table_node_right->hash());
@@ -106,15 +111,10 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), pruned_column_set_a);
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), pruned_column_set_a);
   EXPECT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a);
-}
-
-TEST_F(StoredTableColumnAlignmentRuleTest, CheckCacheability) {
-  auto _union_node_abstract = _union_node->deep_copy();
-  const auto is_cacheable = _apply_rule(_rule, _union_node_abstract);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

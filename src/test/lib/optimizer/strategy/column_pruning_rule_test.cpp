@@ -26,6 +26,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class ColumnPruningRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_abc = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_uvw = MockNode::make(
@@ -81,6 +82,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -115,6 +117,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
 
     _apply_rule(rule, _lqp);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -146,6 +149,7 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -171,6 +175,7 @@ TEST_F(ColumnPruningRuleTest, ProjectionDoesNotRecompute) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -211,8 +216,8 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
-
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -236,6 +241,7 @@ TEST_F(ColumnPruningRuleTest, SimpleAggregate) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -259,6 +265,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -282,6 +289,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStarAndSum) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -306,6 +314,7 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -326,6 +335,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -341,6 +351,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -356,6 +367,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneDeleteInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -371,6 +383,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneExportInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -391,6 +404,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -408,6 +422,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
   // clang-format on
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -425,6 +440,7 @@ TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
   // clang-format on
 
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(node_abc->pruned_column_ids(), std::vector<ColumnID>{ColumnID{2}});
 }
 
@@ -448,20 +464,13 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
       _lqp = ProjectionNode::make(projections, join_node);
 
       _apply_rule(rule, _lqp);
+      EXPECT_TRUE(_optimization_context.is_cacheable());
 
       SCOPED_TRACE("With JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
       EXPECT_TRUE(join_node->prunable_input_side());
       EXPECT_EQ(*join_node->prunable_input_side(), prunable_input_side);
     }
   }
-}
-
-TEST_F(ColumnPruningRuleTest, CheckCacheability) {
-  auto lqp = std::dynamic_pointer_cast<AbstractLQPNode>(
-      ExportNode::make("dummy.csv", FileType::Auto, PredicateNode::make(greater_than_(a, 5), node_abc)));
-
-  const auto is_cacheable = _apply_rule(rule, lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

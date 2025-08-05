@@ -12,6 +12,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "types.hpp"
@@ -87,8 +88,9 @@ std::string IndexScanRule::name() const {
   return name;
 }
 
-IsCacheable IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set.");
+void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                      OptimizationContext& optimization_context) const {
+  DebugAssert(optimization_context.cost_estimator, "IndexScanRule requires cost estimator to be set.");
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& node) {
@@ -101,7 +103,7 @@ IsCacheable IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_p
 
         const auto& indexes_statistics = stored_table_node->table_indexes_statistics();
         for (const auto& index_statistics : indexes_statistics) {
-          if (is_index_scan_applicable(index_statistics, predicate_node, cost_estimator)) {
+          if (is_index_scan_applicable(index_statistics, predicate_node, optimization_context.cost_estimator)) {
             predicate_node->scan_type = ScanType::IndexScan;
           }
         }
@@ -110,8 +112,6 @@ IsCacheable IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_p
 
     return LQPVisitation::VisitInputs;
   });
-
-  return IsCacheable::Yes;
 }
 
 }  // namespace hyrise

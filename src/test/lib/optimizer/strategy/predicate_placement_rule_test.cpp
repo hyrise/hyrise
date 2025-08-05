@@ -31,6 +31,7 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   }
 
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     Hyrise::get().storage_manager.add_table("a", _table_a);
     _stored_table_a = StoredTableNode::make("a");
     _a_a = _stored_table_a->get_column("a");
@@ -56,7 +57,6 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     _e_a = _stored_table_e->get_column("a");
 
     _rule = std::make_shared<PredicatePlacementRule>();
-
     {
       // Initialization of projection pushdown LQP.
       const auto parameter_c = correlated_parameter_(ParameterID{0}, _a_a);
@@ -98,6 +98,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -118,6 +119,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleOneSideJoinPushdownTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -133,6 +135,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleBothSideJoinPushdownTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -151,6 +154,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -184,6 +188,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -230,6 +235,7 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -266,6 +272,7 @@ TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -317,6 +324,7 @@ TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
       expected_common_node1));
   // clang-format on
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -356,6 +364,7 @@ TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -388,6 +397,7 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -407,6 +417,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtUnion) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -450,6 +461,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -480,6 +492,7 @@ TEST_F(PredicatePlacementRuleTest, ComplexBlockingPredicatesPushdownTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -499,6 +512,7 @@ TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectio
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -518,6 +532,7 @@ TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjecti
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -533,6 +548,7 @@ TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTe
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -554,6 +570,7 @@ TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -582,6 +599,7 @@ TEST_F(PredicatePlacementRuleTest, SemiPushDown) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -621,6 +639,7 @@ TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
   EXPECT_EQ(barrier_predicate_node->output_count(), 1);
   // After the pushdown, the inner join should have the two outputs that barrier_predicate_node previously had.
@@ -665,6 +684,7 @@ TEST_F(PredicatePlacementRuleTest, HandleMultiPredicateBarrierPredicatePushdown)
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
   EXPECT_EQ(barrier_predicate_node->output_count(), 2);
   EXPECT_EQ(temporary_node->left_input(), barrier_predicate_node);
@@ -687,6 +707,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownPredicateThroughAggregate) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -711,6 +732,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownAntiThroughAggregate) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -733,6 +755,7 @@ TEST_F(PredicatePlacementRuleTest, PullUpPastProjection) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -755,6 +778,7 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastProjectionThatPrunes) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -776,6 +800,7 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastSort) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -801,6 +826,7 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPa
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -834,6 +860,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -858,6 +885,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -883,6 +911,7 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnLeftSide) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -908,6 +937,7 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnBothSides) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -933,6 +963,7 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnlyWhereBeneficial) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -950,6 +981,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfNonInner) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -968,6 +1000,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -988,16 +1021,9 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
 
     _apply_rule(_rule, _lqp);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
-}
-
-TEST_F(PredicatePlacementRuleTest, CheckCacheability) {
-  auto input_lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(
-      or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
-      JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a), _stored_table_d, _stored_table_e)));
-  const auto is_cacheable = _apply_rule(_rule, input_lqp);
-  EXPECT_EQ(is_cacheable, IsCacheable::Yes);
 }
 
 }  // namespace hyrise

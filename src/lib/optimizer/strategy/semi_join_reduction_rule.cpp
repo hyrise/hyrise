@@ -12,6 +12,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -23,8 +24,8 @@ std::string SemiJoinReductionRule::name() const {
   return name;
 }
 
-IsCacheable SemiJoinReductionRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                              OptimizationContext& optimization_context) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto.");
 
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
@@ -37,8 +38,8 @@ IsCacheable SemiJoinReductionRule::_apply_to_plan_without_subqueries(
     return side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   };
 
-  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction();
+  const auto estimator = optimization_context.cost_estimator->cardinality_estimator->new_instance();
+  estimator->guarantee_bottom_up_construction(lqp_root);
 
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Join) {
@@ -168,7 +169,5 @@ IsCacheable SemiJoinReductionRule::_apply_to_plan_without_subqueries(
   for (const auto& [join_node, side_of_join, semi_join_reduction_node] : semi_join_reductions) {
     lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
   }
-
-  return IsCacheable::Yes;
 }
 }  // namespace hyrise

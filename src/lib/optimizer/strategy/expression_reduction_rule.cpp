@@ -39,8 +39,8 @@ std::string ExpressionReductionRule::name() const {
   return name;
 }
 
-IsCacheable ExpressionReductionRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void ExpressionReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                OptimizationContext& /*optimization_context*/) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {
@@ -67,8 +67,6 @@ IsCacheable ExpressionReductionRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
-
-  return IsCacheable::Yes;
 }
 
 const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distributivity(

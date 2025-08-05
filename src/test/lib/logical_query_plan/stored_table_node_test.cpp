@@ -486,16 +486,16 @@ TEST_F(StoredTableNodeTest, GetMatchingUniqueColumnCombination) {
   _stored_table_node->set_pruned_column_ids({});
   const auto [has_matching_ucc_a, matching_ucc_cacheable_a] = _stored_table_node->has_matching_ucc({_a});
   EXPECT_TRUE(has_matching_ucc_a);
-  EXPECT_EQ(matching_ucc_cacheable_a, IsCacheable::Yes);
+  EXPECT_EQ(matching_ucc_cacheable_a, true);
 
   // Test superset of column ids.
   const auto [has_matching_ucc_ab, matching_ucc_cacheable_ab] = _stored_table_node->has_matching_ucc({_a, _b});
   EXPECT_TRUE(has_matching_ucc_ab);
-  EXPECT_EQ(matching_ucc_cacheable_ab, IsCacheable::Yes);
+  EXPECT_EQ(matching_ucc_cacheable_ab, true);
 
   const auto [has_matching_ucc_ac, matching_ucc_cacheable_ac] = _stored_table_node->has_matching_ucc({_a, _c});
   EXPECT_TRUE(has_matching_ucc_ac);
-  EXPECT_EQ(matching_ucc_cacheable_ac, IsCacheable::Yes);
+  EXPECT_EQ(matching_ucc_cacheable_ac, true);
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {

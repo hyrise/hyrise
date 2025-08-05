@@ -11,10 +11,10 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "optimizer/strategy/join_to_semi_join_rule.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
@@ -170,14 +170,14 @@ TEST_F(OptimizerTest, VerifiesResults) {
     }
 
    protected:
-    IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                           OptimizationContext& /*optimization_context*/) const override {
       // Change the `b` expression in the projection to `u`, which is not part of the input LQP.
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
       if (!projection_node) {
-        return IsCacheable::Yes;
+        return;
       }
       projection_node->node_expressions[0] = _out_of_plan_expression;
-      return IsCacheable::Yes;
     }
 
     std::shared_ptr<AbstractExpression> _out_of_plan_expression;
@@ -205,13 +205,12 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
     }
 
    protected:
-    IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                           OptimizationContext& /*optimization_context*/) const override {
       visit_lqp(lqp_root, [&](const auto& node) {
         nodes.emplace(node);
         return LQPVisitation::VisitInputs;
       });
-
-      return IsCacheable::Yes;
     }
 
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes;
@@ -295,9 +294,9 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     size_t& counter;
 
    protected:
-    IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                           OptimizationContext& optimization_context) const override {
       ++counter;
-      return IsCacheable::Yes;
     }
   };
 
@@ -306,7 +305,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   auto optimizer = Optimizer{};
   optimizer.add_rule(std::move(rule));
 
-  const auto optimized_lqp = optimizer.optimize(std::move(lqp)).first;
+  const auto optimized_lqp = optimizer.optimize(std::move(lqp));
   lqp = nullptr;
 
   /**
@@ -340,14 +339,34 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   }
 }
 
-TEST_F(OptimizerTest, OptimizationWithoutKeyConstraintCacheable) {
-  // The resulting optimized LQP should be cacheable if no KeyConstraints or FunctionalDependencies are used.
-  auto optimizer = Optimizer::create_default_optimizer();
+TEST_F(OptimizerTest, NonCacheabilityIsReflectedInOptimizationContext) {
+  // Check that once a rule sets the OptimizationContext to not cacheable, this is also reflected in the
+  // OptimizationContext returned by the Optimizer.
 
-  auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
-                                  PredicateNode::make(greater_than_(a, subquery_b), node_a));
-  const auto [_, cacheable] = optimizer->optimize(std::move(lqp));
-  EXPECT_TRUE(static_cast<bool>(cacheable));
+  class MockRule : public AbstractRule {
+   public:
+    std::string name() const override {
+      return "MockRule";
+    }
+
+   protected:
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                           OptimizationContext& optimization_context) const override {
+      optimization_context.set_not_cacheable();
+    }
+  };
+
+  auto optimizer = Optimizer::create_default_optimizer();
+  optimizer->add_rule(std::make_unique<MockRule>());
+
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b),
+      node_a));
+  // clang-format on
+  const auto [_, optimization_context] = optimizer->optimize_with_context(std::move(lqp));
+  EXPECT_FALSE(optimization_context->is_cacheable());
 }
 
 TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
@@ -376,9 +395,9 @@ TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
         stored_table_node));
   // clang-format on
   static_cast<JoinNode&>(*lqp1->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto optimize_results1 = optimizer.optimize(std::move(lqp1));
+  const auto [optimize_results1, optimization_context1] = optimizer.optimize_with_context(std::move(lqp1));
 
-  EXPECT_EQ(optimize_results1.second, IsCacheable::No);
+  EXPECT_FALSE(optimization_context1->is_cacheable());
 }
 
 TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {
@@ -397,9 +416,8 @@ TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {
     }
 
    protected:
-    IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
-      return IsCacheable::Yes;
-    }
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                           OptimizationContext& /*optimization_context*/) const override {}
   };
 
   optimizer.add_rule(std::make_unique<MockRule>());

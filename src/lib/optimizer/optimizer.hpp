@@ -40,10 +40,20 @@ class Optimizer final {
   void add_rule(std::unique_ptr<AbstractRule> rule);
 
   /**
-   * Returns optimized version of @param input LQP and whether the result is safe to cache.
-   * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
+   * Returns optimized version of @param input LQP. Wraps `optimize_with_context()` and returns only the optimized
+   * LQP. @param rule_durations may be set in order to retrieve runtime information for each applied rule.
    */
-  std::pair<std::shared_ptr<AbstractLQPNode>, IsCacheable> optimize(
+  std::shared_ptr<AbstractLQPNode> optimize(
+      std::shared_ptr<AbstractLQPNode> input,
+      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
+
+  /**
+   * Returns optimized version of @param input LQP and the OptimizationContext used by all transformation rules.
+   * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
+   * The OptimizationContext contains metadata about the optimization process, such as whether the resulting LQP
+   * is cacheable or not.
+   */
+  std::pair<std::shared_ptr<AbstractLQPNode>, std::unique_ptr<OptimizationContext>> optimize_with_context(
       std::shared_ptr<AbstractLQPNode> input,
       const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
 
