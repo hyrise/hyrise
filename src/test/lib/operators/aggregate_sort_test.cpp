@@ -75,8 +75,10 @@ class AggregateSortTest : public BaseTest {
     const auto table_1 =
         load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", ChunkOffset{2});
     table_1->set_value_clustered_by({ColumnID{0}});
-    table_1->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-    table_1->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
+    table_1->get_chunk(ChunkID{0})
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
+    table_1->get_chunk(ChunkID{1})
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst));
     _table_wrapper_1 = std::make_shared<TableWrapper>(table_1);
     _table_wrapper_1->never_clear_output();
     _table_wrapper_1->execute();
@@ -85,13 +87,13 @@ class AggregateSortTest : public BaseTest {
         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_multi_columns.tbl", ChunkOffset{2});
     table_2->set_value_clustered_by({ColumnID{0}, ColumnID{1}, ColumnID{2}});
     table_2->get_chunk(ChunkID{0})
-        ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
-                                      SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
-                                      SortColumnDefinition(ColumnID{2}, SortMode::Ascending)});
+        ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst),
+                                      SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst),
+                                      SortColumnDefinition(ColumnID{2}, SortMode::AscendingNullsFirst)});
     table_2->get_chunk(ChunkID{1})
-        ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Descending),
-                                      SortColumnDefinition(ColumnID{1}, SortMode::Descending),
-                                      SortColumnDefinition(ColumnID{2}, SortMode::Ascending)});
+        ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst),
+                                      SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsFirst),
+                                      SortColumnDefinition(ColumnID{2}, SortMode::AscendingNullsFirst)});
     _table_wrapper_multi_columns = std::make_shared<TableWrapper>(table_2);
     _table_wrapper_multi_columns->never_clear_output();
     _table_wrapper_multi_columns->execute();
@@ -202,7 +204,7 @@ TEST_F(AggregateSortTest, AggregateOnPresortedValueClustered) {
   const auto chunk_count = table_sorted_value_clustered->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = table_sorted_value_clustered->get_chunk(chunk_id);
-    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   }
   test_clustered_table_input(table_sorted_value_clustered);
   test_clustered_table_input(to_simple_reference_table(table_sorted_value_clustered));
