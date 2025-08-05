@@ -139,18 +139,19 @@ inline std::pair<size_t, size_t> find_cut_point(const T* const left, const size_
 
 // Parallel merge of two consecutive runs using Merge Path.
 template <typename Compare>
-void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mid, const size_t end, Compare comp) {
+void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mid, const size_t end, Compare comp,
+                         size_t max_workers) {
+  TRACE_EVENT("Sort", "MergePathParallel");
   const auto len_left = mid - start;
   const auto len_right = end - mid;
   const auto total_len = len_left + len_right;
 
-  const auto scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
-  DebugAssert(scheduler, "Scheduler must be NodeQueueScheduler");
-  const auto max_workers = scheduler->active_worker_count().load();
-  const auto workers = static_cast<size_t>(std::min<uint64_t>(max_workers, total_len));
+  const auto workers = static_cast<size_t>(std::min(max_workers, total_len));
 
+  TRACE_EVENT_BEGIN("Sort", "MergePathParallel::AllocateBuffer");
   auto dest = RowIDPosList{};
   dest.resize(total_len);
+  TRACE_EVENT_END("Sort");
 
   // Compute cut points
   struct Cut {
@@ -177,6 +178,7 @@ void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mi
 
   for (auto task_idx = size_t{0}; task_idx < workers; ++task_idx) {
     jobs.emplace_back(std::make_shared<JobTask>([&, task_idx] {
+      TRACE_EVENT("Sort", "MergePathParallel::Worker", "TaskIndex", task_idx);
       const auto cutL = cuts[task_idx];
       const auto cutR = cuts[task_idx + 1];
 
@@ -189,7 +191,7 @@ void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mi
       std::merge(l_begin, l_end, r_begin, r_end, out, comp);
     }));
   }
-  scheduler->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   std::move(dest.begin(), dest.end(), rows.begin() + start);
 }
 
@@ -210,15 +212,15 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
   if (!scheduler) {
     throw std::logic_error("Scheduler should be instance of NodeQueueScheduler.");
   }
-  auto num_workers = scheduler->active_worker_count().load();
-  size_t const block = (row_count + num_workers - 1) / num_workers;  // no auto because of call to std::min later
+  const auto num_workers = static_cast<size_t>(scheduler->active_worker_count().load());
+  const auto block = (row_count + num_workers - 1) / num_workers;  // no auto because of call to std::min later
 
   // 2) sort each block in parallel
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(num_workers);
-  for (auto thread_idx = int16_t{0}; thread_idx < num_workers; ++thread_idx) {
-    size_t start = thread_idx * block;
-    size_t end = std::min(start + block, row_count);
+  for (auto thread_idx = size_t{0}; thread_idx < num_workers; ++thread_idx) {
+    const auto start = thread_idx * block;
+    const auto end = std::min(start + block, row_count);
     if (start < end) {
       jobs.emplace_back(std::make_shared<JobTask>([start, end, &rows, &comp]() {
         TRACE_EVENT("Sort", "ParallelSortRowIDs::Sort");
@@ -236,16 +238,7 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
       size_t mid = left + run;
       size_t right = std::min(left + 2 * run, row_count);
 
-      const bool is_final_merge = run * 2 >= row_count;
-      if (is_final_merge) {
-        std::cout << "test";
-        merge_path_parallel(rows, left, mid, right, comp);
-      } else {
-        jobs.emplace_back(std::make_shared<JobTask>([left, mid, right, &rows, &comp]() {
-          TRACE_EVENT("Sort", "ParallelSortRowIDs::Merge");
-          std::inplace_merge(rows.begin() + left, rows.begin() + mid, rows.begin() + right, comp);
-        }));
-      }
+      merge_path_parallel(rows, left, mid, right, comp, num_workers);
     }
     if (!jobs.empty()) {
       scheduler->schedule_and_wait_for_tasks(jobs);
