@@ -65,6 +65,11 @@ class OperatorsUpdateTest : public BaseTest {
   inline static std::shared_ptr<AbstractExpression> column_a, column_b;
 };
 
+TEST_F(OperatorsUpdateTest, OperatorName) {
+  const auto update = std::make_shared<Update>("", nullptr, nullptr);
+  EXPECT_EQ(update->name(), "Update");
+}
+
 TEST_F(OperatorsUpdateTest, SelfOverride) {
   helper(greater_than_(column_a, 0), expression_vector(column_a, column_b), "resources/test_data/tbl/int_float2.tbl");
 }
