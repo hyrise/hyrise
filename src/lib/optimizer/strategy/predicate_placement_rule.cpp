@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -17,6 +18,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -28,11 +30,12 @@ std::string PredicatePlacementRule::name() const {
   return name;
 }
 
-void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                               OptimizationContext& optimization_context) const {
   // The traversal functions require the existence of a root of the LQP, so make sure we have that.
   const auto root_node = lqp_root->type == LQPNodeType::Root ? lqp_root : LogicalPlanRootNode::make(lqp_root);
 
-  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
+  const auto estimator = optimization_context.cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction(lqp_root);
   // Turn off statistics pruning because we untie nodes while estimating cardinalities. Thus, not all required predicate
   // expessions are part of the LQP when the required statistics are populated during the first estimation call.
