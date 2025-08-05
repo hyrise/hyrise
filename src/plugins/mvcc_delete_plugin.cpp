@@ -77,8 +77,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
         // Calculate metric 2 – Chunk hotness.
         const auto highest_end_commit_id = chunk->mvcc_data()->max_end_cid.load();
-        Assert(highest_end_commit_id != MAX_COMMIT_ID,
-               "Chunk has deleted rows, but max_end_cid was not updated.");
+        Assert(highest_end_commit_id != MAX_COMMIT_ID, "Chunk has deleted rows, but max_end_cid was not updated.");
 
         const auto criterion2 =
             highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= Hyrise::get().transaction_manager.last_commit_id();
@@ -166,8 +165,7 @@ bool MvccDeletePlugin::_try_logical_delete(ObjectID table_id, const ChunkID chun
 
   // Use Update operator to delete and re-insert valid records in chunk. Pass validate into Update operator twice since
   // data will not be changed.
-  const auto& table_name = Hyrise::get().catalog.table_name(table_id);
-  const auto update = std::make_shared<Update>(table_name, validate, validate);
+  const auto update = std::make_shared<Update>(table_id, validate, validate);
   update->set_transaction_context(transaction_context);
   update->execute();
 

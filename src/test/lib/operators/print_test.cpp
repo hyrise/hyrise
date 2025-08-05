@@ -16,13 +16,12 @@ namespace hyrise {
 class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
-    TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("column_1", DataType::Int, true);
-    column_definitions.emplace_back("column_2", DataType::String, false);
+    const auto column_definitions =
+        TableColumnDefinitions{{"column_1", DataType::Int, true}, {"column_2", DataType::String, false}};
     _t = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size);
-    Hyrise::get().catalog.add_table(_table_name, _t);
+    _table_id = Hyrise::get().catalog.add_table("printTestTable", _t);
 
-    _gt = std::make_shared<GetTable>(_table_name);
+    _gt = std::make_shared<GetTable>(_table_id);
     _gt->never_clear_output();
     _gt->execute();
   }
@@ -32,8 +31,8 @@ class OperatorsPrintTest : public BaseTest {
   std::shared_ptr<Table> _t;
   std::shared_ptr<GetTable> _gt;
 
-  const std::string _table_name = "printTestTable";
   const ChunkOffset _chunk_size = ChunkOffset{10};
+  ObjectID _table_id;
 };
 
 // class used to make protected methods visible without
@@ -81,13 +80,13 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
 
 TEST_F(OperatorsPrintTest, FilledTable) {
   const size_t chunk_count = 117;
-  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  auto tab = Hyrise::get().storage_manager.get_table(_table_id);
   for (size_t i = 0; i < _chunk_size * chunk_count; i++) {
     // char 97 is an 'a'. Modulo 26 to stay within the alphabet.
     tab->append({static_cast<int>(i % _chunk_size), pmr_string(1, 97 + static_cast<int>(i / _chunk_size) % 26)});
   }
 
-  auto gt = std::make_shared<GetTable>(_table_name);
+  auto gt = std::make_shared<GetTable>(_table_id);
   gt->never_clear_output();
   gt->execute();
 
@@ -119,7 +118,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   uint16_t min = 8;
   uint16_t max = 20;
 
-  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  auto tab = Hyrise::get().storage_manager.get_table(_table_id);
 
   {
     auto pr_wrap = std::make_shared<PrintWrapper>(_gt);
@@ -136,7 +135,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   tab->append({ten_digits_ints, "quite a long string with more than $max chars"});
 
   {
-    auto gt_post_append = std::make_shared<GetTable>(_table_name);
+    auto gt_post_append = std::make_shared<GetTable>(_table_id);
     gt_post_append->execute();
 
     auto pr_wrap = std::make_shared<PrintWrapper>(gt_post_append);
@@ -169,7 +168,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValue) {
 
 TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto print_wrap = std::make_shared<PrintWrapper>(_gt);
-  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  auto tab = Hyrise::get().storage_manager.get_table(_table_id);
 
   pmr_string cell_string = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
   auto input = AllTypeVariant{cell_string};
@@ -332,7 +331,7 @@ TEST_F(OperatorsPrintTest, SQL) {
 }
 
 TEST_F(OperatorsPrintTest, EmptyTable) {
-  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
+  auto tab = Hyrise::get().storage_manager.get_table(_table_id);
   auto wrap = std::make_shared<TableWrapper>(tab);
   wrap->execute();
 

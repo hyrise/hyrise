@@ -30,6 +30,7 @@ class Catalog : public Noncopyable {
   ObjectID add_table(const std::string& name, const std::shared_ptr<Table>& table);
   void drop_table(ObjectID table_id);
   void drop_table(const std::string& name);
+  bool has_table(const std::string& name) const;
   ObjectID table_id(const std::string& name) const;
   const std::string& table_name(const ObjectID table_id) const;
   std::vector<std::string_view> table_names() const;

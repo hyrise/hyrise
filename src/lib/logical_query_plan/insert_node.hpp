@@ -4,6 +4,7 @@
 #include <string>
 
 #include "abstract_non_query_node.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -12,11 +13,11 @@ namespace hyrise {
  */
 class InsertNode : public EnableMakeForLQPNode<InsertNode>, public AbstractNonQueryNode {
  public:
-  explicit InsertNode(const std::string& init_table_name);
+  explicit InsertNode(const ObjectID init_table_id);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  const std::string table_name;
+  const ObjectID table_id;
 
  protected:
   size_t _on_shallow_hash() const override;

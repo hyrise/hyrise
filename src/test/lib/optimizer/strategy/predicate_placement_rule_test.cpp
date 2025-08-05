@@ -29,29 +29,37 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     _table_e = load_table("resources/test_data/tbl/int_int4.tbl");
   }
 
+  static void TearDownTestSuite() {
+    _table_a = nullptr;
+    _table_b = nullptr;
+    _table_c = nullptr;
+    _table_d = nullptr;
+    _table_e = nullptr;
+  }
+
   void SetUp() override {
-    Hyrise::get().catalog.add_table("a", _table_a);
-    _stored_table_a = StoredTableNode::make("a");
+    const auto table_id_a = Hyrise::get().catalog.add_table("a", _table_a);
+    _stored_table_a = StoredTableNode::make(table_id_a);
     _a_a = _stored_table_a->get_column("a");
     _a_b = _stored_table_a->get_column("b");
 
-    Hyrise::get().catalog.add_table("b", _table_b);
-    _stored_table_b = StoredTableNode::make("b");
+    const auto table_id_b = Hyrise::get().catalog.add_table("b", _table_b);
+    _stored_table_b = StoredTableNode::make(table_id_b);
     _b_a = _stored_table_b->get_column("a");
     _b_b = _stored_table_b->get_column("b");
 
-    Hyrise::get().catalog.add_table("c", _table_c);
-    _stored_table_c = StoredTableNode::make("c");
+    const auto table_id_c = Hyrise::get().catalog.add_table("c", _table_c);
+    _stored_table_c = StoredTableNode::make(table_id_c);
     _c_a = _stored_table_c->get_column("a");
     _c_b = _stored_table_c->get_column("b");
 
-    Hyrise::get().catalog.add_table("d", _table_d);
-    _stored_table_d = StoredTableNode::make("d");
+    const auto table_id_d = Hyrise::get().catalog.add_table("d", _table_d);
+    _stored_table_d = StoredTableNode::make(table_id_d);
     _d_a = _stored_table_d->get_column("a");
     _d_b = _stored_table_d->get_column("b");
 
-    Hyrise::get().catalog.add_table("e", _table_e);
-    _stored_table_e = StoredTableNode::make("e");
+    const auto table_id_e = Hyrise::get().catalog.add_table("e", _table_e);
+    _stored_table_e = StoredTableNode::make(table_id_e);
     _e_a = _stored_table_e->get_column("a");
 
     _rule = std::make_shared<PredicatePlacementRule>();
@@ -361,6 +369,7 @@ TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
 TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
   // If the predicate cannot be pushed down and is effectively re-inserted at the same position, make sure that
   // its outputs are correctly restored.
+  const auto table_id = Hyrise::get().catalog.table_id("a");
   // clang-format off
   const auto input_sub_lqp =
   PredicateNode::make(greater_than_(_a_a, 1),
@@ -368,7 +377,7 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
       _stored_table_a));
 
   _lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(table_id,
     input_sub_lqp,
     ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
       input_sub_lqp));
@@ -379,7 +388,7 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
       _stored_table_a));
 
   const auto expected_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(table_id,
     expected_sub_lqp,
     ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
       expected_sub_lqp));

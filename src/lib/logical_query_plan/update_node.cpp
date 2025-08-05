@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/container_hash/hash.hpp>
+
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
@@ -15,19 +17,18 @@
 
 namespace hyrise {
 
-UpdateNode::UpdateNode(const std::string& init_table_name)
-    : AbstractNonQueryNode(LQPNodeType::Update), table_name(init_table_name) {}
+UpdateNode::UpdateNode(const ObjectID init_table_id)
+    : AbstractNonQueryNode(LQPNodeType::Update), table_id(init_table_id) {}
 
 std::string UpdateNode::description(const DescriptionMode /*mode*/) const {
+  const auto& table_name = Hyrise::get().catalog.table_name(table_id);
   auto desc = std::ostringstream{};
-
   desc << "[Update] Table: '" << table_name << "'";
-
   return desc.str();
 }
 
 std::shared_ptr<AbstractLQPNode> UpdateNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
-  return UpdateNode::make(table_name);
+  return UpdateNode::make(table_id);
 }
 
 bool UpdateNode::is_column_nullable(const ColumnID /*column_id*/) const {
@@ -39,12 +40,14 @@ std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::output_expressions(
 }
 
 size_t UpdateNode::_on_shallow_hash() const {
-  return std::hash<std::string>{}(table_name);
+  auto hash_value = size_t{0};
+  boost::hash_combine(hash_value, table_id);
+  return hash_value;
 }
 
 bool UpdateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& update_node_rhs = static_cast<const UpdateNode&>(rhs);
-  return table_name == update_node_rhs.table_name;
+  return table_id == update_node_rhs.table_id;
 }
 
 }  // namespace hyrise

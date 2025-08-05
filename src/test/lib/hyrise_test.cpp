@@ -34,15 +34,17 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
 
   const auto table_name = "test_table";
 
-  EXPECT_FALSE(hyrise.storage_manager.has_table(table_name));
+  EXPECT_EQ(hyrise.catalog.table_id(table_name), INVALID_OBJECT_ID);
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
-  hyrise.storage_manager.add_table(table_name, table);
-  EXPECT_TRUE(hyrise.storage_manager.has_table(table_name));
+  const auto table_id = hyrise.catalog.add_table(table_name, table);
+  EXPECT_NE(hyrise.catalog.table_id(table_name), INVALID_OBJECT_ID);
+  EXPECT_EQ(hyrise.catalog.table_name(table_id), table_name);
+  EXPECT_TRUE(hyrise.storage_manager.has_table(table_id));
 
   EXPECT_EQ(hyrise.transaction_manager.last_commit_id(), CommitID{1});
 
   // We need to do some honest work so that the commit id is actually incremented
-  const auto get_table = std::make_shared<GetTable>(table_name);
+  const auto get_table = std::make_shared<GetTable>(table_id);
   const auto validate = std::make_shared<Validate>(get_table);
   const auto delete_op = std::make_shared<Delete>(validate);
   const auto transaction_context = hyrise.transaction_manager.new_transaction_context(AutoCommit::No);
@@ -57,7 +59,8 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
   Hyrise::reset();
 
   EXPECT_EQ(get_plugins().size(), 0);
-  EXPECT_FALSE(hyrise.storage_manager.has_table(table_name));
+  EXPECT_EQ(hyrise.catalog.table_id(table_name), INVALID_OBJECT_ID);
+  EXPECT_FALSE(hyrise.storage_manager.has_table(table_id));
   EXPECT_EQ(hyrise.transaction_manager.last_commit_id(), CommitID{1});
 }
 

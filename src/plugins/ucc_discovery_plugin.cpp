@@ -134,7 +134,8 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
     auto message = std::stringstream{};
 
-    message << "Checking candidate " << Hyrise::get().catalog.table_name(candidate.table_id) << "." << table->column_name(column_id);
+    message << "Checking candidate " << Hyrise::get().catalog.table_name(candidate.table_id) << "."
+            << table->column_name(column_id);
 
     const auto& soft_key_constraints = table->soft_key_constraints();
     const auto candidate_columns = std::set<ColumnID>{column_id};

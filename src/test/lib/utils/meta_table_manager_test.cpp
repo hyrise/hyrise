@@ -58,7 +58,8 @@ class MetaTableManagerTest : public BaseTest {
   }
 };
 
-class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<std::shared_ptr<AbstractMetaTable>> {};
+class MetaTableManagerMultiTablesTest : public MetaTableManagerTest,
+                                        public ::testing::WithParamInterface<std::shared_ptr<AbstractMetaTable>> {};
 
 const auto meta_table_manager_test_formatter = [](const auto& info) {
   auto stream = std::stringstream{};

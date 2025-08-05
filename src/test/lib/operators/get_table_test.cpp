@@ -22,21 +22,24 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().catalog.add_table("int_int_float",
-                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
-    Hyrise::get().catalog.add_table(
+    _int_int_float_id = Hyrise::get().catalog.add_table(
+        "int_int_float", load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
+    _int_int_float_aliased_id = Hyrise::get().catalog.add_table(
         "int_int_float_aliased", load_table("resources/test_data/tbl/int_int_float_aliased.tbl", ChunkOffset{2}));
 
-    const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
+    const auto& table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
     ChunkEncoder::encode_all_chunks(table);
     table->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a");
     table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b1");
     table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b2");
   }
+
+  ObjectID _int_int_float_id;
+  ObjectID _int_int_float_aliased_id;
 };
 
 TEST_F(OperatorsGetTableTest, GetOutput) {
-  auto get_table = std::make_shared<GetTable>("int_int_float");
+  auto get_table = std::make_shared<GetTable>(_int_int_float_id);
   get_table->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(),
@@ -44,13 +47,13 @@ TEST_F(OperatorsGetTableTest, GetOutput) {
 }
 
 TEST_F(OperatorsGetTableTest, OutputDoesNotChangeChunkSize) {
-  auto get_table = std::make_shared<GetTable>("int_int_float");
+  auto get_table = std::make_shared<GetTable>(_int_int_float_id);
   get_table->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(),
                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
-  const auto table = Hyrise::get().storage_manager.get_table("int_int_float");
+  const auto table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
   table->append({1, 2, 10.0f});
   EXPECT_GT(table->chunk_count(), get_table->get_output()->chunk_count());
 
@@ -58,27 +61,26 @@ TEST_F(OperatorsGetTableTest, OutputDoesNotChangeChunkSize) {
                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 }
 
-TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
-  auto get_table = std::make_shared<GetTable>("anUglyTestTable");
-
-  EXPECT_THROW(get_table->execute(), std::exception) << "Should throw unknown table name exception";
+TEST_F(OperatorsGetTableTest, ThrowsUnknownTableID) {
+  auto get_table = std::make_shared<GetTable>(ObjectID{1312});
+  EXPECT_THROW(get_table->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsGetTableTest, OperatorName) {
-  auto get_table = std::make_shared<GetTable>("int_int_float");
+  auto get_table = std::make_shared<GetTable>(_int_int_float_id);
 
   EXPECT_EQ(get_table->name(), "GetTable");
 }
 
 TEST_F(OperatorsGetTableTest, Description) {
-  const auto get_table_a = std::make_shared<GetTable>("int_int_float");
+  const auto get_table_a = std::make_shared<GetTable>(_int_int_float_id);
   EXPECT_EQ(get_table_a->description(DescriptionMode::SingleLine),
             "GetTable (int_int_float) pruned: 0/4 chunk(s), 0/3 column(s)");
   EXPECT_EQ(get_table_a->description(DescriptionMode::MultiLine),
             "GetTable\n(int_int_float)\npruned:\n0/4 chunk(s)\n0/3 column(s)");
 
   const auto get_table_b =
-      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+      std::make_shared<GetTable>(_int_int_float_id, std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
   EXPECT_EQ(get_table_b->description(DescriptionMode::SingleLine),
             "GetTable (int_int_float) pruned: 1/4 chunk(s) (1 static, 0 dynamic), 1/3 column(s)");
   EXPECT_EQ(get_table_b->description(DescriptionMode::MultiLine),
@@ -86,7 +88,7 @@ TEST_F(OperatorsGetTableTest, Description) {
 }
 
 TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
-  auto get_table_1 = std::make_shared<GetTable>("int_int_float");
+  auto get_table_1 = std::make_shared<GetTable>(_int_int_float_id);
   get_table_1->execute();
 
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
@@ -102,7 +104,7 @@ TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
 
   transaction_context->commit();
 
-  auto get_table_2 = std::make_shared<GetTable>("int_int_float");
+  auto get_table_2 = std::make_shared<GetTable>(_int_int_float_id);
   get_table_2->execute();
   const auto result_table = get_table_2->get_output();
 
@@ -116,11 +118,11 @@ TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
 
 TEST_F(OperatorsGetTableTest, PrunedChunks) {
   auto get_table =
-      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}}, std::vector<ColumnID>{});
+      std::make_shared<GetTable>(_int_int_float_id, std::vector{ChunkID{0}, ChunkID{2}}, std::vector<ColumnID>{});
 
   get_table->execute();
 
-  auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
+  auto original_table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
   auto table = get_table->get_output();
   EXPECT_EQ(table->chunk_count(), ChunkID(2));
   EXPECT_EQ(table->get_value<int32_t>(ColumnID(0), 0), original_table->get_value<int32_t>(ColumnID(0), 1));
@@ -134,7 +136,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunks) {
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumns) {
-  auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+  auto get_table = std::make_shared<GetTable>(_int_int_float_id, std::vector<ChunkID>{}, std::vector{ColumnID{1}});
 
   get_table->execute();
 
@@ -156,7 +158,7 @@ TEST_F(OperatorsGetTableTest, PrunedColumns) {
 
 TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
   auto get_table =
-      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}}, std::vector{ColumnID{0}});
+      std::make_shared<GetTable>(_int_int_float_id, std::vector{ChunkID{0}, ChunkID{2}}, std::vector{ColumnID{0}});
 
   get_table->execute();
 
@@ -174,10 +176,10 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
 }
 
 TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
-  auto get_table = std::make_shared<GetTable>("int_int_float");
+  auto get_table = std::make_shared<GetTable>(_int_int_float_id);
   auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
-  auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
+  auto original_table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
   auto chunk = original_table->get_chunk(ChunkID{0});
 
   chunk->set_cleanup_commit_id(CommitID{2});
@@ -191,12 +193,12 @@ TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
 }
 
 TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
-  auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
+  auto original_table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
   auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{1}, AutoCommit::No);
-  auto get_table = std::make_shared<GetTable>("int_int_float");
+  auto get_table = std::make_shared<GetTable>(_int_int_float_id);
   get_table->set_transaction_context(context);
   get_table->execute();
   EXPECT_EQ(get_table->get_output()->chunk_count(), 4);
@@ -224,7 +226,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
 
   // Check GetTable filtering
   auto context2 = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{1}, AutoCommit::No);
-  auto get_table_2 = std::make_shared<GetTable>("int_int_float");
+  auto get_table_2 = std::make_shared<GetTable>(_int_int_float_id);
   get_table_2->set_transaction_context(context2);
 
   get_table_2->execute();
@@ -233,12 +235,12 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
 
 TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   // 1. --- Physical deletion of a chunk
-  auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
+  auto original_table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
   auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{1}, AutoCommit::No);
-  auto get_table = std::make_shared<GetTable>("int_int_float");
+  auto get_table = std::make_shared<GetTable>(_int_int_float_id);
   get_table->set_transaction_context(context);
   get_table->execute();
   EXPECT_EQ(get_table->get_output()->chunk_count(), 4);
@@ -260,11 +262,11 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   EXPECT_FALSE(original_table->get_chunk(ChunkID{2}));
 
   // 2. --- Logical deletion of a chunk
-  auto get_table_2 = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector<ColumnID>{});
+  auto get_table_2 = std::make_shared<GetTable>(_int_int_float_id, std::vector{ChunkID{0}}, std::vector<ColumnID>{});
 
   auto context2 = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
-  auto modified_table = Hyrise::get().storage_manager.get_table("int_int_float");
+  auto modified_table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
   auto chunk = modified_table->get_chunk(ChunkID{1});
 
   chunk->set_cleanup_commit_id(CommitID{2});
@@ -277,24 +279,26 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
 }
 
 TEST_F(OperatorsGetTableTest, Copy) {
-  const auto stored_table_node_a = StoredTableNode::make("int_int_float");
-  const auto get_table_a = std::make_shared<GetTable>("int_int_float");
+  const auto stored_table_node_a = StoredTableNode::make(_int_int_float_id);
+  const auto get_table_a = std::make_shared<GetTable>(_int_int_float_id);
   get_table_a->lqp_node = stored_table_node_a;
   const auto& get_table_a_copy = std::static_pointer_cast<GetTable>(get_table_a->deep_copy());
   EXPECT_EQ(get_table_a_copy->table_name(), "int_int_float");
+  EXPECT_EQ(get_table_a_copy->table_id(), _int_int_float_id);
   EXPECT_TRUE(get_table_a_copy->pruned_chunk_ids().empty());
   EXPECT_TRUE(get_table_a_copy->pruned_column_ids().empty());
   EXPECT_EQ(get_table_a_copy->lqp_node, stored_table_node_a);
 
   const auto get_table_b =
-      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{1}}, std::vector{ColumnID{0}});
+      std::make_shared<GetTable>(_int_int_float_id, std::vector{ChunkID{1}}, std::vector{ColumnID{0}});
   const auto& get_table_b_copy = std::static_pointer_cast<GetTable>(get_table_b->deep_copy());
   EXPECT_EQ(get_table_b_copy->table_name(), "int_int_float");
+  EXPECT_EQ(get_table_a_copy->table_id(), _int_int_float_id);
   EXPECT_EQ(get_table_b_copy->pruned_chunk_ids(), std::vector{ChunkID{1}});
   EXPECT_EQ(get_table_b_copy->pruned_column_ids(), std::vector{ColumnID{0}});
 
-  const auto get_table_c = std::make_shared<GetTable>("int_int_float");
-  const auto get_table_d = std::make_shared<GetTable>("int_int_float_aliased");
+  const auto get_table_c = std::make_shared<GetTable>(_int_int_float_id);
+  const auto get_table_d = std::make_shared<GetTable>(_int_int_float_aliased_id);
   const auto table_scan_a =
       std::make_shared<TableScan>(get_table_d, equals_(pqp_column_(ColumnID{1}, DataType::Int, false, "x"), 10));
   const auto projection = std::make_shared<Projection>(
@@ -316,7 +320,7 @@ TEST_F(OperatorsGetTableTest, Copy) {
 }
 
 TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
-  auto table = Hyrise::get().storage_manager.get_table("int_int_float");
+  auto table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
   table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   table->get_chunk(ChunkID{1})
       ->set_individually_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
@@ -324,7 +328,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
   // single column pruned
   {
-    auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+    auto get_table = std::make_shared<GetTable>(_int_int_float_id, std::vector<ChunkID>{}, std::vector{ColumnID{1}});
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();
@@ -340,7 +344,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   // multiple columns pruned
   {
     auto get_table =
-        std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{0}, ColumnID{1}});
+        std::make_shared<GetTable>(_int_int_float_id, std::vector<ChunkID>{}, std::vector{ColumnID{0}, ColumnID{1}});
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();
@@ -353,7 +357,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
   // no columns pruned
   {
-    auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});
+    auto get_table = std::make_shared<GetTable>(_int_int_float_id, std::vector<ChunkID>{}, std::vector<ColumnID>{});
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();
@@ -367,7 +371,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   // pruning the columns on which chunks are sorted
   {
     auto get_table =
-        std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{0}, ColumnID{2}});
+        std::make_shared<GetTable>(_int_int_float_id, std::vector<ChunkID>{}, std::vector{ColumnID{0}, ColumnID{2}});
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();
@@ -379,7 +383,8 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
 TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   // Prune table with the predicates of linked TableScan using subquery results.
-  const auto get_table = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  const auto get_table =
+      std::make_shared<GetTable>(_int_int_float_id, std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
@@ -387,7 +392,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
       std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
                                                          pqp_subquery_(table_wrapper, DataType::Int, false)));
   const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
-  const auto stored_table_node = StoredTableNode::make("int_int_float");
+  const auto stored_table_node = StoredTableNode::make(_int_int_float_id);
   stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
   stored_table_node->set_pruned_column_ids({ColumnID{1}});
   const auto predicate_node =
@@ -412,7 +417,8 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
 
 TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   // Same as DynamicSubqueryPruning, but the subquery is not executed. Thus, we fail.
-  const auto get_table = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  const auto get_table =
+      std::make_shared<GetTable>(_int_int_float_id, std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
@@ -420,7 +426,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
       std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
                                                          pqp_subquery_(table_wrapper, DataType::Int, false)));
   const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
-  const auto stored_table_node = StoredTableNode::make("int_int_float");
+  const auto stored_table_node = StoredTableNode::make(_int_int_float_id);
   stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
   stored_table_node->set_pruned_column_ids({ColumnID{1}});
   const auto predicate_node =
@@ -436,7 +442,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
 
 TEST_F(OperatorsGetTableTest, ImmutableChunks) {
   // Insert one tuple into int_int_float to create a mutable chunk.
-  const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
+  const auto& table = Hyrise::get().storage_manager.get_table(_int_int_float_id);
   EXPECT_EQ(table->chunk_count(), 4);
   table->append({1, 1, 0.1f});
   table->append_mutable_chunk();
@@ -448,7 +454,7 @@ TEST_F(OperatorsGetTableTest, ImmutableChunks) {
   // Test without and with pruned columns. In the first case, GetTable can just forward the stored chunks. In the second
   // case, it has to build the chunks on its own.
   for (const auto& pruned_column_ids : {std::vector<ColumnID>{}, std::vector{ColumnID{1}, ColumnID{2}}}) {
-    const auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, pruned_column_ids);
+    const auto get_table = std::make_shared<GetTable>(_int_int_float_id, std::vector<ChunkID>{}, pruned_column_ids);
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();

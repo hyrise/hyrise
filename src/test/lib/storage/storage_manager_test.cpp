@@ -8,6 +8,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
 #include "utils/meta_table_manager.hpp"
 
@@ -23,10 +24,10 @@ class StorageManagerTest : public BaseTest {
     _add_table(ObjectID{0}, t1);
     _add_table(ObjectID{1}, t2);
 
-    const auto v1_lqp = StoredTableNode::make("first_table");
+    const auto v1_lqp = StoredTableNode::make(ObjectID{0});
     const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
 
-    const auto v2_lqp = StoredTableNode::make("second_table");
+    const auto v2_lqp = StoredTableNode::make(ObjectID{1});
     const auto v2 = std::make_shared<LQPView>(v2_lqp, std::unordered_map<ColumnID, std::string>{});
 
     _add_view(ObjectID{0}, std::move(v1));
@@ -72,7 +73,8 @@ TEST_F(StorageManagerTest, AddObjectTwice) {
                std::logic_error);
   EXPECT_THROW(_add_view(ObjectID{0}, std::make_shared<LQPView>(nullptr, std::unordered_map<ColumnID, std::string>{})),
                std::logic_error);
-  EXPECT_THROW(_add_prepared_plan(ObjectID{0}, std::make_shared<PreparedPlan>(nullptr, std::vector<ParameterID>{})), std::logic_error);
+  EXPECT_THROW(_add_prepared_plan(ObjectID{0}, std::make_shared<PreparedPlan>(nullptr, std::vector<ParameterID>{})),
+               std::logic_error);
 }
 
 TEST_F(StorageManagerTest, StatisticsCreationOnAddTable) {
@@ -193,8 +195,8 @@ TEST_F(StorageManagerTest, HasView) {
 // }
 
 TEST_F(StorageManagerTest, GetPreparedPlan) {
-  auto pp3 =   Hyrise::get().storage_manager.get_prepared_plan(ObjectID{0});
-  auto pp4 =   Hyrise::get().storage_manager.get_prepared_plan(ObjectID{1});
+  auto pp3 = Hyrise::get().storage_manager.get_prepared_plan(ObjectID{0});
+  auto pp4 = Hyrise::get().storage_manager.get_prepared_plan(ObjectID{1});
   EXPECT_THROW(Hyrise::get().storage_manager.get_prepared_plan(ObjectID{17}), std::logic_error);
 }
 
@@ -214,7 +216,7 @@ TEST_F(StorageManagerTest, DropPreparedPlan) {
 }
 
 TEST_F(StorageManagerTest, HasPreparedPlan) {
-  EXPECT_TRUE( Hyrise::get().storage_manager.has_prepared_plan(ObjectID{0}));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_prepared_plan(ObjectID{0}));
   EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan(ObjectID{17}));
 }
 

@@ -20,21 +20,19 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorsUpdateTest : public BaseTest {
  public:
-  static void SetUpTestCase() {
-    column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-    column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
-  }
-
   void SetUp() override {
     const auto table = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
-    // Update operator works on the StorageManager
-    Hyrise::get().catalog.add_table(table_to_update_name, table);
+    // Update operator works on the StorageManager.
+    table_id = Hyrise::get().catalog.add_table("updateTestTable", table);
+
+    column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+    column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
   }
 
   void helper(const std::shared_ptr<AbstractExpression>& where_predicate,
               const std::vector<std::shared_ptr<AbstractExpression>>& update_expressions,
               const std::string& expected_result_path) {
-    const auto get_table = std::make_shared<GetTable>(table_to_update_name);
+    const auto get_table = std::make_shared<GetTable>(table_id);
     const auto where_scan = std::make_shared<TableScan>(get_table, where_predicate);
     where_scan->never_clear_output();
     const auto updated_values_projection = std::make_shared<Projection>(where_scan, update_expressions);
@@ -44,7 +42,7 @@ class OperatorsUpdateTest : public BaseTest {
     updated_values_projection->execute();
 
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-    const auto update = std::make_shared<Update>(table_to_update_name, where_scan, updated_values_projection);
+    const auto update = std::make_shared<Update>(table_id, where_scan, updated_values_projection);
     update->set_transaction_context(transaction_context);
     update->execute();
     transaction_context->commit();
@@ -52,7 +50,7 @@ class OperatorsUpdateTest : public BaseTest {
     // Get validated table which should have the same row twice.
     const auto post_update_transaction_context =
         Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-    const auto post_update_get_table = std::make_shared<GetTable>(table_to_update_name);
+    const auto post_update_get_table = std::make_shared<GetTable>(table_id);
     const auto validate = std::make_shared<Validate>(post_update_get_table);
     validate->set_transaction_context(post_update_transaction_context);
     post_update_get_table->execute();
@@ -61,8 +59,9 @@ class OperatorsUpdateTest : public BaseTest {
     EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), load_table(expected_result_path));
   }
 
-  std::string table_to_update_name{"updateTestTable"};
-  inline static std::shared_ptr<AbstractExpression> column_a, column_b;
+  ObjectID table_id;
+  std::shared_ptr<AbstractExpression> column_a;
+  std::shared_ptr<AbstractExpression> column_b;
 };
 
 TEST_F(OperatorsUpdateTest, SelfOverride) {

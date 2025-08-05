@@ -21,8 +21,7 @@ class TransactionContext;
  */
 class Insert : public AbstractReadWriteOperator {
  public:
-  explicit Insert(const std::string& target_table_name,
-                  const std::shared_ptr<const AbstractOperator>& values_to_insert);
+  explicit Insert(const ObjectID target_table_id, const std::shared_ptr<const AbstractOperator>& values_to_insert);
 
   const std::string& name() const override;
 
@@ -37,7 +36,7 @@ class Insert : public AbstractReadWriteOperator {
   void _on_rollback_records() override;
 
  private:
-  const std::string _target_table_name;
+  const ObjectID _target_table_id;
 
   // Ranges of rows to which the inserted values are written.
   struct ChunkRange {

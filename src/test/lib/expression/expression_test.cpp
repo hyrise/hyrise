@@ -30,14 +30,14 @@ class ExpressionTest : public BaseTest {
   void SetUp() override {
     table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
     table_int_float_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
-    Hyrise::get().catalog.add_table("int_float", table_int_float);
-    Hyrise::get().catalog.add_table("int_float_with_null", table_int_float_with_null);
+    const auto int_float_id = Hyrise::get().catalog.add_table("int_float", table_int_float);
+    const auto int_float_null_id = Hyrise::get().catalog.add_table("int_float_with_null", table_int_float_with_null);
 
-    int_float_node = StoredTableNode::make("int_float");
+    int_float_node = StoredTableNode::make(int_float_id);
     a = int_float_node->get_column("a");
     b = int_float_node->get_column("b");
 
-    int_float_node_nullable = StoredTableNode::make("int_float_with_null");
+    int_float_node_nullable = StoredTableNode::make(int_float_null_id);
     a_nullable = int_float_node_nullable->get_column("a");
     b_nullable = int_float_node_nullable->get_column("b");
   }
@@ -244,7 +244,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(in_(5, subquery_expression)->requires_computation());
   EXPECT_TRUE(not_in_(5, subquery_expression)->requires_computation());
 
-  const auto get_table = std::make_shared<GetTable>("int_float");
+  const auto get_table = std::make_shared<GetTable>(Hyrise::get().catalog.table_id("int_float"));
   const auto pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(get_table);
 
   EXPECT_TRUE(pqp_subquery_expression->requires_computation());
@@ -512,12 +512,13 @@ TEST_F(ExpressionTest, EqualsAndHash) {
   expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, true, "alias"));
 
   // PQPSubqueryExpression
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("a"), DataType::Int, false));
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Int, false));
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, false));
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, true));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>(ObjectID{0}), DataType::Int, false));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>(ObjectID{17}), DataType::Int, false));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>(ObjectID{17}), DataType::Float, false));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>(ObjectID{17}), DataType::Float, true));
   const auto parameter = std::make_pair(ParameterID{0}, ColumnID{0});
-  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, true, parameter));
+  expressions.emplace_back(__LINE__,
+                           pqp_subquery_(std::make_shared<GetTable>(ObjectID{17}), DataType::Float, true, parameter));
 
   // UnaryMinusExpression
   expressions.emplace_back(__LINE__, unary_minus_(3));

@@ -12,9 +12,9 @@ class PredicateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2});
-    Hyrise::get().catalog.add_table("table_a", _table_a);
+    const auto table_id = Hyrise::get().catalog.add_table("table_a", _table_a);
 
-    _table_node = StoredTableNode::make("table_a");
+    _table_node = StoredTableNode::make(table_id);
     _i = lqp_column_(_table_node, ColumnID{0});
     _f = lqp_column_(_table_node, ColumnID{1});
 
@@ -33,7 +33,7 @@ TEST_F(PredicateNodeTest, Descriptions) {
 
 TEST_F(PredicateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_predicate_node, *_predicate_node);
-  const auto equal_table_node = StoredTableNode::make("table_a");
+  const auto equal_table_node = StoredTableNode::make(Hyrise::get().catalog.table_id("table_a"));
   const auto equal_i = equal_table_node->get_column("i");
 
   const auto other_predicate_node_a = PredicateNode::make(equals_(_i, 5), _table_node);

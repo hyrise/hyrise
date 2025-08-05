@@ -121,6 +121,10 @@ void Catalog::drop_table(const std::string& name) {
   Hyrise::get().storage_manager._drop_table(iter->second);
 }
 
+bool Catalog::has_table(const std::string& name) const {
+  return table_id(name) != INVALID_OBJECT_ID;
+}
+
 ObjectID Catalog::table_id(const std::string& name) const {
   const auto iter = _tables.ids.find(name);
   return iter == _tables.ids.end() ? INVALID_OBJECT_ID : iter->second;

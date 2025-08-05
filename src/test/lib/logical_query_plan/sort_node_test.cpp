@@ -12,9 +12,9 @@ class SortNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2});
-    Hyrise::get().catalog.add_table("table_a", _table_a);
+    const auto table_id = Hyrise::get().catalog.add_table("table_a", _table_a);
 
-    _table_node = StoredTableNode::make("table_a");
+    _table_node = StoredTableNode::make(table_id);
 
     _a_i = _table_node->get_column("i");
     _a_f = _table_node->get_column("f");

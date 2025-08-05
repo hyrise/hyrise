@@ -29,14 +29,12 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // This checks if the EntireChunkPosList correctly handles rows that are added to the table
   // after the PosList was created. These later added rows should not be contained in the PosList
 
-  auto table_name = "test_table";
-  auto table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{10}, SetLastChunkImmutable::No);
+  const auto table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{10}, SetLastChunkImmutable::No);
   EXPECT_EQ(table->chunk_count(), 1);
-  auto table_to_add_name = "test_table_to_add";
-  auto table_to_add = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{10});
+  const auto table_to_add = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{10});
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager/Catalog.
-  const auto table_id = Hyrise::get().catalog.add_table(table_name, table);
-  const auto table_table_to_add_id = Hyrise::get().catalog.add_table(table_to_add_name, table_to_add);
+  const auto table_id = Hyrise::get().catalog.add_table("test_table", table);
+  const auto table_table_to_add_id = Hyrise::get().catalog.add_table("test_table_to_add", table_to_add);
 
   auto get_table = std::make_shared<GetTable>(table_id);
   get_table->execute();
@@ -48,7 +46,7 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   auto get_table_to_add = std::make_shared<GetTable>(table_table_to_add_id);
   get_table_to_add->execute();
 
-  auto insert = std::make_shared<Insert>(table_name, get_table_to_add);
+  auto insert = std::make_shared<Insert>(table_id, get_table_to_add);
   insert->set_transaction_context(insert_context);
   insert->execute();
   insert_context->commit();

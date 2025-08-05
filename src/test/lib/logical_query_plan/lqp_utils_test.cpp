@@ -253,23 +253,25 @@ TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
   // clang-format on
 
   EXPECT_EQ(lqp_find_modified_tables(read_only_lqp).size(), 0);
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}, {"b", DataType::Int, false}});
+  const auto table_id = Hyrise::get().catalog.add_table("insert_table_name", dummy_table);
 
   // clang-format off
   const auto insert_lqp =
-  InsertNode::make("insert_table_name",
+  InsertNode::make(table_id,
     PredicateNode::make(greater_than_(a_a, 5),
       node_a));
   // clang-format on
   const auto insert_tables = lqp_find_modified_tables(insert_lqp);
 
   EXPECT_EQ(insert_tables.size(), 1);
-  EXPECT_NE(insert_tables.find("insert_table_name"), insert_tables.end());
+  EXPECT_TRUE(insert_tables.contains("insert_table_name"));
 
   const auto delete_lqp = DeleteNode::make(node_a);
   const auto delete_tables = lqp_find_modified_tables(delete_lqp);
 
   EXPECT_EQ(delete_tables.size(), 1);
-  EXPECT_NE(delete_tables.find("node_a"), delete_tables.end());
+  EXPECT_TRUE(delete_tables.contains("node_a"));
 }
 
 TEST_F(LQPUtilsTest, LQPInsertAboveNode) {

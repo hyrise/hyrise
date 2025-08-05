@@ -23,13 +23,13 @@ class PQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() override {
     _table = load_table("resources/test_data/tbl/int_float.tbl");
-    Hyrise::get().catalog.add_table("int_float", _table);
+    _table_id = Hyrise::get().catalog.add_table("int_float", _table);
     _a = PQPColumnExpression::from_table(*_table, "a");
     _b = PQPColumnExpression::from_table(*_table, "b");
 
     // Create PQPSubqueryExpression without parameters
     {
-      const auto get_table = std::make_shared<GetTable>(_table_name);
+      const auto get_table = std::make_shared<GetTable>(_table_id);
       // TableScan (a > 5)
       _pqp = std::make_shared<TableScan>(get_table, greater_than_(_a, 5));
 
@@ -39,7 +39,7 @@ class PQPSubqueryExpressionTest : public BaseTest {
     // Create PQPSubqueryExpression with parameters
     {
       // Build a PQP with one parameter returning a single non-nullable value
-      const auto get_table = std::make_shared<GetTable>(_table_name);
+      const auto get_table = std::make_shared<GetTable>(_table_id);
       // Projection (a + ?)
       const auto parameter = placeholder_(ParameterID{0});
       const auto projection = std::make_shared<Projection>(get_table, expression_vector(add_(_a, parameter)));
@@ -52,7 +52,7 @@ class PQPSubqueryExpressionTest : public BaseTest {
   }
 
  protected:
-  std::string _table_name = "int_float";
+  ObjectID _table_id;
   std::shared_ptr<Table> _table;
   std::shared_ptr<PQPColumnExpression> _a, _b;
 
@@ -104,7 +104,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
 
 TEST_F(PQPSubqueryExpressionTest, DeepCopyPreservesPlanDeduplication) {
   // Prepare DIAMOND-SHAPED PQP
-  auto get_table = std::make_shared<GetTable>(_table_name);
+  auto get_table = std::make_shared<GetTable>(_table_id);
   auto scan_a = std::make_shared<TableScan>(get_table, greater_than_(_a, 5));
   auto scan_b = std::make_shared<TableScan>(get_table, greater_than_(_b, 10));
   auto union_positions = std::make_shared<UnionPositions>(scan_a, scan_b);

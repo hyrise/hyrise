@@ -45,18 +45,13 @@ class JoinToSemiJoinRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
-  {
-    auto column_definitions = TableColumnDefinitions{};
-    column_definitions.emplace_back("column0", DataType::Int, false);
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("column0", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.add_table("table", table);
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
-
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
-  }
-
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(table_id);
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -83,20 +78,14 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
 
 TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) {
   // Same as InnerJoinToSemiJoin, but with an additional join predicate that should not change the result.
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("column0", DataType::Int, false);
+  column_definitions.emplace_back("column1", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.add_table("table", table);
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
 
-  {
-    auto column_definitions = TableColumnDefinitions{};
-    column_definitions.emplace_back("column0", DataType::Int, false);
-    column_definitions.emplace_back("column1", DataType::Int, false);
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
-
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
-  }
-
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(table_id);
   const auto column0 = stored_table_node->get_column("column0");
   const auto column1 = stored_table_node->get_column("column1");
 
@@ -128,19 +117,14 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
    * columns. We expect to see a semi join reformulation because the resulting unique column combination matches the
    * inner join's predicate expressions.
    */
-  {
-    auto column_definitions = TableColumnDefinitions{};
-    column_definitions.emplace_back("column0", DataType::Int, false);
-    column_definitions.emplace_back("column1", DataType::Int, false);
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("column0", DataType::Int, false);
+  column_definitions.emplace_back("column1", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.add_table("table", table);
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
-
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
-  }
-
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(table_id);
   const auto column0 = stored_table_node->get_column("column0");
   const auto column1 = stored_table_node->get_column("column1");
 
@@ -167,18 +151,13 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
 }
 
 TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
-  {
-    auto column_definitions = TableColumnDefinitions{};
-    column_definitions.emplace_back("column0", DataType::Int, false);
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("column0", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.add_table("table", table);
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
-
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
-  }
-
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(table_id);
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -199,16 +178,12 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
 
 TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
   // Based on the InnerJoinToSemiJoin test.
-  {
-    auto column_definitions = TableColumnDefinitions{};
-    column_definitions.emplace_back("column0", DataType::Int, false);
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("column0", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.add_table("table", table);
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
-  }
-
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(table_id);
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -235,20 +210,15 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
    * (a == column0). Hence, the resulting unique column combination does not match the expressions of the single equals
    * predicate and we should not see a semi join reformulation.
    */
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("column0", DataType::Int, false);
+  column_definitions.emplace_back("column1", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.add_table("table", table);
 
-  {
-    auto column_definitions = TableColumnDefinitions{};
-    column_definitions.emplace_back("column0", DataType::Int, false);
-    column_definitions.emplace_back("column1", DataType::Int, false);
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
-
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
-  }
-
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(table_id);
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off
@@ -269,18 +239,13 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
 
 TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
   // Based on the InnerJoinToSemiJoin test.
-  {
-    auto column_definitions = TableColumnDefinitions{};
-    column_definitions.emplace_back("column0", DataType::Int, false);
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("column0", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.add_table("table", table);
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
 
-    auto& sm = Hyrise::get().storage_manager;
-    sm.add_table("table", table);
-
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
-  }
-
-  const auto stored_table_node = StoredTableNode::make("table");
+  const auto stored_table_node = StoredTableNode::make(table_id);
   const auto column0 = stored_table_node->get_column("column0");
 
   // clang-format off

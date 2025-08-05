@@ -1,5 +1,3 @@
-#include <regex>
-
 #include "base_test.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -12,6 +10,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "utils/load_table.hpp"
+#include "utils/string_utils.hpp"
 
 namespace hyrise {
 
@@ -21,13 +20,14 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class LQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() override {
-    Hyrise::get().catalog.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    const auto table_id =
+        Hyrise::get().catalog.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
-    int_float_node_a = StoredTableNode::make("int_float");
+    int_float_node_a = StoredTableNode::make(table_id);
     a = int_float_node_a->get_column("a");
     b = int_float_node_a->get_column("b");
 
-    int_float_node_a_2 = StoredTableNode::make("int_float");
+    int_float_node_a_2 = StoredTableNode::make(table_id);
     a_2 = int_float_node_a_2->get_column("a");
 
     // clang-format off
@@ -120,21 +120,25 @@ TEST_F(LQPSubqueryExpressionTest, IsNullable) {
   EXPECT_TRUE(subquery_a->is_nullable_on_lqp(*int_float_node_a_2));
   EXPECT_FALSE(subquery_c->is_nullable_on_lqp(*int_float_node_a_2));
 
-  // clang-format of
-  const auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, null_()))),
-                                         ProjectionNode::make(expression_vector(add_(a, null_())), int_float_node_a));
   // clang-format off
+  const auto lqp_c =
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, null_()))),
+    ProjectionNode::make(expression_vector(add_(a, null_())),
+      int_float_node_a));
+  // clang-format on
 
   EXPECT_TRUE(lqp_subquery_(lqp_c)->is_nullable_on_lqp(*int_float_node_a_2));
 }
 
 TEST_F(LQPSubqueryExpressionTest, AsColumnName) {
-  EXPECT_TRUE(std::regex_search(subquery_a->as_column_name(), std::regex{"SUBQUERY \\(LQP, 0x[0-9a-f]+\\)"}));
-  EXPECT_TRUE(std::regex_search(subquery_c->as_column_name(), std::regex{"SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
+  EXPECT_EQ(replace_addresses(subquery_a->as_column_name()), "SUBQUERY (LQP, 0x00000000)");
+  EXPECT_EQ(replace_addresses(subquery_c->as_column_name()), "SUBQUERY (LQP, 0x00000000, Parameters: [a, id=0])");
 
-  // Test IN and EXISTS here as well, since they need subqueries to function
-  EXPECT_TRUE(std::regex_search(exists_(subquery_c)->as_column_name(), std::regex{"EXISTS\\(SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)\\)"}));  // NOLINT
-  EXPECT_TRUE(std::regex_search(in_(5, subquery_c)->as_column_name(), std::regex{"\\(5\\) IN SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
+  // Test IN and EXISTS here as well, since they need subqueries to function.
+  EXPECT_EQ(replace_addresses(exists_(subquery_c)->as_column_name()),
+            "EXISTS(SUBQUERY (LQP, 0x00000000, Parameters: [a, id=0]))");
+  EXPECT_EQ(replace_addresses(in_(5, subquery_c)->as_column_name()),
+            "(5) IN SUBQUERY (LQP, 0x00000000, Parameters: [a, id=0])");
 }
 
 }  // namespace hyrise

@@ -530,16 +530,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
   auto target_table = std::shared_ptr<Table>{};
+  auto table_id = INVALID_OBJECT_ID;
   if (is_meta_table) {
     auto sql_identifier_resolver =
         _sql_identifier_resolver ? _sql_identifier_resolver : std::make_shared<SQLIdentifierResolver>();
     _translate_meta_table(table_name, sql_identifier_resolver);
-    AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name), "Cannot insert into " + table_name);
+    AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name),
+                "Cannot insert into '" + table_name + "'.");
     target_table = _meta_tables->at(trim_meta_table_name(table_name));
   } else {
-    AssertInput(Hyrise::get().storage_manager.has_table(table_name),
-                std::string{"Did not find a table with name "} + table_name);
-    target_table = Hyrise::get().storage_manager.get_table(table_name);
+    table_id = Hyrise::get().catalog.table_id(table_name);
+    AssertInput(table_id != INVALID_OBJECT_ID, "Did not find a table with name '" + table_name + "'.");
+    target_table = Hyrise::get().storage_manager.get_table(table_id);
   }
 
   auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
@@ -640,7 +642,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   /**
    * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
    */
-  return InsertNode::make(table_name, insert_data_node);
+  return InsertNode::make(table_id, insert_data_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_statement) {
@@ -671,33 +673,30 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
-  AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name");
-
+  AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name.");
   const auto table_name = std::string{update.table->name};
-
-  auto translation_state = _translate_table_ref(*update.table);
-
-  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
-
   auto target_table = std::shared_ptr<Table>{};
+  auto table_id = INVALID_OBJECT_ID;
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
   if (is_meta_table) {
-    AssertInput(Hyrise::get().meta_table_manager.can_update(table_name), "Cannot update " + table_name);
+    AssertInput(Hyrise::get().meta_table_manager.can_update(table_name), "Cannot update '" + table_name + "'.");
     target_table = _meta_tables->at(trim_meta_table_name(table_name));
   } else {
-    AssertInput(Hyrise::get().storage_manager.has_table(table_name),
-                std::string{"Did not find a table with name "} + table_name);
-    target_table = Hyrise::get().storage_manager.get_table(table_name);
+    table_id = Hyrise::get().catalog.table_id(table_name);
+    AssertInput(table_id != INVALID_OBJECT_ID, "Did not find a table with name '" + table_name + "'.");
+    target_table = Hyrise::get().storage_manager.get_table(table_id);
   }
 
-  // The LQP that selects the fields to update
+  // The LQP that selects the fields to update.
+  auto translation_state = _translate_table_ref(*update.table);
   auto selection_lqp = translation_state.lqp;
 
-  // Take a copy intentionally, we're going to replace some of these later
+  // Take a copy intentionally, we're going to replace some of these later.
   auto update_expressions = selection_lqp->output_expressions();
 
   // The update operator wants ReferenceSegments on its left side. Also, we should make sure that we do not update
   // invalid rows.
-  Assert(is_meta_table || lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated");
+  Assert(is_meta_table || lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated.");
 
   if (update.where) {
     const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_resolver);
@@ -713,7 +712,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
         _translate_hsql_expr(*update_clause->value, translation_state.sql_identifier_resolver);
   }
 
-  // Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
+  // Perform type conversions if necessary so the types of the inserted data exactly matches the table column types.
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.
@@ -723,13 +722,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
     }
   }
 
-  // LQP that computes the updated values
+  // LQP that computes the updated values.
   const auto updated_values_lqp = ProjectionNode::make(update_expressions, selection_lqp);
 
   if (is_meta_table) {
     return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Update, selection_lqp, updated_values_lqp);
   }
-  return UpdateNode::make(table_name, selection_lqp, updated_values_lqp);
+  return UpdateNode::make(table_id, selection_lqp, updated_values_lqp);
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::TableRef& hsql_table_ref) {

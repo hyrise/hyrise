@@ -77,7 +77,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
   if (!if_not_exists || !Hyrise::get().storage_manager.has_table(table_name)) {
     // TODO(anybody) chunk size and mvcc not yet specifiable
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-    Hyrise::get().catalog.add_table(table_name, table);
+    const auto table_id = Hyrise::get().catalog.add_table(table_name, table);
 
     const auto& table_key_constraints = _left_input->get_output()->soft_key_constraints();
     for (const auto& table_key_constraint : table_key_constraints) {
@@ -85,7 +85,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     }
 
     // Insert table data (if no data is present, insertion makes no difference)
-    _insert = std::make_shared<Insert>(table_name, _left_input);
+    _insert = std::make_shared<Insert>(table_id, _left_input);
     _insert->set_transaction_context(context);
     _insert->execute();
   }

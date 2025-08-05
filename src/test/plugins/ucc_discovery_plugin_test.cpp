@@ -298,10 +298,10 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
 
   // Insert all columns as candidates
   const auto ucc_candidates = UccCandidates{{_table_id_A, ColumnID{0}},
-                                      {_table_id_A, ColumnID{1}},
-                                      {_table_id_A, ColumnID{2}},
-                                      {_table_id_B, ColumnID{0}},
-                                      {_table_id_B, ColumnID{1}}};
+                                            {_table_id_A, ColumnID{1}},
+                                            {_table_id_A, ColumnID{2}},
+                                            {_table_id_B, ColumnID{0}},
+                                            {_table_id_B, ColumnID{1}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
@@ -436,8 +436,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   _table_A->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   delete_row(_table_A, 3);
 
-  const auto ucc_candidates =
-      UccCandidates{{_table_id_A, ColumnID{0}}, {_table_id_A, ColumnID{1}}};
+  const auto ucc_candidates = UccCandidates{{_table_id_A, ColumnID{0}}, {_table_id_A, ColumnID{1}}};
   _validate_ucc_candidates(ucc_candidates);
 
   // Perform a transaction that does not affect table A but increments the global CommitID.

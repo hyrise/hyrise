@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -27,7 +28,7 @@ class Insert;
  */
 class Update : public AbstractReadWriteOperator {
  public:
-  explicit Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
+  explicit Update(const ObjectID table_to_update_id, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
                   const std::shared_ptr<AbstractOperator>& update_values_op);
 
   const std::string& name() const override;
@@ -47,7 +48,7 @@ class Update : public AbstractReadWriteOperator {
   void _on_rollback_records() override {}
 
  protected:
-  const std::string _table_to_update_name;
+  const ObjectID _table_to_update_id;
   std::shared_ptr<Delete> _delete;
   std::shared_ptr<Insert> _insert;
 };

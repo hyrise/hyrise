@@ -39,8 +39,8 @@ class OperatorDeepCopyTest : public BaseTest {
     _b_a = PQPColumnExpression::from_table(*_table_b, "a");
     _b_b = PQPColumnExpression::from_table(*_table_b, "b");
 
-    Hyrise::get().catalog.add_table(_table_name_a, _table_a);
-    Hyrise::get().catalog.add_table(_table_name_b, _table_b);
+    _table_id_a = Hyrise::get().catalog.add_table("table_a", _table_a);
+    _table_id_b = Hyrise::get().catalog.add_table("table_b", _table_b);
 
     _table_wrapper_a =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
@@ -59,8 +59,8 @@ class OperatorDeepCopyTest : public BaseTest {
 
   std::shared_ptr<PQPColumnExpression> _a_a, _a_b, _b_a, _b_b;
   std::shared_ptr<Table> _table_a, _table_b;
-  std::string _table_name_a = "table_a";
-  std::string _table_name_b = "table_b";
+  ObjectID _table_id_a;
+  ObjectID _table_id_b;
   std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d;
 };
 
@@ -138,7 +138,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyPrint) {
 
 TEST_F(OperatorDeepCopyTest, DeepCopyGetTable) {
   // build and execute get table
-  auto get_table = std::make_shared<GetTable>("table_a");
+  auto get_table = std::make_shared<GetTable>(_table_id_a);
   get_table->execute();
   EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), _table_a);
 
@@ -259,8 +259,8 @@ TEST_F(OperatorDeepCopyTest, DeduplicationAmongRootAndSubqueryPQPs) {
    * In this test, we check whether deep copies preserve deduplication for
    *  uncorrelated subqueries that share a part of the root PQP. Similar to TPC-H Q11.
    */
-  auto get_table_a = std::make_shared<GetTable>(_table_name_a);
-  auto get_table_b = std::make_shared<GetTable>(_table_name_b);
+  auto get_table_a = std::make_shared<GetTable>(_table_id_a);
+  auto get_table_b = std::make_shared<GetTable>(_table_id_b);
 
   // Prepare uncorrelated subquery that uses get_table_a from root PQP
   auto join = std::make_shared<JoinHash>(
@@ -285,8 +285,8 @@ TEST_F(OperatorDeepCopyTest, DeduplicationAmongSubqueries) {
    * In this test, we check whether deep copies preserve deduplication for uncorrelated subqueries that share parts of
    * their PQP among each other. Similar to TPC-DS Q9.
    */
-  auto get_table_a = std::make_shared<GetTable>(_table_name_a);
-  auto get_table_b = std::make_shared<GetTable>(_table_name_b);
+  auto get_table_a = std::make_shared<GetTable>(_table_id_a);
+  auto get_table_b = std::make_shared<GetTable>(_table_id_b);
 
   // Prepare three subqueries for Case expression
   auto group_by_columns = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};

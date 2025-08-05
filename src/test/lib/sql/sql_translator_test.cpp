@@ -36,6 +36,7 @@
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
@@ -56,18 +57,26 @@ class SQLTranslatorTest : public BaseTest {
     int_int_int = load_table("resources/test_data/tbl/int_int_int.tbl");
   }
 
-  void SetUp() override {
-    stored_table_node_int_float = StoredTableNode::make("int_float");
-    stored_table_node_int_string = StoredTableNode::make("int_string");
-    stored_table_node_int_float2 = StoredTableNode::make("int_float2");
-    stored_table_node_int_float5 = StoredTableNode::make("int_float5");
-    stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
+  static void TearDownTestSuite() {
+    int_float = nullptr;
+    int_string = nullptr;
+    int_float2 = nullptr;
+    int_float5 = nullptr;
+    int_int_int = nullptr;
+  }
 
-    Hyrise::get().catalog.add_table("int_float", int_float);
-    Hyrise::get().catalog.add_table("int_string", int_string);
-    Hyrise::get().catalog.add_table("int_float2", int_float2);
-    Hyrise::get().catalog.add_table("int_float5", int_float5);
-    Hyrise::get().catalog.add_table("int_int_int", int_int_int);
+  void SetUp() override {
+    id_int_float = Hyrise::get().catalog.add_table("int_float", int_float);
+    id_int_string = Hyrise::get().catalog.add_table("int_string", int_string);
+    id_int_float2 = Hyrise::get().catalog.add_table("int_float2", int_float2);
+    id_int_float5 = Hyrise::get().catalog.add_table("int_float5", int_float5);
+    id_int_int_int = Hyrise::get().catalog.add_table("int_int_int", int_int_int);
+
+    stored_table_node_int_float = StoredTableNode::make(id_int_float);
+    stored_table_node_int_string = StoredTableNode::make(id_int_string);
+    stored_table_node_int_float2 = StoredTableNode::make(id_int_float2);
+    stored_table_node_int_float5 = StoredTableNode::make(id_int_float5);
+    stored_table_node_int_int_int = StoredTableNode::make(id_int_int_int);
 
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
@@ -96,10 +105,11 @@ class SQLTranslatorTest : public BaseTest {
   }
 
   static inline std::shared_ptr<Table> int_float, int_string, int_float2, int_float5, int_int_int;
-  static inline std::shared_ptr<StoredTableNode> stored_table_node_int_float, stored_table_node_int_string,
+  std::shared_ptr<StoredTableNode> stored_table_node_int_float, stored_table_node_int_string,
       stored_table_node_int_float2, stored_table_node_int_float5, stored_table_node_int_int_int;
   std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_string_a, int_string_b, int_float5_a, int_float5_d,
       int_float2_a, int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
+  ObjectID id_int_float, id_int_string, id_int_float2, id_int_float5, id_int_int_int;
 };
 
 TEST_F(SQLTranslatorTest, NoFromClause) {
@@ -2250,7 +2260,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(id_int_float,
    ProjectionNode::make(expression_vector(10, cast_(12.5, DataType::Float)),
      DummyTableNode::make()));
   // clang-format on
@@ -2263,7 +2273,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(id_int_float,
     ProjectionNode::make(expression_vector(10, cast_(12.5, DataType::Float)),
         DummyTableNode::make()));
   // clang-format on
@@ -2276,7 +2286,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(id_int_float,
     ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), cast_(12.5, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
@@ -2289,7 +2299,7 @@ TEST_F(SQLTranslatorTest, InsertNull) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(id_int_float,
     ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), cast_(12.5, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
@@ -2303,7 +2313,7 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(id_int_float,
     PredicateNode::make(greater_than_(int_float2_a, 5),
       stored_table_node_int_float2));
   // clang-format on
@@ -2316,7 +2326,7 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
 
   // clang-format off
   const auto expected_lqp =
-  InsertNode::make("int_float",
+  InsertNode::make(id_int_float,
     ProjectionNode::make(expression_vector(cast_(5.5, DataType::Int), cast_(12, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
@@ -2349,7 +2359,7 @@ TEST_F(SQLTranslatorTest, DeleteSimple) {
   const auto expected_lqp =
   DeleteNode::make(
     ValidateNode::make(
-      StoredTableNode::make("int_float")));
+      StoredTableNode::make(id_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -2393,6 +2403,7 @@ TEST_F(SQLTranslatorTest, UpdateWithoutMVCC) {
 
 TEST_F(SQLTranslatorTest, UpdateUnconditional) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("UPDATE int_float SET b = b + 1", UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.table_id("int_float");
 
   // clang-format off
   const auto row_subquery_lqp =
@@ -2400,7 +2411,7 @@ TEST_F(SQLTranslatorTest, UpdateUnconditional) {
     stored_table_node_int_float);
 
   const auto expected_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(table_id,
     row_subquery_lqp,
     ProjectionNode::make(expression_vector(int_float_a, add_(int_float_b, value_(1))),
       row_subquery_lqp));
@@ -2412,6 +2423,7 @@ TEST_F(SQLTranslatorTest, UpdateUnconditional) {
 TEST_F(SQLTranslatorTest, UpdateConditional) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("UPDATE int_float SET b = 3.2 WHERE a > 1;", UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.table_id("int_float");
 
   // clang-format off
   const auto row_subquery_lqp =
@@ -2420,7 +2432,7 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
       stored_table_node_int_float));
 
   const auto expected_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(table_id,
     row_subquery_lqp,
     ProjectionNode::make(expression_vector(int_float_a, cast_(3.2, DataType::Float)),
       row_subquery_lqp));
@@ -2432,6 +2444,7 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
 TEST_F(SQLTranslatorTest, UpdateCast) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("UPDATE int_float SET a = b, b = 3 WHERE a > 1;", UseMvcc::Yes);
+  const auto table_id = Hyrise::get().catalog.table_id("int_float");
 
   // clang-format off
   const auto row_subquery_lqp =
@@ -2440,7 +2453,7 @@ TEST_F(SQLTranslatorTest, UpdateCast) {
       stored_table_node_int_float));
 
   const auto expected_lqp =
-  UpdateNode::make("int_float",
+  UpdateNode::make(table_id,
     row_subquery_lqp,
     ProjectionNode::make(expression_vector(cast_(int_float_b, DataType::Int), cast_(3, DataType::Float)),
       row_subquery_lqp));
@@ -2651,7 +2664,7 @@ TEST_F(SQLTranslatorTest, InvalidConstraints) {
 TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("CREATE TABLE a_table AS SELECT * FROM int_float");
 
-  const auto stored_table_node = StoredTableNode::make("int_float");
+  const auto stored_table_node = StoredTableNode::make(id_int_float);
   const auto expected_lqp = CreateTableNode::make("a_table", false, stored_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

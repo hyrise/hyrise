@@ -20,14 +20,16 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class LogicalQueryPlanTest : public BaseTest {
  public:
   void SetUp() override {
-    Hyrise::get().catalog.add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl"));
-    Hyrise::get().catalog.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
+    const auto int_int_id =
+        Hyrise::get().catalog.add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl"));
+    const auto int_int_int_id =
+        Hyrise::get().catalog.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
-    node_int_int = StoredTableNode::make("int_int");
+    node_int_int = StoredTableNode::make(int_int_id);
     a1 = node_int_int->get_column("a");
     b1 = node_int_int->get_column("b");
 
-    node_int_int_int = StoredTableNode::make("int_int_int");
+    node_int_int_int = StoredTableNode::make(int_int_int_id);
     a2 = node_int_int_int->get_column("a");
     b2 = node_int_int_int->get_column("b");
     c2 = node_int_int_int->get_column("c");
@@ -106,8 +108,9 @@ class LogicalQueryPlanTest : public BaseTest {
 };
 
 TEST_F(LogicalQueryPlanTest, LQPColumnExpressionHash) {
-  const auto node_int_int_1 = StoredTableNode::make("int_int");
-  const auto node_int_int_2 = StoredTableNode::make("int_int");
+  const auto int_int_id = Hyrise::get().catalog.table_id("int_int");
+  const auto node_int_int_1 = StoredTableNode::make(int_int_id);
+  const auto node_int_int_2 = StoredTableNode::make(int_int_id);
 
   const auto expression_a = std::make_shared<LQPColumnExpression>(node_int_int_1, ColumnID{0});
   const auto expression_a_1 = std::make_shared<LQPColumnExpression>(node_int_int_1, ColumnID{0});

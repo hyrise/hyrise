@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_non_query_node.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -15,13 +16,13 @@ class AbstractExpression;
  */
 class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractNonQueryNode {
  public:
-  explicit UpdateNode(const std::string& init_table_name);
+  explicit UpdateNode(const ObjectID init_table_id);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   bool is_column_nullable(const ColumnID /*column_id*/) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
 
-  const std::string table_name;
+  const ObjectID table_id;
 
  protected:
   size_t _on_shallow_hash() const override;

@@ -49,11 +49,11 @@ class MvccDeletePluginSystemTest : public BaseTest {
       _table->last_chunk()->set_immutable();
       begin_value += CHUNK_SIZE;
     }
-    Hyrise::get().catalog.add_table(_t_name_test, _table);
+    _table_id_test = Hyrise::get().catalog.add_table(_table_name_test, _table);
 
     // For some dummy inserts later on, we load an int table
-    auto t = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{10});
-    Hyrise::get().catalog.add_table(_t_name_ints, t);
+    // auto t = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{10});
+    // Hyrise::get().catalog.add_table(_t_name_ints, t);
   }
 
  protected:
@@ -68,14 +68,14 @@ class MvccDeletePluginSystemTest : public BaseTest {
       return;
     }
 
-    const auto gt = std::make_shared<GetTable>(_t_name_test);
+    const auto gt = std::make_shared<GetTable>(_table_id_test);
 
     const auto validate = std::make_shared<Validate>(gt);
 
     const auto column = pqp_column_(ColumnID{0}, DataType::Int, false, "number");
     const auto where = std::make_shared<TableScan>(validate, equals_(column, static_cast<int>(_counter)));
 
-    const auto update = std::make_shared<Update>(_t_name_test, where, where);
+    const auto update = std::make_shared<Update>(_table_id_test, where, where);
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     update->set_transaction_context_recursively(transaction_context);
 
@@ -99,7 +99,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
   void validate_table() {
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-    const auto gt = std::make_shared<GetTable>(_t_name_test);
+    const auto gt = std::make_shared<GetTable>(_table_id_test);
     gt->set_transaction_context(transaction_context);
 
     const auto validate = std::make_shared<Validate>(gt);
@@ -122,8 +122,9 @@ class MvccDeletePluginSystemTest : public BaseTest {
   constexpr static ChunkID INITIAL_CHUNK_COUNT{3};
   constexpr static ChunkOffset CHUNK_SIZE{200};
   constexpr static uint32_t INITIAL_UPDATE_OFFSET{220};
-  const std::string _t_name_test{"mvcc_test"};
-  const std::string _t_name_ints{"int_values"};
+  const std::string _table_name_test{"mvcc_test"};
+  // const std::string _t_name_ints{"int_values"};
+  ObjectID _table_id_test;
 
   std::atomic_uint32_t _counter = INITIAL_UPDATE_OFFSET;
   std::shared_ptr<Table> _table;
@@ -257,7 +258,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       // To increase the global _last_commit_id, we need to execute a transaction with read-write operators
       // We perform some dummy updates so that the table is unmodified and the validation routine does not complain
       auto pipeline =
-          SQLPipelineBuilder{std::string{"UPDATE " + _t_name_test + " SET number = number WHERE number = -1"}}
+          SQLPipelineBuilder{std::string{"UPDATE " + _table_name_test + " SET number = number WHERE number = -1"}}
               .create_pipeline();
 
       // Execute and verify update transaction

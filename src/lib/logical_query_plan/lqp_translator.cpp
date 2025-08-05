@@ -461,25 +461,21 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = _translate_node_recursively(node->left_input());
-  auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
-  return std::make_shared<Insert>(insert_node->table_name, input_operator);
+  return std::make_shared<Insert>(static_cast<const InsertNode&>(*node).table_id, input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator = _translate_node_recursively(node->left_input());
-  auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
-  return std::make_shared<Delete>(input_operator);
+  return std::make_shared<Delete>(_translate_node_recursively(node->left_input()));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
-
   const auto input_operator_left = _translate_node_recursively(node->left_input());
   const auto input_operator_right = _translate_node_recursively(node->right_input());
 
-  return std::make_shared<Update>(update_node->table_name, input_operator_left, input_operator_right);
+  return std::make_shared<Update>(static_cast<const UpdateNode&>(*node).table_id, input_operator_left,
+                                  input_operator_right);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(

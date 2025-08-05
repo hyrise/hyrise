@@ -147,7 +147,7 @@ TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
 }
 
 TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsSingle) {
-  const auto pqp_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+  const auto pqp_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>(ObjectID{17}));
 
   auto subqueries = find_pqp_subquery_expressions(pqp_subquery);
 
@@ -156,8 +156,8 @@ TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsSingle) {
 }
 
 TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsMultiple) {
-  const auto pqp_subquery_a = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
-  const auto pqp_subquery_b = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_b"));
+  const auto pqp_subquery_a = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>(ObjectID{17}));
+  const auto pqp_subquery_b = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>(ObjectID{1717}));
   auto expression = add_(pqp_subquery_a, sub_(value_(1), pqp_subquery_b));
 
   auto subqueries = find_pqp_subquery_expressions(expression);
@@ -169,9 +169,9 @@ TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsMultiple) {
 
 TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsIgnoreNested) {
   // (1) Nested Subquery
-  const auto nested_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+  const auto nested_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>(ObjectID{17}));
   // (2) Root Subquery
-  const auto projection = std::make_shared<Projection>(std::make_shared<GetTable>("table_b"),
+  const auto projection = std::make_shared<Projection>(std::make_shared<GetTable>(ObjectID{1717}),
                                                        expression_vector(add_(nested_subquery, value_(1))));
   const auto subquery = std::make_shared<PQPSubqueryExpression>(projection);
 

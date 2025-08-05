@@ -315,7 +315,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
     node_abc);
 
   _lqp =
-  UpdateNode::make("dummy",
+  UpdateNode::make(ObjectID{17},
     select_rows_lqp,
     ProjectionNode::make(expression_vector(a, add_(b, 1), c),
       select_rows_lqp));
@@ -331,7 +331,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
 
   // clang-format off
   _lqp =
-  InsertNode::make("dummy",
+  InsertNode::make(ObjectID{17},
     PredicateNode::make(greater_than_(a, 5),
       node_abc));
   // clang-format on

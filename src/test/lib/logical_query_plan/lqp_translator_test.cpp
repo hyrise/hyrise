@@ -69,28 +69,28 @@ class LQPTranslatorTest : public BaseTest {
     table_int_float5 = load_table("resources/test_data/tbl/int_float5.tbl");
     table_alias_name = load_table("resources/test_data/tbl/table_alias_name.tbl");
 
-    Hyrise::get().catalog.add_table("table_int_float", table_int_float);
-    Hyrise::get().catalog.add_table("table_int_string", table_int_string);
-    Hyrise::get().catalog.add_table("table_int_float2", table_int_float2);
-    Hyrise::get().catalog.add_table("table_int_float5", table_int_float5);
+    const auto int_float_id = Hyrise::get().catalog.add_table("table_int_float", table_int_float);
+    const auto int_string_id = Hyrise::get().catalog.add_table("table_int_string", table_int_string);
+    const auto int_float2_id = Hyrise::get().catalog.add_table("table_int_float2", table_int_float2);
+    const auto int_float5_id = Hyrise::get().catalog.add_table("table_int_float5", table_int_float5);
     Hyrise::get().catalog.add_table("table_alias_name", table_alias_name);
     Hyrise::get().catalog.add_table("int_float_chunked",
-                                            load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1}));
+                                    load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1}));
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
 
-    int_float_node = StoredTableNode::make("table_int_float");
+    int_float_node = StoredTableNode::make(int_float_id);
     int_float_a = int_float_node->get_column("a");
     int_float_b = int_float_node->get_column("b");
 
-    int_string_node = StoredTableNode::make("table_int_string");
+    int_string_node = StoredTableNode::make(int_string_id);
     int_string_a = int_string_node->get_column("a");
     int_string_b = int_string_node->get_column("b");
 
-    int_float2_node = StoredTableNode::make("table_int_float2");
+    int_float2_node = StoredTableNode::make(int_float2_id);
     int_float2_a = int_float2_node->get_column("a");
     int_float2_b = int_float2_node->get_column("b");
 
-    int_float5_node = StoredTableNode::make("table_int_float5");
+    int_float5_node = StoredTableNode::make(int_float5_id);
     int_float5_a = int_float5_node->get_column("a");
     int_float5_d = int_float5_node->get_column("d");
   }
@@ -457,9 +457,10 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
    * Build LQP and translate to PQP.
    */
-  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
+  const auto table_id = Hyrise::get().catalog.table_id("int_float_chunked");
+  const auto stored_table_node = StoredTableNode::make(table_id);
 
-  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   const auto index_column_id = ColumnID{1};
   const auto index_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   table->create_partial_hash_index(index_column_id, index_chunk_ids);
@@ -495,8 +496,9 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   /**
    * Build LQP and translate to PQP.
    */
-  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
-  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  const auto table_id = Hyrise::get().catalog.table_id("int_float_chunked");
+  const auto stored_table_node = StoredTableNode::make(table_id);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
 
   table->create_partial_hash_index(ColumnID{1}, {ChunkID{0}, ChunkID{2}});
 
@@ -538,8 +540,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeEntirelyPrunedIndexScan) {
   /**
    * Build LQP and translate to PQP.
    */
-  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
-  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  const auto table_id = Hyrise::get().catalog.table_id("int_float_chunked");
+  const auto stored_table_node = StoredTableNode::make(table_id);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
 
   table->create_partial_hash_index(ColumnID{1}, {ChunkID{0}, ChunkID{2}});
 
@@ -564,9 +567,10 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
    * Build LQP and translate to PQP.
    */
-  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
+  const auto table_id = Hyrise::get().catalog.table_id("int_float_chunked");
+  const auto stored_table_node = StoredTableNode::make(table_id);
 
-  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   const auto index_column_id = ColumnID{1};
   const auto index_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   table->create_partial_hash_index(index_column_id, index_chunk_ids);
@@ -602,9 +606,10 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   /**
    * Build LQP and translate to PQP.
    */
-  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
+  const auto table_id = Hyrise::get().catalog.table_id("int_float_chunked");
+  const auto stored_table_node = StoredTableNode::make(table_id);
 
-  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
   const auto index_column_ids = std::vector<ColumnID>{ColumnID{1}};
   const auto index_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -761,7 +766,8 @@ TEST_F(LQPTranslatorTest, LimitNode) {
   /**
    * Build LQP and translate to PQP.
    */
-  const auto stored_table_node = StoredTableNode::make("table_int_float");
+  const auto table_id = Hyrise::get().catalog.table_id("table_int_float");
+  const auto stored_table_node = StoredTableNode::make(table_id);
 
   auto limit_node = LimitNode::make(value_(2));
   limit_node->set_left_input(stored_table_node);
@@ -955,11 +961,12 @@ TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
    *
    */
 
-  auto int_float_node_1 = StoredTableNode::make("table_int_float2");
+  const auto int_float2_id = Hyrise::get().catalog.table_id("table_int_float2");
+  auto int_float_node_1 = StoredTableNode::make(int_float2_id);
   auto int_float_a_1 = int_float_node_1->get_column("a");
   auto int_float_b_1 = int_float_node_1->get_column("b");
 
-  auto int_float_node_2 = StoredTableNode::make("table_int_float2");
+  auto int_float_node_2 = StoredTableNode::make(int_float2_id);
   auto int_float_a_2 = int_float_node_2->get_column("a");
   auto int_float_b_2 = int_float_node_2->get_column("b");
 

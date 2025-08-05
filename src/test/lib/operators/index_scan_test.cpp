@@ -54,14 +54,14 @@ class OperatorsIndexScanTest : public BaseTest {
     int_int_7->create_partial_hash_index(_column_id, _chunk_ids);
     int_int_5->create_partial_hash_index(_column_id, _chunk_ids_partly_compressed);
 
-    Hyrise::get().catalog.add_table("int_int_7", int_int_7);
-    Hyrise::get().catalog.add_table("int_int_5", int_int_5);
+    const auto int_int_5_id = Hyrise::get().catalog.add_table("int_int_5", int_int_5);
+    const auto int_int_7_id = Hyrise::get().catalog.add_table("int_int_7", int_int_7);
 
-    _int_int = std::make_shared<GetTable>("int_int_7");
+    _int_int = std::make_shared<GetTable>(int_int_7_id);
     _int_int->never_clear_output();
     _int_int->execute();
 
-    _int_int_small_chunk = std::make_shared<GetTable>("int_int_5");
+    _int_int_small_chunk = std::make_shared<GetTable>(int_int_5_id);
     _int_int_small_chunk->never_clear_output();
     _int_int_small_chunk->execute();
 
@@ -192,7 +192,7 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
   std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
   table->create_partial_hash_index(ColumnID{0}, chunk_ids);
 
-  Hyrise::get().catalog.add_table("table", table);
+  const auto table_id = Hyrise::get().catalog.add_table("table", table);
 
   const auto pruned_chunk_id_tests = std::vector<std::pair<std::vector<ChunkID>, std::vector<AllTypeVariant>>>{
       // Prunes chunks with values 6, 10, 12, and 14.
@@ -204,7 +204,7 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
        {}}};
 
   for (const auto& [pruned_chunk_ids, result] : pruned_chunk_id_tests) {
-    auto get_table = std::make_shared<GetTable>("table", pruned_chunk_ids, std::vector<ColumnID>{});
+    auto get_table = std::make_shared<GetTable>(table_id, pruned_chunk_ids, std::vector<ColumnID>{});
     get_table->never_clear_output();
     get_table->execute();
 
@@ -218,8 +218,6 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
 
     ASSERT_COLUMN_EQ(index_scan->get_output(), ColumnID{0}, result);
   }
-
-  Hyrise::get().catalog.drop_table("table");
 }
 
 TEST_F(OperatorsIndexScanTest, OperatorName) {

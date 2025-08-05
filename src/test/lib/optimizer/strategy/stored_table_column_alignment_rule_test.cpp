@@ -9,10 +9,9 @@ namespace hyrise {
 class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    const auto table_id = Hyrise::get().catalog.add_table("t_a",
-                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
-    Hyrise::get().catalog.add_table("t_b",
-                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
+    const auto table_id =
+        Hyrise::get().catalog.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
+    Hyrise::get().catalog.add_table("t_b", load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
     _stored_table_node_left = StoredTableNode::make(table_id);
     _stored_table_node_left->set_pruned_chunk_ids({ChunkID{2}});

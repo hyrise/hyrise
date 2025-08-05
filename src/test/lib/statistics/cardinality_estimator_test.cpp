@@ -883,8 +883,8 @@ TEST_F(CardinalityEstimatorTest, Sort) {
 }
 
 TEST_F(CardinalityEstimatorTest, StoredTable) {
-  Hyrise::get().catalog.add_table("t", load_table("resources/test_data/tbl/int.tbl"));
-  EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make("t")), 3);
+  const auto table_id = Hyrise::get().catalog.add_table("t", load_table("resources/test_data/tbl/int.tbl"));
+  EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make(table_id)), 3);
 }
 
 TEST_F(CardinalityEstimatorTest, StaticTable) {
@@ -942,7 +942,7 @@ TEST_F(CardinalityEstimatorTest, Union) {
 
 TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   // Test that, basically, the CardinalityEstimator doesn't crash when processing non-query nodes. There is not much
-  // more to test here
+  // more to test here.
 
   const auto create_table_lqp = CreateTableNode::make("t", false, node_a);
   EXPECT_EQ(estimator.estimate_cardinality(create_table_lqp), 0.0);
@@ -956,10 +956,10 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   const auto create_view_lqp = CreateViewNode::make("v", lqp_view, false);
   EXPECT_EQ(estimator.estimate_cardinality(create_view_lqp), 0.0);
 
-  const auto update_lqp = UpdateNode::make("t", node_a, node_b);
+  const auto update_lqp = UpdateNode::make(ObjectID{17}, node_a, node_b);
   EXPECT_EQ(estimator.estimate_cardinality(update_lqp), 0.0);
 
-  const auto insert_lqp = InsertNode::make("t", node_a);
+  const auto insert_lqp = InsertNode::make(ObjectID{17}, node_a);
   EXPECT_EQ(estimator.estimate_cardinality(insert_lqp), 0.0);
 
   EXPECT_EQ(estimator.estimate_cardinality(DeleteNode::make(node_a)), 0.0);
@@ -1254,7 +1254,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   }
 
   // Adding the table to the StorageManager creates statistics.
-  Hyrise::get().catalog.add_table("table_u", table_u);
+  const auto table_id_u = Hyrise::get().catalog.add_table("table_u", table_u);
   EXPECT_TRUE(table_u->table_statistics());
 
   // Round two: The node has base table statistics. There should not be statistics for pruned and unused columns. We
@@ -1276,7 +1276,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[9]));
 
   // Create the same query as for the StaticTableNode, but with pruned columns.
-  const auto node_v = StoredTableNode::make("table_u");
+  const auto node_v = StoredTableNode::make(table_id_u);
   const auto pruned_column_ids = std::vector{{ColumnID{1}, ColumnID{3}, ColumnID{4}, ColumnID{7}, ColumnID{9}}};
   node_v->set_pruned_column_ids(pruned_column_ids);
 
@@ -1320,11 +1320,11 @@ TEST_F(CardinalityEstimatorTest, AssertRequiredStatistics) {
   // for an aggregation) or no statistics are provided at all (e.g., for a StaticTableNode).
 
   const auto table_u = load_table("resources/test_data/tbl/int_float_double_string.tbl");
-  Hyrise::get().catalog.add_table("table_u", table_u);
+  const auto table_id_u = Hyrise::get().catalog.add_table("table_u", table_u);
   // After adding to the StorageManager, the table should have statistics.
   const auto table_u_statistics = table_u->table_statistics();
   ASSERT_TRUE(table_u_statistics);
-  const auto node_u = StoredTableNode::make("table_u");
+  const auto node_u = StoredTableNode::make(table_id_u);
   const auto u_a = node_u->get_column("i");
   const auto u_b = node_u->get_column("f");
   const auto u_d = node_u->get_column("s");

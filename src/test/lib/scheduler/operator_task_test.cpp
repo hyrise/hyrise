@@ -38,7 +38,6 @@ class OperatorTaskTest : public BaseTest {
   std::shared_ptr<Table> _test_table_b;
   ObjectID _table_id_a;
   ObjectID _table_id_b;
-
 };
 
 TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {

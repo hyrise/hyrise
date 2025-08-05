@@ -542,7 +542,7 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
 TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                              ChunkOffset{3}, UseMvcc::Yes);
-  Hyrise::get().catalog.add_table("table_a", table);
+  const auto table_id = Hyrise::get().catalog.add_table("table_a", table);
 
   const auto values_to_insert =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
@@ -560,7 +560,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     threads.emplace_back([&]() {
       for (auto iteration = uint32_t{0}; iteration < insert_count; ++iteration) {
         const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
-        const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
+        const auto insert = std::make_shared<Insert>(table_id, table_wrapper);
 
         // Commit only 50% of transactions. Thus, there should be committed and rolled back operators that both mark
         // chunks as immutable.

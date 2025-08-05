@@ -35,4 +35,5 @@ class CreateView : public AbstractReadOnlyOperator {
   const std::shared_ptr<LQPView> _view;
   const bool _if_not_exists;
 };
+
 }  // namespace hyrise

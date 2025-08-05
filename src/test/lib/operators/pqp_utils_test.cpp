@@ -14,14 +14,14 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class PQPUtilsTest : public BaseTest {
  public:
   void SetUp() override {
-    node_a = std::make_shared<GetTable>("foo");
+    node_a = std::make_shared<GetTable>(ObjectID{1});
   }
 
   std::shared_ptr<AbstractOperator> node_a;
 };
 
 TEST_F(PQPUtilsTest, VisitPQPStreamlinePQP) {
-  const auto node_b = std::make_shared<GetTable>("bar");
+  const auto node_b = std::make_shared<GetTable>(ObjectID{17});
   const auto node_c = std::make_shared<JoinHash>(
       node_b, node_a, JoinMode::Inner,
       OperatorJoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
@@ -71,7 +71,7 @@ TEST_F(PQPUtilsTest, VisitPQPNonConstOperators) {
 }
 
 TEST_F(PQPUtilsTest, VisitPQPConstOperators) {
-  const auto node_b = std::make_shared<const GetTable>("bar");
+  const auto node_b = std::make_shared<const GetTable>(ObjectID{1312});
   const auto node_c = std::make_shared<const Limit>(node_b, value_(1));
 
   const auto expected_nodes = std::vector<std::shared_ptr<const AbstractOperator>>{node_c, node_b};

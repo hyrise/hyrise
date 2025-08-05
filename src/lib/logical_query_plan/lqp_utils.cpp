@@ -298,12 +298,16 @@ std::unordered_set<std::string> lqp_find_modified_tables(const std::shared_ptr<A
 
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
-      case LQPNodeType::Insert:
-        modified_tables.insert(static_cast<InsertNode&>(*node).table_name);
+      case LQPNodeType::Insert: {
+        const auto& table_name = Hyrise::get().catalog.table_name(static_cast<const InsertNode&>(*node).table_id);
+        modified_tables.insert(table_name);
         break;
-      case LQPNodeType::Update:
-        modified_tables.insert(static_cast<UpdateNode&>(*node).table_name);
+      }
+      case LQPNodeType::Update: {
+        const auto& table_name = Hyrise::get().catalog.table_name(static_cast<const UpdateNode&>(*node).table_id);
+        modified_tables.insert(table_name);
         break;
+      }
       case LQPNodeType::Delete: {
         visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
           if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(sub_delete_node)) {
