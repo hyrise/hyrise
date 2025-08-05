@@ -203,8 +203,6 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   // clang-format on
   _apply_rule(rule, _lqp);
 
-  _apply_rule(rule, _lqp);
-
   EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because used FD was derived from schema-given UCC.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }

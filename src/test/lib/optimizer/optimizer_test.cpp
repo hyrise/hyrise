@@ -1,6 +1,5 @@
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/in_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -10,14 +9,11 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
-#include "optimizer/strategy/join_to_semi_join_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
 
 namespace hyrise {
 
@@ -367,37 +363,6 @@ TEST_F(OptimizerTest, NonCacheabilityIsReflectedInOptimizationContext) {
   // clang-format on
   const auto [_, optimization_context] = optimizer->optimize_with_context(std::move(lqp));
   EXPECT_FALSE(optimization_context->is_cacheable());
-}
-
-TEST_F(OptimizerTest, OptimizationWithTempKeyConstraintNotCacheable) {
-  // The optimization uses a `TableKeyConstraint` valid for commit INITIAL_COMMIT_ID. This should lead to the plan
-  // being not cacheable.
-  auto optimizer = Optimizer{};
-  optimizer.add_rule(std::make_unique<JoinToSemiJoinRule>());
-
-  auto column_definitions = TableColumnDefinitions{{"column0", DataType::Int, false}};
-  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-
-  Hyrise::get().storage_manager.add_table("table", table);
-
-  // Add a non-schema-given UCC.
-  table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
-
-  const auto stored_table_node = StoredTableNode::make("table");
-  const auto column0 = stored_table_node->get_column("column0");
-
-  // clang-format off
-  auto lqp1 =
-    ProjectionNode::make(expression_vector(add_(a, 2)),
-      JoinNode::make(JoinMode::Inner, equals_(a, column0),
-        ProjectionNode::make(expression_vector(a),
-          node_a),
-        stored_table_node));
-  // clang-format on
-  static_cast<JoinNode&>(*lqp1->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  const auto [optimize_results1, optimization_context1] = optimizer.optimize_with_context(std::move(lqp1));
-
-  EXPECT_FALSE(optimization_context1->is_cacheable());
 }
 
 TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {

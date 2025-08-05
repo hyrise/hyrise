@@ -91,7 +91,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
 
   // The rule should only rewrite inner and semi joins. The UCC is not schema-given. Therefore, the result should not
   // be cacheable in this case.
-  EXPECT_TRUE((GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) || !_optimization_context.is_cacheable());
+  EXPECT_FALSE((GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi) && _optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
