@@ -115,6 +115,86 @@ inline void encode_integer(uint8_t* dest, const T value, const size_t data_lengt
 template void encode_integer<int32_t>(uint8_t* dest, const int32_t value, const size_t data_length);
 template void encode_integer<int64_t>(uint8_t* dest, const int64_t value, const size_t data_length);
 
+// Finds the cut point for the merge path diagonal inspired by https://arxiv.org/pdf/1406.2628
+template <typename T, typename Compare>
+inline std::pair<size_t, size_t> find_cut_point(const T* const left, const size_t len_left, const T* const right,
+                                                const size_t len_right, const size_t diag, Compare comp) {
+  auto low = diag > len_right ? diag - len_right : 0;
+  auto high = std::min(diag, len_left);
+
+  while (low < high) {
+    const auto cut_left = (low + high) / 2;
+    const auto cut_right = diag - cut_left;
+
+    const bool left_smaller = (cut_left < len_left) && (cut_right == 0 || comp(left[cut_left], right[cut_right - 1]));
+
+    if (left_smaller) {
+      low = cut_left + 1;
+    } else {
+      high = cut_left;
+    }
+  }
+  return {low, diag - low};
+}
+
+// Parallel merge of two consecutive runs using Merge Path.
+template <typename Compare>
+void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mid, const size_t end, Compare comp,
+                         size_t max_workers) {
+  TRACE_EVENT("Sort", "MergePathParallel");
+  const auto len_left = mid - start;
+  const auto len_right = end - mid;
+  const auto total_len = len_left + len_right;
+
+  const auto workers = static_cast<size_t>(std::min(max_workers, total_len));
+
+  TRACE_EVENT_BEGIN("Sort", "MergePathParallel::AllocateBuffer");
+  auto dest = RowIDPosList{};
+  dest.resize(total_len);
+  TRACE_EVENT_END("Sort");
+
+  // Compute cut points
+  struct Cut {
+    size_t a;
+    size_t b;
+  };
+
+  auto cuts = std::vector<Cut>(workers + 1);
+  cuts.front() = {0, 0};
+  cuts.back() = {len_left, len_right};
+
+  const auto* left = rows.data() + start;
+  const auto* right = rows.data() + mid;
+
+  for (auto index = size_t{1}; index < workers; ++index) {
+    const auto diag = index * total_len / workers;
+    const auto [a, b] = find_cut_point(left, len_left, right, len_right, diag, comp);
+    cuts[index] = {a, b};
+  }
+
+  // Launch worker tasks
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(workers);
+
+  for (auto task_idx = size_t{0}; task_idx < workers; ++task_idx) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, task_idx] {
+      TRACE_EVENT("Sort", "MergePathParallel::Worker", "TaskIndex", task_idx);
+      const auto cutL = cuts[task_idx];
+      const auto cutR = cuts[task_idx + 1];
+
+      const auto* l_begin = left + cutL.a;
+      const auto* l_end = left + cutR.a;
+      const auto* r_begin = right + cutL.b;
+      const auto* r_end = right + cutR.b;
+
+      auto* out = dest.data() + (cutL.a + cutL.b);
+      std::merge(l_begin, l_end, r_begin, r_end, out, comp);
+    }));
+  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  std::move(dest.begin(), dest.end(), rows.begin() + start);
+}
+
 template <typename Compare>
 void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
   TRACE_EVENT("Sort", "ParallelSortRowIDs");
@@ -123,7 +203,7 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
 
   if (!is_multithreaded || row_count < SMALL_ARRAY_THRESHOLD) {
     TRACE_EVENT("Sort", "ParallelSortRowIDs::SmallArray");
-    std::sort(rows.begin(), rows.end(), comp);
+    boost::sort::pdqsort(rows.begin(), rows.end(), comp);
     return;
   }
 
@@ -132,19 +212,19 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
   if (!scheduler) {
     throw std::logic_error("Scheduler should be instance of NodeQueueScheduler.");
   }
-  auto num_workers = scheduler->active_worker_count().load();
-  size_t block = (row_count + num_workers - 1) / num_workers;
+  const auto num_workers = static_cast<size_t>(scheduler->active_worker_count().load());
+  const auto block = (row_count + num_workers - 1) / num_workers;  // no auto because of call to std::min later
 
   // 2) sort each block in parallel
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(num_workers);
-  for (auto t = int16_t{0}; t < num_workers; ++t) {
-    size_t start = t * block;
-    size_t end = std::min(start + block, row_count);
+  for (auto thread_idx = size_t{0}; thread_idx < num_workers; ++thread_idx) {
+    const auto start = thread_idx * block;
+    const auto end = std::min(start + block, row_count);
     if (start < end) {
       jobs.emplace_back(std::make_shared<JobTask>([start, end, &rows, &comp]() {
         TRACE_EVENT("Sort", "ParallelSortRowIDs::Sort");
-        std::sort(rows.begin() + start, rows.begin() + end, comp);
+        boost::sort::pdqsort(rows.begin() + start, rows.begin() + end, comp);
       }));
     }
   }
@@ -157,12 +237,12 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
     for (size_t left = 0; left + run < row_count; left += 2 * run) {
       size_t mid = left + run;
       size_t right = std::min(left + 2 * run, row_count);
-      jobs.emplace_back(std::make_shared<JobTask>([left, mid, right, &rows, &comp]() {
-        TRACE_EVENT("Sort", "ParallelSortRowIDs::Merge");
-        std::inplace_merge(rows.begin() + left, rows.begin() + mid, rows.begin() + right, comp);
-      }));
+
+      merge_path_parallel(rows, left, mid, right, comp, num_workers);
     }
-    scheduler->schedule_and_wait_for_tasks(jobs);
+    if (!jobs.empty()) {
+      scheduler->schedule_and_wait_for_tasks(jobs);
+    }
     run *= 2;
   }
 }
@@ -535,14 +615,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
    *********************************************** Key-Generation ***********************************************
    **************************************************************************************************************/
 
-  // Custom comparator function used for sorting
-  auto compare_rows = [&](const RowID a, const RowID b) {
-    auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
-    auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
-
-    return memcmp(key_a, key_b, key_width) < 0;
-  };
-
   TRACE_EVENT_BEGIN("Sort", "Execute::GenerateKeys");
   // job queue for generating keys in parallel
   auto keygen_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -614,6 +686,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   /**************************************************************************************************************
    ************************************************** Mergesort *************************************************
    **************************************************************************************************************/
+
+  // Custom comparator function used for sorting
+  auto compare_rows = [&](const RowID a, const RowID b) {
+    auto* key_a = &key_buffer[(row_id_offsets[a.chunk_id] + a.chunk_offset) * key_width];
+    auto* key_b = &key_buffer[(row_id_offsets[b.chunk_id] + b.chunk_offset) * key_width];
+
+    return memcmp(key_a, key_b, key_width) < 0;
+  };
 
   parallel_sort_rowids(row_ids, compare_rows);
   auto merge_sort_time = timer.lap();
