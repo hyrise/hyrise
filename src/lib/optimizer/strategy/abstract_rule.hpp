@@ -51,8 +51,7 @@ class AbstractRule {
    * DO NOT CALL THIS FUNCTION RECURSIVELY!
    *  The reason for this can be found in diamond LQPs: When using "trivial" recursion, we would go down both on the
    *  left and the right side of the diamond. On both sides, we would reach the bottom of the diamond. From there, we
-   *  would look at each node twice. visit_lqp prevents this by tracking which nodes have already been visited and
-   *  avoiding visiting a node s.
+   *  would look at each node twice. `visit_lqp` prevents this by tracking which nodes have already been visited.
    */
   virtual void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
                                                  OptimizationContext& optimization_context) const = 0;
