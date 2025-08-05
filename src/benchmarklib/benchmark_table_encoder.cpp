@@ -1,9 +1,7 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
-#include <iostream>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -13,6 +11,7 @@
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
@@ -24,11 +23,13 @@ namespace {
 using namespace hyrise;  // NOLINT
 
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
-  auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
+  auto chunk_encoding_spec = ChunkEncodingSpec{};
+  const auto column_count = chunk.column_count();
+  chunk_encoding_spec.reserve(column_count);
 
-  for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto& abstract_segment = chunk.get_segment(column_id);
-    chunk_encoding_spec[column_id] = get_segment_encoding_spec(abstract_segment);
+    chunk_encoding_spec.push_back(get_segment_encoding_spec(abstract_segment));
   }
 
   return chunk_encoding_spec;
@@ -69,6 +70,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
    */
   const auto& type_mapping = encoding_config.type_encoding_mapping;
   const auto& custom_mapping = encoding_config.custom_encoding_mapping;
+  const auto& default_encoding_spec = encoding_config.default_encoding_spec;
 
   const auto& column_mapping_it = custom_mapping.find(table_name);
   const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
@@ -98,19 +100,16 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     }
 
     // No column-specific or type-specific encoding was specified.
-    // Use default if it is compatible with the column type or leave column Unencoded if it is not.
-    if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
-      chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
-    } else {
-      // Use a stringstream here to bundle all writes into a single one and avoid locking.
-      auto output = std::ostringstream{};
-      output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      output << column_data_type << " cannot be encoded as ";
-      output << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      output << "left Unencoded.\n";
-      std::cout << output.str();
-      chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
+    if (default_encoding_spec && encoding_supports_data_type(default_encoding_spec->encoding_type, column_data_type)) {
+      chunk_encoding_spec.push_back(*default_encoding_spec);
+      continue;
     }
+
+    const auto segment_values_are_unique = column_is_unique(table, column_id);
+    const auto segment_values_are_key = column_is_key(table, column_id);
+    const auto segment_values_might_be_unique = column_might_be_unique(table, column_id);
+    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(
+        column_data_type, segment_values_are_unique, segment_values_are_key, segment_values_might_be_unique));
   }
 
   /**

@@ -6,13 +6,14 @@
 #include <vector>
 
 #include "storage/constraints/table_key_constraint.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
 class Table;
 
 /**
- * This file provides helper functions for creating constraints, adding them to tables, and verifying their validity. 
+ * This file provides helper functions for creating constraints, adding them to tables, and verifying their validity.
  * Besides improving readability, these functions ensure that only column names from the correct tables are used and
  * that constraints are guaranteed to be valid.
  *
@@ -49,5 +50,14 @@ bool key_constraint_is_confidently_valid(const std::shared_ptr<Table>& table,
 
 bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
                                            const TableKeyConstraint& table_key_constraint);
+
+bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id);
+std::vector<bool> columns_are_unique(const std::shared_ptr<Table>& table);
+
+bool column_is_key(const std::shared_ptr<Table>& table, const ColumnID column_id);
+std::vector<bool> columns_are_key(const std::shared_ptr<Table>& table);
+
+bool column_might_be_unique(const std::shared_ptr<Table>& table, const ColumnID column_id);
+std::vector<bool> columns_might_be_unique(const std::shared_ptr<Table>& table);
 
 }  // namespace hyrise
