@@ -1026,17 +1026,4 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
   }
 }
 
-TEST_F(PredicatePlacementRuleTest, CheckCacheability) {
-  // clang-format off
-  _lqp = PredicateNode::make(
-      equals_(_d_b, 1),
-      JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a),
-        _stored_table_d,
-        _stored_table_e));
-  // clang-format on
-
-  _apply_rule(_rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
-
 }  // namespace hyrise

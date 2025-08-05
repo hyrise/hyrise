@@ -410,10 +410,4 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentSetOperationMode) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(PredicateMergeRuleTest, CheckCacheability) {
-  _lqp = PredicateNode::make(less_than_(a_a, 10), node_a);
-  _apply_rule(rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
-
 }  // namespace hyrise

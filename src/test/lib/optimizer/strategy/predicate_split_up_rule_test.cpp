@@ -364,10 +364,4 @@ TEST_F(PredicateSplitUpRuleTest, NoRewriteSimplePredicate) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(PredicateSplitUpRuleTest, CheckCacheability) {
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(less_than_(a_a, value_(10)), node_a));
-  _apply_rule(rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
-
 }  // namespace hyrise

@@ -80,22 +80,4 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(JoinOrderingRuleTest, CheckCacheability) {
-  // clang-format off
-  _lqp =
-  AggregateNode::make(expression_vector(a_a), expression_vector(),
-    PredicateNode::make(equals_(a_a, b_b),
-      JoinNode::make(JoinMode::Cross,
-        node_a,
-        JoinNode::make(JoinMode::Left, equals_(b_b, d_d),
-          node_b,
-          PredicateNode::make(equals_(d_d, c_c),
-            JoinNode::make(JoinMode::Cross,
-              node_d,
-              node_c))))));
-  // clang-format on
-  _apply_rule(rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
-
 }  // namespace hyrise

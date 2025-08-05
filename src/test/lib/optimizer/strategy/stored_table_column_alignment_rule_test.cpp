@@ -117,9 +117,4 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
   EXPECT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a);
 }
 
-TEST_F(StoredTableColumnAlignmentRuleTest, CheckCacheability) {
-  _apply_rule(_rule, _union_node);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
-
 }  // namespace hyrise

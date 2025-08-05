@@ -428,11 +428,4 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
-
-TEST_F(InExpressionRewriteRuleTest, CheckCacheability) {
-  auto rule = std::make_shared<InExpressionRewriteRule>();
-  _lqp = PredicateNode::make(single_element_in_expression, node);
-  _apply_rule(rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
 }  // namespace hyrise

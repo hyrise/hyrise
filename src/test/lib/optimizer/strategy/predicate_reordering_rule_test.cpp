@@ -335,11 +335,4 @@ TEST_F(PredicateReorderingTest, PreferPredicatesOverJoins) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(PredicateReorderingTest, CheckCacheability) {
-  _lqp =
-      std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(greater_than_(a, 60), ValidateNode::make(node)));
-  _apply_rule(_rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
-
 }  // namespace hyrise

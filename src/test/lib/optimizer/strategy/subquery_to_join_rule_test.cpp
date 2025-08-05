@@ -16,6 +16,7 @@
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -1584,13 +1585,8 @@ TEST_F(SubqueryToJoinRuleTest, ComplexArithmeticExpression) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
-  EXPECT_LQP_EQ(_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, CheckCacheability) {
-  _lqp = std::dynamic_pointer_cast<AbstractLQPNode>(PredicateNode::make(in_(a_a, list_(1, 2, 3)), node_a));
-  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

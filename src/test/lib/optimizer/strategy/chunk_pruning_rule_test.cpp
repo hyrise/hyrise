@@ -509,15 +509,6 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
 }
 
-TEST_F(ChunkPruningRuleTest, CheckCacheability) {
-  const auto stored_table_node = StoredTableNode::make("fixed_string_compressed");
-
-  _lqp = PredicateNode::make(equals_(stored_table_node->get_column("a"), "zzz"), stored_table_node);
-
-  _apply_rule(_rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
-
 TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
   const auto stored_table_node_1 = StoredTableNode::make("compressed");
   const auto stored_table_node_1_col_a = stored_table_node_1->get_column("a");

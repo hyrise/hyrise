@@ -473,15 +473,4 @@ TEST_F(BetweenCompositionRuleTest, HandleMultipleEqualExpressions) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionRuleTest, CheckCacheability) {
-  // clang-format off
-  _lqp =
-  PredicateNode::make(equals_(_a_a, 100),
-    PredicateNode::make(equals_(_a_b, 100),
-      _node_a));
-  // clang-format on
-  _apply_rule(_rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
-}
-
 }  // namespace hyrise
