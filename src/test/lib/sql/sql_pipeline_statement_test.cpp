@@ -38,7 +38,6 @@ class SQLPipelineStatementTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
-
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
