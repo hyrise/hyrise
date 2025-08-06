@@ -40,7 +40,7 @@ add_library(perfetto STATIC
         perfetto/sdk/perfetto.cc
 )
 target_include_directories(perfetto PUBLIC perfetto/sdk)
-target_compile_definitions(perfetto PUBLIC PERFETTO_IMPLEMENTATION)
+target_compile_definitions(perfetto PUBLIC PERFETTO_IMPLEMENTATION
 
 # Create wrapper
 add_library(perfetto-wrapper INTERFACE)
