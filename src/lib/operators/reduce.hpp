@@ -14,8 +14,7 @@ namespace hyrise {
 
 enum class ReduceMode : uint8_t {
   Build,
-  Probe,
-  BuildAndProbe,
+  Probe
 };
 
 enum class UseMinMax : bool {
@@ -28,10 +27,7 @@ class Reduce : public AbstractReadOnlyOperator {
  public:
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
                   const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate)
-      : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _predicate{predicate} {
-    _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
-    _min_max_filter = std::make_shared<MinMaxFilter>();
-  }
+      : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input}, _predicate{predicate} {}
 
   const std::string& name() const override {
     static const auto name = std::string{"Reduce"};
@@ -40,90 +36,85 @@ class Reduce : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override {
-    _build();
-    return _probe();
-  }
+    std::cout << "Reducer called.\n";
 
-  void _build() {
-    const auto table = _right_input->get_output();
+    std::shared_ptr<const Table> input_table;
+    std::shared_ptr<const Table> output_table;
+    if (mode == ReduceMode::Build) {
+      input_table = right_input_table();
+      output_table = input_table;
+    } else {
+      input_table = left_input_table();
+    }
     const auto column_id = _predicate.column_ids.second;
-    const auto chunk_count = table->chunk_count();
-
-    resolve_data_type(table->column_data_type(column_id), [&](const auto column_data_type) {
-      using ColumnDataType = typename decltype(column_data_type)::type;
-
-      for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
-        const auto& segment = table->get_chunk(chunk_index)->get_segment(column_id);
-
-        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-          if (!position.is_null()) {
-            auto seed = size_t{4615968};
-            boost::hash_combine(seed, position.value());
-            _bloom_filter->insert(static_cast<uint64_t>(seed));
-
-            // auto casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<int32_t>>(_min_max_filter);
-            // casted_min_max_filter->insert(position.value());
-          }
-        });
-      }
-    });
-  }
-
-  std::shared_ptr<Table> _probe() {
-    const auto input_table = left_input_table();
     const auto chunk_count = input_table->chunk_count();
-    const auto column_id = _predicate.column_ids.first;
-
     auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-    output_chunks.reserve(chunk_count);
 
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
       using ColumnDataType = typename decltype(column_data_type)::type;
 
-      for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
-        const auto& chunk = input_table->get_chunk(chunk_index);
-        const auto& segment = chunk->get_segment(column_id);
-        auto matches = std::make_shared<RowIDPosList>();
-        matches->guarantee_single_chunk();
+      if (true ){ //mode == ReduceMode::Build) {
+        _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+        _min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
+      } else {
+        output_chunks.reserve(chunk_count);
+      }
 
-        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+      for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
+        const auto& input_chunk = input_table->get_chunk(chunk_index);
+        const auto& input_segment = input_chunk->get_segment(column_id);
+        
+        auto matches = std::make_shared<RowIDPosList>();
+        if (mode == ReduceMode::Probe) {
+          matches->guarantee_single_chunk();
+        }
+
+        segment_iterate<ColumnDataType>(*input_segment, [&](const auto& position) {
           if (!position.is_null()) {
             auto seed = size_t{4615968};
             boost::hash_combine(seed, position.value());
-            // auto casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<int32_t>>(_min_max_filter);
+    
+            auto casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<ColumnDataType>>(_min_max_filter);
 
-            if (_bloom_filter->probe(static_cast<uint64_t>(seed)) /*&& casted_min_max_filter->probe<ColumnDataType>(position.value())*/) {
-              matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
+            if (mode == ReduceMode::Build) {
+              _bloom_filter->insert(static_cast<uint64_t>(seed));
+              casted_min_max_filter->insert(position.value());
+            } else {
+              if (_bloom_filter->probe(static_cast<uint64_t>(seed)) /*&& casted_min_max_filter->probe(position.value())*/) {
+                matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
+              }
             }
           }
         });
 
+        if (mode == ReduceMode::Build) {
+          return;
+        }
+        Assert(mode == ReduceMode::Probe, "Invalid mode for Reduce operator.");
+
         if (!matches->empty()) {
           const auto column_count = input_table->column_count();
-          auto out_segments = Segments{};
-          out_segments.reserve(column_count);
+          auto output_segments = Segments{};
+          output_segments.reserve(column_count);
 
           auto keep_chunk_sort_order = true;
           if (input_table->type() == TableType::References) {
-            if (matches->size() == chunk->size()) {
+            if (matches->size() == input_chunk->size()) {
               for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-                const auto segment_in = chunk->get_segment(column_id);
-                out_segments.emplace_back(segment_in);
+                output_segments.emplace_back(input_chunk->get_segment(column_id));
               }
             } else {
               auto filtered_pos_lists =
                   std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
               for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-                const auto segment_in = chunk->get_segment(column_id);
+                auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(input_chunk->get_segment(column_id));
+                DebugAssert(reference_segment, "All segments should be of type ReferenceSegment.");
 
-                auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
-                DebugAssert(ref_segment_in, "All segments should be of type ReferenceSegment.");
+                const auto pos_list_in = reference_segment->pos_list();
 
-                const auto pos_list_in = ref_segment_in->pos_list();
-
-                const auto table_out = ref_segment_in->referenced_table();
-                const auto column_id_out = ref_segment_in->referenced_column_id();
+                const auto referenced_table = reference_segment->referenced_table();
+                const auto referenced_column_id = reference_segment->referenced_column_id();
 
                 auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
@@ -144,36 +135,35 @@ class Reduce : public AbstractReadOnlyOperator {
                 }
 
                 const auto ref_segment_out =
-                    std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
-                out_segments.push_back(ref_segment_out);
+                    std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, filtered_pos_list);
+                output_segments.push_back(ref_segment_out);
               }
             }
           } else {
             matches->guarantee_single_chunk();
 
-            const auto output_pos_list = matches->size() == chunk->size()
+            const auto output_pos_list = matches->size() == input_chunk->size()
                                              ? static_cast<std::shared_ptr<AbstractPosList>>(
-                                                   std::make_shared<EntireChunkPosList>(chunk_index, chunk->size()))
+                                                   std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
                                              : static_cast<std::shared_ptr<AbstractPosList>>(matches);
 
             for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
               const auto ref_segment_out = std::make_shared<ReferenceSegment>(input_table, column_id, output_pos_list);
-              out_segments.push_back(ref_segment_out);
+              output_segments.push_back(ref_segment_out);
             }
           }
 
-          const auto out_chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk->get_allocator());
+          const auto out_chunk = std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
           out_chunk->set_immutable();
-          if (keep_chunk_sort_order && !chunk->individually_sorted_by().empty()) {
-            out_chunk->set_individually_sorted_by(chunk->individually_sorted_by());
+          if (keep_chunk_sort_order && !input_chunk->individually_sorted_by().empty()) {
+            out_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
           }
           output_chunks.emplace_back(out_chunk);
         }
       }
-    });
 
-    const auto output_table =
-        std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
+      output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
+    });
 
     return output_table;
   }
@@ -189,7 +179,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
   const OperatorJoinPredicate _predicate;
   std::shared_ptr<BloomFilter<20, 2>> _bloom_filter;
-  std::shared_ptr<MinMaxFilter> _min_max_filter;
+  std::shared_ptr<BaseMinMaxFilter> _min_max_filter;
 };
 
 }  // namespace hyrise
