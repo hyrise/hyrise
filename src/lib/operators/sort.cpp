@@ -141,17 +141,14 @@ inline std::pair<size_t, size_t> find_cut_point(const T* const left, const size_
 template <typename Compare>
 void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mid, const size_t end, Compare comp,
                          size_t max_workers) {
-  TRACE_EVENT("Sort", "MergePathParallel");
   const auto len_left = mid - start;
   const auto len_right = end - mid;
   const auto total_len = len_left + len_right;
 
   const auto workers = static_cast<size_t>(std::min(max_workers, total_len));
 
-  TRACE_EVENT_BEGIN("Sort", "MergePathParallel::AllocateBuffer");
   auto dest = RowIDPosList{};
   dest.resize(total_len);
-  TRACE_EVENT_END("Sort");
 
   // Compute cut points
   struct Cut {
@@ -178,7 +175,6 @@ void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mi
 
   for (auto task_idx = size_t{0}; task_idx < workers; ++task_idx) {
     jobs.emplace_back(std::make_shared<JobTask>([&, task_idx] {
-      TRACE_EVENT("Sort", "MergePathParallel::Worker", "TaskIndex", task_idx);
       const auto cutL = cuts[task_idx];
       const auto cutR = cuts[task_idx + 1];
 
@@ -197,12 +193,10 @@ void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mi
 
 template <typename Compare>
 void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
-  TRACE_EVENT("Sort", "ParallelSortRowIDs");
   auto row_count = rows.size();
   auto is_multithreaded = Hyrise::get().is_multi_threaded();
 
   if (!HYRISE_DEBUG && (!is_multithreaded || row_count < SMALL_ARRAY_THRESHOLD)) {
-    TRACE_EVENT("Sort", "ParallelSortRowIDs::SmallArray");
     boost::sort::pdqsort(rows.begin(), rows.end(), comp);
     return;
   }
@@ -226,7 +220,6 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
     const auto end = std::min(start + block, row_count);
     if (start < end) {
       jobs.emplace_back(std::make_shared<JobTask>([start, end, &rows, &comp]() {
-        TRACE_EVENT("Sort", "ParallelSortRowIDs::Sort");
         boost::sort::pdqsort(rows.begin() + start, rows.begin() + end, comp);
       }));
     }
@@ -254,7 +247,6 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<const Table>& unsorted_table,
                                                        RowIDPosList pos_list, const ChunkOffset output_chunk_size) {
-  TRACE_EVENT("Sort", "WriteMaterializedOutputTable");
   // First, we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
@@ -295,9 +287,6 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, column_id,
                                                      column_is_nullable = column_is_nullable,
                                                      accessor_by_chunk_id = accessor_by_chunk_id]() {
-          TRACE_EVENT("Sort", "WriteMaterializedOutputTable::Column::Chunk", "ColumnID", static_cast<size_t>(column_id),
-                      "ChunkID", static_cast<size_t>(output_chunk_id));
-
           auto value_segment_value_vector = pmr_vector<ColumnDataType>{};
           auto value_segment_null_vector = pmr_vector<bool>{};
 
@@ -355,7 +344,6 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
 // reference table. If the input is already a reference table, the double indirection needs to be resolved.
 std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const Table>& unsorted_table,
                                                     RowIDPosList input_pos_list, const ChunkOffset output_chunk_size) {
-  TRACE_EVENT("Sort", "WriteReferenceOutputTable");
   // First we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output_table = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::References);
@@ -399,9 +387,6 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
         jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, column_id, input_segments = input_segments,
                                                      referenced_table = referenced_table,
                                                      referenced_column_id = referenced_column_id]() {
-          TRACE_EVENT("Sort", "WriteReferenceOutputTable::Column::Chunk", "ColumnID", static_cast<size_t>(column_id),
-                      "ChunkID", static_cast<size_t>(output_chunk_id));
-
           const auto chunk_size =
               std::min(output_chunk_size, static_cast<ChunkOffset>(row_count - output_chunk_id * output_chunk_size));
 
@@ -483,7 +468,6 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
-  TRACE_EVENT("Sort", "Execute");
   auto timer = Timer{};
   const auto& input_table = left_input_table();
 
@@ -520,7 +504,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto field_width = std::vector<size_t>();
   field_width.reserve(sort_definitions_size);
 
-  TRACE_EVENT_BEGIN("Sort", "Execute::PrecomputeFieldWidth");
   for (auto& def : _sort_definitions) {
     const auto sort_col = def.column;
     resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
@@ -542,13 +525,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         // Store size of the string + 2 for string length.
         field_width.emplace_back(max_string_length + 2);
       } else {
-        field_width.emplace_ba
+        field_width.emplace_back(
             // Store size of the column type, e.g. 4 for int, 8 for double, etc.
             sizeof(ColumnDataType));
       }
     });
   }
-  TRACE_EVENT_END("Sort");
 
   // Total width of each normalized key is the width of all columns to be sorted by plus null bytes.
   auto key_width = size_t{0};
@@ -566,7 +548,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;
   }
 
-  TRACE_EVENT_BEGIN("Sort", "Execute::PrecomputeChunkSizes");
   auto key_buffer = std::vector<uint8_t>();
   auto total_buffer_size = size_t{0};
 
@@ -597,7 +578,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       row_ids.emplace_back(chunk_id, row);
     }
   }
-  TRACE_EVENT_END("Sort");
 
   key_buffer.reserve(total_buffer_size);
   auto preparation_time = timer.lap();
@@ -606,7 +586,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
    *********************************************** Key-Generation ***********************************************
    **************************************************************************************************************/
 
-  TRACE_EVENT_BEGIN("Sort", "Execute::GenerateKeys");
   // Job queue for generating keys in parallel.
   auto keygen_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   keygen_jobs.reserve(static_cast<size_t>(chunk_count) * sort_definitions_size);
@@ -615,9 +594,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
     for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
       keygen_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, index, chunk = chunk]() {
-        TRACE_EVENT("Sort", "Execute::GenerateKeys", "ChunkID", static_cast<size_t>(chunk_id), "ColumnID",
-                    static_cast<size_t>(_sort_definitions[index].column));
-
         auto sort_col = _sort_definitions[index].column;
         auto nulls_first = is_nulls_first(_sort_definitions[index].sort_mode);
         auto descending = is_descending(_sort_definitions[index].sort_mode);
@@ -669,7 +645,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(keygen_jobs);
-  TRACE_EVENT_END("Sort");
   auto key_generation_time = timer.lap();
 
   /**************************************************************************************************************
@@ -735,7 +710,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     sorted_table = write_reference_output_table(input_table, std::move(row_ids), _output_chunk_size);
   }
 
-  TRACE_EVENT("Sort", "Execute::SetIndividuallySortedBy");
   const auto& final_sort_definition = _sort_definitions[0];
   // Set the sorted_by attribute of the output's chunks according to the most significant sort operation, which is the
   // column the table was sorted by last.
@@ -744,7 +718,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   write_output_jobs.reserve(static_cast<size_t>(output_chunk_count));
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
     write_output_jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id] {
-      TRACE_EVENT("Sort", "Execute::SetIndividuallySortedBy::Chunk", "ChunkID", static_cast<size_t>(output_chunk_id));
       const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
       output_chunk->set_immutable();
       output_chunk->set_individually_sorted_by(final_sort_definition);
