@@ -37,11 +37,8 @@
 #include "utils/timer.hpp"
 
 namespace {
-  constexpr size_t SMALL_ARRAY_THRESHOLD = 10'000;
-} // unnamed namespace
 
-namespace {
-
+constexpr size_t SMALL_ARRAY_THRESHOLD = 10'000;
 using namespace hyrise;  // NOLINT
 
 // Ceiling of integer division
@@ -104,7 +101,8 @@ template <typename T>
 inline void encode_integer(uint8_t* dest, const T value, const size_t data_length) {
   // Bias the value to get a lexicographically sortable encoding
   using UnsignedT = std::make_unsigned_t<T>;
-  UnsignedT const biased = static_cast<UnsignedT>(value) ^ (static_cast<UnsignedT>(1) << ((data_length * 8) - 1));  // flip sign bit
+  UnsignedT const biased =
+      static_cast<UnsignedT>(value) ^ (static_cast<UnsignedT>(1) << ((data_length * 8) - 1));  // flip sign bit
 
   // Store bytes in big-endian order starting at dest[1]
   for (auto byte_idx = size_t{0}; byte_idx < data_length; ++byte_idx) {
@@ -287,42 +285,44 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       }
 
       for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
-        jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, column_id,
-                                                     column_is_nullable = column_is_nullable,
-                                                     accessor_by_chunk_id = accessor_by_chunk_id]() {
-          auto value_segment_value_vector = pmr_vector<ColumnDataType>{};
-          auto value_segment_null_vector = pmr_vector<bool>{};
+        jobs.emplace_back(
+            std::make_shared<JobTask>([&, output_chunk_id, column_id, column_is_nullable = column_is_nullable,
+                                       accessor_by_chunk_id = accessor_by_chunk_id]() {
+              auto value_segment_value_vector = pmr_vector<ColumnDataType>{};
+              auto value_segment_null_vector = pmr_vector<bool>{};
 
-          const auto chunk_size =
-              std::min(output_chunk_size, static_cast<ChunkOffset>(row_count - (static_cast<uint64_t>(output_chunk_id * output_chunk_size))));
+              const auto chunk_size = std::min(
+                  output_chunk_size,
+                  static_cast<ChunkOffset>(row_count - (static_cast<uint64_t>(output_chunk_id * output_chunk_size))));
 
-          value_segment_value_vector.reserve(chunk_size);
-          if (column_is_nullable) {
-            value_segment_null_vector.reserve(chunk_size);
-          }
+              value_segment_value_vector.reserve(chunk_size);
+              if (column_is_nullable) {
+                value_segment_null_vector.reserve(chunk_size);
+              }
 
-          for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
-            const auto [chunk_id, chunk_offset] = pos_list[(static_cast<size_t>(output_chunk_size * output_chunk_id)) + row_index];
+              for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
+                const auto [chunk_id, chunk_offset] =
+                    pos_list[(static_cast<size_t>(output_chunk_size * output_chunk_id)) + row_index];
 
-            auto& accessor = accessor_by_chunk_id[chunk_id];
-            const auto typed_value = accessor->access(chunk_offset);
-            const auto is_null = !typed_value;
-            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
-            if (column_is_nullable) {
-              value_segment_null_vector.push_back(is_null);
-            }
-          }
+                auto& accessor = accessor_by_chunk_id[chunk_id];
+                const auto typed_value = accessor->access(chunk_offset);
+                const auto is_null = !typed_value;
+                value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
+                if (column_is_nullable) {
+                  value_segment_null_vector.push_back(is_null);
+                }
+              }
 
-          std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
-          if (column_is_nullable) {
-            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
-                                                                           std::move(value_segment_null_vector));
-          } else {
-            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
-          }
+              std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
+              if (column_is_nullable) {
+                value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
+                                                                               std::move(value_segment_null_vector));
+              } else {
+                value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
+              }
 
-          output_segments_by_chunk[output_chunk_id][column_id] = value_segment;
-        }));
+              output_segments_by_chunk[output_chunk_id][column_id] = value_segment;
+            }));
         jobs.back()->schedule();  // schedule immediately because job creation is somewhat expensive
       }
     });
@@ -390,8 +390,9 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
         jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, column_id, input_segments = input_segments,
                                                      referenced_table = referenced_table,
                                                      referenced_column_id = referenced_column_id]() {
-          const auto chunk_size =
-              std::min(output_chunk_size, static_cast<ChunkOffset>(row_count - (static_cast<uint64_t>(output_chunk_id * output_chunk_size))));
+          const auto chunk_size = std::min(
+              output_chunk_size,
+              static_cast<ChunkOffset>(row_count - (static_cast<uint64_t>(output_chunk_id * output_chunk_size))));
 
           // To keep the implementation simple, we write the output ReferenceSegments column by column.
           // This means that even if input ReferenceSegments share a PosList,
