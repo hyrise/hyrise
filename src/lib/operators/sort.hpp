@@ -11,7 +11,6 @@
 #include "abstract_read_only_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "trace_categories.hpp"
 #include "types.hpp"
 
 namespace hyrise {

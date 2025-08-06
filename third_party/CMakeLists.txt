@@ -41,16 +41,11 @@ add_library(perfetto STATIC
 )
 target_include_directories(perfetto PUBLIC perfetto/sdk)
 target_compile_definitions(perfetto PUBLIC PERFETTO_IMPLEMENTATION)
-target_compile_options(perfetto PUBLIC -fPIC)
 
 # Create wrapper
 add_library(perfetto-wrapper INTERFACE)
 target_link_libraries(perfetto-wrapper INTERFACE perfetto)
-target_link_libraries(perfetto-wrapper INTERFACE dl pthread)
-if(UNIX AND NOT APPLE)
-  target_link_libraries(perfetto-wrapper INTERFACE rt)
-endif()
-target_compile_options(perfetto-wrapper INTERFACE -fPIC)
+target_link_libraries(perfetto-wrapper INTERFACE dl pthread rt)
 
 
 # Build sql-parser library

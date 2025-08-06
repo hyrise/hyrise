@@ -4,133 +4,184 @@
 #include <random>
 
 // This playground only compiles on Linux as we require Linux's perf and perfetto.
-#include "benchmark_config.hpp"
 #include "hyrise.hpp"
-#include "operators/get_table.hpp"
-#include "operators/print.hpp"
-#include "operators/sort.hpp"
-#include "operators/table_wrapper.hpp"
-#include "operators/trace_categories.hpp"
 #include "perfcpp/event_counter.h"
 #include "perfetto.h"
-#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk.hpp"
-#include "tpcds/tpcds_table_generator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-static void silent_tpcds_table_generation(uint32_t scale_factor, std::shared_ptr<BenchmarkConfig> config) {
-  auto* initial_buffer = std::cout.rdbuf();
+constexpr auto STRING_COUNT = size_t{100'000'000};  // Careful: 100M has an RSS of ~30GB.
 
-  std::cout.rdbuf(nullptr);
-  TPCDSTableGenerator(scale_factor, config).generate_and_store();
-  std::cout.rdbuf(initial_buffer);
+// Define trace categories
+PERFETTO_DEFINE_CATEGORIES(perfetto::Category("Sort").SetDescription("Benchmark parallel sorting"));
+
+PERFETTO_TRACK_EVENT_STATIC_STORAGE();
+
+std::vector<std::string> get_top_by_stdsort(const size_t k, std::vector<std::string>& input) {
+  std::ranges::sort(input);
+  return std::vector<std::string>(input.begin(), input.begin() + k);
 }
 
-std::tuple<std::shared_ptr<Table>, std::shared_ptr<GetTable>, std::vector<SortColumnDefinition>>
-setup_get_table_and_sort_definitions(const auto& table_name, const std::vector<std::string>& sort_column_names,
-                                     const std::string& project_column_name) {
-  auto& sm = Hyrise::get().storage_manager;
+std::vector<std::string> get_top_by_indexsort(const size_t k, std::vector<std::string>& input) {
+  static_assert(std::numeric_limits<uint32_t>::max() >= STRING_COUNT);
+  auto offsets = std::vector<uint32_t>(input.size());
+  std::iota(offsets.begin(), offsets.end(), 0);
 
-  auto table = sm.get_table(table_name);
-  const auto column_count = table->column_count();
-  auto unpruned_column_ids = std::vector<ColumnID>{};
-  for (const auto& column_name : sort_column_names) {
-    const auto column_id = table->column_id_by_name(column_name);
-    unpruned_column_ids.emplace_back(column_id);
-  }
-  unpruned_column_ids.emplace_back(table->column_id_by_name(project_column_name));
+  std::ranges::sort(offsets, [&](const auto& lhs, const auto& rhs) {
+    return input[lhs] < input[rhs];
+  });
 
-  std::ranges::sort(unpruned_column_ids);
-  auto all_column_ids = std::vector<ColumnID>(column_count);
-  std::iota(all_column_ids.begin(), all_column_ids.end(), ColumnID{0});
+  auto result = std::vector<std::string>{};
+  result.reserve(k);
 
-  auto pruned_column_ids = std::vector<ColumnID>();
-  std::ranges::set_difference(all_column_ids, unpruned_column_ids, std::back_inserter(pruned_column_ids));
-
-  const auto get_table = std::make_shared<GetTable>(table_name, std::vector<ChunkID>{}, pruned_column_ids);
-  get_table->never_clear_output();
-  get_table->execute();
-
-  auto sort_definitions = std::vector<SortColumnDefinition>{};
-  for (const auto& column_name : sort_column_names) {
-    const auto column_id = get_table->get_output()->column_id_by_name(column_name);
-    sort_definitions.emplace_back(column_id);
+  for (auto index = size_t{0}; index < k; ++index) {
+    result.push_back(input[offsets[index]]);
   }
 
-  return {table, get_table, sort_definitions};
+  return result;
 }
 
-/*
-static void DuckDBTPCDS_C_Integers(const uint32_t scale_factor, const EncodingConfig encoding_config) {
-  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-  Hyrise::get().set_scheduler(node_queue_scheduler);
+std::vector<std::string> get_top_by_priorityqueue(const size_t k, std::vector<std::string>& input) {
+  // We use a max queue to mimic a fixed-size min-queue.
+  auto priority_queue = std::priority_queue<std::string>{};
 
-  auto benchmark_config = std::make_shared<BenchmarkConfig>();
-  benchmark_config->cache_binary_tables = true;
-  benchmark_config->encoding_config = encoding_config;
+  for (const auto& string : input) {
+    if (priority_queue.size() < k) {
+      priority_queue.push(string);
+      continue;
+    }
 
-  silent_tpcds_table_generation(scale_factor, benchmark_config);
+    if (priority_queue.top() > string) {
+      priority_queue.pop();
+      priority_queue.push(string);
+    }
+  }
 
-  const auto sort_columns = std::vector<std::string>{"c_birth_year", "c_birth_month", "c_birth_day"};
-  const auto get_table_and_sort_definitions =
-      setup_get_table_and_sort_definitions(std::string{"customer"}, sort_columns, std::string{"c_customer_sk"});
-  const auto table = std::get<0>(get_table_and_sort_definitions);
-  const auto get_table = std::get<1>(get_table_and_sort_definitions);
-  const auto sort_definitions = std::get<2>(get_table_and_sort_definitions);
+  Assert(priority_queue.size() == k, "Unexpected size of priority queue.");
+  auto result = std::vector<std::string>(k);
+  for (auto index = k; index > 0; --index) {
+    result[index - 1] = priority_queue.top();
+    priority_queue.pop();
+  }
 
-  auto sort = std::make_shared<Sort>(get_table, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes);
-  sort->execute();
-
-  node_queue_scheduler->finish();
-}
-*/
-
-static void DuckDBTPCDS_CS(const uint32_t scale_factor, const EncodingConfig encoding_config) {
-  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-  Hyrise::get().set_scheduler(node_queue_scheduler);
-
-  auto benchmark_config = std::make_shared<BenchmarkConfig>();
-  benchmark_config->cache_binary_tables = true;
-  benchmark_config->encoding_config = encoding_config;
-
-  silent_tpcds_table_generation(scale_factor, benchmark_config);
-
-  const auto sort_columns =
-      std::vector<std::string>{"cs_warehouse_sk", "cs_ship_mode_sk", "cs_promo_sk", "cs_quantity"};
-  // OpenMP/clang cause issues with structured bindings.
-  const auto get_table_and_sort_definitions =
-      setup_get_table_and_sort_definitions("catalog_sales", sort_columns, std::string{"cs_item_sk"});
-  const auto table = std::get<0>(get_table_and_sort_definitions);
-  const auto get_table = std::get<1>(get_table_and_sort_definitions);
-  const auto sort_definitions = std::get<2>(get_table_and_sort_definitions);
-
-  std::cout << "Size of table to sort: " << table->row_count() << " rows over " << table->chunk_count() << " chunks. "
-            << std::endl;
-  std::cout << "Sorting by " << sort_definitions.size() << " columns." << std::endl;
-  std::cout << "Memory Usage: " << table->memory_usage(MemoryUsageCalculationMode::Sampled) << ".\n";
-
-  auto sort = std::make_shared<Sort>(get_table, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes);
-  sort->execute();
-
-  node_queue_scheduler->finish();
+  return result;
 }
 
-// Initialize the Perfetto SDK and register your categories.
-void InitializePerfetto() {
+template <typename Iterator>
+void merge_sort(Iterator first, Iterator last) {
+  TRACE_EVENT("Sort", "MergeSort");
+  if (std::distance(first, last) <= Chunk::DEFAULT_SIZE) {
+    TRACE_EVENT("Sort", "MergeSort::sort");
+    std::sort(first, last);
+    return;
+  }
+
+  auto middle = first + (std::distance(first, last) / 2);
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    merge_sort(first, middle);
+  }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    merge_sort(middle, last);
+  }));
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
+  TRACE_EVENT("Sort", "MergeSort::merge");
+  std::inplace_merge(first, middle, last);
+}
+
+void parallel_merge_sort(std::vector<std::string>& input) {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  TRACE_EVENT("Sort", "ParallelMergeSort");
+  merge_sort(input.begin(), input.end());
+
+  if (!std::ranges::is_sorted(input)) {
+    std::cerr << "Input not sorted.\n";
+  }
+
+  Hyrise::get().scheduler()->finish();
+}
+
+std::vector<std::string> get_std_strings(auto& generator, auto& random_distribution) {
+  auto std_strings = std::vector<std::string>(STRING_COUNT);
+  for (auto index = size_t{0}; index < STRING_COUNT; ++index) {
+    // Should always exceed SSO. Expensive comparisons.
+    std_strings[index] =
+        std::string{"2042-02-31 10:10:10_"} + std::to_string(random_distribution(generator)) + "_remainderstring";
+  }
+
+  std::ranges::shuffle(std_strings, generator);
+
+  return std_strings;
+}
+
+int main() {
+  auto generator = std::mt19937{17};
+  auto random_distribution = std::uniform_int_distribution<uint32_t>();
+
+  auto base_data = get_std_strings(generator, random_distribution);
+  auto compare_result_data_copy = base_data;
+  const auto compare_result = get_top_by_stdsort(100, compare_result_data_copy);
+
+  /**
+   * The following usage of perf-cpp and Perfetto is just to show case how to use these tools. Feel free to add helper
+   * methods, classes, ... whatever you need.
+   *
+   * Initialize the perf-cpp counters.
+   */
+  auto counters = perf::CounterDefinition{};
+  auto event_counter = perf::EventCounter{counters};
+
+  // Specify hardware events to count.
+  event_counter.add(
+      {"seconds", "instructions", "cycles", "cache-misses", "dTLB-miss-ratio"});  // Not possible on the VM server.
+  // event_counter.add("seconds");  // Runs on the VM server. Not too helpful though.
+
+  const auto functions = std::vector<
+      std::pair<std::string, std::function<std::vector<std::string>(const size_t, std::vector<std::string>&)>>>{
+      {"get_top_by_stdsort", get_top_by_stdsort},
+      {"get_top_by_indexsort", get_top_by_indexsort},
+      {"get_top_by_priorityqueue", get_top_by_priorityqueue}};
+
+  for (const auto& [function_name, function] : functions) {
+    auto benchmark_data = base_data;
+
+    // Run the workload and track with perf-cpp.
+    event_counter.start();
+    const auto result = function(100, benchmark_data);
+    event_counter.stop();
+
+    Assert(result.size() == compare_result.size(), "Wrong result size.");
+    for (auto index = size_t{0}; index < compare_result.size(); ++index) {
+      Assert(result[index] == compare_result[index], "Wrong item at position " + std::to_string(index) + ".");
+    }
+
+    // Print the results.
+    std::cout << ">>> " << function_name << '\n';
+    const auto perf_result = event_counter.result();
+    for (const auto& [event_name, value] : perf_result) {
+      std::cout << event_name << ": " << value << '\n';
+    }
+    std::cout << '\n';
+  }
+
+  /**
+   * Initialize Perfetto.
+   */
+  auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
+  track_event_cfg.add_enabled_categories("Sort");
+
   auto args = perfetto::TracingInitArgs{};
   args.backends = perfetto::kInProcessBackend;
   perfetto::Tracing::Initialize(args);
   perfetto::TrackEvent::Register();
-}
-
-std::unique_ptr<perfetto::TracingSession> StartTracing() {
-  auto track_event_cfg = perfetto::protos::gen::TrackEventConfig{};
-  track_event_cfg.add_enabled_categories("Sort");
 
   auto cfg = perfetto::TraceConfig{};
   cfg.add_buffers()->set_size_kb(4096);
@@ -142,33 +193,16 @@ std::unique_ptr<perfetto::TracingSession> StartTracing() {
   tracing_session->Setup(cfg);
   tracing_session->StartBlocking();
 
-  return tracing_session;
-}
+  auto sort_data = base_data;
+  parallel_merge_sort(sort_data);
 
-void StopTracing(std::unique_ptr<perfetto::TracingSession>& tracing_session) {
   tracing_session->StopBlocking();
   auto trace_data = std::vector<char>(tracing_session->ReadTraceBlocking());
 
   auto output = std::ofstream{};
-  output.open("tpc-ds-cs.perfetto-trace", std::ios::out | std::ios::binary);
+  output.open("dyod2025_mergesort.perfetto-trace", std::ios::out | std::ios::binary);
   output.write(&trace_data[0], trace_data.size());
   output.close();
-}
-
-int main(int argc, char* argv[]) {
-  InitializePerfetto();
-  auto tracing_session = StartTracing();
-
-  const auto tpcds_scale_factor = static_cast<uint32_t>(std::stoi(argv[1]));
-  // const auto tpcds_scale_factor = uint32_t{1};
-  std::cout << "TPC-DS scale factor: " << tpcds_scale_factor << '\n';
-
-  const auto encoding_config = EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
-
-  // DuckDBTPCDS_C_Integers(tpcds_scale_factor, encoding_config);
-  DuckDBTPCDS_CS(tpcds_scale_factor, encoding_config);
-
-  StopTracing(tracing_session);
 
   return 0;
 }
