@@ -40,17 +40,17 @@ target_link_libraries(
 )
 
 # Configure hyriseMinMaxFilterEvaluation
-add_executable(
-    hyriseMinMaxFilterEvaluation
+# add_executable(
+#     hyriseMinMaxFilterEvaluation
 
-    hyrise_min_max_filter_evaluation.cpp
-)
+#     hyrise_min_max_filter_evaluation.cpp
+# )
 
-target_link_libraries(
-    hyriseMinMaxFilterEvaluation
-    hyrise
-    hyriseBenchmarkLib
-)
+# target_link_libraries(
+#     hyriseMinMaxFilterEvaluation
+#     hyrise
+#     hyriseBenchmarkLib
+# )
 
 # Configure client
 add_executable(

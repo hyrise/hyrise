@@ -12,6 +12,18 @@
 
 namespace hyrise {
 
+enum class ReduceMode : uint8_t {
+  Build,
+  Probe,
+  BuildAndProbe,
+};
+
+enum class UseMinMax : bool {
+  Yes = true,
+  No = false
+};
+
+template <ReduceMode mode, UseMinMax use_min_max>
 class Reduce : public AbstractReadOnlyOperator {
  public:
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
@@ -28,10 +40,13 @@ class Reduce : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override {
-    return nullptr;
+    _build();
+    return _probe();
   }
 
-  void _create_filter(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
+  void _build() {
+    const auto table = _right_input->get_output();
+    const auto column_id = _predicate.column_ids.second;
     const auto chunk_count = table->chunk_count();
 
     resolve_data_type(table->column_data_type(column_id), [&](const auto column_data_type) {
@@ -45,13 +60,16 @@ class Reduce : public AbstractReadOnlyOperator {
             auto seed = size_t{4615968};
             boost::hash_combine(seed, position.value());
             _bloom_filter->insert(static_cast<uint64_t>(seed));
+
+            // auto casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<int32_t>>(_min_max_filter);
+            // casted_min_max_filter->insert(position.value());
           }
         });
       }
     });
   }
 
-  std::shared_ptr<Table> _create_reduced_table() {
+  std::shared_ptr<Table> _probe() {
     const auto input_table = left_input_table();
     const auto chunk_count = input_table->chunk_count();
     const auto column_id = _predicate.column_ids.first;
@@ -72,8 +90,9 @@ class Reduce : public AbstractReadOnlyOperator {
           if (!position.is_null()) {
             auto seed = size_t{4615968};
             boost::hash_combine(seed, position.value());
+            // auto casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<int32_t>>(_min_max_filter);
 
-            if (_bloom_filter->probe(static_cast<uint64_t>(seed))) {
+            if (_bloom_filter->probe(static_cast<uint64_t>(seed)) /*&& casted_min_max_filter->probe<ColumnDataType>(position.value())*/) {
               matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
             }
           }
@@ -165,7 +184,7 @@ class Reduce : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override {
-    return std::make_shared<Reduce>(copied_left_input, copied_right_input, _predicate);
+    return std::make_shared<Reduce<mode, use_min_max>>(copied_left_input, copied_right_input, _predicate);
   }
 
   const OperatorJoinPredicate _predicate;
