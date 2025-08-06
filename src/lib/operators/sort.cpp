@@ -611,11 +611,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             // Pointer to the destination in the key buffer for this column.
             auto* dest = &key_buffer[(row_id_offsets[chunk_id] + row) * key_width + key_offsets[index]];
 
-            const ColumnDataType& value = val.value();
+            const auto is_not_null = !val.is_null();
+            const ColumnDataType value = is_not_null ? val.value() : ColumnDataType{};
             const auto data_length = field_width[index];
 
             // Set the first byte to indicate if the value is null or not.
-            auto null_byte = !val.is_null() ? 0x00U : 0xFFU;
+            auto null_byte = is_not_null ? 0x00U : 0xFFU;
             if (nulls_first) {
               null_byte = ~null_byte;
             }
