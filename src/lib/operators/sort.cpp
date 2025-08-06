@@ -514,7 +514,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
    ***************************************** Pre-compute offsets and other info *********************************
    **************************************************************************************************************/
 
-  // The key length is calculated based on the sizes of the columns to be sorted by, e.g. if sorting by int, string it should be [4, 8].
+  // The key length is calculated based on the sizes of the columns to be sorted by,
+  // e.g. if sorting by int, string it should be [4, 8].
   auto field_width = std::vector<size_t>();
   field_width.reserve(sort_definitions_size);
 
@@ -537,10 +538,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             }
           });
         }
-        // Store size of the string prefix + 2 for string length.
+        // Store size of the string + 2 for string length.
         field_width.emplace_back(max_string_length + 2);
       } else {
-        field_width.push_back(
+        field_width.emplace_ba
             // Store size of the column type, e.g. 4 for int, 8 for double, etc.
             sizeof(ColumnDataType));
       }
