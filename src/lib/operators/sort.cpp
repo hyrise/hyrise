@@ -115,7 +115,7 @@ inline void encode_integer(uint8_t* dest, const T value, const size_t data_lengt
 template void encode_integer<int32_t>(uint8_t* dest, const int32_t value, const size_t data_length);
 template void encode_integer<int64_t>(uint8_t* dest, const int64_t value, const size_t data_length);
 
-// Finds the cut point for the merge path diagonal inspired by https://arxiv.org/pdf/1406.2628
+// Finds the cut point for the merge path diagonal inspired by https://arxiv.org/pdf/1406.2628.
 template <typename T, typename Compare>
 inline std::pair<size_t, size_t> find_cut_point(const T* const left, const size_t len_left, const T* const right,
                                                 const size_t len_right, const size_t diag, Compare comp) {
@@ -208,14 +208,15 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
   }
 
   // 1) Get number of workers and block size.
-  auto num_workers = size_t{1};  // default to single-threaded execution
+  // Default to single-threaded execution
+  auto num_workers = size_t{1};
 
   auto nq_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
   if (nq_scheduler) {
     num_workers = static_cast<size_t>(nq_scheduler->active_worker_count().load());
   }
 
-  const auto block = (row_count + num_workers - 1) / num_workers;  // no auto because of call to std::min later
+  const auto block = (row_count + num_workers - 1) / num_workers;
 
   // 2) Sort each block in parallel.
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
