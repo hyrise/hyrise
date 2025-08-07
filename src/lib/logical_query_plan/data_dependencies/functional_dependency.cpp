@@ -5,6 +5,7 @@
 #include <functional>
 #include <ostream>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -56,6 +57,10 @@ bool FunctionalDependency::is_schema_given() const {
   return _is_schema_given;
 }
 
+void FunctionalDependency::set_schema_given() const {
+  _is_schema_given = true;
+}
+
 size_t FunctionalDependency::hash() const {
   auto hash = size_t{0};
   for (const auto& expression : determinants) {
@@ -84,12 +89,11 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
   auto inflated_fds = FunctionalDependencies{fds.size()};
 
   for (const auto& fd : fds) {
-    if (fd.dependents.size() == 1) {
-      inflated_fds.insert(fd);
-    } else {
-      for (const auto& dependent : fd.dependents) {
-        auto determinants = fd.determinants;
-        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent}, fd.is_schema_given());
+    for (const auto& dependent : fd.dependents) {
+      auto [existing_fd, inserted] = inflated_fds.emplace(ExpressionUnorderedSet{fd.determinants},
+                                                          ExpressionUnorderedSet{dependent}, fd.is_schema_given());
+      if (!inserted && fd.is_schema_given() && !existing_fd->is_schema_given()) {
+        existing_fd->set_schema_given();
       }
     }
   }
@@ -102,40 +106,70 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     return {};
   }
 
-  // We cannot use a set here as we want to add dependents to existing FDs and objects in sets are immutable.
-  auto existing_fds = std::vector<std::tuple<ExpressionUnorderedSet, ExpressionUnorderedSet, bool>>{};
-  existing_fds.reserve(fds.size());
+  using Key = std::pair<ExpressionUnorderedSet, bool>;  // Determinants and schema-given flag.
+
+  auto hash_pair = [](const Key& key) {
+    auto hash = size_t{0};
+    for (const auto& expression : key.first) {
+      hash ^= expression->hash();
+    }
+
+    return hash ^ static_cast<size_t>(key.second);  // Include the schema-given flag in the hash.
+  };
+
+  auto pair_equal = [](const Key& lhs, const Key& rhs) {
+    if (lhs.second != rhs.second) {
+      return false;  // Schema-given flags differ.
+    }
+    for (const auto& expression : lhs.first) {
+      if (!rhs.first.contains(expression)) {
+        return false;  // Determinants differ.
+      }
+    }
+    for (const auto& expression : rhs.first) {
+      if (!lhs.first.contains(expression)) {
+        return false;  // Determinants differ.
+      }
+    }
+    return true;  // Determinants are equal.
+  };
+
+  // We use this hash map to collect the dependents for each unique determinant set and its genuineness.
+  auto existing_fds = std::unordered_map<Key, ExpressionUnorderedSet, decltype(hash_pair), decltype(pair_equal)>(
+      fds.size(), hash_pair, pair_equal);
 
   for (const auto& fd_to_add : fds) {
-    // Check if we have seen an FD with the same determinants.
-    auto existing_fd = std::find_if(existing_fds.begin(), existing_fds.end(), [&](const auto& fd) {
-      // Quick check for cardinality.
-      const auto& determinants = std::get<0>(fd);
-      if (determinants.size() != fd_to_add.determinants.size()) {
-        return false;
+    // Try only inserting the FD first.
+    auto [existing_fd, inserted] =
+        existing_fds.emplace(std::pair(fd_to_add.determinants, fd_to_add.is_schema_given()), fd_to_add.dependents);
+    if (!inserted) {
+      auto& dependents = existing_fd->second;
+      dependents.insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
+    }
+
+    // If the FD is schema-given, we add the determinants to the non-schema-given FD with the same determinants.
+    if (fd_to_add.is_schema_given()) {
+      auto [existing_fd, inserted] =
+          existing_fds.emplace(std::pair(fd_to_add.determinants, false), fd_to_add.dependents);
+      if (!inserted) {
+        auto& dependents = existing_fd->second;
+        dependents.insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
       }
-
-      // Compare determinants.
-      for (const auto& expression : fd_to_add.determinants) {
-        if (!determinants.contains(expression)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // If we have found an FD with same determinants and cacheability, add the dependents. Otherwise, add a new FD.
-    if (existing_fd != existing_fds.end() && std::get<2>(*existing_fd) == fd_to_add.is_schema_given()) {
-      std::get<1>(*existing_fd).insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
-    } else {
-      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents, fd_to_add.is_schema_given());
     }
   }
 
-  auto deflated_fds = FunctionalDependencies(fds.size());
-  for (auto [determinants, dependents, is_schema_given] : existing_fds) {
-    deflated_fds.emplace(std::move(determinants), std::move(dependents), is_schema_given);
+  auto deflated_fds = FunctionalDependencies{};
+  deflated_fds.reserve(existing_fds.size());
+  for (auto& [key, dependents] : existing_fds) {
+    auto [existing_fd, inserted] =
+        deflated_fds.emplace(ExpressionUnorderedSet{key.first}, std::move(dependents), key.second);
+
+    if (!inserted && key.second && !existing_fd->is_schema_given()) {
+      // If the FD was already in the set and is schema-given, we set the already existing FD to schema-given as well.
+      // This is necessary because we might have added the FD with the same determinants but without the schema-given
+      // flag.
+      existing_fd->set_schema_given();
+    }
   }
 
   return deflated_fds;

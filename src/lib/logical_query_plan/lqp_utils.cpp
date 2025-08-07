@@ -514,13 +514,33 @@ UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
+  auto matching_ucc = std::optional<UniqueColumnCombinations::const_iterator>{};
+
   // Look for a unique column combination that is based on a subset of the given expressions.
-  return std::find_if(unique_column_combinations.begin(), unique_column_combinations.end(), [&](auto& ucc) {
-    return ucc.expressions.size() <= expressions.size() &&
-           std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
-             return expressions.contains(ucc_expression);
-           });
-  });
+  for (auto ucc_it = unique_column_combinations.cbegin(); ucc_it != unique_column_combinations.cend(); ++ucc_it) {
+    const auto& ucc = *ucc_it;
+
+    // If all of the expressions in the UCC are contained in the given expressions, we found a match.
+    if (ucc.expressions.size() <= expressions.size() &&
+        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
+          return expressions.contains(ucc_expression);
+        })) {
+      if (!matching_ucc) {
+        matching_ucc = ucc_it;
+        if (ucc.is_schema_given()) {
+          // If this match is schema-given, we can stop here.
+          break;
+        }
+      } else if (ucc.is_schema_given()) {
+        // We continue looking for a schema-given UCC and overwrite the previous match with a schema-given UCC if we
+        // find one.
+        matching_ucc = ucc_it;
+        break;
+      }
+    }
+  }
+
+  return matching_ucc ? *matching_ucc : unique_column_combinations.cend();
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,

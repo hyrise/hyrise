@@ -46,9 +46,10 @@ struct FunctionalDependency {
   ExpressionUnorderedSet dependents;
 
   bool is_schema_given() const;
+  void set_schema_given() const;
 
  private:
-  bool _is_schema_given;
+  mutable bool _is_schema_given;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
@@ -60,8 +61,11 @@ using FunctionalDependencies = std::unordered_set<FunctionalDependency>;
  *         We consider FDs as inflated when they have a single dependent expression only. Therefore, inflating an FD
  *         works as follows:
  *                                                      {a} => {b}
- *                             {a} => {b, c, d}   -->   {a} => {c}
+ *                            {a} => {b, c, d}    -->   {a} => {c}
  *                                                      {a} => {d}
+ *         (not schema-given) {a} => {b, c, d, e} -->   {a} => {e} (not schema-given)
+ *         Note that the second FD only produces the FD {a} => {e} because this one is not present yet while the other
+ *         FDs resulting from the dependents are already present and schema-given.
  */
 FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 
@@ -73,7 +77,9 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}
  *                             {a} => {d} 
- *          (not schema-given) {a} => {e}         -->   {a} => {e} (not schema-given)
+ *          (not schema-given) {a} => {e}         -->   {a} => {b, c, d, e} (not schema-given)
+ *         Note that if we have two FDs with the same determinant expressions, but one of them is not schema-given,
+ *         this not schema-given FD is ignored in the deflation process as it is 'shadowed' by the schema-given one.
  */
 FunctionalDependencies deflate_fds(const FunctionalDependencies& fds);
 

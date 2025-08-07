@@ -249,7 +249,9 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
 /**
  * @return A `const_iterator` that points to the UCC in the given set of @param unique_column_combinations matching
  *         the given set of @param expressions. A unique column combination matches if it covers a subset of @param
- *         expressions. If no such UCC exists, the end iterator is returned.
+ *         expressions. If no such UCC exists, the end iterator is returned. We prefer schema-given UCCs over 
+ *         non-schema-given UCCs. This means that if a schema-given UCC exists, it will be returned even if
+ *         a non-schema-given UCC exists that consists of fewer expressions.
  */
 UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations& unique_column_combinations,
                                                   const ExpressionUnorderedSet& expressions);

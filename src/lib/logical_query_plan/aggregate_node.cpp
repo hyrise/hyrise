@@ -151,20 +151,13 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
     std::copy_n(node_expressions.begin(), group_by_columns_count,
                 std::inserter(group_by_columns, group_by_columns.begin()));
 
-    // Make sure that we do not add an already existing or a superset UCC.
-
-    if (unique_column_combinations.empty()) {
-      unique_column_combinations.emplace(std::move(group_by_columns), /*is_schema_given=*/true);
-    } else {
-      const auto existing_ucc = find_ucc(unique_column_combinations, group_by_columns);
-      if (existing_ucc == unique_column_combinations.end()) {
+    const auto [existing_ucc, inserted] =
         unique_column_combinations.emplace(std::move(group_by_columns), /*is_schema_given=*/true);
-      } else if (existing_ucc != unique_column_combinations.end() &&
-                 existing_ucc->expressions.size() == group_by_columns_count) {
-        // If we already have a UCC for the group-by columns that is an exact match, we do not need to add it again.
-        // However, we should still set it as schema-given, as the spurious UCC is not needed anymore.
-        existing_ucc->set_schema_given();
-      }
+
+    // If the UCC was already in the set, is not schema-given and matches the group-by columns, we set it to
+    // schema-given.
+    if (!inserted && !existing_ucc->is_schema_given() && existing_ucc->expressions.size() == group_by_columns_count) {
+      existing_ucc->set_schema_given();
     }
   }
 

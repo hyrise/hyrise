@@ -1,7 +1,9 @@
 #include "base_test.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "types.hpp"
@@ -156,13 +158,24 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
    *  - UCC from key_constraint_b remains valid since _b is part of the group-by columns.
    *  - UCC from key_constraint_b should remain not schema-given. 
    *  - UCC from key_constraint_c, however, should be discarded because _c gets aggregated.
+   *  - Also, we should gain a new schema-given UCC covering all group-by columns.
    */
 
   // Basic check.
-  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_EQ(unique_column_combinations.size(), 2);
   // In-depth check.
-  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
-  EXPECT_FALSE(unique_column_combinations.cbegin()->is_schema_given());
+  const auto ucc_b = find_ucc(unique_column_combinations, {_b});
+  const auto ucc_c = find_ucc(unique_column_combinations, {_c});
+  const auto ucc_a_b = find_ucc(unique_column_combinations, {_a, _b});
+
+  EXPECT_NE(ucc_b, unique_column_combinations.end());
+  EXPECT_FALSE(ucc_b->is_schema_given());
+
+  EXPECT_EQ(ucc_c, unique_column_combinations.end());
+
+  EXPECT_NE(ucc_a_b, unique_column_combinations.end());
+  EXPECT_TRUE(ucc_a_b->is_schema_given());
+  EXPECT_EQ(ucc_a_b->expressions.size(), 2);
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
@@ -234,16 +247,26 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
    * AggregateNode should try to create a new UCC from both group-by-columns _a and _b. However, MockNode already has a
    * UCC for _a, which is forwarded. It is shorter, and thus preferred over the UCC covering both _a and _b.
    *
-   * Expected behaviour: AggregateNode should only forward the input UCC.
+   * Expected behaviour: AggregateNode should only forward the input UCC. Additionally, it should create a new 
+   * schema-given UCC covering both _a and _b.
    */
 
   // Basic check.
   const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
-  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_EQ(unique_column_combinations.size(), 2);
+
   // In-depth check.
-  EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
+  const auto ucc_a = find_ucc(unique_column_combinations, {_a});
+  const auto ucc_a_b = find_ucc(unique_column_combinations, {_a, _b});
+
+  EXPECT_NE(ucc_a, unique_column_combinations.end());
+  EXPECT_NE(ucc_a_b, unique_column_combinations.end());
+  EXPECT_EQ(ucc_a_b->expressions.size(), 2);
+
   // The input UCC is not marked as schema-given, as it is not created by the AggregateNode.
-  EXPECT_FALSE(unique_column_combinations.cbegin()->is_schema_given());
+  EXPECT_FALSE(ucc_a->is_schema_given());
+  // The new UCC covering both _a and _b is marked as schema-given.
+  EXPECT_TRUE(ucc_a_b->is_schema_given());
 }
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {

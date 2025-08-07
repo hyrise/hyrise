@@ -298,11 +298,11 @@ std::pair<bool, bool> AbstractLQPNode::has_matching_ucc(const ExpressionUnordere
     return {false, false};
   }
 
-  const auto existic_ucc = find_ucc(unique_column_combinations, expressions);
-  if (existic_ucc == unique_column_combinations.end()) {
+  const auto existing_ucc = find_ucc(unique_column_combinations, expressions);
+  if (existing_ucc == unique_column_combinations.end()) {
     return {false, false};
   }
-  return {true, existic_ucc->is_schema_given()};
+  return {true, existing_ucc->is_schema_given()};
 }
 
 bool AbstractLQPNode::has_matching_od(
