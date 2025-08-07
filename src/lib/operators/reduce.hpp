@@ -35,12 +35,23 @@ class Reduce : public AbstractReadOnlyOperator {
     return name;
   }
 
+  std::shared_ptr<BloomFilter<20,2>> get_bloom_filter() const {
+    return _bloom_filter;
+  }
+
+  std::shared_ptr<BaseMinMaxFilter> get_min_max_filter() const {
+    return _min_max_filter;
+  }
+
  protected:
   std::shared_ptr<const Table> _on_execute() override {
-    std::cout << "Reducer called.\n";
+    // std::cout << "Reducer called.\n";
     std::shared_ptr<const Table> input_table;
     std::shared_ptr<const Table> output_table;
     auto column_id = ColumnID{};
+
+    std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter;
+    std::shared_ptr<BaseMinMaxFilter> new_min_max_filter;
 
     if constexpr (reduce_mode == ReduceMode::Build) {
       input_table = right_input_table();
@@ -58,9 +69,22 @@ class Reduce : public AbstractReadOnlyOperator {
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.reserve(chunk_count);
 
-      if constexpr (reduce_mode != ReduceMode::Probe) {
+      if constexpr (reduce_mode == ReduceMode::Build) {
         _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
         _min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
+      } else {
+        Assert(_right_input->executed(), "Build Reducer was not executed.");
+        const auto build_reduce = std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input);
+        Assert(build_reduce, "Failed to cast probe reduce.");
+
+        _bloom_filter = build_reduce->get_bloom_filter();
+        _min_max_filter = build_reduce->get_min_max_filter();
+      }
+
+
+      if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
+        new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+        new_min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
       }
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
@@ -73,7 +97,7 @@ class Reduce : public AbstractReadOnlyOperator {
         }
 
         auto matches = std::make_shared<RowIDPosList>();
-        if constexpr (reduce_mode == ReduceMode::Probe) {
+        if constexpr (reduce_mode != ReduceMode::Build) {
           matches->guarantee_single_chunk();
         }
 
@@ -92,7 +116,7 @@ class Reduce : public AbstractReadOnlyOperator {
               bool found = _bloom_filter->probe(static_cast<uint64_t>(seed));
 
               if constexpr (use_min_max == UseMinMax::Yes) {
-                found =casted_min_max_filter->probe(position.value());
+                found = casted_min_max_filter->probe(position.value());
               }
 
               if (found) {

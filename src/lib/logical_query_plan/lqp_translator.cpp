@@ -437,18 +437,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
 
   if (join_node->join_mode == JoinMode::Semi && join_node->is_semi_reduction()) {
-    // const char* env = std::getenv("REDUCER");
-    // if (env) {
-    // const auto env_string = std::string{env};
-    // if (env_string == "prototype") {
-    // const auto
-    return std::make_shared<Reduce<ReduceMode::BuildAndProbe, UseMinMax::Yes>>(left_input_operator, right_input_operator, primary_join_predicate);
-    // } else if (env_string == "legacy") {
-    // return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
-    // } else if (env_string != "semi") {
-    // Fail("Unsupported reducer type.");
-    // }
-    // }
+    const auto build_reducer = std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(left_input_operator, right_input_operator, primary_join_predicate);
+    return std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(left_input_operator, build_reducer, primary_join_predicate);
   }
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};
