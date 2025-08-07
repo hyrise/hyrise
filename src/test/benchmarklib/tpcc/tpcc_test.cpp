@@ -20,12 +20,16 @@ class TPCCTest : public BaseTest {
     static_assert(NUM_WAREHOUSES > 1);
   }
 
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
     const auto benchmark_config = std::make_shared<BenchmarkConfig>();
     auto table_generator = TPCCTableGenerator{NUM_WAREHOUSES, benchmark_config};
 
     tables = table_generator.generate();
+  }
+
+  static void TearDownTestSuite() {
+    tables.clear();
   }
 
   void SetUp() override {
@@ -34,11 +38,11 @@ class TPCCTest : public BaseTest {
       const auto generated_table = table_info.table;
       auto isolated_table =
           std::make_shared<Table>(generated_table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
-      Hyrise::get().catalog.add_table(table_name, isolated_table);
+      const auto table_id = Hyrise::get().catalog.add_table(table_name, isolated_table);
 
       auto table_wrapper = std::make_shared<TableWrapper>(generated_table);
       table_wrapper->execute();
-      auto insert = std::make_shared<Insert>(table_name, table_wrapper);
+      auto insert = std::make_shared<Insert>(table_id, table_wrapper);
       auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
       insert->set_transaction_context(transaction_context);
       insert->execute();
@@ -48,7 +52,7 @@ class TPCCTest : public BaseTest {
 
   std::shared_ptr<const Table> get_validated(const std::string& table_name,
                                              const std::shared_ptr<TransactionContext>& transaction_context) {
-    auto get_table = std::make_shared<GetTable>(table_name);
+    auto get_table = std::make_shared<GetTable>(Hyrise::get().catalog.table_id(table_name));
     get_table->execute();
 
     auto validate = std::make_shared<Validate>(get_table);
@@ -349,7 +353,7 @@ TEST_F(TPCCTest, NewOrderUnusedItemId) {
 
   // None of the tables should have been visibly modified
   for (const auto& [table_name, table_info] : tables) {
-    auto get_table = std::make_shared<GetTable>(table_name);
+    auto get_table = std::make_shared<GetTable>(Hyrise::get().catalog.table_id(table_name));
     get_table->execute();
     auto validate = std::make_shared<Validate>(get_table);
     validate->set_transaction_context(new_transaction_context);

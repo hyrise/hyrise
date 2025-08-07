@@ -16,7 +16,7 @@ class UpdateNodeTest : public BaseTest {
     _mock_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
     const auto table = Table::create_dummy_table({{"a", DataType::Int, false}});
     _table_id = Hyrise::get().catalog.add_table("table_a", table);
-    _update_node = UpdateNode::make(ObjectID{17}, _mock_node, _mock_node);
+    _update_node = UpdateNode::make(_table_id, _mock_node, _mock_node);
   }
 
   std::shared_ptr<UpdateNode> _update_node;

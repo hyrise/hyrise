@@ -674,6 +674,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
   AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name.");
+  auto translation_state = _translate_table_ref(*update.table);
+
   const auto table_name = std::string{update.table->name};
   auto target_table = std::shared_ptr<Table>{};
   auto table_id = INVALID_OBJECT_ID;
@@ -688,7 +690,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   }
 
   // The LQP that selects the fields to update.
-  auto translation_state = _translate_table_ref(*update.table);
   auto selection_lqp = translation_state.lqp;
 
   // Take a copy intentionally, we're going to replace some of these later.
@@ -929,7 +930,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
-  AssertInput(Hyrise::get().meta_table_manager.has_table(name), std::string{"Did not find a table with name "} + name);
+  AssertInput(Hyrise::get().meta_table_manager.has_table(name), "Did not find a table with name '" + name + "'.");
 
   // MetaTables are non-cacheable because they might contain information about the general system state
   // that can change at any time
@@ -939,7 +940,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
 
   // Meta tables are integrated in the LQP as static table nodes in order to avoid regeneration at every
   // access in the pipeline afterwards.
-  std::shared_ptr<Table> meta_table;
+  auto meta_table = std::shared_ptr<Table>{};
   if (_meta_tables->contains(meta_table_name)) {
     meta_table = _meta_tables->at(meta_table_name);
   } else {

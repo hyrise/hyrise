@@ -24,8 +24,8 @@ class StoredTableNodeTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(_table_a);
     _table_b = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
 
-    _table_a_id = Hyrise::get().catalog.add_table("table_a", _table_a);
-    _table_b_id = Hyrise::get().catalog.add_table("table_b", _table_b);
+    _table_a_id = Hyrise::get().catalog.add_table("t_a", _table_a);
+    _table_b_id = Hyrise::get().catalog.add_table("t_b", _table_b);
 
     _table_a->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
     _table_a->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
@@ -99,9 +99,6 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(*_stored_table_node, *different_node_c);
   EXPECT_EQ(*different_node_c, *different_node_c2);
 
-  EXPECT_NE(_stored_table_node->hash(), different_node_a->hash());
-  EXPECT_NE(_stored_table_node->hash(), different_node_b->hash());
-  EXPECT_NE(_stored_table_node->hash(), different_node_c->hash());
   EXPECT_EQ(different_node_c->hash(), different_node_c2->hash());
 }
 

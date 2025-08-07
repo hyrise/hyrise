@@ -684,9 +684,9 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
       Hyrise::get().catalog.drop_table(table_name);
     }
 
-    Hyrise::get().catalog.add_table(
-        table_name, std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
-                                            Chunk::DEFAULT_SIZE, UseMvcc::Yes));
+    const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                               Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+    const auto table_id = Hyrise::get().catalog.add_table(table_name, table);
 
     const auto values_to_insert =
         std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
@@ -705,17 +705,17 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
     auto insert_threads = std::vector<std::thread>{};
     insert_threads.reserve(insert_thread_count);
 
-    const auto start = std::chrono::system_clock::now();
+    const auto start = std::chrono::steady_clock::now();
     auto start_flag = std::atomic_flag{};
     auto stop_flag = std::atomic_flag{};
 
     for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
       insert_threads.emplace_back([&]() {
         start_flag.wait(false);
-        for (auto loop_id = uint32_t{0}; loop_id < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + RUNTIME;
+        for (auto loop_id = uint32_t{0}; loop_id < MAX_LOOP_COUNT && std::chrono::steady_clock::now() < start + RUNTIME;
              ++loop_id) {
           const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
-          const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
+          const auto insert = std::make_shared<Insert>(table_id, table_wrapper);
 
           const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
           insert->set_transaction_context(transaction_context);
@@ -786,7 +786,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   table->append({2, 2, 2});
   table->append({3, 3, 1});
 
-  Hyrise::get().catalog.add_table("dummy_table", table);
+  const auto table_id = Hyrise::get().catalog.add_table("dummy_table", table);
   /**
    * This test runs insertions and reads concurrently. Specifically, it tests the following functions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`
@@ -840,7 +840,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
     while (!stop_flag.test()) {
       // Prevent this thread from starving the `validate_constraint` thread by continously acquiring `shared_locks`.
       writer_waiting_flag.wait(true);
-      const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
+      const auto stored_table_node = StoredTableNode::make(table_id);
       // Access the unique column combinations. We need to lock here because `unique_column_combinations` uses a
       // reference to iterate over the constraints. This reference is invalidated when the constraints are cleared.
       const auto lock = std::shared_lock{deletion_mutex};

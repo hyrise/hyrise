@@ -26,7 +26,7 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
-  EXPECT_EQ(plugins.size(), 0u);
+  EXPECT_TRUE(plugins.empty());
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
   EXPECT_TRUE(plugins.contains("hyriseTestPlugin"));
@@ -50,7 +50,7 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
-  EXPECT_EQ(plugins.size(), 0u);
+  EXPECT_TRUE(plugins.empty());
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
   EXPECT_TRUE(plugins.contains("hyriseTestPlugin"));
@@ -74,14 +74,13 @@ TEST_F(PluginManagerTest, LoadingUnloadingUserExecutableFunctions) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
-  EXPECT_EQ(plugins.size(), 0u);
+  EXPECT_TRUE(plugins.empty());
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
-  EXPECT_EQ(plugins.size(), 2u);
+  EXPECT_EQ(plugins.size(), 2);
 
   {
-    auto user_executable_functions = pm.user_executable_functions();
-
+    const auto user_executable_functions = pm.user_executable_functions();
     EXPECT_EQ(user_executable_functions.size(), 3);
     EXPECT_TRUE(user_executable_functions.contains({"hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName"}));
     EXPECT_TRUE(user_executable_functions.contains({"hyriseTestPlugin", "OurFreelyChoosableFunctionName"}));
@@ -151,17 +150,15 @@ TEST_F(PluginManagerTest, LoadingUnloadingBenchmarkHooks) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
-  EXPECT_EQ(plugins.size(), 0u);
+  EXPECT_TRUE(plugins.empty());
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
-  EXPECT_EQ(plugins.size(), 2u);
+  EXPECT_EQ(plugins.size(), 2);
 
-  {
-    EXPECT_TRUE(pm.has_pre_benchmark_hook("hyriseTestPlugin"));
-    EXPECT_TRUE(pm.has_post_benchmark_hook("hyriseTestPlugin"));
-    EXPECT_FALSE(pm.has_pre_benchmark_hook("hyriseSecondTestPlugin"));
-    EXPECT_FALSE(pm.has_post_benchmark_hook("hyriseSecondTestPlugin"));
-  }
+  EXPECT_TRUE(pm.has_pre_benchmark_hook("hyriseTestPlugin"));
+  EXPECT_TRUE(pm.has_post_benchmark_hook("hyriseTestPlugin"));
+  EXPECT_FALSE(pm.has_pre_benchmark_hook("hyriseSecondTestPlugin"));
+  EXPECT_FALSE(pm.has_post_benchmark_hook("hyriseSecondTestPlugin"));
 
   pm.unload_plugin("hyriseTestPlugin");
   EXPECT_FALSE(pm.has_pre_benchmark_hook("hyriseTestPlugin"));
@@ -239,7 +236,7 @@ TEST_F(PluginManagerTest, LoadingSameName) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
-  EXPECT_EQ(plugins.size(), 0u);
+  EXPECT_TRUE(plugins.empty());
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
   EXPECT_THROW(pm.load_plugin(build_dylib_path("libhyriseTestPlugin")), std::exception);
@@ -261,17 +258,17 @@ TEST_F(PluginManagerTest, LoadingDifferentPlugins) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
-  EXPECT_EQ(plugins.size(), 0u);
+  EXPECT_TRUE(plugins.empty());
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.load_plugin(build_dylib_path("libhyriseMvccDeletePlugin"));
-  EXPECT_EQ(plugins.size(), 2u);
+  EXPECT_EQ(plugins.size(), 2);
 }
 
 TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
-  EXPECT_EQ(plugins.size(), 0u);
+  EXPECT_TRUE(plugins.empty());
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   EXPECT_THROW(pm.load_plugin(build_dylib_path("libhyriseTestPlugin")), std::exception);
 }
@@ -280,7 +277,7 @@ TEST_F(PluginManagerTest, UnloadNotLoadedPlugin) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
-  EXPECT_EQ(plugins.size(), 0u);
+  EXPECT_TRUE(plugins.empty());
 
   EXPECT_THROW(pm.unload_plugin("NotLoadedPlugin"), std::exception);
 }

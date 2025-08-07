@@ -28,7 +28,7 @@ class ServerTestRunner : public BaseTest {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     Hyrise::get().catalog.add_table("table_a", _table_a);
 
-    auto server_runner = [](Server& server) {
+    const auto server_runner = [](Server& server) {
       server.run();
     };
 
@@ -188,7 +188,7 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
   EXPECT_TRUE(compare_files(_export_filename + ".csv", "resources/test_data/bin/int_float_deleted.csv"));
 
   // Get reference table without deleted row
-  auto get_table = std::make_shared<GetTable>("table_a");
+  auto get_table = std::make_shared<GetTable>(Hyrise::get().catalog.table_id("table_a"));
   auto validate = std::make_shared<Validate>(get_table);
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   validate->set_transaction_context(transaction_context);

@@ -31,10 +31,10 @@ namespace hyrise {
 std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandler::execute_pipeline(
     const std::string& query, const SendExecutionInfo send_execution_info,
     const std::shared_ptr<TransactionContext>& transaction_context) {
-  // A simple query command invalidates unnamed statements
+  // A simple query command invalidates unnamed statements.
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  if (Hyrise::get().storage_manager.has_prepared_plan("")) {
-    Hyrise::get().storage_manager.drop_prepared_plan("");
+  if (Hyrise::get().catalog.has_prepared_plan("")) {
+    Hyrise::get().catalog.drop_prepared_plan("");
   }
 
   DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
@@ -70,12 +70,12 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
 void QueryHandler::setup_prepared_plan(const std::string& statement_name, const std::string& query) {
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message.
   // An unnamed prepared statement lasts only until the next Parse statement specifying the unnamed statement as
-  // destination is issued
+  // destination is issued.
   // https://www.postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  if (Hyrise::get().storage_manager.has_prepared_plan(statement_name)) {
+  if (Hyrise::get().catalog.has_prepared_plan(statement_name)) {
     AssertInput(statement_name.empty(),
                 "Named prepared statements must be explicitly closed before they can be redefined.");
-    Hyrise::get().storage_manager.drop_prepared_plan(statement_name);
+    Hyrise::get().catalog.drop_prepared_plan(statement_name);
   }
 
   auto pipeline = SQLPipelineBuilder{query}.create_pipeline();
@@ -93,7 +93,7 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
   auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
   const auto prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids_of_value_placeholders);
 
-  Hyrise::get().storage_manager.add_prepared_plan(statement_name, prepared_plan);
+  Hyrise::get().catalog.add_prepared_plan(statement_name, prepared_plan);
 }
 
 std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const PreparedStatementDetails& statement_details) {

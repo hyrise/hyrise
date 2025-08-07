@@ -127,7 +127,7 @@ TEST_F(StorageManagerTest, DropTable) {
 
   // Adding a table with the same ID is okay. The Catalog should take care that that does not actually happen.
   _add_table(ObjectID{0}, std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("first_table"));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table(ObjectID{0}));
 }
 
 TEST_F(StorageManagerTest, HasTable) {

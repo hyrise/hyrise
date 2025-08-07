@@ -31,9 +31,9 @@ std::shared_ptr<AbstractOperator> DropView::_on_deep_copy(
 void DropView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> DropView::_on_execute() {
-  // If IF EXISTS is not set and the view is not found, StorageManager throws an exception.
-  if (!if_exists || Hyrise::get().storage_manager.has_view(view_name)) {
-    Hyrise::get().storage_manager.drop_view(view_name);
+  // If IF EXISTS is not set and the view is not found, Catalog throws an exception.
+  if (!if_exists || Hyrise::get().catalog.has_view(view_name)) {
+    Hyrise::get().catalog.drop_view(view_name);
   }
 
   return nullptr;

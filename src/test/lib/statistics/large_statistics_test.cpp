@@ -125,23 +125,22 @@ TEST_F(LargeStatisticsTest, CorrectHistogramBins) {
 }
 
 TEST_F(LargeStatisticsTest, CostAndCardinalityEstimation) {
-  Hyrise::get().catalog.add_table("a", table);
-  const auto a = StoredTableNode::make("a");
+  const auto table_id = Hyrise::get().catalog.add_table("a", table);
+  const auto table_a = StoredTableNode::make(table_id);
 
   // clang-format off
   const auto lqp =
   UnionNode::make(SetOperationMode::All,
-    a,
-    SortNode::make(expression_vector(a->get_column("a_a")), std::vector<SortMode>{SortMode::Ascending},
+    table_a,
+    SortNode::make(expression_vector(table_a->get_column("a_a")), std::vector<SortMode>{SortMode::Ascending},
       LimitNode::make(value_(1),
-        a)));
+        table_a)));
   // clang-format on
 
   const auto cardinality_estimator = std::make_shared<CardinalityEstimator>();
   auto cost_estimator = CostEstimatorLogical{cardinality_estimator};
 
-  const auto cardinality_a = cardinality_estimator->estimate_cardinality(a);
-  EXPECT_EQ(cardinality_a, 30'000'000);
+  EXPECT_EQ(cardinality_estimator->estimate_cardinality(table_a), 30'000'000);
   EXPECT_EQ(cardinality_estimator->estimate_cardinality(lqp->left_input()), 30'000'000);
   EXPECT_EQ(cardinality_estimator->estimate_cardinality(lqp->right_input()), 1);
   EXPECT_EQ(cardinality_estimator->estimate_cardinality(lqp->right_input()->left_input()), 1);
@@ -149,7 +148,7 @@ TEST_F(LargeStatisticsTest, CostAndCardinalityEstimation) {
 
   // The cost of the entire plan sums all individual costs. Thus, the overall cost should be higher than the cost of a
   // single node.
-  EXPECT_GT(cost_estimator.estimate_plan_cost(lqp), cost_estimator.estimate_plan_cost(a));
+  EXPECT_GT(cost_estimator.estimate_plan_cost(lqp), cost_estimator.estimate_plan_cost(table_a));
 }
 
 }  // namespace hyrise

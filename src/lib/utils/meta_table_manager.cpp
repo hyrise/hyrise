@@ -26,7 +26,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::vector<std::vector<AllTypeVariant>> materialize_values(const std::shared_ptr<const Table>& values) {
   const auto performance_warning_disabler = PerformanceWarningDisabler{};
@@ -73,6 +73,7 @@ std::vector<std::string_view> MetaTableManager::table_names() const {
   for (const auto& [name, _] : _meta_tables) {
     table_names.push_back(name);
   }
+  std::ranges::sort(table_names);
   return table_names;
 }
 

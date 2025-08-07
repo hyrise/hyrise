@@ -307,7 +307,7 @@ void AbstractTableGenerator::generate_and_store() {
 
       const auto add_table = [&]() {
         auto per_table_timer = Timer{};
-        if (catalog.table_id(table_name) != INVALID_OBJECT_ID) {
+        if (catalog.has_table(table_name)) {
           catalog.drop_table(table_name);
         }
         catalog.add_table(table_name, table_info.table);

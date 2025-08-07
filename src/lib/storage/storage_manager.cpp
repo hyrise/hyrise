@@ -25,10 +25,6 @@
 
 namespace hyrise {
 
-// void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
-//   Hyrise::get().catalog.add_table(name, table);
-// }
-
 void StorageManager::_add_table(const ObjectID table_id, std::shared_ptr<Table> table) {
   const auto needs_growth = table_id >= _tables.size();
   Assert(needs_growth || !_tables[table_id],
@@ -53,10 +49,6 @@ void StorageManager::_add_table(const ObjectID table_id, std::shared_ptr<Table> 
 
   _tables[table_id] = std::move(table);
 }
-
-// void StorageManager::drop_table(const std::string& name) {
-//   Hyrise::get().catalog.drop_table(name);
-// }
 
 void StorageManager::_drop_table(const ObjectID table_id) {
   Assert(table_id < _tables.size() && _tables[table_id],
@@ -85,10 +77,6 @@ bool StorageManager::has_table(const ObjectID table_id) const {
   return _tables[table_id] != nullptr;
 }
 
-void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
-  Hyrise::get().catalog.add_view(name, view);
-}
-
 void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQPView>& view) {
   const auto needs_growth = view_id >= _views.size();
   Assert(needs_growth || !_views[view_id],
@@ -98,10 +86,6 @@ void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQP
   }
 
   _views[view_id] = view;
-}
-
-void StorageManager::drop_view(const std::string& name) {
-  Hyrise::get().catalog.drop_view(name);
 }
 
 void StorageManager::_drop_view(const ObjectID view_id) {
@@ -131,20 +115,6 @@ bool StorageManager::has_view(const ObjectID view_id) const {
   return view_id < _views.size() && _views[view_id] != nullptr;
 }
 
-std::unordered_map<std::string_view, std::shared_ptr<LQPView>> StorageManager::views() const {
-  auto result = std::unordered_map<std::string_view, std::shared_ptr<LQPView>>{};
-
-  for (const auto& [view_name, view_id] : Hyrise::get().catalog.view_ids()) {
-    result[view_name] = _views[view_id];
-  }
-
-  return result;
-}
-
-void StorageManager::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
-  Hyrise::get().catalog.add_prepared_plan(name, prepared_plan);
-}
-
 void StorageManager::_add_prepared_plan(const ObjectID plan_id, const std::shared_ptr<PreparedPlan>& prepared_plan) {
   const auto needs_growth = plan_id >= _prepared_plans.size();
   Assert(needs_growth || !_prepared_plans[plan_id],
@@ -154,10 +124,6 @@ void StorageManager::_add_prepared_plan(const ObjectID plan_id, const std::share
   }
 
   _prepared_plans[plan_id] = prepared_plan;
-}
-
-void StorageManager::drop_prepared_plan(const std::string& name) {
-  Hyrise::get().catalog.drop_prepared_plan(name);
 }
 
 void StorageManager::_drop_prepared_plan(const ObjectID plan_id) {
@@ -186,43 +152,5 @@ bool StorageManager::has_prepared_plan(const std::string& name) const {
 bool StorageManager::has_prepared_plan(const ObjectID plan_id) const {
   return plan_id < _prepared_plans.size() && _prepared_plans[plan_id] != nullptr;
 }
-
-std::unordered_map<std::string_view, std::shared_ptr<PreparedPlan>> StorageManager::prepared_plans() const {
-  auto result = std::unordered_map<std::string_view, std::shared_ptr<PreparedPlan>>{};
-
-  for (const auto& [prepared_plan_name, plan_id] : Hyrise::get().catalog.prepared_plan_ids()) {
-    result[prepared_plan_name] = _prepared_plans[plan_id];
-  }
-
-  return result;
-}
-
-// std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {
-//   stream << "==================\n";
-//   stream << "===== Tables =====\n\n";
-
-//   for (const auto& [name, table_id] : Hyrise::get().catalog.table_ids()) {
-//     stream << "==== table >> " << name << " <<";
-//     const auto table = storage_manager.get_table(table_id);
-//     stream << " (" << table->column_count() << " columns, " << table->row_count() << " rows in " << table->chunk_count()
-//            << " chunks)\n";
-//   }
-
-//   stream << "==================\n";
-//   stream << "===== Views ======\n\n";
-
-//   for (auto const& view : storage_manager.views()) {
-//     stream << "==== view >> " << view.first << " <<\n";
-//   }
-
-//   stream << "==================\n";
-//   stream << "= PreparedPlans ==\n\n";
-
-//   for (auto const& prepared_plan : storage_manager.prepared_plans()) {
-//     stream << "==== prepared plan >> " << prepared_plan.first << " <<\n";
-//   }
-
-//   return stream;
-// }
 
 }  // namespace hyrise

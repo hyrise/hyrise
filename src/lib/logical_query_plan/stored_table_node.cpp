@@ -257,7 +257,8 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
 }
 
 size_t StoredTableNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(static_cast<ObjectID::base_type>(table_id));
+  auto hash = size_t{0};
+  boost::hash_combine(hash, table_id);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
     boost::hash_combine(hash, pruned_chunk_id);
   }

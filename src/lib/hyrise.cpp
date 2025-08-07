@@ -25,8 +25,8 @@ Hyrise::Hyrise() {
   // construction, explicitly initializing the resource first means that it is destructed last.
   std::pmr::set_default_resource(&DefaultResource::get());
 
-  catalog = Catalog{};
   storage_manager = StorageManager{};
+  catalog = Catalog{};
   plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};
   meta_table_manager = MetaTableManager{};

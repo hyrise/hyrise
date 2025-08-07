@@ -40,6 +40,7 @@ class Catalog : public Noncopyable {
   ObjectID add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
   void drop_view(ObjectID view_id);
   void drop_view(const std::string& name);
+  bool has_view(const std::string& name) const;
   ObjectID view_id(const std::string& name) const;
   const std::string& view_name(const ObjectID view_id) const;
   std::vector<std::string_view> view_names() const;
@@ -48,12 +49,13 @@ class Catalog : public Noncopyable {
   ObjectID add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
   void drop_prepared_plan(ObjectID plan_id);
   void drop_prepared_plan(const std::string& name);
+  bool has_prepared_plan(const std::string& name) const;
   ObjectID prepared_plan_id(const std::string& name) const;
   const std::string& prepared_plan_name(const ObjectID plan_id) const;
   std::unordered_map<std::string_view, ObjectID> prepared_plan_ids() const;
 
   // We pre-allocate data structures to prevent costly re-allocations.
-  static constexpr size_t INITIAL_SIZE = 100;
+  static constexpr auto INITIAL_SIZE = size_t{100};
 
   struct ObjectMetadata {
     // Required for the use in the Hyrise constructor.

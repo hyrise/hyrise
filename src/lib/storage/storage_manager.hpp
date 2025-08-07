@@ -38,13 +38,10 @@ class StorageManager : public Noncopyable {
    * @defgroup Manage SQL views, this is only thread-safe for operations on views with different names.
    * @{
    */
-  void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
-  void drop_view(const std::string& name);
   std::shared_ptr<LQPView> get_view(const ObjectID view_id) const;
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
   bool has_view(const ObjectID object_id) const;
   bool has_view(const std::string& name) const;
-  std::unordered_map<std::string_view, std::shared_ptr<LQPView>> views() const;
   /** @} */
 
   /**
@@ -52,13 +49,10 @@ class StorageManager : public Noncopyable {
    *           prepared plans with different names.
    * @{
    */
-  void add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
-  void drop_prepared_plan(const std::string& name);
   std::shared_ptr<PreparedPlan> get_prepared_plan(const ObjectID plan_id) const;
   std::shared_ptr<PreparedPlan> get_prepared_plan(const std::string& name) const;
   bool has_prepared_plan(const ObjectID plan_id) const;
   bool has_prepared_plan(const std::string& name) const;
-  std::unordered_map<std::string_view, std::shared_ptr<PreparedPlan>> prepared_plans() const;
   /** @} */
 
  protected:

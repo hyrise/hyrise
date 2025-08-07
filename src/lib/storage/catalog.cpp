@@ -117,8 +117,9 @@ void Catalog::drop_table(const std::string& name) {
          "Error deleting table. No such table named '" + name + "'.");
 
   // The `concurrent_unordered_map` does not support concurrency-safe erasure. Thus, we simply reset the table ID.
+  const auto table_id = iter->second;
   _tables.ids[name] = INVALID_OBJECT_ID;
-  Hyrise::get().storage_manager._drop_table(iter->second);
+  Hyrise::get().storage_manager._drop_table(table_id);
 }
 
 bool Catalog::has_table(const std::string& name) const {
@@ -177,8 +178,13 @@ void Catalog::drop_view(const std::string& name) {
          "Error deleting view. No such view named '" + name + "'.");
 
   // The `concurrent_unordered_map` does not support concurrency-safe erasure. Thus, we simply reset the table ID.
+  const auto view_id = iter->second;
   _views.ids[name] = INVALID_OBJECT_ID;
-  Hyrise::get().storage_manager._drop_view(iter->second);
+  Hyrise::get().storage_manager._drop_view(view_id);
+}
+
+bool Catalog::has_view(const std::string& name) const {
+  return view_id(name) != INVALID_OBJECT_ID;
 }
 
 ObjectID Catalog::view_id(const std::string& name) const {
@@ -219,8 +225,13 @@ void Catalog::drop_prepared_plan(const std::string& name) {
          "Error deleting view. No such prepared plan named '" + name + "'.");
 
   // The `concurrent_unordered_map` does not support concurrency-safe erasure. Thus, we simply reset the table ID.
+  const auto plan_id = iter->second;
   _prepared_plans.ids[name] = INVALID_OBJECT_ID;
-  Hyrise::get().storage_manager._drop_prepared_plan(iter->second);
+  Hyrise::get().storage_manager._drop_prepared_plan(plan_id);
+}
+
+bool Catalog::has_prepared_plan(const std::string& name) const {
+  return prepared_plan_id(name) != INVALID_OBJECT_ID;
 }
 
 ObjectID Catalog::prepared_plan_id(const std::string& name) const {

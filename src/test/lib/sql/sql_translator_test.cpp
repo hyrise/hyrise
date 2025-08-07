@@ -2777,7 +2777,7 @@ TEST_F(SQLTranslatorTest, Execute) {
   const auto prepared_plan = std::make_shared<PreparedPlan>(
       prepared_plan_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
 
-  Hyrise::get().storage_manager.add_prepared_plan("some_prepared_plan", prepared_plan);
+  Hyrise::get().catalog.add_prepared_plan("some_prepared_plan", prepared_plan);
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE some_prepared_plan ('Hello', 1, 42)");
 
@@ -2807,7 +2807,7 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
 
-  Hyrise::get().storage_manager.add_prepared_plan("another_prepared_plan", prepared_plan);
+  Hyrise::get().catalog.add_prepared_plan("another_prepared_plan", prepared_plan);
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE another_prepared_plan ()");
 

@@ -43,9 +43,9 @@ std::shared_ptr<AbstractOperator> CreateView::_on_deep_copy(
 void CreateView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> CreateView::_on_execute() {
-  // If IF NOT EXISTS is not set and the view already exists, StorageManager throws an exception.
-  if (!_if_not_exists || !Hyrise::get().storage_manager.has_view(_view_name)) {
-    Hyrise::get().storage_manager.add_view(_view_name, _view);
+  // If IF NOT EXISTS is not set and the view already exists, Catalog throws an exception.
+  if (!_if_not_exists || !Hyrise::get().catalog.has_view(_view_name)) {
+    Hyrise::get().catalog.add_view(_view_name, _view);
   }
   return nullptr;
 }

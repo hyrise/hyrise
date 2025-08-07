@@ -44,7 +44,7 @@ const std::string& CreatePreparedPlan::prepared_plan_name() const {
 }
 
 std::shared_ptr<const Table> CreatePreparedPlan::_on_execute() {
-  Hyrise::get().storage_manager.add_prepared_plan(_prepared_plan_name, _prepared_plan);
+  Hyrise::get().catalog.add_prepared_plan(_prepared_plan_name, _prepared_plan);
   return nullptr;
 }
 
