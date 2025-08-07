@@ -441,7 +441,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     // if (env) {
     // const auto env_string = std::string{env};
     // if (env_string == "prototype") {
-    return std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(left_input_operator, right_input_operator, primary_join_predicate);
+    // const auto
+    return std::make_shared<Reduce<ReduceMode::BuildAndProbe, UseMinMax::Yes>>(left_input_operator, right_input_operator, primary_join_predicate);
     // } else if (env_string == "legacy") {
     // return std::make_shared<LegacyReduce>(left_input_operator, right_input_operator, primary_join_predicate, false);
     // } else if (env_string != "semi") {
