@@ -1,7 +1,4 @@
-#include <algorithm>
-#include <fstream>
 #include <iostream>
-#include <random>
 
 // This playground only compiles on Linux as we require Linux's perf and perfetto.
 #include "hyrise.hpp"
@@ -9,7 +6,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
