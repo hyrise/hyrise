@@ -57,13 +57,14 @@ std::shared_ptr<const Table> Import::_on_execute() {
       auto csv_meta = CsvMeta{};
       const auto meta_filename = filename + CsvMeta::META_FILE_EXTENSION;
       const auto meta_file_exists = std::filesystem::exists(meta_filename);
-      const auto table_exists = Hyrise::get().storage_manager.has_table(_tablename);
+      const auto table_exists = Hyrise::get().catalog.has_table(_tablename);
       if (table_exists) {
         if (meta_file_exists) {
           std::cerr << "Warning: Ignoring " << meta_filename << " because table " << _tablename << " already exists.\n";
         }
 
-        const auto& column_definitions = Hyrise::get().storage_manager.get_table(_tablename)->column_definitions();
+        const auto table_id = Hyrise::get().catalog.table_id(_tablename);
+        const auto& column_definitions = Hyrise::get().storage_manager.get_table(table_id)->column_definitions();
         const auto column_count = column_definitions.size();
 
         csv_meta.columns.resize(column_count);
@@ -115,14 +116,15 @@ std::shared_ptr<const Table> Import::_on_execute() {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
-  if (!Hyrise::get().storage_manager.has_table(_tablename)) {
+  const auto table_id = Hyrise::get().catalog.table_id(_tablename);
+  if (table_id == INVALID_OBJECT_ID) {
     // We create statistics when tables are added to the storage manager. As statistics can be expensive to create
     // and their creation benefits from dictionary encoding, we add the tables after they are encoded.
     Hyrise::get().catalog.add_table(_tablename, table);
     return nullptr;
   }
 
-  const auto existing_table = Hyrise::get().storage_manager.get_table(_tablename);
+  const auto existing_table = Hyrise::get().storage_manager.get_table(table_id);
   const auto append_lock = existing_table->acquire_append_mutex();
   if (existing_table->chunk_count() > 0 && existing_table->last_chunk()->is_mutable()) {
     existing_table->last_chunk()->set_immutable();

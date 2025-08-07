@@ -218,7 +218,8 @@ TEST_F(TPCCTest, Delivery) {
 
 TEST_F(TPCCTest, NewOrder) {
   auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  const auto old_order_line_size = static_cast<int>(Hyrise::get().storage_manager.get_table("ORDER_LINE")->row_count());
+  const auto order_line_id = Hyrise::get().catalog.table_id("ORDER_LINE");
+  const auto old_order_line_size = Hyrise::get().storage_manager.get_table(order_line_id)->row_count();
   const auto old_time = time(nullptr);
 
   BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
@@ -269,14 +270,16 @@ TEST_F(TPCCTest, NewOrder) {
   new_sizes["ORDER_LINE"] = old_order_line_size + order_lines.size();
   verify_table_sizes(new_sizes);
 
-  // Verify NEW_ORDER entry
-  const auto new_order_row = Hyrise::get().storage_manager.get_table("NEW_ORDER")->get_row(new_sizes["NEW_ORDER"] - 1);
+  // Verify NEW_ORDER entry.
+  const auto new_order_id = Hyrise::get().catalog.table_id("NEW_ORDER");
+  const auto new_order_row = Hyrise::get().storage_manager.get_table(new_order_id)->get_row(new_sizes["NEW_ORDER"] - 1);
   EXPECT_EQ(new_order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});  // NO_O_ID
   EXPECT_EQ(new_order_row[1], AllTypeVariant{new_order.d_id});               // NO_D_ID
   EXPECT_EQ(new_order_row[2], AllTypeVariant{new_order.w_id});               // NO_W_ID
 
-  // Verify ORDER entry
-  const auto order_row = Hyrise::get().storage_manager.get_table("ORDER")->get_row(new_sizes["ORDER"] - 1);
+  // Verify ORDER entry.
+  const auto order_id = Hyrise::get().catalog.table_id("NEW_ORDER");
+  const auto order_row = Hyrise::get().storage_manager.get_table(order_id)->get_row(new_sizes["ORDER"] - 1);
   EXPECT_EQ(order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});               // O_ID
   EXPECT_EQ(order_row[1], AllTypeVariant{new_order.d_id});                            // O_D_ID
   EXPECT_EQ(order_row[2], AllTypeVariant{new_order.w_id});                            // O_W_ID
@@ -287,11 +290,12 @@ TEST_F(TPCCTest, NewOrder) {
   EXPECT_EQ(order_row[7], AllTypeVariant{0});                                         // O_ALL_LOCAL
 
   // VERIFY ORDER_LINE entries
+  const auto order_line = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("ORDER_LINE"));
   for (auto line_idx = size_t{0}; line_idx < order_lines.size(); ++line_idx) {
     const auto ol_i_id = order_lines[line_idx].ol_i_id;
 
     const auto row_idx = new_sizes["ORDER_LINE"] - order_lines.size() + line_idx;
-    const auto order_line_row = Hyrise::get().storage_manager.get_table("ORDER_LINE")->get_row(row_idx);
+    const auto order_line_row = order_line->get_row(row_idx);
     EXPECT_EQ(order_line_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});         // OL_O_ID
     EXPECT_EQ(order_line_row[1], AllTypeVariant{new_order.d_id});                      // OL_D_ID
     EXPECT_EQ(order_line_row[2], AllTypeVariant{new_order.w_id});                      // OL_W_ID

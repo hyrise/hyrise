@@ -32,7 +32,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
   void SetUp() override {
     table = load_table("resources/test_data/tbl/int_float4.tbl");
     const auto table_id = Hyrise::get().catalog.add_table("a", table);
-    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("a"));
+    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table(table_id));
 
     rule = std::make_shared<IndexScanRule>();
 

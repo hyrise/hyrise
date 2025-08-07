@@ -1,5 +1,3 @@
-#include <unordered_map>
-
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
@@ -88,8 +86,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
   void TearDown(::benchmark::State& /*state*/) override {}
 
-  std::unordered_map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(Catalog& catalog) {
-    auto wrapper_map = std::unordered_map<std::string, std::shared_ptr<TableWrapper>>{};
+  std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(Catalog& catalog) {
+    auto wrapper_map = std::map<std::string, std::shared_ptr<TableWrapper>>{};
     for (const auto& [table_name, table_id] : catalog.table_ids()) {
       const auto table = Hyrise::get().storage_manager.get_table(table_id);
       const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -104,7 +102,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
   inline static bool _tpch_data_generated = false;
 
-  std::unordered_map<std::string, std::shared_ptr<TableWrapper>> _table_wrapper_map;
+  std::map<std::string, std::shared_ptr<TableWrapper>> _table_wrapper_map;
 
   std::shared_ptr<PQPColumnExpression> _lorderkey_operand;
   std::shared_ptr<BinaryPredicateExpression> _int_predicate;

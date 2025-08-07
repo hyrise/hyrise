@@ -52,9 +52,9 @@ TEST_F(CreateViewTest, Execute) {
   EXPECT_TRUE(create_view->executed());
   EXPECT_FALSE(create_view->get_output());
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_view("view_name"));
-
-  const auto view_out = Hyrise::get().storage_manager.get_view("view_name");
+  const auto view_out_id = Hyrise::get().catalog.view_id("view_name");
+  EXPECT_NE(view_out_id, INVALID_OBJECT_ID);
+  const auto view_out = Hyrise::get().storage_manager.get_view(view_out_id);
   EXPECT_EQ(view_out->lqp->type, LQPNodeType::Mock);
 
   const auto create_view_2 = std::make_shared<CreateView>("view_name", view_in, false);
@@ -71,9 +71,9 @@ TEST_F(CreateViewTest, ExecuteWithIfNotExists) {
   EXPECT_TRUE(create_view->executed());
   EXPECT_FALSE(create_view->get_output());
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_view("view_name"));
-
-  const auto view_out = Hyrise::get().storage_manager.get_view("view_name");
+  const auto view_out_id = Hyrise::get().catalog.view_id("view_name");
+  EXPECT_NE(view_out_id, INVALID_OBJECT_ID);
+  const auto view_out = Hyrise::get().storage_manager.get_view(view_out_id);
   EXPECT_EQ(view_out->lqp->type, LQPNodeType::Mock);
 
   const auto create_view_2 = std::make_shared<CreateView>("view_name", view_in, true);

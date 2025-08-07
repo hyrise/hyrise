@@ -83,9 +83,9 @@ TEST_F(CreateTableTest, Execute) {
 
   EXPECT_TRUE(create_table->executed());
   EXPECT_FALSE(create_table->get_output());
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("t"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("t"));
 
-  const auto table = Hyrise::get().storage_manager.get_table("t");
+  const auto table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("t"));
 
   EXPECT_EQ(table->row_count(), 0);
   EXPECT_EQ(table->column_definitions(), column_definitions);
@@ -103,9 +103,9 @@ TEST_F(CreateTableTest, SoftKeyConstraints) {
 
   EXPECT_TRUE(create_table->executed());
   EXPECT_FALSE(create_table->get_output());
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("t"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("t"));
 
-  const auto table = Hyrise::get().storage_manager.get_table("t");
+  const auto table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("t"));
   const auto& table_key_constraints = table->soft_key_constraints();
   EXPECT_EQ(table_key_constraints.size(), 1);
   EXPECT_TRUE(table_key_constraints.contains(unique_constraint));
@@ -141,9 +141,8 @@ TEST_F(CreateTableTest, ExecuteWithIfNotExists) {
   ct_if_not_exists_1->execute();
   context->commit();
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("t"));
-
-  const auto table = Hyrise::get().storage_manager.get_table("t");
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("t"));
+  const auto table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("t"));
 
   EXPECT_EQ(table->row_count(), 0);
   EXPECT_EQ(table->column_definitions(), column_definitions);
@@ -213,7 +212,7 @@ TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
 
   context->commit();
 
-  const auto created_table = Hyrise::get().storage_manager.get_table("test_2");
+  const auto created_table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("test_2"));
 
   EXPECT_TABLE_EQ_ORDERED(created_table, load_table("resources/test_data/tbl/projection/int_float_add.tbl"));
 }

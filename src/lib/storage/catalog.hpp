@@ -27,6 +27,10 @@ class Catalog : public Noncopyable {
  public:
   std::pair<ObjectType, ObjectID> resolve_object(const std::string& name);
 
+  /**
+   * @defgroup Manage tables, this is only thread-safe for operations on tables with different names.
+   * @{
+   */
   ObjectID add_table(const std::string& name, const std::shared_ptr<Table>& table);
   void drop_table(ObjectID table_id);
   void drop_table(const std::string& name);
@@ -36,23 +40,32 @@ class Catalog : public Noncopyable {
   std::vector<std::string_view> table_names() const;
   std::unordered_map<std::string_view, ObjectID> table_ids() const;
   std::unordered_map<std::string_view, std::shared_ptr<Table>> tables() const;
+  /** @} */
 
+  /**
+   * @defgroup Manage SQL views, this is only thread-safe for operations on views with different names.
+   * @{
+   */
   ObjectID add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
   void drop_view(ObjectID view_id);
   void drop_view(const std::string& name);
   bool has_view(const std::string& name) const;
   ObjectID view_id(const std::string& name) const;
   const std::string& view_name(const ObjectID view_id) const;
-  std::vector<std::string_view> view_names() const;
-  std::unordered_map<std::string_view, ObjectID> view_ids() const;
+  /** @} */
 
+  /**
+   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements, this is only thread-safe for operations on
+   *           prepared plans with different names.
+   * @{
+   */
   ObjectID add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
   void drop_prepared_plan(ObjectID plan_id);
   void drop_prepared_plan(const std::string& name);
   bool has_prepared_plan(const std::string& name) const;
   ObjectID prepared_plan_id(const std::string& name) const;
   const std::string& prepared_plan_name(const ObjectID plan_id) const;
-  std::unordered_map<std::string_view, ObjectID> prepared_plan_ids() const;
+  /** @} */
 
   // We pre-allocate data structures to prevent costly re-allocations.
   static constexpr auto INITIAL_SIZE = size_t{100};

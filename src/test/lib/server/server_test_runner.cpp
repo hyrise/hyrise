@@ -119,8 +119,9 @@ TEST_F(ServerTestRunner, TestCopyImport) {
 
   transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("another_table"));
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("another_table"), _table_a);
+  const auto table_id = Hyrise::get().catalog.table_id("another_table");
+  EXPECT_NE(table_id, INVALID_OBJECT_ID);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table(table_id), _table_a);
 }
 
 TEST_F(ServerTestRunner, TestInvalidCopyImport) {
@@ -199,8 +200,8 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
   // Re-import the tables and compare them with the expected one
   transaction.exec("COPY table_b FROM '" + _export_filename + ".bin';");
   transaction.exec("COPY table_c FROM '" + _export_filename + ".csv';");
-  const auto table_b = Hyrise::get().storage_manager.get_table("table_b");
-  const auto table_c = Hyrise::get().storage_manager.get_table("table_c");
+  const auto table_b = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("table_b"));
+  const auto table_c = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("table_c"));
 
   EXPECT_TABLE_EQ_ORDERED(table_b, expected_table);
   EXPECT_TABLE_EQ_ORDERED(table_c, expected_table);

@@ -38,21 +38,20 @@ TEST_F(MetaExecTest, SelectUserExecutableFunctions) {
 
 TEST_F(MetaExecTest, CallUserExecutableFunctions) {
   auto& pm = Hyrise::get().plugin_manager;
-  auto& sm = Hyrise::get().storage_manager;
 
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
 
-  // Test plugin has state and cretes tables with an increasing id.
+  // Test plugin has state and creates tables with an increasing ID.
   const auto exec_query =
       "INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseTestPlugin', "
       "'OurFreelyChoosableFunctionName')";
   SQLPipelineBuilder{exec_query}.create_pipeline().get_result_table();
   // The test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_0"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("TableOfTestPlugin_0"));
 
   SQLPipelineBuilder{exec_query}.create_pipeline().get_result_table();
-  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_1"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("TableOfTestPlugin_1"));
 
   SQLPipelineBuilder{
       "INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseSecondTestPlugin', "
@@ -60,7 +59,7 @@ TEST_F(MetaExecTest, CallUserExecutableFunctions) {
       .create_pipeline()
       .get_result_table();
   // The second test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfSecondTestPlugin"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("TableOfSecondTestPlugin"));
 }
 
 TEST_F(MetaExecTest, CallNotCallableUserExecutableFunctions) {

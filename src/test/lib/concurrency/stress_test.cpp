@@ -680,7 +680,7 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
   // The issues triggered in this test usually arise early (later, the scan is getting slower and slower on increasing
   // table sizes). For that, we execute multiple short runs.
   for (auto test_run = size_t{0}; test_run < 10; ++test_run) {
-    if (Hyrise::get().storage_manager.has_table(table_name)) {
+    if (Hyrise::get().catalog.has_table(table_name)) {
       Hyrise::get().catalog.drop_table(table_name);
     }
 

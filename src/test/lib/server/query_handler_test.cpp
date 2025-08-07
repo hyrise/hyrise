@@ -14,10 +14,8 @@ class QueryHandlerTest : public BaseTest {
 };
 
 TEST_F(QueryHandlerTest, ExecutePipeline) {
-  const std::string query = "SELECT 1;";
-
   const auto [execution_information, transaction_context] =
-      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
+      QueryHandler::execute_pipeline("SELECT 1;", SendExecutionInfo::Yes, nullptr);
 
   EXPECT_TRUE(execution_information.error_messages.empty());
   EXPECT_EQ(execution_information.result_table->column_count(), 1);
@@ -29,7 +27,7 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
 TEST_F(QueryHandlerTest, CreatePreparedPlan) {
   QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?");
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_prepared_plan("test_statement"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_prepared_plan("test_statement"));
 }
 
 TEST_F(QueryHandlerTest, BindParameters) {
@@ -57,25 +55,29 @@ TEST_F(QueryHandlerTest, ExecutePreparedStatement) {
   pqp->set_transaction_context_recursively(transaction_context);
 
   const auto& result_table = QueryHandler::execute_prepared_plan(pqp);
-  EXPECT_EQ(result_table->row_count(), 2u);
-  EXPECT_EQ(result_table->column_count(), 2u);
+  EXPECT_EQ(result_table->row_count(), 2);
+  EXPECT_EQ(result_table->column_count(), 2);
 }
 
 TEST_F(QueryHandlerTest, CorrectlyInvalidateStatements) {
   QueryHandler::setup_prepared_plan("", "SELECT * FROM table_a WHERE a > ?");
-  const auto old_plan = Hyrise::get().storage_manager.get_prepared_plan("");
+  const auto old_plan_id = Hyrise::get().catalog.prepared_plan_id("");
+  EXPECT_NE(old_plan_id, INVALID_OBJECT_ID);
+  const auto old_plan = Hyrise::get().storage_manager.get_prepared_plan(old_plan_id);
 
-  // New unnamed statement invalidates existing prepared plan
+  // New unnamed statement invalidates existing prepared plan.
   QueryHandler::setup_prepared_plan("", "SELECT * FROM table_a WHERE b > ?");
-  const auto new_plan = Hyrise::get().storage_manager.get_prepared_plan("");
+  const auto new_plan_id = Hyrise::get().catalog.prepared_plan_id("");
+  EXPECT_NE(new_plan_id, INVALID_OBJECT_ID);
+  EXPECT_NE(new_plan_id, old_plan_id);
+  const auto new_plan = Hyrise::get().storage_manager.get_prepared_plan(new_plan_id);
 
   EXPECT_NE(old_plan->hash(), new_plan->hash());
 
-  // Simple queries invalidate an existing plan as well
-  const std::string query = "SELECT 1;";
-  QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
+  // Simple queries invalidate an existing plan as well.
+  QueryHandler::execute_pipeline("SELECT 1;", SendExecutionInfo::Yes, nullptr);
 
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan(""));
+  EXPECT_FALSE(Hyrise::get().catalog.has_prepared_plan(""));
 }
 
 }  // namespace hyrise

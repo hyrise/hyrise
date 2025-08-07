@@ -74,9 +74,9 @@ class LQPTranslatorTest : public BaseTest {
     const auto int_float2_id = Hyrise::get().catalog.add_table("table_int_float2", table_int_float2);
     const auto int_float5_id = Hyrise::get().catalog.add_table("table_int_float5", table_int_float5);
     Hyrise::get().catalog.add_table("table_alias_name", table_alias_name);
-    Hyrise::get().catalog.add_table("int_float_chunked",
-                                    load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1}));
-    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
+    const auto int_float_chunked = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1});
+    ChunkEncoder::encode_all_chunks(int_float_chunked);
+    Hyrise::get().catalog.add_table("int_float_chunked", int_float_chunked);
 
     int_float_node = StoredTableNode::make(int_float_id);
     int_float_a = int_float_node->get_column("a");

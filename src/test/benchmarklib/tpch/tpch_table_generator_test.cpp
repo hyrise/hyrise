@@ -78,26 +78,26 @@ TEST_F(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
 }
 
 TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("part"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("supplier"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("partsupp"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("customer"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("orders"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("nation"));
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("region"));
-  ASSERT_FALSE(Hyrise::get().storage_manager.has_table("lineitem"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("part"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("supplier"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("partsupp"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("customer"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("orders"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("nation"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("region"));
+  ASSERT_FALSE(Hyrise::get().catalog.has_table("lineitem"));
 
   // Small scale factor
   TPCHTableGenerator(0.01f, ClusteringConfiguration::None, Chunk::DEFAULT_SIZE).generate_and_store();
 
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("part"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("supplier"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("partsupp"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("customer"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("orders"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("nation"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("region"));
-  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("lineitem"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("part"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("supplier"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("partsupp"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("customer"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("orders"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("nation"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("region"));
+  EXPECT_TRUE(Hyrise::get().catalog.has_table("lineitem"));
 }
 
 TEST_F(TPCHTableGeneratorTest, TableConstraints) {
@@ -105,35 +105,36 @@ TEST_F(TPCHTableGeneratorTest, TableConstraints) {
   // specification.
   TPCHTableGenerator{0.01f, ClusteringConfiguration::None}.generate_and_store();
 
-  const auto& part_table = Hyrise::get().storage_manager.get_table("part");
+  const auto& catalog = Hyrise::get().catalog;
+  const auto& part_table = Hyrise::get().storage_manager.get_table(catalog.table_id("part"));
   EXPECT_EQ(part_table->soft_key_constraints().size(), 1);
   EXPECT_TRUE(part_table->soft_foreign_key_constraints().empty());
 
-  const auto& supplier_table = Hyrise::get().storage_manager.get_table("supplier");
+  const auto& supplier_table = Hyrise::get().storage_manager.get_table(catalog.table_id("supplier"));
   EXPECT_EQ(supplier_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(supplier_table->soft_foreign_key_constraints().size(), 1);
 
-  const auto& partsupp_table = Hyrise::get().storage_manager.get_table("partsupp");
+  const auto& partsupp_table = Hyrise::get().storage_manager.get_table(catalog.table_id("partsupp"));
   EXPECT_EQ(partsupp_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(partsupp_table->soft_foreign_key_constraints().size(), 2);
 
-  const auto& customer_table = Hyrise::get().storage_manager.get_table("customer");
+  const auto& customer_table = Hyrise::get().storage_manager.get_table(catalog.table_id("customer"));
   EXPECT_EQ(customer_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(customer_table->soft_foreign_key_constraints().size(), 1);
 
-  const auto& orders_table = Hyrise::get().storage_manager.get_table("orders");
+  const auto& orders_table = Hyrise::get().storage_manager.get_table(catalog.table_id("orders"));
   EXPECT_EQ(orders_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(orders_table->soft_foreign_key_constraints().size(), 1);
 
-  const auto& nation_table = Hyrise::get().storage_manager.get_table("nation");
+  const auto& nation_table = Hyrise::get().storage_manager.get_table(catalog.table_id("nation"));
   EXPECT_EQ(nation_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(nation_table->soft_foreign_key_constraints().size(), 1);
 
-  const auto& region_table = Hyrise::get().storage_manager.get_table("region");
+  const auto& region_table = Hyrise::get().storage_manager.get_table(catalog.table_id("region"));
   EXPECT_EQ(region_table->soft_key_constraints().size(), 1);
   EXPECT_TRUE(region_table->soft_foreign_key_constraints().empty());
 
-  const auto& lineitem_table = Hyrise::get().storage_manager.get_table("lineitem");
+  const auto& lineitem_table = Hyrise::get().storage_manager.get_table(catalog.table_id("lineitem"));
   EXPECT_EQ(lineitem_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(lineitem_table->soft_foreign_key_constraints().size(), 4);
 }

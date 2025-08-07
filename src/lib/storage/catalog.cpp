@@ -36,20 +36,6 @@ ObjectID add_object(const std::string& name, Catalog::ObjectMetadata& meta_data)
   return static_cast<ObjectID>(object_id);
 }
 
-std::vector<std::string_view> object_names(const Catalog::ObjectMetadata& meta_data) {
-  auto names = std::vector<std::string_view>{};
-  names.reserve(meta_data.ids.size());
-
-  for (const auto& [name, object_id] : meta_data.ids) {
-    if (object_id != INVALID_OBJECT_ID) {
-      names.push_back(name);
-    }
-  }
-
-  std::ranges::sort(names);
-  return names;
-}
-
 std::unordered_map<std::string_view, ObjectID> object_ids(const Catalog::ObjectMetadata& meta_data) {
   auto result = std::unordered_map<std::string_view, ObjectID>{};
 
@@ -137,7 +123,17 @@ const std::string& Catalog::table_name(const ObjectID table_id) const {
 }
 
 std::vector<std::string_view> Catalog::table_names() const {
-  return object_names(_tables);
+  auto names = std::vector<std::string_view>{};
+  names.reserve(_tables.ids.size());
+
+  for (const auto& [name, object_id] : _tables.ids) {
+    if (object_id != INVALID_OBJECT_ID) {
+      names.push_back(name);
+    }
+  }
+
+  std::ranges::sort(names);
+  return names;
 }
 
 std::unordered_map<std::string_view, ObjectID> Catalog::table_ids() const {
@@ -197,14 +193,6 @@ const std::string& Catalog::view_name(const ObjectID view_id) const {
   return _views.names[view_id];
 }
 
-std::vector<std::string_view> Catalog::view_names() const {
-  return object_names(_views);
-}
-
-std::unordered_map<std::string_view, ObjectID> Catalog::view_ids() const {
-  return object_ids(_tables);
-}
-
 ObjectID Catalog::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
   const auto iter = _prepared_plans.ids.find(name);
   Assert(iter == _prepared_plans.ids.end() || iter->second == INVALID_OBJECT_ID,
@@ -242,10 +230,6 @@ ObjectID Catalog::prepared_plan_id(const std::string& name) const {
 const std::string& Catalog::prepared_plan_name(const ObjectID plan_id) const {
   Assert(plan_id < _prepared_plans.names.size(), "ObjectID " + std::to_string(plan_id) + " out of range.");
   return _prepared_plans.names[plan_id];
-}
-
-std::unordered_map<std::string_view, ObjectID> Catalog::prepared_plan_ids() const {
-  return object_ids(_prepared_plans);
 }
 
 }  // namespace hyrise

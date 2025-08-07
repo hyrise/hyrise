@@ -6,20 +6,20 @@ namespace hyrise {
 class TransactionHandlingTest : public BaseTest {};
 
 TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
-  const std::string query = "BEGIN; CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1); COMMIT;";
+  const auto [execution_information, transaction_ctx] = QueryHandler::execute_pipeline(
+      "BEGIN; CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1); COMMIT;", SendExecutionInfo::Yes, nullptr);
 
-  auto [execution_information, transaction_ctx] =
-      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
-
-  // begin and commit transaction statements are executed successfully
+  // Begin and commit transaction statements are executed successfully.
   EXPECT_TRUE(execution_information.error_messages.empty());
   EXPECT_EQ(execution_information.result_table, nullptr);
   EXPECT_EQ(*execution_information.custom_command_complete_message, "COMMIT");
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("users")->row_count(), 1);
+  const auto table_id = Hyrise::get().catalog.table_id("users");
+  EXPECT_NE(table_id, INVALID_OBJECT_ID);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(table_id)->row_count(), 1);
 }
 
 TEST_F(TransactionHandlingTest, RollbackTransaction) {
-  const std::string query =
+  const auto query =
       "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);"
       "INSERT INTO users(id) VALUES (2);"
       "BEGIN; INSERT INTO users(id) VALUES (3);"

@@ -82,7 +82,7 @@ bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
   // Make sure that clustering, indexes, and constraints have made it all the way up to here
-  const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
+  const auto orders_table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("orders"));
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
   if (_clustering_configuration == ClusteringConfiguration::Pruning) {
     Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost.");

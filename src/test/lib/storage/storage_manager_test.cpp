@@ -122,9 +122,6 @@ TEST_F(StorageManagerTest, DropTable) {
   EXPECT_THROW(Hyrise::get().storage_manager.get_table(ObjectID{0}), std::logic_error);
   EXPECT_THROW(_drop_table(ObjectID{0}), std::logic_error);
 
-  // const auto& tables = sm.tables();
-  // EXPECT_EQ(tables.size(), 1);
-
   // Adding a table with the same ID is okay. The Catalog should take care that that does not actually happen.
   _add_table(ObjectID{0}, std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table(ObjectID{0}));
@@ -146,9 +143,6 @@ TEST_F(StorageManagerTest, DropView) {
   EXPECT_THROW(Hyrise::get().storage_manager.get_view(ObjectID{0}), std::logic_error);
   EXPECT_THROW(_drop_view(ObjectID{0}), std::logic_error);
 
-  // const auto& views = sm.views();
-  // EXPECT_EQ(views.size(), 1);
-
   // Adding a view with the same ID is okay. The Catalog should take care that that does not actually happen.
   const auto v1_lqp = StoredTableNode::make(ObjectID{0});
   const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
@@ -166,34 +160,6 @@ TEST_F(StorageManagerTest, HasView) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_view(ObjectID{17}));
 }
 
-// TEST_F(StorageManagerTest, ListViewNames) {
-//   auto& sm = Hyrise::get().storage_manager;
-//   const auto view_names = sm.view_names();
-
-//   EXPECT_EQ(view_names.size(), 2u);
-
-//   EXPECT_EQ(view_names[0], "first_view");
-//   EXPECT_EQ(view_names[1], "second_view");
-// }
-
-// TEST_F(StorageManagerTest, OutputToStream) {
-//   auto& sm = Hyrise::get().storage_manager;
-//   _add_table("third_table", load_table("resources/test_data/tbl/int_int2.tbl", ChunkOffset{2}));
-
-//   std::ostringstream output;
-//   output << sm;
-//   auto output_string = output.str();
-
-//   EXPECT_TRUE(output_string.find("===== Tables =====") != std::string::npos);
-//   EXPECT_TRUE(output_string.find("==== table >> first_table << (1 columns, 0 rows in 0 chunks)") != std::string::npos);
-//   EXPECT_TRUE(output_string.find("==== table >> second_table << (1 columns, 0 rows in 0 chunks)") != std::string::npos);
-//   EXPECT_TRUE(output_string.find("==== table >> third_table << (2 columns, 4 rows in 2 chunks)") != std::string::npos);
-
-//   EXPECT_TRUE(output_string.find("===== Views ======") != std::string::npos);
-//   EXPECT_TRUE(output_string.find("==== view >> first_view <<") != std::string::npos);
-//   EXPECT_TRUE(output_string.find("==== view >> second_view <<") != std::string::npos);
-// }
-
 TEST_F(StorageManagerTest, GetPreparedPlan) {
   auto pp3 = Hyrise::get().storage_manager.get_prepared_plan(ObjectID{0});
   auto pp4 = Hyrise::get().storage_manager.get_prepared_plan(ObjectID{1});
@@ -204,9 +170,6 @@ TEST_F(StorageManagerTest, DropPreparedPlan) {
   _drop_prepared_plan(ObjectID{0});
   EXPECT_THROW(Hyrise::get().storage_manager.get_prepared_plan(ObjectID{0}), std::logic_error);
   EXPECT_THROW(_drop_prepared_plan(ObjectID{0}), std::logic_error);
-
-  // const auto& prepared_plans = sm.prepared_plans();
-  // EXPECT_EQ(prepared_plans.size(), 1);
 
   // Adding a prepared plan with the same ID is okay. The Catalog should take care that that does not actually happen.
   const auto pp_lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");

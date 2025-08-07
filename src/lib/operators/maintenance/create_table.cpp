@@ -36,8 +36,9 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
 
   // If the input operator has already been cleared, we cannot retrieve its columns anymore. However, since the table
   // has been created, we can simply pull the definitions from the new table.
-  const auto& input_table =
-      left_input_table() ? left_input_table() : Hyrise::get().storage_manager.get_table(table_name);
+  const auto& input_table = left_input_table()
+                                ? left_input_table()
+                                : Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id(table_name));
   const auto column_definitions = input_table->column_definitions();
 
   stream << AbstractOperator::description(description_mode) << " '" << table_name << "' (";
@@ -51,7 +52,7 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
       stream << "NOT NULL";
     }
 
-    if (column_id + 1u < column_definitions.size()) {
+    if (column_id + 1 < column_definitions.size()) {
       stream << separator;
     }
   }
@@ -73,8 +74,8 @@ const TableColumnDefinitions& CreateTable::column_definitions() const {
 std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<TransactionContext> context) {
   const auto column_definitions = _left_input->get_output()->column_definitions();
 
-  // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
-  if (!if_not_exists || !Hyrise::get().storage_manager.has_table(table_name)) {
+  // If IF NOT EXISTS is not set and the table already exists, Catalog throws an exception.
+  if (!if_not_exists || !Hyrise::get().catalog.has_table(table_name)) {
     // TODO(anybody) chunk size and mvcc not yet specifiable
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     const auto table_id = Hyrise::get().catalog.add_table(table_name, table);

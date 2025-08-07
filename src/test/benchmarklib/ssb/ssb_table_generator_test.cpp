@@ -31,11 +31,12 @@ TEST_F(SSBTableGeneratorTest, GenerateAndStoreRowCounts) {
 
   for (const auto& [name, size] : expected_sizes) {
     SCOPED_TRACE("checking table " + name);
-    EXPECT_EQ(Hyrise::get().storage_manager.get_table(name)->row_count(), size);
+    const auto table_id = Hyrise::get().catalog.table_id(name);
+    EXPECT_EQ(Hyrise::get().storage_manager.get_table(table_id)->row_count(), size);
   }
 
-  const auto lineorder_cardinality =
-      static_cast<float>(Hyrise::get().storage_manager.get_table("lineorder")->row_count());
+  const auto lineorder_table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("lineorder"));
+  const auto lineorder_cardinality = static_cast<double>(lineorder_table->row_count());
   const auto expected_cardinality = 6'000'000 * scale_factor;
   const auto epsilon = 0.001;
   EXPECT_NEAR(lineorder_cardinality, expected_cardinality, expected_cardinality * epsilon);
@@ -49,11 +50,13 @@ TEST_F(SSBTableGeneratorTest, TableConstraints) {
 
   SSBTableGenerator(_dbgen_path, _csv_meta_path, data_path, 0.01f).generate_and_store();
 
-  const auto& lineorder_table = Hyrise::get().storage_manager.get_table("lineorder");
-  const auto& part_table = Hyrise::get().storage_manager.get_table("part");
-  const auto& supplier_table = Hyrise::get().storage_manager.get_table("supplier");
-  const auto& customer_table = Hyrise::get().storage_manager.get_table("customer");
-  const auto& date_table = Hyrise::get().storage_manager.get_table("date");
+  const auto& catalog = Hyrise::get().catalog;
+  const auto& storage_manager = Hyrise::get().storage_manager;
+  const auto& lineorder_table = storage_manager.get_table(catalog.table_id("lineorder"));
+  const auto& part_table = storage_manager.get_table(catalog.table_id("part"));
+  const auto& supplier_table = storage_manager.get_table(catalog.table_id("supplier"));
+  const auto& customer_table = storage_manager.get_table(catalog.table_id("customer"));
+  const auto& date_table = storage_manager.get_table(catalog.table_id("date"));
 
   EXPECT_EQ(lineorder_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(lineorder_table->soft_foreign_key_constraints().size(), 5);

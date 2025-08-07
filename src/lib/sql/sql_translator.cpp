@@ -784,14 +784,15 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
           sql_identifier_resolver->set_table_name(expression, hsql_table_ref.name);
         }
 
-      } else if (Hyrise::get().storage_manager.has_table(hsql_table_ref.name)) {
+      } else if (Hyrise::get().catalog.has_table(hsql_table_ref.name)) {
         lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_resolver);
 
       } else if (MetaTableManager::is_meta_table_name(hsql_table_ref.name)) {
         lqp = _translate_meta_table(hsql_table_ref.name, sql_identifier_resolver);
 
-      } else if (Hyrise::get().storage_manager.has_view(hsql_table_ref.name)) {
-        const auto view = Hyrise::get().storage_manager.get_view(hsql_table_ref.name);
+      } else if (Hyrise::get().catalog.has_view(hsql_table_ref.name)) {
+        const auto view_id = Hyrise::get().catalog.view_id(hsql_table_ref.name);
+        const auto view = Hyrise::get().storage_manager.get_view(view_id);
         lqp = view->lqp;
 
         /**
@@ -1821,16 +1822,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {
+  const auto prepared_plan_id = Hyrise::get().catalog.prepared_plan_id(execute_statement.name);
+  AssertInput(prepared_plan_id != INVALID_OBJECT_ID, "No such prepared statement '" + execute_statement.name + "'.");
+  const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(prepared_plan_id);
+  AssertInput(_use_mvcc == (lqp_is_validated(prepared_plan->lqp) ? UseMvcc::Yes : UseMvcc::No),
+              "Mismatch between validation of Prepared statement and query it is used in.");
+
   const auto num_parameters = execute_statement.parameters ? execute_statement.parameters->size() : 0;
   auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{num_parameters};
   for (auto parameter_idx = size_t{0}; parameter_idx < num_parameters; ++parameter_idx) {
     parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx], _use_mvcc);
   }
-
-  const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(execute_statement.name);
-
-  AssertInput(_use_mvcc == (lqp_is_validated(prepared_plan->lqp) ? UseMvcc::Yes : UseMvcc::No),
-              "Mismatch between validation of Prepared statement and query it is used in.");
 
   return prepared_plan->instantiate(parameters);
 }

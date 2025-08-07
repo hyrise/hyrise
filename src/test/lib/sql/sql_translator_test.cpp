@@ -2796,6 +2796,11 @@ TEST_F(SQLTranslatorTest, Execute) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+
+  // Invalid number of parameters.
+  EXPECT_THROW(sql_to_lqp_helper("EXECUTE some_prepared_plan ('just_one_parameter')"), std::logic_error);
+  // No such prepared plan.
+  EXPECT_THROW(sql_to_lqp_helper("EXECUTE non_existing_plan"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {

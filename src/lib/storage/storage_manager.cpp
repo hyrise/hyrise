@@ -51,30 +51,17 @@ void StorageManager::_add_table(const ObjectID table_id, std::shared_ptr<Table> 
 }
 
 void StorageManager::_drop_table(const ObjectID table_id) {
-  Assert(table_id < _tables.size() && _tables[table_id],
-         "Error deleting table. No such table with ID '" + std::to_string(table_id) + "'.");
+  Assert(has_table(table_id), "Error deleting table. No such table with ID '" + std::to_string(table_id) + "'.");
   _tables[table_id] = nullptr;
 }
 
-std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
-  const auto table_id = Hyrise::get().catalog.table_id(name);
-  Assert(table_id != INVALID_OBJECT_ID, "No such table named '" + name + "'.");
-
-  return get_table(table_id);
-}
-
 std::shared_ptr<Table> StorageManager::get_table(const ObjectID table_id) const {
-  Assert(table_id < _tables.size() && _tables[table_id],
-         "No such table with ID '" + std::to_string(table_id) + "'. Was it dropped?");
+  Assert(has_table(table_id), "No such table with ID '" + std::to_string(table_id) + "'. Was it dropped?");
   return _tables[table_id];
 }
 
-bool StorageManager::has_table(const std::string& name) const {
-  return Hyrise::get().catalog.table_id(name) != INVALID_OBJECT_ID;
-}
-
 bool StorageManager::has_table(const ObjectID table_id) const {
-  return _tables[table_id] != nullptr;
+  return table_id < _tables.size() && _tables[table_id] != nullptr;
 }
 
 void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQPView>& view) {
@@ -89,26 +76,13 @@ void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQP
 }
 
 void StorageManager::_drop_view(const ObjectID view_id) {
-  Assert(view_id < _views.size() && _views[view_id],
-         "Error deleting view. No such view with ID '" + std::to_string(view_id) + "'");
+  Assert(has_view(view_id), "Error deleting view. No such view with ID '" + std::to_string(view_id) + "'");
   _views[view_id] = nullptr;
 }
 
-std::shared_ptr<LQPView> StorageManager::get_view(const std::string& name) const {
-  const auto view_id = Hyrise::get().catalog.view_id(name);
-  Assert(view_id != INVALID_OBJECT_ID, "No such view named '" + name + "'.");
-
-  return get_view(view_id);
-}
-
 std::shared_ptr<LQPView> StorageManager::get_view(const ObjectID view_id) const {
-  Assert(view_id < _views.size() && _views[view_id],
-         "No such view with ID '" + std::to_string(view_id) + "'. Was it dropped?");
+  Assert(has_view(view_id), "No such view with ID '" + std::to_string(view_id) + "'. Was it dropped?");
   return _views[view_id]->deep_copy();
-}
-
-bool StorageManager::has_view(const std::string& name) const {
-  return Hyrise::get().catalog.view_id(name) != INVALID_OBJECT_ID;
 }
 
 bool StorageManager::has_view(const ObjectID view_id) const {
@@ -127,26 +101,15 @@ void StorageManager::_add_prepared_plan(const ObjectID plan_id, const std::share
 }
 
 void StorageManager::_drop_prepared_plan(const ObjectID plan_id) {
-  Assert(plan_id < _prepared_plans.size() && _prepared_plans[plan_id],
+  Assert(has_prepared_plan(plan_id),
          "Error deleting prepared plan. No such prepared plan with ID '" + std::to_string(plan_id) + "'");
   _prepared_plans[plan_id] = nullptr;
 }
 
-std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const std::string& name) const {
-  const auto plan_id = Hyrise::get().catalog.prepared_plan_id(name);
-  Assert(plan_id != INVALID_OBJECT_ID, "No such prepared plan named '" + name + "'.");
-
-  return get_prepared_plan(plan_id);
-}
-
 std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const ObjectID plan_id) const {
-  Assert(plan_id < _prepared_plans.size() && _prepared_plans[plan_id],
+  Assert(has_prepared_plan(plan_id),
          "No such prepared plan with ID '" + std::to_string(plan_id) + "'. Was it dropped?");
   return _prepared_plans[plan_id];
-}
-
-bool StorageManager::has_prepared_plan(const std::string& name) const {
-  return Hyrise::get().catalog.prepared_plan_id(name) != INVALID_OBJECT_ID;
 }
 
 bool StorageManager::has_prepared_plan(const ObjectID plan_id) const {

@@ -49,7 +49,7 @@ TEST_F(DropViewTest, Execute) {
   EXPECT_TRUE(drop_view->executed());
   EXPECT_FALSE(drop_view->get_output());
 
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_view("view_name"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_view("view_name"));
 }
 
 TEST_F(DropViewTest, ExecuteWithIfExists) {
@@ -59,14 +59,14 @@ TEST_F(DropViewTest, ExecuteWithIfExists) {
   EXPECT_TRUE(drop_view_1->executed());
   EXPECT_FALSE(drop_view_1->get_output());
 
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_view("view_name"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_view("view_name"));
 
   const auto drop_view_2 = std::make_shared<DropView>("view_name", true);
 
   EXPECT_NO_THROW(drop_view_2->execute());
   EXPECT_TRUE(drop_view_2->executed());
 
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_view("view_name"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_view("view_name"));
 }
 
 }  // namespace hyrise

@@ -12,13 +12,12 @@ namespace hyrise {
 class SQLiteAddIndicesTest : public BaseTest {
  protected:
   void SetUp() override {
-    TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("column_1", DataType::Int, false);
-    column_definitions.emplace_back("column_2", DataType::String, false);
-    Hyrise::get().catalog.add_table("table_1",
-                                    std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}));
+    const auto table = std::make_shared<Table>(
+        TableColumnDefinitions{{"column_1", DataType::Int, false}, {"column_2", DataType::String, false}},
+        TableType::Data, ChunkOffset{2});
+    const auto table_id = Hyrise::get().catalog.add_table("table_1", table);
 
-    stored_table = Hyrise::get().storage_manager.get_table("table_1");
+    stored_table = Hyrise::get().storage_manager.get_table(table_id);
     stored_table->append({13, "Hello,"});
     stored_table->append({37, "world"});
 

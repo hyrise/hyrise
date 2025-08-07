@@ -109,7 +109,8 @@ TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCountsAndTableConstraints) {
   EXPECT_EQ(Hyrise::get().catalog.tables().size(), expected_table_info.size());
   for (const auto& [name, table_info] : expected_table_info) {
     SCOPED_TRACE("checking table " + name);
-    const auto table = Hyrise::get().storage_manager.get_table(name);
+    const auto table_id = Hyrise::get().catalog.table_id(name);
+    const auto table = Hyrise::get().storage_manager.get_table(table_id);
     const auto [size, foreign_key_count] = table_info;
     EXPECT_EQ(table->row_count(), size);
 

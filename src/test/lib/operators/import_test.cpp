@@ -91,7 +91,9 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
       reference_filepath + reference_filenames.at(file_type) + file_extensions.at(file_type);
   const auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, file_type, encoding);
   importer->execute();
-  const auto table = Hyrise::get().storage_manager.get_table("a");
+  const auto table_id = Hyrise::get().catalog.table_id("a");
+  EXPECT_NE(table_id, INVALID_OBJECT_ID);
+  const auto table = Hyrise::get().storage_manager.get_table(table_id);
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 
@@ -148,7 +150,7 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
   const auto importer =
       std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, FileType::Auto, std::nullopt);
   importer->execute();
-  const auto table = Hyrise::get().storage_manager.get_table("a");
+  const auto table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id("a"));
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 
@@ -181,7 +183,9 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, HasCorrectMvccData) {
   auto importer = std::make_shared<Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, file_type, encoding);
   importer->execute();
 
-  const auto table = Hyrise::get().storage_manager.get_table("a");
+  const auto table_id = Hyrise::get().catalog.table_id("a");
+  EXPECT_NE(table_id, INVALID_OBJECT_ID);
+  const auto table = Hyrise::get().storage_manager.get_table(table_id);
 
   EXPECT_EQ(table->uses_mvcc(), UseMvcc::Yes);
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->has_mvcc_data());
@@ -206,7 +210,9 @@ TEST_F(OperatorsImportTest, RetrieveCsvMetaFromEmptyTable) {
   auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
   importer->execute();
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  const auto table_id = Hyrise::get().catalog.table_id("a");
+  EXPECT_NE(table_id, INVALID_OBJECT_ID);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table(table_id), expected_table);
 }
 
 TEST_F(OperatorsImportTest, AppendToExistingTable) {
@@ -222,41 +228,51 @@ TEST_F(OperatorsImportTest, AppendToExistingTable) {
   auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
   importer->execute();
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  const auto table_id = Hyrise::get().catalog.table_id("a");
+  EXPECT_NE(table_id, INVALID_OBJECT_ID);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table(table_id), expected_table);
 }
 
 TEST_F(OperatorsImportTest, ChunkSize) {
   auto importer = std::make_shared<Import>("resources/test_data/csv/float_int_large.csv", "a", ChunkOffset{20});
   importer->execute();
 
-  // check if chunk_size property is correct
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->target_chunk_size(), 20U);
+  const auto table_id = Hyrise::get().catalog.table_id("a");
+  ASSERT_NE(table_id, INVALID_OBJECT_ID);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
 
-  // check if actual chunk_size is correct
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->size(), 20U);
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{1})->size(), 20U);
+  // Check if target chunk size property is correct.
+  EXPECT_EQ(table->target_chunk_size(), 20);
+
+  // Check if actual chunk size is correct.
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 20);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 20);
 }
 
-TEST_F(OperatorsImportTest, TargetChunkSize) {
-  auto importer =
-      std::make_shared<Import>("resources/test_data/csv/float_int_large_chunksize_max.csv", "a", Chunk::DEFAULT_SIZE);
+TEST_F(OperatorsImportTest, DefaultChunkSize) {
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float_int_large_chunksize_max.csv", "a");
   importer->execute();
 
-  // check if chunk_size property is correct (target chunk size)
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->target_chunk_size(), Chunk::DEFAULT_SIZE);
+  const auto table_id = Hyrise::get().catalog.table_id("a");
+  ASSERT_NE(table_id, INVALID_OBJECT_ID);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_id);
 
-  // check if actual chunk_size and chunk_count is correct
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->size(), 100U);
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->chunk_count(), ChunkID{1});
+  // Check if chunk size property is correct (target chunk size).
+  EXPECT_EQ(table->target_chunk_size(), Chunk::DEFAULT_SIZE);
 
-  TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20});
+  // Check if actual chunk size and chunk count are correct.
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 100);
+  EXPECT_EQ(table->chunk_count(), ChunkID{1});
 
-  for (int i = 0; i < 100; ++i) {
+  const auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}},
+                              TableType::Data, ChunkOffset{20});
+
+  for (auto i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
   }
 
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
 }  // namespace hyrise

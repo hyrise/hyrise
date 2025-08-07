@@ -624,7 +624,7 @@ int Console::_load_table(const std::string& args) {
 
   out("Loading " + filepath.string() + " into table \"" + tablename + "\"\n");
 
-  if (Hyrise::get().storage_manager.has_table(tablename)) {
+  if (Hyrise::get().catalog.has_table(tablename)) {
     out("Table \"" + tablename + "\" already existed. Replacing it.\n");
   }
 
@@ -645,7 +645,7 @@ int Console::_load_table(const std::string& args) {
   }
 
   // Check if the specified encoding can be used.
-  const auto& table = Hyrise::get().storage_manager.get_table(tablename);
+  const auto& table = Hyrise::get().storage_manager.get_table(Hyrise::get().catalog.table_id(tablename));
   auto supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     if (!encoding_supports_data_type(*encoding_type, table->column_data_type(column_id))) {

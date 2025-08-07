@@ -97,10 +97,10 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
 }
 
 std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const PreparedStatementDetails& statement_details) {
-  AssertInput(Hyrise::get().storage_manager.has_prepared_plan(statement_details.statement_name),
-              "The specified statement does not exist.");
+  const auto plan_id = Hyrise::get().catalog.prepared_plan_id(statement_details.statement_name);
+  AssertInput(plan_id != INVALID_OBJECT_ID, "The statement '" + statement_details.statement_name + "' does not exist.");
 
-  const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(statement_details.statement_name);
+  const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(plan_id);
 
   const auto parameter_count = statement_details.parameters.size();
   auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{parameter_count};

@@ -341,7 +341,7 @@ const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metric
 }
 
 void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) {
-  const auto& storage_manager = Hyrise::get().storage_manager;
+  const auto& catalog = Hyrise::get().catalog;
 
   /**
    * Only look at the root operator, because as of now DDL operators are always at the root.
@@ -350,31 +350,31 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
   switch (pqp->type()) {
     case OperatorType::CreatePreparedPlan: {
       const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
-      AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->prepared_plan_name()),
+      AssertInput(!catalog.has_prepared_plan(create_prepared_plan->prepared_plan_name()),
                   "Prepared Plan '" + create_prepared_plan->prepared_plan_name() + "' already exists.");
       break;
     }
     case OperatorType::CreateTable: {
       const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
-      AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
+      AssertInput(create_table->if_not_exists || !catalog.has_table(create_table->table_name),
                   "Table '" + create_table->table_name + "' already exists.");
       break;
     }
     case OperatorType::CreateView: {
       const auto create_view = std::dynamic_pointer_cast<CreateView>(pqp);
-      AssertInput(create_view->if_not_exists() || !storage_manager.has_view(create_view->view_name()),
+      AssertInput(create_view->if_not_exists() || !catalog.has_view(create_view->view_name()),
                   "View '" + create_view->view_name() + "' already exists.");
       break;
     }
     case OperatorType::DropTable: {
       const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
-      AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
+      AssertInput(drop_table->if_exists || catalog.has_table(drop_table->table_name),
                   "There is no table '" + drop_table->table_name + "'.");
       break;
     }
     case OperatorType::DropView: {
       const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
-      AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
+      AssertInput(drop_view->if_exists || catalog.has_view(drop_view->view_name),
                   "There is no view '" + drop_view->view_name + "'.");
       break;
     }

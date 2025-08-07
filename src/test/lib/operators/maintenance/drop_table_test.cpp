@@ -34,7 +34,7 @@ TEST_F(DropTableTest, Execute) {
   drop_table->execute();
   EXPECT_TRUE(drop_table->executed());
   EXPECT_FALSE(drop_table->get_output());
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("t"));
 }
 
 TEST_F(DropTableTest, NoSuchTable) {
@@ -47,12 +47,12 @@ TEST_F(DropTableTest, ExecuteWithIfExists) {
   drop_table_if_exists_1->execute();
   EXPECT_TRUE(drop_table_if_exists_1->executed());
   EXPECT_FALSE(drop_table_if_exists_1->get_output());
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("t"));
 
   auto drop_table_if_exists_2 = std::make_shared<DropTable>("t", true);
   EXPECT_NO_THROW(drop_table_if_exists_2->execute());
   EXPECT_TRUE(drop_table_if_exists_2->executed());
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
+  EXPECT_FALSE(Hyrise::get().catalog.has_table("t"));
 }
 
 }  // namespace hyrise
