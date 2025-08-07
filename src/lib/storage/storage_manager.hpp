@@ -4,6 +4,7 @@
 
 #include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): Identified as C system headers.
 
+#include "memory/zero_allocator.hpp"
 #include "storage/catalog.hpp"
 #include "types.hpp"
 
@@ -28,7 +29,7 @@ class StorageManager : public Noncopyable {
 
   StorageManager() = default;
 
-  void _add_table(const ObjectID table_id, std::shared_ptr<Table> table);
+  void _add_table(const ObjectID table_id, const std::shared_ptr<Table>& table);
   void _drop_table(const ObjectID table_id);
 
   void _add_view(const ObjectID view_id, const std::shared_ptr<LQPView>& view);
@@ -37,9 +38,9 @@ class StorageManager : public Noncopyable {
   void _add_prepared_plan(const ObjectID plan_id, const std::shared_ptr<PreparedPlan>& prepared_plan);
   void _drop_prepared_plan(const ObjectID plan_id);
 
-  tbb::concurrent_vector<std::shared_ptr<Table>> _tables{Catalog::INITIAL_SIZE};
-  tbb::concurrent_vector<std::shared_ptr<LQPView>> _views{Catalog::INITIAL_SIZE};
-  tbb::concurrent_vector<std::shared_ptr<PreparedPlan>> _prepared_plans{Catalog::INITIAL_SIZE};
+  tbb::concurrent_vector<std::shared_ptr<Table>, ZeroAllocator<std::shared_ptr<Table>>> _tables{Catalog::INITIAL_SIZE};
+  tbb::concurrent_vector<std::shared_ptr<LQPView>, ZeroAllocator<std::shared_ptr<LQPView>>> _views{Catalog::INITIAL_SIZE};
+  tbb::concurrent_vector<std::shared_ptr<PreparedPlan>, ZeroAllocator<std::shared_ptr<PreparedPlan>>> _prepared_plans{Catalog::INITIAL_SIZE};
 };
 
 }  // namespace hyrise

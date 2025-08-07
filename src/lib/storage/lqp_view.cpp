@@ -11,7 +11,7 @@
 namespace hyrise {
 
 LQPView::LQPView(const std::shared_ptr<AbstractLQPNode>& init_lqp,
-                 std::unordered_map<ColumnID, std::string> init_column_names = {})
+                 std::unordered_map<ColumnID, std::string> init_column_names)
     : lqp(init_lqp), column_names(std::move(init_column_names)) {}
 
 std::shared_ptr<LQPView> LQPView::deep_copy() const {

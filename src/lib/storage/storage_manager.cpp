@@ -25,12 +25,12 @@
 
 namespace hyrise {
 
-void StorageManager::_add_table(const ObjectID table_id, std::shared_ptr<Table> table) {
+void StorageManager::_add_table(const ObjectID table_id, const std::shared_ptr<Table>& table) {
   const auto needs_growth = table_id >= _tables.size();
   Assert(needs_growth || !_tables[table_id],
          "Cannot add table " + std::to_string(table_id) + " - a table with the same ID already exists.");
   if (needs_growth) {
-    _tables.grow_to_at_least(table_id);
+    _tables.grow_to_at_least(table_id + 1);
   }
 
   const auto chunk_count = table->chunk_count();
@@ -47,21 +47,21 @@ void StorageManager::_add_table(const ObjectID table_id, std::shared_ptr<Table> 
   }
   generate_chunk_pruning_statistics(table);
 
-  _tables[table_id] = std::move(table);
+  std::atomic_store(&_tables[table_id], table);
 }
 
 void StorageManager::_drop_table(const ObjectID table_id) {
   Assert(has_table(table_id), "Error deleting table. No such table with ID '" + std::to_string(table_id) + "'.");
-  _tables[table_id] = nullptr;
+  std::atomic_store(&_tables[table_id], std::shared_ptr<Table>{});
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const ObjectID table_id) const {
   Assert(has_table(table_id), "No such table with ID '" + std::to_string(table_id) + "'. Was it dropped?");
-  return _tables[table_id];
+  return std::atomic_load(&_tables[table_id]);
 }
 
 bool StorageManager::has_table(const ObjectID table_id) const {
-  return table_id < _tables.size() && _tables[table_id] != nullptr;
+  return table_id < _tables.size() && std::atomic_load(&_tables[table_id]) != nullptr;
 }
 
 void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQPView>& view) {
@@ -69,24 +69,24 @@ void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQP
   Assert(needs_growth || !_views[view_id],
          "Cannot add view " + std::to_string(view_id) + " - a view with the same ID already exists.");
   if (needs_growth) {
-    _views.grow_to_at_least(view_id);
+    _views.grow_to_at_least(view_id + 1);
   }
 
-  _views[view_id] = view;
+  std::atomic_store(&_views[view_id], view);
 }
 
 void StorageManager::_drop_view(const ObjectID view_id) {
   Assert(has_view(view_id), "Error deleting view. No such view with ID '" + std::to_string(view_id) + "'");
-  _views[view_id] = nullptr;
+  std::atomic_store(&_views[view_id], std::shared_ptr<LQPView>{});
 }
 
 std::shared_ptr<LQPView> StorageManager::get_view(const ObjectID view_id) const {
   Assert(has_view(view_id), "No such view with ID '" + std::to_string(view_id) + "'. Was it dropped?");
-  return _views[view_id]->deep_copy();
+  return std::atomic_load(&_views[view_id])->deep_copy();
 }
 
 bool StorageManager::has_view(const ObjectID view_id) const {
-  return view_id < _views.size() && _views[view_id] != nullptr;
+  return view_id < _views.size() && std::atomic_load(&_views[view_id]) != nullptr;
 }
 
 void StorageManager::_add_prepared_plan(const ObjectID plan_id, const std::shared_ptr<PreparedPlan>& prepared_plan) {
@@ -94,26 +94,26 @@ void StorageManager::_add_prepared_plan(const ObjectID plan_id, const std::share
   Assert(needs_growth || !_prepared_plans[plan_id],
          "Cannot add prepared plan " + std::to_string(plan_id) + " - a view with the same ID already exists");
   if (needs_growth) {
-    _prepared_plans.grow_to_at_least(plan_id);
+    _prepared_plans.grow_to_at_least(plan_id + 1);
   }
 
-  _prepared_plans[plan_id] = prepared_plan;
+  std::atomic_store(&_prepared_plans[plan_id], prepared_plan);
 }
 
 void StorageManager::_drop_prepared_plan(const ObjectID plan_id) {
   Assert(has_prepared_plan(plan_id),
          "Error deleting prepared plan. No such prepared plan with ID '" + std::to_string(plan_id) + "'");
-  _prepared_plans[plan_id] = nullptr;
+  std::atomic_store(&_prepared_plans[plan_id], std::shared_ptr<PreparedPlan>{});
 }
 
 std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const ObjectID plan_id) const {
   Assert(has_prepared_plan(plan_id),
          "No such prepared plan with ID '" + std::to_string(plan_id) + "'. Was it dropped?");
-  return _prepared_plans[plan_id];
+  return std::atomic_load(&_prepared_plans[plan_id]);
 }
 
 bool StorageManager::has_prepared_plan(const ObjectID plan_id) const {
-  return plan_id < _prepared_plans.size() && _prepared_plans[plan_id] != nullptr;
+  return plan_id < _prepared_plans.size() && std::atomic_load(&_prepared_plans[plan_id]) != nullptr;
 }
 
 }  // namespace hyrise

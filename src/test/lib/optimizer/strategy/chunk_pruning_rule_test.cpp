@@ -65,6 +65,7 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
     _rule = std::make_shared<ChunkPruningRule>();
     _uncompressed_table_id =
         catalog.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{10}));
+  }
 
   std::shared_ptr<ChunkPruningRule> _rule;
   ObjectID _compressed_table_id, _long_compressed_table_id, _run_length_compressed_table_id,

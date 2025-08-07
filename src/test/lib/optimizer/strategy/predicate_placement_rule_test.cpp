@@ -39,7 +39,6 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   }
 
   void SetUp() override {
-<<<<<<< HEAD
     StrategyBaseTest::SetUp();
     const auto table_id_a = Hyrise::get().catalog.add_table("a", _table_a);
     _stored_table_a = StoredTableNode::make(table_id_a);

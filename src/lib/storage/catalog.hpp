@@ -76,7 +76,7 @@ class Catalog : public Noncopyable {
     ObjectMetadata(ObjectMetadata&& other) noexcept;
     ObjectMetadata& operator=(ObjectMetadata&& other) noexcept;
 
-    tbb::concurrent_unordered_map<std::string, ObjectID> ids{INITIAL_SIZE};
+    tbb::concurrent_unordered_map<std::string, std::atomic<ObjectID::base_type>> ids{INITIAL_SIZE};
     tbb::concurrent_vector<std::string> names{INITIAL_SIZE};
     std::atomic<ObjectID::base_type> next_id{0};
   };

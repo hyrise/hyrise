@@ -29,10 +29,10 @@ namespace {
 ObjectID add_object(const std::string& name, Catalog::ObjectMetadata& meta_data) {
   const auto object_id = meta_data.next_id++;
   if (object_id >= meta_data.names.size()) {
-    meta_data.names.grow_to_at_least(object_id);
+    meta_data.names.grow_to_at_least(object_id + 1);
   }
-  meta_data.names[object_id] = name;
-  meta_data.ids[name] = object_id;
+  meta_data.names[object_id] =  name;
+  std::atomic_store(&meta_data.ids[name], object_id);
   return static_cast<ObjectID>(object_id);
 }
 
@@ -103,9 +103,9 @@ void Catalog::drop_table(const std::string& name) {
          "Error deleting table. No such table named '" + name + "'.");
 
   // The `concurrent_unordered_map` does not support concurrency-safe erasure. Thus, we simply reset the table ID.
-  const auto table_id = iter->second;
-  _tables.ids[name] = INVALID_OBJECT_ID;
-  Hyrise::get().storage_manager._drop_table(table_id);
+  const auto table_id = iter->second.load();
+  std::atomic_store(&_tables.ids[name], INVALID_OBJECT_ID);
+  Hyrise::get().storage_manager._drop_table(static_cast<ObjectID>(table_id));
 }
 
 bool Catalog::has_table(const std::string& name) const {
@@ -114,7 +114,7 @@ bool Catalog::has_table(const std::string& name) const {
 
 ObjectID Catalog::table_id(const std::string& name) const {
   const auto iter = _tables.ids.find(name);
-  return iter == _tables.ids.end() ? INVALID_OBJECT_ID : iter->second;
+  return iter == _tables.ids.end() ? INVALID_OBJECT_ID : static_cast<ObjectID>(iter->second.load());
 }
 
 const std::string& Catalog::table_name(const ObjectID table_id) const {
@@ -145,7 +145,7 @@ std::unordered_map<std::string_view, std::shared_ptr<Table>> Catalog::tables() c
 
   for (const auto& [name, table_id] : _tables.ids) {
     if (table_id != INVALID_OBJECT_ID) {
-      tables[name] = Hyrise::get().storage_manager.get_table(table_id);
+      tables[name] = Hyrise::get().storage_manager.get_table(static_cast<ObjectID>(table_id));
     }
   }
   return tables;
@@ -174,9 +174,9 @@ void Catalog::drop_view(const std::string& name) {
          "Error deleting view. No such view named '" + name + "'.");
 
   // The `concurrent_unordered_map` does not support concurrency-safe erasure. Thus, we simply reset the table ID.
-  const auto view_id = iter->second;
-  _views.ids[name] = INVALID_OBJECT_ID;
-  Hyrise::get().storage_manager._drop_view(view_id);
+  const auto view_id = iter->second.load();
+  std::atomic_store(&_views.ids[name], INVALID_OBJECT_ID);
+  Hyrise::get().storage_manager._drop_view(static_cast<ObjectID>(view_id));
 }
 
 bool Catalog::has_view(const std::string& name) const {
@@ -185,7 +185,7 @@ bool Catalog::has_view(const std::string& name) const {
 
 ObjectID Catalog::view_id(const std::string& name) const {
   const auto iter = _views.ids.find(name);
-  return iter == _views.ids.end() ? INVALID_OBJECT_ID : iter->second;
+  return iter == _views.ids.end() ? INVALID_OBJECT_ID : static_cast<ObjectID>(iter->second);
 }
 
 const std::string& Catalog::view_name(const ObjectID view_id) const {
@@ -213,9 +213,9 @@ void Catalog::drop_prepared_plan(const std::string& name) {
          "Error deleting view. No such prepared plan named '" + name + "'.");
 
   // The `concurrent_unordered_map` does not support concurrency-safe erasure. Thus, we simply reset the table ID.
-  const auto plan_id = iter->second;
-  _prepared_plans.ids[name] = INVALID_OBJECT_ID;
-  Hyrise::get().storage_manager._drop_prepared_plan(plan_id);
+  const auto plan_id = iter->second.load();
+  std::atomic_store(&_prepared_plans.ids[name], INVALID_OBJECT_ID);
+  Hyrise::get().storage_manager._drop_prepared_plan(static_cast<ObjectID>(plan_id));
 }
 
 bool Catalog::has_prepared_plan(const std::string& name) const {
@@ -224,7 +224,7 @@ bool Catalog::has_prepared_plan(const std::string& name) const {
 
 ObjectID Catalog::prepared_plan_id(const std::string& name) const {
   const auto iter = _prepared_plans.ids.find(name);
-  return iter == _prepared_plans.ids.end() ? INVALID_OBJECT_ID : iter->second;
+  return iter == _prepared_plans.ids.end() ? INVALID_OBJECT_ID : static_cast<ObjectID>(iter->second);
 }
 
 const std::string& Catalog::prepared_plan_name(const ObjectID plan_id) const {
