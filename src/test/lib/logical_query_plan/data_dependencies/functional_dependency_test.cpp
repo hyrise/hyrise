@@ -70,7 +70,7 @@ TEST_F(FunctionalDependencyTest, ToStream) {
   EXPECT_EQ(stream.str(), "{a, b} => {c}");
 }
 
-TEST_F(FunctionalDependencyTest, InflateFDs) {
+TEST_F(FunctionalDependencyTest, InflateFDsSimple) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_1 = FunctionalDependency({_a}, {_b});
   const auto fd_a_2 = FunctionalDependency({_a}, {_c});
@@ -86,7 +86,38 @@ TEST_F(FunctionalDependencyTest, InflateFDs) {
   EXPECT_TRUE(inflated_fds.contains(fd_x));
 }
 
-TEST_F(FunctionalDependencyTest, DeflateFDs) {
+TEST_F(FunctionalDependencyTest, InflateFDsGenuineAndSpurious) {
+  const auto fd_a_bc = FunctionalDependency({_a}, {_b, _c}, /*is_schema_given=*/true);
+  const auto fd_a_bc2 = FunctionalDependency({_a}, {_b, _c, _x}, /*is_schema_given=*/false);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b}, /*is_schema_given=*/true);
+  const auto fd_a_c = FunctionalDependency({_a}, {_c}, /*is_schema_given=*/true);
+  const auto fd_a_x = FunctionalDependency({_a}, {_x}, /*is_schema_given=*/false);
+
+  const auto fd_b_ac = FunctionalDependency({_b}, {_a, _c}, /*is_schema_given=*/false);
+  const auto fd_b_a = FunctionalDependency({_b}, {_a}, /*is_schema_given=*/false);
+  const auto fd_b_c = FunctionalDependency({_b}, {_c}, /*is_schema_given=*/false);
+
+  const auto& inflated_fds = inflate_fds({fd_a_bc, fd_a_bc2, fd_b_ac});
+  EXPECT_EQ(inflated_fds.size(), 5);
+  ASSERT_TRUE(inflated_fds.contains(fd_a_b));
+  ASSERT_TRUE(inflated_fds.contains(fd_a_c));
+  ASSERT_TRUE(inflated_fds.contains(fd_a_x));
+  ASSERT_TRUE(inflated_fds.contains(fd_b_c));
+  ASSERT_TRUE(inflated_fds.contains(fd_b_a));
+
+  // Also check that the schema-given properties are correct. Note that FDs are not hashed by their schema-given
+  // properties, so we cannot check the schema-given property of the inflated FDs directly
+  EXPECT_TRUE(inflated_fds.find(fd_a_b)->is_schema_given());
+  EXPECT_TRUE(inflated_fds.find(fd_a_c)->is_schema_given());
+  EXPECT_FALSE(inflated_fds.find(fd_a_x)->is_schema_given());
+  EXPECT_FALSE(inflated_fds.find(fd_b_a)->is_schema_given());
+  EXPECT_FALSE(inflated_fds.find(fd_b_c)->is_schema_given());
+
+  // An FD with multiple dependents is not inflated.
+  EXPECT_FALSE(inflated_fds.contains(fd_b_ac));
+}
+
+TEST_F(FunctionalDependencyTest, DeflateFDsSimple) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto fd_a_1 = FunctionalDependency({_a}, {_b});
   const auto fd_a_2 = FunctionalDependency({_a}, {_c});
@@ -96,6 +127,22 @@ TEST_F(FunctionalDependencyTest, DeflateFDs) {
   EXPECT_EQ(deflated_fds.size(), 2);
   EXPECT_TRUE(deflated_fds.contains(fd_a));
   EXPECT_TRUE(deflated_fds.contains(fd_b_c));
+}
+
+TEST_F(FunctionalDependencyTest, DeflateFDsGenuineAndSpurious) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c}, /*is_schema_given=*/false);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b}, /*is_schema_given=*/true);
+  const auto fd_a_c = FunctionalDependency({_a}, {_c}, /*is_schema_given=*/false);
+
+  const auto& deflated_fds = deflate_fds({fd_a_b, fd_a_c});
+  EXPECT_EQ(deflated_fds.size(), 2);
+  ASSERT_TRUE(
+      deflated_fds.contains(fd_a));  // We combine the schema-given and non-schema-given FDs into a non-schema-given FD.
+  ASSERT_TRUE(deflated_fds.contains(fd_a_b));  // We keep the schema-given FD.
+
+  // Check that the schema-given property is correct.
+  EXPECT_FALSE(deflated_fds.find(fd_a)->is_schema_given());
+  EXPECT_TRUE(deflated_fds.find(fd_a_b)->is_schema_given());
 }
 
 TEST_F(FunctionalDependencyTest, UnionFDsEmpty) {

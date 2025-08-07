@@ -55,7 +55,8 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    // Non-schema-given UCC
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -79,7 +80,7 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   _apply_rule(rule, _lqp);
-  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_FALSE(_optimization_context.is_cacheable());  // Not cacheable because UCC used is not permanent.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -95,7 +96,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -120,9 +121,8 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   _apply_rule(rule, _lqp);
-  // Not cacheable because UCC used is not permanent. Non-cacheability is added in #2600. This is why it is still
-  // cacheable.
-  EXPECT_TRUE(_optimization_context.is_cacheable());
+  // Not cacheable because UCC used is not permanent.
+  EXPECT_FALSE(_optimization_context.is_cacheable());
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -142,7 +142,9 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    // Non-schema-given UCC
+    table->add_soft_constraint(
+        TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -167,9 +169,8 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
 
   static_cast<JoinNode&>(*_lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   _apply_rule(rule, _lqp);
-  // Not cacheable because UCC used is not permanent. Non-cacheability is added in #2600. This is why it is still
-  // cacheable.
-  EXPECT_TRUE(_optimization_context.is_cacheable());
+  // Not cacheable because UCC used is not permanent.
+  EXPECT_FALSE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

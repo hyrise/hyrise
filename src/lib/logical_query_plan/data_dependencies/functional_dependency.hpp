@@ -28,9 +28,15 @@ namespace hyrise {
  *
  * Currently, the determinant expressions are required to be non-nullable to be involved in FDs. Combining null values
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
+ *
+ * If the FD may become invalid in the future (because it is not based on a schema constraint, but on the data
+ * incidentally fulfilling the constraint at the moment), the FD is marked as being not schema-given.
+ * This information is important because query plans that were optimized using a non-schema-given FD are not safely
+ * cacheable.
  */
 struct FunctionalDependency {
-  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents);
+  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
+                       bool is_schema_given = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -38,6 +44,12 @@ struct FunctionalDependency {
 
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
+
+  bool is_schema_given() const;
+  void set_schema_given() const;
+
+ private:
+  mutable bool _is_schema_given;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
@@ -49,18 +61,25 @@ using FunctionalDependencies = std::unordered_set<FunctionalDependency>;
  *         We consider FDs as inflated when they have a single dependent expression only. Therefore, inflating an FD
  *         works as follows:
  *                                                      {a} => {b}
- *                             {a} => {b, c, d}   -->   {a} => {c}
+ *                            {a} => {b, c, d}    -->   {a} => {c}
  *                                                      {a} => {d}
+ *         (not schema-given) {a} => {b, c, d, e} -->   {a} => {e} (not schema-given)
+ *         Note that the second FD only produces the FD {a} => {e} because this one is not present yet while the other
+ *         FDs resulting from the dependents are already present and schema-given.
  */
 FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
- *         As a result, FDs become deflated as follows:
+ *         Note that FDs that do not share the schema-given values are not merged. As a result, FDs become deflated as
+ *         follows (assuming all FDs are schema-given):
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}
- *                             {a} => {d}
+ *                             {a} => {d} 
+ *          (not schema-given) {a} => {e}         -->   {a} => {b, c, d, e} (not schema-given)
+ *         Note that if we have two FDs with the same determinant expressions, but one of them is not schema-given,
+ *         this not schema-given FD is ignored in the deflation process as it is 'shadowed' by the schema-given one.
  */
 FunctionalDependencies deflate_fds(const FunctionalDependencies& fds);
 

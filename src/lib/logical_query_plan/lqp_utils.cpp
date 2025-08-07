@@ -26,6 +26,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -508,23 +509,38 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
   return column_expressions;
 }
 
-bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
-                                                 const ExpressionUnorderedSet& expressions) {
+UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations& unique_column_combinations,
+                                                  const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
+  auto matching_ucc = std::optional<UniqueColumnCombinations::const_iterator>{};
+
   // Look for a unique column combination that is based on a subset of the given expressions.
-  for (const auto& ucc : unique_column_combinations) {
+  for (auto ucc_it = unique_column_combinations.cbegin(); ucc_it != unique_column_combinations.cend(); ++ucc_it) {
+    const auto& ucc = *ucc_it;
+
+    // If all of the expressions in the UCC are contained in the given expressions, we found a match.
     if (ucc.expressions.size() <= expressions.size() &&
         std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
           return expressions.contains(ucc_expression);
         })) {
-      // Found a matching UCC.
-      return true;
+      if (!matching_ucc) {
+        matching_ucc = ucc_it;
+        if (ucc.is_schema_given()) {
+          // If this match is schema-given, we can stop here.
+          break;
+        }
+      } else if (ucc.is_schema_given()) {
+        // We continue looking for a schema-given UCC and overwrite the previous match with a schema-given UCC if we
+        // find one.
+        matching_ucc = ucc_it;
+        break;
+      }
     }
   }
-  // Did not find a UCC for the given expressions.
-  return false;
+
+  return matching_ucc ? *matching_ucc : unique_column_combinations.cend();
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
@@ -570,7 +586,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                return (fd.determinants == determinants) && (fd.dependents == dependents);
                              }) == fds.cend(),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(std::move(determinants), std::move(dependents));
+    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_schema_given());
   }
   return fds;
 }

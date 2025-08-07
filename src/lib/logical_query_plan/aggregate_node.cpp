@@ -17,6 +17,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -150,10 +151,13 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
     std::copy_n(node_expressions.begin(), group_by_columns_count,
                 std::inserter(group_by_columns, group_by_columns.begin()));
 
-    // Make sure that we do not add an already existing or a superset UCC.
-    if (unique_column_combinations.empty() ||
-        !contains_matching_unique_column_combination(unique_column_combinations, group_by_columns)) {
-      unique_column_combinations.emplace(std::move(group_by_columns));
+    const auto [existing_ucc, inserted] =
+        unique_column_combinations.emplace(std::move(group_by_columns), /*is_schema_given=*/true);
+
+    // If the UCC was already in the set, is not schema-given and matches the group-by columns, we set it to
+    // schema-given.
+    if (!inserted && !existing_ucc->is_schema_given() && existing_ucc->expressions.size() == group_by_columns_count) {
+      existing_ucc->set_schema_given();
     }
   }
 
