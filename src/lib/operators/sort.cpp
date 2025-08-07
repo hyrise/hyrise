@@ -57,8 +57,9 @@ bool is_nulls_first(const SortMode& mode) {
 
 inline void encode_string(uint8_t* dest, const size_t data_length, const pmr_string& value) {
   auto string_len = value.size();
-  memset(dest + 1, 0, data_length);                                          // set all bytes to 0
-  memcpy(dest + 1, value.data(), string_len);                                // copy the string data into the key buffer
+  memset(dest + 1, 0, data_length);  // set all bytes to 0
+  // copy the string data into the key buffer
+  memcpy(dest + 1, value.data(), string_len);                                //NOLINT
   memset(dest + 1 + data_length - 2, static_cast<uint16_t>(string_len), 2);  // store actual string length
 }
 
