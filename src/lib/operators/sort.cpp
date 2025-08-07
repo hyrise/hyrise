@@ -2,21 +2,28 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
+#include <cstring>
 #include <memory>
-#include <optional>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "boost/sort/pdqsort/pdqsort.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_segment_accessor.hpp"
 #include "storage/chunk.hpp"
@@ -31,12 +38,211 @@
 
 namespace {
 
+constexpr size_t SMALL_ARRAY_THRESHOLD = 10'000;
 using namespace hyrise;  // NOLINT
 
 // Ceiling of integer division
 size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
   DebugAssert(rhs > 0, "Divisor must be larger than 0.");
   return (lhs + rhs - 1u) / rhs;
+}
+
+bool is_descending(const SortMode& mode) {
+  return mode == SortMode::DescendingNullsFirst || mode == SortMode::DescendingNullsLast;
+}
+
+bool is_nulls_first(const SortMode& mode) {
+  return mode == SortMode::AscendingNullsFirst || mode == SortMode::DescendingNullsFirst;
+}
+
+inline void encode_string(uint8_t* dest, const size_t data_length, const pmr_string& value) {
+  auto string_len = value.size();
+  memset(dest + 1, 0, data_length);  // set all bytes to 0
+  // copy the string data into the key buffer
+  memcpy(dest + 1, value.data(), string_len);                                //NOLINT
+  memset(dest + 1 + data_length - 2, static_cast<uint16_t>(string_len), 2);  // store actual string length
+}
+
+inline void encode_double(uint8_t* dest, const double value) {
+  // Encode double value; reinterpret double as raw 64-bit bits
+  auto bits = uint64_t{0};
+  memcpy(&bits, &value, sizeof(bits));
+
+  // Flip the bits to ensure lexicographic order matches numeric order
+  if (std::signbit(value)) {
+    bits = ~bits;  // Negative values are bitwise inverted
+  } else {
+    bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values
+  }
+
+  // Write to buffer in big-endian order (MSB first)
+  for (auto byte_idx = uint32_t{0}; byte_idx < 8; ++byte_idx) {
+    dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((7 - byte_idx) * 8));
+  }
+}
+
+inline void encode_float(uint8_t* dest, const float value) {
+  auto bits = uint32_t{0};
+  memcpy(&bits, &value, sizeof(bits));
+
+  // Flip the bits to ensure lexicographic order matches numeric order
+  if (std::signbit(value)) {
+    bits = ~bits;  // Negative values are bitwise inverted
+  } else {
+    bits ^= 0x80000000;  // Flip the sign bit for positive values
+  }
+
+  // Write to buffer in big-endian order (MSB first)
+  for (auto byte_idx = uint32_t{0}; byte_idx < 4; ++byte_idx) {
+    dest[1 + byte_idx] = static_cast<uint8_t>(bits >> ((3 - byte_idx) * 8));
+  }
+}
+
+template <typename T>
+inline void encode_integer(uint8_t* dest, const T value, const size_t data_length) {
+  // Bias the value to get a lexicographically sortable encoding
+  using UnsignedT = std::make_unsigned_t<T>;
+  UnsignedT const biased =
+      static_cast<UnsignedT>(value) ^ (static_cast<UnsignedT>(1) << ((data_length * 8) - 1));  // flip sign bit
+
+  // Store bytes in big-endian order starting at dest[1]
+  for (auto byte_idx = size_t{0}; byte_idx < data_length; ++byte_idx) {
+    dest[1 + byte_idx] = static_cast<uint8_t>(biased >> ((data_length - 1 - byte_idx) * 8));
+  }
+}
+
+template void encode_integer<int32_t>(uint8_t* dest, const int32_t value, const size_t data_length);
+template void encode_integer<int64_t>(uint8_t* dest, const int64_t value, const size_t data_length);
+
+// Finds the cut point for the merge path diagonal inspired by https://arxiv.org/pdf/1406.2628.
+template <typename T, typename Compare>
+inline std::pair<size_t, size_t> find_cut_point(const T* const left, const size_t len_left, const T* const right,
+                                                const size_t len_right, const size_t diag, Compare comp) {
+  auto low = diag > len_right ? diag - len_right : 0;
+  auto high = std::min(diag, len_left);
+
+  while (low < high) {
+    const auto cut_left = (low + high) / 2;
+    const auto cut_right = diag - cut_left;
+
+    const bool left_smaller = (cut_left < len_left) && (cut_right == 0 || comp(left[cut_left], right[cut_right - 1]));
+
+    if (left_smaller) {
+      low = cut_left + 1;
+    } else {
+      high = cut_left;
+    }
+  }
+  return {low, diag - low};
+}
+
+// Parallel merge of two consecutive runs using Merge Path.
+template <typename Compare>
+void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mid, const size_t end, Compare comp,
+                         size_t max_workers) {
+  const auto len_left = mid - start;
+  const auto len_right = end - mid;
+  const auto total_len = len_left + len_right;
+
+  const auto workers = static_cast<size_t>(std::min(max_workers, total_len));
+
+  auto dest = RowIDPosList{};
+  dest.resize(total_len);
+
+  // Compute cut points
+  struct Cut {
+    size_t a;
+    size_t b;
+  };
+
+  auto cuts = std::vector<Cut>(workers + 1);
+  cuts.front() = {0, 0};
+  cuts.back() = {len_left, len_right};
+
+  const auto* left = rows.data() + start;
+  const auto* right = rows.data() + mid;
+
+  for (auto index = size_t{1}; index < workers; ++index) {
+    const auto diag = index * total_len / workers;
+    const auto [a, b] = find_cut_point(left, len_left, right, len_right, diag, comp);
+    cuts[index] = {a, b};
+  }
+
+  // Launch worker tasks
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(workers);
+
+  for (auto task_idx = size_t{0}; task_idx < workers; ++task_idx) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, task_idx] {
+      const auto cut_l = cuts[task_idx];
+      const auto cut_r = cuts[task_idx + 1];
+
+      const auto* l_begin = left + cut_l.a;
+      const auto* l_end = left + cut_r.a;
+      const auto* r_begin = right + cut_l.b;
+      const auto* r_end = right + cut_r.b;
+
+      auto* out = dest.data() + (cut_l.a + cut_l.b);
+      std::merge(l_begin, l_end, r_begin, r_end, out, comp);
+    }));
+  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  const auto start_offset = static_cast<std::ptrdiff_t>(start);
+  std::move(dest.begin(), dest.end(), rows.begin() + start_offset);
+}
+
+template <typename Compare>
+void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
+  auto row_count = rows.size();
+  auto is_multithreaded = Hyrise::get().is_multi_threaded();
+
+  if (!HYRISE_DEBUG && (!is_multithreaded || row_count < SMALL_ARRAY_THRESHOLD)) {
+    boost::sort::pdqsort(rows.begin(), rows.end(), comp);
+    return;
+  }
+
+  // 1) Get number of workers and block size.
+  // Default to single-threaded execution
+  auto num_workers = size_t{1};
+
+  auto nq_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
+  if (nq_scheduler) {
+    num_workers = static_cast<size_t>(nq_scheduler->active_worker_count().load());
+  }
+
+  const auto block = (row_count + num_workers - 1) / num_workers;
+
+  // 2) Sort each block in parallel.
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(num_workers);
+  for (auto thread_idx = size_t{0}; thread_idx < num_workers; ++thread_idx) {
+    const auto start = thread_idx * block;
+    const auto end = std::min(start + block, row_count);
+    if (start < end) {
+      jobs.emplace_back(std::make_shared<JobTask>([start, end, &rows, &comp]() {
+        const auto start_offset = static_cast<std::ptrdiff_t>(start);
+        const auto end_offset = static_cast<std::ptrdiff_t>(end);
+        boost::sort::pdqsort(rows.begin() + start_offset, rows.begin() + end_offset, comp);
+      }));
+    }
+  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+  // 3) Bottom-up merge sorted runs, doubling the run size each pass:
+  auto run = block;
+  while (run < row_count) {
+    jobs.clear();
+    for (auto left = size_t{0}; left + run < row_count; left += 2 * run) {
+      auto mid = left + run;
+      auto right = std::min(left + (2 * run), row_count);
+
+      merge_path_parallel(rows, left, mid, right, comp, num_workers);
+    }
+    if (!jobs.empty()) {
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+    }
+    run *= 2;
+  }
 }
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
@@ -54,13 +260,17 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   const auto output_chunk_count = div_ceil(pos_list.size(), output_chunk_size);
   Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
-  // Vector of segments for each chunk
-  auto output_segments_by_chunk = std::vector<Segments>{output_chunk_count};
-
   // Materialize column by column, starting a new ValueSegment whenever output_chunk_size is reached
   const auto input_chunk_count = unsorted_table->chunk_count();
   const auto output_column_count = unsorted_table->column_count();
   const auto row_count = unsorted_table->row_count();
+
+  // Vector of segments for each chunk
+  auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(output_column_count));
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(output_chunk_count * output_column_count);
+
   for (auto column_id = ColumnID{0}; column_id < output_column_count; ++column_id) {
     const auto column_data_type = output->column_data_type(column_id);
     const auto column_is_nullable = unsorted_table->column_is_nullable(column_id);
@@ -68,80 +278,58 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
     resolve_data_type(column_data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto chunk_it = output_segments_by_chunk.begin();
-      auto current_segment_size = size_t{0};
-
-      auto value_segment_value_vector = pmr_vector<ColumnDataType>{};
-      auto value_segment_null_vector = pmr_vector<bool>{};
-
-      {
-        const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count));
-        value_segment_value_vector.reserve(next_chunk_size);
-        if (column_is_nullable) {
-          value_segment_null_vector.reserve(next_chunk_size);
-        }
-      }
-
       auto accessor_by_chunk_id =
-          std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(unsorted_table->chunk_count());
+          std::vector<std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>(unsorted_table->chunk_count());
       for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
         const auto& abstract_segment = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
         accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
       }
 
-      for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
-        const auto [chunk_id, chunk_offset] = pos_list[row_index];
+      for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
+        jobs.emplace_back(
+            std::make_shared<JobTask>([&, output_chunk_id, column_id, column_is_nullable = column_is_nullable,
+                                       accessor_by_chunk_id = accessor_by_chunk_id]() {
+              auto value_segment_value_vector = pmr_vector<ColumnDataType>{};
+              auto value_segment_null_vector = pmr_vector<bool>{};
 
-        auto& accessor = accessor_by_chunk_id[chunk_id];
-        const auto typed_value = accessor->access(chunk_offset);
-        const auto is_null = !typed_value;
-        value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
-        if (column_is_nullable) {
-          value_segment_null_vector.push_back(is_null);
-        }
+              const auto chunk_size = std::min(
+                  output_chunk_size,
+                  static_cast<ChunkOffset>(row_count - (static_cast<uint64_t>(output_chunk_id * output_chunk_size))));
 
-        ++current_segment_size;
+              value_segment_value_vector.reserve(chunk_size);
+              if (column_is_nullable) {
+                value_segment_null_vector.reserve(chunk_size);
+              }
 
-        // Check if value segment is full
-        if (current_segment_size >= output_chunk_size) {
-          current_segment_size = 0;
+              for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
+                const auto [chunk_id, chunk_offset] =
+                    pos_list[(static_cast<size_t>(output_chunk_size * output_chunk_id)) + row_index];
 
-          std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
-          if (column_is_nullable) {
-            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
-                                                                           std::move(value_segment_null_vector));
-          } else {
-            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
-          }
+                auto& accessor = accessor_by_chunk_id[chunk_id];
+                const auto typed_value = accessor->access(chunk_offset);
+                const auto is_null = !typed_value;
+                value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
+                if (column_is_nullable) {
+                  value_segment_null_vector.push_back(is_null);
+                }
+              }
 
-          chunk_it->push_back(value_segment);
-          value_segment_value_vector = pmr_vector<ColumnDataType>{};
-          value_segment_null_vector = pmr_vector<bool>{};
+              std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
+              if (column_is_nullable) {
+                value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
+                                                                               std::move(value_segment_null_vector));
+              } else {
+                value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
+              }
 
-          const auto next_chunk_size =
-              std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count - row_index));
-          value_segment_value_vector.reserve(next_chunk_size);
-          if (column_is_nullable) {
-            value_segment_null_vector.reserve(next_chunk_size);
-          }
-
-          ++chunk_it;
-        }
-      }
-
-      // Last segment has not been added
-      if (current_segment_size > 0) {
-        std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
-        if (column_is_nullable) {
-          value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
-                                                                         std::move(value_segment_null_vector));
-        } else {
-          value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector));
-        }
-        chunk_it->push_back(value_segment);
+              output_segments_by_chunk[output_chunk_id][column_id] = value_segment;
+            }));
+        jobs.back()->schedule();  // schedule immediately because job creation is somewhat expensive
       }
     });
   }
+
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   for (auto& segments : output_segments_by_chunk) {
     output->append_chunk(segments);
@@ -168,7 +356,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   const auto column_count = output_table->column_count();
 
   const auto output_chunk_count = div_ceil(input_pos_list.size(), output_chunk_size);
-  Assert(input_pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
+  const auto row_count = unsorted_table->row_count();
+  Assert(input_pos_list.size() == row_count, "Mismatching size of input table and PosList");
 
   // Vector of segments for each chunk
   auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(column_count));
@@ -181,17 +370,13 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       output_segments[column_id] = std::make_shared<ReferenceSegment>(unsorted_table, column_id, output_pos_list);
     }
   } else {
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
-      // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
-      // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
-      // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
-      // is acceptable. In the future, this could be improved.
-      auto output_pos_list = std::make_shared<RowIDPosList>();
-      output_pos_list->reserve(output_chunk_size);
+    const auto input_chunk_count = unsorted_table->chunk_count();
 
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    jobs.reserve(static_cast<size_t>(column_count));
+
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       // Collect all input segments for the current column
-      const auto input_chunk_count = unsorted_table->chunk_count();
       auto input_segments = std::vector<std::shared_ptr<AbstractSegment>>(input_chunk_count);
       for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
         input_segments[input_chunk_id] = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
@@ -202,46 +387,49 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       const auto referenced_column_id =
           resolve_indirection ? first_reference_segment->referenced_column_id() : column_id;
 
-      // write_output_pos_list creates an output reference segment for a given ChunkID, ColumnID and PosList.
-      auto output_chunk_id = ChunkID{0};
-      const auto write_output_pos_list = [&] {
-        DebugAssert(!output_pos_list->empty(), "Asked to write empty output_pos_list");
-        output_segments_by_chunk.at(output_chunk_id)[column_id] =
-            std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
-        ++output_chunk_id;
+      for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
+        jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, column_id, input_segments = input_segments,
+                                                     referenced_table = referenced_table,
+                                                     referenced_column_id = referenced_column_id]() {
+          const auto chunk_size = std::min(
+              output_chunk_size,
+              static_cast<ChunkOffset>(row_count - (static_cast<uint64_t>(output_chunk_id * output_chunk_size))));
 
-        output_pos_list = std::make_shared<RowIDPosList>();
-        if (output_chunk_id < output_chunk_count) {
-          output_pos_list->reserve(output_chunk_size);
-        }
-      };
+          // To keep the implementation simple, we write the output ReferenceSegments column by column.
+          // This means that even if input ReferenceSegments share a PosList,
+          //  the output will contain independent PosLists. While this is
+          // slightly more expensive to generate and slightly less efficient for following operators,
+          // we assume that the lion's share of the work has been done
+          // before the Sort operator is executed and that the relative cost of this
+          // is acceptable. In the future, this could be improved.
+          auto output_pos_list = std::make_shared<RowIDPosList>();
+          output_pos_list->reserve(chunk_size);
 
-      // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
-      // `output_chunk_size` rows.
-      const auto input_pos_list_size = input_pos_list.size();
-      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list_size;
-           ++input_pos_list_offset) {
-        const auto& row_id = input_pos_list[input_pos_list_offset];
-        if (resolve_indirection) {
-          const auto& input_reference_segment = static_cast<ReferenceSegment&>(*input_segments[row_id.chunk_id]);
-          DebugAssert(input_reference_segment.referenced_table() == referenced_table,
-                      "Input column references more than one table");
-          DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
-                      "Input column references more than one column");
-          const auto& input_reference_pos_list = input_reference_segment.pos_list();
-          output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
-        } else {
-          output_pos_list->emplace_back(row_id);
-        }
+          for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
+            const auto& row_id = input_pos_list[(static_cast<size_t>(output_chunk_size * output_chunk_id)) + row_index];
 
-        if (output_pos_list->size() == output_chunk_size) {
-          write_output_pos_list();
-        }
-      }
-      if (!output_pos_list->empty()) {
-        write_output_pos_list();
+            if (resolve_indirection) {
+              const auto& input_reference_segment = static_cast<ReferenceSegment&>(*input_segments[row_id.chunk_id]);
+              DebugAssert(input_reference_segment.referenced_table() == referenced_table,
+                          "Input column references more than one table");
+              DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
+                          "Input column references more than one column");
+              const auto& input_reference_pos_list = input_reference_segment.pos_list();
+              output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
+            } else {
+              output_pos_list->emplace_back(row_id);
+            }
+          }
+
+          DebugAssert(!output_pos_list->empty(), "Asked to write empty output_pos_list");
+          output_segments_by_chunk.at(output_chunk_id)[column_id] =
+              std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
+        }));
+        jobs.back()->schedule();  // schedule job immediately
       }
     }
+
+    Hyrise::get().scheduler()->wait_for_tasks(jobs);
   }
 
   for (auto& segments : output_segments_by_chunk) {
@@ -285,8 +473,10 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
+  auto timer = Timer{};
   const auto& input_table = left_input_table();
 
+  // Validate sort definitions
   for (const auto& column_sort_definition : _sort_definitions) {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
@@ -301,44 +491,197 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return input_table;
   }
 
-  std::shared_ptr<Table> sorted_table;
-
   // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
   // been determined so far. This is not a completely proper PosList on the input table as it might point to
   // ReferenceSegments.
-  auto previously_sorted_pos_list = std::optional<RowIDPosList>{};
+  auto sorted_table = std::shared_ptr<Table>{};
 
-  auto total_materialization_time = std::chrono::nanoseconds{};
-  auto total_temporary_result_writing_time = std::chrono::nanoseconds{};
-  auto total_sort_time = std::chrono::nanoseconds{};
+  const auto chunk_count = input_table->chunk_count();
+  const auto row_count = input_table->row_count();
+  const auto sort_definitions_size = _sort_definitions.size();
 
-  for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
-    const auto& sort_definition = _sort_definitions[sort_step];
-    const auto data_type = input_table->column_data_type(sort_definition.column);
+  /**************************************************************************************************************
+   ***************************************** Pre-compute offsets and other info *********************************
+   **************************************************************************************************************/
 
-    resolve_data_type(data_type, [&](auto type) {
+  // The key length is calculated based on the sizes of the columns to be sorted by,
+  // e.g. if sorting by int, string it should be [4, 8].
+  auto field_width = std::vector<size_t>();
+  field_width.reserve(sort_definitions_size);
+
+  for (const auto& def : _sort_definitions) {
+    const auto sort_col = def.column;
+    resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-
-      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
-      previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
-
-      total_materialization_time += sort_impl.materialization_time;
-      total_temporary_result_writing_time += sort_impl.temporary_result_writing_time;
-      total_sort_time += sort_impl.sort_time;
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        // Iterate over all chunks to find the longest string in the column.
+        auto max_string_length = size_t{0};
+        for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          const auto abstract_segment = input_table->get_chunk(chunk_id)->get_segment(sort_col);
+          segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
+            if (!val.is_null()) {
+              const auto string_length = val.value().size();
+              if (string_length > max_string_length) {
+                max_string_length = string_length;
+              }
+            }
+          });
+        }
+        // Store size of the string + 2 for string length.
+        field_width.emplace_back(max_string_length + 2);
+      } else {
+        field_width.emplace_back(
+            // Store size of the column type, e.g. 4 for int, 8 for double, etc.
+            sizeof(ColumnDataType));
+      }
     });
   }
 
+  // Total width of each normalized key is the width of all columns to be sorted by plus null bytes.
+  auto key_width = size_t{0};
+  for (const auto& column : field_width) {
+    key_width += column + 1;
+  }
+
+  /**
+   * Offsets for each column in the key, i.e. `key_offsets[i]` is the offset of the i-th column in the key.
+   * This means, that `buffer[key_offsets[i]]` is the location of the i-th column's value in the key.
+  */
+  auto key_offsets = std::vector<size_t>(sort_definitions_size);
+  key_offsets[0] = 0;
+  for (auto index = size_t{1}; index < sort_definitions_size; ++index) {
+    key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;
+  }
+
+  auto key_buffer = std::vector<uint8_t>();
+  auto total_buffer_size = size_t{0};
+
+  // Number of rows per chunk in the input table.
+  auto chunk_sizes = std::vector<size_t>(chunk_count);
+
+  auto row_ids = RowIDPosList{};
+  row_ids.reserve(row_count);
+
+  auto row_id_offsets = std::vector<size_t>();
+  row_id_offsets.reserve(chunk_count);
+  row_id_offsets.emplace_back(0);
+
+  for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto chunk = input_table->get_chunk(chunk_id);
+    auto row_count_for_chunk = chunk->size();
+
+    chunk_sizes[chunk_id] = row_count_for_chunk;
+    // Total size of the keys for all chunks.
+    total_buffer_size += row_count_for_chunk * key_width;
+
+    // Offset for the next chunk.
+    if (chunk_id > 0) {
+      row_id_offsets.emplace_back(row_id_offsets[chunk_id - 1] + chunk_sizes[chunk_id - 1]);
+    }
+
+    for (ChunkOffset row = ChunkOffset{0}; row < row_count_for_chunk; ++row) {
+      row_ids.emplace_back(chunk_id, row);
+    }
+  }
+
+  key_buffer.reserve(total_buffer_size);
+  auto preparation_time = timer.lap();
+
+  /**************************************************************************************************************
+   *********************************************** Key-Generation ***********************************************
+   **************************************************************************************************************/
+
+  // Job queue for generating keys in parallel.
+  auto keygen_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  keygen_jobs.reserve(static_cast<size_t>(chunk_count) * sort_definitions_size);
+  for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto chunk = input_table->get_chunk(chunk_id);
+
+    for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
+      keygen_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, index, chunk = chunk]() {
+        auto sort_col = _sort_definitions[index].column;
+        auto nulls_first = is_nulls_first(_sort_definitions[index].sort_mode);
+        auto descending = is_descending(_sort_definitions[index].sort_mode);
+
+        const auto abstract_segment = chunk->get_segment(sort_col);
+        resolve_data_type(input_table->column_data_type(sort_col), [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
+
+          segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
+            const auto row = val.chunk_offset();
+
+            // Pointer to the destination in the key buffer for this column.
+            auto* dest = &key_buffer[(row_id_offsets[chunk_id] + row) * key_width + key_offsets[index]];
+
+            const auto is_not_null = !val.is_null();
+            const ColumnDataType value = is_not_null ? val.value() : ColumnDataType{};
+            const auto data_length = field_width[index];
+
+            // Set the first byte to indicate if the value is null or not.
+            auto null_byte = is_not_null ? 0x00U : 0xFFU;
+            if (nulls_first) {
+              null_byte = ~null_byte;
+            }
+            dest[0] = static_cast<uint8_t>(null_byte);
+
+            // Encode the value into the key based on the data type.
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+              encode_string(dest, data_length, value);
+            } else if constexpr (std::is_same_v<ColumnDataType, double>) {
+              encode_double(dest, value);
+            } else if constexpr (std::is_same_v<ColumnDataType, float>) {
+              encode_float(dest, value);
+            } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
+              encode_integer<ColumnDataType>(dest, value, data_length);
+            } else {
+              const auto type_name = std::string{typeid(ColumnDataType).name()};
+              throw std::logic_error("Unsupported data type for sorting: " + type_name);
+            }
+
+            // Invert for descending order (excluding the null byte).
+            if (descending) {
+              for (auto idx = size_t{1}; idx <= data_length; ++idx) {
+                dest[idx] = ~dest[idx];
+              }
+            }
+          });
+        });
+      }));
+    }
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(keygen_jobs);
+  auto key_generation_time = timer.lap();
+
+  /**************************************************************************************************************
+   ************************************************** Mergesort *************************************************
+   **************************************************************************************************************/
+
+  // Custom comparator function used for sorting
+  auto compare_rows = [&](const RowID rowid_a, const RowID rowid_b) {
+    auto* key_a = &key_buffer[(row_id_offsets[rowid_a.chunk_id] + rowid_a.chunk_offset) * key_width];
+    auto* key_b = &key_buffer[(row_id_offsets[rowid_b.chunk_id] + rowid_b.chunk_offset) * key_width];
+
+    return memcmp(key_a, key_b, key_width) < 0;
+  };
+
+  parallel_sort_rowids(row_ids, compare_rows);
+  auto merge_sort_time = timer.lap();
+
+  /**************************************************************************************************************
+   *********************************************** Output writing ***********************************************
+   **************************************************************************************************************/
+
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, total_materialization_time);
-  step_performance_data.set_step_runtime(OperatorSteps::TemporaryResultWriting, total_temporary_result_writing_time);
-  step_performance_data.set_step_runtime(OperatorSteps::Sort, total_sort_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Preparation, preparation_time);
+  step_performance_data.set_step_runtime(OperatorSteps::MaterializeSortColumns, key_generation_time);
+  step_performance_data.set_step_runtime(OperatorSteps::Sort, merge_sort_time);
 
   // We have to materialize the output (i.e., write ValueSegments) if
   //  (a) it is requested by the user,
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
   //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
   // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
-  auto timer = Timer{};
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
@@ -368,148 +711,31 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   if (must_materialize) {
-    sorted_table =
-        write_materialized_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
+    sorted_table = write_materialized_output_table(input_table, std::move(row_ids), _output_chunk_size);
   } else {
-    sorted_table =
-        write_reference_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
+    sorted_table = write_reference_output_table(input_table, std::move(row_ids), _output_chunk_size);
   }
 
   const auto& final_sort_definition = _sort_definitions[0];
   // Set the sorted_by attribute of the output's chunks according to the most significant sort operation, which is the
   // column the table was sorted by last.
   const auto output_chunk_count = sorted_table->chunk_count();
+  auto write_output_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  write_output_jobs.reserve(static_cast<size_t>(output_chunk_count));
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
-    const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
-    output_chunk->set_immutable();
-    output_chunk->set_individually_sorted_by(final_sort_definition);
+    write_output_jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id] {
+      const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
+      output_chunk->set_immutable();
+      output_chunk->set_individually_sorted_by(final_sort_definition);
+    }));
   }
 
-  step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, timer.lap());
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(write_output_jobs);
+
+  auto write_output_time = timer.lap();
+  step_performance_data.set_step_runtime(OperatorSteps::WriteOutput, write_output_time);
+
   return sorted_table;
 }
-
-template <typename SortColumnType>
-class Sort::SortImpl {
- public:
-  using RowIDValuePair = std::pair<RowID, SortColumnType>;
-
-  std::chrono::nanoseconds materialization_time{};
-  std::chrono::nanoseconds temporary_result_writing_time{};
-  std::chrono::nanoseconds sort_time{};
-
-  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
-           const SortMode sort_mode = SortMode::Ascending)
-      : _table_in(table_in), _column_id(column_id), _sort_mode(sort_mode) {
-    const auto row_count = _table_in->row_count();
-    _row_id_value_vector.reserve(row_count);
-    _null_value_rows.reserve(row_count);
-  }
-
-  // Sorts table_in, potentially taking the pre-existing order of previously_sorted_pos_list into account.
-  // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
-  // output table.
-  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    auto timer = Timer{};
-    // 1. Prepare Sort: Creating RowID-value-Structure
-    _materialize_sort_column(previously_sorted_pos_list);
-    materialization_time = timer.lap();
-
-    // 2. After we got our ValueRowID Map we sort the map by the value of the pair
-    const auto sort_with_comparator = [&](auto comparator) {
-      std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) {
-                         return comparator(lhs.second, rhs.second);
-                       });
-    };
-    if (_sort_mode == SortMode::Ascending) {
-      sort_with_comparator(std::less<>{});
-    } else {
-      sort_with_comparator(std::greater<>{});
-    }
-    sort_time = timer.lap();
-
-    // 2b. Insert null rows in front of all non-NULL rows
-    if (!_null_value_rows.empty()) {
-      // NULLs come before all values. The SQL standard allows for this to be implementation-defined. We used to have
-      // a NULLS LAST mode, but never used it over multiple years. Different databases have different behaviors, and
-      // storing NULLs first even for descending orders is somewhat uncommon:
-      //   https://docs.mendix.com/refguide/ordering-behavior#null-ordering-behavior
-      // For Hyrise, we found that storing NULLs first is the method that requires the least amount of code.
-      _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
-    }
-
-    auto pos_list = RowIDPosList{};
-    pos_list.reserve(_row_id_value_vector.size());
-    for (const auto& [row_id, _] : _row_id_value_vector) {
-      pos_list.emplace_back(row_id);
-    }
-    temporary_result_writing_time = timer.lap();
-    return pos_list;
-  }
-
- protected:
-  // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    // If there was no PosList passed, this is the first sorting run and we simply fill our values and nulls data
-    // structures from our input table. Otherwise we will materialize according to the PosList which is the result of
-    // the last run.
-    if (previously_sorted_pos_list) {
-      _materialize_column_from_pos_list(*previously_sorted_pos_list);
-    } else {
-      const auto chunk_count = _table_in->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = _table_in->get_chunk(chunk_id);
-        Assert(chunk, "Did not expect deleted chunk here.");  // see https://github.com/hyrise/hyrise/issues/1686
-
-        auto abstract_segment = chunk->get_segment(_column_id);
-
-        segment_iterate<SortColumnType>(*abstract_segment, [&](const auto& position) {
-          if (position.is_null()) {
-            _null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
-          } else {
-            _row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
-          }
-        });
-      }
-    }
-  }
-
-  // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
-  void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
-    const auto input_chunk_count = _table_in->chunk_count();
-    auto accessor_by_chunk_id =
-        std::vector<std::unique_ptr<AbstractSegmentAccessor<SortColumnType>>>(input_chunk_count);
-    for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-      const auto& abstract_segment = _table_in->get_chunk(input_chunk_id)->get_segment(_column_id);
-      accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<SortColumnType>(abstract_segment);
-    }
-
-    for (auto row_id : pos_list) {
-      const auto [chunk_id, chunk_offset] = row_id;
-
-      auto& accessor = accessor_by_chunk_id[chunk_id];
-      const auto typed_value = accessor->access(chunk_offset);
-      if (!typed_value) {
-        _null_value_rows.emplace_back(row_id, SortColumnType{});
-      } else {
-        _row_id_value_vector.emplace_back(row_id, typed_value.value());
-      }
-    }
-  }
-
-  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::shared_ptr<const Table> _table_in;
-
-  // Column to sort by.
-  const ColumnID _column_id;
-  const SortMode _sort_mode;
-  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
-
-  std::vector<RowIDValuePair> _row_id_value_vector;
-
-  // Stored as RowIDValuePair for better type compatibility even if value is unused.
-  std::vector<RowIDValuePair> _null_value_rows;
-};
 
 }  // namespace hyrise
