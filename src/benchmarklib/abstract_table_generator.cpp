@@ -114,7 +114,7 @@ void AbstractTableGenerator::generate_and_store() {
 
         const auto sort_table = [&]() {
           auto& table = table_info_by_name[table_name].table;
-          const auto sort_mode = SortMode::AscendingNullsFirst;  // currently fixed to ascending
+          const auto sort_mode = SortMode::AscendingNullsFirst;  // Currently fixed to ascending and NULLs first.
           const auto sort_column_id = table->column_id_by_name(column_name);
           const auto chunk_count = table->chunk_count();
 
