@@ -49,7 +49,6 @@ TEST_F(VariableLengthKeyTest, CreateKeysWithOrAndShift) {
   EXPECT_TRUE(key == _key_reference);
 }
 
-
 /**
  * Test that copy‐assignment correctly duplicates the bit pattern.
  */
