@@ -405,7 +405,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
   delete_row(_table_A, 2, true);
   auto transaction_context = insert_row(_table_id_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
 
-  // Re-validate UCCs.
+  // Re-validate UCCs. The UCC should remain valid since only a delete was committed.
   _validate_ucc_candidates(ucc_candidates);
 
   EXPECT_EQ(constraints_A.size(), 1);

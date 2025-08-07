@@ -30,6 +30,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class IndexScanRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     table = load_table("resources/test_data/tbl/int_float4.tbl");
     const auto table_id = Hyrise::get().catalog.add_table("a", table);
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table(table_id));
@@ -69,6 +70,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
 
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
   _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
@@ -84,6 +87,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
 
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
   _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
@@ -95,6 +100,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
 
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
   _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
@@ -110,6 +117,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
   _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
@@ -125,6 +134,8 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
   _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::IndexScan);
 }
 
@@ -142,6 +153,8 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
 
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
   _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::IndexScan);
 }
 
@@ -162,6 +175,7 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
   EXPECT_EQ(predicate_node->scan_type, ScanType::IndexScan);
 }
@@ -185,6 +199,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
   EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
