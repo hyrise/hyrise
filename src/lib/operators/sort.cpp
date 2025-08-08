@@ -1252,8 +1252,8 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
   const auto small_bucket_max_blocks = div_ceil(total_num_blocks, config.bucket_count);
   const auto small_bucket_max_size =
       std::max(small_bucket_max_blocks * config.block_size, config.max_parallelism * config.block_size);
-  for (auto counter = size_t{0}; counter < 16; ++counter) {
-    TRACE_EVENT("sort", "ips4o::split_large_buckets", "counter", counter);
+  for (auto round = size_t{0}; round < 16; ++round) {
+    TRACE_EVENT("sort", "ips4o::split_large_buckets", "round", round);
     auto large_bucket_range = std::ranges::partition(unparsed_buckets, [&](const auto& range) {
       return std::ranges::size(range) <= small_bucket_max_size;
     });
@@ -1282,7 +1282,6 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
     }
     const auto small_begin = std::next(buckets.begin(), small_offset);
     unparsed_buckets = std::ranges::subrange(small_begin, buckets.end());
-    ++counter;
   }
 
   // Sort buckets by size to first sort large buckets.
