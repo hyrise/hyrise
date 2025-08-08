@@ -756,19 +756,6 @@ StripeClassificationResult classify_stripe(NormalizedKeyRange auto& stripe_range
   return result;
 }
 
-// Count the number of empty blocks the specified bucket overlaps with in the provided stripe.
-size_t count_empty_blocks(const size_t stripe_size, const ssize_t stripe_end, const ssize_t last_bucket_begin,
-                          const StripeClassificationResult& classification_result, size_t block_size) {
-  const auto stripe_num_blocks = stripe_size / block_size;
-  // DebugAssert(stripe_num_blocks * block_size == stripe_size, "Stripes should be block size");
-  const auto stripe_empty_blocks = stripe_num_blocks - classification_result.num_blocks_written;
-  const auto count_to_stripe_end = last_bucket_begin - stripe_end;
-  const auto blocks_to_stripe_end = static_cast<ssize_t>(count_to_stripe_end / block_size);
-  // DebugAssert(static_cast<ssize_t>(blocks_to_stripe_end * block_size) == count_to_stripe_end,
-  //             "Everything should be aligned to blocks");
-  return std::min(blocks_to_stripe_end, static_cast<ssize_t>(stripe_empty_blocks));
-}
-
 /**
  * Fill the gaps inside a bucket so that the first blocks are classified and the last blocks are empty. Only buckets crossing chunks boundaries need to be fixed.
  */
@@ -778,6 +765,8 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
                                 const std::ranges::range auto& bucket_delimiter, const size_t block_size) {
   const auto stripe_result = std::next(stripe_results.begin(), stripe_index);
   const auto stripe_range_iter = std::next(stripe_ranges.begin(), stripe_index);
+  const auto stripe_begin = stripe_range_iter->begin();
+  const auto stripe_begin_index = std::distance(sort_range.begin(), stripe_begin);
   const auto stripe_end = stripe_range_iter->end();
   const auto stripe_end_index = std::distance(sort_range.begin(), stripe_end);
 
@@ -806,19 +795,28 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
   auto stripe_result_iter = std::next(stripe_results.begin(), last_bucket_first_stripe_index);
   for (auto stripe_iter = last_bucket_first_stripe; stripe_iter != stripe_range_iter;
        ++stripe_iter, ++stripe_result_iter) {
-    const auto stripe_size = std::ranges::size(*stripe_iter);
-    const auto stripe_end = std::distance(std::ranges::begin(sort_range), stripe_iter->end());
+    const auto stripe_begin = std::distance(sort_range.begin(), stripe_iter->begin());
+    const auto stripe_end = std::distance(sort_range.begin(), stripe_iter->end());
+    const auto written_end = static_cast<ssize_t>(stripe_begin + (stripe_result_iter->num_blocks_written * block_size));
+    const auto empty_begin = std::max(written_end, last_bucket_begin);
+    const auto num_empty_blocks = (stripe_end - empty_begin) / static_cast<ssize_t>(block_size);
+    DebugAssert(num_empty_blocks >= 0, "Expects a positive number of empty blocks.");
+
     // At these empty to blocks to the number of already processed blocks, because they are processed by different
     // threads.
-    num_already_moved_blocks +=
-        count_empty_blocks(stripe_size, stripe_end, last_bucket_begin, *stripe_result_iter, block_size);
+    num_already_moved_blocks += num_empty_blocks;
   }
 
   // Calculate the number of blocks which must be filled by this stripe.
-  const auto stripe_size = std::ranges::size(*stripe_range_iter);
-  auto move_num_blocks = static_cast<ssize_t>(
-      count_empty_blocks(stripe_size, stripe_end_index, last_bucket_begin, *stripe_result, block_size));
-  auto stripe_empty_begin = std::next(stripe_range_iter->begin(), stripe_result->num_blocks_written * block_size);
+  const auto written_end = static_cast<ssize_t>(stripe_begin_index + (stripe_result->num_blocks_written * block_size));
+  const auto empty_begin = std::max(written_end, last_bucket_begin);
+  DebugAssert(empty_begin <= stripe_end_index, "Empty region ends after");
+  const auto num_empty_blocks = static_cast<ssize_t>((stripe_end_index - empty_begin) / block_size);
+
+  auto move_num_blocks = num_empty_blocks;
+  const auto stripe_empty_begin_index = stripe_begin_index + (stripe_result->num_blocks_written * block_size);
+  const auto bucket_empty_begin = std::max(last_bucket_begin, static_cast<ssize_t>(stripe_empty_begin_index));
+  auto stripe_empty_begin = std::next(sort_range.begin(), bucket_empty_begin);
 
   // Find last stripe a bucket is in.
   auto last_stripe =
@@ -997,7 +995,6 @@ std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t
   const auto num_classifiers = num_buckets - 1;
   // Calculate the number of blocks assigned to each stripe.
   const auto max_blocks_per_stripe = div_ceil(num_blocks, num_stripes);
-  std::cout << DEBUG(max_blocks_per_stripe) << DEBUG(total_size) << DEBUG(num_blocks) << DEBUG(num_classifiers) << "\n";
 
   DebugAssert(num_blocks > 0, "At least one block is required.");
   DebugAssert(num_buckets > 0, "At least one bucket is required.");
@@ -1034,14 +1031,6 @@ std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t
   Hyrise::get().scheduler()->wait_for_tasks(classification_tasks);
   TRACE_EVENT_END("sort");
 
-  for (auto stripe = size_t{0}; stripe < num_stripes; ++stripe) {
-    std::cout << std::format("=== Stripe {} ===\n", stripe);
-    for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
-      std::cout << std::format("bucket[{}] size={}\n", bucket, classification_results[stripe].buckets[bucket].size());
-    }
-  }
-  std::cout << "===\n";
-
   // Prepare permuting classified blocks into the correct position. This preparation is done in the following:
   // 1. We create the prefix sum of all buckets. As a result, we receive a list of bucket end indices.
   // 2. We align these indices to the next block size.
@@ -1059,11 +1048,6 @@ std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t
     aggregated_bucket_sizes[bucket_index] = buckets_total_size;
     aligned_bucket_sizes[bucket_index] = next_multiple(buckets_total_size, block_size);
   }
-
-  for (auto index = size_t{0}; index < num_buckets; ++index) {
-    std::cout << aligned_bucket_sizes[index] << " ";
-  }
-  std::cout << "\n";
 
   TRACE_EVENT_BEGIN("sort", "ips4o::prepare_permutations");
   const auto prepare_tasks = run_parallel_batched(num_stripes, 1, [&](auto stripe) {
@@ -1174,7 +1158,7 @@ std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t
       // Last bucket is empty.
       bucket_empty_tail[bucket] = std::ranges::subrange(bucket_written_end, bucket_written_end);
     } else if (bucket_written_end_index > bucket_end_index) {
-      DebugAssert(bucket + 1 == num_buckets, "This case should not happen for the last bucket");
+      DebugAssert(bucket + 1 != num_buckets, "This case should not happen for the last bucket");
       // Bucket overflows actual size. Because of that we move the overflowing elements to the start of that bucket.
       DebugAssert(bucket_written_end_index <= static_cast<ssize_t>(aligned_bucket_sizes[bucket]),
                   "More blocks written than bucket should contains");
@@ -1206,6 +1190,15 @@ std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t
   }
   if (!overflow_bucket.empty()) {
     write_to_ranges(overflow_bucket, bucket_empty_start.back(), bucket_empty_tail.back());
+  }
+
+  if constexpr (HYRISE_DEBUG) {
+    for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
+      DebugAssert(std::ranges::empty(bucket_empty_start[bucket]),
+                  std::format("Bucket {} is not fully filled (start)", bucket));
+      DebugAssert(std::ranges::empty(bucket_empty_tail[bucket]),
+                  std::format("Bucket {} is not fully filled (tail)", bucket));
+    }
   }
   TRACE_EVENT_END("sort");
 
@@ -1335,7 +1328,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
            "Sort: Column ID is greater than table's column count");
-    std::cout << "sort " << column_sort_definition.column << " " << column_sort_definition.sort_mode << "\n";
   }
 
   if (input_table->row_count() == 0) {

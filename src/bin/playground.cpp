@@ -26,6 +26,10 @@ int main() {
 
   auto config = Sort::Config();
   config.block_size = 256;
+  config.max_parallelism = std::thread::hardware_concurrency();
+  config.bucket_count = config.max_parallelism * 2;
+  config.samples_per_classifier = 4;
+  config.min_blocks_per_stripe = 32;
 
   auto cs_table = storage_manager.get_table("catalog_sales");
   auto sort_definitions = std::vector<SortColumnDefinition>{};
