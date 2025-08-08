@@ -288,7 +288,8 @@ template <typename T>
 class UVector {
  public:
   explicit UVector(const size_t size)
-      :  // Replace with std::make_unique_for_overwrite from C++23 if available (see https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)
+      :  // Replace with std::make_unique_for_overwrite from C++23 if available
+         // (see https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)
         _ptr(std::unique_ptr<T>(std::allocator<T>().allocate(size))),  // NOLINT(bugprone-unique-ptr-array-mismatch)
         _size(size) {
     Assert(_ptr, "Failed to allocate array");
@@ -456,7 +457,6 @@ void copy_uint_to_byte_array(std::byte* byte_array, std::unsigned_integral auto 
   memcpy(byte_array, uint_byte_array + (sizeof(decltype(uint)) - len), len);
 }
 
-//using NormalizedKeyIter = pmr_vector<NormalizedKeyRow>::iterator;
 using NormalizedKeyIter = NormalizedKeyRow*;
 
 // Append segement's values as byte array to the normalized keys. Expects that the normalized_key_iter is valid for
