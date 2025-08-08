@@ -26,12 +26,13 @@
 namespace hyrise {
 
 void StorageManager::_add_table(const ObjectID table_id, const std::shared_ptr<Table>& table) {
+  // std::atomic_thread_fence(std::memory_order_seq_cst);
   const auto needs_growth = table_id >= _tables.size();
   Assert(needs_growth || !_tables[table_id],
          "Cannot add table " + std::to_string(table_id) + " - a table with the same ID already exists.");
-  if (needs_growth) {
-    _tables.grow_to_at_least(table_id + 1);
-  }
+  // if (needs_growth) {
+    _tables.grow_to_at_least(table_id + 1, std::shared_ptr<Table>{});
+  // }
 
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -47,20 +48,33 @@ void StorageManager::_add_table(const ObjectID table_id, const std::shared_ptr<T
   }
   generate_chunk_pruning_statistics(table);
 
+  const auto lock = std::unique_lock{_mutex};
+  Assert(!_has_table(table_id),
+         "Cannot add table " + std::to_string(table_id) + " - a table with the same ID already exists.");
   std::atomic_store(&_tables[table_id], table);
 }
 
 void StorageManager::_drop_table(const ObjectID table_id) {
-  Assert(has_table(table_id), "Error deleting table. No such table with ID '" + std::to_string(table_id) + "'.");
+  // std::atomic_thread_fence(std::memory_order_seq_cst);
+  const auto lock = std::unique_lock{_mutex};
+  Assert(_has_table(table_id), "Error deleting table. No such table with ID '" + std::to_string(table_id) + "'.");
   std::atomic_store(&_tables[table_id], std::shared_ptr<Table>{});
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const ObjectID table_id) const {
-  Assert(has_table(table_id), "No such table with ID '" + std::to_string(table_id) + "'. Was it dropped?");
+  // std::atomic_thread_fence(std::memory_order_seq_cst);
+  const auto lock = std::shared_lock{_mutex};
+  Assert(_has_table(table_id), "No such table with ID '" + std::to_string(table_id) + "'. Was it dropped?");
   return std::atomic_load(&_tables[table_id]);
 }
 
 bool StorageManager::has_table(const ObjectID table_id) const {
+  const auto lock = std::shared_lock{_mutex};
+  return _has_table(table_id);
+  // return table_id < _tables.size() && std::atomic_load(&_tables[table_id]) != nullptr;
+}
+
+bool StorageManager::_has_table(const ObjectID table_id) const {
   return table_id < _tables.size() && std::atomic_load(&_tables[table_id]) != nullptr;
 }
 

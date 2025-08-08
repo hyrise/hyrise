@@ -26,14 +26,16 @@
 namespace hyrise {
 
 namespace {
+
 ObjectID add_object(const std::string& name, Catalog::ObjectMetadata& meta_data) {
   const auto object_id = meta_data.next_id++;
   if (object_id >= meta_data.names.size()) {
     meta_data.names.grow_to_at_least(object_id + 1);
   }
   meta_data.names[object_id] =  name;
+  const auto cpy = object_id;
   std::atomic_store(&meta_data.ids[name], object_id);
-  return static_cast<ObjectID>(object_id);
+  return static_cast<ObjectID>(cpy);
 }
 
 std::unordered_map<std::string_view, ObjectID> object_ids(const Catalog::ObjectMetadata& meta_data) {
@@ -61,18 +63,6 @@ Catalog::ObjectMetadata& Catalog::ObjectMetadata::operator=(Catalog::ObjectMetad
 Catalog::ObjectMetadata::ObjectMetadata(Catalog::ObjectMetadata&& other) noexcept
     : ids{std::move(other.ids)}, names{std::move(other.names)}, next_id{other.next_id.load()} {}
 
-ObjectID Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& table) {
-  const auto table_iter = _tables.ids.find(name);
-  const auto view_iter = _views.ids.find(name);
-  Assert(table_iter == _tables.ids.end() || table_iter->second == INVALID_OBJECT_ID,
-         "Cannot add table " + name + " - a table with the same name already exists.");
-  Assert(view_iter == _views.ids.end() || view_iter->second == INVALID_OBJECT_ID,
-         "Cannot add table " + name + " - a view with the same name already exists.");
-  const auto table_id = add_object(name, _tables);
-  Hyrise::get().storage_manager._add_table(table_id, table);
-  return table_id;
-}
-
 std::pair<ObjectType, ObjectID> Catalog::resolve_object(const std::string& name) {
   const auto table_id = this->table_id(name);
   if (table_id != INVALID_OBJECT_ID) {
@@ -92,6 +82,19 @@ std::pair<ObjectType, ObjectID> Catalog::resolve_object(const std::string& name)
   Fail("Unknown object: '" + name + "'");
 }
 
+ObjectID Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& table) {
+  const auto table_iter = _tables.ids.find(name);
+  const auto view_iter = _views.ids.find(name);
+  Assert(table_iter == _tables.ids.end() || table_iter->second == INVALID_OBJECT_ID,
+         "Cannot add table " + name + " - a table with the same name already exists.");
+  Assert(view_iter == _views.ids.end() || view_iter->second == INVALID_OBJECT_ID,
+         "Cannot add table " + name + " - a view with the same name already exists.");
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+  const auto table_id = add_object(name, _tables);
+  Hyrise::get().storage_manager._add_table(table_id, table);
+  return table_id;
+}
+
 void Catalog::drop_table(ObjectID table_id) {
   Assert(table_id < _tables.names.size(), "ObjectID " + std::to_string(table_id) + " out of range.");
   drop_table(_tables.names[table_id]);
@@ -104,7 +107,8 @@ void Catalog::drop_table(const std::string& name) {
 
   // The `concurrent_unordered_map` does not support concurrency-safe erasure. Thus, we simply reset the table ID.
   const auto table_id = iter->second.load();
-  std::atomic_store(&_tables.ids[name], INVALID_OBJECT_ID);
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+  std::atomic_store(&iter->second, INVALID_OBJECT_ID);
   Hyrise::get().storage_manager._drop_table(static_cast<ObjectID>(table_id));
 }
 
