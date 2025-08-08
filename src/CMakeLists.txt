@@ -80,7 +80,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
             -Wno-c++98-compat-pedantic          # We are incompatible with C++98.
             -Wno-ctad-maybe-unsupported         # Warns on some of the class template argument deductions we use. Could
                                                 # be fixable.
-            -Wno-documentation                  # We do not really do Doxygen documentation.
+            -Wno-documentation                  # We do not use Doxygen.
             -Wno-double-promotion               # We implicitly convert float to double several times.
             -Wno-exit-time-destructors          # We use declarations that require exit-time destructors.
             -Wno-float-equal                    # Currently we compare floats for equality or inequality.
