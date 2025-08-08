@@ -702,73 +702,31 @@ std::vector<NormalizedKeyRow> select_classifiers(const NormalizedKeyRange auto& 
     DebugAssert(sample < num_samples, "Index out of range");
     classifiers[classifier] = samples[sample];
   }
-  //return classifiers;
 
   // Reorganize classifiers into binary decision tree layout
   std::vector<NormalizedKeyRow> tree(num_classifiers);
   std::function<void(size_t, size_t, size_t)> build_tree = [&](size_t left, size_t right, size_t pos) {
-    if (left >= right || pos >= tree.size()) return;
+    if (left >= right || pos >= tree.size())
+      return;
     size_t mid = left + (right - left) / 2;
     tree[pos] = classifiers[mid];
     build_tree(left, mid, 2 * pos + 1);       // left child
     build_tree(mid + 1, right, 2 * pos + 2);  // right child
   };
   build_tree(0, classifiers.size(), 0);
-  return tree; 
+  return tree;
 }
 
-
-size_t classify_value(const NormalizedKeyRow& value,
-                      const std::vector<NormalizedKeyRow>& tree,
+size_t classify_value(const NormalizedKeyRow& value, const std::vector<NormalizedKeyRow>& tree,
                       const NormalizedKeyComparator auto& comp) {
-  
   size_t index = 0;
   while (index < tree.size()) {
     // returns true if value is greater → go right
-    const bool go_right = comp(tree[index], value);  // true = right child
-    index = 2 * index + 1 + static_cast<size_t>(go_right); // left: +0, right: +1
+    const bool go_right = comp(tree[index], value);         // true = right child
+    index = 2 * index + 1 + static_cast<size_t>(go_right);  // left: +0, right: +1
   }
-  return index - tree.size();  
+  return index - tree.size();
 }
-
-// Select the classifiers for the sample sort. At the moment this selects first num classifiers many keys.
-/*std::vector<NormalizedKeyRow> select_classifiers(const NormalizedKeyRange auto& sort_range, size_t num_classifiers,
-                                                 size_t samples_per_classifier,
-                                                 const NormalizedKeyComparator auto& comp) {
-  TRACE_EVENT("sort", "ips4o::select_classifiers");
-
-  const auto size = std::ranges::size(sort_range);
-  const auto num_samples = num_classifiers * samples_per_classifier;
-  const auto elements_per_sample = size / num_samples;
-  const auto offset = elements_per_sample / 2;
-
-  auto samples = std::vector<NormalizedKeyRow>(num_samples);
-  for (auto sample = size_t{0}; sample < num_samples; ++sample) {
-    const auto index = (sample * elements_per_sample) + offset;
-    DebugAssert(index < size, "Index out of range");
-    samples[sample] = *std::next(sort_range.begin(), index);
-  }
-  boost::sort::pdqsort(samples.begin(), samples.end(), comp);
-
-  const auto samples_offset = samples_per_classifier / 2;
-  auto classifiers = std::vector<NormalizedKeyRow>(num_classifiers);
-  for (auto classifier = size_t{0}; classifier < num_classifiers; ++classifier) {
-    const auto sample = (classifier * samples_per_classifier) + samples_offset;
-    DebugAssert(sample < num_samples, "Index out of range");
-    classifiers[classifier] = samples[sample];
-  }
-
-  return classifiers;
-}*/
-
-
-// Return the index of the bucket an element belongs to.
-/*size_t classify_value(const NormalizedKeyRow& value, const NormalizedKeyRange auto& classifiers,
-                      const NormalizedKeyComparator auto& comp) {
-  const auto it = std::ranges::lower_bound(classifiers, value, comp);
-  const auto result = std::distance(classifiers.begin(), it);
-  return result;
-}*/
 
 /*
  * Classify all elements of stripe_range into buckets. Each bucket holds at most block size many elements. A full
