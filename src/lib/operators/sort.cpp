@@ -1000,7 +1000,7 @@ std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t
   Assert(num_buckets > 1, "At least two buckets are required");
   Assert(num_stripes > 1, "This function should be called with at least two 2 stripes. Use pdqsort instead");
   Assert(std::ranges::size(sort_range) >= block_size, "Provide at least one block");
-  // TODO(): check sorting of single block arrays.
+
   TRACE_EVENT("sort", "ips4o");
   using RangeIterator = decltype(std::ranges::begin(sort_range));
 
@@ -1252,8 +1252,7 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
   const auto small_bucket_max_blocks = div_ceil(total_num_blocks, config.bucket_count);
   const auto small_bucket_max_size =
       std::max(small_bucket_max_blocks * config.block_size, config.max_parallelism * config.block_size);
-  auto counter = size_t{0};
-  while (true) {  // TODO(student): Limit number of passes
+  for (auto counter = size_t{0}; counter < 16; ++counter) {
     TRACE_EVENT("sort", "ips4o::split_large_buckets", "counter", counter);
     auto large_bucket_range = std::ranges::partition(unparsed_buckets, [&](const auto& range) {
       return std::ranges::size(range) <= small_bucket_max_size;
