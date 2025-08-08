@@ -9,6 +9,7 @@
 
 #include <boost/variant/get.hpp>
 
+#include "abstract_rule.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
@@ -38,8 +39,8 @@ std::string ExpressionReductionRule::name() const {
   return name;
 }
 
-void ExpressionReductionRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void ExpressionReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                OptimizationContext& /*optimization_context*/) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {
