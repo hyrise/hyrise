@@ -12,16 +12,9 @@
 
 namespace hyrise {
 
-enum class ReduceMode : uint8_t {
-  Build,
-  Probe,
-  BuildAndProbe
-};
+enum class ReduceMode : uint8_t { Build, Probe, BuildAndProbe };
 
-enum class UseMinMax : bool {
-  Yes = true,
-  No = false
-};
+enum class UseMinMax : bool { Yes = true, No = false };
 
 template <ReduceMode reduce_mode, UseMinMax use_min_max>
 class Reduce : public AbstractReadOnlyOperator {
@@ -35,7 +28,7 @@ class Reduce : public AbstractReadOnlyOperator {
     return name;
   }
 
-  std::shared_ptr<BloomFilter<20,2>> get_bloom_filter() const {
+  std::shared_ptr<BloomFilter<20, 2>> get_bloom_filter() const {
     return _bloom_filter;
   }
 
@@ -75,7 +68,8 @@ class Reduce : public AbstractReadOnlyOperator {
         _min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
       } else {
         Assert(_right_input->executed(), "Build Reducer was not executed.");
-        const auto build_reduce = std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input);
+        const auto build_reduce =
+            std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input);
         Assert(build_reduce, "Failed to cast probe reduce.");
 
         _bloom_filter = build_reduce->get_bloom_filter();
@@ -135,7 +129,6 @@ class Reduce : public AbstractReadOnlyOperator {
         });
 
         if constexpr (reduce_mode != ReduceMode::Build) {
-
           if (!matches->empty()) {
             const auto column_count = input_table->column_count();
             auto output_segments = Segments{};
@@ -152,7 +145,8 @@ class Reduce : public AbstractReadOnlyOperator {
                     std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
                 for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
-                  auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(input_chunk->get_segment(column_index));
+                  auto reference_segment =
+                      std::dynamic_pointer_cast<const ReferenceSegment>(input_chunk->get_segment(column_index));
                   DebugAssert(reference_segment, "All segments should be of type ReferenceSegment.");
 
                   const auto pos_list_in = reference_segment->pos_list();
@@ -186,13 +180,15 @@ class Reduce : public AbstractReadOnlyOperator {
             } else {
               matches->guarantee_single_chunk();
 
-              const auto output_pos_list = matches->size() == input_chunk->size()
-                                               ? static_cast<std::shared_ptr<AbstractPosList>>(
-                                                     std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
-                                               : static_cast<std::shared_ptr<AbstractPosList>>(matches);
+              const auto output_pos_list =
+                  matches->size() == input_chunk->size()
+                      ? static_cast<std::shared_ptr<AbstractPosList>>(
+                            std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
+                      : static_cast<std::shared_ptr<AbstractPosList>>(matches);
 
               for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
-                const auto ref_segment_out = std::make_shared<ReferenceSegment>(input_table, column_index, output_pos_list);
+                const auto ref_segment_out =
+                    std::make_shared<ReferenceSegment>(input_table, column_index, output_pos_list);
                 output_segments.push_back(ref_segment_out);
               }
             }
@@ -204,11 +200,11 @@ class Reduce : public AbstractReadOnlyOperator {
             }
             output_chunks.emplace_back(out_chunk);
           }
-
         }
       }
 
-      output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
+      output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
+                                                   std::move(output_chunks));
 
       if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
         _bloom_filter = new_bloom_filter;

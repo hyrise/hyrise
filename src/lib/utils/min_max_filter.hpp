@@ -12,10 +12,10 @@ class BaseMinMaxFilter {
  public:
   virtual ~BaseMinMaxFilter() = default;
 
-//   virtual void insert(const int32_t& value) = 0;
-//   virtual bool probe(const int32_t& value) const = 0;
-//   virtual int32_t min_value() const = 0;
-//   virtual int32_t max_value() const = 0;
+  //   virtual void insert(const int32_t& value) = 0;
+  //   virtual bool probe(const int32_t& value) const = 0;
+  //   virtual int32_t min_value() const = 0;
+  //   virtual int32_t max_value() const = 0;
 };
 
 template <typename DataType>
