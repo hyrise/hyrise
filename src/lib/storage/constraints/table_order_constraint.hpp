@@ -3,6 +3,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <oneapi/tbb/concurrent_unordered_set.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.s
+
 #include "abstract_table_constraint.hpp"
 
 namespace hyrise {
@@ -32,7 +34,7 @@ class TableOrderConstraint final : public AbstractTableConstraint {
   std::vector<ColumnID> _ordered_columns;
 };
 
-using TableOrderConstraints = std::unordered_set<TableOrderConstraint>;
+using TableOrderConstraints = tbb::concurrent_unordered_set<TableOrderConstraint>;
 
 }  // namespace hyrise
 

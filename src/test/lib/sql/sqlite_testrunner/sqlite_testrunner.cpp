@@ -2,7 +2,7 @@
 
 namespace hyrise {
 
-void SQLiteTestRunner::SetUpTestCase() {
+void SQLiteTestRunner::SetUpTestSuite() {
   /**
    * This loads the tables used for the SQLiteTestRunner into the Hyrise cache
    * (_table_cache_per_encoding[EncodingType::Unencoded]) and into SQLite.
@@ -14,22 +14,22 @@ void SQLiteTestRunner::SetUpTestCase() {
 
   auto unencoded_table_cache = TableCache{};
 
-  std::ifstream file("resources/test_data/sqlite_testrunner.tables");
-  std::string line;
+  auto file = std::ifstream{"resources/test_data/sqlite_testrunner.tables"};
+  auto line = std::string{};
   while (std::getline(file, line)) {
     if (line.empty()) {
       continue;
     }
 
-    std::vector<std::string> args;
+    auto args = std::vector<std::string>{};
     boost::algorithm::split(args, line, boost::is_space());
 
     if (args.size() != 2) {
       continue;
     }
 
-    std::string table_file = args.at(0);
-    std::string table_name = args.at(1);
+    const auto table_file = args.at(0);
+    const auto table_name = args.at(1);
 
     const auto table = load_table(table_file, CHUNK_SIZE);
 
@@ -48,7 +48,15 @@ void SQLiteTestRunner::SetUpTestCase() {
   _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
 
   // DO NOT modify the Hyrise class here, as those changes will get overwritten by the base test. Instead, make those
-  // changes in SetUp()
+  // changes in SetUp().
+}
+
+void SQLiteTestRunner::TearDownTestSuite() {
+  _sqlite.reset();
+  _table_cache_per_encoding.clear();
+  _lqp_cache.reset();
+  _pqp_cache.reset();
+  _sqlite_result_cache.clear();
 }
 
 void SQLiteTestRunner::SetUp() {
@@ -116,7 +124,7 @@ void SQLiteTestRunner::SetUp() {
   for (auto& [table_name, table_cache_entry] : table_cache) {
     /*
       Hyrise:
-        We start off with cached tables (SetUpTestCase) and add them to the resetted
+        We start off with cached tables (SetUpTestSuite) and add them to the resetted
         storage manager before each test here. In case tables have been modified, they are
         removed from the cache and we thus need to reload them from the initial tbl file.
       SQLite:
@@ -143,14 +151,14 @@ void SQLiteTestRunner::SetUp() {
 }
 
 std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
-  static std::vector<std::pair<size_t, std::string>> queries;
+  static auto queries = std::vector<std::pair<size_t, std::string>>{};
 
   if (!queries.empty()) {
     return queries;
   }
 
-  std::ifstream file("resources/test_data/sqlite_testrunner_queries.sql");
-  std::string query;
+  auto file = std::ifstream{"resources/test_data/sqlite_testrunner_queries.sql"};
+  auto query = std::string{};
 
   auto next_line = size_t{0};  // Incremented before first use
   while (std::getline(file, query)) {
@@ -174,12 +182,19 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   SCOPED_TRACE("Query '" + sql + "' from line " + std::to_string(line) + " with encoding " +
                std::string{magic_enum::enum_name(encoding_type)});
 
-  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
-
-  // Execute query in Hyrise and SQLite
+  // Execute query in Hyrise.
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_pqp_cache(_pqp_cache).with_lqp_cache(_lqp_cache).create_pipeline();
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
   ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
-  const auto sqlite_result_table = _sqlite->main_connection.execute_query(sql);
+
+  // Obtain SQLite result from cache or execute the query.
+  auto sqlite_result_table = std::shared_ptr<const Table>{};
+  if (const auto cached_sqlite_result = _sqlite_result_cache.try_get(sql)) {
+    sqlite_result_table = *cached_sqlite_result;
+  } else {
+    sqlite_result_table = _sqlite->main_connection.execute_query(sql);
+    _sqlite_result_cache.set(sql, sqlite_result_table);
+  }
 
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
               sqlite_result_table->row_count() > 0)
