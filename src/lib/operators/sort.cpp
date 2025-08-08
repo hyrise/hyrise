@@ -267,7 +267,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
     // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
     // is acceptable. In the future, this could be improved.
     auto column_write_tasks = std::vector(column_count, std::vector<std::shared_ptr<AbstractTask>>());
-    const auto batch_size = opt_batch_size(output_chunk_count, 8, (8 + column_count - 1) / column_count);
+    const auto batch_size = opt_batch_size(output_chunk_count, 8, (2 + column_count - 1) / column_count);
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       column_write_tasks[column_id] = run_parallel_batched(
           output_chunk_count, batch_size,
@@ -326,6 +326,42 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   return output_table;
 }
 
+/// Allocate an large chunk of uninitialized memory. This class is faster than C++ std::vector with resize, as it does
+/// not initialize each entry.
+template <typename T>
+class UVector {
+ public:
+  explicit UVector(const size_t size)
+      :  // Replace with std::make_unique_for_overwrite from C++23 if available (see https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)
+        _ptr(std::unique_ptr<T>(std::allocator<T>().allocate(size))),  // NOLINT(bugprone-unique-ptr-array-mismatch)
+        _size(size) {
+    Assert(_ptr, "Failed to allocate array");
+  }
+
+  UVector(const UVector& other) = delete;
+  UVector(UVector&& other) = delete;
+  UVector& operator=(const UVector&) = delete;
+  UVector& operator=(UVector&&) = delete;
+
+  ~UVector() = default;
+
+  T* begin() {
+    return _ptr.get();
+  }
+
+  T* end() {
+    return _ptr.get() + _size;
+  }
+
+  size_t size() const {
+    return _size;
+  }
+
+ private:
+  std::unique_ptr<T> _ptr;
+  size_t _size;
+};
+
 template <size_t start, size_t end>
 int static_memcmp(std::byte* left, std::byte* right, size_t len) {
   if (len == start) {
@@ -339,6 +375,10 @@ int static_memcmp(std::byte* left, std::byte* right, size_t len) {
 }
 
 struct NormalizedKeyRow {
+  constexpr NormalizedKeyRow() noexcept = default;
+
+  constexpr NormalizedKeyRow(std::byte* key_head, RowID row_id) noexcept : key_head(key_head), row_id(row_id) {}
+
   std::byte* key_head = nullptr;
   RowID row_id;
 
@@ -460,7 +500,8 @@ void copy_uint_to_byte_array(std::byte* byte_array, std::unsigned_integral auto 
   memcpy(byte_array, uint_byte_array + (sizeof(decltype(uint)) - len), len);
 }
 
-using NormalizedKeyIter = pmr_vector<NormalizedKeyRow>::iterator;
+//using NormalizedKeyIter = pmr_vector<NormalizedKeyRow>::iterator;
+using NormalizedKeyIter = NormalizedKeyRow*;
 
 // Append segement's values as byte array to the normalized keys. Expects that the normalized_key_iter is valid for
 // each segment's values.
@@ -1427,10 +1468,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // into an array of bytes. These rows can be compared using memcmp.
 
   TRACE_EVENT_BEGIN("sort", "allocate_rows");
-
-  auto materialized_rows = pmr_vector<NormalizedKeyRow>();
-  materialized_rows.resize(input_table->row_count());
-
+  // UVector is used instead of std::vector, because std::vector.resize() not only allocates the necessary memory but
+  // also initializes all elements. This is not necessary, as we initialize all elements in parallel as part of the
+  // next step. The performance improves by about 10%.
+  auto materialized_rows = UVector<NormalizedKeyRow>(input_table->row_count());
   TRACE_EVENT_END("sort");
 
   TRACE_EVENT_BEGIN("sort", "materialize");
@@ -1455,10 +1496,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     auto normalized_key_iter = materialized_rows.begin() + chunk_offsets[chunk_index];
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       const auto row_id = RowID{chunk_id, chunk_offset};
-      *normalized_key_iter++ = NormalizedKeyRow{
-          .key_head = chunk_allocations[chunk_id].data() + (chunk_offset * padded_key_size),
-          .row_id = row_id,
-      };
+      *normalized_key_iter++ =
+          NormalizedKeyRow(chunk_allocations[chunk_id].data() + (chunk_offset * padded_key_size), row_id);
     }
 
     normalized_key_iter = materialized_rows.begin() + chunk_offsets[chunk_index];
