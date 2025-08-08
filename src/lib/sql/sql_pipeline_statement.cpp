@@ -8,8 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/algorithm/string.hpp>
-
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
@@ -25,10 +23,11 @@
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "types.hpp"
@@ -132,7 +131,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached output_expressions)
         // and concurrent translations might conflict.
+        // Note that the plan we have received here was cached, so it is obviously cacheable. This is why a missing
+        // optimization context leads to a cacheable PQP.
         _optimized_logical_plan = plan->deep_copy();
+        _optimization_context = nullptr;
         return _optimized_logical_plan;
       }
     }
@@ -149,14 +151,15 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
 
-  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
+  std::tie(_optimized_logical_plan, _optimization_context) =
+      _optimizer->optimize_with_context(std::move(unoptimized_lqp), optimizer_rule_durations);
 
   const auto done = std::chrono::steady_clock::now();
   _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache && _translation_info.cacheable) {
+  if (lqp_cache && _translation_info.cacheable && _optimization_context->is_cacheable()) {
     lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
 
@@ -168,16 +171,16 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     return _physical_plan;
   }
 
-  // If we need a transaction context but haven't passed one in, this is the last point where we can create it
+  // If we need a transaction context but have not passed one in, this is the last point where we can create it.
   if (!_transaction_context && _use_mvcc == UseMvcc::Yes) {
     _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
 
-  // Stores when the actual compilation started/ended
+  // Stores when the actual compilation started/ended.
   auto started = std::chrono::steady_clock::now();
   auto done = started;  // dummy value needed for initialization
 
-  // Try to retrieve the PQP from cache
+  // Try to retrieve the PQP from cache.
   if (pqp_cache) {
     if (const auto cached_physical_plan = pqp_cache->try_get(_sql_string)) {
       if ((*cached_physical_plan)->transaction_context_is_set()) {
@@ -192,10 +195,9 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   }
 
   if (!_physical_plan) {
-    // "Normal" path in which the query plan is created instead of begin retrieved from cache
+    // "Normal" path in which the query plan is created instead of begin retrieved from cache.
     const auto& lqp = get_optimized_logical_plan();
-
-    // Reset time to exclude previous pipeline steps
+    // Reset time to exclude the previous pipeline steps.
     started = std::chrono::steady_clock::now();
     _physical_plan = LQPTranslator{}.translate_node(lqp);
   }
@@ -206,8 +208,10 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     _physical_plan->set_transaction_context_recursively(_transaction_context);
   }
 
-  // Cache newly created plan for the according sql statement (only if not already cached)
-  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
+  // Cache the newly created PQP for the according SQL statement (only if not already cached). If the LQP was cached
+  // (`_optimization_context` is set to `nullptr`), we can also safely cache the PQP.
+  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable &&
+      (!_optimization_context || _optimization_context->is_cacheable())) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 

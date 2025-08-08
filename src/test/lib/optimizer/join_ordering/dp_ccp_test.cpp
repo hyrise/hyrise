@@ -9,6 +9,7 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/load_table.hpp"
 

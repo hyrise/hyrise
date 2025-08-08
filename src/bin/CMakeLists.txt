@@ -22,8 +22,6 @@ target_link_libraries(
 
     hyrise
     hyriseBenchmarkLib
-    perf-cpp-wrapper
-    perfetto-wrapper
 )
 
 # Configure DYODEvaluation

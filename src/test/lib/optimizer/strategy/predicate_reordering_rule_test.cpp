@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -9,6 +11,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "strategy_base_test.hpp"
 #include "utils/assert.hpp"
@@ -20,6 +23,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     _rule = std::make_shared<PredicateReorderingRule>();
 
     node = create_mock_node_with_statistics(
@@ -53,6 +57,8 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -72,6 +78,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -97,6 +104,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -117,6 +126,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
     _apply_rule(_rule, _lqp);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   {
@@ -134,6 +144,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
     _apply_rule(_rule, _lqp);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -189,6 +200,8 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -241,6 +254,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -258,6 +273,8 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -282,6 +299,8 @@ TEST_F(PredicateReorderingTest, DoNotReorderMultiPredicateSemiAndAntiJoins) {
     const auto expected_lqp = _lqp->deep_copy();
 
     _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -311,6 +330,8 @@ TEST_F(PredicateReorderingTest, PreferPredicatesOverJoins) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

@@ -56,9 +56,3 @@
 [submodule "third_party/concurrentqueue"]
 	path = third_party/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git
-[submodule "third_party/perf-cpp"]
-	path = third_party/perf-cpp
-	url = https://github.com/jmuehlig/perf-cpp.git
-[submodule "third_party/perfetto"]
-	path = third_party/perfetto
-	url = https://github.com/google/perfetto.git

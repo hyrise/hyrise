@@ -42,7 +42,7 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
 
     // The ColumnIsNullTableScan is optimized for Value, Dictionary, LZ4, and FrameofReference segments since their
     // NULL values can be efficiently iterated through their null_values or attribute vector. RunLength segments use
-    // the _scan_generic_segment() method because their NULL values are stored in runs, making iteration less easy.
+    // the `_scan_generic_segment()` method because their NULL values are stored in runs, making iteration less easy.
 
     if (const auto* typed_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
       _scan_typed_segment(*typed_segment, chunk_id, matches, position_filter);
@@ -58,12 +58,11 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
         for (const auto& sorted_by : chunk_sorted_by) {
           if (sorted_by.column == _column_id) {
             _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-            ++num_chunks_with_binary_search;
+            return;
           }
         }
-      } else {
-        _scan_generic_segment(segment, chunk_id, matches, position_filter);
       }
+      _scan_generic_segment(segment, chunk_id, matches, position_filter);
     }
   });
 }
@@ -84,9 +83,10 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(
 
 void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sorted_by) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sorted_by) {
   const bool is_nulls_first = sorted_by == SortMode::AscendingNullsFirst || sorted_by == SortMode::DescendingNullsFirst;
   const bool predicate_is_null = predicate_condition == PredicateCondition::IsNull;
+  ++num_chunks_with_binary_search;
   segment_with_iterators_filtered(segment, position_filter, [&](auto begin, auto end) {
     if (is_nulls_first) {
       const auto first_not_null =
@@ -111,7 +111,7 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(
       }
     }
 
-    size_t output_idx = matches.size();
+    auto output_idx = matches.size();
     matches.resize(matches.size() + std::distance(begin, end));
     for (auto segment_it = begin; segment_it != end; ++segment_it) {
       matches[output_idx++] = RowID{chunk_id, segment_it->chunk_offset()};
