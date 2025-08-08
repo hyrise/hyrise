@@ -3,9 +3,11 @@
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
 #include "operators/sort.hpp"
+#include "operators/table_wrapper.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
+#include "utils/timer.hpp"
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
@@ -42,7 +44,14 @@ int main() {
   std::cout << "Size of table to sort: " << cs_table->row_count()
             << ". Memory Usage: " << cs_table->memory_usage(MemoryUsageCalculationMode::Sampled) << ".\n";
 
-  perfetto_run(cs_table, sort_definitions, config);
+  const auto table_wrapper = std::make_shared<TableWrapper>(cs_table);
+  table_wrapper->execute();
+  const auto sort_operator = std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE,
+                                                    Sort::ForceMaterialization::No, config);
+
+  auto timer = Timer{};
+  sort_operator->execute();
+  std::cout << timer.lap() << "\n";
 
   node_queue_scheduler->finish();
 
