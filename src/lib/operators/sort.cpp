@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstring>
 #include <format>
+#include <fstream>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -662,7 +663,10 @@ class AtomicBlockIteratorPair {
 
   /// Decrement the number of pending reads.
   void complete_read() {
-    DebugAssert(_pending_reads.fetch_sub(1, std::memory_order_relaxed) >= 1, "Pending reads shoul be at least one");
+    const auto pending_reads = _pending_reads.fetch_sub(1, std::memory_order_relaxed);
+    if constexpr (HYRISE_DEBUG) {
+      Assert(pending_reads >= 1, "Pending reads shoul be at least one");
+    }
   }
 
  private:
@@ -975,9 +979,6 @@ void write_to_ranges(std::ranges::range auto& input, std::ranges::range auto& fi
 std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t num_buckets,
                                const size_t samples_per_classifier, const size_t block_size, size_t num_stripes,
                                const NormalizedKeyComparator auto& comp) {
-  std::cout << "ips4o pass " << std::format("size={} ", std::ranges::size(sort_range)) << DEBUG(num_buckets)
-            << DEBUG(samples_per_classifier) << DEBUG(block_size) << DEBUG(num_stripes) << "\n";
-
   Assert(num_buckets > 1, "At least two buckets are required");
   Assert(num_stripes > 1, "This function should be called with at least two 2 stripes. Use pdqsort instead");
   Assert(std::ranges::size(sort_range) >= block_size, "Provide at least one block");
@@ -1420,8 +1421,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   TRACE_EVENT_END("sort");
 
   const auto padded_key_size = ((normalized_key_size + 3) / 4) * 4;
-  std::cerr << "normalized_key_size " << normalized_key_size << "\n";
-  std::cerr << "padded_key_size " << padded_key_size << "\n";
 
   // const auto scan_time = timer.lap();
   timer.lap();
