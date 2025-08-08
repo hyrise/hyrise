@@ -302,6 +302,38 @@ TEST_F(SortTest, NegativeFloatSorting) {
   EXPECT_EQ(last, float{7});
 }
 
+TEST_F(SortTest, Ips4oFullConfig) {
+  auto config = Sort::Config();
+  config.block_size = 128;
+  config.max_parallelism = 8;
+  config.bucket_count = config.max_parallelism * 2;
+  config.samples_per_classifier = 4;
+  config.min_blocks_per_stripe = 16;
+
+  const auto count = 1000000;
+  const auto table = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, false}},
+                                             TableType::Data);
+  for (auto index = int32_t{0}; index < count; ++index) {
+    table->append({index});
+  }
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+  auto sort = Sort{table_wrapper,
+                   {SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},
+                   Chunk::DEFAULT_SIZE,
+                   Sort::ForceMaterialization::No,
+                   config};
+  sort.execute();
+
+  const auto output_table = sort.get_output();
+  EXPECT_EQ(output_table->row_count(), count);
+  const auto rows = output_table->get_rows();
+  for (auto index = size_t{0}; index < count; ++index) {
+    EXPECT_EQ(boost::get<int32_t>(rows[index][0]), index);
+  }
+}
+
 TEST_F(SortTest, NullsLast) {
   auto test_sort = [&](const std::vector<SortColumnDefinition>& sort_column_definitions, const bool input_is_reference,
                        const Sort::ForceMaterialization force_materialization, const std::string& result_filename) {
