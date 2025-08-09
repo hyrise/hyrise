@@ -384,7 +384,16 @@ struct ScanResult {
     return encoding_width + ((long_strings.empty()) ? 0 : long_width) + extra_width + ((nullable) ? 1 : 0);
   }
 
-  ScanResult merge(ScanResult other) const {
+  ScanResult merge(ScanResult other) {
+    const auto old_size = long_strings.size();
+    long_strings.resize(old_size + other.long_strings.size());
+    auto begin = std::next(long_strings.begin(), static_cast<int64_t>(old_size));
+    std::ranges::move(other.long_strings, begin);
+    other.long_strings.clear();
+    // Calculate number of bytes required to encode long string offsets. Also account for the extra element to encode
+    // shorter strings.
+    const auto encoded_width = std::max(encoding_width, other.encoding_width);
+    const auto long_width = sizeof(uint64_t) - (std::countl_zero(long_strings.size() + 1) / size_t{8});
     return {
         .encoding_width = encoded_width,
         .extra_width = std::max(extra_width, other.extra_width),
