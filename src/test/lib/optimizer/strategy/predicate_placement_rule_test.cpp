@@ -143,11 +143,11 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_(_a_a, _a_b),
-    SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
       _stored_table_a));
 
   const auto expected_lqp =
-  SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     PredicateNode::make(greater_than_(_a_a, _a_b),
       _stored_table_a));
   // clang-format on
@@ -788,12 +788,12 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastSort) {
    */
   // clang-format off
   _lqp =
-  SortNode::make(expression_vector(_a_b), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(_a_b), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     PredicateNode::make(exists_(_subquery),
       _stored_table_a));
 
   const auto expected_lqp =
-  SortNode::make(expression_vector(_a_b), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(_a_b), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     PredicateNode::make(exists_(_subquery),
       _stored_table_a));
   // clang-format on
@@ -843,7 +843,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     PredicateNode::make(greater_than_(_a_a, _a_b),
       PredicateNode::make(less_than_(subquery, _a_b),
-        SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::Ascending},
+        SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
            ProjectionNode::make(expression_vector(_a_a, _a_b),
              _stored_table_a)))),
     _stored_table_b);
@@ -851,7 +851,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
   const auto expected_lqp =
   PredicateNode::make(less_than_(subquery, _a_b),
     JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-     SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::Ascending},
+     SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
        ProjectionNode::make(expression_vector(_a_a, _a_b),
          PredicateNode::make(greater_than_(_a_a, _a_b),
            _stored_table_a))),

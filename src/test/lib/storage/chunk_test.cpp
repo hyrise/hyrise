@@ -231,7 +231,7 @@ TEST_F(StorageChunkTest, RemoveIndex) {
 
 TEST_F(StorageChunkTest, SetSortedInformationSingle) {
   EXPECT_TRUE(chunk->individually_sorted_by().empty());
-  const auto sorted_by = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
+  const auto sorted_by = SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst);
   chunk->set_immutable();
   chunk->set_individually_sorted_by(sorted_by);
   EXPECT_EQ(chunk->individually_sorted_by().size(), 1);
@@ -240,8 +240,8 @@ TEST_F(StorageChunkTest, SetSortedInformationSingle) {
 
 TEST_F(StorageChunkTest, SetSortedInformationVector) {
   EXPECT_TRUE(chunk->individually_sorted_by().empty());
-  const auto sorted_by_vector = std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
-                                            SortColumnDefinition(ColumnID{1}, SortMode::Descending)};
+  const auto sorted_by_vector = std::vector{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst),
+                                            SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsFirst)};
   chunk->set_immutable();
   chunk->set_individually_sorted_by(sorted_by_vector);
   EXPECT_EQ(chunk->individually_sorted_by(), sorted_by_vector);
@@ -261,9 +261,11 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
   chunk_with_nulls->set_immutable();
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
-  EXPECT_NO_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)));
-  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
-               std::logic_error);
+  EXPECT_NO_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)));
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)),
+      std::logic_error);
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
@@ -279,9 +281,10 @@ TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
 
   // Currently, NULL values always come first when sorted.
   EXPECT_NO_THROW(
-      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)));
-  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
-               std::logic_error);
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)));
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)),
+      std::logic_error);
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
@@ -296,10 +299,12 @@ TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
-  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
-               std::logic_error);
-  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
-               std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)),
+      std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)),
+      std::logic_error);
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
@@ -314,10 +319,12 @@ TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
-  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
-               std::logic_error);
-  EXPECT_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
-               std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)),
+      std::logic_error);
+  EXPECT_THROW(
+      chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst)),
+      std::logic_error);
 }
 
 TEST_F(StorageChunkTest, MemoryUsageEstimation) {
