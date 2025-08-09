@@ -64,9 +64,9 @@ class SegmentIteratorsTest : public EncodingTest {
 
 TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
   /**
-   * Test that all (including PointAccess-) Segment iterators can be used as STL LegacyForwardIterators, e.g.,
-   * that they can be used in STL algorithms working on sorted ranges. These compatibility tests would probably
-   * be unnecessary if boost correctly implemented std::iterator_traits. Currently, it returns
+   * Test that all (including PointAccess-) Segment iterators can be used as STL LegacyForwardIterators, e.g., that they
+   * can be used in STL algorithms working on sorted ranges. These compatibility tests would probably be unnecessary if
+   * boost correctly implemented std::iterator_traits. Currently, it returns
    *   boost::detail::iterator_category_with_traversal<struct
    *     std::input_iterator_tag,struct boost::random_access_traversal_tag>
    * instead of simply std::random_access_iterator_tag.
