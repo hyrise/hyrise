@@ -3,16 +3,16 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <string>
 #include <memory>
-#include <numeric>
 #include <vector>
 
 #include <boost/sort/pdqsort/pdqsort.hpp>
 
+#include "types.hpp"
 #include "resolve_type.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/key_normalizer.h"
