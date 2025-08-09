@@ -292,9 +292,8 @@ template <typename T>
 class UVector {
  public:
   explicit UVector(const size_t size)
-      :  // Replace with std::make_unique_for_overwrite from C++23 if available
-         // (see https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)
-        _ptr(std::unique_ptr<T>(std::allocator<T>().allocate(size))),  // NOLINT(bugprone-unique-ptr-array-mismatch)
+      : _allocator(),
+        _ptr(_allocator.allocate(size)),  // NOLINT
         _size(size) {
     Assert(_ptr, "Failed to allocate array");
   }
@@ -304,14 +303,16 @@ class UVector {
   UVector& operator=(const UVector&) = delete;
   UVector& operator=(UVector&&) = delete;
 
-  ~UVector() = default;
+  ~UVector() {
+    _allocator.deallocate(_ptr, _size);
+  }
 
   T* begin() {
-    return _ptr.get();
+    return _ptr;
   }
 
   T* end() {
-    return _ptr.get() + _size;
+    return _ptr + _size;
   }
 
   size_t size() const {
@@ -319,7 +320,8 @@ class UVector {
   }
 
  private:
-  std::unique_ptr<T> _ptr;
+  std::allocator<T> _allocator;
+  T* _ptr;  // NOLINT
   size_t _size;
 };
 
