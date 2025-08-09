@@ -12,6 +12,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <numeric>
 #include <ranges>
 #include <string>
@@ -384,7 +385,7 @@ struct ScanResult {
     return encoding_width + ((long_strings.empty()) ? 0 : long_width) + extra_width + ((nullable) ? 1 : 0);
   }
 
-  ScanResult merge(ScanResult other) {
+  ScanResult merge(ScanResult& other) {
     const auto old_size = long_strings.size();
     long_strings.resize(old_size + other.long_strings.size());
     auto begin = std::next(long_strings.begin(), static_cast<int64_t>(old_size));
@@ -545,7 +546,7 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
           if (value.size() < STRING_CUTOFF) {
             copy_uint_to_byte_array(normalized_key_start, uint64_t{0}, column_info.long_width);
           } else {
-            const auto iter = std::ranges::lower_bound(column_info.long_strings, value);
+            const auto iter = std::ranges::lower_bound(column_info.long_strings, value);  // NOLINT
             DebugAssert(iter != column_info.long_strings.end(), "Could not find strings");
             const auto index = std::distance(column_info.long_strings.begin(), iter);
             DebugAssert(index >= 0, "Invalid element");
@@ -1434,7 +1435,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (auto column_index = size_t{0}; column_index < search_column_count; ++column_index) {
     const auto column_id = _sort_definitions[column_index].column;
     auto aggregated_stats = std::accumulate(chunk_stats[column_index].begin(), chunk_stats[column_index].end(),
-                                            ScanResult{}, [](ScanResult result, ScanResult chunk) {
+                                            ScanResult{}, [](ScanResult result, ScanResult& chunk) {
                                               return result.merge(chunk);
                                             });
     Assert(aggregated_stats.width() > 0, std::format("Invalid width for column {}", static_cast<uint16_t>(column_id)));
