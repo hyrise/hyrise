@@ -1207,6 +1207,7 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
 
   // Do an initial pass of IPS4o.
   const auto num_stripes = std::min(total_num_blocks / config.min_blocks_per_stripe, config.max_parallelism);
+  auto bucket_lock = std::mutex();
   auto buckets = std::vector<std::ranges::subrange<RangeIterator>>();
   buckets.reserve(config.bucket_count * config.bucket_count);
   buckets.emplace_back(sort_range.begin(), sort_range.end());
@@ -1229,11 +1230,14 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
     }
 
     const auto small_offset = buckets.size();
-    for (auto large_range : large_buckets) {
+    const auto round_tasks = run_parallel_batched(large_buckets.size(), 1, [&](const auto bucket) {
+      const auto large_range = large_buckets[bucket];
       DebugAssert(std::ranges::size(large_range) >= small_bucket_max_size, "Large bucket");
 
       const auto delimiter = ips4o_pass(large_range, config.bucket_count, config.samples_per_classifier,
                                         config.block_size, num_stripes, comp);
+
+      const auto guard = std::lock_guard(bucket_lock);
       auto bucket_begin_index = size_t{0};
       for (const auto bucket_delimiter : delimiter) {
         const auto begin = std::next(large_range.begin(), bucket_begin_index);
@@ -1246,7 +1250,8 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
         }
         bucket_begin_index = bucket_delimiter;
       }
-    }
+    });
+    Hyrise::get().scheduler()->wait_for_tasks(round_tasks);
     const auto small_begin = std::next(buckets.begin(), small_offset);
     unparsed_buckets = std::ranges::subrange(small_begin, buckets.end());
   }
