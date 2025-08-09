@@ -9,11 +9,11 @@
 
 #include <boost/sort/pdqsort/pdqsort.hpp>
 
-#include "types.hpp"
 #include "resolve_type.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/key_normalizer.h"
 

@@ -1,23 +1,32 @@
 #include "key_normalizer.h"
 
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include "assert.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 // Portable byte swap implementation for 32-bit integer
 inline uint32_t portable_bswap_32(const uint32_t val) {
-  return ((val & 0xFF000000) >> 24) | ((val & 0x00FF0000) >> 8) | ((val & 0x0000FF00) << 8) |
-         ((val & 0x000000FF) << 24);
+  return ((val & 0xFF000000) >> 24u) | ((val & 0x00FF0000) >> 8u) | ((val & 0x0000FF00) << 8u) |
+         ((val & 0x000000FF) << 24u);
 }
 
 // Portable byte swap implementation for 64-bit integer
 inline uint64_t portable_bswap_64(const uint64_t val) {
-  return ((val & 0xFF00000000000000) >> 56) | ((val & 0x00FF000000000000) >> 40) | ((val & 0x0000FF0000000000) >> 24) |
-         ((val & 0x000000FF00000000) >> 8) | ((val & 0x00000000FF000000) << 8) | ((val & 0x0000000000FF0000) << 24) |
-         ((val & 0x000000000000FF00) << 40) | ((val & 0x00000000000000FF) << 56);
+  return ((val & 0xFF00000000000000) >> 56u) | ((val & 0x00FF000000000000) >> 40u) | ((val & 0x0000FF0000000000) >> 24u) |
+         ((val & 0x000000FF00000000) >> 8u) | ((val & 0x00000000FF000000) << 8u) | ((val & 0x0000000000FF0000) << 24u) |
+         ((val & 0x000000000000FF00) << 40u) | ((val & 0x00000000000000FF) << 56u);
 }
 
 template <typename T>
@@ -48,7 +57,7 @@ size_t data_type_size(const DataType data_type) {
   Fail("Unsupported data type encountered");
 }
 
-KeyNormalizer::KeyNormalizer() {}
+KeyNormalizer::KeyNormalizer() = default;
 
 std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_for_table(
     const std::shared_ptr<const Table>& table, const std::vector<SortColumnDefinition>& sort_definitions,
@@ -169,7 +178,7 @@ void KeyNormalizer::_insert_integral(std::vector<unsigned char>& buffer, T value
   // values (e.g., -128 to 127) to an unsigned range (0 to 255) in a way that
   // preserves their order for a lexicographical byte comparison.
   if constexpr (std::is_signed_v<T>) {
-    value ^= (T(1) << (sizeof(T) * 8 - 1));
+    value ^= std::bit_cast<std::make_unsigned_t<T>>(T(1) << (sizeof(T) * 8u - 1u));
   }
 
   // Ensure the byte order is big-endian before writing to the buffer. If not, we swap.
