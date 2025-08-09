@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <string>
 #include <memory>
-#include <numeric>
 #include <vector>
 
 #include <boost/sort/pdqsort/pdqsort.hpp>
@@ -12,8 +12,8 @@
 #include "resolve_type.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/key_normalizer.h"
 
@@ -349,8 +349,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             return sort_def.sort_mode == SortMode::AscendingNullsFirst ||
                    sort_def.sort_mode == SortMode::DescendingNullsFirst;
           if (variant_is_null(val_b))
-            return !(sort_def.sort_mode == SortMode::AscendingNullsFirst ||
-                     sort_def.sort_mode == SortMode::DescendingNullsFirst);
+            return sort_def.sort_mode != SortMode::AscendingNullsFirst &&
+                     sort_def.sort_mode != SortMode::DescendingNullsFirst;
 
           const auto ascending =
               sort_def.sort_mode == SortMode::AscendingNullsFirst || sort_def.sort_mode == SortMode::AscendingNullsLast;
