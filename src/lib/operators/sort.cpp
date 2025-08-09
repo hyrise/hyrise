@@ -522,7 +522,6 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
       }
 
       const auto& value = segment_position.value();
-      DebugAssert(normalized_key_start, "Why????");
 
       // Normalize value and encode to byte array.
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
@@ -586,7 +585,9 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         } else {
           unsigned_value |= UnsignedColumnDataType{1} << ((sizeof(UnsignedColumnDataType) * 8) - 1);
         }
+
         unsigned_value = byteswap(unsigned_value);
+        unsigned_value ^= static_cast<UnsignedColumnDataType>(full_modifier);
         memcpy(normalized_key_start, &unsigned_value, sizeof(UnsignedColumnDataType));
         normalized_key_start += sizeof(UnsignedColumnDataType);
       } else {

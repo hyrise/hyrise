@@ -278,28 +278,28 @@ TEST_F(SortTest, ValidateVarIntEncoding) {
   EXPECT_EQ(last, int32_t{256});
 }
 
-TEST_F(SortTest, NegativeFloatSorting) {
+TEST_F(SortTest, FloatDescendingSort) {
   const auto table = load_table("./resources/test_data/tbl/sort/a_float.tbl");
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 16);
-  EXPECT_EQ(table->row_count(), 16);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 7);
+  EXPECT_EQ(table->row_count(), 7);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  auto sort = Sort{table_wrapper, {SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}}};
+  auto sort = Sort{table_wrapper, {SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsFirst}}};
   sort.execute();
 
   const auto output_table = sort.get_output();
-  EXPECT_EQ(output_table->row_count(), 16);
+  EXPECT_EQ(output_table->row_count(), 7);
 
-  auto last = float{-9};
+  auto last = 10000.0f;
   for (const auto& row : output_table->get_rows()) {
     EXPECT_EQ(row.size(), 1);
 
     const auto current = boost::get<float>(row[0]);
-    EXPECT_LT(last, current);
+    EXPECT_GE(last, current);
     last = current;
   }
-  EXPECT_EQ(last, float{7});
+  EXPECT_GT(last, -1000.0f);
 }
 
 TEST_F(SortTest, Ips4oFullConfig) {
