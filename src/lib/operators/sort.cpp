@@ -52,6 +52,8 @@ namespace {
 
 using namespace hyrise;  // NOLINT
 
+constexpr size_t STRING_CUTOFF = 64;
+
 /**
  *        ____  _  _  __  ____  ____   __  ____   ___
  *       (    \( \/ )/  \(    \(___ \ /  \(___ \ / __)
@@ -370,40 +372,47 @@ struct ScanResult {
   size_t encoding_width = 0;
   // Number of extra bytes required to encode the length of an string.
   size_t extra_width = 0;
+  // Extra bytes required to encode long strings.
+  size_t long_width = 0;
   // Contains a null value.
   bool nullable = false;
+  // List of long sorted strings.
+  std::vector<pmr_string> long_strings;
 
   // Returns number of bytes required to encode all scanned values. Includes the extra byte for null values.
   size_t width() const {
-    return encoding_width + extra_width + ((nullable) ? 1 : 0);
+    return encoding_width + ((long_strings.empty()) ? 0 : long_width) + extra_width + ((nullable) ? 1 : 0);
   }
 
   ScanResult merge(ScanResult other) const {
     return {
-        .encoding_width = std::max(encoding_width, other.encoding_width),
+        .encoding_width = encoded_width,
         .extra_width = std::max(extra_width, other.extra_width),
+        .long_width = long_width,
         .nullable = nullable || other.nullable,
+        .long_strings = std::move(long_strings),
     };
   }
 };
 
-/// Scans column for maximum bytes necessary to encode all segmenet values and null values.
+/// Scans column for maximum bytes necessary to encode all segment values and null values.
 template <typename ColumnDataType>
 ScanResult scan_column(const AbstractSegment& segment) {
-  auto result = ScanResult{
-      .encoding_width = 0,
-      .extra_width = 0,
-      .nullable = false,
-  };
+  auto result = ScanResult();
   segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto end) {
     while (it != end) {
       const auto& segment_position = *it;
       if (segment_position.is_null()) {
         result.nullable = true;
       } else if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        result.encoding_width = std::max(result.encoding_width, segment_position.value().size());
-        const auto extra_width = static_cast<size_t>((std::countl_zero(result.encoding_width) + 7) / 8);
-        result.extra_width = std::max(result.extra_width, extra_width);
+        const auto& value = segment_position.value();
+        const auto size = std::min(value.size(), STRING_CUTOFF);
+        result.encoding_width = std::max(result.encoding_width, size);
+        result.extra_width = sizeof(uint64_t) - (std::countl_zero(result.encoding_width) / size_t{8});
+
+        if (value.size() >= STRING_CUTOFF) {
+          result.long_strings.push_back(value);
+        }
       } else {
         const auto& value = segment_position.value();
         if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
@@ -495,10 +504,10 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
       // Encode the null byte for nullable segments. This byte is used to order null vs. non-null values (e.g.
       // put them to the front or end depending on the specified null order)
       if (column_info.nullable && segment_position.is_null()) {
-        *normalized_key_start++ = normalized_null_value;
+        *(normalized_key_start++) = normalized_null_value;
         // Initialize actual key by setting all bytes to 0.
-        for (auto counter = size_t{0}; counter < column_info.encoding_width + column_info.extra_width; ++counter) {
-          *normalized_key_start++ = std::byte{0};
+        for (auto counter = size_t{0}; counter < column_info.width() - 1; ++counter) {
+          *(normalized_key_start++) = std::byte{0};
         }
         DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + column_info.width(),
                     "Encoded unexpected number of bytes");
@@ -506,21 +515,40 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         continue;
       }
       if (column_info.nullable) {
-        *normalized_key_start++ = normalized_non_null_value;
+        *(normalized_key_start++) = normalized_non_null_value;
       }
 
       const auto& value = segment_position.value();
 
       // Normalize value and encode to byte array.
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        for (const auto chr : value) {
-          *normalized_key_start++ = static_cast<std::byte>(chr) ^ modifier;
+        for (const auto chr : value | std::views::take(column_info.encoding_width)) {
+          *(normalized_key_start++) = static_cast<std::byte>(chr) ^ modifier;
         }
+
         // Add null bytes to pad values to correct size. (All keys must have the same size)
         for (auto counter = segment_position.value().size(); counter < column_info.encoding_width; ++counter) {
-          *normalized_key_start++ = std::byte{0} ^ modifier;
+          *(normalized_key_start++) = std::byte{0} ^ modifier;
         }
-        copy_uint_to_byte_array(normalized_key_start, segment_position.value().size(), column_info.extra_width);
+
+        // Encode an identifier for long strings. Use 0 if string is small.
+        if (!column_info.long_strings.empty()) {
+          if (value.size() < STRING_CUTOFF) {
+            copy_uint_to_byte_array(normalized_key_start, uint64_t{0}, column_info.long_width);
+          } else {
+            const auto iter = std::ranges::lower_bound(column_info.long_strings, value);
+            DebugAssert(iter != column_info.long_strings.end(), "Could not find strings");
+            const auto index = std::distance(column_info.long_strings.begin(), iter);
+            DebugAssert(index >= 0, "Invalid element");
+            copy_uint_to_byte_array(normalized_key_start, static_cast<uint64_t>(index + 1), column_info.long_width);
+          }
+          normalized_key_start += column_info.long_width;
+        } else {
+          DebugAssert(value.size() <= STRING_CUTOFF, "String must be smaller than the cut off size");
+        }
+
+        DebugAssert(column_info.extra_width > 0, "Missing extra width");
+        copy_uint_to_byte_array(normalized_key_start, std::min(value.size(), STRING_CUTOFF), column_info.extra_width);
         normalized_key_start += column_info.extra_width;
       } else if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
         using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{}));
@@ -554,7 +582,9 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         } else {
           unsigned_value |= UnsignedColumnDataType{1} << ((sizeof(UnsignedColumnDataType) * 8) - 1);
         }
+
         unsigned_value = byteswap(unsigned_value);
+        unsigned_value ^= static_cast<UnsignedColumnDataType>(full_modifier);
         memcpy(normalized_key_start, &unsigned_value, sizeof(UnsignedColumnDataType));
         normalized_key_start += sizeof(UnsignedColumnDataType);
       } else {
@@ -1212,15 +1242,19 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
 
   // Do an initial pass of IPS4o.
   const auto num_stripes = std::min(total_num_blocks / config.min_blocks_per_stripe, config.max_parallelism);
+  auto bucket_lock = std::mutex();
   auto buckets = std::vector<std::ranges::subrange<RangeIterator>>();
   buckets.reserve(config.bucket_count * config.bucket_count);
   buckets.emplace_back(sort_range.begin(), sort_range.end());
+
+  auto unsplittable_buckets = std::vector<std::ranges::subrange<RangeIterator>>();
+  unsplittable_buckets.reserve(config.bucket_count);
 
   auto unparsed_buckets = std::ranges::subrange(buckets.begin(), buckets.end());
   const auto small_bucket_max_blocks = div_ceil(total_num_blocks, config.bucket_count);
   const auto small_bucket_max_size =
       std::max(small_bucket_max_blocks * config.block_size, config.max_parallelism * config.block_size);
-  for (auto round = size_t{0}; round < 16; ++round) {
+  for (auto round = size_t{0}; round < 4; ++round) {
     auto large_bucket_range = std::ranges::partition(unparsed_buckets, [&](const auto& range) {
       return std::ranges::size(range) <= small_bucket_max_size;
     });
@@ -1231,21 +1265,28 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
     }
 
     const auto small_offset = buckets.size();
-    for (auto large_range : large_buckets) {
+    const auto round_tasks = run_parallel_batched(large_buckets.size(), 1, [&](const auto bucket) {
+      const auto large_range = large_buckets[bucket];
       DebugAssert(std::ranges::size(large_range) >= small_bucket_max_size, "Large bucket");
 
       const auto delimiter = ips4o_pass(large_range, config.bucket_count, config.samples_per_classifier,
                                         config.block_size, num_stripes, comp);
+
+      const auto guard = std::lock_guard(bucket_lock);
       auto bucket_begin_index = size_t{0};
       for (const auto bucket_delimiter : delimiter) {
         const auto begin = std::next(large_range.begin(), bucket_begin_index);
         const auto end = std::next(large_range.begin(), bucket_delimiter);
-        if (std::distance(begin, end) > 0) {
+        const auto bucket_size = bucket_delimiter - bucket_begin_index;
+        if (bucket_size == std::ranges::size(large_range)) {
+          unsplittable_buckets.emplace_back(begin, end);
+        } else if (bucket_size > 0) {
           buckets.emplace_back(begin, end);
         }
         bucket_begin_index = bucket_delimiter;
       }
-    }
+    });
+    Hyrise::get().scheduler()->wait_for_tasks(round_tasks);
     const auto small_begin = std::next(buckets.begin(), small_offset);
     unparsed_buckets = std::ranges::subrange(small_begin, buckets.end());
   }
@@ -1255,9 +1296,14 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
     return std::ranges::size(left) > std::ranges::size(right);
   });
 
+  const auto unsplittable_buckets_tasks = run_parallel_batched(unsplittable_buckets.size(), 1, [&](const auto bucket) {
+    boost::sort::pdqsort(unsplittable_buckets[bucket].begin(), unsplittable_buckets[bucket].end(), comp);
+  });
   const auto sort_tasks = run_parallel_batched(buckets.size(), 1, [&](const auto bucket) {
     boost::sort::pdqsort(buckets[bucket].begin(), buckets[bucket].end(), comp);
   });
+
+  Hyrise::get().scheduler()->wait_for_tasks(unsplittable_buckets_tasks);
   Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
 }
 
@@ -1353,8 +1399,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         // Always the same with.
         const auto column_is_nullable = input_table->column_is_nullable(column_id);
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          chunk_stats[column_index][chunk_id] = {.encoding_width = sizeof(ColumnDataType),
-                                                 .nullable = column_is_nullable};
+          chunk_stats[column_index][chunk_id].encoding_width = sizeof(ColumnDataType);
+          chunk_stats[column_index][chunk_id].nullable = column_is_nullable;
         }
       } else {
         // Elements may have different size.
@@ -1378,14 +1424,19 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto normalized_key_size = size_t{0};
   for (auto column_index = size_t{0}; column_index < search_column_count; ++column_index) {
     const auto column_id = _sort_definitions[column_index].column;
-    const auto aggregated_stats = std::accumulate(chunk_stats[column_index].begin(), chunk_stats[column_index].end(),
-                                                  ScanResult{}, [](ScanResult result, ScanResult chunk) {
-                                                    return result.merge(chunk);
-                                                  });
+    auto aggregated_stats = std::accumulate(chunk_stats[column_index].begin(), chunk_stats[column_index].end(),
+                                            ScanResult{}, [](ScanResult result, ScanResult chunk) {
+                                              return result.merge(chunk);
+                                            });
     Assert(aggregated_stats.width() > 0, std::format("Invalid width for column {}", static_cast<uint16_t>(column_id)));
-    column_stats[column_index] = aggregated_stats;
     normalized_key_size += aggregated_stats.width();
+    column_stats[column_index] = std::move(aggregated_stats);
   }
+
+  const auto sort_long_strings = run_parallel_batched(search_column_count, 1, [&](const auto column) {
+    boost::sort::pdqsort(column_stats[column].long_strings.begin(), column_stats[column].long_strings.end());
+  });
+  Hyrise::get().scheduler()->wait_for_tasks(sort_long_strings);
 
   const auto padded_key_size = ((normalized_key_size + 3) / 4) * 4;
 
