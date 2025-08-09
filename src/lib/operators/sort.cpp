@@ -349,8 +349,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             return sort_def.sort_mode == SortMode::AscendingNullsFirst ||
                    sort_def.sort_mode == SortMode::DescendingNullsFirst;
           if (variant_is_null(val_b))
-            return !(sort_def.sort_mode == SortMode::AscendingNullsFirst ||
-                     sort_def.sort_mode == SortMode::DescendingNullsFirst);
+            return sort_def.sort_mode != SortMode::AscendingNullsFirst &&
+                     sort_def.sort_mode != SortMode::DescendingNullsFirst;
 
           const auto ascending =
               sort_def.sort_mode == SortMode::AscendingNullsFirst || sort_def.sort_mode == SortMode::AscendingNullsLast;
