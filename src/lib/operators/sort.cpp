@@ -142,7 +142,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       }
 
       const auto materialize_chunks = run_parallel_batched(output_chunk_count, 8, [&](const auto chunk_index) {
-        const auto output_chunk_id = ChunkID{static_cast<uint32_t>(chunk_index)};
+        const auto output_chunk_id = static_cast<ChunkID>(chunk_index);
 
         const auto output_segment_begin = chunk_index * output_chunk_size;
         const auto output_segment_end = std::min(output_segment_begin + output_chunk_size, row_count);
@@ -378,7 +378,7 @@ struct ScanResult {
     return encoding_width + extra_width + ((nullable) ? 1 : 0);
   }
 
-  ScanResult merge(ScanResult other) {
+  ScanResult merge(ScanResult other) const {
     return {
         .encoding_width = std::max(encoding_width, other.encoding_width),
         .extra_width = std::max(extra_width, other.extra_width),
@@ -689,7 +689,7 @@ class AtomicBlockIteratorPair {
     return (write_128 << uint32_t{64}) | read_128;
   }
 
-  It _begin;
+  It _begin = It();
   // Uses 128bit value to encode both read and write offset. The upper bits of the value will be the write and the
   // lower the read offset.
   std::atomic<boost::uint128_type> _offset_pair;
@@ -728,7 +728,7 @@ std::vector<NormalizedKeyRow> select_classifiers(const NormalizedKeyRange auto& 
 // Return the index of the bucket an element belongs to.
 size_t classify_value(const NormalizedKeyRow& value, const NormalizedKeyRange auto& classifiers,
                       const NormalizedKeyComparator auto& comp) {
-  const auto it = std::ranges::lower_bound(classifiers, value, comp);
+  const auto it = std::ranges::lower_bound(classifiers, value, comp);  // NOLINT
   const auto result = std::distance(classifiers.begin(), it);
   return result;
 }
@@ -775,17 +775,17 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
   const auto stripe_end_index = std::distance(sort_range.begin(), stripe_end);
 
   // Find the first bucket ending after the end of this stripe.
-  const auto last_bucket_iter =
-      std::ranges::lower_bound(bucket_delimiter, stripe_end_index, [](const int64_t stripe_end, const auto bucket_end) {
+  const auto last_bucket_iter = std::ranges::lower_bound(  // NOLINT
+      bucket_delimiter, stripe_end_index, [](const int64_t stripe_end, const auto bucket_end) {
         return stripe_end < static_cast<int64_t>(bucket_end);
       });
   const auto last_bucket_index = std::distance(bucket_delimiter.begin(), last_bucket_iter);
   const auto last_bucket_begin =
-      (last_bucket_index != 0) ? static_cast<int64_t>(bucket_delimiter[last_bucket_index - 1]) : ssize_t{0};
+      (last_bucket_index != 0) ? static_cast<int64_t>(bucket_delimiter[last_bucket_index - 1]) : int64_t{0};
   const auto last_bucket_end = static_cast<int64_t>(bucket_delimiter[last_bucket_index]);
   // Find the stripe the last bucket starts in.
-  const auto last_bucket_first_stripe =
-      std::ranges::lower_bound(stripe_ranges, last_bucket_begin, std::less<int64_t>(), [&](const auto& stripe_range) {
+  const auto last_bucket_first_stripe = std::ranges::lower_bound(  // NOLINT
+      stripe_ranges, last_bucket_begin, std::less<int64_t>(), [&](const auto& stripe_range) {
         return std::distance(sort_range.begin(), stripe_range.end());
       });
   const auto last_bucket_first_stripe_index = std::distance(stripe_ranges.begin(), last_bucket_first_stripe);
@@ -823,8 +823,8 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
   auto stripe_empty_begin = std::next(sort_range.begin(), bucket_empty_begin);
 
   // Find last stripe a bucket is in.
-  auto last_stripe =
-      std::ranges::lower_bound(stripe_ranges, last_bucket_end, std::less<int64_t>(), [&](const auto& stripe_range) {
+  auto last_stripe = std::ranges::lower_bound(  // NOLINT
+      stripe_ranges, last_bucket_end, std::less<int64_t>(), [&](const auto& stripe_range) {
         return std::distance(sort_range.begin(), stripe_range.end());
       });
   if (last_stripe == stripe_ranges.end()) {
