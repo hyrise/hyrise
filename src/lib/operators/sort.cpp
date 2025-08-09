@@ -1211,11 +1211,14 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
   buckets.reserve(config.bucket_count * config.bucket_count);
   buckets.emplace_back(sort_range.begin(), sort_range.end());
 
+  auto unsplittable_buckets = std::vector<std::ranges::subrange<RangeIterator>>();
+  unsplittable_buckets.reserve(config.bucket_count);
+
   auto unparsed_buckets = std::ranges::subrange(buckets.begin(), buckets.end());
   const auto small_bucket_max_blocks = div_ceil(total_num_blocks, config.bucket_count);
   const auto small_bucket_max_size =
       std::max(small_bucket_max_blocks * config.block_size, config.max_parallelism * config.block_size);
-  for (auto round = size_t{0}; round < 16; ++round) {
+  for (auto round = size_t{0}; round < 4; ++round) {
     auto large_bucket_range = std::ranges::partition(unparsed_buckets, [&](const auto& range) {
       return std::ranges::size(range) <= small_bucket_max_size;
     });
@@ -1235,7 +1238,10 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
       for (const auto bucket_delimiter : delimiter) {
         const auto begin = std::next(large_range.begin(), bucket_begin_index);
         const auto end = std::next(large_range.begin(), bucket_delimiter);
-        if (std::distance(begin, end) > 0) {
+        const auto bucket_size = bucket_delimiter - bucket_begin_index;
+        if (bucket_size == std::ranges::size(large_range)) {
+          unsplittable_buckets.emplace_back(begin, end);
+        } else if (bucket_size > 0) {
           buckets.emplace_back(begin, end);
         }
         bucket_begin_index = bucket_delimiter;
@@ -1250,9 +1256,14 @@ void sort(NormalizedKeyRange auto& sort_range, const Sort::Config& config, const
     return std::ranges::size(left) > std::ranges::size(right);
   });
 
+  const auto unsplittable_buckets_tasks = run_parallel_batched(unsplittable_buckets.size(), 1, [&](const auto bucket) {
+    boost::sort::pdqsort(unsplittable_buckets[bucket].begin(), unsplittable_buckets[bucket].end(), comp);
+  });
   const auto sort_tasks = run_parallel_batched(buckets.size(), 1, [&](const auto bucket) {
     boost::sort::pdqsort(buckets[bucket].begin(), buckets[bucket].end(), comp);
   });
+
+  Hyrise::get().scheduler()->wait_for_tasks(unsplittable_buckets_tasks);
   Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
 }
 

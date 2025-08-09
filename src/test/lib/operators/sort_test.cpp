@@ -334,6 +334,23 @@ TEST_F(SortTest, Ips4oFullConfig) {
   }
 }
 
+TEST_F(SortTest, SameValues) {
+  const auto count = 1000000;
+  const auto table = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, false}},
+                                             TableType::Data);
+  for (auto counter = int32_t{0}; counter < count; ++counter) {
+    table->append({42});
+  }
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+  auto sort = Sort{
+      table_wrapper,
+      {SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},
+  };
+  sort.execute();
+}
+
 TEST_F(SortTest, NullsLast) {
   auto test_sort = [&](const std::vector<SortColumnDefinition>& sort_column_definitions, const bool input_is_reference,
                        const Sort::ForceMaterialization force_materialization, const std::string& result_filename) {
