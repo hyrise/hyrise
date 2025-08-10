@@ -22,7 +22,6 @@ target_link_libraries(
 
     hyrise
     hyriseBenchmarkLib
-    perf-cpp-wrapper
 )
 if (ENABLE_PERFETTO)
     target_link_libraries(hyrisePlayground perfetto-wrapper)
