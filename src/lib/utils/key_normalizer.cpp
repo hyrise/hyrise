@@ -15,29 +15,29 @@
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 
-namespace hyrise {
+namespace {
 // Portable byte swap implementation for 32-bit integer
 inline uint32_t portable_bswap_32(const uint32_t val) {
-  return ((val & 0xFF000000) >> 24u)
-      | ((val & 0x00FF0000) >> 8u)
-      | ((val & 0x0000FF00) << 8u)
-      | ((val & 0x000000FF) << 24u);
+  return ((val & 0xFF000000u) >> 24u)
+      | ((val & 0x00FF0000u) >> 8u)
+      | ((val & 0x0000FF00u) << 8u)
+      | ((val & 0x000000FFu) << 24u);
 }
 
 // Portable byte swap implementation for 64-bit integer
 inline uint64_t portable_bswap_64(const uint64_t val) {
-  return ((val & 0xFF00000000000000) >> 56u)
-      | ((val & 0x00FF000000000000) >> 40u)
-      | ((val & 0x0000FF0000000000) >> 24u)
-      | ((val & 0x000000FF00000000) >> 8u)
-      | ((val & 0x00000000FF000000) << 8u)
-      | ((val & 0x0000000000FF0000) << 24u)
-      | ((val & 0x000000000000FF00) << 40u)
-      | ((val & 0x00000000000000FF) << 56u);
+  return ((val & 0xFF00000000000000u) >> 56u)
+      | ((val & 0x00FF000000000000u) >> 40u)
+      | ((val & 0x0000FF0000000000u) >> 24u)
+      | ((val & 0x000000FF00000000u) >> 8u)
+      | ((val & 0x00000000FF000000u) << 8u)
+      | ((val & 0x0000000000FF0000u) << 24u)
+      | ((val & 0x000000000000FF00u) << 40u)
+      | ((val & 0x00000000000000FFu) << 56u);
 }
 
 template <typename T>
-T portable_bswap(T val) {
+inline T portable_bswap(T val) {
   if constexpr (sizeof(T) == 4) {
     return portable_bswap_32(val);
   } else if constexpr (sizeof(T) == 8) {
@@ -46,24 +46,26 @@ T portable_bswap(T val) {
   return val;
 }
 
-size_t data_type_size(const DataType data_type) {
+inline size_t data_type_size(const hyrise::DataType data_type) {
   switch (data_type) {
-    case DataType::Int:
+    case hyrise::DataType::Int:
       return sizeof(int32_t);
-    case DataType::Long:
+    case hyrise::DataType::Long:
       return sizeof(int64_t);
-    case DataType::Float:
+    case hyrise::DataType::Float:
       return sizeof(float);
-    case DataType::Double:
+    case hyrise::DataType::Double:
       return sizeof(double);
-    case DataType::String:
-      return sizeof(pmr_string);
-    case DataType::Null:
+    case hyrise::DataType::String:
+      return sizeof(hyrise::pmr_string);
+    case hyrise::DataType::Null:
       return 0;
   }
   Fail("Unsupported data type encountered");
 }
+}  // namespace
 
+namespace hyrise {
 KeyNormalizer::KeyNormalizer() = default;
 
 std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_for_table(
@@ -103,7 +105,7 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_fo
     const auto chunk_offset = table_offset;
 
     auto task = std::make_shared<JobTask>([=, &result_buffer, &sort_definitions]() {
-      insert_keys_for_chunk(result_buffer, current_chunk, sort_definitions, chunk_offset, chunk_id, tuple_key_size,
+      _insert_keys_for_chunk(result_buffer, current_chunk, sort_definitions, chunk_offset, chunk_id, tuple_key_size,
                             string_prefix_length);
     });
     tasks.emplace_back(task);
@@ -117,12 +119,12 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_fo
 
 // PRIVATE
 
-void KeyNormalizer::insert_keys_for_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
+void KeyNormalizer::_insert_keys_for_chunk(std::vector<unsigned char>& buffer,
+                                          const std::shared_ptr<const Chunk>& chunk,
                                           const std::vector<SortColumnDefinition>& sort_definitions,
                                           const uint64_t row_offset, const ChunkID chunk_id,
                                           const uint32_t tuple_key_size, const uint32_t string_prefix_length) {
   const auto chunk_size = chunk->size();
-  std::vector<std::function<void(ChunkOffset)>> column_writers;
   uint32_t component_offset = 0;
 
   for (const auto& sort_definition : sort_definitions) {
@@ -142,7 +144,7 @@ void KeyNormalizer::insert_keys_for_chunk(std::vector<unsigned char>& buffer, co
       using ColumnDataType = typename decltype(type)::type;
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
-        const auto offset = (row_offset + pos.chunk_offset()) * tuple_key_size + component_offset;
+        const auto offset = ((row_offset + pos.chunk_offset()) * tuple_key_size) + component_offset;
         const auto is_null = pos.is_null();
 
         // Use 0x00 when NullsFirst and 0x01 when NullsLast
@@ -169,7 +171,7 @@ void KeyNormalizer::insert_keys_for_chunk(std::vector<unsigned char>& buffer, co
 }
 
 template <typename T>
-void KeyNormalizer::_insert_normalized_value(std::vector<unsigned char>& buffer, const T value, const uint64_t offset,
+void KeyNormalizer::_insert_normalized_value(std::vector<unsigned char>& buffer, const T& value, const uint64_t offset,
                                              const bool descending, const uint32_t string_prefix_length) {
   if constexpr (std::is_integral_v<T>) {
     _insert_integral(buffer, value, offset, descending);
@@ -188,17 +190,12 @@ void KeyNormalizer::_insert_integral(std::vector<unsigned char>& buffer, T value
   // values (e.g., -128 to 127) to an unsigned range (0 to 255) in a way that
   // preserves their order for a lexicographical byte comparison.
   if constexpr (std::is_signed_v<T>) {
-    value ^= std::bit_cast<std::make_unsigned_t<T>>(T(1) << (sizeof(T) * 8u - 1u));
+    value ^= std::make_unsigned_t<T>(T(1)) << ((sizeof(T) * 8u) - 1u);
   }
 
   // Ensure the byte order is big-endian before writing to the buffer. If not, we swap.
   if constexpr (std::endian::native == std::endian::little) {
-    if constexpr (sizeof(T) == 4) {
-      value = portable_bswap_32(value);
-    }
-    if constexpr (sizeof(T) == 8) {
-      value = portable_bswap_64(value);
-    }
+    value = portable_bswap(value);
   }
 
   // For descending order, we simply invert all bits of the value's representation.
@@ -219,10 +216,10 @@ void KeyNormalizer::_insert_floating_point(std::vector<unsigned char>& buffer, T
 
   // If the float is negative (sign bit is 1), we flip all bits to reverse the sort order.
   // If the float is positive (sign bit is 0), we flip only the sign bit to make it sort after all negatives.
-  if (reinterpreted_val & (I(1) << (sizeof(I) * 8 - 1))) {
+  if (reinterpreted_val & (I(1) << ((sizeof(I) * 8u) - 1u))) {
     reinterpreted_val = ~reinterpreted_val;
   } else {
-    reinterpreted_val ^= (I(1) << (sizeof(I) * 8 - 1));
+    reinterpreted_val ^= (I(1) << ((sizeof(I) * 8u) - 1u));
   }
 
   // Now, call append_integral with the correctly transformed bits. Since `I` is unsigned,
@@ -235,29 +232,30 @@ void KeyNormalizer::_insert_string(std::vector<unsigned char>& buffer, const pmr
   const auto prefix_length = std::min(static_cast<uint32_t>(value.size()), string_prefix_length);
   std::memcpy(&buffer[offset], value.data(), prefix_length);
 
-  unsigned char pad_char = 0x00;
-  std::fill(&buffer[offset + prefix_length], &buffer[offset + string_prefix_length], pad_char);
+  constexpr unsigned char PAD_CHAR = 0x00;
+  std::fill(&buffer[offset + prefix_length], &buffer[offset + string_prefix_length], PAD_CHAR);
 
   if (descending) {
     for (auto i = uint32_t{0}; i < string_prefix_length; ++i) {
-      buffer[offset + i] = ~buffer[offset + i];
+      buffer[offset + i] = static_cast<unsigned char>(~buffer[offset + i]);
     }
   }
 }
 
-template void KeyNormalizer::_insert_normalized_value<int32_t>(std::vector<unsigned char>& buffer, int32_t value,
+template void KeyNormalizer::_insert_normalized_value<int32_t>(std::vector<unsigned char>& buffer, const int32_t& value,
                                                                uint64_t offset, bool descending,
                                                                uint32_t string_prefix_length);
-template void KeyNormalizer::_insert_normalized_value<int64_t>(std::vector<unsigned char>& buffer, int64_t value,
+template void KeyNormalizer::_insert_normalized_value<int64_t>(std::vector<unsigned char>& buffer, const int64_t& value,
                                                                uint64_t offset, bool descending,
                                                                uint32_t string_prefix_length);
-template void KeyNormalizer::_insert_normalized_value<float>(std::vector<unsigned char>& buffer, float value,
+template void KeyNormalizer::_insert_normalized_value<float>(std::vector<unsigned char>& buffer, const float& value,
                                                              uint64_t offset, bool descending,
                                                              uint32_t string_prefix_length);
-template void KeyNormalizer::_insert_normalized_value<double>(std::vector<unsigned char>& buffer, double value,
+template void KeyNormalizer::_insert_normalized_value<double>(std::vector<unsigned char>& buffer, const double& value,
                                                               uint64_t offset, bool descending,
                                                               uint32_t string_prefix_length);
-template void KeyNormalizer::_insert_normalized_value<pmr_string>(std::vector<unsigned char>& buffer, pmr_string value,
+template void KeyNormalizer::_insert_normalized_value<pmr_string>(std::vector<unsigned char>& buffer,
+                                                                  const pmr_string& value,
                                                                   uint64_t offset, bool descending,
                                                                   uint32_t string_prefix_length);
 

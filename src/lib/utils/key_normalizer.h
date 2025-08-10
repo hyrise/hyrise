@@ -29,12 +29,12 @@ class KeyNormalizer {
       uint32_t string_prefix_length = 8);
 
  private:
-  static void insert_keys_for_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
+  static void _insert_keys_for_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
                                     const std::vector<SortColumnDefinition>& sort_definitions, uint64_t buffer_offset,
                                     ChunkID chunk_id, uint32_t tuple_key_size, uint32_t string_prefix_length);
 
   template <typename T>
-  static void _insert_normalized_value(std::vector<unsigned char>& buffer, T value, uint64_t offset, bool descending,
+  static void _insert_normalized_value(std::vector<unsigned char>& buffer, const T& value, uint64_t offset, bool descending,
                                        uint32_t string_prefix_length);
 
   template <typename T>

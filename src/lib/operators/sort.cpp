@@ -316,12 +316,10 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   {
-    const auto& input_table_ref = *input_table;
-
     struct StableKeyComparator {
-      const size_t key_size;
-      const Table& table;
-      const std::vector<SortColumnDefinition>& sort_definitions;
+      size_t key_size;
+      const Table* table;
+      const std::vector<SortColumnDefinition>* sort_definitions;
       uint32_t offset_for_row_id = key_size - sizeof(RowID);
 
       bool operator()(const unsigned char* const a_ptr, const unsigned char* const b_ptr) const {
@@ -334,9 +332,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           return key_cmp < 0;
         }
 
-        for (const auto& sort_def : sort_definitions) {
-          const auto& segment_a = table.get_chunk(a_row_id.chunk_id)->get_segment(sort_def.column);
-          const auto& segment_b = table.get_chunk(b_row_id.chunk_id)->get_segment(sort_def.column);
+        for (const auto& sort_def : *sort_definitions) {
+          const auto& segment_a = table->get_chunk(a_row_id.chunk_id)->get_segment(sort_def.column);
+          const auto& segment_b = table->get_chunk(b_row_id.chunk_id)->get_segment(sort_def.column);
 
           const auto val_a = (*segment_a)[a_row_id.chunk_offset];
           const auto val_b = (*segment_b)[b_row_id.chunk_offset];
@@ -363,7 +361,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     };
 
     boost::sort::pdqsort(key_pointers.begin(), key_pointers.end(),
-                         StableKeyComparator{key_size, input_table_ref, _sort_definitions});
+                         StableKeyComparator{key_size, input_table.get(), &_sort_definitions});
   }
 
   const auto row_id_offset = key_size - sizeof(RowID);
