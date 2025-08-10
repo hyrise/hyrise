@@ -1,18 +1,24 @@
 #include "key_normalizer.h"
 
+#include <algorithm>
+#include <bit>
 #include <cstdint>
-#include <functional>
+#include <cstddef>
+#include <cstring>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "assert.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace {
@@ -46,7 +52,7 @@ inline T portable_bswap(T val) {
   return val;
 }
 
-inline size_t data_type_size(const hyrise::DataType data_type) {
+inline std::size_t data_type_size(const hyrise::DataType data_type) {
   switch (data_type) {
     case hyrise::DataType::Int:
       return sizeof(int32_t);
@@ -102,10 +108,9 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_fo
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto current_chunk = table->get_chunk(chunk_id);
     const auto chunk_size = current_chunk->size();
-    const auto chunk_offset = table_offset;
 
     auto task = std::make_shared<JobTask>([=, &result_buffer, &sort_definitions]() {
-      _insert_keys_for_chunk(result_buffer, current_chunk, sort_definitions, chunk_offset, chunk_id, tuple_key_size,
+      _insert_keys_for_chunk(result_buffer, current_chunk, sort_definitions, table_offset, chunk_id, tuple_key_size,
                             string_prefix_length);
     });
     tasks.emplace_back(task);
@@ -122,7 +127,7 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_fo
 void KeyNormalizer::_insert_keys_for_chunk(std::vector<unsigned char>& buffer,
                                           const std::shared_ptr<const Chunk>& chunk,
                                           const std::vector<SortColumnDefinition>& sort_definitions,
-                                          const uint64_t row_offset, const ChunkID chunk_id,
+                                          const uint64_t table_offset, const ChunkID chunk_id,
                                           const uint32_t tuple_key_size, const uint32_t string_prefix_length) {
   const auto chunk_size = chunk->size();
   uint32_t component_offset = 0;
@@ -144,7 +149,7 @@ void KeyNormalizer::_insert_keys_for_chunk(std::vector<unsigned char>& buffer,
       using ColumnDataType = typename decltype(type)::type;
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
-        const auto offset = ((row_offset + pos.chunk_offset()) * tuple_key_size) + component_offset;
+        const auto offset = ((table_offset + pos.chunk_offset()) * tuple_key_size) + component_offset;
         const auto is_null = pos.is_null();
 
         // Use 0x00 when NullsFirst and 0x01 when NullsLast
@@ -164,7 +169,7 @@ void KeyNormalizer::_insert_keys_for_chunk(std::vector<unsigned char>& buffer,
   // Append RowIDs at the end for tie-breaking
   const auto row_id_offset = tuple_key_size - sizeof(RowID);
   for (auto offset = ChunkOffset{0}; offset < chunk_size; ++offset) {
-    const auto buffer_start = (row_offset + offset) * tuple_key_size;
+    const auto buffer_start = (table_offset + offset) * tuple_key_size;
     const RowID row_id{chunk_id, offset};
     std::memcpy(&buffer[buffer_start + row_id_offset], &row_id, sizeof(RowID));
   }
@@ -186,43 +191,45 @@ template <class T>
   requires std::is_integral_v<T>
 void KeyNormalizer::_insert_integral(std::vector<unsigned char>& buffer, T value, const uint64_t offset,
                                      const bool descending) {
+  using UnsignedType = std::make_unsigned_t<T>;
+  auto unsigned_value = std::bit_cast<UnsignedType>(value);
+
   // For signed integers, the sign bit must be flipped. This maps the range of signed
   // values (e.g., -128 to 127) to an unsigned range (0 to 255) in a way that
   // preserves their order for a lexicographical byte comparison.
   if constexpr (std::is_signed_v<T>) {
-    value ^= std::make_unsigned_t<T>(T(1)) << ((sizeof(T) * 8u) - 1u);
+    unsigned_value ^= UnsignedType(1) << ((sizeof(T) * 8u) - 1u);
   }
 
   // Ensure the byte order is big-endian before writing to the buffer. If not, we swap.
   if constexpr (std::endian::native == std::endian::little) {
-    value = portable_bswap(value);
+    unsigned_value = portable_bswap(unsigned_value);
   }
 
   // For descending order, we simply invert all bits of the value's representation.
   if (descending) {
-    value = ~value;
+    unsigned_value = ~unsigned_value;
   }
-  std::memcpy(buffer.data() + offset, &value, sizeof(T));
+  std::memcpy(buffer.data() + offset, &unsigned_value, sizeof(UnsignedType));
 }
 
 template <class T>
   requires std::is_floating_point_v<T>
 void KeyNormalizer::_insert_floating_point(std::vector<unsigned char>& buffer, T value, uint64_t offset,
                                            const bool descending) {
-  using I = std::conditional_t<sizeof(T) == 4, uint32_t, uint64_t>;
+  using UnsignedType = std::conditional_t<sizeof(T) == 4, uint32_t, uint64_t>;
 
-  I reinterpreted_val;
-  std::memcpy(&reinterpreted_val, &value, sizeof(T));
+  auto reinterpreted_val = std::bit_cast<UnsignedType>(value);
 
   // If the float is negative (sign bit is 1), we flip all bits to reverse the sort order.
   // If the float is positive (sign bit is 0), we flip only the sign bit to make it sort after all negatives.
-  if (reinterpreted_val & (I(1) << ((sizeof(I) * 8u) - 1u))) {
+  if (reinterpreted_val & (UnsignedType{1} << ((sizeof(UnsignedType) * 8u) - 1u))) {
     reinterpreted_val = ~reinterpreted_val;
   } else {
-    reinterpreted_val ^= (I(1) << ((sizeof(I) * 8u) - 1u));
+    reinterpreted_val ^= (UnsignedType{1} << ((sizeof(UnsignedType) * 8u) - 1u));
   }
 
-  // Now, call append_integral with the correctly transformed bits. Since `I` is unsigned,
+  // Now, call append_integral with the correctly transformed bits. Since `UnsignedType` is unsigned,
   // the signed-integer logic inside _insert_integral will be skipped.
   _insert_integral(buffer, reinterpreted_val, offset, descending);
 }

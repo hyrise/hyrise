@@ -30,7 +30,7 @@ class KeyNormalizer {
 
  private:
   static void _insert_keys_for_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
-                                    const std::vector<SortColumnDefinition>& sort_definitions, uint64_t buffer_offset,
+                                    const std::vector<SortColumnDefinition>& sort_definitions, uint64_t table_offset,
                                     ChunkID chunk_id, uint32_t tuple_key_size, uint32_t string_prefix_length);
 
   template <typename T>
