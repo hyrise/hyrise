@@ -879,7 +879,7 @@ void prepare_block_permutations(NormalizedKeyRange auto& sort_range, size_t stri
   for (; last_stripe != stripe_range_iter && move_num_blocks > 0; --last_stripe, --last_stripe_result) {
     const auto begin_index = std::distance(sort_range.begin(), last_stripe->begin());
     DebugAssert(begin_index % block_size == 0, "Wrong alignment");
-    const auto stripe_end_index = std::distance(sort_range.begin(), last_stripe->end());
+    const auto stripe_end_index = static_cast<int64_t>(std::distance(sort_range.begin(), last_stripe->end()));
     const auto end_index = std::min(last_bucket_end, stripe_end_index);
     const auto bucket_num_blocks = (end_index - begin_index) / block_size;
     const auto num_blocks_written = last_stripe_result->num_blocks_written;
