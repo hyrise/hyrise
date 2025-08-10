@@ -198,7 +198,7 @@ void KeyNormalizer::_insert_integral(std::vector<unsigned char>& buffer, T value
   // values (e.g., -128 to 127) to an unsigned range (0 to 255) in a way that
   // preserves their order for a lexicographical byte comparison.
   if constexpr (std::is_signed_v<T>) {
-    unsigned_value ^= UnsignedType(1) << ((sizeof(T) * 8u) - 1u);
+    unsigned_value ^= UnsignedType{1} << ((sizeof(T) * 8u) - 1u);
   }
 
   // Ensure the byte order is big-endian before writing to the buffer. If not, we swap.
