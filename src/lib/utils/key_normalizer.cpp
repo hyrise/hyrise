@@ -18,15 +18,22 @@
 namespace hyrise {
 // Portable byte swap implementation for 32-bit integer
 inline uint32_t portable_bswap_32(const uint32_t val) {
-  return ((val & 0xFF000000) >> 24u) | ((val & 0x00FF0000) >> 8u) | ((val & 0x0000FF00) << 8u) |
-         ((val & 0x000000FF) << 24u);
+  return ((val & 0xFF000000) >> 24u)
+      | ((val & 0x00FF0000) >> 8u)
+      | ((val & 0x0000FF00) << 8u)
+      | ((val & 0x000000FF) << 24u);
 }
 
 // Portable byte swap implementation for 64-bit integer
 inline uint64_t portable_bswap_64(const uint64_t val) {
-  return ((val & 0xFF00000000000000) >> 56u) | ((val & 0x00FF000000000000) >> 40u) | ((val & 0x0000FF0000000000) >> 24u) |
-         ((val & 0x000000FF00000000) >> 8u) | ((val & 0x00000000FF000000) << 8u) | ((val & 0x0000000000FF0000) << 24u) |
-         ((val & 0x000000000000FF00) << 40u) | ((val & 0x00000000000000FF) << 56u);
+  return ((val & 0xFF00000000000000) >> 56u)
+      | ((val & 0x00FF000000000000) >> 40u)
+      | ((val & 0x0000FF0000000000) >> 24u)
+      | ((val & 0x000000FF00000000) >> 8u)
+      | ((val & 0x00000000FF000000) << 8u)
+      | ((val & 0x0000000000FF0000) << 24u)
+      | ((val & 0x000000000000FF00) << 40u)
+      | ((val & 0x00000000000000FF) << 56u);
 }
 
 template <typename T>
@@ -122,10 +129,13 @@ void KeyNormalizer::insert_keys_for_chunk(std::vector<unsigned char>& buffer, co
     const auto segment = chunk->get_segment(sort_definition.column);
     const auto data_type = segment->data_type();
     const auto sort_mode = sort_definition.sort_mode;
-    const auto descending = sort_mode == SortMode::DescendingNullsFirst || sort_mode == SortMode::DescendingNullsLast;
-    const auto nulls_first = sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
+    const auto descending =
+      sort_mode == SortMode::DescendingNullsFirst || sort_mode == SortMode::DescendingNullsLast;
+    const auto nulls_first =
+      sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
 
-    const auto component_data_size = (data_type == DataType::String ? string_prefix_length : data_type_size(data_type));
+    const auto component_data_size =
+      (data_type == DataType::String ? string_prefix_length : data_type_size(data_type));
     const auto component_total_size = component_data_size + 1;
 
     resolve_data_type(data_type, [&](const auto type) {
