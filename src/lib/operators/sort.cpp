@@ -633,7 +633,7 @@ struct StripeClassificationResult {
   std::vector<std::vector<NormalizedKeyRow>> buckets;
   std::vector<std::size_t> bucket_sizes;
   // Number of blocks written back to the stripe.
-  size_t num_blocks_written = 0;
+  uint64_t num_blocks_written = 0;
 };
 
 /**
