@@ -374,7 +374,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                          StableKeyComparator{
                            .key_size = key_size,
                            .table = input_table.get(),
-                           .sort_definitions=&_sort_definitions
+                           .sort_definitions = &_sort_definitions
                          });
   }
 
