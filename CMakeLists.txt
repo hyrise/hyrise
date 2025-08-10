@@ -20,6 +20,8 @@ function(compiler_not_supported message)
     endif()
 endfunction(compiler_not_supported)
 
+option(ENABLE_PERFETTO "Add perfetto to the dependencies. Default: ON" OFF)
+
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.2)
         compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")

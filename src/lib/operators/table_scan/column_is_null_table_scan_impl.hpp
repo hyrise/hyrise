@@ -33,7 +33,7 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
 
   void _scan_generic_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                                     const std::shared_ptr<const AbstractPosList>& position_filter,
-                                    const SortMode sorted_by) const;
+                                    const SortMode sorted_by);
 
   /**
    * @defgroup Methods used for faster handling of value, dictionary, LZ4, and frame-of-reference segments 

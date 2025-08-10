@@ -108,8 +108,9 @@ TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {
 
   const auto& output_table = join_operator->get_output();
 
-  const auto expected_sorted_columns = std::vector<SortColumnDefinition>{
-      SortColumnDefinition(ColumnID{0}, SortMode::Ascending), SortColumnDefinition(ColumnID{4}, SortMode::Ascending)};
+  const auto expected_sorted_columns =
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst),
+                                        SortColumnDefinition(ColumnID{4}, SortMode::AscendingNullsFirst)};
   for (auto chunk_id = ChunkID{0}; chunk_id < output_table->chunk_count(); ++chunk_id) {
     const auto& actual_sorted_columns = output_table->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_EQ(actual_sorted_columns, expected_sorted_columns);
