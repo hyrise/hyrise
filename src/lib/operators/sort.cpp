@@ -5,14 +5,24 @@
 #include <cstring>
 #include <string>
 #include <memory>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <boost/sort/pdqsort/pdqsort.hpp>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_segment_accessor.hpp"
+#include "storage/chunk.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/key_normalizer.h"
@@ -361,7 +371,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     };
 
     boost::sort::pdqsort(key_pointers.begin(), key_pointers.end(),
-                         StableKeyComparator{key_size, input_table.get(), &_sort_definitions});
+                         StableKeyComparator{
+                           .key_size = key_size,
+                           .table = input_table.get(),
+                           .sort_definitions=&_sort_definitions
+                         });
   }
 
   const auto row_id_offset = key_size - sizeof(RowID);
