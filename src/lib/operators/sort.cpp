@@ -147,7 +147,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       const auto materialize_chunks = run_parallel_batched(output_chunk_count, 8, [&](const auto chunk_index) {
         const auto output_chunk_id = static_cast<ChunkID>(chunk_index);
 
-        const auto output_segment_begin = chunk_index * output_chunk_size;
+        const auto output_segment_begin = static_cast<uint64_t>(chunk_index * output_chunk_size);
         const auto output_segment_end = std::min(output_segment_begin + output_chunk_size, row_count);
         const auto output_segment_size = output_segment_end - output_segment_begin;
 
@@ -1126,7 +1126,8 @@ std::vector<size_t> ips4o_pass(NormalizedKeyRange auto& sort_range, const size_t
       const auto written_begin = std::max(stripe_begin, delimiter_begin);
       // The delimiter may start after the last block is written. To avoid negative values we set the minimal value to
       // the delimiter_begin.
-      const auto written_end = std::max(std::min(stripe_written_end, delimiter_end), delimiter_begin);
+      const auto written_end =
+          std::max(std::min(stripe_written_end, delimiter_end), static_cast<int64_t>(delimiter_begin));
 
       const auto num_written = (written_end - written_begin);
       DebugAssert(num_written % block_size == 0, "Fence");
