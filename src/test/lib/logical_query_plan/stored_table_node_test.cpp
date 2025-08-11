@@ -429,7 +429,8 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
 }
 
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsValidityNotGuaranteed) {
-  // Check that only the key constraints are used as UCCs for optimization purposes that are guaranteed to be valid.
+  // Check that only the key constraints are used as UCCs for optimization purposes that are guaranteed to be valid
+  // for the current snapshot.
 
   // Prepare UCCs.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
@@ -440,8 +441,8 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsValidityNotGuaranteed) {
   EXPECT_EQ(table_key_constraints.size(), 2);
   EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 2);
 
-  // Modify the table so that the UCC is no longer guaranteed to be valid
-  // (in fact, it is actually no longer valid because we duplicated all rows).
+  // Modify the table so that the UCC is no longer guaranteed to be valid. In fact, it is actually no longer valid
+  // because we duplicated all rows.
   const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto get_table = std::make_shared<GetTable>("t_a");
   get_table->execute();
@@ -486,16 +487,16 @@ TEST_F(StoredTableNodeTest, GetMatchingUniqueColumnCombination) {
   _stored_table_node->set_pruned_column_ids({});
   const auto [has_matching_ucc_a, matching_ucc_cacheable_a] = _stored_table_node->has_matching_ucc({_a});
   EXPECT_TRUE(has_matching_ucc_a);
-  EXPECT_EQ(matching_ucc_cacheable_a, true);
+  EXPECT_TRUE(matching_ucc_cacheable_a);
 
   // Test superset of column ids.
   const auto [has_matching_ucc_ab, matching_ucc_cacheable_ab] = _stored_table_node->has_matching_ucc({_a, _b});
   EXPECT_TRUE(has_matching_ucc_ab);
-  EXPECT_EQ(matching_ucc_cacheable_ab, true);
+  EXPECT_TRUE(matching_ucc_cacheable_ab);
 
   const auto [has_matching_ucc_ac, matching_ucc_cacheable_ac] = _stored_table_node->has_matching_ucc({_a, _c});
   EXPECT_TRUE(has_matching_ucc_ac);
-  EXPECT_EQ(matching_ucc_cacheable_ac, true);
+  EXPECT_TRUE(matching_ucc_cacheable_ac);
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {

@@ -113,7 +113,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
           optimization_context.set_not_cacheable();
         }
 
-        const auto& output_expressions = aggregate_node.output_expressions();
+        const auto output_expressions = aggregate_node.output_expressions();
         // Remove the AggregateNode if it does not limit or reorder the output expressions.
         if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
           lqp_remove_node(node);
@@ -192,8 +192,6 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
 
       const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
-        // Functional dependencies are derived from UCCs. In case we encounter a non-schema-given FD, this means we
-        // encountered an underlying non-schema-given UCC as well.
         if (!fd.is_schema_given()) {
           optimization_context.set_not_cacheable();
         }

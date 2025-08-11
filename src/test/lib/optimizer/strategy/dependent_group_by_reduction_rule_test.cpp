@@ -136,8 +136,8 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
     _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(
-        _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-schema-given UCC was used.
+    // Not cacheable because FD derived from non-schema-given UCC was used.
+    EXPECT_FALSE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   {

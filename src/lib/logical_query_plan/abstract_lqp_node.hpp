@@ -191,7 +191,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   virtual UniqueColumnCombinations unique_column_combinations() const = 0;
   /**
-   * @return Searchs for a unique column combination (UCC) matching the given subset of output expressions (i.e.,
+   * @return Searches for a unique column combination (UCC) matching the given subset of output expressions (i.e.,
    *         the rows are guaranteed to be unique). This is preferred over calling
    *         `find_ucc(unique_column_combinations(), ...)` as it performs additional
    *         sanity checks. Provides a pair<bool, bool> indicating whether a UCC was found and whether it is

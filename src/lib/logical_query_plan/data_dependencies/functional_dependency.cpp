@@ -1,13 +1,11 @@
 #include "functional_dependency.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <ostream>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
-#include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "utils/assert.hpp"
