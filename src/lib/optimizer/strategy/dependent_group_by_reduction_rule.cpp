@@ -154,8 +154,8 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
     };
 
     // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause. If
-    // two FDs have the same number of determinants, we prefer the schema-given ones. Only when both FDs are
-    // schema-given, we compare the ColumnIDs of the determinants to ensure a deterministic order.
+    // two FDs have the same number of determinants, we prefer the genuine ones. Only when both FDs are
+    // genuine, we compare the ColumnIDs of the determinants to ensure a deterministic order.
     auto ordered_fds = std::vector<FunctionalDependency>{fds.cbegin(), fds.cend()};
     std::sort(ordered_fds.begin(), ordered_fds.end(), [&](const auto& fd_left, const auto& fd_right) {
       const auto left_determinant_size = fd_left.determinants.size();
@@ -164,11 +164,11 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
         return left_determinant_size < right_determinant_size;
       }
 
-      // Currently, we only encounter at most two FDs per determinant combination, one schema-given and one
-      // non-schema-given. We want to prefer the schema-given FDs because they allow caching of the query plan.
-      // Therefore, we order FDs with schema-given determinants before those without.
-      if (fd_left.is_schema_given() != fd_right.is_schema_given()) {
-        return fd_left.is_schema_given();
+      // Currently, we only encounter at most two FDs per determinant combination, one genuine and one
+      // non-genuine. We want to prefer the genuine FDs because they allow caching of the query plan.
+      // Therefore, we order FDs with genuine determinants before those without.
+      if (fd_left.is_genuine() != fd_right.is_genuine()) {
+        return fd_left.is_genuine();
       }
 
       // The FDs are expected to be equally useful for the rewrite. However, we have to decide on semantics here to make
@@ -192,7 +192,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
 
       const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
-        if (!fd.is_schema_given()) {
+        if (!fd.is_genuine()) {
           optimization_context.set_not_cacheable();
         }
 

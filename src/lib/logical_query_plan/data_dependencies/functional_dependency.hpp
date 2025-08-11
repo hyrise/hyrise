@@ -30,13 +30,13 @@ namespace hyrise {
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
  *
  * If the FD may become invalid in the future (because it is not based on a schema constraint, but on the data
- * incidentally fulfilling the constraint at the moment), the FD is marked as being not schema-given.
- * This information is important because query plans that were optimized using a non-schema-given FD are not safely
+ * incidentally fulfilling the constraint at the moment), the FD is marked as being not genuine.
+ * This information is important because query plans that were optimized using a non-genuine FD are not safely
  * cacheable.
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
-                       bool is_schema_given = true);
+                       bool is_genuine = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -45,11 +45,11 @@ struct FunctionalDependency {
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
 
-  bool is_schema_given() const;
-  void set_schema_given() const;
+  bool is_genuine() const;
+  void set_genuine() const;
 
  private:
-  mutable bool _is_schema_given;
+  mutable bool _is_genuine;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
@@ -63,23 +63,23 @@ using FunctionalDependencies = std::unordered_set<FunctionalDependency>;
  *                                                      {a} => {b}
  *                            {a} => {b, c, d}    -->   {a} => {c}
  *                                                      {a} => {d}
- *         (not schema-given) {a} => {b, c, d, e} -->   {a} => {e} (not schema-given)
+ *         (not genuine) {a} => {b, c, d, e} -->   {a} => {e} (not genuine)
  *         Note that the second FD only produces the FD {a} => {e} because this one is not present yet while the other
- *         FDs resulting from the dependents are already present and schema-given.
+ *         FDs resulting from the dependents are already present and genuine.
  */
 FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
- *         Note that FDs that do not share the schema-given values are not merged. As a result, FDs become deflated as
- *         follows (assuming all FDs are schema-given):
+ *         Note that FDs that do not share the genuine values are not merged. As a result, FDs become deflated as
+ *         follows (assuming all FDs are genuine):
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}
  *                             {a} => {d} 
- *          (not schema-given) {a} => {e}         -->   {a} => {b, c, d, e} (not schema-given)
- *         Note that if we have two FDs with the same determinant expressions, but one of them is not schema-given,
- *         this not schema-given FD is ignored in the deflation process as it is 'shadowed' by the schema-given one.
+ *          (not genuine) {a} => {e}         -->   {a} => {b, c, d, e} (not genuine)
+ *         Note that if we have two FDs with the same determinant expressions, but one of them is not genuine,
+ *         this not genuine FD is ignored in the deflation process as it is 'shadowed' by the genuine one.
  */
 FunctionalDependencies deflate_fds(const FunctionalDependencies& fds);
 

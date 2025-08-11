@@ -527,12 +527,12 @@ UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations
         })) {
       if (!matching_ucc) {
         matching_ucc = ucc_it;
-        if (ucc.is_schema_given()) {
-          // If this match is schema-given, we can stop here.
+        if (ucc.is_genuine()) {
+          // If this match is genuine, we can stop here.
           break;
         }
-      } else if (ucc.is_schema_given()) {
-        // We continue looking for a schema-given UCC and overwrite the previous match with a schema-given UCC if we
+      } else if (ucc.is_genuine()) {
+        // We continue looking for a genuine UCC and overwrite the previous match with a genuine UCC if we
         // find one.
         matching_ucc = ucc_it;
         break;
@@ -586,7 +586,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                return (fd.determinants == determinants) && (fd.dependents == dependents);
                              }) == fds.cend(),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_schema_given());
+    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_genuine());
   }
   return fds;
 }

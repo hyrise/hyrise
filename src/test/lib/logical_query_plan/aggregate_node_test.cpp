@@ -131,13 +131,13 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
     const auto& unique_column_combinations = agg_node_a->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a}}));
-    EXPECT_TRUE(unique_column_combinations.cbegin()->is_schema_given());
+    EXPECT_TRUE(unique_column_combinations.cbegin()->is_genuine());
   }
   {
     const auto& unique_column_combinations = agg_node_b->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a, _b}}));
-    EXPECT_TRUE(unique_column_combinations.cbegin()->is_schema_given());
+    EXPECT_TRUE(unique_column_combinations.cbegin()->is_genuine());
   }
 }
 
@@ -156,9 +156,9 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   /**
    * Expected behaviour:
    *  - UCC from key_constraint_b remains valid since _b is part of the group-by columns.
-   *  - UCC from key_constraint_b should remain not schema-given. 
+   *  - UCC from key_constraint_b should remain not genuine. 
    *  - UCC from key_constraint_c, however, should be discarded because _c gets aggregated.
-   *  - Also, we should gain a new schema-given UCC covering all group-by columns.
+   *  - Also, we should gain a new genuine UCC covering all group-by columns.
    */
 
   // Basic check.
@@ -169,12 +169,12 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   const auto ucc_a_b = find_ucc(unique_column_combinations, {_a, _b});
 
   EXPECT_NE(ucc_b, unique_column_combinations.end());
-  EXPECT_FALSE(ucc_b->is_schema_given());
+  EXPECT_FALSE(ucc_b->is_genuine());
 
   EXPECT_EQ(ucc_c, unique_column_combinations.end());
 
   EXPECT_NE(ucc_a_b, unique_column_combinations.end());
-  EXPECT_TRUE(ucc_a_b->is_schema_given());
+  EXPECT_TRUE(ucc_a_b->is_genuine());
   EXPECT_EQ(ucc_a_b->expressions.size(), 2);
 }
 
@@ -219,7 +219,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
 
   /**
    * AggregateNode should try to create a new UCC from its group-by-column _a. It is the same as MockNode's UCC, which
-   * is forwarded. Note that because the UCC and the group-by column are an exact match, the result is schema-given.
+   * is forwarded. Note that because the UCC and the group-by column are an exact match, the result is genuine.
    *
    * Expected behaviour: AggregateNode should not output the same UCC twice.
    */
@@ -229,8 +229,8 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
   EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
-  // Due to the exact match, the UCC is marked as schema-given.
-  EXPECT_TRUE(unique_column_combinations.cbegin()->is_schema_given());
+  // Due to the exact match, the UCC is marked as genuine.
+  EXPECT_TRUE(unique_column_combinations.cbegin()->is_genuine());
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
@@ -248,7 +248,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
    * UCC for _a, which is forwarded. It is shorter, and thus preferred over the UCC covering both _a and _b.
    *
    * Expected behaviour: AggregateNode should only forward the input UCC. Additionally, it should create a new 
-   * schema-given UCC covering both _a and _b.
+   * genuine UCC covering both _a and _b.
    */
 
   // Basic check.
@@ -263,10 +263,10 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
   EXPECT_NE(ucc_a_b, unique_column_combinations.end());
   EXPECT_EQ(ucc_a_b->expressions.size(), 2);
 
-  // The input UCC is not marked as schema-given, as it is not created by the AggregateNode.
-  EXPECT_FALSE(ucc_a->is_schema_given());
-  // The new UCC covering both _a and _b is marked as schema-given.
-  EXPECT_TRUE(ucc_a_b->is_schema_given());
+  // The input UCC is not marked as genuine, as it is not created by the AggregateNode.
+  EXPECT_FALSE(ucc_a->is_genuine());
+  // The new UCC covering both _a and _b is marked as genuine.
+  EXPECT_TRUE(ucc_a_b->is_genuine());
 }
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {

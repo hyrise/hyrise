@@ -152,12 +152,12 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
                 std::inserter(group_by_columns, group_by_columns.begin()));
 
     const auto [existing_ucc, inserted] =
-        unique_column_combinations.emplace(std::move(group_by_columns), /*is_schema_given=*/true);
+        unique_column_combinations.emplace(std::move(group_by_columns), /*is_genuine=*/true);
 
-    // If the UCC was already in the set, is not schema-given and matches the group-by columns, we set it to
-    // schema-given.
-    if (!inserted && !existing_ucc->is_schema_given() && existing_ucc->expressions.size() == group_by_columns_count) {
-      existing_ucc->set_schema_given();
+    // If the UCC was already in the set, is not genuine and matches the group-by columns, we set it to
+    // genuine.
+    if (!inserted && !existing_ucc->is_genuine() && existing_ucc->expressions.size() == group_by_columns_count) {
+      existing_ucc->set_genuine();
     }
   }
 

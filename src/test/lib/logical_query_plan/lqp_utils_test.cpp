@@ -451,18 +451,18 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
 
 TEST_F(LQPUtilsTest, FindCorrectMatchingUCC) {
   // Arbitrary set of UCCs to test against.
-  auto uccs = UniqueColumnCombinations{UniqueColumnCombination{{a_a}, /*is_schema_given=*/false},
-                                       UniqueColumnCombination{{a_a, a_b}, /*is_schema_given=*/true}};
+  auto uccs = UniqueColumnCombinations{UniqueColumnCombination{{a_a}, /*is_genuine=*/false},
+                                       UniqueColumnCombination{{a_a, a_b}, /*is_genuine=*/true}};
 
-  // If we now search for a UCC over columns a and b, we should find the schema-given UCC.
+  // If we now search for a UCC over columns a and b, we should find the genuine UCC.
   auto ucc_it = find_ucc(uccs, {a_a, a_b});
   ASSERT_NE(ucc_it, uccs.end());
-  EXPECT_TRUE(ucc_it->is_schema_given());
+  EXPECT_TRUE(ucc_it->is_genuine());
 
-  // If we only search for the first column a, we should find the non-schema-given UCC.
+  // If we only search for the first column a, we should find the non-genuine UCC.
   ucc_it = find_ucc(uccs, {a_a});
   ASSERT_NE(ucc_it, uccs.end());
-  EXPECT_FALSE(ucc_it->is_schema_given());
+  EXPECT_FALSE(ucc_it->is_genuine());
 }
 
 }  // namespace hyrise

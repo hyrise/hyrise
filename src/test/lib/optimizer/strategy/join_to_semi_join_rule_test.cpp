@@ -55,7 +55,7 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    // Non-schema-given UCC
+    // Non-genuine UCC
     table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }
 
@@ -142,7 +142,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    // Non-schema-given UCC
+    // Non-genuine UCC
     table->add_soft_constraint(
         TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
   }

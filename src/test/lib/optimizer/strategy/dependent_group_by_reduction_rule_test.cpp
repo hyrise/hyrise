@@ -27,8 +27,8 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
-    // Non-schema-given UCC. In practice, primary key constraints will always be schema-given (because they are given by
-    // the schema), but we want this constraint to be non-schema-given in order to test query plan cacheability.
+    // Non-genuine UCC. In practice, primary key constraints will always be genuine (because they are given by
+    // the schema), but we want this constraint to be non-genuine in order to test query plan cacheability.
     table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
     storage_manager.add_table("table_a", table_a);
     stored_table_node_a = StoredTableNode::make("table_a");
@@ -136,7 +136,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
     _apply_rule(rule, _lqp);
 
-    // Not cacheable because FD derived from non-schema-given UCC was used.
+    // Not cacheable because FD derived from non-genuine UCC was used.
     EXPECT_FALSE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
@@ -154,7 +154,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
     _apply_rule(rule, _lqp);
 
     EXPECT_FALSE(
-        _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-schema-given UCC was used.
+        _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-genuine UCC was used.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -203,12 +203,12 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   // clang-format on
   _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because used FD was derived from schema-given UCC.
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because used FD was derived from genuine UCC.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-// Test that usage of non-schema-given FD leads to the result not being cacheable.
-TEST_F(DependentGroupByReductionRuleTest, NonSchemaGivenFDNotCacheable) {
+// Test that usage of non-genuine FD leads to the result not being cacheable.
+TEST_F(DependentGroupByReductionRuleTest, NonGenuineFDNotCacheable) {
   // clang-format off
   _lqp =
   AggregateNode::make(expression_vector(column_f_1, column_f_2, column_f_3), expression_vector(sum_(column_f_0)),
@@ -223,7 +223,7 @@ TEST_F(DependentGroupByReductionRuleTest, NonSchemaGivenFDNotCacheable) {
   _apply_rule(rule, _lqp);
 
   EXPECT_FALSE(
-      _optimization_context.is_cacheable());  // Not cacheable because used FD was derived from non-schema-given UCC.
+      _optimization_context.is_cacheable());  // Not cacheable because used FD was derived from non-genuine UCC.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -242,7 +242,7 @@ TEST_F(DependentGroupByReductionRuleTest, EqualDeterminantLengthCacheable) {
 
   _apply_rule(rule, _lqp);
 
-  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because the schema-given UCC was used.
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because the genuine UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -268,7 +268,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
   _apply_rule(rule, _lqp);
 
   EXPECT_FALSE(
-      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-schema-given UCC was used.
+      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-genuine UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -293,7 +293,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKeyNoEquiPredicate
 
   _apply_rule(rule, _lqp);
 
-  // Also not cacheable because UCC over column `a_0` is not schema-given and used to move `a_1`.
+  // Also not cacheable because UCC over column `a_0` is not genuine and used to move `a_1`.
   EXPECT_FALSE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -329,7 +329,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
   _apply_rule(rule, _lqp);
 
   EXPECT_FALSE(
-      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-schema-given UCC was used.
+      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-genuine UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -352,7 +352,7 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
   _apply_rule(rule, _lqp);
 
   EXPECT_FALSE(
-      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-schema-given UCC was used.
+      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-genuine UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -443,7 +443,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
     const auto expected_lqp = stored_table_node_a->deep_copy();
     _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(_optimization_context.is_cacheable());  // Not cacheable because UCC used is not schema-given.
+    EXPECT_FALSE(_optimization_context.is_cacheable());  // Not cacheable because UCC used is not genuine.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -467,7 +467,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
     _apply_rule(rule, _lqp);
 
     EXPECT_TRUE(
-        _optimization_context.is_cacheable());  // Cacheable because used UCC is implied by query and thus schema-given.
+        _optimization_context.is_cacheable());  // Cacheable because used UCC is implied by query and thus genuine.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -488,7 +488,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
 
     _apply_rule(rule, _lqp);
 
-    EXPECT_FALSE(_optimization_context.is_cacheable());  // Not cacheable because UCC used is not schema-given.
+    EXPECT_FALSE(_optimization_context.is_cacheable());  // Not cacheable because UCC used is not genuine.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   // We need to reset the `_optimization_context` here, because the rule sets it to not cacheable.

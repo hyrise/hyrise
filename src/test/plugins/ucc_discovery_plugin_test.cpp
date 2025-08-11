@@ -430,7 +430,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 0);  // No constraints known for the table yet.
 
-  // Add schema-given UCC to table A.
+  // Add genuine UCC to table A.
   _table_A->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   delete_row(_table_A, 3);
 

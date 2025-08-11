@@ -14,10 +14,8 @@
 namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
-                                           ExpressionUnorderedSet&& init_dependents, bool is_schema_given)
-    : determinants{std::move(init_determinants)},
-      dependents{std::move(init_dependents)},
-      _is_schema_given{is_schema_given} {
+                                           ExpressionUnorderedSet&& init_dependents, bool is_genuine)
+    : determinants{std::move(init_determinants)}, dependents{std::move(init_dependents)}, _is_genuine{is_genuine} {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
@@ -51,12 +49,12 @@ bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
   return !(other == *this);
 }
 
-bool FunctionalDependency::is_schema_given() const {
-  return _is_schema_given;
+bool FunctionalDependency::is_genuine() const {
+  return _is_genuine;
 }
 
-void FunctionalDependency::set_schema_given() const {
-  _is_schema_given = true;
+void FunctionalDependency::set_genuine() const {
+  _is_genuine = true;
 }
 
 size_t FunctionalDependency::hash() const {
@@ -89,9 +87,9 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
   for (const auto& fd : fds) {
     for (const auto& dependent : fd.dependents) {
       auto [existing_fd, inserted] = inflated_fds.emplace(ExpressionUnorderedSet{fd.determinants},
-                                                          ExpressionUnorderedSet{dependent}, fd.is_schema_given());
-      if (!inserted && fd.is_schema_given() && !existing_fd->is_schema_given()) {
-        existing_fd->set_schema_given();
+                                                          ExpressionUnorderedSet{dependent}, fd.is_genuine());
+      if (!inserted && fd.is_genuine() && !existing_fd->is_genuine()) {
+        existing_fd->set_genuine();
       }
     }
   }
@@ -104,7 +102,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     return {};
   }
 
-  using Key = std::pair<ExpressionUnorderedSet, bool>;  // Determinants and schema-given flag.
+  using Key = std::pair<ExpressionUnorderedSet, bool>;  // Determinants and genuine flag.
 
   auto hash_pair = [](const Key& key) {
     auto hash = size_t{0};
@@ -112,12 +110,12 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
       hash ^= expression->hash();
     }
 
-    return hash ^ static_cast<size_t>(key.second);  // Include the schema-given flag in the hash.
+    return hash ^ static_cast<size_t>(key.second);  // Include the genuine flag in the hash.
   };
 
   auto pair_equal = [](const Key& lhs, const Key& rhs) {
     if (lhs.second != rhs.second) {
-      return false;  // Schema-given flags differ.
+      return false;  // Genuine flags differ.
     }
     for (const auto& expression : lhs.first) {
       if (!rhs.first.contains(expression)) {
@@ -139,14 +137,14 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
   for (const auto& fd_to_add : fds) {
     // Try only inserting the FD first.
     auto [existing_fd, inserted] =
-        existing_fds.emplace(std::pair(fd_to_add.determinants, fd_to_add.is_schema_given()), fd_to_add.dependents);
+        existing_fds.emplace(std::pair(fd_to_add.determinants, fd_to_add.is_genuine()), fd_to_add.dependents);
     if (!inserted) {
       auto& dependents = existing_fd->second;
       dependents.insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
     }
 
-    // If the FD is schema-given, we add the determinants to the non-schema-given FD with the same determinants.
-    if (fd_to_add.is_schema_given()) {
+    // If the FD is genuine, we add the determinants to the non-genuine FD with the same determinants.
+    if (fd_to_add.is_genuine()) {
       auto [existing_fd, inserted] =
           existing_fds.emplace(std::pair(fd_to_add.determinants, false), fd_to_add.dependents);
       if (!inserted) {
@@ -162,11 +160,11 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     auto [existing_fd, inserted] =
         deflated_fds.emplace(ExpressionUnorderedSet{key.first}, std::move(dependents), key.second);
 
-    if (!inserted && key.second && !existing_fd->is_schema_given()) {
-      // If the FD was already in the set and is schema-given, we set the already existing FD to schema-given as well.
-      // This is necessary because we might have added the FD with the same determinants but without the schema-given
+    if (!inserted && key.second && !existing_fd->is_genuine()) {
+      // If the FD was already in the set and is genuine, we set the already existing FD to genuine as well.
+      // This is necessary because we might have added the FD with the same determinants but without the genuine
       // flag.
-      existing_fd->set_schema_given();
+      existing_fd->set_genuine();
     }
   }
 

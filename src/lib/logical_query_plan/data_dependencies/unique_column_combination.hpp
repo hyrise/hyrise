@@ -16,26 +16,26 @@ namespace hyrise {
  *       there has been a ValidateNode before or where MVCC is disabled).
  *
  * If a UCC may become invalid in the future (because it is not based on a schema constraint, but on the data
- * incidentally being unique at the moment), the UCC is marked as being not schema-given.
- * This information is important because query plans that were optimized using a non-schema-given UCC are not safely
+ * incidentally being unique at the moment), the UCC is marked as being not genuine.
+ * This information is important because query plans that were optimized using a non-genuine UCC are not safely
  * cacheable.
  */
 struct UniqueColumnCombination final {
-  explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_schema_given = true);
+  explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_genuine = true);
 
   bool operator==(const UniqueColumnCombination& rhs) const;
   bool operator!=(const UniqueColumnCombination& rhs) const;
 
-  bool is_schema_given() const;
-  void set_schema_given() const;
+  bool is_genuine() const;
+  void set_genuine() const;
   size_t hash() const;
 
   ExpressionUnorderedSet expressions;
 
  private:
-  // `_is_schema_given` is mutable to allow setting a UCC as schema-given (with set_schema_given()`) after its
+  // `_is_genuine` is mutable to allow setting a UCC as genuine (with set_genuine()`) after its
   // creation, e.g. in an AggregateNode.
-  mutable bool _is_schema_given;
+  mutable bool _is_genuine;
 };
 
 std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc);
