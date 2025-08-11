@@ -74,7 +74,7 @@ class Catalog : public Noncopyable {
     ObjectMetadata(ObjectMetadata&& other) noexcept;
     ObjectMetadata& operator=(ObjectMetadata&& other) noexcept;
 
-    // In a microbenchmark, `tbb::concurrent_hash_map` was slightly faster than `boost::concurrent_tlat_map` and
+    // In a microbenchmark, `tbb::concurrent_hash_map` was slightly faster than `boost::concurrent_flat_map` and
     // `tbb::concurrent_unordered_map`.
     tbb::concurrent_hash_map<std::string, ObjectID> ids{INITIAL_SIZE};
     // We cannot simply use a `tbb::concurrent_vector` with ObjectIDs as indexes because it is not guaranteed that

@@ -27,6 +27,9 @@
 
 namespace hyrise {
 
+template <typename T>
+using ConstAccessor = typename tbb::concurrent_hash_map<ObjectID, std::shared_ptr<T>>::const_accessor;
+
 void StorageManager::_add_table(const ObjectID table_id, const std::shared_ptr<Table>& table) {
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -47,23 +50,19 @@ void StorageManager::_add_table(const ObjectID table_id, const std::shared_ptr<T
 }
 
 void StorageManager::_drop_table(const ObjectID table_id) {
-  auto accessor = ItemContainer<Table>::accessor{};
-  _tables.find(accessor, table_id);
-  Assert(!accessor.empty(), "Error deleting table. No such table with ID " + std::to_string(table_id) + ".");
-  accessor->second = nullptr;
+  const auto erased = _tables.erase(table_id);
+  Assert(erased, "Error deleting table. No such table with ID " + std::to_string(table_id) + ".");
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const ObjectID table_id) const {
-  auto accessor = ItemContainer<Table>::const_accessor{};
+  auto accessor = ConstAccessor<Table>{};
   _tables.find(accessor, table_id);
-  Assert(!accessor.empty() && accessor->second, "No such table with ID " + std::to_string(table_id) + ".");
+  Assert(!accessor.empty(), "No such table with ID " + std::to_string(table_id) + ".");
   return accessor->second;
 }
 
 bool StorageManager::has_table(const ObjectID table_id) const {
-  auto accessor = ItemContainer<Table>::const_accessor{};
-  _tables.find(accessor, table_id);
-  return !accessor.empty() && accessor->second;
+  return _tables.count(table_id) != 0;
 }
 
 void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQPView>& view) {
@@ -72,23 +71,19 @@ void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQP
 }
 
 void StorageManager::_drop_view(const ObjectID view_id) {
-  auto accessor = ItemContainer<LQPView>::accessor{};
-  _views.find(accessor, view_id);
-  Assert(!accessor.empty(), "Error deleting view. No such view with ID " + std::to_string(view_id) + ".");
-  accessor->second = nullptr;
+  const auto erased = _views.erase(view_id);
+  Assert(erased, "Error deleting view. No such view with ID " + std::to_string(view_id) + ".");
 }
 
 std::shared_ptr<LQPView> StorageManager::get_view(const ObjectID view_id) const {
-  auto accessor = ItemContainer<LQPView>::const_accessor{};
+  auto accessor = ConstAccessor<LQPView>{};
   _views.find(accessor, view_id);
-  Assert(!accessor.empty() && accessor->second, "No such view with ID " + std::to_string(view_id) + ".");
+  Assert(!accessor.empty(), "No such view with ID " + std::to_string(view_id) + ".");
   return accessor->second->deep_copy();
 }
 
 bool StorageManager::has_view(const ObjectID view_id) const {
-  auto accessor = ItemContainer<LQPView>::const_accessor{};
-  _views.find(accessor, view_id);
-  return !accessor.empty() && accessor->second;
+  return _views.count(view_id) != 0;
 }
 
 void StorageManager::_add_prepared_plan(const ObjectID plan_id, const std::shared_ptr<PreparedPlan>& prepared_plan) {
@@ -98,24 +93,19 @@ void StorageManager::_add_prepared_plan(const ObjectID plan_id, const std::share
 }
 
 void StorageManager::_drop_prepared_plan(const ObjectID plan_id) {
-  auto accessor = ItemContainer<PreparedPlan>::accessor{};
-  _prepared_plans.find(accessor, plan_id);
-  Assert(!accessor.empty(),
-         "Error deleting prepared plan. No such prepared plan with ID " + std::to_string(plan_id) + ".");
-  accessor->second = nullptr;
+  const auto erased = _prepared_plans.erase(plan_id);
+  Assert(erased, "Error deleting prepared plan. No such prepared plan with ID " + std::to_string(plan_id) + ".");
 }
 
 std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const ObjectID plan_id) const {
-  auto accessor = ItemContainer<PreparedPlan>::const_accessor{};
+  auto accessor = ConstAccessor<PreparedPlan>{};
   _prepared_plans.find(accessor, plan_id);
-  Assert(!accessor.empty() && accessor->second, "No such prepared plan with ID " + std::to_string(plan_id) + ".");
+  Assert(!accessor.empty(), "No such prepared plan with ID " + std::to_string(plan_id) + ".");
   return accessor->second;
 }
 
 bool StorageManager::has_prepared_plan(const ObjectID plan_id) const {
-  auto accessor = ItemContainer<PreparedPlan>::const_accessor{};
-  _prepared_plans.find(accessor, plan_id);
-  return !accessor.empty() && accessor->second;
+  return _prepared_plans.count(plan_id) != 0;
 }
 
 }  // namespace hyrise

@@ -39,11 +39,9 @@ class StorageManager : public Noncopyable {
 
   // We do not simply use `concurrent_vector`s with the ObjectIDs as indexes here because it is not guaranteed that
   // inserted values are visible to ALL later operations when the vector grows. See `catalog.hpp` for more details.
-  template <typename Item>
-  using ItemContainer = tbb::concurrent_hash_map<ObjectID, std::shared_ptr<Item>>;
-  ItemContainer<Table> _tables{Catalog::INITIAL_SIZE};
-  ItemContainer<LQPView> _views{Catalog::INITIAL_SIZE};
-  ItemContainer<PreparedPlan> _prepared_plans{Catalog::INITIAL_SIZE};
+  tbb::concurrent_hash_map<ObjectID, std::shared_ptr<Table>> _tables{Catalog::INITIAL_SIZE};
+  tbb::concurrent_hash_map<ObjectID, std::shared_ptr<LQPView>> _views{Catalog::INITIAL_SIZE};
+  tbb::concurrent_hash_map<ObjectID, std::shared_ptr<PreparedPlan>> _prepared_plans{Catalog::INITIAL_SIZE};
 };
 
 }  // namespace hyrise

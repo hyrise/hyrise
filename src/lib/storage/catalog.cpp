@@ -28,17 +28,9 @@ namespace {
 
 ObjectID add_object(const std::string& name, Catalog::ObjectMetadata& meta_data) {
   const auto object_id = static_cast<ObjectID>(meta_data.next_id++);
-  {
-    auto accessor = tbb::concurrent_hash_map<std::string, ObjectID>::accessor{};
-    const auto emplaced = meta_data.ids.emplace(accessor, name, object_id);
-    if (!emplaced) {
-      Assert(emplaced || accessor->second == INVALID_OBJECT_ID,
-        "Cannot add object " + name + " - an object with the same name already exists.");
-      accessor->second = object_id;
-
-    }
-  }
-  // IDs are unique, so we do not have to take care of updating probably existing entries.
+  const auto emplaced = meta_data.ids.emplace(name, object_id);
+  Assert(emplaced, "Cannot add object " + name + " - an object with the same name already exists.");
+  // IDs are unique, so we do not have to take care of already existing entries.
   meta_data.names.emplace(object_id, name);
   return object_id;
 }
@@ -48,7 +40,7 @@ ObjectID drop_object(const std::string& name, Catalog::ObjectMetadata& meta_data
   meta_data.ids.find(accessor, name);
   Assert(!accessor.empty(), "Error deleting object. No such object named '" + name + "'.");
   const auto object_id = accessor->second;
-  accessor->second = INVALID_OBJECT_ID;
+  meta_data.ids.erase(accessor);
   return object_id;
 }
 
@@ -69,9 +61,7 @@ std::unordered_map<std::string, ObjectID> object_ids(const Catalog::ObjectMetada
   auto result = std::unordered_map<std::string, ObjectID>{};
 
   for (const auto& [name, object_id] : meta_data.ids) {
-    if (object_id != INVALID_OBJECT_ID) {
-      result[name] = object_id;
-    }
+    result[name] = object_id;
   }
   return result;
 }
@@ -110,10 +100,7 @@ std::pair<ObjectType, ObjectID> Catalog::resolve_object(const std::string& name)
 }
 
 ObjectID Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& table) {
-  auto accessor = tbb::concurrent_hash_map<std::string, ObjectID>::const_accessor{};
-  _views.ids.find(accessor, name);
-  Assert(accessor.empty() || accessor->second == INVALID_OBJECT_ID,
-         "Cannot add table " + name + " - a view with the same name already exists.");
+  Assert(_views.ids.count(name) == 0, "Cannot add table " + name + " - a view with the same name already exists.");
 
   const auto table_id = add_object(name, _tables);
   Hyrise::get().storage_manager._add_table(table_id, table);
@@ -145,10 +132,8 @@ std::vector<std::string> Catalog::table_names() const {
   auto names = std::vector<std::string>{};
   names.reserve(_tables.ids.size());
 
-  for (const auto& [name, object_id] : _tables.ids) {
-    if (object_id != INVALID_OBJECT_ID) {
-      names.push_back(name);
-    }
+  for (const auto& [name, _] : _tables.ids) {
+    names.push_back(name);
   }
 
   std::ranges::sort(names);
@@ -163,18 +148,13 @@ std::unordered_map<std::string, std::shared_ptr<Table>> Catalog::tables() const 
   auto tables = std::unordered_map<std::string, std::shared_ptr<Table>>{};
 
   for (const auto& [name, table_id] : _tables.ids) {
-    if (table_id != INVALID_OBJECT_ID) {
-      tables[name] = Hyrise::get().storage_manager.get_table(table_id);
-    }
+    tables[name] = Hyrise::get().storage_manager.get_table(table_id);
   }
   return tables;
 }
 
 ObjectID Catalog::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
-  auto accessor = tbb::concurrent_hash_map<std::string, ObjectID>::const_accessor{};
-  _tables.ids.find(accessor, name);
-  Assert(accessor.empty() || accessor->second == INVALID_OBJECT_ID,
-         "Cannot add view " + name + " - a table with the same name already exists.");
+  Assert(_tables.ids.count(name) == 0, "Cannot add view " + name + " - a table with the same name already exists.");
   const auto view_id = add_object(name, _views);
   Hyrise::get().storage_manager._add_view(view_id, view);
   return view_id;
