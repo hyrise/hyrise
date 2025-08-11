@@ -3,7 +3,6 @@
 #include <atomic>
 #include <memory>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -36,9 +35,9 @@ class Catalog : public Noncopyable {
   bool has_table(const std::string& name) const;
   ObjectID table_id(const std::string& name) const;
   std::string table_name(const ObjectID table_id) const;
-  std::vector<std::string_view> table_names() const;
-  std::unordered_map<std::string_view, ObjectID> table_ids() const;
-  std::unordered_map<std::string_view, std::shared_ptr<Table>> tables() const;
+  std::vector<std::string> table_names() const;
+  std::unordered_map<std::string, ObjectID> table_ids() const;
+  std::unordered_map<std::string, std::shared_ptr<Table>> tables() const;
   /** @} */
 
   /**

@@ -4,7 +4,6 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -66,8 +65,8 @@ const std::string object_name(const ObjectID object_id, const tbb::concurrent_ha
   return accessor->second;
 }
 
-std::unordered_map<std::string_view, ObjectID> object_ids(const Catalog::ObjectMetadata& meta_data) {
-  auto result = std::unordered_map<std::string_view, ObjectID>{};
+std::unordered_map<std::string, ObjectID> object_ids(const Catalog::ObjectMetadata& meta_data) {
+  auto result = std::unordered_map<std::string, ObjectID>{};
 
   for (const auto& [name, object_id] : meta_data.ids) {
     if (object_id != INVALID_OBJECT_ID) {
@@ -142,8 +141,8 @@ std::string Catalog::table_name(const ObjectID table_id) const {
   return object_name(table_id, _tables.names);
 }
 
-std::vector<std::string_view> Catalog::table_names() const {
-  auto names = std::vector<std::string_view>{};
+std::vector<std::string> Catalog::table_names() const {
+  auto names = std::vector<std::string>{};
   names.reserve(_tables.ids.size());
 
   for (const auto& [name, object_id] : _tables.ids) {
@@ -156,12 +155,12 @@ std::vector<std::string_view> Catalog::table_names() const {
   return names;
 }
 
-std::unordered_map<std::string_view, ObjectID> Catalog::table_ids() const {
+std::unordered_map<std::string, ObjectID> Catalog::table_ids() const {
   return object_ids(_tables);
 }
 
-std::unordered_map<std::string_view, std::shared_ptr<Table>> Catalog::tables() const {
-  auto tables = std::unordered_map<std::string_view, std::shared_ptr<Table>>{};
+std::unordered_map<std::string, std::shared_ptr<Table>> Catalog::tables() const {
+  auto tables = std::unordered_map<std::string, std::shared_ptr<Table>>{};
 
   for (const auto& [name, table_id] : _tables.ids) {
     if (table_id != INVALID_OBJECT_ID) {
