@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): Identified as C system headers.
+
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "operators/export.hpp"
@@ -26,14 +28,6 @@
 namespace hyrise {
 
 void StorageManager::_add_table(const ObjectID table_id, const std::shared_ptr<Table>& table) {
-  // std::atomic_thread_fence(std::memory_order_seq_cst);
-  const auto needs_growth = table_id >= _tables.size();
-  Assert(needs_growth || !_tables[table_id],
-         "Cannot add table " + std::to_string(table_id) + " - a table with the same ID already exists.");
-  // if (needs_growth) {
-    _tables.grow_to_at_least(table_id + 1, std::shared_ptr<Table>{});
-  // }
-
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // We currently assume that all tables stored in the StorageManager are mutable and, as such, have MVCC data. This
@@ -48,86 +42,80 @@ void StorageManager::_add_table(const ObjectID table_id, const std::shared_ptr<T
   }
   generate_chunk_pruning_statistics(table);
 
-  const auto lock = std::unique_lock{_mutex};
-  Assert(!_has_table(table_id),
-         "Cannot add table " + std::to_string(table_id) + " - a table with the same ID already exists.");
-  std::atomic_store(&_tables[table_id], table);
+  const auto inserted = _tables.emplace(table_id, table);
+  Assert(inserted, "Cannot add table " + std::to_string(table_id) + " - a table with the same ID already exists.");
 }
 
 void StorageManager::_drop_table(const ObjectID table_id) {
-  // std::atomic_thread_fence(std::memory_order_seq_cst);
-  const auto lock = std::unique_lock{_mutex};
-  Assert(_has_table(table_id), "Error deleting table. No such table with ID '" + std::to_string(table_id) + "'.");
-  std::atomic_store(&_tables[table_id], std::shared_ptr<Table>{});
+  auto accessor = ItemContainer<Table>::accessor{};
+  _tables.find(accessor, table_id);
+  Assert(!accessor.empty(), "Error deleting table. No such table with ID " + std::to_string(table_id) + ".");
+  accessor->second = nullptr;
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const ObjectID table_id) const {
-  // std::atomic_thread_fence(std::memory_order_seq_cst);
-  const auto lock = std::shared_lock{_mutex};
-  Assert(_has_table(table_id), "No such table with ID '" + std::to_string(table_id) + "'. Was it dropped?");
-  return std::atomic_load(&_tables[table_id]);
+  auto accessor = ItemContainer<Table>::const_accessor{};
+  _tables.find(accessor, table_id);
+  Assert(!accessor.empty() && accessor->second, "No such table with ID " + std::to_string(table_id) + ".");
+  return accessor->second;
 }
 
 bool StorageManager::has_table(const ObjectID table_id) const {
-  const auto lock = std::shared_lock{_mutex};
-  return _has_table(table_id);
-  // return table_id < _tables.size() && std::atomic_load(&_tables[table_id]) != nullptr;
-}
-
-bool StorageManager::_has_table(const ObjectID table_id) const {
-  return table_id < _tables.size() && std::atomic_load(&_tables[table_id]) != nullptr;
+  auto accessor = ItemContainer<Table>::const_accessor{};
+  _tables.find(accessor, table_id);
+  return !accessor.empty() && accessor->second;
 }
 
 void StorageManager::_add_view(const ObjectID view_id, const std::shared_ptr<LQPView>& view) {
-  const auto needs_growth = view_id >= _views.size();
-  Assert(needs_growth || !_views[view_id],
-         "Cannot add view " + std::to_string(view_id) + " - a view with the same ID already exists.");
-  if (needs_growth) {
-    _views.grow_to_at_least(view_id + 1);
-  }
-
-  std::atomic_store(&_views[view_id], view);
+  const auto inserted = _views.emplace(view_id, view);
+  Assert(inserted, "Cannot add view " + std::to_string(view_id) + " - a view with the same ID already exists.");
 }
 
 void StorageManager::_drop_view(const ObjectID view_id) {
-  Assert(has_view(view_id), "Error deleting view. No such view with ID '" + std::to_string(view_id) + "'");
-  std::atomic_store(&_views[view_id], std::shared_ptr<LQPView>{});
+  auto accessor = ItemContainer<LQPView>::accessor{};
+  _views.find(accessor, view_id);
+  Assert(!accessor.empty(), "Error deleting view. No such view with ID " + std::to_string(view_id) + ".");
+  accessor->second = nullptr;
 }
 
 std::shared_ptr<LQPView> StorageManager::get_view(const ObjectID view_id) const {
-  Assert(has_view(view_id), "No such view with ID '" + std::to_string(view_id) + "'. Was it dropped?");
-  return std::atomic_load(&_views[view_id])->deep_copy();
+  auto accessor = ItemContainer<LQPView>::const_accessor{};
+  _views.find(accessor, view_id);
+  Assert(!accessor.empty() && accessor->second, "No such view with ID " + std::to_string(view_id) + ".");
+  return accessor->second->deep_copy();
 }
 
 bool StorageManager::has_view(const ObjectID view_id) const {
-  return view_id < _views.size() && std::atomic_load(&_views[view_id]) != nullptr;
+  auto accessor = ItemContainer<LQPView>::const_accessor{};
+  _views.find(accessor, view_id);
+  return !accessor.empty() && accessor->second;
 }
 
 void StorageManager::_add_prepared_plan(const ObjectID plan_id, const std::shared_ptr<PreparedPlan>& prepared_plan) {
-  const auto needs_growth = plan_id >= _prepared_plans.size();
-  Assert(needs_growth || !_prepared_plans[plan_id],
-         "Cannot add prepared plan " + std::to_string(plan_id) + " - a view with the same ID already exists");
-  if (needs_growth) {
-    _prepared_plans.grow_to_at_least(plan_id + 1);
-  }
-
-  std::atomic_store(&_prepared_plans[plan_id], prepared_plan);
+  const auto inserted = _prepared_plans.emplace(plan_id, prepared_plan);
+  Assert(inserted,
+         "Cannot add prepared plan " + std::to_string(plan_id) + " - a prepared plan with the same ID already exists.");
 }
 
 void StorageManager::_drop_prepared_plan(const ObjectID plan_id) {
-  Assert(has_prepared_plan(plan_id),
-         "Error deleting prepared plan. No such prepared plan with ID '" + std::to_string(plan_id) + "'");
-  std::atomic_store(&_prepared_plans[plan_id], std::shared_ptr<PreparedPlan>{});
+  auto accessor = ItemContainer<PreparedPlan>::accessor{};
+  _prepared_plans.find(accessor, plan_id);
+  Assert(!accessor.empty(),
+         "Error deleting prepared plan. No such prepared plan with ID " + std::to_string(plan_id) + ".");
+  accessor->second = nullptr;
 }
 
 std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const ObjectID plan_id) const {
-  Assert(has_prepared_plan(plan_id),
-         "No such prepared plan with ID '" + std::to_string(plan_id) + "'. Was it dropped?");
-  return std::atomic_load(&_prepared_plans[plan_id]);
+  auto accessor = ItemContainer<PreparedPlan>::const_accessor{};
+  _prepared_plans.find(accessor, plan_id);
+  Assert(!accessor.empty() && accessor->second, "No such prepared plan with ID " + std::to_string(plan_id) + ".");
+  return accessor->second;
 }
 
 bool StorageManager::has_prepared_plan(const ObjectID plan_id) const {
-  return plan_id < _prepared_plans.size() && std::atomic_load(&_prepared_plans[plan_id]) != nullptr;
+  auto accessor = ItemContainer<PreparedPlan>::const_accessor{};
+  _prepared_plans.find(accessor, plan_id);
+  return !accessor.empty() && accessor->second;
 }
 
 }  // namespace hyrise

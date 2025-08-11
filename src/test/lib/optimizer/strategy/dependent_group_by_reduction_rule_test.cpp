@@ -20,9 +20,9 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     auto& catalog = Hyrise::get().catalog;
 
     const auto column_definitions = TableColumnDefinitions{{"column0", DataType::Int, false},
-                                                     {"column1", DataType::Int, false},
-                                                     {"column2", DataType::Int, false},
-                                                     {"column3", DataType::Int, false}};
+                                                           {"column1", DataType::Int, false},
+                                                           {"column2", DataType::Int, false},
+                                                           {"column3", DataType::Int, false}};
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
     table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});

@@ -24,6 +24,8 @@
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/constraints/constraint_utils.hpp"
+#include "storage/lqp_view.hpp"
+#include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -31,8 +33,6 @@
 #include "ucc_discovery_plugin.hpp"
 #include "utils/atomic_max.hpp"
 #include "utils/plugin_manager.hpp"
-#include "storage/prepared_plan.hpp"
-#include "storage/lqp_view.hpp"
 
 namespace hyrise {
 
@@ -879,55 +879,61 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   ASSERT_LE(table->soft_key_constraints().size(), 0);
 }
 
-// Ensure that the Catalog is thread-safe for all operations and different object names.
+// Ensure that the Catalog ans StorageManager are thread-safe for all operations on different object names.
 TEST_F(StressTest, ConcurrentCatalogAccess) {
   constexpr auto THREAD_COUNT = 100;
   constexpr auto REPETITION_COUNT = 1'000;
+  constexpr auto LOOP_COUNT = 10;
 
- auto threads = std::vector<std::thread>{};
- threads.reserve(THREAD_COUNT);
- auto start_flag = std::atomic_flag{};
- auto& catalog = Hyrise::get().catalog;
- auto& storage_manager = Hyrise::get().storage_manager;
+  for (auto i = 0; i < LOOP_COUNT; ++i) {
+    auto threads = std::vector<std::thread>{};
+    threads.reserve(THREAD_COUNT);
+    auto start_flag = std::atomic_flag{};
+    auto& catalog = Hyrise::get().catalog;
+    auto& storage_manager = Hyrise::get().storage_manager;
 
- for (auto thread_id = 0; thread_id < THREAD_COUNT; ++thread_id) {
-    threads.emplace_back([&, thread_id] {
-      const auto name = "test_" + std::to_string(thread_id);
-      const auto table = Table::create_dummy_table({{"a", DataType::Int, false}});
-      const auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-      const auto view = std::make_shared<LQPView>(lqp);
-      const auto prepared_plan = std::make_shared<PreparedPlan>(lqp, std::vector<ParameterID>{});
-      start_flag.wait(false);
-      for (auto repetition = 0; repetition < REPETITION_COUNT; ++repetition) {
-        EXPECT_FALSE(catalog.has_table(name));
-        const auto table_id = catalog.add_table(name, table);
-        EXPECT_TRUE(catalog.has_table(name));
-        EXPECT_TRUE(storage_manager.has_table(table_id));
-        // EXPECT_EQ(storage_manager.get_table(table_id), table);
-        catalog.drop_table(name);
-        EXPECT_FALSE(catalog.has_table(name));
+    for (auto thread_id = 0; thread_id < THREAD_COUNT; ++thread_id) {
+      threads.emplace_back([&, thread_id] {
+        const auto name = "test_" + std::to_string(thread_id);
+        const auto table = Table::create_dummy_table({{"a", DataType::Int, false}});
+        const auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+        const auto view = std::make_shared<LQPView>(lqp);
+        const auto prepared_plan = std::make_shared<PreparedPlan>(lqp, std::vector<ParameterID>{});
+        start_flag.wait(false);
+        for (auto repetition = 0; repetition < REPETITION_COUNT; ++repetition) {
+          EXPECT_FALSE(catalog.has_table(name));
+          const auto table_id = catalog.add_table(name, table);
+          EXPECT_TRUE(catalog.has_table(name));
+          EXPECT_EQ(catalog.table_name(table_id), name);
+          EXPECT_TRUE(storage_manager.has_table(table_id));
+          EXPECT_EQ(storage_manager.get_table(table_id), table);
+          catalog.drop_table(name);
+          EXPECT_FALSE(catalog.has_table(name));
 
-        // EXPECT_FALSE(catalog.has_view(name));
-        // const auto view_id = catalog.add_view(name, view);
-        // EXPECT_TRUE(catalog.has_view(name));
-        // EXPECT_TRUE(storage_manager.get_view(view_id)->deep_equals(*view));
-        // catalog.drop_view(name);
-        // EXPECT_FALSE(catalog.has_view(name));
+          EXPECT_FALSE(catalog.has_view(name));
+          const auto view_id = catalog.add_view(name, view);
+          EXPECT_TRUE(catalog.has_view(name));
+          EXPECT_EQ(catalog.view_name(view_id), name);
+          EXPECT_TRUE(storage_manager.get_view(view_id)->deep_equals(*view));
+          catalog.drop_view(name);
+          EXPECT_FALSE(catalog.has_view(name));
 
-        // EXPECT_FALSE(catalog.has_prepared_plan(name));
-        // const auto plan_id = catalog.add_prepared_plan(name, prepared_plan);
-        // EXPECT_TRUE(catalog.has_prepared_plan(name));
-        // EXPECT_EQ(storage_manager.get_prepared_plan(plan_id), prepared_plan);
-        // catalog.drop_prepared_plan(name);
-        // EXPECT_FALSE(catalog.has_prepared_plan(name));
-      }
-    });
-  }
+          EXPECT_FALSE(catalog.has_prepared_plan(name));
+          const auto plan_id = catalog.add_prepared_plan(name, prepared_plan);
+          EXPECT_TRUE(catalog.has_prepared_plan(name));
+          EXPECT_EQ(catalog.prepared_plan_name(plan_id), name);
+          EXPECT_EQ(storage_manager.get_prepared_plan(plan_id), prepared_plan);
+          catalog.drop_prepared_plan(name);
+          EXPECT_FALSE(catalog.has_prepared_plan(name));
+        }
+      });
+    }
 
-  start_flag.test_and_set();
-  start_flag.notify_all();
-  for (auto& thread : threads) {
-    thread.join();
+    start_flag.test_and_set();
+    start_flag.notify_all();
+    for (auto& thread : threads) {
+      thread.join();
+    }
   }
 }
 

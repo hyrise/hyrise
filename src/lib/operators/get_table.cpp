@@ -86,7 +86,7 @@ std::string GetTable::description(DescriptionMode description_mode) const {
   return stream.str();
 }
 
-const std::string& GetTable::table_name() const {
+std::string GetTable::table_name() const {
   return Hyrise::get().catalog.table_name(_table_id);
 }
 

@@ -10,6 +10,7 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "expression/expression_utils.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "types.hpp"

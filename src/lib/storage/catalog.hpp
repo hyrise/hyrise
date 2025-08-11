@@ -8,8 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): Identified as C system headers.
-#include <oneapi/tbb/concurrent_vector.h>         // NOLINT(build/include_order): Identified as C system headers.
+#include <oneapi/tbb/concurrent_hash_map.h>  // NOLINT(build/include_order): Identified as C system headers.
 
 #include "types.hpp"
 
@@ -36,7 +35,7 @@ class Catalog : public Noncopyable {
   void drop_table(const std::string& name);
   bool has_table(const std::string& name) const;
   ObjectID table_id(const std::string& name) const;
-  const std::string& table_name(const ObjectID table_id) const;
+  std::string table_name(const ObjectID table_id) const;
   std::vector<std::string_view> table_names() const;
   std::unordered_map<std::string_view, ObjectID> table_ids() const;
   std::unordered_map<std::string_view, std::shared_ptr<Table>> tables() const;
@@ -51,7 +50,7 @@ class Catalog : public Noncopyable {
   void drop_view(const std::string& name);
   bool has_view(const std::string& name) const;
   ObjectID view_id(const std::string& name) const;
-  const std::string& view_name(const ObjectID view_id) const;
+  std::string view_name(const ObjectID view_id) const;
   /** @} */
 
   /**
@@ -64,7 +63,7 @@ class Catalog : public Noncopyable {
   void drop_prepared_plan(const std::string& name);
   bool has_prepared_plan(const std::string& name) const;
   ObjectID prepared_plan_id(const std::string& name) const;
-  const std::string& prepared_plan_name(const ObjectID plan_id) const;
+  std::string prepared_plan_name(const ObjectID plan_id) const;
   /** @} */
 
   // We pre-allocate data structures to prevent costly re-allocations.
@@ -76,8 +75,12 @@ class Catalog : public Noncopyable {
     ObjectMetadata(ObjectMetadata&& other) noexcept;
     ObjectMetadata& operator=(ObjectMetadata&& other) noexcept;
 
-    tbb::concurrent_unordered_map<std::string, std::atomic<ObjectID::base_type>> ids{INITIAL_SIZE};
-    tbb::concurrent_vector<std::string> names{INITIAL_SIZE};
+    // In a microbenchmark, `tbb::concurrent_hash_map` was slightly faster than `boost::concurrent_tlat_map` and
+    // `tbb::concurrent_unordered_map`.
+    tbb::concurrent_hash_map<std::string, ObjectID> ids{INITIAL_SIZE};
+    // We cannot simply use a `tbb::concurrent_vector` with ObjectIDs as indexes because it is not guaranteed that
+    // inserted values are visible to ALL subsequent operations when the vector grows.
+    tbb::concurrent_hash_map<ObjectID, std::string> names{INITIAL_SIZE};
     std::atomic<ObjectID::base_type> next_id{0};
   };
 
