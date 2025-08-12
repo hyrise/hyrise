@@ -657,7 +657,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
     data_to_delete_node = _translate_meta_table(delete_statement.tableName, sql_identifier_resolver);
     AssertInput(Hyrise::get().meta_table_manager.can_delete_from(table_name), "Cannot delete from " + table_name);
   } else {
-    data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
+    const auto table_id = Hyrise::get().catalog.table_id(delete_statement.tableName);
+    data_to_delete_node = _translate_stored_table(table_id, delete_statement.tableName, sql_identifier_resolver);
     Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
   }
 
@@ -784,14 +785,15 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
           sql_identifier_resolver->set_table_name(expression, hsql_table_ref.name);
         }
 
-      } else if (Hyrise::get().catalog.has_table(hsql_table_ref.name)) {
-        lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_resolver);
+      } else if (const auto table_id = Hyrise::get().catalog.table_id(hsql_table_ref.name);
+                 table_id != INVALID_OBJECT_ID) {
+        lqp = _translate_stored_table(table_id, hsql_table_ref.name, sql_identifier_resolver);
 
       } else if (MetaTableManager::is_meta_table_name(hsql_table_ref.name)) {
         lqp = _translate_meta_table(hsql_table_ref.name, sql_identifier_resolver);
 
-      } else if (Hyrise::get().catalog.has_view(hsql_table_ref.name)) {
-        const auto view_id = Hyrise::get().catalog.view_id(hsql_table_ref.name);
+      } else if (const auto view_id = Hyrise::get().catalog.view_id(hsql_table_ref.name);
+                 view_id != INVALID_OBJECT_ID) {
         const auto view = Hyrise::get().storage_manager.get_view(view_id);
         lqp = view->lqp;
 
@@ -909,8 +911,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
-    const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
-  const auto table_id = Hyrise::get().catalog.table_id(name);
+    const ObjectID table_id, const std::string& name,
+    const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   AssertInput(table_id != INVALID_OBJECT_ID, "Did not find a table with name '" + name + "'.");
 
   const auto stored_table_node = StoredTableNode::make(table_id);
@@ -1872,8 +1874,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
     if (MetaTableManager::is_meta_table_name(table_name)) {
       lqp = _translate_meta_table(table_name, sql_identifier_resolver);
     } else {
-      // Get stored table as input (validated if MVCC is enabled)
-      lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+      // Get stored table as input (validated if MVCC is enabled).
+      const auto table_id = Hyrise::get().catalog.table_id(export_statement.tableName);
+      lqp = _translate_stored_table(table_id, export_statement.tableName, sql_identifier_resolver);
     }
   }
 

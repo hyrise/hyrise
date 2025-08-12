@@ -144,7 +144,8 @@ class SQLTranslator final {
   TableSourceState _translate_table_ref(const hsql::TableRef& hsql_table_ref);
   TableSourceState _translate_table_origin(const hsql::TableRef& hsql_table_ref);
   std::shared_ptr<AbstractLQPNode> _translate_stored_table(
-      const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
+      const ObjectID table_id, const std::string& name,
+      const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
   std::shared_ptr<AbstractLQPNode> _translate_meta_table(
       const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
   TableSourceState _translate_predicated_join(const hsql::JoinDefinition& join);
