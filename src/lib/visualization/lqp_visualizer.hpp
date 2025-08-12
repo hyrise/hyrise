@@ -11,10 +11,11 @@
 
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "statistics/cardinality_estimator.hpp"
 #include "visualization/abstract_visualizer.hpp"
 
 namespace hyrise {
+
+class CardinalityEstimator;
 
 class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractLQPNode>>> {
  public:
@@ -28,12 +29,12 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
 
   void _build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                       std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
-                      ExpressionUnorderedSet& visualized_sub_queries);
+                      ExpressionUnorderedSet& visualized_sub_queries,
+                      const CardinalityEstimator& cardinality_estimator);
 
   void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
-                       const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side);
-
-  CardinalityEstimator _cardinality_estimator;
+                       const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side,
+                       const CardinalityEstimator& cardinality_estimator);
 };
 
 }  // namespace hyrise

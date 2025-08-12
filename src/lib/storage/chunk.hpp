@@ -78,6 +78,7 @@ class Chunk : private Noncopyable {
    *       call `get_segment again`, be aware that the returned object might have changed.
    */
   std::shared_ptr<AbstractSegment> get_segment(ColumnID column_id) const;
+  const Segments& segments() const;
 
   bool has_mvcc_data() const;
 
@@ -206,8 +207,8 @@ class Chunk : private Noncopyable {
   std::vector<SortColumnDefinition> _sorted_by;
   mutable std::atomic<ChunkOffset::base_type> _invalid_row_count{ChunkOffset::base_type{0}};
 
-  // Default value of zero means "not set".
-  std::atomic<CommitID> _cleanup_commit_id{CommitID{0}};
+  // Default value of zero (beginning of time) means "not set".
+  std::atomic<CommitID> _cleanup_commit_id{UNSET_COMMIT_ID};
 };
 
 }  // namespace hyrise

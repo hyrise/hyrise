@@ -15,7 +15,6 @@
 #include "operators/get_table.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
@@ -79,8 +78,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
         // Calculate metric 2 – Chunk hotness.
         const auto highest_end_commit_id = chunk->mvcc_data()->max_end_cid.load();
-        Assert(highest_end_commit_id != MvccData::MAX_COMMIT_ID,
-               "Chunk has deleted rows, but max_end_cid was not updated.");
+        Assert(highest_end_commit_id != MAX_COMMIT_ID, "Chunk has deleted rows, but max_end_cid was not updated.");
 
         const auto criterion2 =
             highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= Hyrise::get().transaction_manager.last_commit_id();

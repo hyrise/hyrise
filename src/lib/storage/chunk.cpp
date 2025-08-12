@@ -59,7 +59,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 
   if (has_mvcc_data()) {
     // Make the row visible - mvcc_data has been pre-allocated
-    mvcc_data()->set_begin_cid(size(), CommitID{0});
+    mvcc_data()->set_begin_cid(size(), UNSET_COMMIT_ID);
   }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
@@ -79,6 +79,10 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
   Assert(column_id < _segments.size(), "ColumnID out of range.");
   return std::atomic_load(&_segments[column_id]);
+}
+
+const Segments& Chunk::segments() const {
+  return _segments;
 }
 
 ColumnCount Chunk::column_count() const {
@@ -116,7 +120,7 @@ void Chunk::set_immutable() {
   DebugAssert(success, "Value exchanged but value was actually false.");
 
   // Only perform the `max_begin_cid` check if it has not already been set.
-  if (has_mvcc_data() && _mvcc_data->max_begin_cid.load() == MvccData::MAX_COMMIT_ID) {
+  if (has_mvcc_data() && _mvcc_data->max_begin_cid.load() == MAX_COMMIT_ID) {
     const auto chunk_size = size();
     Assert(chunk_size > 0, "`set_immutable()` should not be called on an empty chunk.");
     auto max_begin_cid = CommitID{0};
@@ -125,7 +129,7 @@ void Chunk::set_immutable() {
     }
     set_atomic_max(_mvcc_data->max_begin_cid, max_begin_cid);
 
-    Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
+    Assert(_mvcc_data->max_begin_cid != MAX_COMMIT_ID,
            "`max_begin_cid` should not be MAX_COMMIT_ID when marking a chunk as immutable.");
   }
 }
@@ -298,7 +302,7 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  if (_cleanup_commit_id.load() == CommitID{0}) {
+  if (_cleanup_commit_id.load() == UNSET_COMMIT_ID) {
     // Cleanup-Commit-ID is not yet set
     return std::nullopt;
   }

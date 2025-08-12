@@ -1,5 +1,8 @@
+#include <memory>
+
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -14,6 +17,7 @@
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
@@ -26,6 +30,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class ChunkPruningRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     auto& storage_manager = Hyrise::get().storage_manager;
 
     auto compressed_table = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
@@ -58,7 +63,6 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
     }
 
     _rule = std::make_shared<ChunkPruningRule>();
-
     storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{10}));
   }
 
@@ -75,6 +79,8 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
@@ -107,6 +113,8 @@ TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -132,6 +140,9 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -157,6 +168,9 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -168,6 +182,8 @@ TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
   _lqp->set_left_input(stored_table_node);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
@@ -187,6 +203,8 @@ TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -201,6 +219,8 @@ TEST_F(ChunkPruningRuleTest, TwoOperatorPruningTest) {
   _lqp->set_left_input(predicate_node);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
@@ -221,6 +241,8 @@ TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -232,6 +254,8 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_GreaterThan) {
   _lqp->set_left_input(stored_table_node);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
@@ -245,6 +269,8 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_Equals) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -256,6 +282,8 @@ TEST_F(ChunkPruningRuleTest, RangeFilterTest) {
   _lqp->set_left_input(stored_table_node);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
@@ -269,6 +297,8 @@ TEST_F(ChunkPruningRuleTest, LotsOfRangesFilterTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -281,6 +311,8 @@ TEST_F(ChunkPruningRuleTest, RunLengthSegmentPruningTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -292,6 +324,8 @@ TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
   _lqp->set_left_input(stored_table_node);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
@@ -315,6 +349,8 @@ TEST_F(ChunkPruningRuleTest, StringPruningTest) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -326,6 +362,8 @@ TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
   _lqp->set_left_input(stored_table_node);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
@@ -348,6 +386,8 @@ TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -369,6 +409,8 @@ TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids_table_1 = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids_table_1);
@@ -393,6 +435,8 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -415,6 +459,8 @@ TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
       stored_table_node_1));
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   // SELECT * FROM compressed WHERE a > 200 AND b BETWEEN (SELECT 1.1) AND (SELECT 3.3);
   // We also switch the order of the predicates to ensure that it does not matter.
   _lqp =
@@ -424,6 +470,8 @@ TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
@@ -454,6 +502,9 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -476,6 +527,7 @@ TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_EQ(stored_table_node_1->prunable_subquery_predicates().size(), 1);
   EXPECT_EQ(stored_table_node_1->prunable_subquery_predicates().front(), _lqp);
@@ -507,6 +559,7 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_TRUE(stored_table_node_1->prunable_subquery_predicates().empty());
 }
@@ -529,6 +582,7 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansComplicatedPredicate) 
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_TRUE(stored_table_node_1->prunable_subquery_predicates().empty());
 }
