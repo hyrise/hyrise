@@ -17,13 +17,16 @@ class LQPView;
 class PreparedPlan;
 class Table;
 
-enum class ObjectType { Table, View, PreparedPlan };
+enum class ObjectType { Table, View, Unknown };
+constexpr auto INVALID_OBJECT_INFO = std::make_pair(ObjectType::Unknown, INVALID_OBJECT_ID);
 
 // The Catalog is responsible for providing metadata of stored objects, e.g., for mapping table names to their unique
 // IDs, or for maintaining table constraints.
 class Catalog : public Noncopyable {
  public:
-  std::pair<ObjectType, ObjectID> resolve_object(const std::string& name);
+  // Helper to distinguish whether an identifier (something that can be in the FROM clause of a query) is a stored table
+  // or a view (or none of both).
+  std::pair<ObjectType, ObjectID> resolve_stored_object(const std::string& name);
 
   /**
    * @defgroup Manage tables, this is only thread-safe for operations on tables with different names.

@@ -44,26 +44,17 @@ ObjectID drop_object(const std::string& name, Catalog::ObjectMetadata& meta_data
   return object_id;
 }
 
-ObjectID object_id(const std::string& name, const tbb::concurrent_hash_map<std::string, ObjectID>& map) {
-  auto accessor = tbb::concurrent_hash_map<std::string, ObjectID>::const_accessor{};
-  map.find(accessor, name);
+ObjectID object_id(const std::string& name, const Catalog::ObjectMetadata& meta_data) {
+  auto accessor = decltype(meta_data.ids)::const_accessor{};
+  meta_data.ids.find(accessor, name);
   return accessor.empty() ? INVALID_OBJECT_ID : accessor->second;
 }
 
-const std::string object_name(const ObjectID object_id, const tbb::concurrent_hash_map<ObjectID, std::string>& map) {
-  auto accessor = tbb::concurrent_hash_map<ObjectID, std::string>::const_accessor{};
-  map.find(accessor, object_id);
+std::string object_name(const ObjectID object_id, const Catalog::ObjectMetadata& meta_data) {
+  auto accessor = decltype(meta_data.names)::const_accessor{};
+  meta_data.names.find(accessor, object_id);
   Assert(!accessor.empty(), "Unknown object with ID " + std::to_string(object_id) + ".");
   return accessor->second;
-}
-
-std::unordered_map<std::string, ObjectID> object_ids(const Catalog::ObjectMetadata& meta_data) {
-  auto result = std::unordered_map<std::string, ObjectID>{};
-
-  for (const auto& [name, object_id] : meta_data.ids) {
-    result[name] = object_id;
-  }
-  return result;
 }
 
 }  //  namespace
@@ -80,7 +71,7 @@ Catalog::ObjectMetadata& Catalog::ObjectMetadata::operator=(Catalog::ObjectMetad
 Catalog::ObjectMetadata::ObjectMetadata(Catalog::ObjectMetadata&& other) noexcept
     : ids{std::move(other.ids)}, names{std::move(other.names)}, next_id{other.next_id.load()} {}
 
-std::pair<ObjectType, ObjectID> Catalog::resolve_object(const std::string& name) {
+std::pair<ObjectType, ObjectID> Catalog::resolve_stored_object(const std::string& name) {
   const auto table_id = this->table_id(name);
   if (table_id != INVALID_OBJECT_ID) {
     return {ObjectType::Table, table_id};
@@ -91,12 +82,7 @@ std::pair<ObjectType, ObjectID> Catalog::resolve_object(const std::string& name)
     return {ObjectType::View, view_id};
   }
 
-  const auto plan_id = this->prepared_plan_id(name);
-  if (plan_id != INVALID_OBJECT_ID) {
-    return {ObjectType::PreparedPlan, plan_id};
-  }
-
-  Fail("Unknown object: '" + name + "'");
+  return {ObjectType::Unknown, INVALID_OBJECT_ID};
 }
 
 ObjectID Catalog::add_table(const std::string& name, const std::shared_ptr<Table>& table) {
@@ -108,7 +94,7 @@ ObjectID Catalog::add_table(const std::string& name, const std::shared_ptr<Table
 }
 
 void Catalog::drop_table(ObjectID table_id) {
-  drop_table(object_name(table_id, _tables.names));
+  drop_table(object_name(table_id, _tables));
 }
 
 void Catalog::drop_table(const std::string& name) {
@@ -121,11 +107,11 @@ bool Catalog::has_table(const std::string& name) const {
 }
 
 ObjectID Catalog::table_id(const std::string& name) const {
-  return object_id(name, _tables.ids);
+  return object_id(name, _tables);
 }
 
 std::string Catalog::table_name(const ObjectID table_id) const {
-  return object_name(table_id, _tables.names);
+  return object_name(table_id, _tables);
 }
 
 std::vector<std::string> Catalog::table_names() const {
@@ -141,7 +127,12 @@ std::vector<std::string> Catalog::table_names() const {
 }
 
 std::unordered_map<std::string, ObjectID> Catalog::table_ids() const {
-  return object_ids(_tables);
+  auto result = std::unordered_map<std::string, ObjectID>{};
+
+  for (const auto& [name, table_id] : _tables.ids) {
+    result[name] = table_id;
+  }
+  return result;
 }
 
 std::unordered_map<std::string, std::shared_ptr<Table>> Catalog::tables() const {
@@ -161,7 +152,7 @@ ObjectID Catalog::add_view(const std::string& name, const std::shared_ptr<LQPVie
 }
 
 void Catalog::drop_view(ObjectID view_id) {
-  drop_view(object_name(view_id, _views.names));
+  drop_view(object_name(view_id, _views));
 }
 
 void Catalog::drop_view(const std::string& name) {
@@ -174,11 +165,11 @@ bool Catalog::has_view(const std::string& name) const {
 }
 
 ObjectID Catalog::view_id(const std::string& name) const {
-  return object_id(name, _views.ids);
+  return object_id(name, _views);
 }
 
 std::string Catalog::view_name(const ObjectID view_id) const {
-  return object_name(view_id, _views.names);
+  return object_name(view_id, _views);
 }
 
 ObjectID Catalog::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
@@ -188,7 +179,7 @@ ObjectID Catalog::add_prepared_plan(const std::string& name, const std::shared_p
 }
 
 void Catalog::drop_prepared_plan(ObjectID plan_id) {
-  drop_view(object_name(plan_id, _prepared_plans.names));
+  drop_prepared_plan(object_name(plan_id, _prepared_plans));
 }
 
 void Catalog::drop_prepared_plan(const std::string& name) {
@@ -201,11 +192,11 @@ bool Catalog::has_prepared_plan(const std::string& name) const {
 }
 
 ObjectID Catalog::prepared_plan_id(const std::string& name) const {
-  return object_id(name, _prepared_plans.ids);
+  return object_id(name, _prepared_plans);
 }
 
 std::string Catalog::prepared_plan_name(const ObjectID plan_id) const {
-  return object_name(plan_id, _prepared_plans.names);
+  return object_name(plan_id, _prepared_plans);
 }
 
 }  // namespace hyrise

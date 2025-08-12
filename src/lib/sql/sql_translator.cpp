@@ -788,10 +788,6 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       } else if (const auto table_id = Hyrise::get().catalog.table_id(hsql_table_ref.name);
                  table_id != INVALID_OBJECT_ID) {
         lqp = _translate_stored_table(table_id, hsql_table_ref.name, sql_identifier_resolver);
-
-      } else if (MetaTableManager::is_meta_table_name(hsql_table_ref.name)) {
-        lqp = _translate_meta_table(hsql_table_ref.name, sql_identifier_resolver);
-
       } else if (const auto view_id = Hyrise::get().catalog.view_id(hsql_table_ref.name);
                  view_id != INVALID_OBJECT_ID) {
         const auto view = Hyrise::get().storage_manager.get_view(view_id);
@@ -813,9 +809,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         }
 
         AssertInput(_use_mvcc == (lqp_is_validated(view->lqp) ? UseMvcc::Yes : UseMvcc::No),
-                    "Mismatch between validation of View and query it is used in");
+                    "Mismatch between validation of View and query it is used in.");
+      } else if (MetaTableManager::is_meta_table_name(hsql_table_ref.name)) {
+        lqp = _translate_meta_table(hsql_table_ref.name, sql_identifier_resolver);
       } else {
-        FailInput(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
+        FailInput("Did not find a table or view with name '" + std::string{hsql_table_ref.name} + ".");
       }
       table_name = hsql_table_ref.alias ? hsql_table_ref.alias->name : hsql_table_ref.name;
 
@@ -1426,7 +1424,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
                                    [&](const auto& group_by_expression) {
                                      return *pre_aggregate_expression == *group_by_expression;
                                    }) != group_by_expressions.end(),
-                      std::string("Expression ") + pre_aggregate_expression->as_column_name() +
+                      "Expression " + pre_aggregate_expression->as_column_name() +
                           " was added to SELECT list when resolving *, but it is not part of the GROUP BY clause.");
         }
       }
@@ -1446,7 +1444,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
           // Select all columns from the FROM element with the specified name
           const auto from_element_iter = _from_clause_result->elements_by_table_name.find(hsql_expr->table);
           AssertInput(from_element_iter != _from_clause_result->elements_by_table_name.end(),
-                      std::string("No such element in FROM with table name '") + hsql_expr->table + "'.");
+                      "No such element in FROM with table name '" + hsql_expr->table + "'.");
 
           for (const auto& element : from_element_iter->second) {
             _inflated_select_list_elements.emplace_back(element);
@@ -1929,7 +1927,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver,
     bool allow_window_functions) {
-  auto name = expr.name ? std::string(expr.name) : "";
+  auto name = expr.name ? std::string{expr.name} : "";
 
   auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver, allow_window_functions) : nullptr;
   const auto right =
@@ -1945,7 +1943,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
   switch (expr.type) {
     case hsql::kExprColumnRef: {
-      const auto table_name = expr.table ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
+      const auto table_name = expr.table ? std::optional<std::string>{expr.table} : std::nullopt;
       const auto identifier = SQLIdentifier{name, table_name};
 
       auto expression = sql_identifier_resolver->resolve_identifier_relaxed(identifier);
@@ -2162,8 +2160,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         // Check that the aggregate can be calculated on the given expression.
         const auto result_type = aggregate_expression->data_type();
         AssertInput(result_type != DataType::Null,
-                    std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
-                        " for input data type " +
+                    "Invalid aggregate " + aggregate_expression->as_column_name() + " for input data type " +
                         data_type_to_string.left.at(aggregate_expression->argument()->data_type()) + ".");
 
         // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:

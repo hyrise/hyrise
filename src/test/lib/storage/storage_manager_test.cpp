@@ -102,14 +102,6 @@ TEST_F(StorageManagerTest, NoSuperfluousStatisticsGeneration) {
   EXPECT_EQ(table->get_chunk(ChunkID{0})->pruning_statistics(), pruning_statistics);
 }
 
-// TEST_F(StorageManagerTest, TableNames) {
-//   const auto& sm = Hyrise::get().storage_manager;
-//   const auto names = std::vector<std::string_view>{"first_table", "second_table"};
-//   const auto& sm_names = sm.table_names();
-//   EXPECT_TRUE(std::is_sorted(sm_names.cbegin(), sm_names.cend()));
-//   EXPECT_EQ(sm_names, names);
-// }
-
 TEST_F(StorageManagerTest, GetTable) {
   const auto& storage_manager = Hyrise::get().storage_manager;
   const auto t3 = storage_manager.get_table(ObjectID{0});

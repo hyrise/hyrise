@@ -27,9 +27,6 @@
 
 namespace hyrise {
 
-template <typename T>
-using ConstAccessor = typename tbb::concurrent_hash_map<ObjectID, std::shared_ptr<T>>::const_accessor;
-
 void StorageManager::_add_table(const ObjectID table_id, const std::shared_ptr<Table>& table) {
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -55,7 +52,7 @@ void StorageManager::_drop_table(const ObjectID table_id) {
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const ObjectID table_id) const {
-  auto accessor = ConstAccessor<Table>{};
+  auto accessor = decltype(_tables)::const_accessor{};
   _tables.find(accessor, table_id);
   Assert(!accessor.empty(), "No such table with ID " + std::to_string(table_id) + ".");
   return accessor->second;
@@ -76,7 +73,7 @@ void StorageManager::_drop_view(const ObjectID view_id) {
 }
 
 std::shared_ptr<LQPView> StorageManager::get_view(const ObjectID view_id) const {
-  auto accessor = ConstAccessor<LQPView>{};
+  auto accessor = decltype(_views)::const_accessor{};
   _views.find(accessor, view_id);
   Assert(!accessor.empty(), "No such view with ID " + std::to_string(view_id) + ".");
   return accessor->second->deep_copy();
@@ -98,7 +95,7 @@ void StorageManager::_drop_prepared_plan(const ObjectID plan_id) {
 }
 
 std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const ObjectID plan_id) const {
-  auto accessor = ConstAccessor<PreparedPlan>{};
+  auto accessor = decltype(_prepared_plans)::const_accessor{};
   _prepared_plans.find(accessor, plan_id);
   Assert(!accessor.empty(), "No such prepared plan with ID " + std::to_string(plan_id) + ".");
   return accessor->second;
