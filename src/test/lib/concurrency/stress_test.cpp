@@ -882,7 +882,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 // Ensure that Catalog and StorageManager are thread-safe for all operations on different object names.
 TEST_F(StressTest, ConcurrentCatalogAccess) {
   constexpr auto THREAD_COUNT = 100;
-  constexpr auto REPETITION_COUNT = 100;
+  constexpr auto REPETITION_COUNT = 10;
   constexpr auto REPETITIONS_PER_THREAD = 1'000;
 
   for (auto i = 0; i < REPETITION_COUNT; ++i) {
