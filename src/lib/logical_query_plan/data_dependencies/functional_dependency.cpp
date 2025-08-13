@@ -1,5 +1,6 @@
 #include "functional_dependency.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <ostream>
@@ -117,17 +118,14 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
   };
 
   const auto pair_equal = [](const auto& lhs, const auto& rhs) {
-    // Early out if the genuineness or the number of determinants if different.
+    // Early out if the genuineness or the number of determinants differ.
     if (lhs.second != rhs.second || lhs.first.size() != rhs.first.size()) {
       return false;
     }
-    for (const auto& expression : lhs.first) {
-      if (!rhs.first.contains(expression)) {
-        // Determinants differ.
-        return false;
-      }
-    }
-    return true;
+
+    return std::ranges::all_of(lhs.first, [&](const auto& expression) {
+      return rhs.first.contains(expression);
+    });
   };
 
   // We use this hash map to collect the dependents for each unique determinant set and its genuineness.

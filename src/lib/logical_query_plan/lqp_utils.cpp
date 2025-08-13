@@ -523,8 +523,8 @@ UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations
         std::ranges::all_of(ucc->expressions, [&](const auto& ucc_expression) {
           return expressions.contains(ucc_expression);
         })) {
+      // If this match is genuine, we can stop here.
       if (ucc->is_genuine()) {
-        // If this match is genuine, we can stop here.
         return ucc;
       }
 

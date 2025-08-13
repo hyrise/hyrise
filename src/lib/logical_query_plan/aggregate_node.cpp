@@ -153,9 +153,8 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
     const auto [existing_ucc, inserted] =
         unique_column_combinations.emplace(std::move(group_by_columns), /*is_genuine=*/true);
 
-    // If the UCC was already in the set, is not genuine and matches the group-by columns, we set it to
-    // genuine.
-    if (!inserted && !existing_ucc->is_genuine() && existing_ucc->expressions.size() == group_by_columns_count) {
+    // If the UCC was already in the set but is not genuine, we set it to genuine.
+    if (!inserted && !existing_ucc->is_genuine()) {
       existing_ucc->set_genuine();
     }
   }
