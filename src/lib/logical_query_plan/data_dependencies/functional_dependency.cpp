@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <boost/container_hash/hash.hpp>
+
 #include "expression/abstract_expression.hpp"
 #include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
@@ -102,37 +104,35 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     return {};
   }
 
-  using Key = std::pair<ExpressionUnorderedSet, bool>;  // Determinants and genuine flag.
-
-  auto hash_pair = [](const Key& key) {
+  const auto hash_pair = [](const auto& key) {
     auto hash = size_t{0};
+    boost::hash_combine(hash, key.first.size());
     for (const auto& expression : key.first) {
       hash ^= expression->hash();
     }
 
-    return hash ^ static_cast<size_t>(key.second);  // Include the genuine flag in the hash.
+    // Include the genuine flag in the hash.
+    boost::hash_combine(hash, key.second);
+    return hash;
   };
 
-  auto pair_equal = [](const Key& lhs, const Key& rhs) {
-    if (lhs.second != rhs.second) {
-      return false;  // Genuine flags differ.
+  const auto pair_equal = [](const auto& lhs, const auto& rhs) {
+    // Early out if the genuineness or the number of determinants if different.
+    if (lhs.second != rhs.second || lhs.first.size() != rhs.first.size()) {
+      return false;
     }
     for (const auto& expression : lhs.first) {
       if (!rhs.first.contains(expression)) {
-        return false;  // Determinants differ.
+        // Determinants differ.
+        return false;
       }
     }
-    for (const auto& expression : rhs.first) {
-      if (!lhs.first.contains(expression)) {
-        return false;  // Determinants differ.
-      }
-    }
-    return true;  // Determinants are equal.
+    return true;
   };
 
   // We use this hash map to collect the dependents for each unique determinant set and its genuineness.
-  auto existing_fds = std::unordered_map<Key, ExpressionUnorderedSet, decltype(hash_pair), decltype(pair_equal)>(
-      fds.size(), hash_pair, pair_equal);
+  auto existing_fds = std::unordered_map<std::pair<ExpressionUnorderedSet, bool>, ExpressionUnorderedSet,
+                                         decltype(hash_pair), decltype(pair_equal)>(fds.size(), hash_pair, pair_equal);
 
   for (const auto& fd_to_add : fds) {
     // Try only inserting the FD first.
@@ -154,13 +154,12 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     }
   }
 
-  auto deflated_fds = FunctionalDependencies{};
-  deflated_fds.reserve(existing_fds.size());
+  auto deflated_fds = FunctionalDependencies{existing_fds.size()};
   for (auto& [key, dependents] : existing_fds) {
-    auto [existing_fd, inserted] =
+    const auto [existing_fd, inserted] =
         deflated_fds.emplace(ExpressionUnorderedSet{key.first}, std::move(dependents), key.second);
 
-    if (!inserted && key.second && !existing_fd->is_genuine()) {
+    if (!inserted && key.second) {
       // If the FD was already in the set and is genuine, we set the already existing FD to genuine as well.
       // This is necessary because we might have added the FD with the same determinants but without the genuine
       // flag.
@@ -182,7 +181,14 @@ FunctionalDependencies union_fds(const FunctionalDependencies& fds_a, const Func
 
   auto fds_unified = FunctionalDependencies{fds_a.cbegin(), fds_a.cend()};
   fds_unified.reserve(fds_a.size() + fds_b.size());
-  fds_unified.insert(fds_b.begin(), fds_b.end());
+
+  // Make sure not to lose genuine FDs.
+  for (const auto& fd : fds_b) {
+    const auto [existing_fd, inserted] = fds_unified.insert(fd);
+    if (!inserted && fd.is_genuine()) {
+      existing_fd->set_genuine();
+    }
+  }
 
   // To get rid of potential duplicates, we call deflate before returning.
   return deflate_fds(fds_unified);
@@ -193,15 +199,18 @@ FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a, const 
     return {};
   }
 
-  const auto& inflated_fds_a = inflate_fds(fds_a);
-  const auto& inflated_fds_b = inflate_fds(fds_b);
+  const auto inflated_fds_a = inflate_fds(fds_a);
+  const auto inflated_fds_b = inflate_fds(fds_b);
 
   auto intersected_fds = FunctionalDependencies();
   intersected_fds.reserve(fds_a.size());
 
-  for (const auto& fd : inflated_fds_a) {
-    if (inflated_fds_b.contains(fd)) {
-      intersected_fds.emplace(fd);
+  // Make sure not to lose genuine FDs.
+  for (const auto& fd_a : inflated_fds_a) {
+    const auto fd_b = inflated_fds_b.find(fd_a);
+    if (fd_b != inflated_fds_b.end()) {
+      intersected_fds.emplace(ExpressionUnorderedSet{fd_a.determinants}, ExpressionUnorderedSet{fd_a.dependents},
+                              fd_a.is_genuine() || fd_b->is_genuine());
     }
   }
 

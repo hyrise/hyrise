@@ -147,9 +147,8 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
   // (2) Create a new UCC from the group-by column(s), which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
   if (group_by_columns_count > 0) {
-    auto group_by_columns = ExpressionUnorderedSet{group_by_columns_count};
-    std::copy_n(node_expressions.begin(), group_by_columns_count,
-                std::inserter(group_by_columns, group_by_columns.begin()));
+    auto group_by_columns =
+        ExpressionUnorderedSet{node_expressions.begin(), node_expressions.begin() + group_by_columns_count};
 
     const auto [existing_ucc, inserted] =
         unique_column_combinations.emplace(std::move(group_by_columns), /*is_genuine=*/true);

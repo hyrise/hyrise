@@ -8,10 +8,13 @@ class FunctionalDependencyTest : public BaseTest {
  public:
   void SetUp() override {
     _mock_node_a = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "mock_node_a");
+        MockNode::ColumnDefinitions{
+            {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}, {DataType::Int, "d"}},
+        "mock_node_a");
     _a = _mock_node_a->get_column("a");
     _b = _mock_node_a->get_column("b");
     _c = _mock_node_a->get_column("c");
+    _d = _mock_node_a->get_column("d");
 
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "mock_node_b");
@@ -22,7 +25,7 @@ class FunctionalDependencyTest : public BaseTest {
  protected:
   std::shared_ptr<MockNode> _mock_node_a;
   std::shared_ptr<MockNode> _mock_node_b;
-  std::shared_ptr<LQPColumnExpression> _a, _b, _c, _x, _y;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c, _d, _x, _y;
 };
 
 TEST_F(FunctionalDependencyTest, Equals) {
@@ -178,6 +181,24 @@ TEST_F(FunctionalDependencyTest, UnionFDsRemoveDuplicates) {
   EXPECT_TRUE(fds_unified.contains(fd_b));
 }
 
+TEST_F(FunctionalDependencyTest, UnionFDsGenuineAndSpurious) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b}, /*is_genuine=*/true);
+  const auto fd_a_b_spurious = FunctionalDependency({_a}, {_b}, /*is_genuine=*/false);
+  const auto fd_c_d = FunctionalDependency({_c}, {_d}, /*is_genuine=*/false);
+
+  const auto fds_unified = union_fds({fd_a, fd_a_b_spurious}, {fd_a, fd_a_b, fd_c_d});
+  EXPECT_EQ(fds_unified.size(), 3);
+  ASSERT_TRUE(fds_unified.contains(fd_a));
+  ASSERT_TRUE(fds_unified.contains(fd_a_b));
+  ASSERT_TRUE(fds_unified.contains(fd_c_d));
+
+  // Check that the genuine property is correct.
+  EXPECT_FALSE(fds_unified.find(fd_a)->is_genuine());
+  EXPECT_TRUE(fds_unified.find(fd_a_b)->is_genuine());  // We keep a genuine FD if there is also a non-genuine one.
+  EXPECT_FALSE(fds_unified.find(fd_c_d)->is_genuine());
+}
+
 TEST_F(FunctionalDependencyTest, IntersectFDsEmpty) {
   const auto fd_x = FunctionalDependency({_x}, {_y});
 
@@ -197,6 +218,22 @@ TEST_F(FunctionalDependencyTest, IntersectFDs) {
   EXPECT_EQ(intersected_fds.size(), 2);
   EXPECT_TRUE(intersected_fds.contains(fd_a_b));
   EXPECT_TRUE(intersected_fds.contains(fd_a_2));
+}
+
+TEST_F(FunctionalDependencyTest, IntersectFDsGenuineAndSpurious) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b}, /*is_genuine=*/true);
+  const auto fd_a_b_spurious = FunctionalDependency({_a}, {_b}, /*is_genuine=*/false);
+  const auto fd_c_d = FunctionalDependency({_c}, {_d}, /*is_genuine=*/false);
+
+  const auto intersected_fds = intersect_fds({fd_a, fd_a_b_spurious}, {fd_a, fd_a_b, fd_c_d});
+  EXPECT_EQ(intersected_fds.size(), 2);
+  ASSERT_TRUE(intersected_fds.contains(fd_a));
+  ASSERT_TRUE(intersected_fds.contains(fd_a_b));
+
+  // Check that the genuine property is correct.
+  EXPECT_FALSE(intersected_fds.find(fd_a)->is_genuine());
+  EXPECT_TRUE(intersected_fds.find(fd_a_b)->is_genuine());  // We keep a genuine FD if there is also a non-genuine one.
 }
 
 }  // namespace hyrise

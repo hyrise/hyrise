@@ -168,12 +168,12 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   const auto ucc_c = find_ucc(unique_column_combinations, {_c});
   const auto ucc_a_b = find_ucc(unique_column_combinations, {_a, _b});
 
-  EXPECT_NE(ucc_b, unique_column_combinations.end());
+  ASSERT_NE(ucc_b, unique_column_combinations.end());
   EXPECT_FALSE(ucc_b->is_genuine());
 
   EXPECT_EQ(ucc_c, unique_column_combinations.end());
 
-  EXPECT_NE(ucc_a_b, unique_column_combinations.end());
+  ASSERT_NE(ucc_a_b, unique_column_combinations.end());
   EXPECT_TRUE(ucc_a_b->is_genuine());
   EXPECT_EQ(ucc_a_b->expressions.size(), 2);
 }
@@ -259,8 +259,8 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
   const auto ucc_a = find_ucc(unique_column_combinations, {_a});
   const auto ucc_a_b = find_ucc(unique_column_combinations, {_a, _b});
 
-  EXPECT_NE(ucc_a, unique_column_combinations.end());
-  EXPECT_NE(ucc_a_b, unique_column_combinations.end());
+  ASSERT_NE(ucc_a, unique_column_combinations.end());
+  ASSERT_NE(ucc_a_b, unique_column_combinations.end());
   EXPECT_EQ(ucc_a_b->expressions.size(), 2);
 
   // The input UCC is not marked as genuine, as it is not created by the AggregateNode.

@@ -121,16 +121,17 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 
   const auto cpu_ticks = _parse_value_string(cpu_line);
 
-  const auto user_ticks = cpu_ticks.at(0);
-  const auto user_nice_ticks = cpu_ticks.at(1);
-  const auto kernel_ticks = cpu_ticks.at(2);
+  const auto user_ticks = static_cast<uint64_t>(cpu_ticks.at(0));
+  const auto user_nice_ticks = static_cast<uint64_t>(cpu_ticks.at(1));
+  const auto kernel_ticks = static_cast<uint64_t>(cpu_ticks.at(2));
 
   const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
 
   // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
   // it to ns.
   // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h.
-  const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
+  const auto active_ns =
+      (active_ticks * static_cast<uint64_t>(std::nano::den)) / static_cast<uint64_t>(sysconf(_SC_CLK_TCK));
 
   return active_ns;
 #endif
@@ -142,12 +143,13 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
       host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get host_statistics.");
 
-  const auto active_ticks =
-      cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE];
+  const auto active_ticks = uint64_t{cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] +
+                                     cpu_info.cpu_ticks[CPU_STATE_NICE]};
 
   // The amount of time from HOST_CPU_LOAD_INFO is measured in units of clock ticks.
   // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
-  const auto active_ns = active_ticks * std::nano::den / sysconf(_SC_CLK_TCK);
+  const auto active_ns =
+      (active_ticks * static_cast<uint64_t>(std::nano::den)) / static_cast<uint64_t>(sysconf(_SC_CLK_TCK));
 
   return active_ns;
 #endif

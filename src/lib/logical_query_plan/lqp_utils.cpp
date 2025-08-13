@@ -514,33 +514,25 @@ UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
-  auto matching_ucc = std::optional<UniqueColumnCombinations::const_iterator>{};
-
-  // Look for a unique column combination that is based on a subset of the given expressions.
-  for (auto ucc_it = unique_column_combinations.cbegin(); ucc_it != unique_column_combinations.cend(); ++ucc_it) {
-    const auto& ucc = *ucc_it;
-
+  // Look for a unique column combination that is based on a subset of the given expressions. We do not guarantee the
+  // UCC to be minimal, but we prefer genuine UCCs.
+  auto matching_ucc = unique_column_combinations.cend();
+  for (auto ucc = unique_column_combinations.cbegin(); ucc != unique_column_combinations.cend(); ++ucc) {
     // If all of the expressions in the UCC are contained in the given expressions, we found a match.
-    if (ucc.expressions.size() <= expressions.size() &&
-        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
+    if (ucc->expressions.size() <= expressions.size() &&
+        std::ranges::all_of(ucc->expressions, [&](const auto& ucc_expression) {
           return expressions.contains(ucc_expression);
         })) {
-      if (!matching_ucc) {
-        matching_ucc = ucc_it;
-        if (ucc.is_genuine()) {
-          // If this match is genuine, we can stop here.
-          break;
-        }
-      } else if (ucc.is_genuine()) {
-        // We continue looking for a genuine UCC and overwrite the previous match with a genuine UCC if we
-        // find one.
-        matching_ucc = ucc_it;
-        break;
+      if (ucc->is_genuine()) {
+        // If this match is genuine, we can stop here.
+        return ucc;
       }
+
+      // We found a matching UCC, but continue looking for a genuine one.
+      matching_ucc = ucc;
     }
   }
-
-  return matching_ucc ? *matching_ucc : unique_column_combinations.cend();
+  return matching_ucc;
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
