@@ -158,6 +158,8 @@ size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) cons
 
   const auto common_elements_size = sizeof(*this) + null_value_vector_size;
 
+  // Contrary to usual clang-tidy guidelines (else-after-return), else in a constexpr if is fine. See PR 2708 for
+  // details.
   if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(_values, mode);
   } else {
