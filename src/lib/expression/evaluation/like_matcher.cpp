@@ -11,13 +11,13 @@
 #include <vector>
 
 #include <boost/algorithm/string/replace.hpp>
-
+#include <boost/algorithm/string/case_conv.hpp>
 #include "types.hpp"
 
 namespace hyrise {
 
-LikeMatcher::LikeMatcher(const pmr_string& pattern) {
-  _pattern_variant = pattern_string_to_pattern_variant(pattern);
+LikeMatcher::LikeMatcher(const pmr_string& pattern, const PredicateCondition condition) : _invert_results{condition == PredicateCondition::NotLike}, _case_insensitive{condition == PredicateCondition::LikeInsensitive} {
+  _pattern_variant = _case_insensitive ? pattern_string_to_pattern_variant(boost::algorithm::to_lower_copy(pattern)) : pattern_string_to_pattern_variant(pattern);
 }
 
 size_t LikeMatcher::get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset) {
@@ -29,7 +29,7 @@ bool LikeMatcher::contains_wildcard(const pmr_string& pattern) {
 }
 
 LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const pmr_string& pattern) {
-  PatternTokens tokens;
+  auto tokens = PatternTokens{};
 
   auto current_position = size_t{0};
   while (current_position < pattern.size()) {

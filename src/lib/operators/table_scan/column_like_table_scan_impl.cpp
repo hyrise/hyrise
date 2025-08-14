@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/algorithm/string/case_conv.hpp>
+
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
@@ -24,8 +26,9 @@ ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Tab
                                                  const PredicateCondition init_predicate_condition,
                                                  const pmr_string& pattern)
     : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition},
-      _matcher{pattern},
-      _invert_results(predicate_condition == PredicateCondition::NotLike) {}
+      _matcher{pattern, init_predicate_condition},
+      _invert_results{predicate_condition == PredicateCondition::NotLike},
+      _case_insensitive{predicate_condition == PredicateCondition::LikeInsensitive} {}
 
 std::string ColumnLikeTableScanImpl::description() const {
   return "ColumnLike";
@@ -55,7 +58,7 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
       using ColumnDataType = typename decltype(iter)::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
+        _matcher.resolve([&](const auto& resolved_matcher) {
           const auto functor = [&](const auto& position) {
             return resolved_matcher(position.value());
           };
@@ -128,7 +131,7 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   count = 0u;
   dictionary_matches.reserve(dictionary.size());
 
-  _matcher.resolve(_invert_results, [&](const auto& matcher) {
+  _matcher.resolve([&](const auto& matcher) {
 #ifdef __clang__
 // For the loop through the dictionary, we want to use const auto& for DictionarySegments. However,
 // FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis

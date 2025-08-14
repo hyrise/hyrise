@@ -69,6 +69,7 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
     case PredicateCondition::NotIn:
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+    case PredicateCondition::LikeInsensitive:
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
       Fail("Cannot flip specified PredicateCondition.");

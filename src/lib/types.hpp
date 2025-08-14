@@ -180,6 +180,7 @@ enum class PredicateCondition {
   NotIn,
   Like,
   NotLike,
+  LikeInsensitive,
   IsNull,
   IsNotNull
 };

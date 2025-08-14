@@ -54,8 +54,9 @@ class ColumnLikeTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
 
   const LikeMatcher _matcher;
 
-  // For NOT LIKE support
+  // For NOT LIKE and ILIKE support.
   const bool _invert_results;
+  const bool _case_insensitive;
 };
 
 }  // namespace hyrise

@@ -15,6 +15,8 @@
 
 namespace hyrise {
 
+class AbstractLikeMatcherImpl;
+
 /**
  * Wraps an SQL LIKE pattern (e.g. "Hello%Wo_ld") which strings can be tested against.
  *
@@ -34,7 +36,7 @@ class LikeMatcher {
   static size_t get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset = 0);
   static bool contains_wildcard(const pmr_string& pattern);
 
-  explicit LikeMatcher(const pmr_string& pattern);
+  explicit LikeMatcher(const pmr_string& pattern, const PredicateCondition condition);
 
   enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
   using PatternToken = std::variant<pmr_string, Wildcard>;  // Keep type order, users rely on which()
@@ -56,8 +58,8 @@ class LikeMatcher {
   static std::optional<std::pair<pmr_string, pmr_string>> bounds(const pmr_string& pattern);
 
   /**
-   * To speed up LIKE there are special implementations available for simple, common patterns.
-   * Any other pattern will fall back to regex.
+   * To speed up LIKE there are special implementations available for simple, common patterns. Any other pattern will
+   *  fall back to regex.
    */
   // 'hello%'
   struct StartsWithPattern final {
@@ -96,23 +98,23 @@ class LikeMatcher {
    *    }
    */
   template <typename Functor>
-  void resolve(const bool invert_results, const Functor& functor) const {
+  void resolve(const Functor& functor) const {
     if (std::holds_alternative<StartsWithPattern>(_pattern_variant)) {
       const auto& prefix = std::get<StartsWithPattern>(_pattern_variant).string;
       functor([&](const auto& string) -> bool {
         if (string.size() < prefix.size()) {
-          return invert_results;
+          return _invert_results;
         }
-        return (string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
+        return (string.compare(0, prefix.size(), prefix) == 0) ^ _invert_results;
       });
 
     } else if (std::holds_alternative<EndsWithPattern>(_pattern_variant)) {
       const auto& suffix = std::get<EndsWithPattern>(_pattern_variant).string;
       functor([&](const auto& string) -> bool {
         if (string.size() < suffix.size()) {
-          return invert_results;
+          return _invert_results;
         }
-        return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert_results;
+        return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ _invert_results;
       });
 
     } else if (std::holds_alternative<ContainsPattern>(_pattern_variant)) {
@@ -121,7 +123,7 @@ class LikeMatcher {
       // get invalidated when the pattern is passed around.
       const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
       functor([&](const auto& string) -> bool {
-        return (std::search(string.begin(), string.end(), searcher) != string.end()) ^ invert_results;
+        return (std::search(string.begin(), string.end(), searcher) != string.end()) ^ _invert_results;
       });
 
     } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
@@ -137,18 +139,18 @@ class LikeMatcher {
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
           current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
           if (current_position == string.end()) {
-            return invert_results;
+            return _invert_results;
           }
           current_position += contains_strs[searcher_idx].size();
         }
-        return !invert_results;
+        return !_invert_results;
       });
 
     } else if (std::holds_alternative<std::regex>(_pattern_variant)) {
       const auto& regex = std::get<std::regex>(_pattern_variant);
 
       functor([&](const auto& string) -> bool {
-        return std::regex_match(string.cbegin(), string.cend(), regex) ^ invert_results;
+        return std::regex_match(string.cbegin(), string.cend(), regex) ^ _invert_results;
       });
 
     } else {
@@ -157,7 +159,13 @@ class LikeMatcher {
   }
 
  private:
+  template <typename Functor>
+  void resolve_case()
+
+
   AllPatternVariant _pattern_variant;
+  bool _invert_results;
+  bool _case_insensitive;
 };
 
 std::ostream& operator<<(std::ostream& stream, const LikeMatcher::Wildcard& wildcard);
