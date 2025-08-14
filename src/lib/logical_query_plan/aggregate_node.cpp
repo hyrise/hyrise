@@ -59,7 +59,7 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   stream << "GroupBy: [";
   for (auto expression_idx = ColumnID{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode);
-    if (expression_idx + 1u < aggregate_expressions_begin_idx) {
+    if (expression_idx + 1 < aggregate_expressions_begin_idx) {
       stream << ", ";
     }
   }
@@ -145,7 +145,7 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
   }
 
   // (2) Create a new UCC from the group-by column(s), which form a candidate key for the output relation.
-  const auto group_by_columns_count = aggregate_expressions_begin_idx;
+  const auto group_by_columns_count = static_cast<NodeExpressionsDifferenceType>(aggregate_expressions_begin_idx);
   if (group_by_columns_count > 0) {
     auto group_by_columns =
         ExpressionUnorderedSet{node_expressions.begin(), node_expressions.begin() + group_by_columns_count};
