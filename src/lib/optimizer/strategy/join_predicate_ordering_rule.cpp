@@ -51,7 +51,7 @@ void reorder_join_predicates_recursively(const std::shared_ptr<AbstractLQPNode>&
   }
 
   // Sort predicates ascending by join selectivity.
-  std::sort(join_predicates.begin(), join_predicates.end(), [&](const auto& lhs, const auto& rhs) {
+  std::sort(join_predicates, [&](const auto& lhs, const auto& rhs) {
     return predicate_cardinalities[lhs] < predicate_cardinalities[rhs];
   });
 
@@ -59,7 +59,7 @@ void reorder_join_predicates_recursively(const std::shared_ptr<AbstractLQPNode>&
   // join predicate. Check that one exists and move it to the front.
   if (is_semi_or_anti_join(join_mode)) {
     auto first_equals_predicate =
-        std::find_if(join_predicates.begin(), join_predicates.end(), [](const auto& expression) {
+        std::find_if(join_predicates, [](const auto& expression) {
           DebugAssert(std::dynamic_pointer_cast<AbstractPredicateExpression>(expression),
                       "Every node expression of a JoinNode should be an AbstractPredicateExpression.");
           return std::static_pointer_cast<AbstractPredicateExpression>(expression)->predicate_condition ==
