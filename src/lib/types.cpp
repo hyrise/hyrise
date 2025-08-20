@@ -18,6 +18,8 @@ bool is_binary_predicate_condition(const PredicateCondition predicate_condition)
          predicate_condition == PredicateCondition::GreaterThan ||
          predicate_condition == PredicateCondition::GreaterThanEquals ||
          predicate_condition == PredicateCondition::NotLike || predicate_condition == PredicateCondition::Like ||
+         predicate_condition == PredicateCondition::LikeInsensitive ||
+         predicate_condition == PredicateCondition::NotLikeInsensitive ||
          predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn;
 }
 
@@ -70,6 +72,7 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
     case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
       Fail("Cannot flip specified PredicateCondition.");
@@ -95,6 +98,10 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
       return PredicateCondition::NotLike;
     case PredicateCondition::NotLike:
       return PredicateCondition::Like;
+    case PredicateCondition::LikeInsensitive:
+      return PredicateCondition::NotLikeInsensitive;
+    case PredicateCondition::NotLikeInsensitive:
+      return PredicateCondition::LikeInsensitive;
     case PredicateCondition::IsNull:
       return PredicateCondition::IsNotNull;
     case PredicateCondition::IsNotNull:
@@ -163,6 +170,8 @@ std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_cond
       {PredicateCondition::BetweenExclusive, "BETWEEN EXCLUSIVE"},
       {PredicateCondition::Like, "LIKE"},
       {PredicateCondition::NotLike, "NOT LIKE"},
+      {PredicateCondition::LikeInsensitive, "ILIKE"},
+      {PredicateCondition::NotLikeInsensitive, "NOT ILIKE"},
       {PredicateCondition::In, "IN"},
       {PredicateCondition::NotIn, "NOT IN"},
       {PredicateCondition::IsNull, "IS NULL"},

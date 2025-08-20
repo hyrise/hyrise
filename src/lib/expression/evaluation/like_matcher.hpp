@@ -1,21 +1,19 @@
 #pragma once
 
-#include <array>
 #include <functional>
 #include <optional>
 #include <ostream>
-#include <regex>
 #include <string>
 #include <utility>
 #include <variant>
 #include <vector>
 
+#include "re2/re2.h"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/string_utils.hpp"
 
 namespace hyrise {
-
-class AbstractLikeMatcherImpl;
 
 /**
  * Wraps an SQL LIKE pattern (e.g. "Hello%Wo_ld") which strings can be tested against.
@@ -36,8 +34,6 @@ class LikeMatcher {
   static size_t get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset = 0);
   static bool contains_wildcard(const pmr_string& pattern);
 
-  explicit LikeMatcher(const pmr_string& pattern, const PredicateCondition condition);
-
   enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
   using PatternToken = std::variant<pmr_string, Wildcard>;  // Keep type order, users rely on which()
   using PatternTokens = std::vector<PatternToken>;
@@ -57,9 +53,56 @@ class LikeMatcher {
   // {test, tesu} | nullopt | nullopt   | {test, test\0}  | {'', '\0'}
   static std::optional<std::pair<pmr_string, pmr_string>> bounds(const pmr_string& pattern);
 
+  template <typename Functor>
+  static void resolve_condition(const PredicateCondition predicate_condition, const Functor& functor) {
+    if (predicate_condition == PredicateCondition::Like) {
+      functor(MatchLike{});
+    } else if (predicate_condition == PredicateCondition::NotLike) {
+      functor(MatchNotLike{});
+    } else if (predicate_condition == PredicateCondition::LikeInsensitive) {
+      functor(MatchLikeInsensitive{});
+    } else if (predicate_condition == PredicateCondition::NotLikeInsensitive) {
+      functor(MatchNotLikeInsensitive{});
+    } else {
+      Fail("Invalid predicate.");
+    }
+  }
+
   /**
-   * To speed up LIKE there are special implementations available for simple, common patterns. Any other pattern will
-   *  fall back to regex.
+   * The functor will be called with a concrete matcher.
+   * Usage example:
+   *    LikeMatcher{"%hello%"}.resolve(false, [](const auto& matcher) {
+   *        std::cout << matcher("He said hello!");
+   *    }
+   */
+  template <typename Predicate, typename Functor>
+  static void resolve_pattern(const pmr_string& pattern, const Functor& functor) {
+    constexpr auto invert =
+        std::is_same_v<Predicate, MatchNotLike> || std::is_same_v<Predicate, MatchNotLikeInsensitive>;
+    if constexpr (std::is_same_v<Predicate, MatchLikeInsensitive> ||
+                  std::is_same_v<Predicate, MatchNotLikeInsensitive>) {
+      _resolve_pattern_with_case<invert>(pattern, functor, [](const auto& input, const auto& matching_function) {
+        return matching_function(string_to_lower(input));
+      });
+    } else {
+      _resolve_pattern_with_case<invert>(pattern, functor, [](const auto& input, const auto& matching_function) {
+        return matching_function(input);
+      });
+    }
+  }
+
+  // Used to resolve the like condition once, even if the pattern changes for column vs. column LIKE predicates.
+  struct MatchLike {};
+
+  struct MatchNotLike {};
+
+  struct MatchLikeInsensitive {};
+
+  struct MatchNotLikeInsensitive {};
+
+  /**
+   * To speed up LIKE, there are special implementations available for simple, common patterns. Any other pattern will
+   * fall back to regexes.
    */
   // 'hello%'
   struct StartsWithPattern final {
@@ -81,91 +124,159 @@ class LikeMatcher {
     std::vector<pmr_string> strings;
   };
 
+  // struct RE2Pattern final {
+  //   // RE2 cannot be copied or moved. The unique_ptr enables moving the variant in the constructor the LikeMatcher.
+  //   re2::RE2 pattern;
+  // };
+
   /**
-   * Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to std::regex for a
+   * Resolves one of the specialised patterns from above (StartsWithPattern, ...) or falls back to std::regex for a
    * general pattern.
    */
-  using AllPatternVariant =
-      std::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
+  template <typename Functor, typename Casing>
+  static void resolve_pattern_type(const pmr_string& pattern, const Casing& casing, const Functor& functor) {
+    casing(pattern, [&](const auto& cased_pattern) {
+      const auto tokens = pattern_string_to_tokens(cased_pattern);
 
-  static AllPatternVariant pattern_string_to_pattern_variant(const pmr_string& pattern);
-
-  /**
-   * The functor will be called with a concrete matcher.
-   * Usage example:
-   *    LikeMatcher{"%hello%"}.resolve(false, [](const auto& matcher) {
-   *        std::cout << matcher("He said hello!");
-   *    }
-   */
-  template <typename Functor>
-  void resolve(const Functor& functor) const {
-    if (std::holds_alternative<StartsWithPattern>(_pattern_variant)) {
-      const auto& prefix = std::get<StartsWithPattern>(_pattern_variant).string;
-      functor([&](const auto& string) -> bool {
-        if (string.size() < prefix.size()) {
-          return _invert_results;
-        }
-        return (string.compare(0, prefix.size(), prefix) == 0) ^ _invert_results;
-      });
-
-    } else if (std::holds_alternative<EndsWithPattern>(_pattern_variant)) {
-      const auto& suffix = std::get<EndsWithPattern>(_pattern_variant).string;
-      functor([&](const auto& string) -> bool {
-        if (string.size() < suffix.size()) {
-          return _invert_results;
-        }
-        return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ _invert_results;
-      });
-
-    } else if (std::holds_alternative<ContainsPattern>(_pattern_variant)) {
-      const auto& contains_str = std::get<ContainsPattern>(_pattern_variant).string;
-      // It's really hard to store the searcher in the pattern as it only holds iterators into the string that easily
-      // get invalidated when the pattern is passed around.
-      const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
-      functor([&](const auto& string) -> bool {
-        return (std::search(string.begin(), string.end(), searcher) != string.end()) ^ _invert_results;
-      });
-
-    } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
-      const auto& contains_strs = std::get<MultipleContainsPattern>(_pattern_variant).strings;
-      auto searchers = std::vector<Searcher>{};
-      searchers.reserve(contains_strs.size());
-      for (const auto& contains_str : contains_strs) {
-        searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
+      if (tokens.size() == 2 && std::holds_alternative<pmr_string>(tokens[0]) &&
+          tokens[1] == PatternToken{Wildcard::AnyChars}) {
+        // Pattern has the form 'hello%'
+        functor(StartsWithPattern{std::get<pmr_string>(tokens[0])});
+        return;
       }
 
-      functor([&](const auto& string) -> bool {
-        auto current_position = string.begin();
-        for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
-          current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
-          if (current_position == string.end()) {
-            return _invert_results;
-          }
-          current_position += contains_strs[searcher_idx].size();
+      if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
+          std::holds_alternative<pmr_string>(tokens[1])) {
+        // Pattern has the form '%hello'
+        functor(EndsWithPattern{std::get<pmr_string>(tokens[1])});
+        return;
+      }
+
+      if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
+          std::holds_alternative<pmr_string>(tokens[1]) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
+        // Pattern has the form '%hello%'
+        functor(ContainsPattern{std::get<pmr_string>(tokens[1])});
+        return;
+      }
+
+      /**
+       * Pattern is either MultipleContainsPattern, e.g., '%hello%world%how%are%you%' or we fall back to
+       * using a regex matcher.
+       *
+       * A MultipleContainsPattern begins and ends with '%' and  contains only strings and '%'.
+       */
+
+      // Pick ContainsMultiple or regex.
+      auto pattern_is_contains_multiple = true;  // Set to false if tokens don't match %(, string, %)* pattern.
+      auto strings = std::vector<pmr_string>{};  // arguments used for ContainsMultiple, if it gets used.
+      auto expect_any_chars = true;              // If true, expect '%', if false, expect a string.
+
+      // Check if the tokens match the layout expected for MultipleContainsPattern - or break and set
+      // pattern_is_contains_multiple to false once they do not.
+      for (const auto& token : tokens) {
+        if (expect_any_chars && token != PatternToken{Wildcard::AnyChars}) {
+          pattern_is_contains_multiple = false;
+          break;
         }
-        return !_invert_results;
-      });
+        if (!expect_any_chars && !std::holds_alternative<pmr_string>(token)) {
+          pattern_is_contains_multiple = false;
+          break;
+        }
+        if (!expect_any_chars) {
+          strings.emplace_back(std::get<pmr_string>(token));
+        }
 
-    } else if (std::holds_alternative<std::regex>(_pattern_variant)) {
-      const auto& regex = std::get<std::regex>(_pattern_variant);
+        expect_any_chars = !expect_any_chars;
+      }
 
-      functor([&](const auto& string) -> bool {
-        return std::regex_match(string.cbegin(), string.cend(), regex) ^ _invert_results;
-      });
+      if (pattern_is_contains_multiple) {
+        functor(MultipleContainsPattern{strings});
+        return;
+      }
 
-    } else {
-      Fail("Pattern not implemented. Probably a bug.");
-    }
+      // functor(std::regex{sql_like_to_regex(cased_pattern)});
+      return functor(re2::RE2{sql_like_to_regex(cased_pattern)});
+    });
   }
 
  private:
-  template <typename Functor>
-  void resolve_case()
+  template <bool invert_results, typename Functor, typename Casing>
+  static void _resolve_pattern_with_case(const pmr_string& pattern, const Functor& functor,
+                                         const Casing& resolve_case) {
+    resolve_pattern_type(pattern, resolve_case, [&](const auto& typed_pattern) {
+      using Pattern = std::decay_t<decltype(typed_pattern)>;
 
+      if constexpr (std::is_same_v<Pattern, StartsWithPattern>) {
+        const auto& prefix = typed_pattern.string;
+        functor([&](const auto& string) -> bool {
+          if (string.size() < prefix.size()) {
+            return invert_results;
+          }
 
-  AllPatternVariant _pattern_variant;
-  bool _invert_results;
-  bool _case_insensitive;
+          return resolve_case(string, [&](const auto& cased_string) -> bool {
+            return (cased_string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
+          });
+        });
+
+      } else if constexpr (std::is_same_v<Pattern, EndsWithPattern>) {
+        const auto& suffix = typed_pattern.string;
+        functor([&](const auto& string) -> bool {
+          if (string.size() < suffix.size()) {
+            return invert_results;
+          }
+          return resolve_case(string, [&](const auto& cased_string) -> bool {
+            return (cased_string.compare(cased_string.size() - suffix.size(), suffix.size(), suffix) == 0) ^
+                   invert_results;
+          });
+        });
+
+      } else if constexpr (std::is_same_v<Pattern, ContainsPattern>) {
+        const auto& contains_str = typed_pattern.string;
+        // It's really hard to store the searcher in the pattern as it only holds iterators into the string that easily
+        // get invalidated when the pattern is passed around.
+        const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
+        functor([&](const auto& string) -> bool {
+          return resolve_case(string, [&](const auto& cased_string) -> bool {
+            return (std::search(cased_string.begin(), cased_string.end(), searcher) != cased_string.end()) ^
+                   invert_results;
+          });
+        });
+
+      } else if constexpr (std::is_same_v<Pattern, MultipleContainsPattern>) {
+        const auto& contains_strs = typed_pattern.strings;
+        auto searchers = std::vector<Searcher>{};
+        searchers.reserve(contains_strs.size());
+        for (const auto& contains_str : contains_strs) {
+          searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
+        }
+
+        functor([&](const auto& string) -> bool {
+          return resolve_case(string, [&](const auto& cased_string) -> bool {
+            auto current_position = cased_string.begin();
+            for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
+              current_position = std::search(current_position, cased_string.end(), searchers[searcher_idx]);
+              if (current_position == cased_string.end()) {
+                return invert_results;
+              }
+              current_position += contains_strs[searcher_idx].size();
+            }
+            return !invert_results;
+          });
+        });
+
+      } else if constexpr (std::is_same_v<Pattern, re2::RE2>) {
+        functor([&](const auto& string) -> bool {
+          return resolve_case(string, [&](const auto& cased_string) -> bool {
+            // return std::regex_match(cased_string.cbegin(), cased_string.cend(), typed_pattern) ^ invert_results;
+            return re2::RE2::FullMatch(re2::StringPiece{cased_string}, typed_pattern) ^ invert_results;
+          });
+        });
+
+      } else {
+        Fail("Pattern not implemented. Probably a bug.");
+      }
+    });
+  }
 };
 
 std::ostream& operator<<(std::ostream& stream, const LikeMatcher::Wildcard& wildcard);

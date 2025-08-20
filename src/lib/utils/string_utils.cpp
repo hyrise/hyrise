@@ -4,11 +4,14 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
+
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -56,5 +59,18 @@ std::string trim_source_file_path(const std::string& path) {
 std::string replace_addresses(const std::string& input) {
   return std::regex_replace(input, std::regex{"0x[0-9A-Fa-f]{4,}"}, "0x00000000");
 }
+
+template <typename String>
+pmr_string string_to_lower(const String& input) {
+  auto copy = pmr_string{input};
+  std::transform(copy.begin(), copy.end(), copy.begin(), [](auto character) {
+    return std::tolower(character);
+  });
+  return copy;
+}
+
+template pmr_string string_to_lower(const pmr_string& input);
+template pmr_string string_to_lower(const std::string& input);
+template pmr_string string_to_lower(const std::string_view& input);
 
 }  // namespace hyrise

@@ -25,10 +25,7 @@ namespace hyrise {
 ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                                  const PredicateCondition init_predicate_condition,
                                                  const pmr_string& pattern)
-    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition},
-      _matcher{pattern, init_predicate_condition},
-      _invert_results{predicate_condition == PredicateCondition::NotLike},
-      _case_insensitive{predicate_condition == PredicateCondition::LikeInsensitive} {}
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition}, _pattern{pattern} {}
 
 std::string ColumnLikeTableScanImpl::description() const {
   return "ColumnLike";
@@ -58,11 +55,14 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
       using ColumnDataType = typename decltype(iter)::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        _matcher.resolve([&](const auto& resolved_matcher) {
-          const auto functor = [&](const auto& position) {
-            return resolved_matcher(position.value());
-          };
-          _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
+        LikeMatcher::resolve_condition(predicate_condition, [&](const auto& predicate) {
+          using Predicate = std::decay_t<decltype(predicate)>;
+          LikeMatcher::resolve_pattern<Predicate>(_pattern, [&](const auto& matcher) {
+            const auto functor = [&](const auto& position) {
+              return matcher(position.value());
+            };
+            _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
+          });
         });
       } else {
         Fail("Can only handle strings");
@@ -123,15 +123,13 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
 template <typename D>
 std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(const D& dictionary) const {
-  auto result = std::pair<size_t, std::vector<bool>>{};
-
-  auto& count = result.first;
-  auto& dictionary_matches = result.second;
-
-  count = 0u;
+  auto count = size_t{0};
+  auto dictionary_matches = std::vector<bool>{};
   dictionary_matches.reserve(dictionary.size());
 
-  _matcher.resolve([&](const auto& matcher) {
+  LikeMatcher::resolve_condition(predicate_condition, [&](const auto& predicate) {
+    using Predicate = std::decay_t<decltype(predicate)>;
+    LikeMatcher::resolve_pattern<Predicate>(_pattern, [&](const auto& matcher) {
 #ifdef __clang__
 // For the loop through the dictionary, we want to use const auto& for DictionarySegments. However,
 // FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
@@ -139,18 +137,19 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrange-loop-analysis"
 #endif
-    for (const auto& value : dictionary) {
-      const auto matches = matcher(value);
-      count += static_cast<size_t>(matches);
-      dictionary_matches.push_back(matches);
-    }
+      for (const auto& value : dictionary) {
+        const auto matches = matcher(value);
+        count += static_cast<size_t>(matches);
+        dictionary_matches.push_back(matches);
+      }
 
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+    });
   });
 
-  return result;
+  return {count, std::move(dictionary_matches)};
 }
 
 }  // namespace hyrise

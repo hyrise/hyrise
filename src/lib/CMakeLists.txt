@@ -752,6 +752,7 @@ target_link_libraries_system(
     sparse_map
     SQLite::SQLite3
     tbb
+    re2
 )
 
 if (NUMA_FOUND)

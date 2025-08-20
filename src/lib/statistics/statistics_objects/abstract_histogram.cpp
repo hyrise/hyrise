@@ -442,6 +442,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
     case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       if constexpr (std::is_same_v<pmr_string, T>) {
         // Generally, (NOT) LIKE is too hard to perform estimations on. Some special patterns could be estimated,
         // e.g. `LIKE 'a'` is the same as `= 'a'` or `LIKE 'a%'` is the same as `>= a AND < b`, but we leave it to other
@@ -604,6 +605,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
     case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       // TODO(anybody): Slicing for (NOT) LIKE not supported, yet.
       return this->shared_from_this();
 
@@ -701,6 +703,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
     case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       // TODO(anybody): Pruning for (NOT) LIKE not supported, yet.
       return this->shared_from_this();
 

@@ -354,26 +354,34 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
   const auto condition = expression.predicate_condition;
   if (both_are_literals || both_are_series) {
     // E.g., `a LIKE b` - A new matcher for each row and a different value as well.
-    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx], condition}.resolve([&](const auto& matcher) {
-        result_values[row_idx] = matcher(left_results->values[row_idx]);
-      });
-    }
+    LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
+      using Predicate = std::decay_t<decltype(predicate)>;
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+        LikeMatcher::resolve_pattern<Predicate>(right_results->values[row_idx], [&](const auto& matcher) {
+          result_values[row_idx] = matcher(left_results->values[row_idx]);
+        });
+      }
+    });
   } else if (!left_results->is_literal() && right_results->is_literal()) {
     // E.g., `a LIKE '%hello%'` - A single matcher for all rows.
-    const auto like_matcher = LikeMatcher{right_results->values.front(), condition};
-    like_matcher.resolve([&](const auto& matcher) {
-      for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-        result_values[row_idx] = matcher(left_results->values[row_idx]);
-      }
+    LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
+      using Predicate = std::decay_t<decltype(predicate)>;
+      LikeMatcher::resolve_pattern<Predicate>(right_results->values.front(), [&](const auto& matcher) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+          result_values[row_idx] = matcher(left_results->values[row_idx]);
+        }
+      });
     });
   } else {
     // E.g., `'hello' LIKE b` - A new matcher for each row but the value to check is constant.
-    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx], condition}.resolve([&](const auto& matcher) {
-        result_values[row_idx] = matcher(left_results->values.front());
-      });
-    }
+    LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
+      using Predicate = std::decay_t<decltype(predicate)>;
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+        LikeMatcher::resolve_pattern<Predicate>(right_results->values[row_idx], [&](const auto& matcher) {
+          result_values[row_idx] = matcher(left_results->values.front());
+        });
+      }
+    });
   }
 
   auto result_nulls = _evaluate_default_null_logic(left_results->nulls, right_results->nulls);
@@ -685,6 +693,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
     case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       return _evaluate_like_expression(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::IsNull:
@@ -1216,7 +1225,8 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::NotIn:
         case PredicateCondition::Like:
         case PredicateCondition::NotLike:
-        case PredicateCondition::LikeInsensitive: {
+        case PredicateCondition::LikeInsensitive:
+        case PredicateCondition::NotLikeInsensitive: {
           // Evaluating (Not)In and (Not)Like to PosLists uses evaluate_expression_to_result() and scans the Series
           // it returns for matches. This is probably slower than a dedicated evaluate-to-PosList implementation
           // for these ExpressionTypes could be. But
