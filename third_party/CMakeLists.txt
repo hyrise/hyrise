@@ -10,10 +10,10 @@ set(CMAKE_UNITY_BUILD "OFF")
 
 # Some third-party libraries already define proper CMake library targets. We can simply add those targets with
 # `add_subdirectory(<lib-directory>)`. For libraries without such definitions, we manually build the library targets.
-set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
 set(ABSL_ENABLE_INSTALL ON)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/abseil)
 add_subdirectory(abseil-cpp)
+set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
 add_subdirectory(benchmark)
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
@@ -30,9 +30,6 @@ target_include_directories(
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/zstd/lib>
 )
-
-# set_property(TARGET abseil-cpp PROPERTY ABSL_ENABLE_INSTALL ON)
-#set_property(TARGET re2 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Build sql-parser library
 set(PARSER_DIR sql-parser)

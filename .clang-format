@@ -75,7 +75,7 @@ IncludeCategories:
 
     # This list needs to be kept up to date to order non-system third party libraries properly. If third party files are
     # missed, it is not a real issue. They are simply grouped with Hyrise headers.
-  - Regex:           '^"(magic_enum|nlohmann|lz4\.h|cxxopts\.hpp|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h|SQLParser\.h|benchmark\/benchmark\.h|SQLParserResult\.h|sql\/.+\.h\").*$'
+  - Regex:           '^"(magic_enum|nlohmann|lz4\.h|cxxopts\.hpp|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h|SQLParser\.h|benchmark\/benchmark\.h|SQLParserResult\.h|re2|sql\/.+\.h\").*$'
     Priority:        4
   - Regex:           '.*'
     Priority:        5

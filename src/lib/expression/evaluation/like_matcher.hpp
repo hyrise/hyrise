@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "re2/re2.h"
+
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/string_utils.hpp"
@@ -71,7 +72,9 @@ class LikeMatcher {
   /**
    * The functor will be called with a concrete matcher.
    * Usage example:
-   *    LikeMatcher{"%hello%"}.resolve(false, [](const auto& matcher) {
+   *    LikeMatcher::resolve_condition(PredicateCondition::Like [&](const auto& predicate) {
+   *      using Predicate = std::decay_t<decltype(predicate)>;
+   *      LikeMatcher::resolve_pattern<Predicate>("%hello%", [](const auto& matcher) {
    *        std::cout << matcher("He said hello!");
    *    }
    */
@@ -81,11 +84,11 @@ class LikeMatcher {
         std::is_same_v<Predicate, MatchNotLike> || std::is_same_v<Predicate, MatchNotLikeInsensitive>;
     if constexpr (std::is_same_v<Predicate, MatchLikeInsensitive> ||
                   std::is_same_v<Predicate, MatchNotLikeInsensitive>) {
-      _resolve_pattern_with_case<invert>(pattern, functor, [](const auto& input, const auto& matching_function) {
+      resolve_pattern_with_case<invert>(pattern, functor, [](const auto& input, const auto& matching_function) {
         return matching_function(string_to_lower(input));
       });
     } else {
-      _resolve_pattern_with_case<invert>(pattern, functor, [](const auto& input, const auto& matching_function) {
+      resolve_pattern_with_case<invert>(pattern, functor, [](const auto& input, const auto& matching_function) {
         return matching_function(input);
       });
     }
@@ -124,14 +127,9 @@ class LikeMatcher {
     std::vector<pmr_string> strings;
   };
 
-  // struct RE2Pattern final {
-  //   // RE2 cannot be copied or moved. The unique_ptr enables moving the variant in the constructor the LikeMatcher.
-  //   re2::RE2 pattern;
-  // };
-
   /**
-   * Resolves one of the specialised patterns from above (StartsWithPattern, ...) or falls back to std::regex for a
-   * general pattern.
+   * Resolves one of the specialised patterns from above (StartsWithPattern, ...) or falls back to a regex for a general
+   * pattern.
    */
   template <typename Functor, typename Casing>
   static void resolve_pattern_type(const pmr_string& pattern, const Casing& casing, const Functor& functor) {
@@ -194,15 +192,12 @@ class LikeMatcher {
         return;
       }
 
-      // functor(std::regex{sql_like_to_regex(cased_pattern)});
       return functor(re2::RE2{sql_like_to_regex(cased_pattern)});
     });
   }
 
- private:
   template <bool invert_results, typename Functor, typename Casing>
-  static void _resolve_pattern_with_case(const pmr_string& pattern, const Functor& functor,
-                                         const Casing& resolve_case) {
+  static void resolve_pattern_with_case(const pmr_string& pattern, const Functor& functor, const Casing& resolve_case) {
     resolve_pattern_type(pattern, resolve_case, [&](const auto& typed_pattern) {
       using Pattern = std::decay_t<decltype(typed_pattern)>;
 
@@ -267,7 +262,6 @@ class LikeMatcher {
       } else if constexpr (std::is_same_v<Pattern, re2::RE2>) {
         functor([&](const auto& string) -> bool {
           return resolve_case(string, [&](const auto& cased_string) -> bool {
-            // return std::regex_match(cased_string.cbegin(), cased_string.cend(), typed_pattern) ^ invert_results;
             return re2::RE2::FullMatch(re2::StringPiece{cased_string}, typed_pattern) ^ invert_results;
           });
         });

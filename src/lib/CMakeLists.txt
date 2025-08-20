@@ -749,10 +749,10 @@ target_link_libraries_system(
     concurrentqueue
     cxxopts
     nlohmann_json::nlohmann_json
+    re2
     sparse_map
     SQLite::SQLite3
     tbb
-    re2
 )
 
 if (NUMA_FOUND)

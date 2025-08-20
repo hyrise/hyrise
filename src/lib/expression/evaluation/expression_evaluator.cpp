@@ -330,11 +330,10 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
    * NOTE: This code path is NOT taken for LIKEs in predicates. That is `SELECT * FROM t WHERE a LIKE '%Hello%'` is
    *       handled in the TableScan. This code path is for `SELECT a LIKE 'bla' FROM ...` and alike.
    */
-
-  Assert(expression.predicate_condition == PredicateCondition::Like ||
-             expression.predicate_condition == PredicateCondition::NotLike ||
-             expression.predicate_condition == PredicateCondition::LikeInsensitive,
-         "Expected PredicateCondition Like, NotLike, or LikeInsensitive.");
+  const auto condition = expression.predicate_condition;
+  Assert(condition == PredicateCondition::Like || condition == PredicateCondition::NotLike ||
+             condition == PredicateCondition::LikeInsensitive || condition == PredicateCondition::NotLikeInsensitive,
+         "Expected PredicateCondition (Not)Like or (Not)LikeInsensitive.");
 
   const auto left_results = evaluate_expression_to_result<pmr_string>(*expression.left_operand());
   const auto right_results = evaluate_expression_to_result<pmr_string>(*expression.right_operand());
@@ -351,7 +350,6 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
    */
   const auto both_are_literals = left_results->is_literal() && right_results->is_literal();
   const auto both_are_series = !left_results->is_literal() && !right_results->is_literal();
-  const auto condition = expression.predicate_condition;
   if (both_are_literals || both_are_series) {
     // E.g., `a LIKE b` - A new matcher for each row and a different value as well.
     LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
