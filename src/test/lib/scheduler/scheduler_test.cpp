@@ -411,7 +411,6 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
   // Test early out for very small number of tasks.
   {
     constexpr auto WORKER_COUNT = size_t{2};
-
     Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -422,12 +421,14 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
 
   // Test that minimally sized topology yields valid group counts.
   {
-    Hyrise::get().topology.use_fake_numa_topology(1, 1);
+    constexpr auto WORKER_COUNT = size_t{1};
+    Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
-    // Create a large number of tasks to avoid early out.
-    const auto task_count = std::thread::hardware_concurrency() * 10;
+    // Create a large number of tasks to avoid early out (factor must be adapted when the max. number of groups is
+    // changed, see NodeQueueScheduler::NUM_GROUPS_MAX_FACTOR).
+    const auto task_count = WORKER_COUNT * 20;
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     tasks.reserve(task_count);
     for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
@@ -438,18 +439,21 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
 }
 
 TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
-  Hyrise::get().topology.use_fake_numa_topology(4, 4);
+  constexpr auto WORKER_COUNT = size_t{4};
+  Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
-  // Create a large number of tasks to avoid early out.
-  const auto task_count = std::thread::hardware_concurrency() * 10;
+  // Create a large number of tasks to avoid early out (factor must be adapted when the max. number of groups is
+  // changed, see NodeQueueScheduler::NUM_GROUPS_MAX_FACTOR).
+  const auto task_count = WORKER_COUNT * 20;
   auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_1.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_1.push_back(std::make_shared<JobTask>([&]() {}));
   }
 
+  // For 40 (4 workers * 20) tasks, grouping should happen.
   const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
   EXPECT_TRUE(num_groups_without_load);
 
