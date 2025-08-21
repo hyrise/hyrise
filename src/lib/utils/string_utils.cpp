@@ -1,5 +1,6 @@
 #include "string_utils.hpp"
 
+#include <algorithm>
 #include <filesystem>
 #include <regex>
 #include <sstream>
