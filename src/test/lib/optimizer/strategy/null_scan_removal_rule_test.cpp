@@ -1,3 +1,6 @@
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -12,6 +15,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class NullScanRemovalRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     rule = std::make_shared<NullScanRemovalRule>();
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
     mock_node_column = mock_node->get_column("a");
@@ -40,6 +44,7 @@ TEST_F(NullScanRemovalRuleTest, LQPNodeTypeIsNotPredicate) {
   _lqp = mock_node->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, mock_node);
 }
 
@@ -49,6 +54,7 @@ TEST_F(NullScanRemovalRuleTest, PredicateIsNotNullExpression) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -58,6 +64,7 @@ TEST_F(NullScanRemovalRuleTest, PredicateConditionIsNotNull) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -67,6 +74,7 @@ TEST_F(NullScanRemovalRuleTest, PredicateOperandIsNotLQPColumnExpression) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -76,6 +84,7 @@ TEST_F(NullScanRemovalRuleTest, LQPColumnOriginalNodeIsNotStoredTableNode) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -85,6 +94,7 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNullable) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -100,6 +110,7 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
   const auto expected_lqp = table_node->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
