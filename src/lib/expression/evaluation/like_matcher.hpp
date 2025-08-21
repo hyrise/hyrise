@@ -76,7 +76,8 @@ class LikeMatcher {
    *      using Predicate = std::decay_t<decltype(predicate)>;
    *      LikeMatcher::resolve_pattern<Predicate>("%hello%", [](const auto& matcher) {
    *        std::cout << matcher("He said hello!");
-   *    }
+   *      });
+   *    });
    */
   template <typename Predicate, typename Functor>
   static void resolve_pattern(const pmr_string& pattern, const Functor& functor) {
@@ -132,8 +133,8 @@ class LikeMatcher {
    * pattern.
    */
   template <typename Functor, typename Casing>
-  static void resolve_pattern_type(const pmr_string& pattern, const Casing& casing, const Functor& functor) {
-    casing(pattern, [&](const auto& cased_pattern) {
+  static void resolve_pattern_type(const pmr_string& pattern, const Casing& resolve_case, const Functor& functor) {
+    resolve_case(pattern, [&](const auto& cased_pattern) {
       const auto tokens = pattern_string_to_tokens(cased_pattern);
 
       if (tokens.size() == 2 && std::holds_alternative<pmr_string>(tokens[0]) &&

@@ -1153,7 +1153,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         }
         if (predicate.predicate_condition == PredicateCondition::LikeInsensitive ||
             predicate.predicate_condition == PredicateCondition::NotLikeInsensitive) {
-          // A placeholder seoectivity between low and high because case-insensitive matching can produce more results
+          // A placeholder selectivity between low and high because case-insensitive matching can produce more results
           // than a case-sensitive predicate. However, we do not have any experiments, yet.
           selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
           return;

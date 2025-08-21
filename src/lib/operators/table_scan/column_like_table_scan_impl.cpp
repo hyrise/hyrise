@@ -6,8 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/algorithm/string/case_conv.hpp>
-
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
