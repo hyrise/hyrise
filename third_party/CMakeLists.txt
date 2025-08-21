@@ -12,6 +12,7 @@ set(CMAKE_UNITY_BUILD "OFF")
 # `add_subdirectory(<lib-directory>)`. For libraries without such definitions, we manually build the library targets.
 set(ABSL_ENABLE_INSTALL ON)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/lib)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(abseil-cpp)
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
 add_subdirectory(benchmark)
