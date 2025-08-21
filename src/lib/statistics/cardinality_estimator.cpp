@@ -1151,6 +1151,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           selectivity = PLACEHOLDER_SELECTIVITY_HIGH;
           return;
         }
+        if (predicate.predicate_condition == PredicateCondition::LikeInsensitive ||
+            predicate.predicate_condition == PredicateCondition::NotLikeInsensitive) {
+          // A placeholder seoectivity between low and high because case-insensitive matching can produce more results
+          // than a case-sensitive predicate. However, we do not have any experiments, yet.
+          selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
+          return;
+        }
 
         auto value2_variant = std::optional<AllTypeVariant>{};
         if (predicate.value2) {
