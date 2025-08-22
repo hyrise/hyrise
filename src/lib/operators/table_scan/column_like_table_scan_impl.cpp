@@ -3,10 +3,12 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"

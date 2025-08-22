@@ -6,7 +6,6 @@
 #include <ostream>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <boost/algorithm/string/replace.hpp>
