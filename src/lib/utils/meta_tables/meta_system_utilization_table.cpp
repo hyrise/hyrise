@@ -125,16 +125,8 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto user_nice_ticks = static_cast<uint64_t>(cpu_ticks.at(1));
   const auto kernel_ticks = static_cast<uint64_t>(cpu_ticks.at(2));
 
-  const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
-
-  // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
-  // it to ns.
-  // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h.
-  const auto active_ns =
-      (active_ticks * static_cast<uint64_t>(std::nano::den)) / static_cast<uint64_t>(sysconf(_SC_CLK_TCK));
-
-  return active_ns;
-#endif
+  const auto active_ticks = static_cast<double>(user_ticks + user_nice_ticks + kernel_ticks);
+#else
 
 #ifdef __APPLE__
   auto cpu_info = host_cpu_load_info_data_t{};
@@ -143,18 +135,19 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
       host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get host_statistics.");
 
-  const auto active_ticks = uint64_t{cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] +
-                                     cpu_info.cpu_ticks[CPU_STATE_NICE]};
-
-  // The amount of time from HOST_CPU_LOAD_INFO is measured in units of clock ticks.
-  // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
-  const auto active_ns =
-      (active_ticks * static_cast<uint64_t>(std::nano::den)) / static_cast<uint64_t>(sysconf(_SC_CLK_TCK));
-
-  return active_ns;
-#endif
+  const auto active_ticks = static_cast<double>(
+      cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE]);
+#else
 
   Fail("Method not implemented for this platform.");
+
+#endif  // __APPLE__
+#endif  // __linux__
+
+  // The amount of time from HOST_CPU_LOAD_INFO is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to
+  // convert it to seconds, which we further convert to nanoseconds.
+  const auto ticks_per_second = static_cast<double>(sysconf(_SC_CLK_TCK));  // NOLINT(misc-include-cleaner)
+  return static_cast<uint64_t>((active_ticks / ticks_per_second) * static_cast<double>(std::nano::den));
 }
 
 /**

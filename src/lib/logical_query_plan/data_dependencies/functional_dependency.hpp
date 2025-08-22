@@ -36,7 +36,7 @@ namespace hyrise {
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
-                       bool is_genuine = true);
+                       bool init_is_genuine = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -45,11 +45,7 @@ struct FunctionalDependency {
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
 
-  bool is_genuine() const;
-  void set_genuine() const;
-
- private:
-  mutable bool _is_genuine;
+  mutable bool is_genuine;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
@@ -84,13 +80,15 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 FunctionalDependencies deflate_fds(const FunctionalDependencies& fds);
 
 /**
- * @return Unified FDs from the given @param fds_a and @param fds_b vectors. FDs with the same determinant
- *         expressions are merged into single objects by merging their dependent expressions.
+ * @return Unified FDs from the given @param fds_a and @param fds_b sets. FDs with the same determinant expressions are
+ *         merged into single objects by merging their dependent expressions. If an FD exists on both sides, but is
+ *         genuine on only one side, we are currently cautious and flag the FD as not genuine.
  */
 FunctionalDependencies union_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b);
 
 /**
- * @return Returns FDs that are included in both of the given vectors.
+ * @return FDs that are included in both of the given sets. If an FD exists on both sides, but is  genuine on only one
+ *         side, we are currently cautious and flag the FD as not genuine.
  */
 FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b);
 

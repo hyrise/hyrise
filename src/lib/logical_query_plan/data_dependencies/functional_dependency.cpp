@@ -17,8 +17,8 @@
 namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
-                                           ExpressionUnorderedSet&& init_dependents, bool is_genuine)
-    : determinants{std::move(init_determinants)}, dependents{std::move(init_dependents)}, _is_genuine{is_genuine} {
+                                           ExpressionUnorderedSet&& init_dependents, bool init_is_genuine)
+    : determinants{std::move(init_determinants)}, dependents{std::move(init_dependents)}, is_genuine{init_is_genuine} {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
@@ -52,14 +52,6 @@ bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
   return !(other == *this);
 }
 
-bool FunctionalDependency::is_genuine() const {
-  return _is_genuine;
-}
-
-void FunctionalDependency::set_genuine() const {
-  _is_genuine = true;
-}
-
 size_t FunctionalDependency::hash() const {
   auto hash = size_t{0};
   for (const auto& expression : determinants) {
@@ -90,9 +82,9 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
   for (const auto& fd : fds) {
     for (const auto& dependent : fd.dependents) {
       auto [existing_fd, inserted] = inflated_fds.emplace(ExpressionUnorderedSet{fd.determinants},
-                                                          ExpressionUnorderedSet{dependent}, fd.is_genuine());
-      if (!inserted && fd.is_genuine() && !existing_fd->is_genuine()) {
-        existing_fd->set_genuine();
+                                                          ExpressionUnorderedSet{dependent}, fd.is_genuine);
+      if (!inserted && fd.is_genuine && !existing_fd->is_genuine) {
+        existing_fd->is_genuine = true;
       }
     }
   }
@@ -135,14 +127,14 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
   for (const auto& fd_to_add : fds) {
     // Try only inserting the FD first.
     auto [existing_fd, inserted] =
-        existing_fds.emplace(std::pair(fd_to_add.determinants, fd_to_add.is_genuine()), fd_to_add.dependents);
+        existing_fds.emplace(std::pair(fd_to_add.determinants, fd_to_add.is_genuine), fd_to_add.dependents);
     if (!inserted) {
       auto& dependents = existing_fd->second;
       dependents.insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
     }
 
     // If the FD is genuine, we add the determinants to the non-genuine FD with the same determinants.
-    if (fd_to_add.is_genuine()) {
+    if (fd_to_add.is_genuine) {
       auto [existing_fd, inserted] =
           existing_fds.emplace(std::pair(fd_to_add.determinants, false), fd_to_add.dependents);
       if (!inserted) {
@@ -161,7 +153,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
       // If the FD was already in the set and is genuine, we set the already existing FD to genuine as well.
       // This is necessary because we might have added the FD with the same determinants but without the genuine
       // flag.
-      existing_fd->set_genuine();
+      existing_fd->is_genuine = true;
     }
   }
 
@@ -180,11 +172,11 @@ FunctionalDependencies union_fds(const FunctionalDependencies& fds_a, const Func
   auto fds_unified = FunctionalDependencies{fds_a.cbegin(), fds_a.cend()};
   fds_unified.reserve(fds_a.size() + fds_b.size());
 
-  // Make sure not to lose genuine FDs.
+  // Make sure not to prefer genuine FDs.
   for (const auto& fd : fds_b) {
     const auto [existing_fd, inserted] = fds_unified.insert(fd);
-    if (!inserted && fd.is_genuine()) {
-      existing_fd->set_genuine();
+    if (!inserted && !fd.is_genuine) {
+      existing_fd->is_genuine = false;
     }
   }
 
@@ -203,12 +195,12 @@ FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a, const 
   auto intersected_fds = FunctionalDependencies();
   intersected_fds.reserve(fds_a.size());
 
-  // Make sure not to lose genuine FDs.
+  // Make sure not to prefer genuine FDs.
   for (const auto& fd_a : inflated_fds_a) {
     const auto fd_b = inflated_fds_b.find(fd_a);
     if (fd_b != inflated_fds_b.end()) {
       intersected_fds.emplace(ExpressionUnorderedSet{fd_a.determinants}, ExpressionUnorderedSet{fd_a.dependents},
-                              fd_a.is_genuine() || fd_b->is_genuine());
+                              fd_a.is_genuine && fd_b->is_genuine);
     }
   }
 

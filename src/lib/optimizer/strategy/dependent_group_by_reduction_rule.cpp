@@ -167,8 +167,8 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
       // Currently, we only encounter at most two FDs per determinant combination, one genuine and one
       // non-genuine. We want to prefer the genuine FDs because they allow caching of the query plan.
       // Therefore, we order FDs with genuine determinants before those without.
-      if (fd_left.is_genuine() != fd_right.is_genuine()) {
-        return fd_left.is_genuine();
+      if (fd_left.is_genuine != fd_right.is_genuine) {
+        return fd_left.is_genuine;
       }
 
       // The FDs are expected to be equally useful for the rewrite. However, we have to decide on semantics here to make
@@ -192,7 +192,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std:
 
       const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
-        if (!fd.is_genuine()) {
+        if (!fd.is_genuine) {
           optimization_context.set_not_cacheable();
         }
 

@@ -110,11 +110,11 @@ TEST_F(FunctionalDependencyTest, InflateFDsGenuineAndSpurious) {
 
   // Also check that the genuine properties are correct. Note that FDs are not hashed by their genuine
   // properties, so we cannot check the genuine property of the inflated FDs directly
-  EXPECT_TRUE(inflated_fds.find(fd_a_b)->is_genuine());
-  EXPECT_TRUE(inflated_fds.find(fd_a_c)->is_genuine());
-  EXPECT_FALSE(inflated_fds.find(fd_a_x)->is_genuine());
-  EXPECT_FALSE(inflated_fds.find(fd_b_a)->is_genuine());
-  EXPECT_FALSE(inflated_fds.find(fd_b_c)->is_genuine());
+  EXPECT_TRUE(inflated_fds.find(fd_a_b)->is_genuine);
+  EXPECT_TRUE(inflated_fds.find(fd_a_c)->is_genuine);
+  EXPECT_FALSE(inflated_fds.find(fd_a_x)->is_genuine);
+  EXPECT_FALSE(inflated_fds.find(fd_b_a)->is_genuine);
+  EXPECT_FALSE(inflated_fds.find(fd_b_c)->is_genuine);
 
   // An FD with multiple dependents is not inflated.
   EXPECT_FALSE(inflated_fds.contains(fd_b_ac));
@@ -143,8 +143,8 @@ TEST_F(FunctionalDependencyTest, DeflateFDsGenuineAndSpurious) {
   ASSERT_TRUE(deflated_fds.contains(fd_a_b));  // We keep the genuine FD.
 
   // Check that the genuine property is correct.
-  EXPECT_FALSE(deflated_fds.find(fd_a)->is_genuine());
-  EXPECT_TRUE(deflated_fds.find(fd_a_b)->is_genuine());
+  EXPECT_FALSE(deflated_fds.find(fd_a)->is_genuine);
+  EXPECT_TRUE(deflated_fds.find(fd_a_b)->is_genuine);
 }
 
 TEST_F(FunctionalDependencyTest, UnionFDsEmpty) {
@@ -182,21 +182,21 @@ TEST_F(FunctionalDependencyTest, UnionFDsRemoveDuplicates) {
 }
 
 TEST_F(FunctionalDependencyTest, UnionFDsGenuineAndSpurious) {
-  const auto fd_a = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
-  const auto fd_a_b = FunctionalDependency({_a}, {_b}, /*is_genuine=*/true);
-  const auto fd_a_b_spurious = FunctionalDependency({_a}, {_b}, /*is_genuine=*/false);
+  const auto fd_a = FunctionalDependency({_a}, {_b}, /*is_genuine=*/true);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/true);
+  const auto fd_a_b_spurious = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
   const auto fd_c_d = FunctionalDependency({_c}, {_d}, /*is_genuine=*/false);
 
-  const auto fds_unified = union_fds({fd_a, fd_a_b_spurious}, {fd_a, fd_a_b, fd_c_d});
+  const auto fds_unified = union_fds({fd_a, fd_a_b}, {fd_a, fd_a_b_spurious, fd_c_d});
   EXPECT_EQ(fds_unified.size(), 3);
   ASSERT_TRUE(fds_unified.contains(fd_a));
   ASSERT_TRUE(fds_unified.contains(fd_a_b));
   ASSERT_TRUE(fds_unified.contains(fd_c_d));
 
   // Check that the genuine property is correct.
-  EXPECT_FALSE(fds_unified.find(fd_a)->is_genuine());
-  EXPECT_TRUE(fds_unified.find(fd_a_b)->is_genuine());  // We keep a genuine FD if there is also a non-genuine one.
-  EXPECT_FALSE(fds_unified.find(fd_c_d)->is_genuine());
+  EXPECT_TRUE(fds_unified.find(fd_a)->is_genuine);
+  EXPECT_FALSE(fds_unified.find(fd_a_b)->is_genuine);  // We keep a spurious FD if there is also a genuine one.
+  EXPECT_FALSE(fds_unified.find(fd_c_d)->is_genuine);
 }
 
 TEST_F(FunctionalDependencyTest, IntersectFDsEmpty) {
@@ -221,19 +221,23 @@ TEST_F(FunctionalDependencyTest, IntersectFDs) {
 }
 
 TEST_F(FunctionalDependencyTest, IntersectFDsGenuineAndSpurious) {
-  const auto fd_a = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
-  const auto fd_a_b = FunctionalDependency({_a}, {_b}, /*is_genuine=*/true);
-  const auto fd_a_b_spurious = FunctionalDependency({_a}, {_b}, /*is_genuine=*/false);
+  const auto fd_a = FunctionalDependency({_a},
+                                         {
+                                             _b,
+                                         },
+                                         /*is_genuine=*/true);
+  const auto fd_a_b = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/true);
+  const auto fd_a_b_spurious = FunctionalDependency({_a}, {_b, _c}, /*is_genuine=*/false);
   const auto fd_c_d = FunctionalDependency({_c}, {_d}, /*is_genuine=*/false);
 
-  const auto intersected_fds = intersect_fds({fd_a, fd_a_b_spurious}, {fd_a, fd_a_b, fd_c_d});
+  const auto intersected_fds = intersect_fds({fd_a, fd_a_b}, {fd_a, fd_a_b_spurious, fd_c_d});
   EXPECT_EQ(intersected_fds.size(), 2);
   ASSERT_TRUE(intersected_fds.contains(fd_a));
   ASSERT_TRUE(intersected_fds.contains(fd_a_b));
 
   // Check that the genuine property is correct.
-  EXPECT_FALSE(intersected_fds.find(fd_a)->is_genuine());
-  EXPECT_TRUE(intersected_fds.find(fd_a_b)->is_genuine());  // We keep a genuine FD if there is also a non-genuine one.
+  EXPECT_TRUE(intersected_fds.find(fd_a)->is_genuine);
+  EXPECT_FALSE(intersected_fds.find(fd_a_b)->is_genuine);  // We keep a spurious FD if there is also a genuine one.
 }
 
 }  // namespace hyrise
