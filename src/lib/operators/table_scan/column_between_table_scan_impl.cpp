@@ -20,6 +20,23 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
+namespace {
+
+template <typename T>
+struct SignedToUnsigned {};
+
+template <>
+struct SignedToUnsigned<int32_t> {
+  typedef uint32_t Type;
+};
+
+template <>
+struct SignedToUnsigned<int64_t> {
+  typedef uint64_t Type;
+};
+
+}  // namespace
+
 namespace hyrise {
 
 ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
@@ -81,12 +98,28 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
       const auto typed_left_value = boost::get<ColumnDataType>(left_value);
       const auto typed_right_value = boost::get<ColumnDataType>(right_value);
 
-      with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
-        auto between_comparator = [&](const auto& position) {
-          return between_comparator_function(position.value(), typed_left_value, typed_right_value);
+      if constexpr (std::is_integral_v<ColumnDataType>) {
+        const auto lower_bound =
+            is_lower_inclusive_between(predicate_condition) ? typed_left_value : typed_left_value + 1;
+        const auto upper_bound =
+            is_upper_inclusive_between(predicate_condition) ? typed_right_value : typed_right_value - 1;
+
+        using UnsignedType = typename SignedToUnsigned<ColumnDataType>::Type;
+        const auto value_diff = static_cast<UnsignedType>(upper_bound - lower_bound);
+        const auto between_comparator = [lower_bound, value_diff](const auto& position) {
+          return (static_cast<UnsignedType>(position.value() - lower_bound)) <= value_diff;
         };
+
         _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
-      });
+
+      } else {
+        with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
+          const auto between_comparator = [&](const auto& position) {
+            return between_comparator_function(position.value(), typed_left_value, typed_right_value);
+          };
+          _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
+        });
+      }
     } else {
       Fail("Dictionary and Reference segments have their own code paths and should be handled there");
     }
