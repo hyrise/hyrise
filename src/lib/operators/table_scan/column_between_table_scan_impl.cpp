@@ -20,23 +20,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace {
-
-template <typename T>
-struct SignedToUnsigned {};
-
-template <>
-struct SignedToUnsigned<int32_t> {
-  typedef uint32_t Type;
-};
-
-template <>
-struct SignedToUnsigned<int64_t> {
-  typedef uint64_t Type;
-};
-
-}  // namespace
-
 namespace hyrise {
 
 ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
@@ -104,7 +87,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
         const auto upper_bound =
             is_upper_inclusive_between(predicate_condition) ? typed_right_value : typed_right_value - 1;
 
-        using UnsignedType = typename SignedToUnsigned<ColumnDataType>::Type;
+        using UnsignedType = std::make_unsigned_t<ColumnDataType>;
         const auto value_diff = static_cast<UnsignedType>(upper_bound - lower_bound);
         const auto between_comparator = [lower_bound, value_diff](const auto& position) {
           return (static_cast<UnsignedType>(position.value() - lower_bound)) <= value_diff;
