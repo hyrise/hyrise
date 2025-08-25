@@ -625,10 +625,9 @@ bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& 
         result_values.resize(result_size);
       }
 
-      with_between_comparator(expression.predicate_condition, [&](const auto& comparator) {
+      with_between_comparator(expression.predicate_condition, lower_bound, upper_bound, [&](const auto& comparator) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-          const auto value_matches =
-              !view.is_null(chunk_offset) && comparator(view.value(chunk_offset), lower_bound, upper_bound);
+          const auto value_matches = !view.is_null(chunk_offset) && comparator(view.value(chunk_offset));
 
           if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
             result_values[chunk_offset] = static_cast<Bool>(value_matches);

@@ -81,12 +81,13 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
       const auto typed_left_value = boost::get<ColumnDataType>(left_value);
       const auto typed_right_value = boost::get<ColumnDataType>(right_value);
 
-      with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
-        auto between_comparator = [&](const auto& position) {
-          return between_comparator_function(position.value(), typed_left_value, typed_right_value);
-        };
-        _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
-      });
+      with_between_comparator(predicate_condition, typed_left_value, typed_right_value,
+                              [&](auto between_comparator_function) {
+                                auto between_comparator = [&](const auto& position) {
+                                  return between_comparator_function(position.value());
+                                };
+                                _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
+                              });
     } else {
       Fail("Dictionary and Reference segments have their own code paths and should be handled there");
     }
