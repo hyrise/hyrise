@@ -24,15 +24,14 @@ cd clang-bolt
 cmake -DCMAKE_UNITY_BUILD=ON -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCOMPILE_FOR_BOLT=TRUE ..
 ninja all -j $(nproc)
 
-benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema'
-for benchmark in $benchmarks
+for benchmark in hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema
 do
     # TODO: Multi-threaded benchmarks?
 
     # remove -j any,u on cpus that do not have a last branch register (i.e. AMD)
     perf record -e cycles:u -j any,u -o $benchmark.data -- ./$benchmark -t 360 -m Shuffled
     # Add -nl on cpus that do not have a last branch register (i.e. AMD)
-    /usr/lib/llvm-17/bin/perf2bolt -p $benchmark.data -o $benchmark.fdata ./lib/libhyrise_impl.so
+    perf2bolt -p $benchmark.data -o $benchmark.fdata ./lib/libhyrise_impl.so
 done
 
-merge-fdata-17 *.fdata > ../resources/bolt.fdata
+merge-fdata *.fdata > ../resources/bolt.fdata
