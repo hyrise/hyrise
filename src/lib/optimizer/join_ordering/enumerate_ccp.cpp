@@ -27,7 +27,7 @@ namespace hyrise {
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges)
     : _num_vertices{num_vertices}, _edges{edges} {
-  // Our implementation of DpCcp is limited to handle less than 64 vertices. The algorihtm should not be used for
+  // Our implementation of DPccp is limited to handle less than 64 vertices. The algorihtm should not be used for
   // queries that many tables because of complexity reasons anyways.
   Assert(_num_vertices < sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
          "Too many vertices, EnumerateCcp relies on to_ulong().");

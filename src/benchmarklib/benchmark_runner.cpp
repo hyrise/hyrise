@@ -646,7 +646,6 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       boost::apply_visitor(
-          // table=table needed because of https://stackoverflow.com/questions/46114214/
           [&, table](const auto& value) {
             if constexpr (!std::is_same_v<std::decay_t<decltype(value)>, NullValue>) {
               entry[table->column_name(column_id)] = value;
