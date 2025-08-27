@@ -117,7 +117,11 @@ class Chunk : private Noncopyable {
 
   void migrate(MemoryResource& memory_resource);
 
-  bool references_exactly_one_table() const;
+  /**
+   * Some operators only check the first segment to obtain positions (e.g. Delete and Validate).
+   * This method checks that all references segments point to the same positions list and the same table.
+   */
+  bool segments_share_table_and_positions() const;
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 

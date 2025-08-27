@@ -380,7 +380,7 @@ TEST_F(StorageChunkTest, SegmentsShareTableAndPositions) {
   test_table2->append_chunk({ds_int, ds_str});
 
   // Chunk with non-reference segments.
-  EXPECT_FALSE(chunk->references_exactly_one_table());
+  EXPECT_FALSE(chunk->segments_share_table_and_positions());
 
   // Chunk with reference segments to the same table with the same pos_list.
   {
@@ -393,7 +393,7 @@ TEST_F(StorageChunkTest, SegmentsShareTableAndPositions) {
     const auto reference_segments = Segments{ref_segment1, ref_segment2};
 
     const auto reference_chunk = std::make_shared<Chunk>(reference_segments);
-    EXPECT_TRUE(reference_chunk->references_exactly_one_table());
+    EXPECT_TRUE(reference_chunk->segments_share_table_and_positions());
   }
 
   // Chunk with reference segments to different tables.
@@ -406,7 +406,7 @@ TEST_F(StorageChunkTest, SegmentsShareTableAndPositions) {
     const auto mixed_reference_segments = Segments{ref_segment1, ref_segment2};
 
     const auto mixed_reference_chunk = std::make_shared<Chunk>(mixed_reference_segments);
-    EXPECT_FALSE(mixed_reference_chunk->references_exactly_one_table());
+    EXPECT_FALSE(mixed_reference_chunk->segments_share_table_and_positions());
   }
 
   // Chunk with reference segments to the same table but different pos_lists.
@@ -422,7 +422,7 @@ TEST_F(StorageChunkTest, SegmentsShareTableAndPositions) {
     const auto different_pos_list_segments = Segments{ref_segment1, ref_segment2};
 
     const auto different_pos_list_chunk = std::make_shared<Chunk>(different_pos_list_segments);
-    EXPECT_FALSE(different_pos_list_chunk->references_exactly_one_table());
+    EXPECT_FALSE(different_pos_list_chunk->segments_share_table_and_positions());
   }
 
   // Chunk with reference segments to the same table and same pos_lists, but separately constructed.
@@ -439,7 +439,7 @@ TEST_F(StorageChunkTest, SegmentsShareTableAndPositions) {
     auto same_pos_list_segments = Segments{ref_segment1, ref_segment2};
 
     const auto different_pos_list_chunk = std::make_shared<Chunk>(same_pos_list_segments);
-    EXPECT_THROW(different_pos_list_chunk->references_exactly_one_table());
+    EXPECT_THROW(different_pos_list_chunk->segments_share_table_and_positions());
   }
 }
 

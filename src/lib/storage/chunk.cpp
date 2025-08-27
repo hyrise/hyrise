@@ -154,7 +154,7 @@ void Chunk::remove_index(const std::shared_ptr<AbstractChunkIndex>& index) {
   _indexes.erase(it);
 }
 
-bool Chunk::references_exactly_one_table() const {
+bool Chunk::segments_share_table_and_positions() const {
   if (column_count() == 0) {
     return false;
   }
