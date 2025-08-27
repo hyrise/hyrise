@@ -210,7 +210,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, *_radix_bits, join_hash_performance_data,
-            adjusted_secondary_predicates);
+            adjusted_secondary_predicates, Chunk::DEFAULT_SIZE * 4);
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -235,7 +235,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const OutputColumnOrder output_column_order, const size_t radix_bits,
-               JoinHash::PerformanceData& performance_data, std::vector<OperatorJoinPredicate>& secondary_predicates)
+               JoinHash::PerformanceData& performance_data, std::vector<OperatorJoinPredicate>& secondary_predicates,
+               size_t probe_size_per_chunk)
       : _join_hash(join_hash),
         _secondary_predicates(secondary_predicates),
         _performance_data(performance_data),
@@ -245,7 +246,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _output_column_order(output_column_order),
-        _radix_bits(radix_bits) {}
+        _radix_bits(radix_bits),
+        _probe_size_per_chunk{probe_size_per_chunk} {}
 
  protected:
   // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members): const members and references are problematic with
@@ -263,6 +265,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   OutputColumnOrder _output_column_order;
   std::shared_ptr<Table> _output_table;
   size_t _radix_bits;
+  size_t _probe_size_per_chunk;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
@@ -500,49 +503,38 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     auto build_side_pos_lists = std::vector<RowIDPosList>{};
     auto probe_side_pos_lists = std::vector<RowIDPosList>{};
-    const size_t partition_count = radix_probe_column.size();
-    build_side_pos_lists.resize(partition_count);
-    probe_side_pos_lists.resize(partition_count);
-
-    // simple heuristic: half of the rows of the probe side will match
-    const size_t result_rows_per_partition =
-        _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
-    for (auto partition_index = size_t{0}; partition_index < partition_count; ++partition_index) {
-      build_side_pos_lists[partition_index].reserve(result_rows_per_partition);
-      probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
-    }
 
     auto timer_probing = Timer{};
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                   probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
-                                                  _secondary_predicates);
+                                                  _secondary_predicates, _probe_size_per_chunk);
         break;
 
       case JoinMode::Left:
       case JoinMode::Right:
         probe<ProbeColumnType, HashedType, true>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                  probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
-                                                 _secondary_predicates);
+                                                 _secondary_predicates, _probe_size_per_chunk);
         break;
 
       case JoinMode::Semi:
-        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
-                                                                     probe_side_pos_lists, *_build_input_table,
-                                                                     *_probe_input_table, _secondary_predicates);
+        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(
+            radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
+            _secondary_predicates, _probe_size_per_chunk);
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates);
+            _secondary_predicates, _probe_size_per_chunk);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates);
+            _secondary_predicates, _probe_size_per_chunk);
         break;
 
       default:

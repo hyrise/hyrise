@@ -639,9 +639,10 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
            std::vector<RowIDPosList>& pos_lists_build_side, std::vector<RowIDPosList>& pos_lists_probe_side,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
-           const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+           const std::vector<OperatorJoinPredicate>& secondary_join_predicates, const size_t probe_size_per_chunk) {
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(probe_radix_container.size());
+  auto manual_jobs = std::vector<std::function<void()>>{};
 
   /*
     NUMA notes:
@@ -651,6 +652,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     and the job that probes that partition should also be on that NUMA node.
   */
 
+  auto output_idx = size_t{0};
   for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
@@ -661,149 +663,164 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     const auto& elements = partition.elements;
     const auto elements_count = elements.size();
 
-    const auto probe_partition = [&, partition_idx, elements_count]() {
-      const auto& null_values = partition.null_values;
+    for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += probe_size_per_chunk) {
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, elements_count]() {
+        const auto& null_values = partition.null_values;
+        const auto partition_end = std::min(partition_begin + probe_size_per_chunk, elements_count);
 
-      RowIDPosList pos_list_build_side_local;
-      RowIDPosList pos_list_probe_side_local;
-
-      if constexpr (keep_null_values) {
-        Assert(elements.size() == null_values.size(),
-               "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
-      }
-
-      const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
-      if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
-        const auto& hash_table = *hash_tables[hash_table_idx];
-
-        // The MultiPredicateJoinEvaluator use accessors internally. Those are not thread-safe, so we create one
-        // evaluator per job.
-        std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
-        if (!secondary_join_predicates.empty()) {
-          multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
-        }
-
+        auto pos_list_build_side_local = RowIDPosList{};
+        auto pos_list_probe_side_local = RowIDPosList{};
         // Simple heuristic to estimate result size: half of the partition's rows will match
         // a more conservative pre-allocation would be the size of the build cluster
-        const size_t expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil(elements.size() / 2)));
-        pos_list_build_side_local.reserve(static_cast<size_t>(expected_output_size));
-        pos_list_probe_side_local.reserve(static_cast<size_t>(expected_output_size));
+        const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
+        pos_list_build_side_local.reserve(expected_output_size);
+        pos_list_probe_side_local.reserve(expected_output_size);
 
-        for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
-          const auto& probe_column_element = elements[partition_offset];
+        if constexpr (keep_null_values) {
+          Assert(elements.size() == null_values.size(),
+                 "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
+        }
 
-          if (mode == JoinMode::Inner && probe_column_element.row_id == NULL_ROW_ID) {
-            // From previous joins, we could potentially have NULL values that do not refer to
-            // an actual probe_column_element but to the NULL_ROW_ID. Hence, we can only skip for inner joins.
-            continue;
+        const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
+        if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
+          const auto& hash_table = *hash_tables[hash_table_idx];
+
+          // The MultiPredicateJoinEvaluator use accessors internally. Those are not thread-safe, so we create one
+          // evaluator per job.
+          auto multi_predicate_join_evaluator = std::optional<MultiPredicateJoinEvaluator>{};
+          if (!secondary_join_predicates.empty()) {
+            multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
           }
 
-          auto [primary_predicate_matching_rows_iter, primary_predicate_matching_rows_end] =
-              hash_table.find(static_cast<HashedType>(probe_column_element.value));
+          for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            const auto& probe_column_element = elements[partition_offset];
 
-          if (primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end) {
-            // Key exists, thus we have at least one hit for the primary predicate
-
-            // Since we cannot store NULL values directly in off-the-shelf containers,
-            // we need to the check the NULL bit vector here because a NULL value (represented
-            // as a zero) yields the same rows as an actual zero value.
-            // For inner joins, we skip NULL values and output them for outer joins.
-            // Note: If the materialization/radix partitioning phase did not explicitly consider
-            // NULL values, they will not be handed to the probe function.
-            if constexpr (keep_null_values) {
-              if (null_values[partition_offset]) {
-                pos_list_build_side_local.emplace_back(NULL_ROW_ID);
-                pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
-                // ignore found matches and continue with next probe item
-                continue;
-              }
+            if (mode == JoinMode::Inner && probe_column_element.row_id == NULL_ROW_ID) {
+              // From previous joins, we could potentially have NULL values that do not refer to
+              // an actual probe_column_element but to the NULL_ROW_ID. Hence, we can only skip for inner joins.
+              continue;
             }
 
-            // If NULL values are discarded, the matching probe_column_element pairs will be written to the result pos
-            // lists.
-            if (!multi_predicate_join_evaluator) {
-              for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
-                   ++primary_predicate_matching_rows_iter) {
-                const auto row_id = *primary_predicate_matching_rows_iter;
-                pos_list_build_side_local.emplace_back(row_id);
-                pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
-              }
-            } else {
-              auto match_found = false;
-              for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
-                   ++primary_predicate_matching_rows_iter) {
-                const auto row_id = *primary_predicate_matching_rows_iter;
-                if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id)) {
-                  pos_list_build_side_local.emplace_back(row_id);
-                  pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
-                  match_found = true;
-                }
-              }
+            auto [primary_predicate_matching_rows_iter, primary_predicate_matching_rows_end] =
+                hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-              // We have not found matching items for all predicates.
+            if (primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end) {
+              // Key exists, thus we have at least one hit for the primary predicate
+
+              // Since we cannot store NULL values directly in off-the-shelf containers,
+              // we need to the check the NULL bit vector here because a NULL value (represented
+              // as a zero) yields the same rows as an actual zero value.
+              // For inner joins, we skip NULL values and output them for outer joins.
+              // Note: If the materialization/radix partitioning phase did not explicitly consider
+              // NULL values, they will not be handed to the probe function.
               if constexpr (keep_null_values) {
-                if (!match_found) {
+                if (null_values[partition_offset]) {
                   pos_list_build_side_local.emplace_back(NULL_ROW_ID);
                   pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
+                  // ignore found matches and continue with next probe item
+                  continue;
                 }
               }
-            }
 
-          } else {
-            // We have not found matching items for the first predicate. Only continue for non-equi join modes.
-            // We use constexpr to prune this conditional for the equi-join implementation.
-            // Note, the outer relation (i.e., left relation for LEFT OUTER JOINs) is the probing
-            // relation since the relations are swapped upfront.
-            if constexpr (keep_null_values) {
+              // If NULL values are discarded, the matching probe_column_element pairs will be written to the result pos
+              // lists.
+              if (!multi_predicate_join_evaluator) {
+                for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
+                     ++primary_predicate_matching_rows_iter) {
+                  const auto row_id = *primary_predicate_matching_rows_iter;
+                  pos_list_build_side_local.emplace_back(row_id);
+                  pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
+                }
+              } else {
+                auto match_found = false;
+                for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
+                     ++primary_predicate_matching_rows_iter) {
+                  const auto row_id = *primary_predicate_matching_rows_iter;
+                  if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id)) {
+                    pos_list_build_side_local.emplace_back(row_id);
+                    pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
+                    match_found = true;
+                  }
+                }
+
+                // We have not found matching items for all predicates.
+                if constexpr (keep_null_values) {
+                  if (!match_found) {
+                    pos_list_build_side_local.emplace_back(NULL_ROW_ID);
+                    pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
+                  }
+                }
+              }
+
+            } else {
+              // We have not found matching items for the first predicate. Only continue for non-equi join modes.
+              // We use constexpr to prune this conditional for the equi-join implementation.
+              // Note, the outer relation (i.e., left relation for LEFT OUTER JOINs) is the probing
+              // relation since the relations are swapped upfront.
+              if constexpr (keep_null_values) {
+                pos_list_build_side_local.emplace_back(NULL_ROW_ID);
+                pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
+              }
+            }
+          }
+        } else {
+          // When there is no hash table, we might still need to handle the values of the probe side for LEFT
+          // and RIGHT joins. We use constexpr to prune this conditional for the equi-join implementation.
+          if constexpr (keep_null_values) {
+            // We assume that the relations have been swapped previously, so that the outer relation is the probing
+            // relation.
+            // Since we did not find a hash table, we know that there is no match in the build column for this
+            // partition. Hence we are going to write NULL values for each row.
+
+            for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
+              const auto& element = elements[partition_offset];
               pos_list_build_side_local.emplace_back(NULL_ROW_ID);
-              pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
+              pos_list_probe_side_local.emplace_back(element.row_id);
             }
           }
         }
+
+        pos_lists_build_side[output_idx] = std::move(pos_list_build_side_local);
+        pos_lists_probe_side[output_idx] = std::move(pos_list_probe_side_local);
+      };
+
+      if (elements_count - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
+        manual_jobs.emplace_back(std::move(probe_partition));
       } else {
-        // When there is no hash table, we might still need to handle the values of the probe side for LEFT
-        // and RIGHT joins. We use constexpr to prune this conditional for the equi-join implementation.
-        if constexpr (keep_null_values) {
-          // We assume that the relations have been swapped previously, so that the outer relation is the probing
-          // relation.
-          // Since we did not find a hash table, we know that there is no match in the build column for this partition.
-          // Hence we are going to write NULL values for each row.
-
-          pos_list_build_side_local.reserve(elements_count);
-          pos_list_probe_side_local.reserve(elements_count);
-
-          for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
-            const auto& element = elements[partition_offset];
-            pos_list_build_side_local.emplace_back(NULL_ROW_ID);
-            pos_list_probe_side_local.emplace_back(element.row_id);
-          }
-        }
+        jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
       }
 
-      pos_lists_build_side[partition_idx] = std::move(pos_list_build_side_local);
-      pos_lists_probe_side[partition_idx] = std::move(pos_list_probe_side_local);
-    };
-
-    if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
-      probe_partition();
-    } else {
-      jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+      ++output_idx;
     }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  pos_lists_build_side.resize(output_idx);
+  pos_lists_probe_side.resize(output_idx);
+
+  for (auto& job : jobs) {
+    job->schedule();
+  }
+
+  for (auto& manual_job : manual_jobs) {
+    manual_job();
+  }
+
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
                      const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
-                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+                     const size_t probe_size_per_chunk) {
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto manual_jobs = std::vector<std::function<void()>>{};
 
   const auto probe_radix_container_count = probe_radix_container.size();
   jobs.reserve(probe_radix_container_count);
 
+  auto output_idx = size_t{0};
   for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
@@ -814,104 +831,121 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     const auto& elements = partition.elements;
     const auto elements_count = elements.size();
 
-    const auto probe_partition = [&, partition_idx, elements_count]() {
-      // Get information from work queue
-      const auto& null_values = partition.null_values;
+    for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += probe_size_per_chunk) {
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, elements_count]() {
+        // Get information from work queue
+        const auto& null_values = partition.null_values;
+        const auto partition_end = std::min(partition_begin + probe_size_per_chunk, elements_count);
 
-      RowIDPosList pos_list_local;
+        auto pos_list_local = RowIDPosList{};
+        const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
+        pos_list_local.reserve(expected_output_size);
 
-      const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
-      if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
-        // Valid hash table found, so there is at least one match in this partition
-        const auto& hash_table = *hash_tables[hash_table_idx];
+        const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
+        if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
+          // Valid hash table found, so there is at least one match in this partition
+          const auto& hash_table = *hash_tables[hash_table_idx];
 
-        // Accessors are not thread-safe, so we create one evaluator per job
-        MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode,
-                                                                   secondary_join_predicates);
-
-        for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
-          const auto& probe_column_element = elements[partition_offset];
-
-          if constexpr (mode == JoinMode::Semi) {
-            // NULLs on the probe side are never emitted
-            if (probe_column_element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
-              // Could be either skipped or NULL
-              continue;
-            }
-          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
-            // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
-            // of secondary predicates (`NULL("as false") AND <anything>` is always false)
-            if (null_values[partition_offset]) {
-              pos_list_local.emplace_back(probe_column_element.row_id);
-              continue;
-            }
-          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
-            if (null_values[partition_offset]) {
-              // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
-              // This means that the probe value never gets emitted
-              continue;
-            }
+          // Accessors are not thread-safe, so we create one evaluator per job
+          auto multi_predicate_join_evaluator = std::optional<MultiPredicateJoinEvaluator>{};
+          if (!secondary_join_predicates.empty()) {
+            multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
           }
 
-          auto any_build_column_value_matches = false;
+          for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            const auto& probe_column_element = elements[partition_offset];
 
-          if (secondary_join_predicates.empty()) {
-            any_build_column_value_matches = hash_table.contains(static_cast<HashedType>(probe_column_element.value));
-          } else {
-            auto [primary_predicate_matching_rows_iter, primary_predicate_matching_rows_end] =
-                hash_table.find(static_cast<HashedType>(probe_column_element.value));
-
-            for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
-                 ++primary_predicate_matching_rows_iter) {
-              const auto row_id = *primary_predicate_matching_rows_iter;
-              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
-                any_build_column_value_matches = true;
-                break;
+            if constexpr (mode == JoinMode::Semi) {
+              // NULLs on the probe side are never emitted
+              if (probe_column_element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+                // Could be either skipped or NULL
+                continue;
+              }
+            } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
+              // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
+              // of secondary predicates (`NULL("as false") AND <anything>` is always false)
+              if (null_values[partition_offset]) {
+                pos_list_local.emplace_back(probe_column_element.row_id);
+                continue;
+              }
+            } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
+              if (null_values[partition_offset]) {
+                // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
+                // This means that the probe value never gets emitted
+                continue;
               }
             }
-          }
 
-          if ((mode == JoinMode::Semi && any_build_column_value_matches) ||
-              ((mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) &&
-               !any_build_column_value_matches)) {
+            auto any_build_column_value_matches = false;
+
+            if (secondary_join_predicates.empty()) {
+              any_build_column_value_matches = hash_table.contains(static_cast<HashedType>(probe_column_element.value));
+            } else {
+              auto [primary_predicate_matching_rows_iter, primary_predicate_matching_rows_end] =
+                  hash_table.find(static_cast<HashedType>(probe_column_element.value));
+
+              for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
+                   ++primary_predicate_matching_rows_iter) {
+                const auto row_id = *primary_predicate_matching_rows_iter;
+                if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id)) {
+                  any_build_column_value_matches = true;
+                  break;
+                }
+              }
+            }
+
+            if ((mode == JoinMode::Semi && any_build_column_value_matches) ||
+                ((mode == JoinMode::AntiNullAsTrue || mode == JoinMode::AntiNullAsFalse) &&
+                 !any_build_column_value_matches)) {
+              pos_list_local.emplace_back(probe_column_element.row_id);
+            }
+          }
+        } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
+          // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing
+          // side get emitted.
+          for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            auto& probe_column_element = elements[partition_offset];
+            pos_list_local.emplace_back(probe_column_element.row_id);
+          }
+        } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
+          // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
+          // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
+          const auto build_table_is_empty = build_table.row_count() == 0;
+          for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
+            auto& probe_column_element = elements[partition_offset];
+            // A NULL on the probe side never gets emitted, except when the build table is empty.
+            // This is because `NULL NOT IN <empty list>` is actually true
+            if (null_values[partition_offset] && !build_table_is_empty) {
+              continue;
+            }
+
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
-        // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
-        // get emitted.
-        pos_list_local.reserve(elements.size());
-        for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
-          auto& probe_column_element = elements[partition_offset];
-          pos_list_local.emplace_back(probe_column_element.row_id);
-        }
-      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
-        // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
-        // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
-        const auto build_table_is_empty = build_table.row_count() == 0;
-        pos_list_local.reserve(elements_count);
-        for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
-          auto& probe_column_element = elements[partition_offset];
-          // A NULL on the probe side never gets emitted, except when the build table is empty.
-          // This is because `NULL NOT IN <empty list>` is actually true
-          if (null_values[partition_offset] && !build_table_is_empty) {
-            continue;
-          }
-          pos_list_local.emplace_back(probe_column_element.row_id);
-        }
+
+        pos_lists[output_idx] = std::move(pos_list_local);
+      };
+
+      if (elements_count - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
+        manual_jobs.emplace_back(probe_partition);
+      } else {
+        jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
       }
-
-      pos_lists[partition_idx] = std::move(pos_list_local);
-    };
-
-    if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
-      probe_partition();
-    } else {
-      jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+      ++output_idx;
     }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  pos_lists.resize(output_idx);
+
+  for (auto& job : jobs) {
+    job->schedule();
+  }
+
+  for (auto& manual_job : manual_jobs) {
+    manual_job();
+  }
+
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 }
 
 }  // namespace hyrise
