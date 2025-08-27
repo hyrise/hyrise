@@ -642,7 +642,6 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates, const size_t probe_size_per_chunk) {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(probe_radix_container.size());
-  auto manual_jobs = std::vector<std::function<void()>>{};
 
   /*
     NUMA notes:
@@ -652,7 +651,6 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     and the job that probes that partition should also be on that NUMA node.
   */
 
-  auto output_idx = size_t{0};
   for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
@@ -664,6 +662,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     const auto elements_count = elements.size();
 
     for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += probe_size_per_chunk) {
+      const auto output_idx = pos_lists_build_side.size();
+      pos_lists_build_side.emplace_back();
+      pos_lists_probe_side.emplace_back();
       const auto probe_partition = [&, partition_idx, output_idx, partition_begin, elements_count]() {
         const auto& null_values = partition.null_values;
         const auto partition_end = std::min(partition_begin + probe_size_per_chunk, elements_count);
@@ -785,27 +786,14 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       };
 
       if (elements_count - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
-        manual_jobs.emplace_back(std::move(probe_partition));
+        probe_partition();
       } else {
         jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
       }
-
-      ++output_idx;
     }
   }
 
-  pos_lists_build_side.resize(output_idx);
-  pos_lists_probe_side.resize(output_idx);
-
-  for (auto& job : jobs) {
-    job->schedule();
-  }
-
-  for (auto& manual_job : manual_jobs) {
-    manual_job();
-  }
-
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -815,12 +803,10 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
                      const size_t probe_size_per_chunk) {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  auto manual_jobs = std::vector<std::function<void()>>{};
 
   const auto probe_radix_container_count = probe_radix_container.size();
   jobs.reserve(probe_radix_container_count);
 
-  auto output_idx = size_t{0};
   for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
@@ -832,6 +818,8 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     const auto elements_count = elements.size();
 
     for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += probe_size_per_chunk) {
+      const auto output_idx = pos_lists.size();
+      pos_lists.emplace_back();
       const auto probe_partition = [&, partition_idx, output_idx, partition_begin, elements_count]() {
         // Get information from work queue
         const auto& null_values = partition.null_values;
@@ -927,25 +915,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       };
 
       if (elements_count - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
-        manual_jobs.emplace_back(probe_partition);
+        probe_partition();
       } else {
         jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
       }
-      ++output_idx;
     }
   }
 
-  pos_lists.resize(output_idx);
-
-  for (auto& job : jobs) {
-    job->schedule();
-  }
-
-  for (auto& manual_job : manual_jobs) {
-    manual_job();
-  }
-
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 }  // namespace hyrise

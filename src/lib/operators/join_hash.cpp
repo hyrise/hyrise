@@ -523,18 +523,21 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates, _probe_size_per_chunk);
+        build_side_pos_lists.resize(probe_side_pos_lists.size());
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates, _probe_size_per_chunk);
+        build_side_pos_lists.resize(probe_side_pos_lists.size());
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates, _probe_size_per_chunk);
+        build_side_pos_lists.resize(probe_side_pos_lists.size());
         break;
 
       default:
