@@ -122,50 +122,18 @@ void with_comparator_light(const PredicateCondition predicate_condition, const F
 template <typename Functor, typename DataType>
 void with_between_comparator(const PredicateCondition predicate_condition, const DataType& lower_value,
                              const DataType& upper_value, const Functor& func) {
-  const auto always_false = [](const auto&) {
-    return false;
-  };
-
   if constexpr (std::is_integral_v<DataType>) {
-    if (lower_value > upper_value)
-      return func(always_false);
+    const auto upd_lower_value = is_lower_inclusive_between(predicate_condition) ? lower_value : lower_value + 1;
+    const auto upd_upper_value = is_upper_inclusive_between(predicate_condition) ? upper_value : upper_value - 1;
+
+    Assert(lower_value <= upper_value, "Query asks for between predicate with empty range. This should have been filtered out earlier.");
 
     using UnsignedDataType = std::make_unsigned_t<DataType>;
     const UnsignedDataType value_difference = upper_value - lower_value;
 
-    switch (predicate_condition) {
-      case PredicateCondition::BetweenInclusive: {
-        return func([&lower_value, &value_difference](const DataType& value) {
-          return static_cast<UnsignedDataType>(value - lower_value) <= value_difference;
-        });
-      }
-
-      case PredicateCondition::BetweenLowerExclusive: {
-        return func([&upper_value, &value_difference](const DataType& value) {
-          return static_cast<UnsignedDataType>(upper_value - value) < value_difference;
-        });
-      }
-
-      case PredicateCondition::BetweenUpperExclusive: {
-        return func([&lower_value, &value_difference](const DataType& value) {
-          return static_cast<UnsignedDataType>(value - lower_value) < value_difference;
-        });
-      }
-
-      case PredicateCondition::BetweenExclusive: {
-        if (value_difference == 0)
-          return func(always_false);
-        const auto dec_value_difference = value_difference - 1;
-        const auto inc_lower_value = lower_value + 1;
-        return func([&inc_lower_value, &dec_value_difference](const DataType& value) {
-          return static_cast<UnsignedDataType>(value - inc_lower_value) < dec_value_difference;
-        });
-      }
-
-      default: {
-        Fail("PredicateCondition is not a Between-PredicateCondition");
-      }
-    }
+    return func([&upd_lower_value, &upd_upper_value](const DataType& value) {
+      return static_cast<UnsignedDataType>(value - upd_lower_value) <= value_difference;
+    });
   }
 
   switch (predicate_condition) {
