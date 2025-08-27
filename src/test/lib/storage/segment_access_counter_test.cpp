@@ -224,8 +224,7 @@ TEST_F(SegmentAccessCounterTest, InequalityOperator) {
 
     modified_counter[access_type] = 42;
 
-    // Should be different.
-    EXPECT_TRUE(zero_counter != modified_counter);  // Should be equal.
+    EXPECT_TRUE(zero_counter != modified_counter);  // Should be different.
   }
 }
 
@@ -240,8 +239,7 @@ TEST_F(SegmentAccessCounterTest, EqualityOperator) {
 
     modified_counter[access_type] = 42;
 
-    // Should be different.
-    EXPECT_FALSE(zero_counter == modified_counter);  // Should be equal.
+    EXPECT_FALSE(zero_counter == modified_counter);  // Should be different.
   }
 }
 
