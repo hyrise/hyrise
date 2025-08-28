@@ -1,5 +1,5 @@
 #include "base_test.hpp"
-#include "utils/key_normalizer.h"
+#include "utils/key_normalizer.hpp"
 
 namespace hyrise {
 

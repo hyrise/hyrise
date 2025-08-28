@@ -1,4 +1,4 @@
-#include "key_normalizer.h"
+#include "key_normalizer.hpp"
 
 #include <algorithm>
 #include <bit>

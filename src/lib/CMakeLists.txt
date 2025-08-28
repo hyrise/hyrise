@@ -605,7 +605,7 @@ set(
     utils/format_duration.hpp
     utils/invalid_input_exception.hpp
     utils/key_normalizer.cpp
-    utils/key_normalizer.h
+    utils/key_normalizer.hpp
     utils/list_directory.cpp
     utils/list_directory.hpp
     utils/load_table.cpp
