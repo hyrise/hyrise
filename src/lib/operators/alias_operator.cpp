@@ -1,6 +1,5 @@
 #include "alias_operator.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <string>

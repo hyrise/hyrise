@@ -40,10 +40,14 @@ class KeyNormalizerTest : public BaseTest {
     });
 
     std::vector<RowID> sorted_row_ids;
+    sorted_row_ids.reserve(key_pointers.size());
     const auto row_id_offset = tuple_key_size - sizeof(RowID);
-    for (const auto* key_ptr : key_pointers) {
-      sorted_row_ids.push_back(*reinterpret_cast<const RowID*>(key_ptr + row_id_offset));
+    for (const auto& key_ptr : key_pointers) {
+      RowID row_id;
+      std::memcpy(&row_id, key_ptr + row_id_offset, sizeof(RowID));
+      sorted_row_ids.push_back(row_id);
     }
+
     return sorted_row_ids;
   }
 
