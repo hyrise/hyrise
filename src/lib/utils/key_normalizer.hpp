@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace hyrise {
@@ -22,7 +24,7 @@ namespace hyrise {
  */
 class KeyNormalizer {
  public:
-  explicit KeyNormalizer();
+  KeyNormalizer();
 
   static std::pair<std::vector<unsigned char>, uint64_t> normalize_keys_for_table(
       const std::shared_ptr<const Table>& table, const std::vector<SortColumnDefinition>& sort_definitions,

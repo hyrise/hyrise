@@ -1,6 +1,8 @@
 #include <iostream>
 
 // This playground only compiles on Linux as we require Linux's perf and perfetto.
+#include <random>
+
 #include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
