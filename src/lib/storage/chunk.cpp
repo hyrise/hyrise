@@ -212,7 +212,7 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
     bytes += segment->memory_usage(mode);
   }
 
-  // TODO(anybody) Index memory usage missing
+  // TODO(anybody): Add index memory usage.
 
   if (_mvcc_data) {
     bytes += _mvcc_data->memory_usage();
@@ -266,15 +266,16 @@ void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
 
 void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
   Assert(!is_mutable(), "Cannot set_individually_sorted_by on mutable chunks.");
-  // Currently, we assume that set_individually_sorted_by is called only once at most.
-  // As such, there should be no existing sorting and the new sorting should contain at least one column.
-  // Feel free to remove this assertion if necessary.
+
+  // Currently, we assume that `set_individually_sorted_by` is called only once at most. Thus, there should be no
+  // existing sorting and the new sorting should contain at least one column. Feel free to remove this assertion if
+  // necessary.
   // Another important restriction is that we only check the first sort column (in debug mode only).
   Assert(!sorted_by.empty() && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
 
   if constexpr (HYRISE_DEBUG) {
     const auto& sorted_by_column = sorted_by[0];
-    const auto sorted_segment = get_segment(sorted_by_column.column);
+    const auto& sorted_segment = get_segment(sorted_by_column.column);
     if (sorted_segment->size() > 1) {
       segment_with_iterators(*sorted_segment, [&](const auto& begin, const auto& end) {
         Assert(std::is_sorted(begin, end,
@@ -285,23 +286,13 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
                                   return false;
                                 }
 
-                                if (sort_mode == SortMode::AscendingNullsFirst ||
-                                    sort_mode == SortMode::DescendingNullsFirst) {
-                                  // NULLs in the beginning.
-                                  if (left.is_null()) {
-                                    return false;  // Handles right side is NULL and both are NULL.
-                                  }
-                                  if (right.is_null()) {
-                                    return true;
-                                  }
-                                } else {
-                                  // NULLs in the end.
-                                  if (left.is_null()) {
-                                    return true;  // Handles right side is NULL and both are NULL.
-                                  }
-                                  if (right.is_null()) {
-                                    return false;
-                                  }
+                                const auto nulls_last = sort_mode == SortMode::AscendingNullsLast ||
+                                                        sort_mode == SortMode::DescendingNullsLast;
+                                if (left.is_null()) {
+                                  return nulls_last;
+                                }
+                                if (right.is_null()) {
+                                  return !nulls_last;
                                 }
                                 const auto ascending = sort_mode == SortMode::AscendingNullsFirst ||
                                                        sort_mode == SortMode::AscendingNullsLast;
