@@ -417,11 +417,11 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowSort) {
 
   // clang-format off
   _lqp =
-  SortNode::make(expression_vector(b_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(b_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     PredicateNode::make(less_than_(b_a, parameter),
       node_b));
   const auto expected_lqp =
-  SortNode::make(expression_vector(b_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(b_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     node_b);
   // clang-format on
 
@@ -1381,7 +1381,7 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
 
   _lqp =
   ProjectionNode::make(expression_vector(s_name, s_address),
-    SortNode::make(expression_vector(s_name), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(s_name), std::vector<SortMode>{SortMode::AscendingNullsFirst},
       JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
         PredicateNode::make(in_(s_suppkey, subquery2),
           ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
@@ -1397,7 +1397,7 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(s_name, s_address),
-    SortNode::make(expression_vector(s_name), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(s_name), std::vector<SortMode>{SortMode::AscendingNullsFirst},
       JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
         JoinNode::make(JoinMode::Semi, equals_(s_suppkey, ps_suppkey),
           ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),

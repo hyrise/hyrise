@@ -220,13 +220,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   // Create a mapping from output columns to input columns for future use. This is necessary as the order may have been
   // changed. The mapping only contains column IDs that are forwarded without modfications.
-  auto output_column_to_input_column = std::unordered_map<ColumnID, ColumnID>{};
+  auto input_column_to_output_column = std::unordered_multimap<ColumnID, ColumnID>{};
   for (auto expression_id = ColumnID{0}; expression_id < expression_count; ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
       if (forwarded_pqp_columns.contains(expression)) {
         const auto& original_id = pqp_column_expression->column_id;
-        output_column_to_input_column[expression_id] = original_id;
+        input_column_to_output_column.emplace(original_id, expression_id);
       }
     }
   }
@@ -282,16 +282,20 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       transformed.reserve(sorted_by.size());
 
       // We need to iterate both sorted information and the output/input mapping as multiple output columns might
-      // originate from the same sorted input column.
-      for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
-        const auto iter =
-            std::find_if(sorted_by.begin(), sorted_by.end(), [input_column_id = input_column_id](const auto sort) {
-              return input_column_id == sort.column;
-            });
-        if (iter != sorted_by.end()) {
-          transformed.emplace_back(output_column_id, iter->sort_mode);
+      // originate from the same sorted input column. Also, it's important that we preserve the actual sort order from
+      // the sort operator here. In the previous implementation, the order of the sorted columns in transformed was
+      // entirely dependent on the (undefined) order within the std::unordered_map for input_column_to_output_column.
+      for (const auto sort : sorted_by) {
+        const auto bucket_index = input_column_to_output_column.bucket(sort.column);
+        auto begin = input_column_to_output_column.begin(bucket_index);
+        const auto end = input_column_to_output_column.end(bucket_index);
+
+        for (; begin != end; ++begin) {
+          const auto [original_column_index, projected_column_index] = *begin;
+          transformed.emplace_back(projected_column_index, sort.sort_mode);
         }
       }
+
       if (!transformed.empty()) {
         chunk->set_individually_sorted_by(transformed);
       }
