@@ -188,7 +188,7 @@ TEST_F(KeyNormalizerTest, StringNormalizationAndPadding) {
 
 TEST_F(KeyNormalizerTest, TwoColumnsIntFloat) {
   const auto sort_definitions = std::vector({SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},
-                                        SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast}});
+                                             SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsLast}});
 
   const auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions);
 
@@ -293,8 +293,8 @@ TEST_F(KeyNormalizerTest, DebugFloats) {
     sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
   }
 
-  const auto expected_order = RowIDPosList({RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{2}},
-                                       RowID{ChunkID{0}, ChunkOffset{1}}});
+  const auto expected_order = RowIDPosList(
+      {RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{1}}});
   EXPECT_EQ(sorted_pos_list, expected_order);
 }
 
@@ -330,8 +330,8 @@ TEST_F(KeyNormalizerTest, DebugSignedInts) {
     sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(ptr + (key_size - sizeof(RowID))));
   }
 
-  const auto expected_order = RowIDPosList({RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}},
-                                       RowID{ChunkID{0}, ChunkOffset{0}}});
+  const auto expected_order = RowIDPosList(
+      {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}}});
   EXPECT_EQ(sorted_pos_list, expected_order);
 }
 
@@ -345,8 +345,8 @@ TEST_F(KeyNormalizerTest, StringsWithSharedPrefixAscending) {
   auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(str_table, sort_definitions);
 
   auto sorted_ids = get_sorted_pos_list(buffer, key_size);
-  const auto expected_order = RowIDPosList({RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{0}},
-                                       RowID{ChunkID{0}, ChunkOffset{2}}});
+  const auto expected_order = RowIDPosList(
+      {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{2}}});
   EXPECT_EQ(sorted_ids, expected_order);
 }
 
@@ -360,8 +360,8 @@ TEST_F(KeyNormalizerTest, StringsWithSharedPrefixDescending) {
   auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(str_table, sort_definitions);
 
   auto sorted_ids = get_sorted_pos_list(buffer, key_size);
-  const auto expected_order = RowIDPosList({RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}},
-                                       RowID{ChunkID{0}, ChunkOffset{1}}});
+  const auto expected_order = RowIDPosList(
+      {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{1}}});
   EXPECT_EQ(sorted_ids, expected_order);
 }
 
@@ -381,7 +381,7 @@ TEST_F(KeyNormalizerTest, StringEdgeCases) {
   auto sorted_ids = get_sorted_pos_list(buffer, key_size);
   // Expected: "", "a", "a\0c", "b"
   const auto expected_order = RowIDPosList({RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}},
-                                       RowID{ChunkID{0}, ChunkOffset{3}}, RowID{ChunkID{0}, ChunkOffset{0}}});
+                                            RowID{ChunkID{0}, ChunkOffset{3}}, RowID{ChunkID{0}, ChunkOffset{0}}});
   EXPECT_EQ(sorted_ids, expected_order);
 }
 
@@ -422,7 +422,7 @@ TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
   }
 
   const auto expected_order = RowIDPosList({RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}},
-                                       RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}}});
+                                            RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}}});
   EXPECT_EQ(sorted_pos_list, expected_order);
 }
 
@@ -442,8 +442,8 @@ TEST_F(KeyNormalizerTest, MultiColumnWithNullInFirstColumn) {
   auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(multi_null_table, sort_definitions);
 
   auto sorted_ids = get_sorted_pos_list(buffer, key_size);
-  const auto expected_order = RowIDPosList({RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}},
-                                       RowID{ChunkID{0}, ChunkOffset{1}}});
+  const auto expected_order = RowIDPosList(
+      {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{1}}});
   EXPECT_EQ(sorted_ids, expected_order);
 }
 

@@ -303,9 +303,8 @@ static void StringPrefix() {
 
     for (auto row_id = ChunkOffset{0}; row_id < Chunk::DEFAULT_SIZE; ++row_id) {
       col_0_segment.emplace_back(static_cast<int32_t>(probability_dist(pseudorandom_engine)));
-      col_1_segment.emplace_back("2025-07-" + std::format("{:02} 12:{:02}:17",
-                                 probability_dist(pseudorandom_engine),
-                                 probability_dist(pseudorandom_engine)));
+      col_1_segment.emplace_back("2025-07-" + std::format("{:02} 12:{:02}:17", probability_dist(pseudorandom_engine),
+                                                          probability_dist(pseudorandom_engine)));
       col_2_segment.emplace_back(static_cast<int64_t>(probability_dist(pseudorandom_engine)));
     }
 

@@ -133,7 +133,6 @@ int main() {
     }
   }
 
-
   auto sort_data = base_data;
   parallel_merge_sort(sort_data);
 

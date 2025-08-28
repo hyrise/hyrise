@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <bit>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <memory>
 #include <type_traits>
@@ -24,22 +24,16 @@
 namespace {
 // Portable byte swap implementation for 32-bit integer
 inline uint32_t portable_bswap_32(const uint32_t val) {
-  return ((val & 0xFF000000u) >> 24u)
-      | ((val & 0x00FF0000u) >> 8u)
-      | ((val & 0x0000FF00u) << 8u)
-      | ((val & 0x000000FFu) << 24u);
+  return ((val & 0xFF000000u) >> 24u) | ((val & 0x00FF0000u) >> 8u) | ((val & 0x0000FF00u) << 8u) |
+         ((val & 0x000000FFu) << 24u);
 }
 
 // Portable byte swap implementation for 64-bit integer
 inline uint64_t portable_bswap_64(const uint64_t val) {
-  return ((val & 0xFF00000000000000u) >> 56u)
-      | ((val & 0x00FF000000000000u) >> 40u)
-      | ((val & 0x0000FF0000000000u) >> 24u)
-      | ((val & 0x000000FF00000000u) >> 8u)
-      | ((val & 0x00000000FF000000u) << 8u)
-      | ((val & 0x0000000000FF0000u) << 24u)
-      | ((val & 0x000000000000FF00u) << 40u)
-      | ((val & 0x00000000000000FFu) << 56u);
+  return ((val & 0xFF00000000000000u) >> 56u) | ((val & 0x00FF000000000000u) >> 40u) |
+         ((val & 0x0000FF0000000000u) >> 24u) | ((val & 0x000000FF00000000u) >> 8u) |
+         ((val & 0x00000000FF000000u) << 8u) | ((val & 0x0000000000FF0000u) << 24u) |
+         ((val & 0x000000000000FF00u) << 40u) | ((val & 0x00000000000000FFu) << 56u);
 }
 
 template <typename T>
@@ -111,7 +105,7 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_fo
 
     auto task = std::make_shared<JobTask>([=, &result_buffer, &sort_definitions]() {
       _insert_keys_for_chunk(result_buffer, current_chunk, sort_definitions, table_offset, chunk_id, tuple_key_size,
-                            string_prefix_length);
+                             string_prefix_length);
     });
     tasks.emplace_back(task);
     table_offset += chunk_size;
@@ -125,10 +119,10 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_fo
 // PRIVATE
 
 void KeyNormalizer::_insert_keys_for_chunk(std::vector<unsigned char>& buffer,
-                                          const std::shared_ptr<const Chunk>& chunk,
-                                          const std::vector<SortColumnDefinition>& sort_definitions,
-                                          const uint64_t table_offset, const ChunkID chunk_id,
-                                          const uint32_t tuple_key_size, const uint32_t string_prefix_length) {
+                                           const std::shared_ptr<const Chunk>& chunk,
+                                           const std::vector<SortColumnDefinition>& sort_definitions,
+                                           const uint64_t table_offset, const ChunkID chunk_id,
+                                           const uint32_t tuple_key_size, const uint32_t string_prefix_length) {
   const auto chunk_size = chunk->size();
   uint32_t component_offset = 0;
 
@@ -136,13 +130,10 @@ void KeyNormalizer::_insert_keys_for_chunk(std::vector<unsigned char>& buffer,
     const auto segment = chunk->get_segment(sort_definition.column);
     const auto data_type = segment->data_type();
     const auto sort_mode = sort_definition.sort_mode;
-    const auto descending =
-      sort_mode == SortMode::DescendingNullsFirst || sort_mode == SortMode::DescendingNullsLast;
-    const auto nulls_first =
-      sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
+    const auto descending = sort_mode == SortMode::DescendingNullsFirst || sort_mode == SortMode::DescendingNullsLast;
+    const auto nulls_first = sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
 
-    const auto component_data_size =
-      (data_type == DataType::String ? string_prefix_length : data_type_size(data_type));
+    const auto component_data_size = (data_type == DataType::String ? string_prefix_length : data_type_size(data_type));
     const auto component_total_size = component_data_size + 1;
 
     resolve_data_type(data_type, [&](const auto type) {
@@ -262,8 +253,7 @@ template void KeyNormalizer::_insert_normalized_value<double>(std::vector<unsign
                                                               uint64_t offset, bool descending,
                                                               uint32_t string_prefix_length);
 template void KeyNormalizer::_insert_normalized_value<pmr_string>(std::vector<unsigned char>& buffer,
-                                                                  const pmr_string& value,
-                                                                  uint64_t offset, bool descending,
-                                                                  uint32_t string_prefix_length);
+                                                                  const pmr_string& value, uint64_t offset,
+                                                                  bool descending, uint32_t string_prefix_length);
 
 }  // namespace hyrise

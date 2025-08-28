@@ -358,7 +358,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                    sort_def.sort_mode == SortMode::DescendingNullsFirst;
           if (variant_is_null(val_b))
             return sort_def.sort_mode != SortMode::AscendingNullsFirst &&
-                     sort_def.sort_mode != SortMode::DescendingNullsFirst;
+                   sort_def.sort_mode != SortMode::DescendingNullsFirst;
 
           const auto ascending =
               sort_def.sort_mode == SortMode::AscendingNullsFirst || sort_def.sort_mode == SortMode::AscendingNullsLast;
@@ -370,12 +370,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       }
     };
 
-    boost::sort::pdqsort(key_pointers.begin(), key_pointers.end(),
-                         StableKeyComparator{
-                           .key_size = key_size,
-                           .table = input_table.get(),
-                           .sort_definitions = &_sort_definitions
-                         });
+    boost::sort::pdqsort(
+        key_pointers.begin(), key_pointers.end(),
+        StableKeyComparator{.key_size = key_size, .table = input_table.get(), .sort_definitions = &_sort_definitions});
   }
 
   const auto row_id_offset = key_size - sizeof(RowID);
