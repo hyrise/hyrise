@@ -318,7 +318,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto [normalized_keys, key_size] = KeyNormalizer::normalize_keys_for_table(input_table, _sort_definitions);
 
-  std::vector<const unsigned char*> key_pointers;
+  auto key_pointers = std::vector<const unsigned char*>();
   key_pointers.reserve(row_count);
   const auto num_bytes_of_normalized_keys = normalized_keys.size();
   for (auto key_offset = size_t{0}; key_offset < num_bytes_of_normalized_keys; key_offset += key_size) {
@@ -333,8 +333,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       uint32_t offset_for_row_id = key_size - sizeof(RowID);
 
       bool operator()(const unsigned char* const a_ptr, const unsigned char* const b_ptr) const {
-        const RowID& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + offset_for_row_id);
-        const RowID& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + offset_for_row_id);
+        const auto& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + offset_for_row_id);
+        const auto& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + offset_for_row_id);
 
         const int key_cmp = std::memcmp(a_ptr, b_ptr, key_size);
 
@@ -379,7 +379,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   const auto row_id_offset = key_size - sizeof(RowID);
-  RowIDPosList sorted_pos_list;
+  auto sorted_pos_list = RowIDPosList();
   sorted_pos_list.reserve(row_count);
   for (const auto* key_ptr : key_pointers) {
     sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(key_ptr + row_id_offset));

@@ -101,7 +101,7 @@ std::pair<std::vector<unsigned char>, uint64_t> KeyNormalizer::normalize_keys_fo
   const auto row_count = table->row_count();
   auto result_buffer = std::vector<unsigned char>(tuple_key_size * row_count);
 
-  std::vector<std::shared_ptr<AbstractTask>> tasks;
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
   const auto chunk_count = table->chunk_count();
   auto table_offset = uint64_t{0};
@@ -170,7 +170,7 @@ void KeyNormalizer::_insert_keys_for_chunk(std::vector<unsigned char>& buffer,
   const auto row_id_offset = tuple_key_size - sizeof(RowID);
   for (auto offset = ChunkOffset{0}; offset < chunk_size; ++offset) {
     const auto buffer_start = (table_offset + offset) * tuple_key_size;
-    const RowID row_id{chunk_id, offset};
+    const auto row_id = RowID{chunk_id, offset};
     std::memcpy(&buffer[buffer_start + row_id_offset], &row_id, sizeof(RowID));
   }
 }
