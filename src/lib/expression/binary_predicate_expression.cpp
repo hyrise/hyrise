@@ -20,10 +20,16 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition in
                                                      const std::shared_ptr<AbstractExpression>& right_operand)
     : AbstractPredicateExpression(init_predicate_condition, {left_operand, right_operand}) {
   if constexpr (HYRISE_DEBUG) {
-    const auto valid_predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
-                                             PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
-                                             PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
-                                             PredicateCondition::Like,        PredicateCondition::NotLike};
+    const auto valid_predicate_conditions = {PredicateCondition::Equals,
+                                             PredicateCondition::NotEquals,
+                                             PredicateCondition::GreaterThan,
+                                             PredicateCondition::GreaterThanEquals,
+                                             PredicateCondition::LessThan,
+                                             PredicateCondition::LessThanEquals,
+                                             PredicateCondition::Like,
+                                             PredicateCondition::NotLike,
+                                             PredicateCondition::LikeInsensitive,
+                                             PredicateCondition::NotLikeInsensitive};
     const auto* const it =
         std::find(valid_predicate_conditions.begin(), valid_predicate_conditions.end(), predicate_condition);
     Assert(it != valid_predicate_conditions.end(),

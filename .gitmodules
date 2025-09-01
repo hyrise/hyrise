@@ -1,12 +1,18 @@
 [submodule "resources/benchmark/tpcds/tpcds-result-reproduction"]
 	path = resources/benchmark/tpcds/tpcds-result-reproduction
 	url = https://github.com/hyrise-mp/tpcds-result-reproduction.git
+[submodule "third_party/abseil-cpp"]
+	path = third_party/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp.git
 [submodule "third_party/benchmark"]
 	path = third_party/benchmark
 	url = https://github.com/google/benchmark.git
 [submodule "third_party/compact_vector"]
 	path = third_party/compact_vector
 	url = https://github.com/gmarcais/compact_vector.git
+[submodule "third_party/concurrentqueue"]
+	path = third_party/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git
 [submodule "third_party/cpplint"]
 	path = third_party/cpplint
 	url = https://github.com/cpplint/cpplint.git
@@ -38,6 +44,9 @@
 	path = third_party/nlohmann_json
 	url = https://github.com/nlohmann/json.git
 	shallow = true
+[submodule "third_party/re2"]
+	path = third_party/re2
+	url = https://github.com/google/re2.git
 [submodule "third_party/sparse-map"]
 	path = third_party/sparse-map
 	url = https://github.com/Tessil/sparse-map.git
@@ -53,6 +62,3 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
-[submodule "third_party/concurrentqueue"]
-	path = third_party/concurrentqueue
-	url = https://github.com/cameron314/concurrentqueue.git
