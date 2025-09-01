@@ -28,9 +28,15 @@ namespace hyrise {
  *
  * Currently, the determinant expressions are required to be non-nullable to be involved in FDs. Combining null values
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
+ *
+ * If the FD may become invalid in the future (because it is not based on a schema constraint, but on the data
+ * incidentally fulfilling the constraint at the moment), the FD is marked as being not genuine.
+ * This information is important because query plans that were optimized using a non-genuine FD are not safely
+ * cacheable.
  */
 struct FunctionalDependency {
-  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents);
+  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
+                       bool init_is_genuine = true);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -38,6 +44,8 @@ struct FunctionalDependency {
 
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
+
+  mutable bool is_genuine;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
@@ -49,29 +57,38 @@ using FunctionalDependencies = std::unordered_set<FunctionalDependency>;
  *         We consider FDs as inflated when they have a single dependent expression only. Therefore, inflating an FD
  *         works as follows:
  *                                                      {a} => {b}
- *                             {a} => {b, c, d}   -->   {a} => {c}
+ *                            {a} => {b, c, d}    -->   {a} => {c}
  *                                                      {a} => {d}
+ *         (not genuine) {a} => {b, c, d, e} -->   {a} => {e} (not genuine)
+ *         Note that the second FD only produces the FD {a} => {e} because this one is not present yet while the other
+ *         FDs resulting from the dependents are already present and genuine.
  */
 FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
 
 /**
  * @return Reduces the given vector of FDs, so that there are no more FD objects with the same determinant expressions.
- *         As a result, FDs become deflated as follows:
+ *         Note that FDs that do not share the genuine values are not merged. As a result, FDs become deflated as
+ *         follows (assuming all FDs are genuine):
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}
- *                             {a} => {d}
+ *                             {a} => {d} 
+ *          (not genuine) {a} => {e}         -->   {a} => {b, c, d, e} (not genuine)
+ *         Note that if we have two FDs with the same determinant expressions, but one of them is not genuine,
+ *         this not genuine FD is ignored in the deflation process as it is 'shadowed' by the genuine one.
  */
 FunctionalDependencies deflate_fds(const FunctionalDependencies& fds);
 
 /**
- * @return Unified FDs from the given @param fds_a and @param fds_b vectors. FDs with the same determinant
- *         expressions are merged into single objects by merging their dependent expressions.
+ * @return Unified FDs from the given @param fds_a and @param fds_b sets. FDs with the same determinant expressions are
+ *         merged into single objects by merging their dependent expressions. If an FD exists on both sides, but is
+ *         genuine on only one side, we are currently cautious and flag the FD as not genuine.
  */
 FunctionalDependencies union_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b);
 
 /**
- * @return Returns FDs that are included in both of the given vectors.
+ * @return FDs that are included in both of the given sets. If an FD exists on both sides, but is  genuine on only one
+ *         side, we are currently cautious and flag the FD as not genuine.
  */
 FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b);
 

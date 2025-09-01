@@ -2,6 +2,7 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
@@ -446,6 +447,22 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
 
   const auto top_diamond_origin_node = find_diamond_origin_node(top_diamond_root_node);
   EXPECT_EQ(top_diamond_origin_node, bottom_diamond_root_node);
+}
+
+TEST_F(LQPUtilsTest, FindCorrectMatchingUCC) {
+  // Arbitrary set of UCCs to test against.
+  auto uccs = UniqueColumnCombinations{UniqueColumnCombination{{a_a}, /*is_genuine=*/false},
+                                       UniqueColumnCombination{{a_a, a_b}, /*is_genuine=*/true}};
+
+  // If we now search for a UCC over columns a and b, we should find the genuine UCC.
+  auto ucc_it = find_ucc(uccs, {a_a, a_b});
+  ASSERT_NE(ucc_it, uccs.end());
+  EXPECT_TRUE(ucc_it->is_genuine());
+
+  // If we only search for the first column a, we should find the non-genuine UCC.
+  ucc_it = find_ucc(uccs, {a_a});
+  ASSERT_NE(ucc_it, uccs.end());
+  EXPECT_FALSE(ucc_it->is_genuine());
 }
 
 }  // namespace hyrise

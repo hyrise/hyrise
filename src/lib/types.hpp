@@ -141,7 +141,7 @@ constexpr CommitID UNSET_COMMIT_ID = CommitID{0};
 // is used for a transaction is 1.
 constexpr CommitID INITIAL_COMMIT_ID = CommitID{1};
 // The last commit id is reserved for uncommitted changes. It is also used to indicate that a `TableKeyConstraint` is
-// schema-given.
+// genuine.
 constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
 
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
