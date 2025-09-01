@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -18,6 +19,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -63,7 +65,8 @@ std::string BetweenCompositionRule::name() const {
  *   b) The BetweenCompositionRule searches for arbitrary PredicateNodes that are directly linked. Therefore,
  *      predicate chains can start and end in the midst of LQPs.
  */
-void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                               OptimizationContext& /*optimization_context*/) const {
   std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
   std::vector<PredicateChain> predicate_chains;
 
