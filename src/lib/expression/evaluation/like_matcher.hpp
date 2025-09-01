@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "re2/re2.h"
+#include "hs.h"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -129,6 +130,10 @@ class LikeMatcher {
     std::vector<pmr_string> strings;
   };
 
+  struct RegexPattern final {
+    std::string pattern;
+  };
+
   /**
    * Resolves one of the specialised patterns from above (StartsWithPattern, ...) or falls back to a regex for a general
    * pattern.
@@ -194,7 +199,8 @@ class LikeMatcher {
         return;
       }
 
-      return functor(re2::RE2{sql_like_to_regex(cased_pattern)});
+      // return functor(re2::RE2{sql_like_to_regex(cased_pattern)});
+      return functor(RegexPattern{sql_like_to_regex(cased_pattern)});
     });
   }
 
@@ -268,10 +274,43 @@ class LikeMatcher {
           });
         });
 
+      } else if constexpr (std::is_same_v<Pattern, RegexPattern>) {
+        hs_database_t * database;
+        hs_compile_error_t * compile_err;
+        hs_scratch_t * scratch = NULL;
+        const auto compiled = hs_compile(typed_pattern.pattern.c_str(), HS_FLAG_DOTALL | HS_FLAG_MULTILINE | HS_FLAG_SOM_LEFTMOST, HS_MODE_BLOCK, NULL, &database, &compile_err);
+        Assert(compiled == HS_SUCCESS, "Could not compile regex pattern: " + std::string{compile_err->message});
+        const auto allocated = hs_alloc_scratch(database, &scratch);
+        Assert(allocated == HS_SUCCESS, "Could not allocate scratch space.");
+
+        const auto match = [](auto /*unused*/, auto /*unused*/, auto /*unused*/, auto /*unused*/, auto* matches) {
+          *(static_cast<bool*>(matches)) = true;
+          return 0;
+        };
+
+        functor([&](const auto& string) -> bool {
+          return resolve_case(string, [&](const auto& cased_string) -> bool {
+            auto has_match = false;
+            hs_scan(database, to_c_string(cased_string), cased_string.size(), 0, scratch, match, &has_match);
+            return has_match ^ invert_results;
+          });
+        });
+
+
+
       } else {
         Fail("Pattern not implemented. Probably a bug.");
       }
     });
+  }
+
+  template <typename StringType>
+  static const char* to_c_string(const StringType& input) {
+    if constexpr (std::is_same_v<StringType, std::string_view>) {
+      return input.data();
+    } else {
+      return input.c_str();
+    }
   }
 };
 
