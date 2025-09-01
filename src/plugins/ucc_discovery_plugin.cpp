@@ -138,10 +138,9 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
     const auto& soft_key_constraints = table->soft_key_constraints();
     const auto candidate_columns = std::set<ColumnID>{column_id};
-    const auto existing_ucc =
-        std::ranges::find_if(soft_key_constraints, [&](const auto& key_constraint) {
-          return std::ranges::includes(key_constraint.columns(), candidate_columns);
-        });
+    const auto existing_ucc = std::ranges::find_if(soft_key_constraints, [&](const auto& key_constraint) {
+      return std::ranges::includes(key_constraint.columns(), candidate_columns);
+    });
 
     if (existing_ucc != soft_key_constraints.end()) {
       // Check if the found key constraint is a primary key constraint. If it is, we can directly skip the candidate.

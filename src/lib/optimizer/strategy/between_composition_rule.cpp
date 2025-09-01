@@ -363,11 +363,7 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
       default:
         break;
     }
-    return {.column_expression = left_column_expression,
-            .border_expression = value_expression,
-            .type = type,
-            .boundary_is_column_expression = false,
-            .id = expression_id};
+    return {left_column_expression, value_expression, type, false, expression_id};
   }
 
   value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->left_operand());
@@ -392,11 +388,7 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
       default:
         break;
     }
-    return {.column_expression = right_column_expression,
-            .border_expression = value_expression,
-            .type = type,
-            .boundary_is_column_expression = false,
-            .id = expression_id};
+    return {right_column_expression, value_expression, type, false, expression_id};
   }
 
   if (left_column_expression && right_column_expression) {
@@ -418,18 +410,10 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
       default:
         break;
     }
-    return {.column_expression = left_column_expression,
-            .border_expression = right_column_expression,
-            .type = type,
-            .boundary_is_column_expression = true,
-            .id = expression_id};
+    return {left_column_expression, right_column_expression, type, true, expression_id};
   }
 
-  return {.column_expression = nullptr,
-          .border_expression = nullptr,
-          .type = ColumnBoundaryType::None,
-          .boundary_is_column_expression = false,
-          .id = expression_id};
+  return {nullptr, nullptr, ColumnBoundaryType::None, false, expression_id};
 }
 
 BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(
@@ -453,11 +437,11 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_b
   }
 
   return {
-      .column_expression = std::static_pointer_cast<LQPColumnExpression>(column_boundary->border_expression),
-      .border_expression = std::static_pointer_cast<AbstractExpression>(column_boundary->column_expression),
-      .type = type,
-      .boundary_is_column_expression = true,
-      .id = column_boundary->id,
+      std::static_pointer_cast<LQPColumnExpression>(column_boundary->border_expression),
+      std::static_pointer_cast<AbstractExpression>(column_boundary->column_expression),
+      type,
+      true,
+      column_boundary->id,
   };
 }
 

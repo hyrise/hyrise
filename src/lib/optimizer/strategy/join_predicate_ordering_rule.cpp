@@ -58,13 +58,12 @@ void reorder_join_predicates_recursively(const std::shared_ptr<AbstractLQPNode>&
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. Check that one exists and move it to the front.
   if (is_semi_or_anti_join(join_mode)) {
-    auto first_equals_predicate =
-        std::ranges::find_if(join_predicates, [](const auto& expression) {
-          DebugAssert(std::dynamic_pointer_cast<AbstractPredicateExpression>(expression),
-                      "Every node expression of a JoinNode should be an AbstractPredicateExpression.");
-          return std::static_pointer_cast<AbstractPredicateExpression>(expression)->predicate_condition ==
-                 PredicateCondition::Equals;
-        });
+    auto first_equals_predicate = std::ranges::find_if(join_predicates, [](const auto& expression) {
+      DebugAssert(std::dynamic_pointer_cast<AbstractPredicateExpression>(expression),
+                  "Every node expression of a JoinNode should be an AbstractPredicateExpression.");
+      return std::static_pointer_cast<AbstractPredicateExpression>(expression)->predicate_condition ==
+             PredicateCondition::Equals;
+    });
 
     // SubqueryToJoinRule and JoinToSemiJoinRule should have taken care of that, so this is really just a safeguard.
     Assert(first_equals_predicate != join_predicates.end(),
