@@ -481,8 +481,7 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
     GTEST_SKIP();
   }
 
-  const auto multiplier = 5'000;
-  const auto task_count = multiplier * worker_count;
+  const auto task_count = 5'000 * worker_count;
 
   for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
     auto output_counter = std::atomic<size_t>{0};
