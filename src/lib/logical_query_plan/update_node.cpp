@@ -5,13 +5,10 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <vector>
 
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -28,14 +25,6 @@ std::string UpdateNode::description(const DescriptionMode /*mode*/) const {
 
 std::shared_ptr<AbstractLQPNode> UpdateNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return UpdateNode::make(table_name);
-}
-
-bool UpdateNode::is_column_nullable(const ColumnID /*column_id*/) const {
-  Fail("Update does not output any columns.");
-}
-
-std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::output_expressions() const {
-  return {};
 }
 
 size_t UpdateNode::_on_shallow_hash() const {
