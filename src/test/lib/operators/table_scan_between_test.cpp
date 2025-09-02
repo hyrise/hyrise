@@ -35,7 +35,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
 
-    const bool descending = sort_mode == SortMode::Descending;
+    const bool descending = sort_mode == SortMode::DescendingNullsFirst;
     const int number_of_nulls = nullable && sort_mode ? 3 : 0;
 
     auto column_definitions = TableColumnDefinitions{{"a", data_type, nullable}, {"b", DataType::Int, nullable}};
@@ -102,8 +102,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                           PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
-    const bool ascending = sort_mode == SortMode::Ascending;
-    const bool descending = sort_mode == SortMode::Descending;
+    const bool ascending = sort_mode == SortMode::AscendingNullsFirst;
+    const bool descending = sort_mode == SortMode::DescendingNullsFirst;
     const int number_of_nulls = nullable && sort_mode ? 3 : 0;
     std::ignore = encoding;
     resolve_data_type(data_type, [&, nullable](const auto data_type_t) {
