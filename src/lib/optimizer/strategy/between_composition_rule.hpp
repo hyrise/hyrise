@@ -55,6 +55,18 @@ class BetweenCompositionRule : public AbstractRule {
    * boundary_is_column_expression flag has been added.
    */
   struct ColumnBoundary {
+    // Constructor only serves the purpose to avoid several long repeated designated initializers of ColumnBoundary (see
+    // contributor guidelines).
+    ColumnBoundary(const std::shared_ptr<LQPColumnExpression>& init_column_expression,
+                   const std::shared_ptr<AbstractExpression>& init_border_expression,
+                   const BetweenCompositionRule::ColumnBoundaryType init_type,
+                   const bool init_boundary_is_column_expression, size_t init_id)
+        : column_expression{init_column_expression},
+          border_expression{init_border_expression},
+          type{init_type},
+          boundary_is_column_expression{init_boundary_is_column_expression},
+          id{init_id} {}
+
     std::shared_ptr<LQPColumnExpression> column_expression;
     std::shared_ptr<AbstractExpression> border_expression;
     BetweenCompositionRule::ColumnBoundaryType type;

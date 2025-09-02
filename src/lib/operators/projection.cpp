@@ -98,7 +98,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   //                          |VS |
   //                          +---+
 
-  const auto forwards_any_columns = std::any_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
+  const auto forwards_any_columns = std::ranges::any_of(expressions, [&](const auto& expression) {
     return expression->type == ExpressionType::PQPColumn;
   });
   const auto output_table_type = forwards_any_columns ? input_table.type() : TableType::Data;
@@ -278,16 +278,16 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     // Forward sorted_by flags, mapping column ids
     const auto& sorted_by = input_chunk->individually_sorted_by();
     if (!sorted_by.empty()) {
-      std::vector<SortColumnDefinition> transformed;
+      auto transformed = std::vector<SortColumnDefinition>{};
       transformed.reserve(sorted_by.size());
 
       // We need to iterate both sorted information and the output/input mapping as multiple output columns might
       // originate from the same sorted input column.
       for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
-        const auto iter =
-            std::find_if(sorted_by.begin(), sorted_by.end(), [input_column_id = input_column_id](const auto sort) {
-              return input_column_id == sort.column;
-            });
+        const auto iter = std::ranges::find_if(sorted_by, [input_column_id](const auto& sort) {
+          // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): False positive by clang tidy.
+          return input_column_id == sort.column;
+        });
         if (iter != sorted_by.end()) {
           transformed.emplace_back(output_column_id, iter->sort_mode);
         }

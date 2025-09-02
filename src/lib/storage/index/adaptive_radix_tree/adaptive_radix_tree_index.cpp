@@ -118,7 +118,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth,
     AbstractChunkIndex::Iterator& it) {
   // This is the anchor of the recursion: if all values have the same key, create a leaf.
-  if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
+  if (std::ranges::all_of(values, [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
         return values.front().first == pair.first;
       })) {
     // copy the Iterator in the _chunk_offsets - vector --> this is the lower_bound of the leaf
