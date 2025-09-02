@@ -84,19 +84,6 @@ target_include_directories(concurrentqueue INTERFACE concurrentqueue)
 add_library(cxxopts INTERFACE)
 target_include_directories(cxxopts INTERFACE cxxopts/include)
 
-add_library(hyperscan INTERFACE)
-target_include_directories(hyperscan INTERFACE hyperscan/src)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/cmake/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/config.h)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/hs_version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/hs_version.h)
-target_sources(hyperscan
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/hs_runtime.h
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/runtime.c
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/scratch.c
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/scratch.h
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/hs_common.h
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/hs.cpp
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hyperscan/src/hs.h
-)
 
 # Build lz4 library
 set(LZ4_LIBRARY_DIR lz4/lib)

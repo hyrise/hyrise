@@ -749,7 +749,6 @@ target_link_libraries_system(
     concurrentqueue
     cxxopts
     nlohmann_json::nlohmann_json
-    hyperscan
     re2
     sparse_map
     SQLite::SQLite3
