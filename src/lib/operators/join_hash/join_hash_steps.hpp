@@ -42,6 +42,8 @@ enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
 
 using Hash = size_t;
 
+constexpr auto PROBE_SIZE_PER_CHUNK = size_t{1} << 18;
+
 /*
 This is how elements of the input relations are saved after materialization.
 The original value is used to detect hash collisions.
@@ -639,7 +641,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
            std::vector<RowIDPosList>& pos_lists_build_side, std::vector<RowIDPosList>& pos_lists_probe_side,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
-           const std::vector<OperatorJoinPredicate>& secondary_join_predicates, const size_t probe_size_per_chunk) {
+           const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(probe_radix_container.size());
 
@@ -661,18 +663,18 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     const auto& elements = partition.elements;
     const auto elements_count = elements.size();
 
-    for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += probe_size_per_chunk) {
+    for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += PROBE_SIZE_PER_CHUNK) {
       const auto output_idx = pos_lists_build_side.size();
       pos_lists_build_side.emplace_back();
       pos_lists_probe_side.emplace_back();
       const auto probe_partition = [&, partition_idx, output_idx, partition_begin, elements_count]() {
         const auto& null_values = partition.null_values;
-        const auto partition_end = std::min(partition_begin + probe_size_per_chunk, elements_count);
+        const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
 
         auto pos_list_build_side_local = RowIDPosList{};
         auto pos_list_probe_side_local = RowIDPosList{};
-        // Simple heuristic to estimate result size: half of the partition's rows will match
-        // a more conservative pre-allocation would be the size of the build cluster
+        // Simple heuristic to estimate result size: half of the partition's rows will match a more conservative
+        // pre-allocation would be the size of the build cluster.
         const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
         pos_list_build_side_local.reserve(expected_output_size);
         pos_list_probe_side_local.reserve(expected_output_size);
@@ -772,8 +774,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             // relation.
             // Since we did not find a hash table, we know that there is no match in the build column for this
             // partition. Hence we are going to write NULL values for each row.
-
-            for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
+            pos_list_build_side_local.reserve(partition_end - partition_begin);
+            pos_list_probe_side_local.reserve(partition_end - partition_begin);
+            for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
               const auto& element = elements[partition_offset];
               pos_list_build_side_local.emplace_back(NULL_ROW_ID);
               pos_list_probe_side_local.emplace_back(element.row_id);
@@ -800,8 +803,7 @@ template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
                      const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
-                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
-                     const size_t probe_size_per_chunk) {
+                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
   const auto probe_radix_container_count = probe_radix_container.size();
@@ -817,13 +819,13 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     const auto& elements = partition.elements;
     const auto elements_count = elements.size();
 
-    for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += probe_size_per_chunk) {
+    for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += PROBE_SIZE_PER_CHUNK) {
       const auto output_idx = pos_lists.size();
       pos_lists.emplace_back();
       const auto probe_partition = [&, partition_idx, output_idx, partition_begin, elements_count]() {
         // Get information from work queue
         const auto& null_values = partition.null_values;
-        const auto partition_end = std::min(partition_begin + probe_size_per_chunk, elements_count);
+        const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
 
         auto pos_list_local = RowIDPosList{};
         const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
@@ -889,14 +891,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             }
           }
         } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
-          // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing
+          // No hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing
           // side get emitted.
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             auto& probe_column_element = elements[partition_offset];
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
-          // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
+          // No hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
           // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
           const auto build_table_is_empty = build_table.row_count() == 0;
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
