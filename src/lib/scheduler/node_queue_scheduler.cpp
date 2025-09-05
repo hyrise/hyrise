@@ -38,7 +38,7 @@ namespace {
  * _workers_per_node).
  */
 constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
-constexpr auto NUM_GROUPS_MAX_FACTOR = 3.0f;
+constexpr auto NUM_GROUPS_MAX_FACTOR = 2.0f;
 constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
 // This factor is used to determine at which queue load we use the maximum number of groups.
@@ -73,7 +73,7 @@ void NodeQueueScheduler::begin() {
   _min_task_count_for_regrouping =
       std::max(size_t{16}, static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
 
-  // Everything above this limit yields the max value for grouping.
+  // For every task list of at least this size, we use the max value for grouping.
   _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
@@ -232,9 +232,9 @@ const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
   const auto active_node_count = _active_nodes.size();
 
-  // Early out: no need to check for preferred node or other queues, if there is only a single node queue or in invalid
+  // Early out: no need to check for preferred node or other queues if there is only a single node queue or an invalid
   // NodeID (the initial value for tasks without an explicit placement) is passed.
-  if (active_node_count == 1 || preferred_node_id == INVALID_NODE_ID) {
+  if (preferred_node_id == INVALID_NODE_ID || active_node_count == 1) {
     return _active_nodes[0];
   }
 

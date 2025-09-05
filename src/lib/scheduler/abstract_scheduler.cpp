@@ -51,6 +51,12 @@ void AbstractScheduler::_schedule_tasks(const std::vector<std::shared_ptr<Abstra
 }
 
 void AbstractScheduler::schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+  if (tasks.empty()) {
+    // Several operators do not schedule tasks when the task input is very small but execute the task right away. In
+    // this case, `tasks` is empty and we can save a bit of unnecessary processing.
+    return;
+  }
+
   _group_tasks(tasks);
   _schedule_tasks(tasks);
   wait_for_tasks(tasks);

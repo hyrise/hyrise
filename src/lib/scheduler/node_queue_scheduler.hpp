@@ -70,7 +70,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
   const std::vector<std::shared_ptr<Worker>>& workers() const;
 
   /**
-   * @param preferred_node_id
+   * @param  preferred_node_id
    * @return `preferred_node_id` if a non-default preferred node ID is passed. When the node is the default of
    *         CURRENT_NODE_ID but no current node (where the task is executed) can be obtained, the node ID of the node
    *         with the lowest queue pressure is returned.
@@ -78,11 +78,11 @@ class NodeQueueScheduler final : public AbstractScheduler {
   NodeID determine_queue_id(const NodeID preferred_node_id) const;
 
   /**
-   * @brief determines the group count which is used by _group_tasks(). Considers the current load on the system.
+   * @brief   Determines the group count which is used by _group_tasks(). Considers the current load on the system.
    *
-   * @param tasks: task list for which the function determines a group count
-   * @return return value is either std::nullopt signaling that grouping is not advantageous (e.g., very short list of
-   * tasks) or the determined number of groups.
+   * @param   tasks: task list for which the function determines a group count
+   * @return  Either std::nullopt signaling that grouping is not advantageous (e.g., very short list of tasks) or the
+   *          determined number of groups.
    */
   std::optional<size_t> determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
 
@@ -100,7 +100,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
    *        for older data (e.g., old and infrequently accessed data might be tiered or heavily compressed). A simpler
    *        grouping (e.g., forming the first chain with the first N tasks) could cause chain processing to be
    *        inbalanced (chains processing frequently accessed data might be less expensive than ones processing tiered
-   *         data).
+   *        data).
    *
    * @param tasks: list of tasks to group
    */
