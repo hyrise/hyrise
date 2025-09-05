@@ -29,15 +29,14 @@ const std::string& Update::name() const {
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
   const auto table_to_update = Hyrise::get().storage_manager.get_table(_table_to_update_name);
 
-  // 0. Validate input
-  DebugAssert(context, "Update needs a transaction context");
-  DebugAssert(left_input_table()->row_count() == right_input_table()->row_count(),
-              "Update required identical layouts from its input tables");
-  DebugAssert(left_input_table()->column_data_types() == right_input_table()->column_data_types(),
-              "Update required identical layouts from its input tables");
+  // 0. Validate input.
+  Assert(context, "Update needs a transaction context.");
+  Assert(left_input_table()->row_count() == right_input_table()->row_count(),
+              "Update requires identical layouts from its input tables.");
+  Assert(left_input_table()->column_data_types() == right_input_table()->column_data_types(),
+              "Update requires identical layouts from its input tables.");
 
-  // 1. Delete obsolete data with the Delete operator.
-  //    Delete doesn't accept empty input data
+  // 1. Delete obsolete data with the Delete operator. Delete does not accept empty input data.
   if (left_input_table()->row_count() > 0) {
     _delete = std::make_shared<Delete>(_left_input);
     _delete->set_transaction_context(context);
@@ -53,7 +52,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   _insert = std::make_shared<Insert>(_table_to_update_name, _right_input);
   _insert->set_transaction_context(context);
   _insert->execute();
-  // Insert cannot fail in the MVCC sense, no check necessary
+  // Insert cannot fail in the MVCC sense, no check necessary.
 
   return nullptr;
 }
