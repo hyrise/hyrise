@@ -117,9 +117,11 @@ const auto hsql_datetime_field = std::unordered_map<hsql::DatetimeField, Datetim
     {hsql::kDatetimeMinute, DatetimeComponent::Minute}, {hsql::kDatetimeSecond, DatetimeComponent::Second},
 };
 
+// According to the SQL standard, the position of NULLs is implementation-defined. For now, NULLs always come before all
+// other values, both for ascending and descending sorts. See sort.cpp for details.
 const auto order_type_to_sort_mode = std::unordered_map<hsql::OrderType, SortMode>{
-    {hsql::kOrderAsc, SortMode::Ascending},
-    {hsql::kOrderDesc, SortMode::Descending},
+    {hsql::kOrderAsc, SortMode::AscendingNullsFirst},
+    {hsql::kOrderDesc, SortMode::DescendingNullsFirst},
 };
 
 const auto supported_hsql_data_types = std::unordered_map<hsql::DataType, DataType>{

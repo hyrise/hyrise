@@ -941,9 +941,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
           _mode == JoinMode::Inner) {
         chunk->set_immutable();
-        // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
-        chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
-                                           SortColumnDefinition(right_join_column, SortMode::Ascending)});
+        // The join columns are sorted in ascending order (ensured by radix_cluster_sort).
+        chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::AscendingNullsFirst),
+                                           SortColumnDefinition(right_join_column, SortMode::AscendingNullsFirst)});
       }
     }
     _performance.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
