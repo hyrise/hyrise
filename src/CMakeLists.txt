@@ -68,8 +68,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
         -Wextra
         -pedantic
         -Werror
-        -Wno-deprecated-dynamic-exception-spec # Needed for jemalloc, at least for the older version that we are using.
-#        -Wno-dollar-in-identifier-extension
+#        -Wno-deprecated-dynamic-exception-spec # Needed for jemalloc, at least for the older version that we are using.
         -Wno-subobject-linkage
         -Wno-unknown-pragmas
         -Wno-unused-parameter
