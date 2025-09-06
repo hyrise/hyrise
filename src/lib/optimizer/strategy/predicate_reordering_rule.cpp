@@ -12,6 +12,8 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/optimization_context.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 
@@ -176,10 +178,10 @@ std::string PredicateReorderingRule::name() const {
   return name;
 }
 
-void PredicateReorderingRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void PredicateReorderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                OptimizationContext& optimization_context) const {
   // We reorder recursively from leaves to root. Thus, the CardinalityEstimator may cache already estimated statistics.
-  const auto caching_cost_estimator = cost_estimator->new_instance();
+  const auto caching_cost_estimator = optimization_context.cost_estimator->new_instance();
   caching_cost_estimator->cardinality_estimator->guarantee_bottom_up_construction(lqp_root);
 
   // We keep track of visited nodes, so that this rule touches nodes once only.

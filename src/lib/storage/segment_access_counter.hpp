@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 
+#include "magic_enum.hpp"
+
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
@@ -26,8 +28,7 @@ class SegmentAccessCounter {
     Sequential /* 0, 1, 1, 2, 3, 4 */,
     Monotonic /* 0, 0, 1, 2, 4, 8, 17 */,
     Random /* 0, 1, 0, 42 */,
-    Dictionary /* Used to count accesses to the dictionary of the dictionary segment */,
-    Count /* Dummy entry to describe the number of elements in this enum class. */
+    Dictionary /* Used to count accesses to the dictionary of the dictionary segment */
   };
 
   inline static const std::map<AccessType, const char*> access_type_string_mapping = {
@@ -54,7 +55,7 @@ class SegmentAccessCounter {
   std::string to_string() const;
 
  private:
-  std::array<CounterType, static_cast<size_t>(AccessType::Count)> _counters = {};
+  std::array<CounterType, magic_enum::enum_count<AccessType>()> _counters = {};
 
   // For access pattern analysis: The following enum is used used to determine how an iterator iterates over its
   // elements. This is done by analysing the first elements in a given PosList and a state machine, defined below.

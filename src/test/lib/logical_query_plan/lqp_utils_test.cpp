@@ -42,7 +42,7 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {
   PredicateNode::make(greater_than_(a_a, 5),
     ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
       PredicateNode::make(less_than_(a_b, 4),
-        SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::Ascending}, node_a))));
+        SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::AscendingNullsFirst}, node_a))));
   // clang-format on
 
   const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
@@ -248,7 +248,7 @@ TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
   PredicateNode::make(greater_than_(a_a, 5),
     ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
       PredicateNode::make(less_than_(a_b, 4),
-        SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::Ascending},
+        SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::AscendingNullsFirst},
           node_a))));
   // clang-format on
 

@@ -6,11 +6,13 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -82,11 +84,11 @@ std::string JoinPredicateOrderingRule::name() const {
   return name;
 }
 
-void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                  OptimizationContext& optimization_context) const {
   // Cache cost of all intermediate operators and joins with reordered predicates.
-  DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
-  const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+  DebugAssert(optimization_context.cost_estimator, "JoinOrderingRule requires cost estimator to be set");
+  const auto caching_cardinality_estimator = optimization_context.cost_estimator->cardinality_estimator->new_instance();
   caching_cardinality_estimator->guarantee_bottom_up_construction(lqp_root);
 
   // In theory, the order of join predicates does not make a difference for cardinality estimation. However, we only use
