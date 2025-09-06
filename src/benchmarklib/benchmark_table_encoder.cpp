@@ -106,10 +106,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     }
 
     const auto segment_values_are_unique = column_is_unique(table, column_id);
-    const auto segment_values_are_key = column_is_key(table, column_id);
-    const auto segment_values_might_be_unique = column_might_be_unique(table, column_id);
-    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(
-        column_data_type, segment_values_are_unique, segment_values_are_key, segment_values_might_be_unique));
+    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(column_data_type, segment_values_are_unique));
   }
 
   /**

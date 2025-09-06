@@ -31,11 +31,8 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
 
 ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
-                                                  const std::vector<bool>& chunk_values_are_unique,
-                                                  const std::vector<bool>& chunk_values_are_key,
-                                                  const std::vector<bool>& chunk_values_might_be_unique);
-SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique = false,
-                                                      const bool segment_values_are_key = false,
-                                                      const bool segment_values_might_be_unique = false);
+                                                  const std::vector<bool>& chunk_values_are_unique);
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type,
+                                                      const bool segment_values_are_unique = false);
 
 }  // namespace hyrise

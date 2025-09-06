@@ -81,6 +81,17 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
       const auto typed_left_value = boost::get<ColumnDataType>(left_value);
       const auto typed_right_value = boost::get<ColumnDataType>(right_value);
 
+      if constexpr (std::is_integral_v<ColumnDataType>) {
+        using SignedColumnDataType = std::make_signed_t<ColumnDataType>;
+        const auto difference = static_cast<SignedColumnDataType>(typed_right_value) - typed_left_value -
+                                !is_lower_inclusive_between(predicate_condition) -
+                                !is_upper_inclusive_between(predicate_condition);
+        // Predicate is always false, just output empty result
+        if (difference < 0) {
+          return;
+        }
+      }
+
       with_between_comparator(predicate_condition, typed_left_value, typed_right_value,
                               [&](auto between_comparator_function) {
                                 auto between_comparator = [&](const auto& position) {

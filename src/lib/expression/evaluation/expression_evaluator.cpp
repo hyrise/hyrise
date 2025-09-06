@@ -617,6 +617,18 @@ bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& 
       return;
     }
 
+    if constexpr (std::is_integral_v<DataType>) {
+      using SignedDataType = std::make_signed_t<DataType>;
+      const auto difference = static_cast<SignedDataType>(*upper_bound) - *lower_bound -
+                              !is_lower_inclusive_between(expression.predicate_condition) -
+                              !is_upper_inclusive_between(expression.predicate_condition);
+      // Predicate is always false, just output empty result
+      if (difference < 0) {
+        success = true;
+        return;
+      }
+    }
+
     const auto expression_result = evaluate_expression_to_result<DataType>(*operand);
     expression_result->as_view([&](const auto& view) {
       const auto result_size = _chunk ? _chunk->size() : static_cast<ChunkOffset>(view.size());

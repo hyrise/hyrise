@@ -126,12 +126,13 @@ void with_between_comparator(const PredicateCondition predicate_condition, const
     const auto upd_lower_value = is_lower_inclusive_between(predicate_condition) ? lower_value : lower_value + 1;
     const auto upd_upper_value = is_upper_inclusive_between(predicate_condition) ? upper_value : upper_value - 1;
 
-    Assert(lower_value <= upper_value, "Query asks for between predicate with empty range. This should have been filtered out earlier.");
+    DebugAssert(upd_lower_value <= upd_upper_value,
+                "Query asks for between predicate with empty range. This should have been filtered out earlier.");
 
     using UnsignedDataType = std::make_unsigned_t<DataType>;
-    const UnsignedDataType value_difference = upper_value - lower_value;
+    const UnsignedDataType value_difference = upd_upper_value - upd_lower_value;
 
-    return func([&upd_lower_value, &upd_upper_value](const DataType& value) {
+    return func([&upd_lower_value, &value_difference](const DataType& value) {
       return static_cast<UnsignedDataType>(value - upd_lower_value) <= value_difference;
     });
   }

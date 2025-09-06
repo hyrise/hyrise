@@ -157,6 +157,10 @@ with open(sys.argv[2]) as new_file:
 if old_data["context"]["benchmark_mode"] != new_data["context"]["benchmark_mode"]:
     exit("Benchmark runs with different modes (ordered/shuffled) are not comparable")
 
+for data in old_data, new_data:
+    if data["context"]["encoding"] is None:
+        data["context"]["encoding"] = "Automatic"
+
 diffs_throughput = []
 total_runtime_old = 0
 total_runtime_new = 0

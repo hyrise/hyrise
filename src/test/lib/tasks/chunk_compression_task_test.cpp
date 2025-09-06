@@ -12,6 +12,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "tasks/chunk_compression_task.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -40,12 +41,13 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table_dict->get_chunk(chunk_id);
 
-    for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
-      auto segment = chunk->get_segment(column_id);
+    auto segment0 = chunk->get_segment(ColumnID{0});
+    auto dict_segment0 = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment0);
+    ASSERT_NE(dict_segment0, nullptr);
 
-      auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
-      ASSERT_NE(dict_segment, nullptr);
-    }
+    auto segment1 = chunk->get_segment(ColumnID{1});
+    auto for_segment1 = std::dynamic_pointer_cast<const FrameOfReferenceSegment<int32_t>>(segment1);
+    ASSERT_NE(for_segment1, nullptr);
   }
 }
 
