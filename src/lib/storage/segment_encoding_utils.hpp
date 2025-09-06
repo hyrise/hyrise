@@ -1,9 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <optional>
+#include <vector>
 
-#include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -30,5 +29,10 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
  * For the difference of the two, please take a look at compressed_vector_type.hpp.
  */
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
+
+ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
+                                                  const std::vector<bool>& chunk_values_are_unique);
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type,
+                                                      const bool segment_values_are_unique = false);
 
 }  // namespace hyrise

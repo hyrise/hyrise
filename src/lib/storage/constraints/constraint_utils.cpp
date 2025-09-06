@@ -129,4 +129,47 @@ bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
   return true;
 }
 
+bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id) {
+  DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
+  for (const auto& key_constraint : table->soft_key_constraints()) {
+    if (key_constraint.can_become_invalid()) {
+      continue;
+    }
+
+    const auto& key_type = key_constraint.key_type();
+    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
+      continue;
+    }
+
+    const auto& columns = key_constraint.columns();
+    if (columns.size() == 1 && columns.contains(column_id)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::vector<bool> columns_are_unique(const std::shared_ptr<Table>& table) {
+  const auto column_count = table->column_count();
+  std::vector<bool> are_unique(column_count, false);
+  for (const auto& key_constraint : table->soft_key_constraints()) {
+    if (key_constraint.can_become_invalid()) {
+      continue;
+    }
+
+    const auto& key_type = key_constraint.key_type();
+    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
+      continue;
+    }
+
+    const auto& columns = key_constraint.columns();
+    if (columns.size() == 1) {
+      are_unique[*columns.begin()] = true;
+    }
+  }
+
+  return are_unique;
+}
+
 }  // namespace hyrise
