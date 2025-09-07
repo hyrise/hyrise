@@ -10,16 +10,22 @@ mkdir "$CMAKE_DIR"
 
 pushd "$CMAKE_DIR"
 cmake -DCMAKE_UNITY_BUILD=ON -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCOMPILE_FOR_BOLT=TRUE ..
-ninja all -j $(nproc)
+ninja all
 
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.source
 llvm-bolt lib/libhyrise_impl.so.source -instrument -o lib/libhyrise_impl.so
 popd
 
+output="$(uname -s)"
+case "${output}" in
+  Linux*)   num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
+  Darwin*)  num_phy_cores="$(sysctl -n hw.physicalcpu)";;
+  *)        echo 'Unsupported operating system. Aborting.' && exit 1;;
+esac
+
 for benchmark in hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema
 do
-    # TODO: Multi-threaded benchmarks?
-    "$CMAKE_DIR/$benchmark" -t 360 -m Shuffled
+    "$CMAKE_DIR/$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -t 1800 -m Shuffled
     mv /tmp/prof.fdata "$CMAKE_DIR/$benchmark.fdata"
 done
 
