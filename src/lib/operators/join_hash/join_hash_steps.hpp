@@ -42,7 +42,10 @@ enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
 
 using Hash = size_t;
 
-constexpr auto PROBE_SIZE_PER_CHUNK = size_t{1} << 18;
+// We have to access the value of DEFAULT_SIZE by .t here, because accessing it via operator T&()
+// is not constexpr. This file assumes this value to not be less than JOB_SPAWN_THRESHOLD whenever
+// if (elements_count - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) is evaluated.
+constexpr auto PROBE_SIZE_PER_CHUNK = Chunk::DEFAULT_SIZE.t * 4;
 
 /*
 This is how elements of the input relations are saved after materialization.

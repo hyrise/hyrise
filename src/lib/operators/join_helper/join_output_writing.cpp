@@ -252,8 +252,7 @@ size_t write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::sh
            ++partition_id) {
         // Copy entries from following PosList into the current working set (pos_list) and free the memory
         // used for the merged PosList.
-        std::copy(pos_lists[partition_id + 1].begin(), pos_lists[partition_id + 1].end(),
-                  std::back_inserter(*pos_list));
+        std::ranges::copy(pos_lists[partition_id + 1], std::back_inserter(*pos_list));
         pos_lists[partition_id + 1] = {};
       }
     }
@@ -263,12 +262,10 @@ size_t write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::sh
     };
 
     write_output_segments_tasks.emplace_back(std::make_shared<JobTask>(write_output_segments_task_params));
-    write_output_segments_tasks.back()->schedule();
-
     ++output_position;
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(write_output_segments_tasks);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(write_output_segments_tasks);
   return output_position;
 }
 
