@@ -188,6 +188,15 @@ else()
     endif()
 endif()
 
+# Needed when building a binary for optimization with BOLT
+option(COMPILE_FOR_BOLT "Set to TRUE to build Hyrise for further optimization / instrumentation / profiling with BOLT. Default: FALSE" FALSE)
+if (${COMPILE_FOR_BOLT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options(-fno-reorder-blocks-and-partition)
+    endif()
+    add_link_options(-Wl,--emit-relocs)
+endif()
+
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
 

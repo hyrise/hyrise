@@ -44,14 +44,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_compile_options(-pthread -Wno-unknown-warning-option)
 
-# Needed when building a binary for optimization with BOLT
-if (${COMPILE_FOR_BOLT})
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        add_compile_options(-fno-reorder-blocks-and-partition)
-    endif()
-    add_link_options(-Wl,--emit-relocs)
-endif()
-
 # Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported system)
 if (NOT "${HYRISE_RELAXED_BUILD}")
     add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas -Wno-subobject-linkage -Wno-deprecated-dynamic-exception-spec)
