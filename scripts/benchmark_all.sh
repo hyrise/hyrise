@@ -101,8 +101,9 @@ do
 
   if [ -f ../resources/bolt.fdata ]
   then
+    echo "Optimizing with BOLT"
     mv ./lib/libhyrise_impl.so ./lib/libhyrise_impl.so.old
-    llvm-bolt-17 ./lib/libhyrise_impl.so.old -o ./lib/libhyrise_impl.so -data ../resources/bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+    /usr/bin/time -p llvm-bolt-17 ./lib/libhyrise_impl.so.old -o ./lib/libhyrise_impl.so -data ../resources/bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
   fi
 
   # Run the benchmarks.
