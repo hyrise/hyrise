@@ -231,6 +231,13 @@ foreach(no_lto_target gtest gtest_main gmock gmock_main)
 endforeach(no_lto_target)
 add_subdirectory(src)
 
+# Needed when building a binary for optimization with BOLT
+if (${COMPILE_FOR_BOLT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options(-fno-reorder-blocks-and-partition)
+    endif()
+    add_link_options(-Wl,--emit-relocs)
+endif()
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort

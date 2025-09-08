@@ -58,14 +58,6 @@ then
   exit 1
 fi
 
-# Ensure that this runs on a release or release with debug build. Not really necessary, just a sanity check.
-output=$(grep 'CMAKE_BUILD_TYPE:STRING=Rel' CMakeCache.txt || true)
-if [ -z "$output" ]
-then
-  echo 'Current folder is not configured as a release build.'
-  exit 1
-fi
-
 # Check whether to use ninja or make.
 output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
 if [ -n "$output" ]
@@ -95,6 +87,14 @@ do
   # Checkout and build from scratch, tracking the compile time.
   git checkout "$commit"
   git submodule update --init --recursive
+
+  if [ -f ../resources/bolt.fdata ]
+  then
+    cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCOMPILE_FOR_BOLT=TRUE ..
+  else
+    cmake -DCMAKE_BUILD_TYPE=Release -DCOMPILE_FOR_BOLT=FALSE ..
+  fi
+
   echo "Building $commit..."
   $build_system clean
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
