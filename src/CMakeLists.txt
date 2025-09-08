@@ -97,3 +97,11 @@ add_subdirectory(plugins)
 set(CMAKE_CXX_CLANG_TIDY "")
 add_subdirectory(benchmark)
 add_subdirectory(test)
+
+# Needed when building a binary for optimization with BOLT
+if (${COMPILE_FOR_BOLT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options(-fno-reorder-blocks-and-partition)
+    endif()
+    add_link_options(-Wl,--emit-relocs)
+endif()
