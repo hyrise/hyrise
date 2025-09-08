@@ -16,14 +16,10 @@
 # apt update
 # apt install linux-tools-common linux-tools-`uname -r`
 
-CMAKE_DIR="cmake-build-bolt-lbr"
+build_folder=$(pwd)
 
-mkdir "$CMAKE_DIR"
-
-pushd "$CMAKE_DIR"
-cmake -DCMAKE_UNITY_BUILD=ON -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCOMPILE_FOR_BOLT=TRUE ..
+ninja clean
 ninja all
-popd
 
 output="$(uname -s)"
 case "${output}" in
@@ -34,8 +30,8 @@ esac
 
 for benchmark in hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema
 do
-    perf record -e cycles:u -j any,u -o "$CMAKE_DIR/$benchmark.data" -- "$CMAKE_DIR/$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -t 1800 -m Shuffled
-    perf2bolt -p "$CMAKE_DIR/$benchmark.data" -o "$CMAKE_DIR/$benchmark.fdata" "$CMAKE_DIR/lib/libhyrise_impl.so"
+    perf record -e cycles:u -j any,u -o "$build_folder/$benchmark.data" -- "$build_folder/$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -t 1800 -m Shuffled
+    perf2bolt -p "$build_folder/$benchmark.data" -o "$build_folder/$benchmark.fdata" "$build_folder/lib/libhyrise_impl.so"
 done
 
-merge-fdata "$CMAKE_DIR/*.fdata" > resources/bolt.fdata
+merge-fdata "$build_folder/*.fdata" > resources/bolt.fdata
