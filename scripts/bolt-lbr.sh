@@ -34,4 +34,4 @@ do
     perf2bolt -p "$build_folder/$benchmark.data" -o "$build_folder/$benchmark.fdata" "$build_folder/lib/libhyrise_impl.so"
 done
 
-merge-fdata "$build_folder/*.fdata" > resources/bolt.fdata
+merge-fdata "$build_folder"/*.fdata > resources/bolt.fdata
