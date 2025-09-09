@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -14,8 +13,7 @@ class Table;
 class Chunk;
 
 /**
- * Creates a Table with values of the parsed csv file <filename> and
- * the corresponding meta file <filename>.meta
+ * Creates a Table with values of the parsed csv file <filename>.
  *
  * The files are parsed according to RFC 4180 if not otherwise specified. [https://tools.ietf.org/html/rfc4180]
  * For non-RFC 4180, all linebreaks within quoted strings are further escaped with an escape character.
@@ -29,11 +27,11 @@ class CsvParser {
  public:
   /*
    * @param filename      Path to the input file.
-   * @param csv_meta      Custom csv meta information which will be used instead of the default "filename" + ".json" meta.
+   * @param csv_meta      Custom csv meta information, which is usually constained in the file "filename" + ".json".
    * @returns             The table that was created from the csv file.
    */
-  static std::shared_ptr<Table> parse(const std::string& filename, const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
-                                      const std::optional<CsvMeta>& csv_meta = std::nullopt);
+  static std::shared_ptr<Table> parse(const std::string& filename, const CsvMeta& csv_meta,
+                                      const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
   static std::shared_ptr<Table> create_table_from_meta_file(const std::string& filename,
                                                             const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
