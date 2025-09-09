@@ -148,9 +148,6 @@ void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& e
         execution_info.custom_command_complete_message = "ROLLBACK";
         break;
       }
-      default: {
-        FailInput("TransactionStatement command not supported.");
-      }
     }
   }
 }
