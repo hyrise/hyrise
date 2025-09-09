@@ -407,7 +407,7 @@ try {
               }
             }
           }, bolt: {
-            state('BOLT') {
+            stage('BOLT') {
               if (env.BRANCH_NAME == 'lukas/bolt' || full_ci) {
                 sh "mkdir cmake-build-bolt"
                 sh "cd cmake-build-bolt && cmake ${relwithdebinfo} ${clang} ${unity} ${ninja} -DCOMPILE_FOR_BOLT=TRUE .. && ninja all -j \$(( \$(nproc)  / 7))"
