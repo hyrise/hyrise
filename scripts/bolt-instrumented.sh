@@ -27,4 +27,4 @@ do
     mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
 done
 
-merge-fdata-17 "$build_folder"/*.fdata" > resources/bolt.fdata
+merge-fdata-17 "$build_folder"/*.fdata > resources/bolt.fdata
