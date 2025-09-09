@@ -676,11 +676,6 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
         auto pos_list_build_side_local = RowIDPosList{};
         auto pos_list_probe_side_local = RowIDPosList{};
-        // Simple heuristic to estimate result size: half of the partition's rows will match a more conservative
-        // pre-allocation would be the size of the build cluster.
-        const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
-        pos_list_build_side_local.reserve(expected_output_size);
-        pos_list_probe_side_local.reserve(expected_output_size);
 
         if constexpr (keep_null_values) {
           Assert(elements.size() == null_values.size(),
@@ -697,6 +692,12 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
           if (!secondary_join_predicates.empty()) {
             multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
           }
+
+          // Simple heuristic to estimate result size: half of the partition's rows will match a more conservative
+          // pre-allocation would be the size of the build cluster.
+          const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
+          pos_list_build_side_local.reserve(expected_output_size);
+          pos_list_probe_side_local.reserve(expected_output_size);
 
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             const auto& probe_column_element = elements[partition_offset];
@@ -831,8 +832,6 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
 
         auto pos_list_local = RowIDPosList{};
-        const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
-        pos_list_local.reserve(expected_output_size);
 
         const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
         if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
@@ -844,6 +843,9 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           if (!secondary_join_predicates.empty()) {
             multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
           }
+
+          const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
+          pos_list_local.reserve(expected_output_size);
 
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             const auto& probe_column_element = elements[partition_offset];
@@ -871,20 +873,13 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 
             auto any_build_column_value_matches = false;
 
-            if (secondary_join_predicates.empty()) {
+            if (!multi_predicate_join_evaluator) {
               any_build_column_value_matches = hash_table.contains(static_cast<HashedType>(probe_column_element.value));
             } else {
-              auto [primary_predicate_matching_rows_iter, primary_predicate_matching_rows_end] =
-                  hash_table.find(static_cast<HashedType>(probe_column_element.value));
-
-              for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
-                   ++primary_predicate_matching_rows_iter) {
-                const auto row_id = *primary_predicate_matching_rows_iter;
-                if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id)) {
-                  any_build_column_value_matches = true;
-                  break;
-                }
-              }
+              auto [hash_table_begin, hash_table_end] = hash_table.find(probe_column_element.value);
+              any_build_column_value_matches = std::any_of(hash_table_begin, hash_table_end, [&](auto& row_id) {
+                return multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id);
+              });
             }
 
             if ((mode == JoinMode::Semi && any_build_column_value_matches) ||
