@@ -21,6 +21,8 @@ build_folder=$(pwd)
 ninja clean
 ninja all
 
+cd ..
+
 output="$(uname -s)"
 case "${output}" in
   Linux*)   num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
