@@ -58,7 +58,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
       const auto chunk_count = input_table->chunk_count();
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-      output_chunks.reserve(chunk_count);
+      output_chunks.resize(chunk_count);
 
       // If reduce_mode is ReduceMode::BuildAndProbe, new filters must be build while the old ones are probed.
       std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter;
@@ -68,7 +68,6 @@ class Reduce : public AbstractReadOnlyOperator {
         new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
 
         if constexpr (use_min_max == UseMinMax::Yes) {
-          std::cout << "Created MinMaxFilter\n";
           new_min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
         }
       }
@@ -86,6 +85,7 @@ class Reduce : public AbstractReadOnlyOperator {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(chunk_count);
 
+      auto empty_chunk_ids = std::vector<ChunkID>{};
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
         const auto& input_chunk = input_table->get_chunk(chunk_index);
         const auto& input_segment = input_chunk->get_segment(column_id);
@@ -136,7 +136,9 @@ class Reduce : public AbstractReadOnlyOperator {
         });
 
         if constexpr (reduce_mode != ReduceMode::Build) {
-          if (!matches->empty()) {
+          if (matches->empty()) {
+            empty_chunk_ids.emplace_back(chunk_index);
+          } else {
             const auto column_count = input_table->column_count();
             auto output_segments = Segments{};
             output_segments.reserve(column_count);
@@ -200,17 +202,18 @@ class Reduce : public AbstractReadOnlyOperator {
               }
             }
 
-            const auto out_chunk = std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
-            out_chunk->set_immutable();
+            const auto output_chunk = std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
+            output_chunk->set_immutable();
             if (keep_chunk_sort_order && !input_chunk->individually_sorted_by().empty()) {
-              out_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
+              output_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
             }
-            output_chunks.emplace_back(out_chunk);
+            output_chunks[chunk_index] = output_chunk;
           }
         }
       }
 
       if constexpr (reduce_mode != ReduceMode::Build) {
+        std::erase_if(output_chunks, [](const auto& ptr){ return ptr == nullptr; });
         output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
                                                    std::move(output_chunks));
       }
