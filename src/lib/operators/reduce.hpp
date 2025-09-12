@@ -85,17 +85,22 @@ class Reduce : public AbstractReadOnlyOperator {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(chunk_count);
 
-      auto empty_chunk_ids = std::vector<ChunkID>{};
+      auto casted_min_max_filter = std::shared_ptr<MinMaxFilter<ColumnDataType>>();
+      if constexpr (reduce_mode != ReduceMode::Build && use_min_max == UseMinMax::Yes) {
+        Assert(_min_max_filter, "Min max filter is null.");
+        casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<ColumnDataType>>(_min_max_filter);
+        Assert(casted_min_max_filter, "Failed to cast min max filter.");
+      }
+      
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
+      
         const auto& input_chunk = input_table->get_chunk(chunk_index);
         const auto& input_segment = input_chunk->get_segment(column_id);
 
-        auto casted_min_max_filter = std::shared_ptr<MinMaxFilter<ColumnDataType>>();
-        if constexpr (reduce_mode != ReduceMode::Build && use_min_max == UseMinMax::Yes) {
-          Assert(_min_max_filter, "Min max filter is null.");
-          casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<ColumnDataType>>(_min_max_filter);
-          Assert(casted_min_max_filter, "Failed to cast min max filter.");
-        }
+        const auto job = [&, chunk_index, input_chunk, input_segment]() {
+          (void)chunk_index;
+          (void)input_chunk;
+          (void)input_segment;
 
         auto matches = std::make_shared<RowIDPosList>();
         if constexpr (reduce_mode != ReduceMode::Build) {
@@ -136,9 +141,7 @@ class Reduce : public AbstractReadOnlyOperator {
         });
 
         if constexpr (reduce_mode != ReduceMode::Build) {
-          if (matches->empty()) {
-            empty_chunk_ids.emplace_back(chunk_index);
-          } else {
+          if (!matches->empty()) {
             const auto column_count = input_table->column_count();
             auto output_segments = Segments{};
             output_segments.reserve(column_count);
@@ -210,6 +213,9 @@ class Reduce : public AbstractReadOnlyOperator {
             output_chunks[chunk_index] = output_chunk;
           }
         }
+        };
+
+        job();
       }
 
       if constexpr (reduce_mode != ReduceMode::Build) {
