@@ -38,7 +38,8 @@ class Reduce : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override {
-    // std::cout << "Reducer called.\n";
+    std::cout << "Reducer called with mode: " << magic_enum::enum_name(reduce_mode) << " use_min_max: "
+              << magic_enum::enum_name(use_min_max) << "\n";
     std::shared_ptr<const Table> input_table;
     std::shared_ptr<const Table> output_table;
     auto column_id = ColumnID{};
@@ -63,31 +64,37 @@ class Reduce : public AbstractReadOnlyOperator {
       std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter;
       std::shared_ptr<MinMaxFilter<ColumnDataType>> new_min_max_filter;
 
-      if constexpr (reduce_mode == ReduceMode::Build) {
-        _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
-        _min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
-      } else {
-        Assert(_right_input->executed(), "Build Reducer was not executed.");
-        const auto build_reduce =
-            std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input);
-        Assert(build_reduce, "Failed to cast probe reduce.");
+      if constexpr (reduce_mode != ReduceMode::Probe) {
+        new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
 
-        _bloom_filter = build_reduce->get_bloom_filter();
-        _min_max_filter = build_reduce->get_min_max_filter();
-
-        if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
-          new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+        if constexpr (use_min_max == UseMinMax::Yes) {
+          std::cout << "Created MinMaxFilter\n";
           new_min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
         }
       }
+
+      if constexpr (reduce_mode != ReduceMode::Build) {
+        Assert(_right_input->executed(), "Build Reducer was not executed.");
+        const auto build_reduce =
+            std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input);
+        Assert(build_reduce, "Failed to cast build reduce.");
+
+        _bloom_filter = build_reduce->get_bloom_filter();
+        _min_max_filter = build_reduce->get_min_max_filter();
+      }
+
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(chunk_count);
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
         const auto& input_chunk = input_table->get_chunk(chunk_index);
         const auto& input_segment = input_chunk->get_segment(column_id);
 
         auto casted_min_max_filter = std::shared_ptr<MinMaxFilter<ColumnDataType>>();
-        if constexpr (use_min_max == UseMinMax::Yes) {
+        if constexpr (reduce_mode != ReduceMode::Build && use_min_max == UseMinMax::Yes) {
+          Assert(_min_max_filter, "Min max filter is null.");
           casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<ColumnDataType>>(_min_max_filter);
+          Assert(casted_min_max_filter, "Failed to cast min max filter.");
         }
 
         auto matches = std::make_shared<RowIDPosList>();
@@ -101,16 +108,16 @@ class Reduce : public AbstractReadOnlyOperator {
             boost::hash_combine(seed, position.value());
 
             if constexpr (reduce_mode == ReduceMode::Build) {
-              _bloom_filter->insert(static_cast<uint64_t>(seed));
+              new_bloom_filter->insert(static_cast<uint64_t>(seed));
 
               if constexpr (use_min_max == UseMinMax::Yes) {
-                casted_min_max_filter->insert(position.value());
+                new_min_max_filter->insert(position.value());
               }
             } else {
-              bool found = _bloom_filter->probe(static_cast<uint64_t>(seed));
+              auto found = _bloom_filter->probe(static_cast<uint64_t>(seed));
 
               if constexpr (use_min_max == UseMinMax::Yes) {
-                found = casted_min_max_filter->probe(position.value());
+                found = found && casted_min_max_filter->probe(position.value());
               }
 
               if (found) {
@@ -203,10 +210,12 @@ class Reduce : public AbstractReadOnlyOperator {
         }
       }
 
-      output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
+      if constexpr (reduce_mode != ReduceMode::Build) {
+        output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
                                                    std::move(output_chunks));
+      }
 
-      if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
+      if constexpr (reduce_mode != ReduceMode::Probe) {
         _bloom_filter = new_bloom_filter;
         _min_max_filter = new_min_max_filter;
       }
