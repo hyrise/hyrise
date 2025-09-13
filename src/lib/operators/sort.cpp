@@ -122,8 +122,8 @@ template void encode_integer<int64_t>(uint8_t* dest, const int64_t value, const 
 // It adapts to data skew, yielding near-equal work per worker and good load balancing.
 // Compared to naive chunking, Merge Path scales better with core count for large runs.
 template <typename T, typename Compare>
-inline Cut find_cut_point(const T* const left, const size_t len_left, const T* const right,
-                          const size_t len_right, const size_t diag, Compare comp) {
+inline Cut find_cut_point(const T* const left, const size_t len_left, const T* const right, const size_t len_right,
+                          const size_t diag, Compare comp) {
   auto low = diag > len_right ? diag - len_right : 0;
   auto high = std::min(diag, len_left);
 
@@ -388,7 +388,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
           resolve_indirection ? first_reference_segment->referenced_column_id() : column_id;
 
       for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
-        jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, column_id, input_segments, referenced_table, referenced_column_id]() {
+        jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, column_id, input_segments, referenced_table,
+                                                     referenced_column_id]() {
           const auto chunk_size = std::min(
               output_chunk_size,
               static_cast<ChunkOffset>(row_count - (static_cast<uint64_t>(output_chunk_id * output_chunk_size))));
@@ -547,7 +548,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto key_offsets = std::vector<size_t>(sort_definitions_size);
   key_offsets[0] = 0;
   for (auto index = size_t{1}; index < sort_definitions_size; ++index) {
-    key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1; // Adding +1 because of null byte.
+    key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;  // Adding +1 because of null byte.
   }
 
   auto key_buffer = std::vector<uint8_t>();
@@ -597,9 +598,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     for (auto index = size_t{0}; index < sort_definitions_size; ++index) {
       keygen_jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, index, chunk]() {
         auto sort_col = _sort_definitions[index].column;
-        auto nulls_first = (
-            _sort_definitions[index].sort_mode == SortMode::AscendingNullsFirst ||
-            _sort_definitions[index].sort_mode == SortMode::DescendingNullsFirst);
+        auto nulls_first = (_sort_definitions[index].sort_mode == SortMode::AscendingNullsFirst ||
+                            _sort_definitions[index].sort_mode == SortMode::DescendingNullsFirst);
         auto descending = is_descending(_sort_definitions[index].sort_mode);
 
         const auto abstract_segment = chunk->get_segment(sort_col);
