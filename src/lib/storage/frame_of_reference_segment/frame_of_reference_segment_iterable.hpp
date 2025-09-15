@@ -8,6 +8,7 @@
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -98,7 +99,10 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
         : _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decompressor{std::move(offset_value_decompressor)},
-          _chunk_offset{chunk_offset} {}
+          _chunk_offset{chunk_offset} {
+      DebugAssert(block_minima->size() == null_values->size(),
+                  "The null value vector should have the same lenght as the offset vector.");
+    }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

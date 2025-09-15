@@ -78,15 +78,14 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
 }
 
 ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
-                                                  const std::vector<bool>& chunk_values_are_unique) {
-  DebugAssert(types.size() == chunk_values_are_unique.size(), "The length of the passed vectors has to match");
+                                                  const std::vector<bool>& unique_columns) {
+  DebugAssert(types.size() == unique_columns.size(), "The length of the passed vectors has to match.");
 
   const auto size = types.size();
   auto chunk_encoding_spec = ChunkEncodingSpec{};
   chunk_encoding_spec.reserve(size);
   for (auto column_id = ColumnID{0}; column_id < size; ++column_id) {
-    chunk_encoding_spec.push_back(
-        auto_select_segment_encoding_spec(types[column_id], chunk_values_are_unique[column_id]));
+    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(types[column_id], unique_columns[column_id]));
   }
   return chunk_encoding_spec;
 }

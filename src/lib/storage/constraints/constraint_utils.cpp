@@ -1,7 +1,10 @@
 #include "constraint_utils.hpp"
 
+#include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <memory>
+#include <ranges>
 #include <set>
 #include <string>
 #include <utility>
@@ -132,6 +135,7 @@ bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
 bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id) {
   DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
   for (const auto& key_constraint : table->soft_key_constraints()) {
+    // Because we to specify a long term encoding for the chunk, we don't care about temporary constraints.
     if (key_constraint.can_become_invalid()) {
       continue;
     }
@@ -150,26 +154,13 @@ bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column
   return false;
 }
 
-std::vector<bool> columns_are_unique(const std::shared_ptr<Table>& table) {
+std::vector<bool> unique_columns(const std::shared_ptr<Table>& table) {
   const auto column_count = table->column_count();
-  std::vector<bool> are_unique(column_count, false);
-  for (const auto& key_constraint : table->soft_key_constraints()) {
-    if (key_constraint.can_become_invalid()) {
-      continue;
-    }
-
-    const auto& key_type = key_constraint.key_type();
-    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
-      continue;
-    }
-
-    const auto& columns = key_constraint.columns();
-    if (columns.size() == 1) {
-      are_unique[*columns.begin()] = true;
-    }
+  auto unique_columns = std::vector<bool>(column_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    unique_columns[column_id] = column_is_unique(table, column_id);
   }
-
-  return are_unique;
+  return unique_columns;
 }
 
 }  // namespace hyrise

@@ -165,8 +165,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 }
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids) {
-  const auto chunk_values_are_unique = columns_are_unique(table);
-  const auto chunk_encoding_spec = auto_select_chunk_encoding_spec(table->column_data_types(), chunk_values_are_unique);
+  const auto chunk_encoding_spec = auto_select_chunk_encoding_spec(table->column_data_types(), unique_columns(table));
   encode_chunks(table, chunk_ids, chunk_encoding_spec);
 }
 
@@ -214,8 +213,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 }
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table) {
-  const auto chunk_values_are_unique = columns_are_unique(table);
-  const auto chunk_encoding_spec = auto_select_chunk_encoding_spec(table->column_data_types(), chunk_values_are_unique);
+  const auto chunk_encoding_spec = auto_select_chunk_encoding_spec(table->column_data_types(), unique_columns(table));
   encode_all_chunks(table, chunk_encoding_spec);
 }
 

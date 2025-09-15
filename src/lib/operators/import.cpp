@@ -108,9 +108,8 @@ std::shared_ptr<const Table> Import::_on_execute() {
       if (_target_encoding && encoding_supports_data_type(*_target_encoding, column_data_type)) {
         chunk_encoding_spec.emplace_back(*_target_encoding);
       } else {
-        const auto segment_values_are_unique = column_is_unique(table, column_id);
         chunk_encoding_spec.emplace_back(
-            auto_select_segment_encoding_spec(column_data_type, segment_values_are_unique));
+            auto_select_segment_encoding_spec(column_data_type, column_is_unique(table, column_id)));
       }
     }
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);

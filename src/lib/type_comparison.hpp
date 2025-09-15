@@ -122,6 +122,9 @@ void with_comparator_light(const PredicateCondition predicate_condition, const F
 template <typename Functor, typename DataType>
 void with_between_comparator(const PredicateCondition predicate_condition, const DataType& lower_value,
                              const DataType& upper_value, const Functor& func) {
+  // For integral types, we can assume that lower <= upper and therefore save one comparison by rearranging
+  // the equation: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
+  // This is quite a bit faster.
   if constexpr (std::is_integral_v<DataType>) {
     const auto upd_lower_value = is_lower_inclusive_between(predicate_condition) ? lower_value : lower_value + 1;
     const auto upd_upper_value = is_upper_inclusive_between(predicate_condition) ? upper_value : upper_value - 1;

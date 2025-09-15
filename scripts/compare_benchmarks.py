@@ -159,6 +159,8 @@ if old_data["context"]["benchmark_mode"] != new_data["context"]["benchmark_mode"
 
 for data in old_data, new_data:
     if data["context"]["encoding"] is None:
+        # The encoding field is empty, when the user did not explicitly request an encoding.
+        # In this case, the automatic mode is used.
         data["context"]["encoding"] = "Automatic"
 
 diffs_throughput = []

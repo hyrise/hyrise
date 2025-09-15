@@ -37,7 +37,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
 
   EXPECT_TABLE_EQ_UNORDERED(table, table_dict);
 
-  constexpr auto chunk_count = 4u;
+  constexpr auto chunk_count = size_t{4};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table_dict->get_chunk(chunk_id);
 

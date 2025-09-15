@@ -31,7 +31,7 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
 
 ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
-                                                  const std::vector<bool>& chunk_values_are_unique);
+                                                  const std::vector<bool>& unique_columns);
 SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type,
                                                       const bool segment_values_are_unique = false);
 

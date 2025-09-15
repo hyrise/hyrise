@@ -36,8 +36,7 @@ void ChunkCompressionTask::_on_execute() {
 
   Assert(table, "Table does not exist.");
 
-  const auto default_encoding_spec =
-      auto_select_chunk_encoding_spec(table->column_data_types(), columns_are_unique(table));
+  const auto default_encoding_spec = auto_select_chunk_encoding_spec(table->column_data_types(), unique_columns(table));
   const auto chunk_encoding_spec = _chunk_encoding_spec.value_or(default_encoding_spec);
 
   for (const auto chunk_id : _chunk_ids) {
