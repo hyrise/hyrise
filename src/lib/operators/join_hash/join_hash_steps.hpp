@@ -2,13 +2,16 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
 #include <limits>
 #include <memory>
 #include <memory_resource>
 #include <mutex>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
+#include <boost/align/aligned_allocator.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
@@ -26,6 +29,7 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -516,6 +520,101 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   return hash_tables;
 }
 
+#if defined(__powerpc__) || defined(__ppc__) || defined(__PPC__)
+constexpr auto BYTES_PER_CACHELINE = std::size_t{128};
+#else
+// Not totally correct, as Apple ARM uses 128 bit?
+// Fix 64 setzen
+constexpr auto BYTES_PER_CACHELINE = std::size_t{64};
+#endif
+
+#if defined(__AVX512F__)
+constexpr auto BYTES_PER_VECTOR = std::size_t{64};
+#elif defined(__powerpc__) || defined(__ppc__) || defined(__PPC__)
+// Do we want to use memcpy on ppc instead of vector nontemporal store?
+constexpr auto BYTES_PER_VECTOR = std::size_t{16};
+#else
+// Not totally correct: ARM has SVE, where the vector size is not specified at compile time
+constexpr auto BYTES_PER_VECTOR = std::size_t{32};
+#endif
+
+// Not totally sure why we should store multiple cachlines at the same time. Maybe because of SVE?
+// Should we integrate this into the calculation for the number of cache lines?
+// #if defined(__arm__)
+// constexpr auto CACHELINES_PER_STORE = 4;
+// #elif defined(__AVX512F__)
+// constexpr auto CACHELINES_PER_STORE = 2;
+// #else
+// constexpr auto CACHELINES_PER_STORE = 1;
+// #endif
+
+using simd_vector = __attribute__((vector_size(BYTES_PER_VECTOR))) uint64_t;
+// strings sind fast nie in joins
+template <typename T>
+union TemporaryRadixBucket {
+  static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
+  // If the bytecount of an element is not a power of two, we want it to be a divisor of the size of this container
+  // We therefore extract the part that is not a power of 2 an use it as a factor
+  // For all types in hyrise, this is either 1 or 3
+  // Is this a good way to handle cases where sizeof(PartitionedElement<T>) is not a power of 2?
+  // Ist fair
+  static constexpr auto CACHELINES_PER_STORE = BYTES_PER_ELEMENT >>
+                                               static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
+  static constexpr auto BYTES_PER_STORE = BYTES_PER_CACHELINE * CACHELINES_PER_STORE;
+  static constexpr auto VECTORS_PER_STORE = BYTES_PER_STORE / BYTES_PER_VECTOR;
+  static constexpr auto ELEMENTS_PER_STORE = BYTES_PER_STORE / BYTES_PER_ELEMENT;
+
+  std::array<PartitionedElement<T>, ELEMENTS_PER_STORE> elements;
+
+  struct {
+    std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1> elements;
+    // Every type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers
+    uint32_t input; // Ist das improvement messbar?
+    uint64_t output;
+  } with_offsets;
+
+  // How do we enforce that the vectors are loaded aligned?
+  std::array<simd_vector, VECTORS_PER_STORE> simd_vectors{};
+
+  // No elements in arrays are actually destructed when this destructor is called.
+  // This is good, because we will have byte-copied them elsewhere.
+  ~TemporaryRadixBucket() {}
+
+  TemporaryRadixBucket(const TemporaryRadixBucket<T>& other) = delete;
+  TemporaryRadixBucket(TemporaryRadixBucket<T>&& other) = delete;
+  TemporaryRadixBucket& operator=(const TemporaryRadixBucket<T>& other) = delete;
+  TemporaryRadixBucket& operator=(TemporaryRadixBucket<T>&& other) = delete;
+};
+
+// Is this a good way to handle null values?
+template <typename T, bool keep_null_values>
+struct TemporaryRadixContainer {
+  using bucket = TemporaryRadixBucket<T>;
+  // Do we still need that allocator given the alignas up top?
+  using allocator = boost::alignment::aligned_allocator<bucket, BYTES_PER_CACHELINE>;
+  using vector = std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<bucket, allocator>,
+                                    std::vector<bucket, allocator>>;
+  vector data;
+  std::vector<std::array<char, bucket::ELEMENTS_PER_STORE>> null_values;
+
+  explicit TemporaryRadixContainer(size_t output_partition_count) : data(output_partition_count) {
+    if constexpr (keep_null_values) {
+      null_values.resize(output_partition_count);
+    }
+  }
+
+  void prefetch(size_t partition_id) {
+    const auto* const ptr = static_cast<char*>(&data[partition_id]);
+    for (auto cacheline_idx = size_t{0}; cacheline_idx < bucket::CACHELINES_PER_STORE; ++cacheline_idx) {
+      __builtin_prefetch(ptr + (cacheline_idx * BYTES_PER_CACHELINE), 1, 3);
+    }
+    if constexpr (keep_null_values) {
+      const auto* const nulls_ptr = &null_values[partition_id];
+      __builtin_prefetch(nulls_ptr, 1, 3);
+    }
+  }
+};
+
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
@@ -552,7 +651,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
   auto output_offsets_by_input_partition =
-      std::vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count));
+      std::vector(input_partition_count, std::vector<size_t>(output_partition_count));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -561,7 +660,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
 
     output[output_partition_idx].elements.resize(this_output_partition_size);
-    if (keep_null_values) {
+    if constexpr (keep_null_values) {
       output[output_partition_idx].null_values.resize(this_output_partition_size);
       null_values_as_char[output_partition_idx].resize(this_output_partition_size);
     }
@@ -575,7 +674,17 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     const auto& elements = input_partition.elements;
     const auto elements_count = elements.size();
 
+    // Do we want a constexpr if-else case whether we directly write to the output or use the temporary storage?
     const auto perform_partition = [&, input_partition_idx, elements_count]() {
+      using TMP = TemporaryRadixContainer<T, keep_null_values>;
+      auto tmp = TMP(output_partition_count);
+      for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
+           ++output_partition_idx) {
+        tmp.prefetch(output_partition_idx);
+        tmp.data[output_partition_idx].with_offset.output =
+            output_offsets_by_input_partition[input_partition_idx][output_partition_idx];
+      }
+
       for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
         const auto& element = elements[input_idx];
 
@@ -585,22 +694,51 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
         const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
 
-        auto& output_idx = output_offsets_by_input_partition[input_partition_idx][radix];
-        DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
-        if (input_partition_idx < input_partition_count - 1) {
-          DebugAssert(output_idx < output_offsets_by_input_partition[input_partition_idx + 1][radix],
-                      "output_idx goes into next range");
+        tmp.prefetch(radix);
+        // Going through tlb here is stupid
+        if (tmp.data[radix].with_offsets.output & (BYTES_PER_CACHELINE - 1)) {
+          // Our output offset is not yet properly aligned to a cacheline.
+          // We therefore write the first few values manually
+          auto& output_idx = tmp.data[radix].with_offsets.output;
+
+          DebugAssert(output_idx < &output[radix].elements.back(), "output_idx is completely out-of-bounds");
+          if (input_partition_idx < input_partition_count - 1) {
+            DebugAssert(
+                output_idx < &output[radix].elements[output_offsets_by_input_partition[input_partition_idx + 1][radix]],
+                "output_idx goes into next range");
+          }
+
+          // In case NULL values have been materialized in materialize_input(), we need to keep them during the radix
+          // clustering phase.
+          // TODO: Does not work with output_ptr
+          if constexpr (keep_null_values) {
+            null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+          }
+
+          output[radix].elements[output_idx] = element;
+
+          ++output_idx;
+          continue;
         }
 
-        // In case NULL values have been materialized in materialize_input(), we need to keep them during the radix
-        // clustering phase.
+        const auto tmp_output_idx = tmp.data[radix].with_offsets.output;
+        const auto tmp_input_idx = tmp.data[radix].with_offsets.input;
+        tmp.data[radix].elements[tmp_input_idx] = element;
         if constexpr (keep_null_values) {
-          null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+          tmp.null_values[radix][tmp_input_idx] = input_partition.null_values[input_idx];
         }
 
-        output[radix].elements[output_idx] = element;
+        tmp_input_idx++;
+        if (tmp_input_idx < TMP::bucket::ELEMENTS_PER_STORE) {
+          tmp.data[radix].with_offsets.input = tmp_input_idx;
+          continue;
+        }
 
-        ++output_idx;
+        for (auto vector_idx = size_t{0}; vector_idx < TMP::bucket::VECTORS_PER_STORE; ++vector_idx) {
+          // TODO: Remplace by openmp
+          __builtin_nontemporal_store(tmp.data[radix].simd_vectors[vector_idx],
+                                      &output[radix].elements[tmp_output_idx]);
+        }
       }
     };
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
