@@ -8,7 +8,9 @@ namespace hyrise {
 template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter {
  public:
-  BloomFilter() { _filter.fill(0ULL); }
+  BloomFilter() {
+    _filter.fill(0ULL);
+  }
 
   void insert(uint64_t hash) {
     // std::cout << hash << " -> ";
@@ -99,24 +101,24 @@ class BloomFilter {
   std::array<std::uint64_t, array_size> _filter;
 };
 
-template class BloomFilter<16,1>;
-template class BloomFilter<17,1>;
-template class BloomFilter<18,1>;
-template class BloomFilter<19,1>;
-template class BloomFilter<20,1>;
-template class BloomFilter<21,1>;
-template class BloomFilter<22,1>;
-template class BloomFilter<16,2>;
-template class BloomFilter<17,2>;
-template class BloomFilter<18,2>;
-template class BloomFilter<19,2>;
-template class BloomFilter<20,2>;
-template class BloomFilter<21,2>;
-template class BloomFilter<22,2>;
-template class BloomFilter<16,3>;
-template class BloomFilter<17,3>;
-template class BloomFilter<18,3>;
-template class BloomFilter<19,3>;
-template class BloomFilter<20,3>;
-template class BloomFilter<21,3>;
+template class BloomFilter<16, 1>;
+template class BloomFilter<17, 1>;
+template class BloomFilter<18, 1>;
+template class BloomFilter<19, 1>;
+template class BloomFilter<20, 1>;
+template class BloomFilter<21, 1>;
+template class BloomFilter<22, 1>;
+template class BloomFilter<16, 2>;
+template class BloomFilter<17, 2>;
+template class BloomFilter<18, 2>;
+template class BloomFilter<19, 2>;
+template class BloomFilter<20, 2>;
+template class BloomFilter<21, 2>;
+template class BloomFilter<22, 2>;
+template class BloomFilter<16, 3>;
+template class BloomFilter<17, 3>;
+template class BloomFilter<18, 3>;
+template class BloomFilter<19, 3>;
+template class BloomFilter<20, 3>;
+template class BloomFilter<21, 3>;
 }  // namespace hyrise

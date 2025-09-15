@@ -38,8 +38,8 @@ class Reduce : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override {
-    std::cout << "Reducer called with mode: " << magic_enum::enum_name(reduce_mode) << " use_min_max: "
-              << magic_enum::enum_name(use_min_max) << "\n";
+    std::cout << "Reducer called with mode: " << magic_enum::enum_name(reduce_mode)
+              << " use_min_max: " << magic_enum::enum_name(use_min_max) << "\n";
     std::shared_ptr<const Table> input_table;
     std::shared_ptr<const Table> output_table;
     auto column_id = ColumnID{};
@@ -91,9 +91,8 @@ class Reduce : public AbstractReadOnlyOperator {
         casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<ColumnDataType>>(_min_max_filter);
         Assert(casted_min_max_filter, "Failed to cast min max filter.");
       }
-      
+
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
-      
         const auto& input_chunk = input_table->get_chunk(chunk_index);
         const auto& input_segment = input_chunk->get_segment(column_id);
 
@@ -102,126 +101,128 @@ class Reduce : public AbstractReadOnlyOperator {
           (void)input_chunk;
           (void)input_segment;
 
-        auto matches = std::make_shared<RowIDPosList>();
-        if constexpr (reduce_mode != ReduceMode::Build) {
-          matches->guarantee_single_chunk();
-        }
+          auto matches = std::make_shared<RowIDPosList>();
+          if constexpr (reduce_mode != ReduceMode::Build) {
+            matches->guarantee_single_chunk();
+          }
 
-        segment_iterate<ColumnDataType>(*input_segment, [&](const auto& position) {
-          if (!position.is_null()) {
-            auto seed = size_t{4615968};
-            boost::hash_combine(seed, position.value());
+          segment_iterate<ColumnDataType>(*input_segment, [&](const auto& position) {
+            if (!position.is_null()) {
+              auto seed = size_t{4615968};
+              boost::hash_combine(seed, position.value());
 
-            if constexpr (reduce_mode == ReduceMode::Build) {
-              new_bloom_filter->insert(static_cast<uint64_t>(seed));
+              if constexpr (reduce_mode == ReduceMode::Build) {
+                new_bloom_filter->insert(static_cast<uint64_t>(seed));
 
-              if constexpr (use_min_max == UseMinMax::Yes) {
-                new_min_max_filter->insert(position.value());
-              }
-            } else {
-              auto found = _bloom_filter->probe(static_cast<uint64_t>(seed));
+                if constexpr (use_min_max == UseMinMax::Yes) {
+                  new_min_max_filter->insert(position.value());
+                }
+              } else {
+                auto found = _bloom_filter->probe(static_cast<uint64_t>(seed));
 
-              if constexpr (use_min_max == UseMinMax::Yes) {
-                found = found && casted_min_max_filter->probe(position.value());
-              }
+                if constexpr (use_min_max == UseMinMax::Yes) {
+                  found = found && casted_min_max_filter->probe(position.value());
+                }
 
-              if (found) {
-                matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
+                if (found) {
+                  matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
 
-                if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
-                  new_bloom_filter->insert(static_cast<uint64_t>(seed));
+                  if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
+                    new_bloom_filter->insert(static_cast<uint64_t>(seed));
 
-                  if constexpr (use_min_max == UseMinMax::Yes) {
-                    new_min_max_filter->insert(position.value());
+                    if constexpr (use_min_max == UseMinMax::Yes) {
+                      new_min_max_filter->insert(position.value());
+                    }
                   }
                 }
               }
             }
-          }
-        });
+          });
 
-        if constexpr (reduce_mode != ReduceMode::Build) {
-          if (!matches->empty()) {
-            const auto column_count = input_table->column_count();
-            auto output_segments = Segments{};
-            output_segments.reserve(column_count);
+          if constexpr (reduce_mode != ReduceMode::Build) {
+            if (!matches->empty()) {
+              const auto column_count = input_table->column_count();
+              auto output_segments = Segments{};
+              output_segments.reserve(column_count);
 
-            auto keep_chunk_sort_order = true;
-            if (input_table->type() == TableType::References) {
-              if (matches->size() == input_chunk->size()) {
-                for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
-                  output_segments.emplace_back(input_chunk->get_segment(column_index));
+              auto keep_chunk_sort_order = true;
+              if (input_table->type() == TableType::References) {
+                if (matches->size() == input_chunk->size()) {
+                  for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
+                    output_segments.emplace_back(input_chunk->get_segment(column_index));
+                  }
+                } else {
+                  auto filtered_pos_lists =
+                      std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+
+                  for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
+                    auto reference_segment =
+                        std::dynamic_pointer_cast<const ReferenceSegment>(input_chunk->get_segment(column_index));
+                    DebugAssert(reference_segment, "All segments should be of type ReferenceSegment.");
+
+                    const auto pos_list_in = reference_segment->pos_list();
+
+                    const auto referenced_table = reference_segment->referenced_table();
+                    const auto referenced_column_id = reference_segment->referenced_column_id();
+
+                    auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+
+                    if (!filtered_pos_list) {
+                      filtered_pos_list = std::make_shared<RowIDPosList>(matches->size());
+                      if (pos_list_in->references_single_chunk()) {
+                        filtered_pos_list->guarantee_single_chunk();
+                      } else {
+                        keep_chunk_sort_order = false;
+                      }
+
+                      auto offset = size_t{0};
+                      for (const auto& match : *matches) {
+                        const auto row_id = (*pos_list_in)[match.chunk_offset];
+                        (*filtered_pos_list)[offset] = row_id;
+                        ++offset;
+                      }
+                    }
+
+                    const auto ref_segment_out =
+                        std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, filtered_pos_list);
+                    output_segments.push_back(ref_segment_out);
+                  }
                 }
               } else {
-                auto filtered_pos_lists =
-                    std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+                matches->guarantee_single_chunk();
+
+                const auto output_pos_list =
+                    matches->size() == input_chunk->size()
+                        ? static_cast<std::shared_ptr<AbstractPosList>>(
+                              std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
+                        : static_cast<std::shared_ptr<AbstractPosList>>(matches);
 
                 for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
-                  auto reference_segment =
-                      std::dynamic_pointer_cast<const ReferenceSegment>(input_chunk->get_segment(column_index));
-                  DebugAssert(reference_segment, "All segments should be of type ReferenceSegment.");
-
-                  const auto pos_list_in = reference_segment->pos_list();
-
-                  const auto referenced_table = reference_segment->referenced_table();
-                  const auto referenced_column_id = reference_segment->referenced_column_id();
-
-                  auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
-
-                  if (!filtered_pos_list) {
-                    filtered_pos_list = std::make_shared<RowIDPosList>(matches->size());
-                    if (pos_list_in->references_single_chunk()) {
-                      filtered_pos_list->guarantee_single_chunk();
-                    } else {
-                      keep_chunk_sort_order = false;
-                    }
-
-                    auto offset = size_t{0};
-                    for (const auto& match : *matches) {
-                      const auto row_id = (*pos_list_in)[match.chunk_offset];
-                      (*filtered_pos_list)[offset] = row_id;
-                      ++offset;
-                    }
-                  }
-
                   const auto ref_segment_out =
-                      std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, filtered_pos_list);
+                      std::make_shared<ReferenceSegment>(input_table, column_index, output_pos_list);
                   output_segments.push_back(ref_segment_out);
                 }
               }
-            } else {
-              matches->guarantee_single_chunk();
 
-              const auto output_pos_list =
-                  matches->size() == input_chunk->size()
-                      ? static_cast<std::shared_ptr<AbstractPosList>>(
-                            std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
-                      : static_cast<std::shared_ptr<AbstractPosList>>(matches);
-
-              for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
-                const auto ref_segment_out =
-                    std::make_shared<ReferenceSegment>(input_table, column_index, output_pos_list);
-                output_segments.push_back(ref_segment_out);
+              const auto output_chunk = std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
+              output_chunk->set_immutable();
+              if (keep_chunk_sort_order && !input_chunk->individually_sorted_by().empty()) {
+                output_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
               }
+              output_chunks[chunk_index] = output_chunk;
             }
-
-            const auto output_chunk = std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
-            output_chunk->set_immutable();
-            if (keep_chunk_sort_order && !input_chunk->individually_sorted_by().empty()) {
-              output_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
-            }
-            output_chunks[chunk_index] = output_chunk;
           }
-        }
         };
 
         job();
       }
 
       if constexpr (reduce_mode != ReduceMode::Build) {
-        std::erase_if(output_chunks, [](const auto& ptr){ return ptr == nullptr; });
+        std::erase_if(output_chunks, [](const auto& ptr) {
+          return ptr == nullptr;
+        });
         output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
-                                                   std::move(output_chunks));
+                                                     std::move(output_chunks));
       }
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
