@@ -40,7 +40,12 @@ namespace {
 
 // Heuristic: arbitrary divider between small and large workloads.
 constexpr size_t SMALL_ARRAY_THRESHOLD = 10'000;
+// Heuristic: arbitrary divider between parallel and sequential merging.
 constexpr size_t SMALL_MERGE_THRESHOLD = 1'000;
+
+using StringSize = unsigned char;
+constexpr size_t STRING_SIZE_LENGTH = sizeof(StringSize);
+
 using namespace hyrise;  // NOLINT
 
 // Ceiling of integer division.
@@ -61,13 +66,13 @@ struct Cut {
 
 inline void encode_string(std::byte* dest, const size_t data_length, const pmr_string& value) {
   const auto string_len = value.size();
-  DebugAssert(string_len <= data_length - 2, "String length exceeds allocated buffer.");
+  DebugAssert(string_len <= data_length - STRING_SIZE_LENGTH, "String length exceeds allocated buffer.");
   memset(dest, 0, data_length);  // Set all bytes to 0.
   // Copy the string data into the key buffer.
   memcpy(dest, value.data(), string_len);  //NOLINT
   // Store actual string length. This is required for cases, where the string ends in
   // null byte(s), because they cannot be differentiated from padding.
-  memset(dest + data_length - 2, static_cast<unsigned char>(string_len), 2);
+  memset(dest + data_length - STRING_SIZE_LENGTH, static_cast<StringSize>(string_len), STRING_SIZE_LENGTH);
 }
 
 inline void encode_double(std::byte* dest, const double value) {
@@ -121,7 +126,8 @@ template void encode_integer<int64_t>(std::byte* dest, const int64_t value, cons
 
 // Finds the cut point for the merge path diagonal inspired by https://arxiv.org/pdf/1406.2628.
 // We use Merge Path to parallelize the binary merge across threads.
-// The diagonal partitioning finds balanced cut points via binary searches so each worker merges disjoint, contiguous ranges.
+// The diagonal partitioning finds balanced cut points via binary
+// searches so each worker merges disjoint, contiguous ranges.
 // This minimizes synchronization, preserves sequential access patterns, and improves cache locality.
 // It adapts to data skew, yielding near-equal work per worker and good load balancing.
 // Compared to naive chunking, Merge Path scales better with core count for large runs.
@@ -198,7 +204,7 @@ void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mi
 template <typename Compare>
 void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
   const auto row_count = rows.size();
-  auto is_multithreaded = Hyrise::get().is_multi_threaded();
+  const auto is_multithreaded = Hyrise::get().is_multi_threaded();
 
   if (!HYRISE_DEBUG && (!is_multithreaded || row_count < SMALL_ARRAY_THRESHOLD)) {
     boost::sort::pdqsort(rows.begin(), rows.end(), comp);
@@ -239,11 +245,8 @@ void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
       auto mid = left + run;
       auto right = std::min(left + (2 * run), row_count);
 
-      std::cout << "Debug" << HYRISE_DEBUG << std::endl;
-
       // For small runs, parallel merging is not worth the overhead.
       if (!HYRISE_DEBUG && run < SMALL_MERGE_THRESHOLD) {
-        std::cout << "SMALL MERGE!!" << std::endl;
         const auto start_offset = static_cast<std::ptrdiff_t>(left);
         const auto mid_offset = static_cast<std::ptrdiff_t>(mid);
         const auto end_offset = static_cast<std::ptrdiff_t>(right);
@@ -524,18 +527,27 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       using ColumnDataType = typename decltype(type)::type;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         // Iterate over all chunks to find the longest string in the column.
-        auto max_string_length = size_t{0};
+        auto max_lengths = std::vector<size_t>(chunk_count, 0);
+        auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
+        jobs.reserve(chunk_count);
+
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          const auto abstract_segment = input_table->get_chunk(chunk_id)->get_segment(sort_col);
-          segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
-            if (!val.is_null()) {
-              const auto string_length = val.value().size();
-              max_string_length = std::max(max_string_length, string_length);
-            }
-          });
+          jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+            const auto abstract_segment = input_table->get_chunk(chunk_id)->get_segment(sort_col);
+            size_t local_max = 0;
+            segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& val) {
+              if (!val.is_null()) {
+                const auto string_length = val.value().size();
+                local_max = std::max(local_max, string_length);
+              }
+            });
+            max_lengths[chunk_id] = local_max;
+          }));
         }
-        // Store size of the string + 2 for string length.
-        field_width.emplace_back(max_string_length + 2);
+        Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+        auto max_string_length = *std::max_element(max_lengths.begin(), max_lengths.end());
+        // Store size of the string as well as its length.
+        field_width.emplace_back(max_string_length + STRING_SIZE_LENGTH);
       } else {
         // Store size of the column type, e.g. 4 for int, 8 for double, etc.
         field_width.emplace_back(sizeof(ColumnDataType));
@@ -544,20 +556,18 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   // Total width of each normalized key is the width of all columns to be sorted by plus null bytes.
-  auto key_width = size_t{0};
-  for (const auto& column : field_width) {
-    key_width += column + 1;
-  }
+  auto key_width = std::reduce(field_width.begin(), field_width.end(), size_t{0});
+  key_width += field_width.size();
 
   /**
    * Offsets for each column in the key, i.e. `key_offsets[i]` is the offset of the i-th column in the key.
    * This means, that `buffer[key_offsets[i]]` is the location of the i-th column's value in the key.
   */
   auto key_offsets = std::vector<size_t>(sort_definitions_size);
-  key_offsets[0] = 0;
-  for (auto index = size_t{1}; index < sort_definitions_size; ++index) {
-    key_offsets[index] = key_offsets[index - 1] + field_width[index - 1] + 1;  // Adding +1 because of null byte.
-  }
+  std::transform_exclusive_scan(field_width.begin(), field_width.end(), key_offsets.begin(), size_t{0}, std::plus<>{},
+                                [](const auto value) {
+                                  return value + 1;
+                                });
 
   auto key_buffer = std::vector<uint8_t>();
   auto total_buffer_size = size_t{0};
