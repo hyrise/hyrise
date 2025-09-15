@@ -1,13 +1,15 @@
 #include "sort.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <memory>
-#include <stdexcept>
+#include <numeric>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -314,7 +316,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
                 value_segment_null_vector.reserve(chunk_size);
               }
 
-              const auto pos_base = static_cast<size_t>(output_chunk_size * output_chunk_id);
+              const auto pos_base = output_chunk_size * output_chunk_id;
               for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
                 const auto [chunk_id, chunk_offset] = pos_list[pos_base + row_index];
 
@@ -416,7 +418,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
           auto output_pos_list = std::make_shared<RowIDPosList>();
           output_pos_list->reserve(chunk_size);
 
-          const auto pos_base = static_cast<size_t>(output_chunk_size * output_chunk_id);
+          const auto pos_base = output_chunk_size * output_chunk_id;
           for (auto row_index = size_t{0}; row_index < chunk_size; ++row_index) {
             const auto& row_id = input_pos_list[pos_base + row_index];
 
