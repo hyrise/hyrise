@@ -98,12 +98,11 @@ try {
             ninja = '-GNinja'
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
-            // support older versions. We test LLVM 19 (older versions might work, but LLVM 15 has issues with recent
-            // libstdc++ versions) and GCC 13.2 (oldest version supported by Hyrise). We execute at least debug runs for
-            // them. If you want to upgrade compiler versions, please update install_dependencies.sh, DEPENDENCIES.md,
-            // and the documentation (README, Wiki).
+            // support older versions. We test LLVM 19 and GCC 13.2 (oldest version supported by Hyrise). We execute at
+            // least debug runs for them. If you want to upgrade compiler versions, please update
+            // install_dependencies.sh, DEPENDENCIES.md, and the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-            clang18 = '-DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18'
+            clang19 = '-DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19'
             gcc = '-DCMAKE_C_COMPILER=gcc-15 -DCMAKE_CXX_COMPILER=g++-15'
             gcc13 = '-DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13'
 
@@ -131,7 +130,7 @@ try {
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}           ${ninja} .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           ${ninja} .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} ${no_lto} ${ninja} .. &\
-            mkdir clang-18-debug && cd clang-18-debug &&                                                 ${cmake} ${debug}          ${clang18} ${unity}           ${ninja} .. &\
+            mkdir clang-19-debug && cd clang-19-debug &&                                                 ${cmake} ${debug}          ${clang19} ${unity}           ${ninja} .. &\
             mkdir gcc-13-debug && cd gcc-13-debug &&                                                     ${cmake} ${debug}          ${gcc13}   ${unity}           ${ninja} .. &\
             wait"
           }
@@ -142,10 +141,10 @@ try {
               sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
-          }, clang18Debug: {
-            stage("clang-18-debug") {
-              sh "cd clang-18-debug && ninja all -j \$(( \$(nproc) / 4))"
-              sh "./clang-18-debug/hyriseTest clang-18-debug"
+          }, clang19Debug: {
+            stage("clang-19-debug") {
+              sh "cd clang-19-debug && ninja all -j \$(( \$(nproc) / 4))"
+              sh "./clang-19-debug/hyriseTest clang-19-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {
