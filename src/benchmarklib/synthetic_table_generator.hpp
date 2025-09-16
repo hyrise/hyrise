@@ -34,10 +34,7 @@ struct ColumnDataDistribution {
   }
 
   static ColumnDataDistribution make_skewed_normal_config(
-      const double skew_location = 0.0, const double skew_scale = 1.0,
-      // Temporary work around for https://github.com/boostorg/math/issues/254.
-      // TODO(anyone): reset to 0.0 when Hyrise's boost has the fix.
-      const double skew_shape = 0.0001) {
+      const double skew_location = 0.0, const double skew_scale = 1.0, const double skew_shape = 0.0) {
     auto config = ColumnDataDistribution{};
     config.skew_location = skew_location;
     config.skew_scale = skew_scale;

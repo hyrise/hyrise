@@ -24,7 +24,6 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/list_directory.hpp"
 
 namespace hyrise {
 
@@ -45,12 +44,12 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     _parse_query_file(query_path, query_subset);
   } else {
     // Recursively walk through the specified directory and add all files on the way.
-    for (const auto& entry : list_directory(path)) {
-      if (is_sql_file(entry)) {
-        if (filename_blacklist.contains(entry.filename())) {
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+      if (is_sql_file(entry.path())) {
+        if (filename_blacklist.contains(entry.path().filename())) {
           continue;
         }
-        _parse_query_file(entry, query_subset);
+        _parse_query_file(entry.path(), query_subset);
       }
     }
   }

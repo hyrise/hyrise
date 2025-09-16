@@ -16,7 +16,6 @@
 #include "benchmark_sql_executor.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "utils/assert.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
@@ -38,16 +37,16 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
 
   std::cout << "- Loading expected result tables\n";
 
-  for (const auto& entry : list_directory(expected_results_directory_path)) {
-    if (is_tbl_file(entry)) {
-      const auto item_name = entry.stem().string();
+  for (const auto& entry : std::filesystem::directory_iterator(expected_results_directory_path)) {
+    if (is_tbl_file(entry.path())) {
+      const auto item_name = entry.path().stem().string();
 
       const auto iter = std::find_if(items().cbegin(), items().cend(), [this, &item_name](const auto& item) {
         return this->item_name(item) == item_name;
       });
       if (iter != items().cend()) {
-        std::cout << "-  Loading result table " + entry.string() << "\n";
-        _dedicated_expected_results[*iter] = load_table(entry.string());
+        std::cout << "-  Loading result table " + entry.path().string() << "\n";
+        _dedicated_expected_results[*iter] = load_table(entry.path().string());
       }
     }
   }

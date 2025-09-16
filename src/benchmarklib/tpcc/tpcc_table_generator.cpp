@@ -451,8 +451,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
   auto segments_by_chunk = std::vector<Segments>{};
   auto column_definitions = TableColumnDefinitions{};
 
-  // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the
-  // same permutation
+  // TODO(anyone): Generate a new customer permutation for each district and warehouse. Currently they all have the same
+  // permutation.
   auto customer_permutation = _random_gen.permutation(0, NUM_CUSTOMERS_PER_DISTRICT);
 
   _add_column<int32_t>(segments_by_chunk, column_definitions, "O_ID", cardinalities,
@@ -516,22 +516,22 @@ TPCCTableGenerator::OrderLineCounts TPCCTableGenerator::generate_order_line_coun
 }
 
 /**
- * Generates a column for the 'ORDER_LINE' table. This is used in the specialization of add_column to insert vectors.
- * In contrast to other tables the ORDER_LINE table is NOT defined by saying, there are 10 order_lines per order,
- * but instead there 5 to 15 order_lines per order.
+ * Generates a column for the 'ORDER_LINE' table. This is used in the specialization of add_column to insert vectors. In
+ * contrast to other tables the ORDER_LINE table is NOT defined by saying, there are 10 order_lines per order, but
+ * instead there 5 to 15 order_lines per order.
  */
 template <typename T>
 std::vector<std::optional<T>> TPCCTableGenerator::_generate_inner_order_line_column(
     const std::vector<size_t>& indices, TPCCTableGenerator::OrderLineCounts order_line_counts,
     const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function) {
-  auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
+  const auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
 
   auto values = std::vector<std::optional<T>>{};
   values.reserve(order_line_count);
   for (auto index = size_t{0}; index < order_line_count; index++) {
     auto copied_indices = indices;
     copied_indices.push_back(index);
-    values.push_back(generator_function(copied_indices));
+    values.emplace_back(generator_function(copied_indices));
   }
 
   return values;

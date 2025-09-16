@@ -32,7 +32,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
@@ -458,11 +457,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
     const std::string& cache_directory) {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
-  for (const auto& table_file : list_directory(cache_directory)) {
-    const auto table_name = table_file.stem();
+  for (const auto& table_file : std::filesystem::directory_iterator(cache_directory)) {
+    const auto table_name = table_file.path().stem();
     auto table_info = BenchmarkTableInfo{};
     table_info.loaded_from_binary = true;
-    table_info.binary_file_path = table_file;
+    table_info.binary_file_path = table_file.path();
     table_info_by_name[table_name] = std::move(table_info);
   }
 

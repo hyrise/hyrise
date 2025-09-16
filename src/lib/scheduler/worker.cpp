@@ -194,7 +194,6 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
       // executed, too. Anecdotal evidence says that this is a good idea. For some reason, this keeps the memory
       // consumption of TPC-H Q6 low even if the scheduler is overcommitted. Because generating random numbers is
       // somewhat expensive, we keep a list of random numbers and reuse them.
-      // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
       _next_random = (_next_random + 1) % _random.size();
       if (_random[_next_random] <= 20) {
         return false;
