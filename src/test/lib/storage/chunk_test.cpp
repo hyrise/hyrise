@@ -263,6 +263,9 @@ TEST_F(StorageChunkTest, SetSortedInformationVector) {
     const auto sort_definition_b = SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst};
 
     EXPECT_THROW(chunk->set_individually_sorted_by({sort_definition_b}), std::logic_error);
+    // The chunk is sorted by a, b (as in `ORDER BY a, b`), but b is not sorted on its own.
+    EXPECT_THROW(chunk->set_individually_sorted_by({sort_definition_a, sort_definition_b}), std::logic_error);
+
     chunk->set_individually_sorted_by({sort_definition_a});
     ASSERT_EQ(chunk->individually_sorted_by().size(), 1);
     EXPECT_EQ(chunk->individually_sorted_by().front(), sort_definition_a);
