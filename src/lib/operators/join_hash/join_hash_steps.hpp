@@ -706,12 +706,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           if (input_partition_idx + 1 != input_partition_count) {
             DebugAssert(bucket.with_indices.output_idx + bucket.with_indices.count ==
                             output_offsets_by_input_partition[input_partition_idx + 1][output_partition_idx],
-                        "There is a gaps within a radix partition.");
-          } else if (output_partition_idx + 1 != output_partition_count) {
-            // Do we want to allow gaps between partitions?
-            DebugAssert(bucket.with_indices.output_idx + bucket.with_indices.count ==
-                            output_offsets_by_input_partition[0][output_partition_idx + 1],
-                        "There is a gap between two radix partitions.");
+                        "The radix boundaries of different input partitions don't match up.");
           }
         }
       };
