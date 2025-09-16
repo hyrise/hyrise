@@ -72,6 +72,17 @@ class Reduce : public AbstractReadOnlyOperator {
         }
       }
 
+      std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter1;
+      std::shared_ptr<MinMaxFilter<ColumnDataType>> new_min_max_filter1;
+
+      if constexpr (reduce_mode != ReduceMode::Probe) {
+        new_bloom_filter1 = std::make_shared<BloomFilter<20, 2>>();
+
+        if constexpr (use_min_max == UseMinMax::Yes) {
+          new_min_max_filter1 = std::make_shared<MinMaxFilter<ColumnDataType>>();
+        }
+      }
+
       if constexpr (reduce_mode != ReduceMode::Build) {
         Assert(_right_input->executed(), "Build Reducer was not executed.");
         const auto build_reduce =
@@ -226,11 +237,15 @@ class Reduce : public AbstractReadOnlyOperator {
       }
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
+        std::cout << "Reducer setting new filters\n";
         _bloom_filter = new_bloom_filter;
         _min_max_filter = new_min_max_filter;
+        // _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+        // _min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
       }
     });
 
+    std::cout << "About to exit reducer\n";
     return output_table;
   }
 

@@ -8,9 +8,9 @@ namespace hyrise {
 template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter {
  public:
-  BloomFilter() {
-    _filter.fill(0ULL);
-  }
+  // BloomFilter() {
+  //   _filter.fill(~0ULL);
+  // }
 
   void insert(uint64_t hash) {
     // std::cout << hash << " -> ";
@@ -22,6 +22,7 @@ class BloomFilter {
   }
 
   bool probe(uint64_t hash) const {
+    // if (1 == 1) return false;
     for (uint8_t i = 0; i < K; ++i) {
       uint32_t bit_index = _extract_bits(hash, i);
       if (!_get_bit(bit_index)) {

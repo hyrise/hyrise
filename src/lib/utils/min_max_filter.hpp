@@ -21,7 +21,7 @@ class BaseMinMaxFilter {
 template <typename DataType>
 class MinMaxFilter : public BaseMinMaxFilter {
  public:
-  MinMaxFilter() : _min_value(INT32_MIN), _max_value(INT32_MAX) {
+  MinMaxFilter() : _min_value(INT32_MAX), _max_value(INT32_MIN) {
     Assert((std::is_same<DataType, int32_t>::value), "MinMaxFilter can only be instantiated with int32_t.");
   }
 
@@ -33,6 +33,7 @@ class MinMaxFilter : public BaseMinMaxFilter {
   }
 
   bool probe(const DataType& value) const {
+    // return false;
     if constexpr (std::is_same_v<DataType, int32_t>) {
       return value >= _min_value && value <= _max_value;
     } else {
