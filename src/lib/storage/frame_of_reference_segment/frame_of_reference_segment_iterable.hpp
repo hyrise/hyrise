@@ -100,7 +100,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
           _null_values{null_values},
           _offset_value_decompressor{std::move(offset_value_decompressor)},
           _chunk_offset{chunk_offset} {
-      DebugAssert(block_minima->size() == null_values->size(),
+      DebugAssert(offset_value_decompressor.size() == null_values->size(),
                   "The null value vector should have the same lenght as the offset vector.");
     }
 

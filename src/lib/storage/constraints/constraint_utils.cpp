@@ -1,10 +1,7 @@
 #include "constraint_utils.hpp"
 
-#include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <memory>
-#include <ranges>
 #include <set>
 #include <string>
 #include <utility>
@@ -135,7 +132,7 @@ bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
 bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id) {
   DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
   for (const auto& key_constraint : table->soft_key_constraints()) {
-    // Because we to specify a long term encoding for the chunk, we don't care about temporary constraints.
+    // Because we specify a long term encoding for the chunk, we do not care about temporary constraints.
     if (key_constraint.can_become_invalid()) {
       continue;
     }

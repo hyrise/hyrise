@@ -84,8 +84,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
       // Filter out trivial cases here, as with_between_comparator assumes that lower and upper bound
       // are set such that values could match the predicate.
       if constexpr (std::is_integral_v<ColumnDataType>) {
-        using SignedColumnDataType = std::make_signed_t<ColumnDataType>;
-        const auto difference = static_cast<SignedColumnDataType>(typed_right_value) - typed_left_value -
+        const auto difference = typed_right_value - typed_left_value -
                                 !is_lower_inclusive_between(predicate_condition) -
                                 !is_upper_inclusive_between(predicate_condition);
         // Predicate is always false, just output an empty result.
@@ -181,7 +180,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
     upper_bound_value_id = segment.unique_values_count();
   }
 
-  with_between_comparator(predicate_condition, lower_bound_value_id, upper_bound_value_id,
+  with_between_comparator(PredicateCondition::BetweenUpperExclusive, lower_bound_value_id, upper_bound_value_id,
                           [&](auto between_comparator_function) {
                             attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
                               // No need to check for NULL because NULL would be represented

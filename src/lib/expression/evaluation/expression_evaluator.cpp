@@ -620,8 +620,7 @@ bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& 
     // Filter out trivial cases here, as with_between_comparator assumes that lower and upper bound
     // are set such that values could match the predicate.
     if constexpr (std::is_integral_v<DataType>) {
-      using SignedDataType = std::make_signed_t<DataType>;
-      const auto difference = static_cast<SignedDataType>(*upper_bound) - *lower_bound -
+      const auto difference = *upper_bound - *lower_bound -
                               !is_lower_inclusive_between(expression.predicate_condition) -
                               !is_upper_inclusive_between(expression.predicate_condition);
       // Predicate is always false, just output an empty result.

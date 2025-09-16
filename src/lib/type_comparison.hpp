@@ -126,17 +126,17 @@ void with_between_comparator(const PredicateCondition predicate_condition, const
   // the equation: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
   // This is quite a bit faster.
   if constexpr (std::is_integral_v<DataType>) {
-    const auto upd_lower_value = is_lower_inclusive_between(predicate_condition) ? lower_value : lower_value + 1;
-    const auto upd_upper_value = is_upper_inclusive_between(predicate_condition) ? upper_value : upper_value - 1;
+    const auto lower_bound = is_lower_inclusive_between(predicate_condition) ? lower_value : lower_value + 1;
+    const auto upper_bound = is_upper_inclusive_between(predicate_condition) ? upper_value : upper_value - 1;
 
-    DebugAssert(upd_lower_value <= upd_upper_value,
+    DebugAssert(lower_bound <= upper_bound,
                 "Query asks for between predicate with empty range. This should have been filtered out earlier.");
 
     using UnsignedDataType = std::make_unsigned_t<DataType>;
-    const UnsignedDataType value_difference = upd_upper_value - upd_lower_value;
+    const auto value_difference = static_cast<UnsignedDataType>(upper_bound - lower_bound);
 
-    return func([&upd_lower_value, &value_difference](const DataType& value) {
-      return static_cast<UnsignedDataType>(value - upd_lower_value) <= value_difference;
+    return func([lower_bound, value_difference](const DataType value) {
+      return static_cast<UnsignedDataType>(value - lower_bound) <= value_difference;
     });
   }
 
