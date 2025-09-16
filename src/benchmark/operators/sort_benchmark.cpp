@@ -30,9 +30,9 @@ static std::shared_ptr<Table> generate_custom_table(const size_t row_count, cons
   return table_generator->generate_table(column_specifications, row_count);
 }
 
-static void BM_RunSort(benchmark::State& state, const size_t row_count = 40'000, const DataType data_type = DataType::Int,
-                    const float null_ratio = 0.0f, const bool multi_column_sort = true,
-                    const bool use_reference_segment = false) {
+static void BM_RunSort(benchmark::State& state, const size_t row_count = 40'000,
+                       const DataType data_type = DataType::Int, const float null_ratio = 0.0f,
+                       const bool multi_column_sort = true, const bool use_reference_segment = false) {
   micro_benchmark_clear_cache();
 
   const auto input_table = generate_custom_table(row_count, data_type, null_ratio);
