@@ -316,9 +316,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return input_table;
   }
 
-  auto [normalized_keys, key_size] = KeyNormalizer::normalize_keys_for_table(input_table, _sort_definitions);
+  const auto [normalized_keys, key_size] = KeyNormalizer::normalize_keys_for_table(input_table, _sort_definitions);
 
-  auto key_pointers = std::vector<const unsigned char*>();
+  auto key_pointers = std::vector<const std::byte*>();
   key_pointers.reserve(row_count);
   const auto num_bytes_of_normalized_keys = normalized_keys.size();
   for (auto key_offset = size_t{0}; key_offset < num_bytes_of_normalized_keys; key_offset += key_size) {
@@ -334,7 +334,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
       uint32_t offset_for_row_id = key_size - sizeof(RowID);
 
-      bool operator()(const unsigned char* const a_ptr, const unsigned char* const b_ptr) const {
+      bool operator()(const std::byte* const a_ptr, const std::byte* const b_ptr) const {
         const auto& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + offset_for_row_id);
         const auto& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + offset_for_row_id);
 
@@ -384,7 +384,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     sorted_pos_list.emplace_back(*reinterpret_cast<const RowID*>(key_ptr + row_id_offset));
   }
 
-  auto sorted_table = std::shared_ptr<Table>{};
   auto must_materialize = _force_materialization == Sort::ForceMaterialization::Yes;
 
   {
@@ -413,11 +412,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     }
   }
 
-  if (must_materialize) {
-    sorted_table = write_materialized_output_table(input_table, std::move(sorted_pos_list), _output_chunk_size);
-  } else {
-    sorted_table = write_reference_output_table(input_table, std::move(sorted_pos_list), _output_chunk_size);
-  }
+  const auto sorted_table =
+      must_materialize ? write_materialized_output_table(input_table, std::move(sorted_pos_list), _output_chunk_size)
+                       : write_reference_output_table(input_table, std::move(sorted_pos_list), _output_chunk_size);
 
   {
     const auto output_chunk_count = sorted_table->chunk_count();

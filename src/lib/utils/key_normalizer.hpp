@@ -26,28 +26,28 @@ class KeyNormalizer {
  public:
   KeyNormalizer();
 
-  static std::pair<std::vector<unsigned char>, uint64_t> normalize_keys_for_table(
+  static std::pair<std::vector<std::byte>, uint64_t> normalize_keys_for_table(
       const std::shared_ptr<const Table>& table, const std::vector<SortColumnDefinition>& sort_definitions,
       uint32_t string_prefix_length = 8);
 
  private:
-  static void _insert_keys_for_chunk(std::vector<unsigned char>& buffer, const std::shared_ptr<const Chunk>& chunk,
+  static void _insert_keys_for_chunk(std::vector<std::byte>& buffer, const std::shared_ptr<const Chunk>& chunk,
                                      const std::vector<SortColumnDefinition>& sort_definitions, uint64_t table_offset,
                                      ChunkID chunk_id, uint32_t tuple_key_size, uint32_t string_prefix_length);
 
   template <typename T>
-  static void _insert_normalized_value(std::vector<unsigned char>& buffer, const T& value, uint64_t offset,
-                                       bool descending, uint32_t string_prefix_length);
+  static void _insert_normalized_value(std::vector<std::byte>& buffer, const T& value, uint64_t offset, bool descending,
+                                       uint32_t string_prefix_length);
 
   template <typename T>
     requires std::is_integral_v<T>
-  static void _insert_integral(std::vector<unsigned char>& buffer, T value, uint64_t offset, bool descending);
+  static void _insert_integral(std::vector<std::byte>& buffer, T value, uint64_t offset, bool descending);
 
   template <typename T>
     requires std::is_floating_point_v<T>
-  static void _insert_floating_point(std::vector<unsigned char>& buffer, T value, uint64_t offset, bool descending);
+  static void _insert_floating_point(std::vector<std::byte>& buffer, T value, uint64_t offset, bool descending);
 
-  static void _insert_string(std::vector<unsigned char>& buffer, const pmr_string& value, uint64_t offset,
-                             bool descending, uint32_t string_prefix_length);
+  static void _insert_string(std::vector<std::byte>& buffer, const pmr_string& value, uint64_t offset, bool descending,
+                             uint32_t string_prefix_length);
 };
 }  // namespace hyrise
