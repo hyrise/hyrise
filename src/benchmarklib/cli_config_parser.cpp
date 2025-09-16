@@ -241,7 +241,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
         Assert(encoding_info.is_object(),
                "The custom encoding for column types needs to be specified as a json object.");
         const auto column_spec = encoding_spec_from_json(encoding_info);
-        Assert(column_spec.has_value(), "The custom encoding for column types needs to include an encoding");
+        Assert(column_spec.has_value(), "The custom encoding for column types needs to include an encoding.");
         custom_encoding_mapping[table_name].emplace(column_name, *column_spec);
       }
     }
