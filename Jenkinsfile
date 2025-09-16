@@ -165,7 +165,7 @@ try {
             stage('bolt') {
               sh "mkdir cmake-build-bolt"
               sh "cd cmake-build-bolt && cmake ${relwithdebinfo} ${clang} ${unity} ${ninja} -DCOMPILE_FOR_BOLT=TRUE .. && ninja all -j \$(( \$(nproc)  / 7))"
-              sh "cd cmake-build-bolt && mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old && llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so && for benchmark in hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkStarSchema; do $benchmark --scheduler --clients 4 --cores 4 -t 120 -m Shuffled; mv /tmp/prof.fdata $benchmark.fdata; done && merge-fdata-17 *.fdata > ../resources/bolt.fdata && rm *.fdata"
+              sh 'cd cmake-build-bolt && mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old && llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so && for benchmark in hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkStarSchema; do ./$benchmark --scheduler --clients 4 --cores 4 -t 120 -m Shuffled; mv /tmp/prof.fdata $benchmark.fdata; done && merge-fdata-17 *.fdata > ../resources/bolt.fdata && rm *.fdata'
               sh "cd cmake-build-bolt && llvm-bolt-17 lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data ../resources/bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats"
               sh "cd cmake-build-bolt && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1 ./hyriseTest"
             }
