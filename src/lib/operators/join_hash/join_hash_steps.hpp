@@ -527,9 +527,9 @@ template <typename T>
   requires std::is_trivially_destructible_v<T>
 union TemporaryRadixBucket {
   static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
-  // If the bytecount of an element is not a power of two, we want it to be a divisor of the size of this container
-  // We therefore extract the part that is not a power of 2 an use it as a factor
-  // For all types in hyrise, this is either 1 or 3
+  // We want the bytecount to be a divisor of the size of this container.
+  // If the bytecount of an element is not a power of two, we have to extract the part that is
+  // not a power of 2 an use it as a factor. For all types in hyrise, this is either 1 or 3.
   static constexpr auto CACHELINES_PER_STORE = BYTES_PER_ELEMENT >>
                                                static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
   static constexpr auto BYTES_PER_STORE = BYTES_PER_CACHELINE * CACHELINES_PER_STORE;
@@ -539,8 +539,8 @@ union TemporaryRadixBucket {
 
   struct {
     std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1> elements;
-    // Every type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers
-    uint32_t count;  // Is it worth to store these here?
+    // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers
+    uint32_t count;
     uint64_t output_idx;
   } with_indices;
 };
@@ -551,7 +551,7 @@ struct TemporaryRadixContainer {
   using allocator = boost::alignment::aligned_allocator<bucket, BYTES_PER_CACHELINE>;
   static constexpr auto ELEMENTS_PER_STORE = bucket::ELEMENTS_PER_STORE;
   uninitialized_vector<bucket, allocator> data;
-  std::vector<std::array<char, bucket::ELEMENTS_PER_STORE>> null_values;
+  uninitialized_vector<std::array<char, ELEMENTS_PER_STORE>> null_values;
 
   explicit TemporaryRadixContainer(size_t output_partition_count) : data(output_partition_count) {
     if constexpr (keep_null_values) {
@@ -562,7 +562,7 @@ struct TemporaryRadixContainer {
   void prefetch(size_t partition_id) {
     const auto* const ptr = reinterpret_cast<char*>(data.data() + partition_id);
     for (auto cacheline_idx = size_t{0}; cacheline_idx < bucket::CACHELINES_PER_STORE; ++cacheline_idx) {
-      __builtin_prefetch(ptr + (cacheline_idx * BYTES_PER_CACHELINE), 1, 3);
+      __builtin_prefetch(ptr + (cacheline_idx * BYTES_PER_CACHELINE), 1 /* = write */, 3 /* = highest priority */);
     }
     if constexpr (keep_null_values) {
       __builtin_prefetch(null_values.data() + partition_id, 1, 3);
@@ -635,6 +635,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         auto tmp = TMP(output_partition_count);
         for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
              ++output_partition_idx) {
+          tmp.prefetch(output_partition_idx);
           tmp.data[output_partition_idx].with_indices.output_idx =
               output_offsets_by_input_partition[input_partition_idx][output_partition_idx];
           tmp.data[output_partition_idx].with_indices.count = 0;
@@ -652,7 +653,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
           const auto output_idx = tmp.data[radix].with_indices.output_idx;
           if (std::bit_cast<uint64_t>(output[radix].elements.data() + output_idx) & (BYTES_PER_CACHELINE - 1)) {
-            // We are not properly aligned with a cacheline yet, just write the prolog manually.
+            // We are not properly aligned with a cacheline yet, just write the element manually.
             DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
 
             if constexpr (keep_null_values) {
