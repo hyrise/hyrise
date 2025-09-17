@@ -12,7 +12,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
 #include "SQLParser.h"
@@ -25,7 +24,6 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/list_directory.hpp"
 
 namespace hyrise {
 
@@ -35,7 +33,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::optional<std::unordered_set<std::string>>& query_subset)
     : AbstractBenchmarkItemRunner(config) {
   const auto is_sql_file = [](const std::string& filename) {
-    return boost::algorithm::ends_with(filename, ".sql");
+    return filename.ends_with(".sql");
   };
 
   const auto path = std::filesystem::path{query_path};
@@ -45,13 +43,13 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not a .sql file.");
     _parse_query_file(query_path, query_subset);
   } else {
-    // Recursively walk through the specified directory and add all files on the way
-    for (const auto& entry : list_directory(path)) {
-      if (is_sql_file(entry)) {
-        if (filename_blacklist.find(entry.filename()) != filename_blacklist.end()) {
+    // Recursively walk through the specified directory and add all files on the way.
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+      if (is_sql_file(entry.path())) {
+        if (filename_blacklist.contains(entry.path().filename())) {
           continue;
         }
-        _parse_query_file(entry, query_subset);
+        _parse_query_file(entry.path(), query_subset);
       }
     }
   }
@@ -109,7 +107,7 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
-    queries_in_file[statement_idx] = {item_name, statement_string};
+    queries_in_file[statement_idx] = {.name = item_name, .sql = statement_string};
   }
 
   // Remove ".0" from the end of the query name if there is only one file

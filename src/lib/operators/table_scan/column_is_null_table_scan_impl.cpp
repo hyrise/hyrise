@@ -70,7 +70,7 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
 void ColumnIsNullTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](const auto& iter, [[maybe_unused]] const auto& end) {
     // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
     const auto invert = predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) {
@@ -159,7 +159,7 @@ void ColumnIsNullTableScanImpl::_scan_iterable_for_null_values(
     return invert ^ value.is_null();
   };
 
-  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+  iterable.with_iterators(position_filter, [&](const auto& iter, const auto& end) {
     _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
 }

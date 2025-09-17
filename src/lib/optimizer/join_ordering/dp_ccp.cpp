@@ -19,7 +19,7 @@
 
 namespace hyrise {
 
-std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
+std::shared_ptr<AbstractLQPNode> DPccp::operator()(const JoinGraph& join_graph,
                                                    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   Assert(!join_graph.vertices.empty(), "Code below relies on the JoinGraph having vertices");
   // No std::unordered_map because hashing of JoinGraphVertexSet is not (efficiently) possible: boost::dynamic_bitset
@@ -109,7 +109,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
   }
 
   /**
-   * 5. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan if the candidate plan
+   * 5. Actual DPccp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan if the candidate plan
    *                            is cheaper than the cheapest currently known plan for a particular subset of vertices.
    */
   const auto csg_cmp_pairs = EnumerateCcp{vertex_count, enumerate_ccp_edges}();

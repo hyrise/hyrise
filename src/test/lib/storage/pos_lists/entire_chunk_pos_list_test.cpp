@@ -56,11 +56,11 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // Extra Lines have been added to the table:
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 6);
-  // Newly added rows are not in the position list
+  // Newly added rows are not in the position list.
   EXPECT_EQ(entire_chunk_pos_list->size(), 3);
 
-  // TODO(anyone): Maybe add a better check than just size, cause the returned iterators should also handle.
-  // this case, which we right now don't check.
+  // TODO(anyone): Maybe add a better check than just size, cause the returned iterators should also handle this case,
+  // which we right now don't check.
 }
 
 TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
