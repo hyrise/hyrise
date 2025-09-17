@@ -34,8 +34,8 @@ inline uint64_t byteswap_64(const uint64_t val) {
          ((val & 0x000000000000FF00u) << 40u) | ((val & 0x00000000000000FFu) << 56u);
 }
 
-// Swaps the endianness of the given value.
-// From C++23, prefer std::byteswap (https://en.cppreference.com/w/cpp/numeric/byteswap.html).
+// Swaps the endianness of the given value. From C++23, prefer std::byteswap
+// (https://en.cppreference.com/w/cpp/numeric/byteswap.html).
 template <typename T>
   requires(sizeof(T) == 4 || sizeof(T) == 8)
 inline T byteswap(T val) {
@@ -45,6 +45,8 @@ inline T byteswap(T val) {
     return byteswap_64(val);
   }
 }
+
+constexpr auto PAD_CHAR = std::byte{0x00};
 }  // namespace
 
 namespace hyrise {
@@ -62,14 +64,14 @@ std::pair<std::vector<std::byte>, uint64_t> KeyNormalizer::normalize_keys_for_ta
     // Add 1 byte for NULL marker (used for NULLs first/last).
     tuple_key_size += 1;
 
-    if (data_type == DataType::String) {
-      tuple_key_size += string_prefix_length;
-    } else {
-      resolve_data_type(data_type, [&](const auto type) {
-        using Type = typename decltype(type)::type;
+    resolve_data_type(data_type, [&](const auto type) {
+      using Type = typename decltype(type)::type;
+      if constexpr (std::is_same_v<Type, pmr_string>) {
+        tuple_key_size += string_prefix_length;
+      } else {
         tuple_key_size += sizeof(Type);
-      });
-    }
+      }
+    });
   }
 
   tuple_key_size += sizeof(RowID);
@@ -121,16 +123,16 @@ void KeyNormalizer::_insert_keys_for_chunk(std::vector<std::byte>& buffer, const
       const auto component_total_size = component_data_size + 1;
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
-        const auto offset = ((table_offset + pos.chunk_offset()) * tuple_key_size) + component_offset;
+        const auto buffer_offset_to_beginning_of_tuple = ((table_offset + pos.chunk_offset()) * tuple_key_size) + component_offset;
         const auto is_null = pos.is_null();
 
         // Use 0x00 when NullsFirst and 0x01 when NullsLast.
-        buffer[offset] = static_cast<std::byte>(is_null != nulls_first);
+        buffer[buffer_offset_to_beginning_of_tuple] = static_cast<std::byte>(is_null != nulls_first);
 
         if (!is_null) {
-          _insert_normalized_value(buffer, pos.value(), offset + 1, descending, string_prefix_length);
+          _insert_normalized_value(buffer, pos.value(), buffer_offset_to_beginning_of_tuple + 1, descending, string_prefix_length);
         } else {
-          std::fill(&buffer[offset + 1], &buffer[offset + component_total_size], std::byte{0x00});
+          std::fill(&buffer[buffer_offset_to_beginning_of_tuple + 1], &buffer[buffer_offset_to_beginning_of_tuple + component_total_size], PAD_CHAR);
         }
       });
 
@@ -140,9 +142,9 @@ void KeyNormalizer::_insert_keys_for_chunk(std::vector<std::byte>& buffer, const
 
   // Append RowIDs at the end for tie-breaking.
   const auto row_id_offset = tuple_key_size - sizeof(RowID);
-  for (auto offset = ChunkOffset{0}; offset < chunk_size; ++offset) {
-    const auto buffer_start = (table_offset + offset) * tuple_key_size;
-    const auto row_id = RowID{chunk_id, offset};
+  for (auto current_row = ChunkOffset{0}; current_row < chunk_size; ++current_row) {
+    const auto buffer_start = (table_offset + current_row) * tuple_key_size;
+    const auto row_id = RowID{chunk_id, current_row};
     std::memcpy(&buffer[buffer_start + row_id_offset], &row_id, sizeof(RowID));
   }
 }
@@ -166,9 +168,8 @@ void KeyNormalizer::_insert_integral(std::vector<std::byte>& buffer, T value, co
   using UnsignedType = std::make_unsigned_t<T>;
   auto unsigned_value = std::bit_cast<UnsignedType>(value);
 
-  // For signed integers, the sign bit must be flipped. This maps the range of signed
-  // values (e.g., -128 to 127) to an unsigned range (0 to 255) in a way that
-  // preserves their order for a lexicographical byte comparison.
+  // For signed integers, the sign bit must be flipped. This maps the range of signed values (e.g., -128 to 127) to an
+  // unsigned range (0 to 255) in a way that preserves their order for a lexicographical byte comparison.
   if constexpr (std::is_signed_v<T>) {
     unsigned_value ^= UnsignedType{1} << ((sizeof(T) * 8u) - 1u);
   }
@@ -182,7 +183,7 @@ void KeyNormalizer::_insert_integral(std::vector<std::byte>& buffer, T value, co
   if (descending) {
     unsigned_value = ~unsigned_value;
   }
-  std::memcpy(buffer.data() + offset, &unsigned_value, sizeof(UnsignedType));
+  std::memcpy(&buffer[offset], &unsigned_value, sizeof(UnsignedType));
 }
 
 template <class T>
@@ -193,16 +194,16 @@ void KeyNormalizer::_insert_floating_point(std::vector<std::byte>& buffer, T val
 
   auto reinterpreted_val = std::bit_cast<UnsignedType>(value);
 
-  // If the float is negative (sign bit is 1), we flip all bits to reverse the sort order.
-  // If the float is positive (sign bit is 0), we flip only the sign bit to make it sort after all negatives.
+  // If the float is negative (sign bit is 1), we flip all bits to reverse the sort order. If the float is positive
+  // (sign bit is 0), we flip only the sign bit to make it sort after all negatives.
   if (reinterpreted_val & (UnsignedType{1} << ((sizeof(UnsignedType) * 8u) - 1u))) {
     reinterpreted_val = ~reinterpreted_val;
   } else {
     reinterpreted_val ^= (UnsignedType{1} << ((sizeof(UnsignedType) * 8u) - 1u));
   }
 
-  // Now, call append_integral with the correctly transformed bits. Since `UnsignedType` is unsigned,
-  // the signed-integer logic inside _insert_integral will be skipped.
+  // Now, call append_integral with the correctly transformed bits. Since `UnsignedType` is unsigned, the signed-integer
+  // logic inside _insert_integral will be skipped.
   _insert_integral(buffer, reinterpreted_val, offset, descending);
 }
 
@@ -211,11 +212,10 @@ void KeyNormalizer::_insert_string(std::vector<std::byte>& buffer, const pmr_str
   const auto prefix_length = std::min(static_cast<uint32_t>(value.size()), string_prefix_length);
   std::memcpy(&buffer[offset], value.data(), prefix_length);
 
-  constexpr auto PAD_CHAR = std::byte{0x00};
-  std::fill(&buffer[offset + prefix_length], &buffer[offset + string_prefix_length], PAD_CHAR);
+  std::fill(&buffer[offset + prefix_length], &buffer[offset + string_prefix_length], descending ? ~PAD_CHAR : PAD_CHAR);
 
   if (descending) {
-    for (auto i = uint32_t{0}; i < string_prefix_length; ++i) {
+    for (auto i = uint32_t{0}; i < prefix_length; ++i) {
       buffer[offset + i] = ~buffer[offset + i];
     }
   }

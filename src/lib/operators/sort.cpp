@@ -335,14 +335,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       uint32_t offset_for_row_id = key_size - sizeof(RowID);
 
       bool operator()(const std::byte* const a_ptr, const std::byte* const b_ptr) const {
-        const auto& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + offset_for_row_id);
-        const auto& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + offset_for_row_id);
-
         const int key_cmp = std::memcmp(a_ptr, b_ptr, key_size);
 
         if (key_cmp != 0) {
           return key_cmp < 0;
         }
+
+        const auto& a_row_id = *reinterpret_cast<const RowID*>(a_ptr + offset_for_row_id);
+        const auto& b_row_id = *reinterpret_cast<const RowID*>(b_ptr + offset_for_row_id);
 
         for (const auto& sort_def : sort_definitions) {
           const auto& segment_a = table.get_chunk(a_row_id.chunk_id)->get_segment(sort_def.column);
