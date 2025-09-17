@@ -49,9 +49,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-            
+
                 # Packages added here should also be added to the Dockerfile
-                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all valgrind; then
+                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all valgrind bolt-17; then
                     echo "Error during apt-get installations."
                     exit 1
                 fi
@@ -68,6 +68,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
 
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 90 --slave /usr/bin/g++ g++ /usr/bin/g++-14
                 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-17 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-17 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-17 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-17 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-17  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-17
+
+                ln -s /usr/lib/llvm-17/lib/libbolt_rt_instr.a /usr/lib/libbolt_rt_instr.a
             else
                 echo "Error during installation."
                 exit 1
