@@ -1,14 +1,13 @@
-#include "base_test.hpp"
-
 #include <cstddef>
 
+#include "base_test.hpp"
 #include "utils/key_normalizer.hpp"
 
 namespace {
-  constexpr auto NULL_PREFIX_NULLS_LAST = std::byte{0x00};
-  constexpr auto NULL_PREFIX_NULLS_FIRST = std::byte{0x01};
-  constexpr auto PAD_CHAR = std::byte{0x00};
-} // namespace
+constexpr auto NULL_PREFIX_NULLS_LAST = std::byte{0x00};
+constexpr auto NULL_PREFIX_NULLS_FIRST = std::byte{0x01};
+constexpr auto PAD_CHAR = std::byte{0x00};
+}  // namespace
 
 namespace hyrise {
 
@@ -114,10 +113,10 @@ TEST_F(KeyNormalizerTest, SingleColumnIntegerAsc) {
 TEST_F(KeyNormalizerTest, IntegerNormalization) {
   // Positive integer, ascending.
   const auto key_pos_asc = get_normalized_key({SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}}, 12,
-                                        ChunkOffset{0});  // Row 0, value 42
+                                              ChunkOffset{0});  // Row 0, value 42
   // Negative integer, ascending.
   const auto key_neg_asc = get_normalized_key({SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}}, 12,
-                                        ChunkOffset{1});  // Row 1, value -10
+                                              ChunkOffset{1});  // Row 1, value -10
 
   // In ascending sort, key for -10 should be lexicographically smaller than key for 42.
   EXPECT_LT(memcmp(key_neg_asc.data(), key_pos_asc.data(), key_pos_asc.size()), 0);
@@ -136,10 +135,10 @@ TEST_F(KeyNormalizerTest, IntegerNormalization) {
 TEST_F(KeyNormalizerTest, FloatNormalization) {
   // Positive float, ascending.
   const auto key_pos_asc = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}}, 12,
-                                        ChunkOffset{0});  // Row 0, value 5.5f
+                                              ChunkOffset{0});  // Row 0, value 5.5f
   // Negative float, ascending.
   const auto key_neg_asc = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}}, 12,
-                                        ChunkOffset{2});  // Row 2, value -10.0f
+                                              ChunkOffset{2});  // Row 2, value -10.0f
 
   EXPECT_LT(memcmp(key_neg_asc.data(), key_pos_asc.data(), key_pos_asc.size()), 0);
 
@@ -155,20 +154,20 @@ TEST_F(KeyNormalizerTest, FloatNormalization) {
 
 TEST_F(KeyNormalizerTest, NullPrefix) {
   // Test NullsFirst: non-NULL byte (0x01) should be greater than NULL byte (0x00).
-  const auto key_non_null_first = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}}, 12,
-                                               ChunkOffset{0});  // Not NULL
+  const auto key_non_null_first = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}},
+                                                     12, ChunkOffset{0});  // Not NULL
   const auto key_null_first = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}}, 12,
-                                           ChunkOffset{1});  // Is NULL
+                                                 ChunkOffset{1});  // Is NULL
 
   EXPECT_EQ(key_null_first[0], std::byte{0x00});  // Null prefix for NULLS FIRST
   EXPECT_EQ(key_non_null_first[0], std::byte{0x01});
   EXPECT_LT(key_null_first[0], key_non_null_first[0]);
 
   // Test NullsLast: NULL byte (0x01) should be greater than non-NULL byte (0x00).
-  const auto key_non_null_last = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsLast}}, 12,
-                                              ChunkOffset{0});  // Not NULL
+  const auto key_non_null_last = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsLast}},
+                                                    12, ChunkOffset{0});  // Not NULL
   const auto key_null_last = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsLast}}, 12,
-                                          ChunkOffset{1});  // Is NULL
+                                                ChunkOffset{1});  // Is NULL
 
   EXPECT_EQ(key_non_null_last[0], NULL_PREFIX_NULLS_LAST);
   EXPECT_EQ(key_null_last[0], NULL_PREFIX_NULLS_FIRST);
@@ -178,11 +177,11 @@ TEST_F(KeyNormalizerTest, NullPrefix) {
 TEST_F(KeyNormalizerTest, StringNormalizationAndPadding) {
   constexpr auto prefix_len = uint32_t{8};
   // "apple"
-  const auto key_apple = get_normalized_key({SortColumnDefinition{ColumnID{2}, SortMode::AscendingNullsFirst}}, prefix_len,
-                                      ChunkOffset{2});
+  const auto key_apple = get_normalized_key({SortColumnDefinition{ColumnID{2}, SortMode::AscendingNullsFirst}},
+                                            prefix_len, ChunkOffset{2});
   // "hello"
-  const auto key_hello = get_normalized_key({SortColumnDefinition{ColumnID{2}, SortMode::AscendingNullsFirst}}, prefix_len,
-                                      ChunkOffset{0});
+  const auto key_hello = get_normalized_key({SortColumnDefinition{ColumnID{2}, SortMode::AscendingNullsFirst}},
+                                            prefix_len, ChunkOffset{0});
 
   // "apple" should come before "hello".
   EXPECT_LT(memcmp(key_apple.data(), key_hello.data(), key_apple.size()), 0);
@@ -194,7 +193,7 @@ TEST_F(KeyNormalizerTest, StringNormalizationAndPadding) {
 
   // Check descending order (bitwise NOT).
   const auto key_apple_desc = get_normalized_key({SortColumnDefinition{ColumnID{2}, SortMode::DescendingNullsFirst}},
-                                           prefix_len, ChunkOffset{2});
+                                                 prefix_len, ChunkOffset{2});
   // The first byte of the descending key should be the inverse of the ascending one.
   EXPECT_EQ(key_apple_desc[1], std::byte{static_cast<unsigned char>(~'a')});
 }
@@ -266,7 +265,8 @@ TEST_F(KeyNormalizerTest, ComplexSort) {
 }
 
 TEST_F(KeyNormalizerTest, DebugFloats) {
-  const auto float_table = std::make_shared<Table>(TableColumnDefinitions{{"f", DataType::Float, false}}, TableType::Data);
+  const auto float_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"f", DataType::Float, false}}, TableType::Data);
   float_table->append({-10.5f});  // Should be first.
   float_table->append({2.0f});    // Should be third.
   float_table->append({0.0f});    // Should be second.
@@ -331,7 +331,8 @@ TEST_F(KeyNormalizerTest, DebugSignedInts) {
 }
 
 TEST_F(KeyNormalizerTest, StringsWithSharedPrefixAscending) {
-  const auto str_table = std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
+  const auto str_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
   str_table->append({"aa"});     // Should be second.
   str_table->append({"a"});      // Should be first.
   str_table->append({"aaaaa"});  // Should be third.
@@ -346,7 +347,8 @@ TEST_F(KeyNormalizerTest, StringsWithSharedPrefixAscending) {
 }
 
 TEST_F(KeyNormalizerTest, StringsWithSharedPrefixDescending) {
-  const auto str_table = std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
+  const auto str_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
   str_table->append({"aa"});     // Should be second.
   str_table->append({"a"});      // Should be third.
   str_table->append({"aaaaa"});  // Should be first.
@@ -361,7 +363,8 @@ TEST_F(KeyNormalizerTest, StringsWithSharedPrefixDescending) {
 }
 
 TEST_F(KeyNormalizerTest, StringEdgeCases) {
-  const auto str_table = std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
+  const auto str_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
   str_table->append({"b"});
   str_table->append({""});  // Empty string
   str_table->append({"a"});
