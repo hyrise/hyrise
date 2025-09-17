@@ -1,4 +1,7 @@
 #include "base_test.hpp"
+
+#include <cstddef>
+
 #include "utils/key_normalizer.hpp"
 
 namespace hyrise {
@@ -18,19 +21,19 @@ class KeyNormalizerTest : public BaseTest {
     table->append({AllTypeVariant{42}, AllTypeVariant{5.5f}, NULL_VALUE});
   }
 
-  std::vector<unsigned char> get_normalized_key(const std::vector<SortColumnDefinition>& sort_definitions,
-                                                uint32_t string_prefix_length = 12,
-                                                ChunkOffset row_offset = ChunkOffset{0}) const {
+  std::vector<std::byte> get_normalized_key(const std::vector<SortColumnDefinition>& sort_definitions,
+                                            uint32_t string_prefix_length = 12,
+                                            ChunkOffset row_offset = ChunkOffset{0}) const {
     auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions, string_prefix_length);
 
     // Extract the key for the specified row
     const auto start = buffer.begin() + (row_offset * key_size);
     const auto end = start + key_size;
-    return std::vector<unsigned char>(start, end);
+    return std::vector<std::byte>(start, end);
   }
 
-  static std::vector<RowID> get_sorted_row_ids(std::vector<unsigned char>& buffer, uint64_t tuple_key_size) {
-    auto key_pointers = std::vector<const unsigned char*>();
+  static std::vector<RowID> get_sorted_row_ids(std::vector<std::byte>& buffer, uint64_t tuple_key_size) {
+    auto key_pointers = std::vector<const std::byte*>();
     for (size_t i = 0; i < buffer.size(); i += tuple_key_size) {
       key_pointers.push_back(&buffer[i]);
     }
@@ -51,8 +54,8 @@ class KeyNormalizerTest : public BaseTest {
     return sorted_row_ids;
   }
 
-  RowIDPosList get_sorted_pos_list(std::vector<unsigned char>& buffer, uint64_t key_size) {
-    auto key_pointers = std::vector<const unsigned char*>();
+  RowIDPosList get_sorted_pos_list(std::vector<std::byte>& buffer, uint64_t key_size) {
+    auto key_pointers = std::vector<const std::byte*>();
     key_pointers.reserve(buffer.size() / key_size);
     for (size_t i = 0; i < buffer.size(); i += key_size) {
       key_pointers.push_back(&buffer[i]);
@@ -151,8 +154,8 @@ TEST_F(KeyNormalizerTest, NullPrefix) {
   auto key_null_first = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsFirst}}, 12,
                                            ChunkOffset{1});  // Is NULL
 
-  EXPECT_EQ(key_null_first[0], 0x00);  // Null prefix for NULLS FIRST
-  EXPECT_EQ(key_non_null_first[0], 0x01);
+  EXPECT_EQ(key_null_first[0], std::byte{0x00});  // Null prefix for NULLS FIRST
+  EXPECT_EQ(key_non_null_first[0], std::byte{0x01});
   EXPECT_LT(key_null_first[0], key_non_null_first[0]);
 
   // Test NullsLast: NULL byte (0x01) should be greater than non-NULL byte (0x00)
@@ -161,8 +164,8 @@ TEST_F(KeyNormalizerTest, NullPrefix) {
   auto key_null_last = get_normalized_key({SortColumnDefinition{ColumnID{1}, SortMode::AscendingNullsLast}}, 12,
                                           ChunkOffset{1});  // Is NULL
 
-  EXPECT_EQ(key_non_null_last[0], 0x00);  // Null prefix for NULLS LAST
-  EXPECT_EQ(key_null_last[0], 0x01);
+  EXPECT_EQ(key_non_null_last[0], std::byte{0x00});  // Null prefix for NULLS LAST
+  EXPECT_EQ(key_null_last[0], std::byte{0x01});
   EXPECT_LT(key_non_null_last[0], key_null_last[0]);
 }
 
@@ -179,15 +182,15 @@ TEST_F(KeyNormalizerTest, StringNormalizationAndPadding) {
   EXPECT_LT(memcmp(key_apple.data(), key_hello.data(), key_apple.size()), 0);
 
   // Check for correct padding. Key for "apple" should be "apple\0\0\0"
-  EXPECT_EQ(key_apple[1 + 5], 0x00);  // 1-byte null prefix + 5 chars
-  EXPECT_EQ(key_apple[1 + 6], 0x00);
-  EXPECT_EQ(key_apple[1 + 7], 0x00);
+  EXPECT_EQ(key_apple[1 + 5], std::byte{0x00});  // 1-byte null prefix + 5 chars
+  EXPECT_EQ(key_apple[1 + 6], std::byte{0x00});
+  EXPECT_EQ(key_apple[1 + 7], std::byte{0x00});
 
   // Check descending order (bitwise NOT)
   auto key_apple_desc = get_normalized_key({SortColumnDefinition{ColumnID{2}, SortMode::DescendingNullsFirst}},
                                            prefix_len, ChunkOffset{2});
   // The first byte of the descending key should be the inverse of the ascending one.
-  EXPECT_EQ(key_apple_desc[1], (unsigned char)~'a');
+  EXPECT_EQ(key_apple_desc[1], std::byte{static_cast<unsigned char>(~'a')});
 }
 
 TEST_F(KeyNormalizerTest, TwoColumnsIntFloat) {
@@ -256,7 +259,7 @@ TEST_F(KeyNormalizerTest, ComplexSort) {
   }
 }
 
-void print_key(const std::vector<unsigned char>& key, const std::string& message = "") {
+void print_key(const std::vector<std::byte>& key, const std::string& message = "") {
   if (!message.empty()) {
     std::cout << message << " ";
   }
@@ -283,7 +286,7 @@ TEST_F(KeyNormalizerTest, DebugFloats) {
   print_key({normalized_keys.begin() + 1 * key_size, normalized_keys.begin() + 2 * key_size}, "Key for   2.0f:");
   print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for   0.0f:");
 
-  auto key_pointers = std::vector<const unsigned char*>();
+  auto key_pointers = std::vector<const std::byte*>();
   for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
     key_pointers.push_back(&normalized_keys[i]);
   }
@@ -320,7 +323,7 @@ TEST_F(KeyNormalizerTest, DebugSignedInts) {
   print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for   0:");
   std::cout << "Expected Order: Key for -2 < Key for 0 < Key for 5\n";
 
-  auto key_pointers = std::vector<const unsigned char*>();
+  auto key_pointers = std::vector<const std::byte*>();
   for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
     key_pointers.push_back(&normalized_keys[i]);
   }
@@ -411,7 +414,7 @@ TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
   print_key({normalized_keys.begin() + 2 * key_size, normalized_keys.begin() + 3 * key_size}, "Key for {5, 'banana'}:");
   print_key({normalized_keys.begin() + 3 * key_size, normalized_keys.begin() + 4 * key_size}, "Key for {10, 'car'}:");
 
-  auto key_pointers = std::vector<const unsigned char*>();
+  auto key_pointers = std::vector<const std::byte*>();
   for (size_t i = 0; i < normalized_keys.size(); i += key_size) {
     key_pointers.push_back(&normalized_keys[i]);
   }
