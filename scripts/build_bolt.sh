@@ -93,7 +93,7 @@ llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
 
 pushd ..
 
-for benchmark in benchmarks
+for benchmark in $benchmarks
 do
     "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$time_per_benchmark" -m Shuffled
     mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
