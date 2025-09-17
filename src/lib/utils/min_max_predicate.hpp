@@ -8,9 +8,9 @@
 
 namespace hyrise {
 
-class BaseMinMaxFilter {
+class BaseMinMaxPredicate {
  public:
-  virtual ~BaseMinMaxFilter() = default;
+  virtual ~BaseMinMaxPredicate() = default;
 
   //   virtual void insert(const int32_t& value) = 0;
   //   virtual bool probe(const int32_t& value) const = 0;
@@ -19,10 +19,10 @@ class BaseMinMaxFilter {
 };
 
 template <typename DataType>
-class MinMaxFilter : public BaseMinMaxFilter {
+class MinMaxPredicate : public BaseMinMaxPredicate {
  public:
-  MinMaxFilter() : _min_value(INT32_MAX), _max_value(INT32_MIN) {
-    Assert((std::is_same<DataType, int32_t>::value), "MinMaxFilter can only be instantiated with int32_t.");
+  MinMaxPredicate() : _min_value(INT32_MAX), _max_value(INT32_MIN) {
+    Assert((std::is_same<DataType, int32_t>::value), "MinMaxPredicate can only be instantiated with int32_t.");
   }
 
   void insert(const DataType& value) {
@@ -41,7 +41,7 @@ class MinMaxFilter : public BaseMinMaxFilter {
     }
   }
 
-  void merge_from(const MinMaxFilter& other) {
+  void merge_from(const MinMaxPredicate& other) {
     if constexpr (std::is_same_v<DataType, int32_t>) {
       if (other._min_value < _min_value)
         _min_value = other._min_value;
@@ -63,6 +63,6 @@ class MinMaxFilter : public BaseMinMaxFilter {
   int32_t _max_value;
 };
 
-// template class MinMaxFilter<int32_t>;
+// template class MinMaxPredicate<int32_t>;
 
 }  // namespace hyrise

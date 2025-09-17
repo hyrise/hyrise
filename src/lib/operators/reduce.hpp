@@ -8,7 +8,7 @@
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/bloom_filter.hpp"
-#include "utils/min_max_filter.hpp"
+#include "utils/min_max_predicate.hpp"
 
 namespace hyrise {
 
@@ -32,7 +32,7 @@ class Reduce : public AbstractReadOnlyOperator {
     return _bloom_filter;
   }
 
-  std::shared_ptr<BaseMinMaxFilter> get_min_max_filter() const {
+  std::shared_ptr<BaseMinMaxPredicate> get_min_max_filter() const {
     return _min_max_filter;
   }
 
@@ -62,24 +62,24 @@ class Reduce : public AbstractReadOnlyOperator {
 
       // If reduce_mode is ReduceMode::BuildAndProbe, new filters must be build while the old ones are probed.
       std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter;
-      std::shared_ptr<MinMaxFilter<ColumnDataType>> new_min_max_filter;
+      std::shared_ptr<MinMaxPredicate<ColumnDataType>> new_min_max_filter;
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
         new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
 
         if constexpr (use_min_max == UseMinMax::Yes) {
-          new_min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
+          new_min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();
         }
       }
 
       std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter1;
-      std::shared_ptr<MinMaxFilter<ColumnDataType>> new_min_max_filter1;
+      std::shared_ptr<MinMaxPredicate<ColumnDataType>> new_min_max_filter1;
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
         new_bloom_filter1 = std::make_shared<BloomFilter<20, 2>>();
 
         if constexpr (use_min_max == UseMinMax::Yes) {
-          new_min_max_filter1 = std::make_shared<MinMaxFilter<ColumnDataType>>();
+          new_min_max_filter1 = std::make_shared<MinMaxPredicate<ColumnDataType>>();
         }
       }
 
@@ -96,10 +96,10 @@ class Reduce : public AbstractReadOnlyOperator {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(chunk_count);
 
-      auto casted_min_max_filter = std::shared_ptr<MinMaxFilter<ColumnDataType>>();
+      auto casted_min_max_filter = std::shared_ptr<MinMaxPredicate<ColumnDataType>>();
       if constexpr (reduce_mode != ReduceMode::Build && use_min_max == UseMinMax::Yes) {
         Assert(_min_max_filter, "Min max filter is null.");
-        casted_min_max_filter = std::dynamic_pointer_cast<MinMaxFilter<ColumnDataType>>(_min_max_filter);
+        casted_min_max_filter = std::dynamic_pointer_cast<MinMaxPredicate<ColumnDataType>>(_min_max_filter);
         Assert(casted_min_max_filter, "Failed to cast min max filter.");
       }
 
@@ -241,7 +241,7 @@ class Reduce : public AbstractReadOnlyOperator {
         _bloom_filter = new_bloom_filter;
         _min_max_filter = new_min_max_filter;
         // _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
-        // _min_max_filter = std::make_shared<MinMaxFilter<ColumnDataType>>();
+        // _min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();
       }
     });
 
@@ -260,7 +260,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
   const OperatorJoinPredicate _predicate;
   std::shared_ptr<BloomFilter<20, 2>> _bloom_filter;
-  std::shared_ptr<BaseMinMaxFilter> _min_max_filter;
+  std::shared_ptr<BaseMinMaxPredicate> _min_max_filter;
 };
 
 }  // namespace hyrise
