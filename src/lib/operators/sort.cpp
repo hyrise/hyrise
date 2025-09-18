@@ -22,6 +22,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_performance_data.hpp"
+#include "operators/sort_algorithms/parallel_merge_sorter.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -36,17 +37,12 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/encoding.hpp"
 #include "utils/timer.hpp"
 
 namespace {
 
-// Heuristic: arbitrary divider between small and large workloads.
-constexpr size_t SMALL_ARRAY_THRESHOLD = 10'000;
-// Heuristic: arbitrary divider between parallel and sequential merging.
-constexpr size_t SMALL_MERGE_THRESHOLD = 1'000;
-
 using StringSize = unsigned char;
-constexpr size_t STRING_SIZE_LENGTH = sizeof(StringSize);
 
 using namespace hyrise;  // NOLINT
 
@@ -58,207 +54,6 @@ size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
 
 bool is_descending(const SortMode& mode) {
   return mode == SortMode::DescendingNullsFirst || mode == SortMode::DescendingNullsLast;
-}
-
-// Merge Path cut descriptor used to partition work between left/right sequences.
-struct Cut {
-  size_t a;
-  size_t b;
-};
-
-inline void encode_string(std::byte* dest, const size_t data_length, const pmr_string& value) {
-  const auto string_len = value.size();
-  DebugAssert(string_len <= data_length - STRING_SIZE_LENGTH, "String length exceeds allocated buffer.");
-  memset(dest, 0, data_length);  // Set all bytes to 0.
-  // Copy the string data into the key buffer.
-  memcpy(dest, value.data(), string_len);  //NOLINT
-  // Store actual string length. This is required for cases, where the string ends in
-  // null byte(s), because they cannot be differentiated from padding.
-  memset(dest + data_length - STRING_SIZE_LENGTH, static_cast<StringSize>(string_len), STRING_SIZE_LENGTH);
-}
-
-inline void encode_double(std::byte* dest, const double value) {
-  // Encode double value; reinterpret double as raw 64-bit bits.
-  auto bits = std::bit_cast<uint64_t>(value);
-
-  // Flip the bits to ensure lexicographic order matches numeric order.
-  if (std::signbit(value)) {
-    bits = ~bits;  // Negative values are bitwise inverted.
-  } else {
-    bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values.
-  }
-
-  // Write to buffer in big-endian order (MSB first).
-  for (auto byte_idx = uint32_t{0}; byte_idx < 8; ++byte_idx) {
-    dest[1 + byte_idx] = static_cast<std::byte>(bits >> ((7 - byte_idx) * 8));
-  }
-}
-
-inline void encode_float(std::byte* dest, const float value) {
-  auto bits = std::bit_cast<uint32_t>(value);
-
-  // Flip the bits to ensure lexicographic order matches numeric order.
-  if (std::signbit(value)) {
-    bits = ~bits;  // Negative values are bitwise inverted.
-  } else {
-    bits ^= 0x80000000;  // Flip the sign bit for positive values.
-  }
-
-  // Write to buffer in big-endian order (MSB first).
-  for (auto byte_idx = uint32_t{0}; byte_idx < 4; ++byte_idx) {
-    dest[1 + byte_idx] = static_cast<std::byte>(bits >> ((3 - byte_idx) * 8));
-  }
-}
-
-template <typename T>
-inline void encode_integer(std::byte* dest, const T value, const size_t data_length) {
-  // Bias the value to get a lexicographically sortable encoding.
-  using UnsignedT = std::make_unsigned_t<T>;
-  const auto biased =
-      static_cast<UnsignedT>(value) ^ (static_cast<UnsignedT>(1) << ((data_length * 8) - 1));  // Flip sign bit.
-
-  // Store in big-endian order (MSB first), in order to satisfy lexicographic sorting.
-  for (auto byte_idx = size_t{0}; byte_idx < data_length; ++byte_idx) {
-    dest[1 + byte_idx] = static_cast<std::byte>(biased >> ((data_length - 1 - byte_idx) * 8));
-  }
-}
-
-template void encode_integer<int32_t>(std::byte* dest, const int32_t value, const size_t data_length);
-template void encode_integer<int64_t>(std::byte* dest, const int64_t value, const size_t data_length);
-
-// Finds the cut point for the merge path diagonal inspired by https://arxiv.org/pdf/1406.2628.
-// We use Merge Path to parallelize the binary merge across threads.
-// The diagonal partitioning finds balanced cut points via binary
-// searches so each worker merges disjoint, contiguous ranges.
-// This minimizes synchronization, preserves sequential access patterns, and improves cache locality.
-// It adapts to data skew, yielding near-equal work per worker and good load balancing.
-// Compared to naive chunking, Merge Path scales better with core count for large runs.
-template <typename T, typename Compare>
-inline Cut find_cut_point(const T* const left, const size_t len_left, const T* const right, const size_t len_right,
-                          const size_t diag, Compare comp) {
-  auto low = diag > len_right ? diag - len_right : 0;
-  auto high = std::min(diag, len_left);
-
-  while (low < high) {
-    const auto cut_left = (low + high) / 2;
-    const auto cut_right = diag - cut_left;
-
-    const bool left_smaller = (cut_left < len_left) && (cut_right == 0 || comp(left[cut_left], right[cut_right - 1]));
-
-    if (left_smaller) {
-      low = cut_left + 1;
-    } else {
-      high = cut_left;
-    }
-  }
-  return Cut{low, diag - low};
-}
-
-// Parallel merge of two consecutive runs using Merge Path.
-template <typename Compare>
-void merge_path_parallel(RowIDPosList& rows, const size_t start, const size_t mid, const size_t end, Compare comp,
-                         const size_t max_workers) {
-  const auto len_left = mid - start;
-  const auto len_right = end - mid;
-  const auto total_len = len_left + len_right;
-
-  const auto workers = static_cast<size_t>(std::min(max_workers, total_len));
-
-  auto dest = RowIDPosList(total_len);
-
-  // Compute cut points.
-  auto cuts = std::vector<Cut>(workers + 1);
-  cuts.front() = {0, 0};
-  cuts.back() = {len_left, len_right};
-
-  const auto* left = rows.data() + start;
-  const auto* right = rows.data() + mid;
-
-  for (auto index = size_t{1}; index < workers; ++index) {
-    const auto diag = index * total_len / workers;
-    const auto [a, b] = find_cut_point(left, len_left, right, len_right, diag, comp);
-    cuts[index] = {a, b};
-  }
-
-  // Launch worker tasks.
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(workers);
-
-  for (auto task_idx = size_t{0}; task_idx < workers; ++task_idx) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, task_idx] {
-      const auto cut_l = cuts[task_idx];
-      const auto cut_r = cuts[task_idx + 1];
-
-      const auto* l_begin = left + cut_l.a;
-      const auto* l_end = left + cut_r.a;
-      const auto* r_begin = right + cut_l.b;
-      const auto* r_end = right + cut_r.b;
-
-      auto* out = dest.data() + (cut_l.a + cut_l.b);
-      std::merge(l_begin, l_end, r_begin, r_end, out, comp);
-    }));
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-  const auto start_offset = static_cast<std::ptrdiff_t>(start);
-  std::move(dest.begin(), dest.end(), rows.begin() + start_offset);
-}
-
-template <typename Compare>
-void parallel_sort_rowids(RowIDPosList& rows, Compare comp) {
-  const auto row_count = rows.size();
-  const auto is_multithreaded = Hyrise::get().is_multi_threaded();
-
-  if (!HYRISE_DEBUG && (!is_multithreaded || row_count < SMALL_ARRAY_THRESHOLD)) {
-    boost::sort::pdqsort(rows.begin(), rows.end(), comp);
-    return;
-  }
-
-  // 1) Get number of workers and block size.
-  // Default to single-threaded execution.
-  auto num_workers = size_t{1};
-
-  const auto nq_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
-  if (nq_scheduler) {
-    num_workers = static_cast<size_t>(nq_scheduler->active_worker_count().load());
-  }
-
-  const auto block = (row_count + num_workers - 1) / num_workers;
-
-  // 2) Sort each block in parallel.
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(num_workers);
-  for (auto thread_idx = size_t{0}; thread_idx < num_workers; ++thread_idx) {
-    const auto start = thread_idx * block;
-    const auto end = std::min(start + block, row_count);
-    if (start < end) {
-      jobs.emplace_back(std::make_shared<JobTask>([start, end, &rows, &comp]() {
-        const auto start_offset = static_cast<std::ptrdiff_t>(start);
-        const auto end_offset = static_cast<std::ptrdiff_t>(end);
-        boost::sort::pdqsort(rows.begin() + start_offset, rows.begin() + end_offset, comp);
-      }));
-    }
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
-  // 3) Bottom-up merge sorted runs, doubling the run size each pass:
-  auto run = block;
-  while (run < row_count) {
-    for (auto left = size_t{0}; left + run < row_count; left += 2 * run) {
-      auto mid = left + run;
-      auto right = std::min(left + (2 * run), row_count);
-
-      // For small runs, parallel merging is not worth the overhead.
-      if (!HYRISE_DEBUG && run < SMALL_MERGE_THRESHOLD) {
-        const auto start_offset = static_cast<std::ptrdiff_t>(left);
-        const auto mid_offset = static_cast<std::ptrdiff_t>(mid);
-        const auto end_offset = static_cast<std::ptrdiff_t>(right);
-        std::inplace_merge(rows.begin() + start_offset, rows.begin() + mid_offset, rows.begin() + end_offset, comp);
-      } else {
-        merge_path_parallel(rows, left, mid, right, comp, num_workers);
-      }
-    }
-    run *= 2;
-  }
 }
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
@@ -464,7 +259,8 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size),
-      _force_materialization(force_materialization) {
+      _force_materialization(force_materialization),
+      _rowid_sorter(std::make_unique<ParallelMergeSorter<std::function<bool(const RowID&, const RowID&)>>>()) {
   DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
 }
 
@@ -642,13 +438,13 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
             // Encode the value into the key based on the data type.
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              encode_string(dest + 1, data_length, value);
+              hyrise::encode_string(dest + 1, data_length, value);
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
-              encode_double(dest, value);
+              hyrise::encode_double(dest, value);
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
-              encode_float(dest, value);
+              hyrise::encode_float(dest, value);
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
-              encode_integer<ColumnDataType>(dest, value, data_length);
+              hyrise::encode_integer<ColumnDataType>(dest, value);
             } else {
               Assert(false, "Unsupported data type for sorting: " + std::string{typeid(ColumnDataType).name()});
             }
@@ -680,7 +476,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return memcmp(key_a, key_b, key_width) < 0;
   };
 
-  parallel_sort_rowids(row_ids, compare_rows);
+  _rowid_sorter->sort(row_ids, compare_rows);
   auto merge_sort_time = timer.lap();
 
   /**************************************************************************************************************
