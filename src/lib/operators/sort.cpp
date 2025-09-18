@@ -1362,9 +1362,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
            "Sort: Column ID is greater than table's column count");
-    Assert(column_sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
-               column_sort_definition.sort_mode == SortMode::DescendingNullsFirst,
-           "Sort does not support NULLS LAST.");
   }
 
   if (input_table->row_count() == 0) {
