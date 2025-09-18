@@ -29,9 +29,8 @@ class StorageChunkTest : public BaseTest {
     ds_int = ChunkEncoder::encode_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
     ds_str = ChunkEncoder::encode_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
 
-    Segments empty_segments;
-    empty_segments.push_back(std::make_shared<ValueSegment<int32_t>>());
-    empty_segments.push_back(std::make_shared<ValueSegment<pmr_string>>());
+    auto empty_segments =
+        Segments{std::make_shared<ValueSegment<int32_t>>(), std::make_shared<ValueSegment<pmr_string>>()};
 
     chunk = std::make_shared<Chunk>(empty_segments);
   }
