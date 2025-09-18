@@ -20,9 +20,7 @@ namespace hyrise {
 template <typename UInt>
 inline void write_big_endian(std::byte* dest, UInt value, size_t length) {
   for (size_t byte_idx = 0; byte_idx < length; ++byte_idx) {
-    dest[1 + byte_idx] = static_cast<std::byte>(
-        (value >> ((length - 1 - byte_idx) * 8)) & static_cast<UInt>(0xFF)
-    );
+    dest[1 + byte_idx] = static_cast<std::byte>((value >> ((length - 1 - byte_idx) * 8)) & static_cast<UInt>(0xFF));
   }
 }
 
@@ -36,7 +34,6 @@ inline void encode_string(std::byte* dest, const size_t data_length, const pmr_s
   // null byte(s), because they cannot be differentiated from padding.
   memset(dest + data_length - STRING_SIZE_LENGTH, static_cast<StringSize>(string_len), STRING_SIZE_LENGTH);
 }
-
 
 inline void encode_double(std::byte* dest, const double value) {
   // Encode double value; reinterpret double as raw 64-bit bits.

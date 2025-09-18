@@ -1,8 +1,8 @@
-#include "base_test.hpp"
-#include "utils/encoding.hpp"
-
 #include <array>
 #include <cstring>
+
+#include "base_test.hpp"
+#include "utils/encoding.hpp"
 
 namespace hyrise {
 

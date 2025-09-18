@@ -22,6 +22,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_performance_data.hpp"
+#include "operators/sort_algorithms/parallel_merge_sorter.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -404,7 +405,8 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size),
-      _force_materialization(force_materialization) {
+      _force_materialization(force_materialization),
+      _rowid_sorter(std::make_unique<ParallelMergeSorter<std::function<bool(const RowID&, const RowID&)>>>()) {
   DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
 }
 
@@ -620,7 +622,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return memcmp(key_a, key_b, key_width) < 0;
   };
 
-  parallel_sort_rowids(row_ids, compare_rows);
+  _rowid_sorter->sort(row_ids, compare_rows);
   auto merge_sort_time = timer.lap();
 
   /**************************************************************************************************************
