@@ -147,6 +147,5 @@ void ParallelMergeSorter<Compare>::sort(RowIDPosList& rows, Compare comp) {
   }
 }
 
-template class hyrise::ParallelMergeSorter<std::function<bool(const RowID&, const RowID&)>>;
-
+template class ParallelMergeSorter<std::function<bool(const RowID&, const RowID&)>>;
 }  // namespace hyrise
