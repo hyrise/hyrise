@@ -341,7 +341,7 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
 
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
   const auto string_length = _read_value<uint32_t>(file);
-  pmr_vector<char> values(string_length * count);
+  auto values = pmr_vector<char>(string_length * count);
   file.read(values.data(), static_cast<int64_t>(values.size()));
   return std::make_shared<FixedStringVector>(std::move(values), string_length, count);
 }

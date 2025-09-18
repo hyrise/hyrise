@@ -81,15 +81,20 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
                                                   const std::vector<bool>& unique_columns) {
   DebugAssert(types.size() == unique_columns.size(), "The length of the passed vectors has to match.");
 
-  const auto size = types.size();
+  const auto column_count = types.size();
   auto chunk_encoding_spec = ChunkEncodingSpec{};
-  chunk_encoding_spec.reserve(size);
-  for (auto column_id = ColumnID{0}; column_id < size; ++column_id) {
+  chunk_encoding_spec.reserve(column_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(types[column_id], unique_columns[column_id]));
   }
   return chunk_encoding_spec;
 }
 
+/**
+ * Selects and encoding for a column based on its data type and whether its values are guaranteed to be unique.
+ * The discussion as to why these encodings are chosen can be found on https://github.com/hyrise/hyrise/pull/2696.
+ * This PR also includes performance measurements for this and other variants.
+ */
 SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique) {
   if (segment_values_are_unique) {
     return SegmentEncodingSpec{EncodingType::Unencoded};

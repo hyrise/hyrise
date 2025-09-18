@@ -126,7 +126,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                  const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs) {
-  const auto& column_data_types = table->column_data_types();
+  const auto column_data_types = table->column_data_types();
 
   for (const auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
@@ -140,7 +140,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                  const ChunkEncodingSpec& chunk_encoding_spec) {
-  const auto& column_data_types = table->column_data_types();
+  const auto column_data_types = table->column_data_types();
 
   for (const auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
@@ -153,7 +153,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                  const SegmentEncodingSpec& segment_encoding_spec) {
-  const auto& column_data_types = table->column_data_types();
+  const auto column_data_types = table->column_data_types();
 
   for (const auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");

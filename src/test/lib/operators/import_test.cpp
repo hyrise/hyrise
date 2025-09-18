@@ -82,7 +82,7 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
       const auto chunk_encoding_spec = ChunkEncodingSpec{segment_encoding_spec_col1, segment_encoding_spec_col2};
       ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
     } else {
-      // The binary file is unencoded, so we do not have to change the encoding of `expected_table`.
+      // No encoding is specified, go with the default that should be selected by `auto_select_segment_encoding_spec`
       const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::FrameOfReference},
                                                          SegmentEncodingSpec{EncodingType::Dictionary}};
       ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);

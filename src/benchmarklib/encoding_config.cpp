@@ -14,12 +14,12 @@
 
 namespace hyrise {
 
-EncodingConfig::EncodingConfig(const std::optional<SegmentEncodingSpec> default_encoding_spec,
-                               DataTypeEncodingMapping type_encoding_mapping,
-                               TableSegmentEncodingMapping encoding_mapping)
-    : default_encoding_spec{default_encoding_spec},
-      type_encoding_mapping{std::move(type_encoding_mapping)},
-      custom_encoding_mapping{std::move(encoding_mapping)} {}
+EncodingConfig::EncodingConfig(const std::optional<SegmentEncodingSpec> init_default_encoding_spec,
+                               DataTypeEncodingMapping init_type_encoding_mapping,
+                               TableSegmentEncodingMapping init_encoding_mapping)
+    : default_encoding_spec{init_default_encoding_spec},
+      type_encoding_mapping{std::move(init_type_encoding_mapping)},
+      custom_encoding_mapping{std::move(init_encoding_mapping)} {}
 
 EncodingConfig EncodingConfig::unencoded() {
   return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
@@ -28,8 +28,8 @@ EncodingConfig EncodingConfig::unencoded() {
 std::optional<SegmentEncodingSpec> EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
                                                                               const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
-  if (!encoding.has_value()) {
-    return std::nullopt;
+  if (!encoding) {
+    return {};
   }
 
   const auto compression = EncodingConfig::compression_string_to_type(compression_str);
@@ -59,7 +59,7 @@ std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(
 
 nlohmann::json EncodingConfig::to_json() const {
   const auto encoding_spec_to_string_map = [](const SegmentEncodingSpec& spec) {
-    nlohmann::json mapping{};
+    auto mapping = nlohmann::json{};
     mapping["encoding"] = std::string{magic_enum::enum_name(spec.encoding_type)};
     if (spec.vector_compression_type) {
       mapping["compression"] = vector_compression_type_to_string.left.at(*spec.vector_compression_type);
@@ -67,12 +67,12 @@ nlohmann::json EncodingConfig::to_json() const {
     return mapping;
   };
 
-  nlohmann::json json{};
+  auto json = nlohmann::json{};
   if (default_encoding_spec) {
     json["default"] = encoding_spec_to_string_map(*default_encoding_spec);
   }
 
-  nlohmann::json type_mapping{};
+  auto type_mapping = nlohmann::json{};
   for (const auto& [type, spec] : type_encoding_mapping) {
     const auto& type_str = data_type_to_string.left.at(type);
     type_mapping[type_str] = encoding_spec_to_string_map(spec);
@@ -82,9 +82,9 @@ nlohmann::json EncodingConfig::to_json() const {
     json["type"] = type_mapping;
   }
 
-  nlohmann::json table_mapping{};
+  auto table_mapping = nlohmann::json{};
   for (const auto& [table, column_config] : custom_encoding_mapping) {
-    nlohmann::json column_mapping{};
+    auto column_mapping = nlohmann::json{};
     for (const auto& [column, spec] : column_config) {
       column_mapping[column] = encoding_spec_to_string_map(spec);
     }
@@ -93,6 +93,10 @@ nlohmann::json EncodingConfig::to_json() const {
 
   if (!table_mapping.empty()) {
     json["custom"] = table_mapping;
+  }
+
+  if (json.empty()) {
+    return "Automatic";
   }
 
   return json;

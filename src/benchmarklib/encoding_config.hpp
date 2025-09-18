@@ -19,9 +19,9 @@ using TableSegmentEncodingMapping =
 // View EncodingConfig::description to see format of encoding JSON
 class EncodingConfig {
  public:
-  explicit EncodingConfig(const std::optional<SegmentEncodingSpec> default_encoding_spec = std::nullopt,
-                          DataTypeEncodingMapping type_encoding_mapping = {},
-                          TableSegmentEncodingMapping encoding_mapping = {});
+  explicit EncodingConfig(const std::optional<SegmentEncodingSpec> init_default_encoding_spec = {},
+                          DataTypeEncodingMapping init_type_encoding_mapping = {},
+                          TableSegmentEncodingMapping init_encoding_mapping = {});
 
   static EncodingConfig unencoded();
 
