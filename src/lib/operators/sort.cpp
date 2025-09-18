@@ -36,6 +36,7 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/encoding.hpp"
 #include "utils/timer.hpp"
 
 namespace {
@@ -46,7 +47,6 @@ constexpr size_t SMALL_ARRAY_THRESHOLD = 10'000;
 constexpr size_t SMALL_MERGE_THRESHOLD = 1'000;
 
 using StringSize = unsigned char;
-constexpr size_t STRING_SIZE_LENGTH = sizeof(StringSize);
 
 using namespace hyrise;  // NOLINT
 
@@ -65,66 +65,6 @@ struct Cut {
   size_t a;
   size_t b;
 };
-
-inline void encode_string(std::byte* dest, const size_t data_length, const pmr_string& value) {
-  const auto string_len = value.size();
-  DebugAssert(string_len <= data_length - STRING_SIZE_LENGTH, "String length exceeds allocated buffer.");
-  memset(dest, 0, data_length);  // Set all bytes to 0.
-  // Copy the string data into the key buffer.
-  memcpy(dest, value.data(), string_len);  //NOLINT
-  // Store actual string length. This is required for cases, where the string ends in
-  // null byte(s), because they cannot be differentiated from padding.
-  memset(dest + data_length - STRING_SIZE_LENGTH, static_cast<StringSize>(string_len), STRING_SIZE_LENGTH);
-}
-
-inline void encode_double(std::byte* dest, const double value) {
-  // Encode double value; reinterpret double as raw 64-bit bits.
-  auto bits = std::bit_cast<uint64_t>(value);
-
-  // Flip the bits to ensure lexicographic order matches numeric order.
-  if (std::signbit(value)) {
-    bits = ~bits;  // Negative values are bitwise inverted.
-  } else {
-    bits ^= 0x8000000000000000ULL;  // Flip the sign bit for positive values.
-  }
-
-  // Write to buffer in big-endian order (MSB first).
-  for (auto byte_idx = uint32_t{0}; byte_idx < 8; ++byte_idx) {
-    dest[1 + byte_idx] = static_cast<std::byte>(bits >> ((7 - byte_idx) * 8));
-  }
-}
-
-inline void encode_float(std::byte* dest, const float value) {
-  auto bits = std::bit_cast<uint32_t>(value);
-
-  // Flip the bits to ensure lexicographic order matches numeric order.
-  if (std::signbit(value)) {
-    bits = ~bits;  // Negative values are bitwise inverted.
-  } else {
-    bits ^= 0x80000000;  // Flip the sign bit for positive values.
-  }
-
-  // Write to buffer in big-endian order (MSB first).
-  for (auto byte_idx = uint32_t{0}; byte_idx < 4; ++byte_idx) {
-    dest[1 + byte_idx] = static_cast<std::byte>(bits >> ((3 - byte_idx) * 8));
-  }
-}
-
-template <typename T>
-inline void encode_integer(std::byte* dest, const T value, const size_t data_length) {
-  // Bias the value to get a lexicographically sortable encoding.
-  using UnsignedT = std::make_unsigned_t<T>;
-  const auto biased =
-      static_cast<UnsignedT>(value) ^ (static_cast<UnsignedT>(1) << ((data_length * 8) - 1));  // Flip sign bit.
-
-  // Store in big-endian order (MSB first), in order to satisfy lexicographic sorting.
-  for (auto byte_idx = size_t{0}; byte_idx < data_length; ++byte_idx) {
-    dest[1 + byte_idx] = static_cast<std::byte>(biased >> ((data_length - 1 - byte_idx) * 8));
-  }
-}
-
-template void encode_integer<int32_t>(std::byte* dest, const int32_t value, const size_t data_length);
-template void encode_integer<int64_t>(std::byte* dest, const int64_t value, const size_t data_length);
 
 // Finds the cut point for the merge path diagonal inspired by https://arxiv.org/pdf/1406.2628.
 // We use Merge Path to parallelize the binary merge across threads.
@@ -642,13 +582,13 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
             // Encode the value into the key based on the data type.
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-              encode_string(dest + 1, data_length, value);
+              hyrise::encode_string(dest + 1, data_length, value);
             } else if constexpr (std::is_same_v<ColumnDataType, double>) {
-              encode_double(dest, value);
+              hyrise::encode_double(dest, value);
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
-              encode_float(dest, value);
+              hyrise::encode_float(dest, value);
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
-              encode_integer<ColumnDataType>(dest, value, data_length);
+              hyrise::encode_integer<ColumnDataType>(dest, value, data_length);
             } else {
               Assert(false, "Unsupported data type for sorting: " + std::string{typeid(ColumnDataType).name()});
             }
