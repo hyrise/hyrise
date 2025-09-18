@@ -1,4 +1,5 @@
 #include <memory>
+#include <stdexcept>
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
@@ -523,7 +524,7 @@ TEST_F(StorageChunkTest, SegmentsShareTableAndPositions) {
     auto same_pos_list_segments = Segments{ref_segment1, ref_segment2};
 
     const auto different_pos_list_chunk = std::make_shared<Chunk>(same_pos_list_segments);
-    EXPECT_THROW(different_pos_list_chunk->segments_share_table_and_positions());
+    EXPECT_THROW(different_pos_list_chunk->segments_share_table_and_positions(), std::logic_error);
   }
 }
 
