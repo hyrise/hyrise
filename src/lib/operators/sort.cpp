@@ -444,7 +444,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
             } else if constexpr (std::is_same_v<ColumnDataType, float>) {
               hyrise::encode_float(dest, value);
             } else if constexpr (std::is_integral<ColumnDataType>::value && std::is_signed<ColumnDataType>::value) {
-              hyrise::encode_integer<ColumnDataType>(dest, value, data_length);
+              hyrise::encode_integer<ColumnDataType>(dest, value);
             } else {
               Assert(false, "Unsupported data type for sorting: " + std::string{typeid(ColumnDataType).name()});
             }

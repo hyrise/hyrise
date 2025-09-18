@@ -63,7 +63,9 @@ inline void encode_float(std::byte* dest, const float value) {
 }
 
 template <typename T>
-inline void encode_integer(std::byte* dest, const T value, const size_t data_length) {
+inline void encode_integer(std::byte* dest, const T value) {
+  const size_t data_length = sizeof(T);
+
   // Bias the value to get a lexicographically sortable encoding.
   using UnsignedT = std::make_unsigned_t<T>;
   const auto biased =

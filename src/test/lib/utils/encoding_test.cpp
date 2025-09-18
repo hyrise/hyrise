@@ -12,17 +12,17 @@ TEST_F(EncodingTest, EncodeIntegerLexicographicOrder) {
   auto buffer1 = std::array<std::byte, 5>{};
   auto buffer2 = std::array<std::byte, 5>{};  // 4 + 1 for MSB offset
 
-  encode_integer<int32_t>(buffer1.data(), -1, 4);
-  encode_integer<int32_t>(buffer2.data(), 1, 4);
+  encode_integer<int32_t>(buffer1.data(), -1);
+  encode_integer<int32_t>(buffer2.data(), 1);
 
   EXPECT_LT(std::memcmp(buffer1.data(), buffer2.data(), buffer1.size()), 0);
 
-  encode_integer<int32_t>(buffer1.data(), 0, 4);
-  encode_integer<int32_t>(buffer2.data(), 1, 4);
+  encode_integer<int32_t>(buffer1.data(), 0);
+  encode_integer<int32_t>(buffer2.data(), 1);
   EXPECT_LT(std::memcmp(buffer1.data(), buffer2.data(), buffer1.size()), 0);
 
-  encode_integer<int32_t>(buffer1.data(), 1, 4);
-  encode_integer<int32_t>(buffer2.data(), 1, 4);
+  encode_integer<int32_t>(buffer1.data(), 1);
+  encode_integer<int32_t>(buffer2.data(), 1);
   EXPECT_EQ(std::memcmp(buffer1.data(), buffer2.data(), buffer1.size()), 0);
 }
 
