@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "storage/pos_lists/row_id_pos_list.hpp"
 
 namespace hyrise {

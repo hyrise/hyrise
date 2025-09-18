@@ -601,6 +601,7 @@ set(
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
+    utils/encoding.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
