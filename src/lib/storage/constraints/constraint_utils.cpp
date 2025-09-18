@@ -129,4 +129,35 @@ bool key_constraint_is_confidently_invalid(const std::shared_ptr<Table>& table,
   return true;
 }
 
+bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column_id) {
+  DebugAssert(column_id < table->column_count(), "ColumnID out of range.");
+  for (const auto& key_constraint : table->soft_key_constraints()) {
+    // Because we specify a long term encoding for the chunk, we do not care about temporary constraints.
+    if (key_constraint.can_become_invalid()) {
+      continue;
+    }
+
+    const auto& key_type = key_constraint.key_type();
+    if (key_type != KeyConstraintType::PRIMARY_KEY && key_type != KeyConstraintType::UNIQUE) {
+      continue;
+    }
+
+    const auto& columns = key_constraint.columns();
+    if (columns.size() == 1 && columns.contains(column_id)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::vector<bool> unique_columns(const std::shared_ptr<Table>& table) {
+  const auto column_count = table->column_count();
+  auto unique_columns = std::vector<bool>(column_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    unique_columns[column_id] = column_is_unique(table, column_id);
+  }
+  return unique_columns;
+}
+
 }  // namespace hyrise
