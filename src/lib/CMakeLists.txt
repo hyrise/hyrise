@@ -254,6 +254,9 @@ set(
     operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
+    operators/sort_algorithms/abstract_row_id_sorter.hpp
+    operators/sort_algorithms/parallel_merge_sorter.cpp
+    operators/sort_algorithms/parallel_merge_sorter.hpp
     operators/sort.cpp
     operators/sort.hpp
     operators/table_scan.cpp
@@ -598,6 +601,7 @@ set(
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
+    utils/normalization.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp

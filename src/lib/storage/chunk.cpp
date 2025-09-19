@@ -212,7 +212,7 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
     bytes += segment->memory_usage(mode);
   }
 
-  // TODO(anybody) Index memory usage missing
+  // TODO(anybody): Add index memory usage.
 
   if (_mvcc_data) {
     bytes += _mvcc_data->memory_usage();
