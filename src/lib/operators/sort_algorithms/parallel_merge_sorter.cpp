@@ -1,14 +1,19 @@
 #include "parallel_merge_sorter.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "boost/sort/pdqsort/pdqsort.hpp"
 #include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

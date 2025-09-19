@@ -1,9 +1,7 @@
 #include "sort.hpp"
 
 #include <algorithm>
-#include <bit>
 #include <chrono>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -26,7 +24,6 @@
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_segment_accessor.hpp"
 #include "storage/chunk.hpp"
