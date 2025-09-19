@@ -113,7 +113,7 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlagForRepeatedColumnReferences) {
     const auto expected_sorted_by =
         std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}, SortColumnDefinition{ColumnID{2}}};
 
-    // We directly check for vector equality as an unordered_map is used in the projection
+    // We directly check for vector equality as an unordered_map is used in the projection.
     for (const auto& sort_column : expected_sorted_by) {
       const auto iter = std::find(chunk_sorted_by.begin(), chunk_sorted_by.end(), sort_column);
       EXPECT_TRUE(iter != chunk_sorted_by.end());
