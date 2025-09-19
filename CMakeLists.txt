@@ -20,8 +20,6 @@ function(compiler_not_supported message)
     endif()
 endfunction(compiler_not_supported)
 
-option(ENABLE_PERFETTO "Add perfetto to the dependencies. Default: ON" OFF)
-
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.2)
         compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
@@ -60,15 +58,15 @@ else()
 endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
-     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 21.0)
-         # Since Clang 18, -Weverything includes a warning that warns when switch statements do not have a default case even when the entire enum is
-         # covered (see https://github.com/llvm/llvm-project/blob/7d9634e527fe52bf20a9036be6e5771f8fc4de17/clang/test/Sema/switch-default.cpp#L19).
-         # Currently, there is discussion in PR #2692 whether -Weverything should remain activated and which switch-specific warnings should be used.
-         # For now, we disable the warning for Clang versions 18 to 20.
-         message(WARNING "Disable warning 'switch-default' for Clang version ${CMAKE_CXX_COMPILER_VERSION}.")
-         add_compile_options(-Wno-switch-default)
-     endif()
- endif()
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 21.0)
+        # Since Clang 18, -Weverything includes a warning that warns when switch statements do not have a default case even when the entire enum is
+        # covered (see https://github.com/llvm/llvm-project/blob/7d9634e527fe52bf20a9036be6e5771f8fc4de17/clang/test/Sema/switch-default.cpp#L19).
+        # Currently, there is discussion in PR #2692 whether -Weverything should remain activated and which switch-specific warnings should be used.
+        # For now, we disable the warning for Clang versions 18 to 20.
+        message(WARNING "Disable warning 'switch-default' for Clang version ${CMAKE_CXX_COMPILER_VERSION}.")
+        add_compile_options(-Wno-switch-default)
+    endif()
+endif()
 
 # Starting with GCC 14's libstdc++, std::atomic_load for shared pointers is deprecated (as part of C++20). However, as
 # of LLVM 19, libc++ has not implemented std::atomic<std::shared_ptr> (see P0718R2,

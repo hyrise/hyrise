@@ -2,65 +2,99 @@
 
 #include "benchmark/benchmark.h"
 
-#include "benchmark_config.hpp"
-#include "hyrise.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
-#include "operators/limit.hpp"
-#include "operators/sort.hpp"
-#include "operators/table_wrapper.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "tpcds/tpcds_table_generator.hpp"
 
 namespace hyrise {
 
-void silent_tpcds_table_generation(uint32_t scale_factor, std::shared_ptr<BenchmarkConfig> config) {
-  auto* initial_buffer = std::cout.rdbuf();
+/**
+ * Welcome to the benchmark playground. Here, you can quickly compare two
+ * approaches in a minimal setup. Of course you can also use it to just benchmark
+ * one single thing.
+ *
+ * In this example, a minimal TableScan-like operation is used to evaluate the
+ * performance impact of pre-allocating the result vector (PosList in hyrise).
+ *
+ * A few tips:
+ * * The optimizer is not your friend. If you do a bunch of calculations and
+ *   don't actually use the result, it will optimize your code out and you will
+ *   benchmark only noise.
+ * * benchmark::DoNotOptimize(<expression>); marks <expression> as "globally
+ *   aliased", meaning that the compiler has to assume that any operation that
+ *   *could* access this memory location will do so.
+ *   However, despite the name, this will not prevent the compiler from
+ *   optimizing this expression itself!
+ * * benchmark::ClobberMemory(); can be used to force calculations to be written
+ *   to memory. It acts as a memory barrier. In combination with DoNotOptimize(e),
+ *   this function effectively declares that it could touch any part of memory,
+ *   in particular globally aliased memory.
+ * * More information on that: https://stackoverflow.com/questions/40122141/
+ */
 
-  std::cout.rdbuf(nullptr);
-  TPCDSTableGenerator(scale_factor, config).generate_and_store();
-  std::cout.rdbuf(initial_buffer);
-}
+using ValueT = int32_t;
 
-static void BM_ips4o(benchmark::State& state) {
-  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-  Hyrise::get().set_scheduler(node_queue_scheduler);
+class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
+ public:
+  void SetUp(::benchmark::State& state) override {
+    MicroBenchmarkBasicFixture::SetUp(state);
 
-  auto& storage_manager = Hyrise::get().storage_manager;
+    _clear_cache();
 
-  auto benchmark_config = std::make_shared<BenchmarkConfig>();
-  benchmark_config->cache_binary_tables = true;
-  benchmark_config->encoding_config = EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
-
-  silent_tpcds_table_generation(10, benchmark_config);
-  auto cs_table = storage_manager.get_table("catalog_sales");
-
-  auto cs_table_wrapper = std::make_shared<TableWrapper>(cs_table);
-  cs_table_wrapper->never_clear_output();
-  cs_table_wrapper->execute();
-
-  auto sort_definitions = std::vector<SortColumnDefinition>{};
-  const auto sort_columns =
-      std::vector<std::string>{"cs_warehouse_sk", "cs_ship_mode_sk", "cs_promo_sk", "cs_quantity"};
-  for (const auto& column_name : sort_columns) {
-    sort_definitions.emplace_back(cs_table->column_id_by_name(column_name));
+    // Fill the vector with 1M values in the pattern 0, 1, 2, 3, 0, 1, 2, 3, ...
+    // The "TableScan" will scan for one value (2), so it will select 25%.
+    _vec.resize(1'000'000);
+    std::generate(_vec.begin(), _vec.end(), []() {
+      static ValueT value = 0;
+      value = (value + 1) % 4;
+      return value;
+    });
   }
 
-  auto sort_config = Sort::Config();
-  sort_config.block_size = state.range(0);
-  sort_config.min_blocks_per_stripe = 32;
-  sort_config.max_parallelism = 16;
-  sort_config.bucket_count = state.range(1);
-  sort_config.samples_per_classifier = state.range(2);
+  void TearDown(::benchmark::State& state) override {
+    MicroBenchmarkBasicFixture::TearDown(state);
+  }
+
+ protected:
+  std::vector<ValueT> _vec;
+};
+
+/**
+ * Reference implementation, growing the vector on demand
+ */
+BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::State& state) {
+  // Add some benchmark-specific setup here
 
   for (auto _ : state) {
-    auto sort = std::make_shared<Sort>(cs_table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE,
-                                       hyrise::Sort::ForceMaterialization::No, sort_config);
-    sort->execute();
+    auto result = std::vector<size_t>{};
+    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
+    const auto size = _vec.size();
+    for (auto index = size_t{0}; index < size; ++index) {
+      if (_vec[index] == 2) {
+        result.push_back(index);
+        benchmark::ClobberMemory();  // Force that record to be written to memory
+      }
+    }
   }
-
-  node_queue_scheduler->finish();
 }
 
-BENCHMARK(BM_ips4o)->ArgsProduct({{4, 32, 64, 128, 256, 512}, {16, 32, 64}, {1, 2, 4, 8}});
+/**
+ * Alternative implementation, pre-allocating the vector
+ */
+BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
+  // Add some benchmark-specific setup here
+
+  for (auto _ : state) {
+    std::vector<size_t> result;
+    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
+    // pre-allocate result vector
+    result.reserve(250'000);
+    const auto size = _vec.size();
+    for (auto index = size_t{0}; index < size; ++index) {
+      if (_vec[index] == 2) {
+        result.push_back(index);
+        benchmark::ClobberMemory();  // Force that record to be written to memory
+      }
+    }
+  }
+}
 
 }  // namespace hyrise
