@@ -257,7 +257,58 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
     const auto expected_sorted_by =
         std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}, SortColumnDefinition{ColumnID{2}}};
 
-    // We directly check for vector equality as an unordered_map is used in the projection
+    // We directly check for vector equality as an unordered_map is used in the projection.
+    for (const auto& sort_column : expected_sorted_by) {
+      const auto iter = std::find(sorted_by.begin(), sorted_by.end(), sort_column);
+      EXPECT_TRUE(iter != sorted_by.end());
+    }
+  }
+}
+
+TEST_F(OperatorsProjectionTest, ForwardSortedByFlagWithFlippedColumns) {
+  // Use table where the two columns don't have the same order when sorted.
+  table_wrapper_a =
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", ChunkOffset{2}));
+  table_wrapper_a->never_clear_output();
+  table_wrapper_a->execute();
+  table_wrapper_b =
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", ChunkOffset{2}));
+  table_wrapper_b->never_clear_output();
+  table_wrapper_b->execute();
+
+  a_a = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
+  a_b = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "b");
+
+  b_a = PQPColumnExpression::from_table(*table_wrapper_b->get_output(), "a");
+  b_b = PQPColumnExpression::from_table(*table_wrapper_b->get_output(), "b");
+
+  // Verify that the sorted_by flag is not set when it's not present in left input.
+  const auto projection_a_unsorted = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a));
+  projection_a_unsorted->execute();
+
+  const auto& result_table_unsorted = projection_a_unsorted->get_output();
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->individually_sorted_by();
+    EXPECT_TRUE(sorted_by.empty());
+  }
+
+  // Verify that the sorted_by flag is set when it's present in left input.
+  const auto sort = std::make_shared<Sort>(
+      table_wrapper_a,
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}, SortColumnDefinition{ColumnID{0}}});
+  sort->execute();
+
+  const auto projection_b_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_b, a_a));
+  projection_b_a_sorted->execute();
+
+  const auto& result_table_sorted = projection_b_a_sorted->get_output();
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
+    const auto expected_sorted_by =
+        std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}}};
+
+    // We directly check for vector equality as an unordered_map is used in the projection.
     for (const auto& sort_column : expected_sorted_by) {
       const auto iter = std::find(sorted_by.begin(), sorted_by.end(), sort_column);
       EXPECT_TRUE(iter != sorted_by.end());

@@ -28,7 +28,6 @@ class AbstractTPCCProcedure {
   // database worker's. As such, having a fixed seed for all thread-local random engines should not be an issue.
   static thread_local std::minstd_rand _random_engine;
   static thread_local TPCCRandomGenerator _tpcc_random_generator;
-
   BenchmarkSQLExecutor& _sql_executor;
 };
 

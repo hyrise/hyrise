@@ -1,6 +1,5 @@
 #include "alias_operator.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -93,21 +92,20 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       sort_definitions.reserve(input_sorted_by.size());
 
       // Adapt column ids of chunk sort definitions
-      for (auto output_column_id = ColumnID{0}; output_column_id < column_count; ++output_column_id) {
-        const auto column_id = _column_ids[output_column_id];
-        // In some edge cases, an input table might be sorted by a column that is not included in the list of columns.
-        // This can happen when an expression occurs repeatedly (e.g., `SELECT a as a1, a as a2`) and the LQP
-        // translator references the first occurrence twice (leaving the second (sorted) occurrence unreferenced, see
-        // issue #2321 for more details). We thus iterate over the output columns to (potentially) mark multiple
-        // columns that reference the same input column as sorted.
-        const auto it =
-            std::find_if(input_sorted_by.cbegin(), input_sorted_by.cend(), [&](const auto& sorted_information) {
-              return column_id == sorted_information.column;
-            });
-        if (it != input_sorted_by.cend()) {
-          sort_definitions.emplace_back(output_column_id, it->sort_mode);
+      // In some edge cases, an input table might be sorted by a column that is not included in the list of columns.
+      // This can happen when an expression occurs repeatedly (e.g., `SELECT a as a1, a as a2`) and the LQP
+      // translator references the first occurrence twice (leaving the second (sorted) occurrence unreferenced, see
+      // issue #2321 for more details). We thus iterate over the output columns to (potentially) mark multiple
+      // columns that reference the same input column as sorted.
+      // Crucially, this conserves the original sort order.
+      for (const auto& input_sort : input_sorted_by) {
+        for (auto index_in_column_ids = ColumnID{0}; index_in_column_ids < column_count; ++index_in_column_ids) {
+          if (_column_ids[index_in_column_ids] == input_sort.column) {
+            sort_definitions.emplace_back(index_in_column_ids, input_sort.sort_mode);
+          }
         }
       }
+
       Assert(input_sorted_by.size() == sort_definitions.size(),
              "Sorting information lost. Mismatch between input and output table");
 
