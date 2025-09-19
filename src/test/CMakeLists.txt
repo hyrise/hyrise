@@ -191,7 +191,7 @@ set(
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
-    lib/storage/normalization_test.hpp
+    lib/storage/encoding_test.hpp
     lib/storage/fixed_string_dictionary_segment/fixed_string_test.cpp
     lib/storage/fixed_string_dictionary_segment/fixed_string_vector_test.cpp
     lib/storage/fixed_string_dictionary_segment_test.cpp
@@ -223,7 +223,7 @@ set(
     lib/utils/check_table_equal_test.cpp
     lib/utils/pruning_utils_test.cpp
     lib/utils/date_time_utils_test.cpp
-    lib/utils/encoding_test.cpp
+    lib/utils/normalization_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
     lib/utils/list_directory_test.cpp

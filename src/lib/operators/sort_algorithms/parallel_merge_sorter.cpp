@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <utility>
+#include <utility>  // for std::move  // NOLINT(misc-include-cleaner)
 #include <vector>
 
 #include "boost/sort/pdqsort/pdqsort.hpp"
