@@ -2,13 +2,13 @@
 #include <cstring>
 
 #include "base_test.hpp"
-#include "utils/encoding.hpp"
+#include "utils/normalization.hpp"
 
 namespace hyrise {
 
-class EncodingTest : public BaseTest {};
+class NormalizationTest : public BaseTest {};
 
-TEST_F(EncodingTest, EncodeIntegerLexicographicOrder) {
+TEST_F(NormalizationTest, EncodeIntegerLexicographicOrder) {
   auto buffer1 = std::array<std::byte, 5>{};
   auto buffer2 = std::array<std::byte, 5>{};  // 4 + 1 for MSB offset
 
@@ -26,7 +26,7 @@ TEST_F(EncodingTest, EncodeIntegerLexicographicOrder) {
   EXPECT_EQ(std::memcmp(buffer1.data(), buffer2.data(), buffer1.size()), 0);
 }
 
-TEST_F(EncodingTest, EncodeDoubleLexicographicOrder) {
+TEST_F(NormalizationTest, EncodeDoubleLexicographicOrder) {
   auto buffer1 = std::array<std::byte, 9>{};
   auto buffer2 = std::array<std::byte, 9>{};
 
@@ -43,7 +43,7 @@ TEST_F(EncodingTest, EncodeDoubleLexicographicOrder) {
   EXPECT_EQ(std::memcmp(buffer1.data(), buffer2.data(), buffer1.size()), 0);
 }
 
-TEST_F(EncodingTest, EncodeFloatLexicographicOrder) {
+TEST_F(NormalizationTest, EncodeFloatLexicographicOrder) {
   auto buffer1 = std::array<std::byte, 5>{};
   auto buffer2 = std::array<std::byte, 5>{};
 
@@ -60,7 +60,7 @@ TEST_F(EncodingTest, EncodeFloatLexicographicOrder) {
   EXPECT_EQ(std::memcmp(buffer1.data(), buffer2.data(), buffer1.size()), 0);
 }
 
-TEST_F(EncodingTest, EncodeStringCorrectLengthAndPadding) {
+TEST_F(NormalizationTest, EncodeStringCorrectLengthAndPadding) {
   auto buffer = std::array<std::byte, 10>{};
   auto value = pmr_string{"abc"};
 
@@ -77,7 +77,7 @@ TEST_F(EncodingTest, EncodeStringCorrectLengthAndPadding) {
   EXPECT_EQ(static_cast<unsigned char>(buffer[9]), value.size());
 }
 
-TEST_F(EncodingTest, EncodeStringMaxLength) {
+TEST_F(NormalizationTest, EncodeStringMaxLength) {
   const auto buffer_size = size_t{8};
   auto value = pmr_string{"abcdef"};  // 6 chars
   auto buffer = std::array<std::byte, buffer_size>{};

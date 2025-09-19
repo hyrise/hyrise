@@ -191,7 +191,7 @@ set(
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
-    lib/storage/encoding_test.hpp
+    lib/storage/normalization_test.hpp
     lib/storage/fixed_string_dictionary_segment/fixed_string_test.cpp
     lib/storage/fixed_string_dictionary_segment/fixed_string_vector_test.cpp
     lib/storage/fixed_string_dictionary_segment_test.cpp
