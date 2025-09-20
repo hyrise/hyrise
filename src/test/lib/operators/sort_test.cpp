@@ -307,7 +307,7 @@ TEST_F(SortTest, Ips4oFullConfig) {
   config.samples_per_classifier = 4;
   config.min_blocks_per_stripe = 16;
 
-  const auto count = 1000000;
+  const auto count = 1'000'000;
   const auto table = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, false}},
                                              TableType::Data);
   for (auto index = int32_t{0}; index < count; ++index) {
