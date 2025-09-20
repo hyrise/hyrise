@@ -1,7 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <concepts>
+#include <functional>
+#include <memory>
 #include <ranges>
+#include <utility>
+#include <vector>
 
 #include <boost/sort/pdqsort/pdqsort.hpp>
 
@@ -53,9 +58,9 @@ class AtomicBlockIteratorPair {
   AtomicBlockIteratorPair() = default;
 
   void init(It begin, int64_t write, int64_t read, size_t block_size) {
-    DebugAssert(sizeof(size_t) <= 8, "expects at most 64bit for size types");
-    DebugAssert(write % block_size == 0, "Write pointer is not block aligned");
-    DebugAssert(read % block_size == 0, "Read pointer is not block aligned");
+    DebugAssert(sizeof(size_t) <= 8, "expects at most 64bit for size types.");
+    DebugAssert(write % block_size == 0, "Write pointer is not block aligned.");
+    DebugAssert(read % block_size == 0, "Read pointer is not block aligned.");
     _block_size = block_size;
     _begin = begin;
     _offset_pair.store(_combine(write, read), std::memory_order_relaxed);
@@ -115,7 +120,7 @@ class AtomicBlockIteratorPair {
   void complete_read() {
     const auto pending_reads = _pending_reads.fetch_sub(1, std::memory_order_relaxed);
     if constexpr (HYRISE_DEBUG) {
-      Assert(pending_reads >= 1, "Pending reads shoul be at least one");
+      Assert(pending_reads >= 1, "Pending reads shoul be at least one.");
     }
   }
 
@@ -146,14 +151,14 @@ class AtomicBlockIteratorPair {
 
 // Split the range at the specified index.
 auto split_range_n(std::ranges::range auto& range, size_t index) {
-  DebugAssert(index <= std::ranges::size(range), "Split index out of range");
+  DebugAssert(index <= std::ranges::size(range), "Split index out of range.");
   auto mid = std::next(range.begin(), index);
   return std::pair(std::ranges::subrange(range.begin(), mid), std::ranges::subrange(mid, range.end()));
 }
 
 // Removes the first index many elements.
 auto cut_range_n(std::ranges::range auto& range, size_t index) {
-  DebugAssert(index <= std::ranges::size(range), "Split index out of range");
+  DebugAssert(index <= std::ranges::size(range), "Split index out of range.");
   auto mid = std::next(range.begin(), index);
   return std::ranges::subrange(mid, range.end());
 }
@@ -179,7 +184,7 @@ std::vector<T> select_classifiers(const SortRange<T> auto& sort_range, size_t nu
   auto samples = std::vector<T>(num_samples);
   for (auto sample = size_t{0}; sample < num_samples; ++sample) {
     const auto index = (sample * elements_per_sample) + offset;
-    DebugAssert(index < size, "Index out of range");
+    DebugAssert(index < size, "Index out of range.");
     samples[sample] = *std::next(sort_range.begin(), index);
   }
   boost::sort::pdqsort(samples.begin(), samples.end(), comp);
@@ -188,7 +193,7 @@ std::vector<T> select_classifiers(const SortRange<T> auto& sort_range, size_t nu
   auto classifiers = std::vector<T>(num_classifiers);
   for (auto classifier = size_t{0}; classifier < num_classifiers; ++classifier) {
     const auto sample = (classifier * samples_per_classifier) + samples_offset;
-    DebugAssert(sample < num_samples, "Index out of range");
+    DebugAssert(sample < num_samples, "Index out of range.");
     classifiers[classifier] = samples[sample];
   }
 
@@ -203,13 +208,13 @@ template <typename T>
 StripeClassificationResult<T> classify_stripe(SortRange<T> auto& stripe_range, const SortRange<T> auto& classifiers,
                                               const size_t block_size, const std::predicate<T, T> auto& comp) {
   const auto num_buckets = std::ranges::size(classifiers) + 1;
-  DebugAssert(num_buckets > 0, "At least one bucket is required");
-  DebugAssert(block_size > 0, "Invalid bock size");
+  DebugAssert(num_buckets > 0, "At least one bucket is required.");
+  DebugAssert(block_size > 0, "Invalid block size.");
   auto result = StripeClassificationResult<T>(num_buckets, block_size);
   auto write_back_begin = std::ranges::begin(stripe_range);
   for (const auto& key : stripe_range) {
     const auto bucket_index = classify_value<T>(key, classifiers, comp);
-    DebugAssert(bucket_index < num_buckets, "Bucket index out of range");
+    DebugAssert(bucket_index < num_buckets, "Bucket index out of range.");
     result.buckets[bucket_index].push_back(key);
     ++result.bucket_sizes[bucket_index];
     if (result.buckets[bucket_index].size() == block_size) {
@@ -230,7 +235,7 @@ void write_to_ranges(std::ranges::range auto& input, std::ranges::range auto& fi
   const auto input_size = std::ranges::size(input);
   const auto first_size = std::ranges::size(first);
   DebugAssert(input_size <= first_size + std::ranges::size(second),
-              "Cannot copy more values than first and second can hold");
+              "Cannot copy more values than first and second can hold.");
 
   const auto copy_to_first = std::min(input_size, first_size);
   const auto [input_first, input_second] = split_range_n(input, copy_to_first);
@@ -238,7 +243,7 @@ void write_to_ranges(std::ranges::range auto& input, std::ranges::range auto& fi
   first = cut_range_n(first, copy_to_first);
 
   const auto copy_to_second = input_size - copy_to_first;
-  DebugAssert(std::ranges::size(input_second) == copy_to_second, "Unexpected second input size");
+  DebugAssert(std::ranges::size(input_second) == copy_to_second, "Unexpected second input size.");
   if (copy_to_second > 0) {
     std::ranges::copy(input_second, second.begin());
     second = cut_range_n(second, copy_to_second);
@@ -359,7 +364,7 @@ void prepare_block_permutations(SortRange<T> auto& sort_range, size_t stripe_ind
   // Calculate the number of blocks which must be filled by this stripe.
   const auto written_end = static_cast<int64_t>(stripe_begin_index + (stripe_result->num_blocks_written * block_size));
   const auto empty_begin = std::max(written_end, last_bucket_begin);
-  DebugAssert(empty_begin <= stripe_end_index, "Empty region ends after");
+  DebugAssert(empty_begin <= stripe_end_index, "Empty region ends after.");
   const auto num_empty_blocks = static_cast<int64_t>((stripe_end_index - empty_begin) / block_size);
 
   auto move_num_blocks = num_empty_blocks;
@@ -375,7 +380,7 @@ void prepare_block_permutations(SortRange<T> auto& sort_range, size_t stripe_ind
   if (last_stripe == stripe_ranges.end()) {
     last_stripe = --stripe_ranges.end();
   }
-  DebugAssert(last_stripe != stripe_ranges.end(), "Bucket should end in last stripe");
+  DebugAssert(last_stripe != stripe_ranges.end(), "Bucket should end in last stripe.");
   const auto last_stripe_index = std::distance(stripe_ranges.begin(), last_stripe);
   auto last_stripe_result = std::next(stripe_results.begin(), last_stripe_index);
 
@@ -383,7 +388,7 @@ void prepare_block_permutations(SortRange<T> auto& sort_range, size_t stripe_ind
   // blocks from the end into the empty blocks, because they are already processed by previous stripes.
   for (; last_stripe != stripe_range_iter && move_num_blocks > 0; --last_stripe, --last_stripe_result) {
     const auto begin_index = std::distance(sort_range.begin(), last_stripe->begin());
-    DebugAssert(begin_index % block_size == 0, "Wrong alignment");
+    DebugAssert(begin_index % block_size == 0, "Wrong alignment.");
     const auto stripe_end_index = static_cast<int64_t>(std::distance(sort_range.begin(), last_stripe->end()));
     const auto end_index = std::min(last_bucket_end, stripe_end_index);
     const auto bucket_num_blocks = (end_index - begin_index) / block_size;
@@ -429,9 +434,9 @@ template <typename T>
 std::vector<size_t> ips4o_pass(SortRange<T> auto& sort_range, const size_t num_buckets,
                                const size_t samples_per_classifier, const size_t block_size, size_t num_stripes,
                                const std::predicate<const T&, const T&> auto& comp) {
-  Assert(num_buckets > 1, "At least two buckets are required");
-  Assert(num_stripes > 1, "This function should be called with at least two 2 stripes. Use pdqsort instead");
-  Assert(std::ranges::size(sort_range) >= block_size, "Provide at least one block");
+  Assert(num_buckets > 1, "At least two buckets are required.");
+  Assert(num_stripes > 1, "This function should be called with at least two 2 stripes. Use pdqsort instead.");
+  Assert(std::ranges::size(sort_range) >= block_size, "Provide at least one block.");
 
   using RangeIterator = decltype(std::ranges::begin(sort_range));
 
@@ -530,19 +535,19 @@ std::vector<size_t> ips4o_pass(SortRange<T> auto& sort_range, const size_t num_b
   auto bucket_begin = sort_range.begin();
   for (auto bucket = size_t{0}, stripe = size_t{0}; bucket < num_buckets; ++bucket) {
     const auto delimiter_begin = std::distance(sort_range.begin(), bucket_begin);
-    DebugAssert(delimiter_begin % block_size == 0, "Delimiter is misaligned");
+    DebugAssert(delimiter_begin % block_size == 0, "Delimiter is misaligned.");
     const auto delimiter_end = static_cast<int64_t>(aligned_bucket_sizes[bucket]);
-    DebugAssert(delimiter_end % block_size == 0, "Delimiter is misaligned");
+    DebugAssert(delimiter_end % block_size == 0, "Delimiter is misaligned.");
 
     // Sum the number of blocks written to this bucket.
     auto num_blocks = int64_t{0};
     while (stripe < num_stripes) {
       const auto stripe_begin = std::distance(sort_range.begin(), stripes[stripe].begin());
-      DebugAssert(stripe_begin % block_size == 0, "Stripe begin is misaligned");
+      DebugAssert(stripe_begin % block_size == 0, "Stripe begin is misaligned.");
       const auto stripe_end = std::distance(sort_range.begin(), stripes[stripe].end());
       const auto stripe_written_end =
           static_cast<int64_t>(stripe_begin + (block_size * classification_results[stripe].num_blocks_written));
-      DebugAssert(stripe_written_end % block_size == 0, "Stripe end is misaligned");
+      DebugAssert(stripe_written_end % block_size == 0, "Stripe end is misaligned.");
 
       const auto written_begin = std::max(stripe_begin, delimiter_begin);
       // The delimiter may start after the last block is written. To avoid negative values we set the minimal value to
@@ -551,7 +556,7 @@ std::vector<size_t> ips4o_pass(SortRange<T> auto& sort_range, const size_t num_b
           std::max(std::min(stripe_written_end, delimiter_end), static_cast<int64_t>(delimiter_begin));
 
       const auto num_written = (written_end - written_begin);
-      DebugAssert(num_written % block_size == 0, "Fence");
+      DebugAssert(num_written % block_size == 0, "Number of written elements should align with the block size.");
       num_blocks += num_written / block_size;
 
       if (delimiter_end <= stripe_end) {
@@ -583,7 +588,7 @@ std::vector<size_t> ips4o_pass(SortRange<T> auto& sort_range, const size_t num_b
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(permute_blocks_tasks);
 
   // Until this point all buckets are aligned to the block_size and there still some classified elements in the stripe
-  // local buffer left. Because of that, we know move elements overflowing the bucket to the start of that bucket and
+  // local buffer left. Because of that, we now move elements overflowing the bucket to the start of that bucket and
   // copy the values from the stripe classification result to empty elements at the buffer begin/end.
 
   // Create a range of empty elements at the start of each bucket. This cannot be done in parallel.
@@ -591,7 +596,7 @@ std::vector<size_t> ips4o_pass(SortRange<T> auto& sort_range, const size_t num_b
   for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
     const auto bucket_start_index = (bucket == 0) ? 0 : aggregated_bucket_sizes[bucket - 1];
     const auto bucket_block_start = (bucket == 0) ? 0 : aligned_bucket_sizes[bucket - 1];
-    DebugAssert(bucket_block_start - bucket_start_index <= std::ranges::size(sort_range), "Size overflow");
+    DebugAssert(bucket_block_start - bucket_start_index <= std::ranges::size(sort_range), "Size overflow.");
 
     auto bucket_start_begin = std::next(sort_range.begin(), bucket_start_index);
     const auto bucket_start_end = std::next(sort_range.begin(), bucket_block_start);
@@ -614,15 +619,15 @@ std::vector<size_t> ips4o_pass(SortRange<T> auto& sort_range, const size_t num_b
       // Last bucket is empty.
       bucket_empty_tail[bucket] = std::ranges::subrange(bucket_written_end, bucket_written_end);
     } else if (bucket_written_end_index > bucket_end_index) {
-      DebugAssert(bucket + 1 != num_buckets, "This case should not happen for the last bucket");
+      DebugAssert(bucket + 1 != num_buckets, "This case should not happen for the last bucket.");
       // Bucket overflows actual size. Because of that we move the overflowing elements to the start of that bucket.
       DebugAssert(bucket_written_end_index <= static_cast<int64_t>(aligned_bucket_sizes[bucket]),
-                  "More blocks written than bucket should contains");
+                  "More blocks written than bucket should contains.");
       DebugAssert(bucket_written_end_index - bucket_end_index <= std::ranges::ssize(bucket_empty_start[bucket]),
-                  "Unexpected number of bucket elements");
+                  "Unexpected number of bucket elements.");
       const auto overflow_begin = std::next(sort_range.begin(), bucket_end_index);
       const auto overflow_end = std::next(sort_range.begin(), bucket_written_end_index);
-      DebugAssert(bucket_written_end_index <= static_cast<int64_t>(total_size), "Overflow stripe size");
+      DebugAssert(bucket_written_end_index <= static_cast<int64_t>(total_size), "Overflow stripe size.");
       std::move(overflow_begin, overflow_end, bucket_empty_start[bucket].begin());
       bucket_empty_start[bucket] = cut_range_n(bucket_empty_start[bucket], bucket_written_end_index - bucket_end_index);
       bucket_empty_tail[bucket] = std::ranges::subrange(bucket_written_end, bucket_written_end);
@@ -649,9 +654,9 @@ std::vector<size_t> ips4o_pass(SortRange<T> auto& sort_range, const size_t num_b
   if constexpr (HYRISE_DEBUG) {
     for (auto bucket = size_t{0}; bucket < num_buckets; ++bucket) {
       DebugAssert(std::ranges::empty(bucket_empty_start[bucket]),
-                  std::format("Bucket {} is not fully filled (start)", bucket));
+                  std::format("Bucket {} is not fully filled (start).", bucket));
       DebugAssert(std::ranges::empty(bucket_empty_tail[bucket]),
-                  std::format("Bucket {} is not fully filled (tail)", bucket));
+                  std::format("Bucket {} is not fully filled (tail).", bucket));
     }
   }
 
@@ -707,7 +712,7 @@ template <typename T>
 void sort(SortRange<T> auto range, std::predicate<const T&, const T&> auto comparator, size_t max_parallelism,
           size_t min_blocks_per_stripe, size_t num_classifiers = 31, size_t samples_per_classifier = 16,
           size_t block_size = 128) {
-  Assert(num_classifiers > 0, "At least one classifier is required");
+  Assert(num_classifiers > 0, "At least one classifier is required.");
   using RangeIterator = decltype(std::ranges::begin(range));
 
   const auto total_size = std::ranges::size(range);
@@ -751,7 +756,8 @@ void sort(SortRange<T> auto range, std::predicate<const T&, const T&> auto compa
     for (auto bucket = size_t{0}; bucket < large_buckets.size(); ++bucket) {
       round_tasks.emplace_back(std::make_shared<JobTask>([&, bucket]() {
         const auto large_range = large_buckets[bucket];
-        DebugAssert(std::ranges::size(large_range) >= small_bucket_max_size, "Large bucket");
+        DebugAssert(std::ranges::size(large_range) >= small_bucket_max_size,
+                    "Found small bucket in large bucket range.");
 
         const auto delimiter =
             ips4o_pass<T>(large_range, bucket_count, samples_per_classifier, block_size, num_stripes, comparator);

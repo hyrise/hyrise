@@ -1,7 +1,6 @@
 #include "sort.hpp"
 
 #include <algorithm>
-#include <atomic>
 #include <bit>
 #include <chrono>
 #include <cstddef>
@@ -12,7 +11,6 @@
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <numeric>
 #include <ranges>
 #include <string>
@@ -22,9 +20,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/accumulators/statistics_fwd.hpp>
-#include <boost/algorithm/cxx11/iota.hpp>
-#include <boost/range/numeric.hpp>
 #include <boost/sort/pdqsort/pdqsort.hpp>
 
 #include "all_type_variant.hpp"
@@ -54,6 +49,7 @@ namespace {
 
 using namespace hyrise;  // NOLINT
 
+// The number of bytes after that long strings are shortened.
 constexpr size_t STRING_CUTOFF = 64;
 
 /**
@@ -91,7 +87,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   // column by column for each output row.
 
   const auto output_chunk_count = div_ceil(pos_list.size(), output_chunk_size);
-  Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
+  Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList.");
 
   // Materialize column by column, starting a new ValueSegment whenever output_chunk_size is reached
   const auto input_chunk_count = unsorted_table->chunk_count();
@@ -114,9 +110,9 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
           std::make_shared<std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>>(input_chunk_count);
       for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
         const auto& abstract_segment = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
-        DebugAssert(abstract_segment, "Segment should exist");
+        DebugAssert(abstract_segment, "Segment should exist.");
         (*accessor_by_chunk_id)[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
-        DebugAssert((*accessor_by_chunk_id)[input_chunk_id], "Accessor must be initialized");
+        DebugAssert((*accessor_by_chunk_id)[input_chunk_id], "Accessor must be initialized.");
       }
 
       for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
@@ -138,7 +134,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
           const auto pos_list_begin = pos_list.begin() + output_segment_begin;
           const auto pos_list_end = pos_list.begin() + output_segment_end;
           for (const auto [input_chunk_id, input_chunk_offset] : std::ranges::subrange(pos_list_begin, pos_list_end)) {
-            DebugAssert((*accessor_by_chunk_id)[input_chunk_id], "ChunkID must be valid");
+            DebugAssert((*accessor_by_chunk_id)[input_chunk_id], "ChunkID must be valid.");
             auto value = (*accessor_by_chunk_id)[input_chunk_id]->access(input_chunk_offset);
             value_segment_null_values.push_back(!value);
             value_segment_values.push_back((value) ? *value : ColumnDataType{});
@@ -184,7 +180,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   const auto column_count = output_table->column_count();
 
   const auto output_chunk_count = div_ceil(input_pos_list.size(), output_chunk_size);
-  Assert(input_pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
+  Assert(input_pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList.");
 
   // Vector of segments for each chunk
   auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(column_count));
@@ -204,7 +200,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       const auto chunk = unsorted_table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         input_segments[column_id][chunk_id] = chunk->get_segment(column_id);
-        DebugAssert(input_segments[column_id][chunk_id], "Expected valid segment");
+        DebugAssert(input_segments[column_id][chunk_id], "Expected valid segment.");
       }
     }
     // To keep the implementation simple, we write the output ReferenceSegments in column and chunk pairs. This means
@@ -239,9 +235,9 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
               const auto& input_reference_segment =
                   static_cast<ReferenceSegment&>(*input_segments[column_id][row_id.chunk_id]);
               DebugAssert(input_reference_segment.referenced_table() == referenced_table,
-                          "Input column references more than one table");
+                          "Input column references more than one table.");
               DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
-                          "Input column references more than one column");
+                          "Input column references more than one column.");
               const auto& input_reference_pos_list = input_reference_segment.pos_list();
               output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
             } else {
@@ -270,11 +266,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 template <typename T>
 class UVector {
  public:
-  explicit UVector(const size_t size)
-      : _allocator(),
-        _ptr(_allocator.allocate(size)),  // NOLINT
-        _size(size) {
-    Assert(_ptr, "Failed to allocate array");
+  explicit UVector(const size_t size) : _allocator(), _ptr(_allocator.allocate(size)), _size(size) {
+    Assert(_ptr, "Failed to allocate array.");
   }
 
   UVector(const UVector& other) = delete;
@@ -300,10 +293,16 @@ class UVector {
 
  private:
   std::allocator<T> _allocator;
-  T* _ptr;  // NOLINT
+  T* _ptr;
   size_t _size;
 };
 
+/**
+ * Implementation of DuckDB's static memcmp. This optimizes calls to memcmp by passing a compile-time known length. If
+ * optimized correctly the compiler would resolve the implementation to a switch like statement.
+ *
+ * `start` and `end` define the range of compile-time known lengthes.
+ */
 template <size_t start, size_t end>
 int static_memcmp(std::byte* left, std::byte* right, size_t len) {
   if (len == start) {
@@ -328,8 +327,8 @@ struct NormalizedKeyRow {
     if (expected_size == 0) {
       return false;
     }
-    DebugAssert(key_head, "NormalizedKey is not valid");
-    DebugAssert(other.key_head, "NormalizedKey is not valid");
+    DebugAssert(key_head, "NormalizedKey is not valid.");
+    DebugAssert(other.key_head, "NormalizedKey is not valid.");
     return static_memcmp<1, 32>(key_head, other.key_head, expected_size) < 0;
   }
 };
@@ -403,7 +402,7 @@ ScanResult scan_column(const AbstractSegment& segment) {
         const auto& value = segment_position.value();
         if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
           using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{}));
-          static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned");
+          static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned.");
           // We often encounter small number, but we still 32-bit numbers while 8 or 16 bit would be sufficient.
           // Because of that we want to reduce the bit-width of our integer numbers to the bare minimum. The idea
           // is to drop all leading 0 for positive integers and all 1 leading 1 for negative numbers. We only keep
@@ -468,7 +467,7 @@ using NormalizedKeyIter = NormalizedKeyRow*;
 // @param offset               Offset to the start of the normalized key row's byte array.
 // @param expected_width       The number of bytes all values must be encoded to.
 // @param ascending            Sort normalized keys in ascending order.
-// @param nullable             Put exrta byte in front to encode null values.
+// @param nullable             Put extra byte in front to encode null values.
 // @param nulls_first          Put null values to the start of the normalized key order else to the back.
 // @param normalized_key_iter  Iterator to the normalized keys.
 template <typename ColumnDataType>
@@ -480,11 +479,11 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
   const auto full_modifier = (ascending) ? uint64_t{0x00} : std::numeric_limits<uint64_t>::max();
   const auto normalized_null_value = ((nulls_first) ? std::byte{0x00} : std::byte{0xFF});
   const auto normalized_non_null_value = ((nulls_first) ? std::byte{0xFF} : std::byte{0x00});
-  segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto end) {
+  segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto& end) {
     while (it != end) {
       const auto segment_position = *it;
       DebugAssert(column_info.nullable || !segment_position.is_null(),
-                  "Segment must be nullable or contains no null values");
+                  "Segment must be nullable or contains no null values.");
       auto* normalized_key_start = normalized_key_iter->key_head + offset;
 
       // Encode the null byte for nullable segments. This byte is used to order null vs. non-null values (e.g.
@@ -496,7 +495,7 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
           *(normalized_key_start++) = std::byte{0};
         }
         DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + column_info.width(),
-                    "Encoded unexpected number of bytes");
+                    "Encoded unexpected number of bytes.");
         ++it, ++normalized_key_iter;
         continue;
       }
@@ -508,6 +507,28 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
 
       // Normalize value and encode to byte array.
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        // String values are encoded by copying all bytes of the string to the normalized key and filling the remaing
+        // bytes with zero values. Because we want to avoid padding for very long strings, we cut of the long string
+        // and replace their tail with a offset into an presorted array. In addition, we also need to account for
+        // null bytes in strings. Therefore, the length of the strings is appended in the end. The resulting
+        // representation looks as follows:
+        //
+        // String representation: of "Hello, World!" and the longest string has 16 bytes.
+        //
+        // | Encoded String                                  | Long String Offset | Length |
+        // | 48 65 6c 6c 6f 2c 20 57 6f 72 6c 6f 21 00 00 00 | 00                 | 0d     |
+        //
+        // Now lets assume the long string cut-off is after 8 bytes and "Hello, World!" is the first of all long
+        // strings:
+        //
+        // | Encoded String          | Long String Offset | Length |
+        // | 48 65 6c 6c 6f 2c 20 57 | 01                 | 08     |
+        //
+        // We can see two things:
+        //
+        // - The long string offset is indexed with 1, because 0 reserved for all shorter strings, and
+        // - the length is capped to the encoded string length
+
         for (const auto chr : value | std::views::take(column_info.encoding_width)) {
           *(normalized_key_start++) = static_cast<std::byte>(chr) ^ modifier;
         }
@@ -523,22 +544,22 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
             copy_uint_to_byte_array(normalized_key_start, uint64_t{0}, column_info.long_width);
           } else {
             const auto iter = std::ranges::lower_bound(column_info.long_strings, value);  // NOLINT
-            DebugAssert(iter != column_info.long_strings.end(), "Could not find strings");
+            DebugAssert(iter != column_info.long_strings.end(), "Could not find strings.");
             const auto index = std::distance(column_info.long_strings.begin(), iter);
-            DebugAssert(index >= 0, "Invalid element");
+            DebugAssert(index >= 0, "Invalid element.");
             copy_uint_to_byte_array(normalized_key_start, static_cast<uint64_t>(index + 1), column_info.long_width);
           }
           normalized_key_start += column_info.long_width;
         } else {
-          DebugAssert(value.size() <= STRING_CUTOFF, "String must be smaller than the cut off size");
+          DebugAssert(value.size() <= STRING_CUTOFF, "String must be smaller than the cut off size.");
         }
 
-        DebugAssert(column_info.extra_width > 0, "Missing extra width");
+        DebugAssert(column_info.extra_width > 0, "Missing extra width.");
         copy_uint_to_byte_array(normalized_key_start, std::min(value.size(), STRING_CUTOFF), column_info.extra_width);
         normalized_key_start += column_info.extra_width;
       } else if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
         using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{}));
-        static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned");
+        static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned.");
 
         // Encode numeric values to a byte array, because we want to compare these values we need to ensure that
         // the order is consistent after the conversion. Because of that, we will set the null value to half of the
@@ -560,7 +581,7 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         normalized_key_start += column_info.encoding_width;
       } else if constexpr (std::is_same_v<ColumnDataType, float> || std::is_same_v<ColumnDataType, double>) {
         using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{value}));
-        static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned");
+        static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned.");
 
         auto unsigned_value = to_unsigned<ColumnDataType>(ColumnDataType{value});
         if (value < 0) {
@@ -574,12 +595,10 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         memcpy(normalized_key_start, &unsigned_value, sizeof(UnsignedColumnDataType));
         normalized_key_start += sizeof(UnsignedColumnDataType);
       } else {
-        Fail(std::format("Cannot encode values of type '{}'", typeid(ColumnDataType).name()));
+        Fail(std::format("Cannot encode values of type '{}'.", typeid(ColumnDataType).name()));
       }
-      if constexpr (HYRISE_DEBUG) {
-        DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + column_info.width(),
-                    "Encoded unexpected number of bytes");
-      }
+      DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + column_info.width(),
+                  "Encoded unexpected number of bytes.");
       ++it, ++normalized_key_iter;
     }
   });
@@ -597,7 +616,7 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
       _output_chunk_size(output_chunk_size),
       _force_materialization(force_materialization),
       _config(config) {
-  DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
+  DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion.");
 }
 
 const std ::vector<SortColumnDefinition>& Sort::sort_definitions() const {
@@ -626,7 +645,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (const auto& column_sort_definition : _sort_definitions) {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
-           "Sort: Column ID is greater than table's column count");
+           "Sort: Column ID is greater than table's column count.");
   }
 
   if (input_table->row_count() == 0) {
@@ -701,7 +720,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                                             ScanResult{}, [](ScanResult result, ScanResult& chunk) {
                                               return result.merge(chunk);
                                             });
-    Assert(aggregated_stats.width() > 0, std::format("Invalid width for column {}", static_cast<uint16_t>(column_id)));
+    Assert(aggregated_stats.width() > 0, std::format("Invalid width for column {}.", static_cast<uint16_t>(column_id)));
     normalized_key_size += aggregated_stats.width();
     column_stats[column_index] = std::move(aggregated_stats);
   }
@@ -766,7 +785,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         const auto ascending = sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::AscendingNullsLast;
         const auto nulls_first =
             sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
-        DebugAssert(index < column_materializer.size(), "Search column out of bounds");
+        DebugAssert(index < column_materializer.size(), "Search column out of bounds.");
         auto materializer = column_materializer[index];
         materializer(*segment, key_offset, ascending, column_stats[index], nulls_first, normalized_key_iter);
         key_offset += column_stats[index].width();
