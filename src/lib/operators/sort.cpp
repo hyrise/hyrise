@@ -109,7 +109,9 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       auto accessor_by_chunk_id =
           std::make_shared<std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>>(input_chunk_count);
       for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-        const auto& abstract_segment = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
+        const auto chunk = unsorted_table->get_chunk(input_chunk_id);
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk #1686.");
+        const auto abstract_segment = chunk->get_segment(column_id);
         DebugAssert(abstract_segment, "Segment should exist.");
         (*accessor_by_chunk_id)[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
         DebugAssert((*accessor_by_chunk_id)[input_chunk_id], "Accessor must be initialized.");
