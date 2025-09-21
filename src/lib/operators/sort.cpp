@@ -444,12 +444,12 @@ using NormalizedKeyIter = NormalizedKeyRow*;
 // @param offset               Offset into the normalized key. This depends on the order of columns.
 // @param expected_width       The length of a normalized key in bytes.
 // @param ascending            Sort normalized keys in ascending order.
-// @param nullable             Put extra byte in front to encode null values.
+// @param column_info          Information gather while scanning the input table.
 // @param nulls_first          Put null values to the start of the normalized key order else to the back.
 // @param normalized_key_iter  Iterator to the normalized keys.
 template <typename ColumnDataType>
 void materialize_segment_as_normalized_keys(const AbstractSegment& segment, const size_t offset, const bool ascending,
-                                            const ScanResult column_info, const bool nulls_first,
+                                            const ScanResult& column_info, const bool nulls_first,
                                             NormalizedKeyIter normalized_key_iter) {
   // Normalized keys are ordered in ascendingly by default. The modifier is applied to invert this order.
   const auto order_modifier = (ascending) ? std::byte{0x00} : std::byte{0xFF};
@@ -470,7 +470,8 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         *(normalized_key_start++) = normalized_null_value;
         // Initialize actual key by setting all bytes to 0.
         for (auto counter = size_t{0}; counter < column_info.width() - 1; ++counter) {
-          *(normalized_key_start++) = std::byte{0};
+          *normalized_key_start = std::byte{0};
+          ++normalized_key_start;
         }
         DebugAssert(normalized_key_start == normalized_key_iter->key_head + offset + column_info.width(),
                     "Encoded unexpected number of bytes.");
@@ -478,7 +479,8 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         continue;
       }
       if (column_info.nullable) {
-        *(normalized_key_start++) = normalized_non_null_value;
+        *normalized_key_start = normalized_non_null_value;
+        ++normalized_key_start;
       }
 
       const auto& value = segment_position.value();
@@ -508,20 +510,23 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         // - the length is capped to the encoded string length
 
         for (const auto chr : value | std::views::take(column_info.encoding_width)) {
-          *(normalized_key_start++) = static_cast<std::byte>(chr) ^ order_modifier;
+          *normalized_key_start = static_cast<std::byte>(chr) ^ order_modifier;
+          ++normalized_key_start;
         }
 
         // Add null bytes to pad values to correct size. (All keys must have the same size)
         for (auto counter = segment_position.value().size(); counter < column_info.encoding_width; ++counter) {
-          *(normalized_key_start++) = std::byte{0} ^ order_modifier;
+          *normalized_key_start = std::byte{0} ^ order_modifier;
+          ++normalized_key_start;
         }
 
-        // Encode an identifier for long strings. Use 0 if string is small.
+        // If long strings are present, put an offset into the long strings array after the encoded string. This offset
+        // will start with one, because the zero-offset is reserved for short strings.
         if (!column_info.long_strings.empty()) {
           if (value.size() < STRING_CUTOFF) {
             copy_uint_to_byte_array(normalized_key_start, uint64_t{0}, column_info.long_width);
           } else {
-            const auto iter = std::ranges::lower_bound(column_info.long_strings, value);  // NOLINT
+            const auto iter = std::ranges::lower_bound(column_info.long_strings, value);
             DebugAssert(iter != column_info.long_strings.end(), "Could not find strings.");
             const auto index = std::distance(column_info.long_strings.begin(), iter);
             DebugAssert(index >= 0, "Invalid element.");
