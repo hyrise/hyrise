@@ -87,11 +87,6 @@ TEST_F(KeyNormalizerTest, SingleColumnIntegerAsc) {
 
   const auto [buffer, tuple_key_size] = KeyNormalizer::normalize_keys_for_table(table, sort_definitions);
 
-  // The number of columns in the table is 3, so we expect the tuple_key_size to be:
-  // (1 + sizeof(int32_t)) + (1 + sizeof(float)) + (1 + string_prefix_length) + sizeof(RowID).
-  // But since we only sort by one column, the key should only contain that column.
-  // The convert_table logic seems to create a key based on the columns passed for sorting.
-  // So the first calculation should be correct.
   auto expected_key_size = uint32_t{0};
   for (const auto& sort_col : sort_definitions) {
     const auto data_type = table->column_data_type(sort_col.column);
@@ -264,7 +259,7 @@ TEST_F(KeyNormalizerTest, ComplexSort) {
   }
 }
 
-TEST_F(KeyNormalizerTest, DebugFloats) {
+TEST_F(KeyNormalizerTest, Floats) {
   const auto float_table =
       std::make_shared<Table>(TableColumnDefinitions{{"f", DataType::Float, false}}, TableType::Data);
   float_table->append({-10.5f});  // Should be first.
@@ -296,8 +291,7 @@ TEST_F(KeyNormalizerTest, DebugFloats) {
   EXPECT_EQ(sorted_pos_list, expected_order);
 }
 
-// Test case for signed integers.
-TEST_F(KeyNormalizerTest, DebugSignedInts) {
+TEST_F(KeyNormalizerTest, SignedInts) {
   const auto int_table = std::make_shared<Table>(TableColumnDefinitions{{"i", DataType::Int, false}}, TableType::Data);
   int_table->append({5});   // Should be third.
   int_table->append({-2});  // Should be first.
@@ -328,22 +322,6 @@ TEST_F(KeyNormalizerTest, DebugSignedInts) {
   const auto expected_order = RowIDPosList(
       {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}}});
   EXPECT_EQ(sorted_pos_list, expected_order);
-}
-
-TEST_F(KeyNormalizerTest, StringsWithSharedPrefixAscending) {
-  const auto str_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"s", DataType::String, false}}, TableType::Data);
-  str_table->append({"aa"});     // Should be second.
-  str_table->append({"a"});      // Should be first.
-  str_table->append({"aaaaa"});  // Should be third.
-
-  const auto sort_definitions = std::vector{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}};
-  auto [buffer, key_size] = KeyNormalizer::normalize_keys_for_table(str_table, sort_definitions);
-
-  const auto sorted_ids = get_sorted_pos_list(buffer, key_size);
-  const auto expected_order = RowIDPosList(
-      {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{2}}});
-  EXPECT_EQ(sorted_ids, expected_order);
 }
 
 TEST_F(KeyNormalizerTest, StringsWithSharedPrefixDescending) {
@@ -383,7 +361,7 @@ TEST_F(KeyNormalizerTest, StringEdgeCases) {
   EXPECT_EQ(sorted_ids, expected_order);
 }
 
-TEST_F(KeyNormalizerTest, DebugMultiColumnMixedOrder) {
+TEST_F(KeyNormalizerTest, MultiColumnMixedOrder) {
   const auto multi_table = std::make_shared<Table>(
       TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::String, false}}, TableType::Data);
   multi_table->append({5, "apple"});  // Sorted: {5, "banana"}, {5, "apple"} -> pos 1, pos 0

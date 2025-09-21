@@ -275,28 +275,29 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       }
     }
 
-    // Forward sorted_by flags, mapping column ids
+    // Forward `sorted_by` flags from input to output chunks, adapting them for the projection's column mapping
+    // (which can reorder, duplicate, or discard columns).
     const auto& sorted_by = input_chunk->individually_sorted_by();
-    if (!sorted_by.empty()) {
+
+    // Only forward sort information if the input is sorted AND if any of the columns involved in the sort are
+    // actually being forwarded. If not, the output is not sorted in any meaningful way.
+    if (!sorted_by.empty() && !input_column_to_output_column.empty()) {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
 
-      // We need to iterate both sorted information and the output/input mapping as multiple output columns might
-      // originate from the same sorted input column. Also, it's important that we preserve the actual sort order from
-      // the sort operator here. In the previous implementation, the order of the sorted columns in transformed was
-      // entirely dependent on the (undefined) order within the std::unordered_map for input_column_to_output_column.
-      for (const auto sort : sorted_by) {
-        const auto bucket_index = input_column_to_output_column.bucket(sort.column);
-        auto begin = input_column_to_output_column.begin(bucket_index);
-        const auto end = input_column_to_output_column.end(bucket_index);
-
-        for (; begin != end; ++begin) {
-          const auto [original_column_index, projected_column_index] = *begin;
-          transformed.emplace_back(projected_column_index, sort.sort_mode);
+      for (const auto& sort_info : sorted_by) {
+        const auto range = input_column_to_output_column.equal_range(sort_info.column);
+        for (auto it = range.first; it != range.second; ++it) {
+          const auto& output_column_id = it->second;
+          transformed.emplace_back(output_column_id, sort_info.sort_mode);
         }
       }
 
       if (!transformed.empty()) {
+        // Sort by column ID to have a defined order for the `sorted_by` property.
+        std::ranges::sort(transformed, [](const auto& a, const auto& b) {
+          return a.column < b.column;
+        });
         chunk->set_individually_sorted_by(transformed);
       }
     }
