@@ -69,11 +69,6 @@ auto div_ceil(const auto left, const auto right) {
   return (left + right - 1) / right;
 }
 
-// Returns the next multiple. If value is already a multiple, then return value.
-auto next_multiple(const auto value, const auto multiple) {
-  return div_ceil(value, multiple) * multiple;
-}
-
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<const Table>& unsorted_table,
