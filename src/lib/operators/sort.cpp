@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <cstring>
 #include <format>
-#include <functional>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -21,6 +20,8 @@
 #include <vector>
 
 #include <boost/sort/pdqsort/pdqsort.hpp>
+
+#include "uninitialized_vector.hpp"
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -258,42 +259,6 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   return output_table;
 }
 
-// Allocate a large chunk of uninitialized memory. This class is faster than C++ std::vector with resize, as it does
-/// not initialize each entry.
-template <typename T>
-class UVector {
- public:
-  explicit UVector(const size_t size) : _allocator(), _ptr(_allocator.allocate(size)), _size(size) {
-    Assert(_ptr, "Failed to allocate array.");
-  }
-
-  UVector(const UVector& other) = delete;
-  UVector(UVector&& other) = delete;
-  UVector& operator=(const UVector&) = delete;
-  UVector& operator=(UVector&&) = delete;
-
-  ~UVector() {
-    _allocator.deallocate(_ptr, _size);
-  }
-
-  T* begin() {
-    return _ptr;
-  }
-
-  T* end() {
-    return _ptr + _size;
-  }
-
-  size_t size() const {
-    return _size;
-  }
-
- private:
-  std::allocator<T> _allocator;
-  T* _ptr;
-  size_t _size;
-};
-
 /**
  * Implementation of DuckDB's static memcmp. This optimizes calls to memcmp by passing a compile-time known length. If
  * optimized correctly the compiler would resolve the implementation to a switch like statement.
@@ -337,26 +302,36 @@ auto to_unsigned(T value) {
     return std::bit_cast<uint32_t>(value);
   } else if constexpr (std::is_same_v<decltype(value), int64_t> || std::is_same_v<decltype(value), double>) {
     return std::bit_cast<uint64_t>(value);
+  } else {
+    static_assert(false, "Unsupported data type");
   }
 }
 
+/**
+ * Stores the result of scanning all values of a segment. For integer and floats this only contains the encoding_width,
+ * while string also contains information about the number of bytes required to encode the long index and the length of
+ * the string.
+ *
+ * After scanning all segment's results of a column will be merged into a single result.
+ */
 struct ScanResult {
-  // Maximum number of bytes required to encode all values.
+  // Maximum number of bytes required to encode a value.
   size_t encoding_width = 0;
   // Number of extra bytes required to encode the length of an string.
-  size_t extra_width = 0;
-  // Extra bytes required to encode long strings.
+  size_t string_len_extra_width = 0;
+  // Extra bytes required to encode the index into the long string array.
   size_t long_width = 0;
-  // Contains a null value.
+  // The segment/column contains a null value.
   bool nullable = false;
-  // List of long sorted strings.
+  // List of long strings. They will be sorted after merging all segments of a column.
   std::vector<pmr_string> long_strings;
 
   // Returns number of bytes required to encode all scanned values. Includes the extra byte for null values.
   size_t width() const {
-    return encoding_width + ((long_strings.empty()) ? 0 : long_width) + extra_width + ((nullable) ? 1 : 0);
+    return encoding_width + ((long_strings.empty()) ? 0 : long_width) + string_len_extra_width + ((nullable) ? 1 : 0);
   }
 
+  // Merge the results of two segments in place.
   ScanResult merge(ScanResult& other) {
     const auto old_size = long_strings.size();
     long_strings.resize(old_size + other.long_strings.size());
@@ -369,7 +344,7 @@ struct ScanResult {
     const auto long_width = sizeof(uint64_t) - (std::countl_zero(long_strings.size() + 1) / size_t{8});
     return {
         .encoding_width = encoded_width,
-        .extra_width = std::max(extra_width, other.extra_width),
+        .string_len_extra_width = std::max(string_len_extra_width, other.string_len_extra_width),
         .long_width = long_width,
         .nullable = nullable || other.nullable,
         .long_strings = std::move(long_strings),
@@ -377,20 +352,26 @@ struct ScanResult {
   }
 };
 
-/// Scans column for maximum bytes necessary to encode all segment values and null values.
+/**
+ * Gather information about the values stored inside each column. This includes the number of bytes required to encode
+ * the normalized keys and lists of long strings.
+ */
 template <typename ColumnDataType>
 ScanResult scan_column(const AbstractSegment& segment) {
   auto result = ScanResult();
   segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto end) {
-    while (it != end) {
+    for (; it != end; ++it) {
       const auto& segment_position = *it;
       if (segment_position.is_null()) {
         result.nullable = true;
-      } else if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        continue;
+      }
+
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         const auto& value = segment_position.value();
         const auto size = std::min(value.size(), STRING_CUTOFF);
         result.encoding_width = std::max(result.encoding_width, size);
-        result.extra_width = sizeof(uint64_t) - (std::countl_zero(result.encoding_width) / size_t{8});
+        result.string_len_extra_width = sizeof(uint64_t) - (std::countl_zero(result.encoding_width) / size_t{8});
 
         if (value.size() >= STRING_CUTOFF) {
           result.long_strings.push_back(value);
@@ -400,17 +381,17 @@ ScanResult scan_column(const AbstractSegment& segment) {
         if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
           using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{}));
           static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned.");
-          // We often encounter small number, but we still 32-bit numbers while 8 or 16 bit would be sufficient.
-          // Because of that we want to reduce the bit-width of our integer numbers to the bare minimum. The idea
-          // is to drop all leading 0 for positive integers and all leading ones for negative numbers. We only keep
-          // 1-bit to store the signess for our integers. To keep the reduction simple we only drop full bytes.
+          // Normally, integers are encoded by preserven their full width (i.e., a 32-bit integer will be encoded with
+          // 4 bytes). The number of required can be reduced, if for all values only the least significant bits are
+          // used.
           //
           // Example for 32-bit:
           //
-          // Number | Hex Representation | Number of dropped bytes | Shortened Int
-          // -------|--------------------|-------------------------|--------------
-          //   -42  | 0xFFFFFFd6         | 6                       | 0xd6
-          //    42  | 0x0000002a         | 6                       | 0x2a
+          // Number | Hex Representation | Number of dropped bytes | Shortened Int | Used Bytes
+          // -------|--------------------|-------------------------|---------------|------------
+          //   -42  | 0xFFFFFFd6         | 3                       | 0xd6          | 1
+          //    42  | 0x0000002a         | 3                       | 0x2a          | 1
+          //   255  | 0x000000ff         | 2                       | 0x00ff        | 2
           constexpr auto BASE_BYTE_COUNT = sizeof(UnsignedColumnDataType);
           if (value < 0) {
             result.encoding_width = std::max(
@@ -425,7 +406,6 @@ ScanResult scan_column(const AbstractSegment& segment) {
           result.encoding_width = 8;
         }
       }
-      ++it;
     }
   });
   return result;
@@ -461,8 +441,8 @@ using NormalizedKeyIter = NormalizedKeyRow*;
 //
 // Parameters:
 // @param segment              Segment to encode values from
-// @param offset               Offset to the start of the normalized key row's byte array.
-// @param expected_width       The number of bytes all values must be encoded to.
+// @param offset               Offset into the normalized key. This depends on the order of columns.
+// @param expected_width       The length of a normalized key in bytes.
 // @param ascending            Sort normalized keys in ascending order.
 // @param nullable             Put extra byte in front to encode null values.
 // @param nulls_first          Put null values to the start of the normalized key order else to the back.
@@ -472,15 +452,16 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
                                             const ScanResult column_info, const bool nulls_first,
                                             NormalizedKeyIter normalized_key_iter) {
   // Normalized keys are ordered in ascendingly by default. The modifier is applied to invert this order.
-  const auto modifier = (ascending) ? std::byte{0x00} : std::byte{0xFF};
-  const auto full_modifier = (ascending) ? uint64_t{0x00} : std::numeric_limits<uint64_t>::max();
+  const auto order_modifier = (ascending) ? std::byte{0x00} : std::byte{0xFF};
+  const auto order_modifier_64bit = (ascending) ? uint64_t{0x00} : std::numeric_limits<uint64_t>::max();
+
   const auto normalized_null_value = ((nulls_first) ? std::byte{0x00} : std::byte{0xFF});
   const auto normalized_non_null_value = ((nulls_first) ? std::byte{0xFF} : std::byte{0x00});
   segment_with_iterators<ColumnDataType>(segment, [&](auto it, const auto& end) {
     while (it != end) {
       const auto segment_position = *it;
       DebugAssert(column_info.nullable || !segment_position.is_null(),
-                  "Segment must be nullable or contains no null values.");
+                  "Segment must be nullable or contain no null values.");
       auto* normalized_key_start = normalized_key_iter->key_head + offset;
 
       // Encode the null byte for nullable segments. This byte is used to order null vs. non-null values (e.g.
@@ -527,12 +508,12 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         // - the length is capped to the encoded string length
 
         for (const auto chr : value | std::views::take(column_info.encoding_width)) {
-          *(normalized_key_start++) = static_cast<std::byte>(chr) ^ modifier;
+          *(normalized_key_start++) = static_cast<std::byte>(chr) ^ order_modifier;
         }
 
         // Add null bytes to pad values to correct size. (All keys must have the same size)
         for (auto counter = segment_position.value().size(); counter < column_info.encoding_width; ++counter) {
-          *(normalized_key_start++) = std::byte{0} ^ modifier;
+          *(normalized_key_start++) = std::byte{0} ^ order_modifier;
         }
 
         // Encode an identifier for long strings. Use 0 if string is small.
@@ -551,9 +532,10 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
           DebugAssert(value.size() <= STRING_CUTOFF, "String must be smaller than the cut off size.");
         }
 
-        DebugAssert(column_info.extra_width > 0, "Missing extra width.");
-        copy_uint_to_byte_array(normalized_key_start, std::min(value.size(), STRING_CUTOFF), column_info.extra_width);
-        normalized_key_start += column_info.extra_width;
+        DebugAssert(column_info.string_len_extra_width > 0, "Missing extra width.");
+        copy_uint_to_byte_array(normalized_key_start, std::min(value.size(), STRING_CUTOFF),
+                                column_info.string_len_extra_width);
+        normalized_key_start += column_info.string_len_extra_width;
       } else if constexpr (std::is_same_v<ColumnDataType, int32_t> || std::is_same_v<ColumnDataType, int64_t>) {
         using UnsignedColumnDataType = decltype(to_unsigned(ColumnDataType{}));
         static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned.");
@@ -570,10 +552,11 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         // -------|--------------------|--------------------------------|-----------------------------------
         //   -42  | 0xFFFFFFd6         | 0x7FFFFFd6                     | 0x56
         //    42  | 0x0000002a         | 0x8000002a                     | 0xaa
+        //   255  | 0x000000ff         | 0x800000ff                     | 0x80ff
 
         auto unsigned_value = to_unsigned<ColumnDataType>(value);
         unsigned_value ^= UnsignedColumnDataType{1} << ((column_info.encoding_width * 8) - 1);
-        unsigned_value ^= static_cast<UnsignedColumnDataType>(full_modifier);
+        unsigned_value ^= static_cast<UnsignedColumnDataType>(order_modifier_64bit);
         copy_uint_to_byte_array(normalized_key_start, unsigned_value, column_info.encoding_width);
         normalized_key_start += column_info.encoding_width;
       } else if constexpr (std::is_same_v<ColumnDataType, float> || std::is_same_v<ColumnDataType, double>) {
@@ -588,7 +571,7 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
         }
 
         unsigned_value = byteswap(unsigned_value);
-        unsigned_value ^= static_cast<UnsignedColumnDataType>(full_modifier);
+        unsigned_value ^= static_cast<UnsignedColumnDataType>(order_modifier_64bit);
         memcpy(normalized_key_start, &unsigned_value, sizeof(UnsignedColumnDataType));
         normalized_key_start += sizeof(UnsignedColumnDataType);
       } else {
@@ -735,7 +718,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // UVector is used instead of std::vector, because std:uvector.resize() not only allocates the necessary memory but
   // also initializes all elements. This is not necessary, as we initialize all elements in parallel as part of the
   // next step. The performance improves by about 10%.
-  auto materialized_rows = UVector<NormalizedKeyRow>(input_table->row_count());
+  auto materialized_rows = uninitialized_vector<NormalizedKeyRow>(input_table->row_count());
 
   // Create list of chunks to materialize.
   auto total_offset = size_t{0};
@@ -746,14 +729,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     total_offset += chunk_size;
   }
 
-  auto chunk_allocations = std::vector<pmr_vector<std::byte>>(chunk_count);
+  auto chunk_allocations = std::vector<uninitialized_vector<std::byte>>(chunk_count);
   auto materialization_tasks = std::vector<std::shared_ptr<AbstractTask>>();
   materialization_tasks.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     materialization_tasks.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
       const auto chunk = input_table->get_chunk(chunk_id);
       const auto chunk_size = chunk->size();
-      chunk_allocations[chunk_id] = pmr_vector<std::byte>(chunk_size * padded_key_size);
+      chunk_allocations[chunk_id] = uninitialized_vector<std::byte>(chunk_size * padded_key_size);
 
       auto* normalized_key_iter = materialized_rows.begin() + chunk_offsets[chunk_id];
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
