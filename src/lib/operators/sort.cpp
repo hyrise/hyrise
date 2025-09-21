@@ -654,17 +654,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   auto sorted_table = std::shared_ptr<Table>{};
 
-  auto column_materializer =
-      pmr_vector<std::function<void(const AbstractSegment&, size_t, bool, ScanResult, bool, NormalizedKeyIter)>>();
-  column_materializer.reserve(_sort_definitions.size());
-  for (const auto& column_sort_definition : _sort_definitions) {
-    const auto column_data_type = input_table->column_data_type(column_sort_definition.column);
-    resolve_data_type(column_data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      column_materializer.emplace_back(materialize_segment_as_normalized_keys<ColumnDataType>);
-    });
-  }
-
   // const auto init_time = timer.lap();
   timer.lap();
 
@@ -778,13 +767,16 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       for (auto index = size_t{0}; index < search_column_count; ++index) {
         const auto sort_mode = _sort_definitions[index].sort_mode;
         const auto column_id = _sort_definitions[index].column;
+        const auto column_data_type = input_table->column_data_type(column_id);
         const auto segment = chunk->get_segment(column_id);
         const auto ascending = sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::AscendingNullsLast;
         const auto nulls_first =
             sort_mode == SortMode::AscendingNullsFirst || sort_mode == SortMode::DescendingNullsFirst;
-        DebugAssert(index < column_materializer.size(), "Search column out of bounds.");
-        auto materializer = column_materializer[index];
-        materializer(*segment, key_offset, ascending, column_stats[index], nulls_first, normalized_key_iter);
+        resolve_data_type(column_data_type, [&](auto type) {
+          using ColumnDataType = typename decltype(type)::type;
+          materialize_segment_as_normalized_keys<ColumnDataType>(*segment, key_offset, ascending, column_stats[index],
+                                                                 nulls_first, normalized_key_iter);
+        });
         key_offset += column_stats[index].width();
       }
     }));
