@@ -258,7 +258,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   return output_table;
 }
 
-/// Allocate an large chunk of uninitialized memory. This class is faster than C++ std::vector with resize, as it does
+// Allocate a large chunk of uninitialized memory. This class is faster than C++ std::vector with resize, as it does
 /// not initialize each entry.
 template <typename T>
 class UVector {
@@ -402,7 +402,7 @@ ScanResult scan_column(const AbstractSegment& segment) {
           static_assert(std::is_unsigned_v<UnsignedColumnDataType>, "Can not convert column data type to unsigned.");
           // We often encounter small number, but we still 32-bit numbers while 8 or 16 bit would be sufficient.
           // Because of that we want to reduce the bit-width of our integer numbers to the bare minimum. The idea
-          // is to drop all leading 0 for positive integers and all 1 leading 1 for negative numbers. We only keep
+          // is to drop all leading 0 for positive integers and all leading ones for negative numbers. We only keep
           // 1-bit to store the signess for our integers. To keep the reduction simple we only drop full bytes.
           //
           // Example for 32-bit:
@@ -440,7 +440,7 @@ auto byteswap(std::unsigned_integral auto value) {
   return value;
 }
 
-// Copy an integer to the byte array. To ensure the encoded integer is comparable with memcmp the endianess of the
+// Copy an integer to the byte array. To ensure the encoded integer is comparable with memcmp, the endianess of the
 // encoded integer is changed to big-endian. In addition, it will take the number of bytes necessary to encode this
 // integer, because of the variable length encoding of int32_t and uint32_t (see materialization and scanning).
 void copy_uint_to_byte_array(std::byte* byte_array, std::unsigned_integral auto uint,
@@ -448,7 +448,7 @@ void copy_uint_to_byte_array(std::byte* byte_array, std::unsigned_integral auto 
   if constexpr (std::endian::native == std::endian::little) {
     uint = byteswap(uint);
   } else if constexpr (std::endian::native != std::endian::big) {
-    Fail("mixed-endian is unsupported");
+    Fail("Mixed-endian is unsupported.");
   }
   const auto* uint_byte_array = reinterpret_cast<std::byte*>(&uint);
   memcpy(byte_array, uint_byte_array + (sizeof(decltype(uint)) - len), len);
@@ -456,7 +456,7 @@ void copy_uint_to_byte_array(std::byte* byte_array, std::unsigned_integral auto 
 
 using NormalizedKeyIter = NormalizedKeyRow*;
 
-// Append segement's values as byte array to the normalized keys. Expects that the normalized_key_iter is valid for
+// Append segment values as byte array to the normalized keys. Expects that the normalized_key_iter is valid for
 // each segment's values.
 //
 // Parameters:
@@ -484,7 +484,7 @@ void materialize_segment_as_normalized_keys(const AbstractSegment& segment, cons
       auto* normalized_key_start = normalized_key_iter->key_head + offset;
 
       // Encode the null byte for nullable segments. This byte is used to order null vs. non-null values (e.g.
-      // put them to the front or end depending on the specified null order)
+      // put them to the front or end depending on the specified null order).
       if (column_info.nullable && segment_position.is_null()) {
         *(normalized_key_start++) = normalized_null_value;
         // Initialize actual key by setting all bytes to 0.
