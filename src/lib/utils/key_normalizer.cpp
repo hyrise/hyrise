@@ -123,19 +123,19 @@ void KeyNormalizer::_insert_keys_for_chunk(std::vector<std::byte>& buffer, const
       const auto component_total_size = component_data_size + 1;
 
       segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
-        const auto buffer_offset_to_beginning_of_tuple =
+        const auto buffer_offset_to_tuple_and_column =
             ((table_offset + pos.chunk_offset()) * tuple_key_size) + component_offset;
         const auto is_null = pos.is_null();
 
         // Use 0x00 when NullsFirst and 0x01 when NullsLast.
-        buffer[buffer_offset_to_beginning_of_tuple] = static_cast<std::byte>(is_null != nulls_first);
+        buffer[buffer_offset_to_tuple_and_column] = static_cast<std::byte>(is_null != nulls_first);
 
         if (!is_null) {
-          _insert_normalized_value(buffer, pos.value(), buffer_offset_to_beginning_of_tuple + 1, descending,
+          _insert_normalized_value(buffer, pos.value(), buffer_offset_to_tuple_and_column + 1, descending,
                                    string_prefix_length);
         } else {
-          std::fill(&buffer[buffer_offset_to_beginning_of_tuple + 1],
-                    &buffer[buffer_offset_to_beginning_of_tuple + component_total_size], PAD_CHAR);
+          std::fill(&buffer[buffer_offset_to_tuple_and_column + 1],
+                    &buffer[buffer_offset_to_tuple_and_column + component_total_size], PAD_CHAR);
         }
       });
 
