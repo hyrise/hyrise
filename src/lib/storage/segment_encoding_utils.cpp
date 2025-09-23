@@ -92,8 +92,8 @@ ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& t
 
 /**
  * Selects and encoding for a column based on its data type and whether its values are guaranteed to be unique.
- * The discussion as to why these encodings are chosen can be found on https://github.com/hyrise/hyrise/pull/2696.
- * This PR also includes performance measurements for this and other variants.
+ * For more details, see #2696. This PR includes a comparison of different encoding strategies:
+ * https://github.com/hyrise/hyrise/pull/2696#pullrequestreview-3087933111
  */
 SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique) {
   if (segment_values_are_unique) {

@@ -70,7 +70,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
    */
   const auto& type_mapping = encoding_config.type_encoding_mapping;
   const auto& custom_mapping = encoding_config.custom_encoding_mapping;
-  const auto& default_encoding_spec = encoding_config.default_encoding_spec;
+  const auto& preferred_encoding_spec = encoding_config.preferred_encoding_spec;
 
   const auto& column_mapping_it = custom_mapping.find(table_name);
   const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
@@ -100,8 +100,9 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     }
 
     // No column-specific or type-specific encoding was specified.
-    if (default_encoding_spec && encoding_supports_data_type(default_encoding_spec->encoding_type, column_data_type)) {
-      chunk_encoding_spec.push_back(*default_encoding_spec);
+    if (preferred_encoding_spec &&
+        encoding_supports_data_type(preferred_encoding_spec->encoding_type, column_data_type)) {
+      chunk_encoding_spec.push_back(*preferred_encoding_spec);
       continue;
     }
 

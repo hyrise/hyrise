@@ -14,10 +14,10 @@
 
 namespace hyrise {
 
-EncodingConfig::EncodingConfig(const std::optional<SegmentEncodingSpec> init_default_encoding_spec,
+EncodingConfig::EncodingConfig(const std::optional<SegmentEncodingSpec>& init_preferred_encoding_spec,
                                DataTypeEncodingMapping init_type_encoding_mapping,
                                TableSegmentEncodingMapping init_encoding_mapping)
-    : default_encoding_spec{init_default_encoding_spec},
+    : preferred_encoding_spec{init_preferred_encoding_spec},
       type_encoding_mapping{std::move(init_type_encoding_mapping)},
       custom_encoding_mapping{std::move(init_encoding_mapping)} {}
 
@@ -68,8 +68,8 @@ nlohmann::json EncodingConfig::to_json() const {
   };
 
   auto json = nlohmann::json{};
-  if (default_encoding_spec) {
-    json["default"] = encoding_spec_to_string_map(*default_encoding_spec);
+  if (preferred_encoding_spec) {
+    json["preferred"] = encoding_spec_to_string_map(*preferred_encoding_spec);
   }
 
   auto type_mapping = nlohmann::json{};
@@ -95,9 +95,7 @@ nlohmann::json EncodingConfig::to_json() const {
     json["custom"] = table_mapping;
   }
 
-  if (json.empty()) {
-    return "Automatic";
-  }
+  json["default"] = "Automatic";
 
   return json;
 }
