@@ -101,6 +101,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     auto hash = size_t{0};
     boost::hash_combine(hash, key.first.size());
     for (const auto& expression : key.first) {
+      // Manually combine the hashes with XOR to make the result independent of the expressions' order.
       hash ^= expression->hash();
     }
 
