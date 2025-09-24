@@ -58,7 +58,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 
   if (has_mvcc_data()) {
     // Make the row visible - mvcc_data has been pre-allocated
-    mvcc_data()->set_begin_cid(size(), CommitID{0});
+    mvcc_data()->set_begin_cid(size(), UNSET_COMMIT_ID);
   }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
@@ -77,6 +77,10 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 
 std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
+}
+
+const Segments& Chunk::segments() const {
+  return _segments;
 }
 
 ColumnCount Chunk::column_count() const {
@@ -114,7 +118,7 @@ void Chunk::set_immutable() {
   DebugAssert(success, "Value exchanged but value was actually false.");
 
   // Only perform the `max_begin_cid` check if it has not already been set.
-  if (has_mvcc_data() && _mvcc_data->max_begin_cid.load() == MvccData::MAX_COMMIT_ID) {
+  if (has_mvcc_data() && _mvcc_data->max_begin_cid.load() == MAX_COMMIT_ID) {
     const auto chunk_size = size();
     Assert(chunk_size > 0, "`set_immutable()` should not be called on an empty chunk.");
     auto max_begin_cid = CommitID{0};
@@ -123,7 +127,7 @@ void Chunk::set_immutable() {
     }
     set_atomic_max(_mvcc_data->max_begin_cid, max_begin_cid);
 
-    Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
+    Assert(_mvcc_data->max_begin_cid != MAX_COMMIT_ID,
            "`max_begin_cid` should not be MAX_COMMIT_ID when marking a chunk as immutable.");
   }
 }
@@ -262,31 +266,40 @@ void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
 
 void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
   Assert(!is_mutable(), "Cannot set_individually_sorted_by on mutable chunks.");
-  // Currently, we assume that set_individually_sorted_by is called only once at most.
-  // As such, there should be no existing sorting and the new sorting should contain at least one column.
-  // Feel free to remove this assertion if necessary.
+  // Currently, we assume that `set_individually_sorted_by` is called only once at most. Thus, there should be no
+  // existing sorting and the new sorting should contain at least one column. Feel free to remove this assertion if
+  // necessary.
   Assert(!sorted_by.empty() && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
 
   if constexpr (HYRISE_DEBUG) {
+    // "Individually sorted by" means that the chunk is sorted by ALL passed columns individually, NOT only by their
+    // combination.
     for (const auto& sorted_by_column : sorted_by) {
-      const auto& sorted_segment = get_segment(sorted_by_column.column);
+      const auto sorted_segment = get_segment(sorted_by_column.column);
       if (sorted_segment->size() < 2) {
         break;
       }
 
-      segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
+      segment_with_iterators(*sorted_segment, [&](const auto& begin, const auto& end) {
         Assert(std::is_sorted(begin, end,
-                              [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
-                                // is_sorted evaluates the segment by calling the lambda with the SegmentPositions at
-                                // it+n and it (n being non-negative), which needs to evaluate to false.
-                                if (right.is_null()) {
-                                  return false;  // handles right side is NULL and both are NULL
+                              [sort_mode = sorted_by_column.sort_mode](const auto& right, const auto& left) {
+                                // `is_sorted` evaluates the segment by iteratively calling the lambda with the
+                                // SegmentPositions at `iter + 1` and `iter`, which needs to evaluate to false.
+                                if (left.is_null() && right.is_null()) {
+                                  return false;
                                 }
+
+                                const auto nulls_last = sort_mode == SortMode::AscendingNullsLast ||
+                                                        sort_mode == SortMode::DescendingNullsLast;
                                 if (left.is_null()) {
-                                  return true;
+                                  return nulls_last;
                                 }
-                                const auto ascending = sort_mode == SortMode::Ascending;
-                                return ascending ? left.value() < right.value() : left.value() > right.value();
+                                if (right.is_null()) {
+                                  return !nulls_last;
+                                }
+                                const auto ascending = sort_mode == SortMode::AscendingNullsFirst ||
+                                                       sort_mode == SortMode::AscendingNullsLast;
+                                return ascending ? right.value() < left.value() : left.value() < right.value();
                               }),
                "Setting a sort order for a segment which is not sorted accordingly.");
       });
@@ -297,7 +310,7 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  if (_cleanup_commit_id.load() == CommitID{0}) {
+  if (_cleanup_commit_id.load() == UNSET_COMMIT_ID) {
     // Cleanup-Commit-ID is not yet set
     return std::nullopt;
   }

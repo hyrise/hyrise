@@ -134,6 +134,16 @@ constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
+// The commit id 0 is used for loading data into a table. It is also used as a start value for the `_cleanup_commit_id`
+// of a chunk. See `Chunk::get_cleanup_commit_id()` for details.
+constexpr CommitID UNSET_COMMIT_ID = CommitID{0};
+// As commit_id=0 for rows indicates that they have been there "from the beginning of time". The first commit id that
+// is used for a transaction is 1.
+constexpr CommitID INITIAL_COMMIT_ID = CommitID{1};
+// The last commit id is reserved for uncommitted changes. It is also used to indicate that a `TableKeyConstraint` is
+// schema-given.
+constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
+
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
 // yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but deleted in
 // the same transaction (which has not yet committed)
@@ -212,9 +222,7 @@ bool is_semi_or_anti_join(JoinMode join_mode);
 // see union_positions.hpp for details.
 enum class SetOperationMode { Unique, All, Positions };
 
-// According to the SQL standard, the position of NULLs is implementation-defined. In Hyrise, NULLs come before all
-// values, both for ascending and descending sorts. See sort.cpp for details.
-enum class SortMode { Ascending, Descending };
+enum class SortMode { AscendingNullsFirst, DescendingNullsFirst, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
 
@@ -241,7 +249,7 @@ enum class EraseTypes { OnlyInDebugBuild, Always };
 
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
-  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::Ascending)
+  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::AscendingNullsFirst)
       : column(init_column), sort_mode(init_sort_mode) {}
 
   ColumnID column;
