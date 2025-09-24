@@ -6,11 +6,10 @@
 namespace hyrise {
 
 class AbstractExpression;
-class AbstractCardinalityEstimator;
+class CardinalityEstimator;
 class AbstractCostEstimator;
 class AbstractLQPNode;
 class JoinGraph;
-class CardinalityEstimationCache;
 
 /**
  * Given a JoinGraph (created by the JoinGraphBuilder), the responsibility of a join ordering algorithm is to bring the

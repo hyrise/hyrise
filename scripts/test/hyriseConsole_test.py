@@ -52,6 +52,11 @@ def main():
     console.sendline("print test")
     console.expect("Table does not exist in StorageManager")
 
+    # Test changing a setting. Also, turn binary caching off to avoid problems with cached binaries (e.g.,
+    # `hyriseServer_test.py` requires a different chunk size for TPC-H).
+    console.sendline("setting binary_caching off")
+    console.expect("Binary caching turned off")
+
     # Test load command.
     console.sendline("load resources/test_data/tbl/10_ints.tbl test")
     console.expect('Loading .*tbl/10_ints.tbl into table "test"')
@@ -124,10 +129,14 @@ def main():
     console.sendline("print nation")
     console.expect("=== Chunk 3 ===")
 
-    # Clear generated tables.
+    # Clear all generated tables and restore default configuration.
     console.sendline("reset")
     console.sendline("select * from meta_tables")
     console.expect("0 rows total")
+
+    # Make sure to turn off binary table caching again.
+    console.sendline("setting binary_caching off")
+    console.expect("Binary caching turned off")
 
     # Test TPC-C generation. We also tried different benchmarks here. SSB and JCC-H are not thread-safe due to the
     # external data generator, leading to problems since this test is executed multiple times. We consider TPC-DS data

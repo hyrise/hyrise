@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "logical_query_plan/drop_table_node.hpp"
 
 namespace hyrise {
@@ -35,6 +34,10 @@ TEST_F(DropTableNodeTest, Copy) {
 
 TEST_F(DropTableNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(drop_table_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(DropTableNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(drop_table_node->order_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

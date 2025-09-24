@@ -1,5 +1,10 @@
 #include "log_manager.hpp"
 
+#include <chrono>
+#include <string>
+
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
+
 namespace hyrise {
 
 void LogManager::add_message(const std::string& reporter, const std::string& message, const LogLevel log_level) {

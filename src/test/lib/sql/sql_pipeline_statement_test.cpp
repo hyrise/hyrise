@@ -1,16 +1,13 @@
 #include <memory>
 #include <string>
-#include <utility>
-
-#include "base_test.hpp"
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+#include "base_test.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
-#include "operators/print.hpp"
 #include "operators/validate.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -293,7 +290,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
   EXPECT_FALSE(_lqp_cache->has(_select_query_a));
 
   auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
-  auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
+  const auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
 
   const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
@@ -306,7 +303,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
   // Evict validated version by requesting a not validated version
   auto not_validated_sql_pipeline =
       SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
-  auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
+  const auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
   const auto& not_validated_lqp = not_validated_statement->get_optimized_logical_plan();
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
@@ -317,28 +314,28 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
-  // Expect cache to be empty
+  // Expect cache to be empty.
   EXPECT_FALSE(_lqp_cache->has(_select_query_a));
 
   auto not_validated_sql_pipeline =
       SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
-  auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
+  const auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
 
   const auto& not_validated_lqp = not_validated_statement->get_optimized_logical_plan();
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
-  // Expect cache to contain not validated LQP
+  // Expect cache to contain not validated LQP.
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
   const auto not_validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
   EXPECT_FALSE(lqp_is_validated(*not_validated_cached_lqp));
 
-  // Evict not validated version by requesting a validated version
+  // Evict not validated version by requesting a validated version.
   auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
-  auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
+  const auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
   const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
 
-  // Expect cache to contain not validated LQP
+  // Expect cache to contain not validated LQP.
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
   const auto validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
   EXPECT_TRUE(lqp_is_validated(*validated_cached_lqp));
@@ -354,7 +351,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) 
   // Copy the structure to check that it is equal after optimizing.
   std::shared_ptr<AbstractLQPNode> unoptimized_copy = unoptimized_lqp->deep_copy();
 
-  // Optimize the LQP node
+  // Optimize the LQP node.
   statement->get_optimized_logical_plan();
   const auto& unoptimized_lqp_new = statement->get_unoptimized_logical_plan();
 
@@ -712,6 +709,101 @@ TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
 
   EXPECT_EQ(_pqp_cache->size(), 0u);
   EXPECT_FALSE(_pqp_cache->has(meta_table_query));
+}
+
+TEST_F(SQLPipelineStatementTest, NonCacheablePlanNotCached) {
+  // This rule marks the plan as non-cacheable. Therefore, the LQP and PQP caches should be empty after executing the
+  // pipeline.
+  class MockRule : public AbstractRule {
+   public:
+    std::string name() const override {
+      return "MockRule";
+    }
+
+   protected:
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                           OptimizationContext& optimization_context) const override {
+      optimization_context.set_not_cacheable();
+    }
+  };
+
+  const auto optimizer = Optimizer::create_default_optimizer();
+  optimizer->add_rule(std::make_unique<MockRule>());
+
+  const auto query = "SELECT * FROM table_a";
+  auto sql_pipeline = SQLPipelineBuilder{query}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+                          .with_optimizer(optimizer)
+                          .create_pipeline();
+  auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
+  statement->get_result_table();
+
+  EXPECT_EQ(_lqp_cache->size(), 0);
+  EXPECT_FALSE(_lqp_cache->has(query));
+
+  EXPECT_EQ(_pqp_cache->size(), 0);
+  EXPECT_FALSE(_pqp_cache->has(query));
+}
+
+TEST_F(SQLPipelineStatementTest, CachedPlanStaysCached) {
+  const auto query = "SELECT * FROM table_a";
+  auto sql_pipeline_cacheable =
+      SQLPipelineBuilder{query}.with_lqp_cache(_lqp_cache).with_pqp_cache(_pqp_cache).create_pipeline();
+  auto statement = get_sql_pipeline_statements(sql_pipeline_cacheable).at(0);
+  statement->get_result_table();
+
+  EXPECT_EQ(_lqp_cache->size(), 1u);
+  EXPECT_TRUE(_lqp_cache->has(query));
+
+  EXPECT_EQ(_pqp_cache->size(), 1u);
+  EXPECT_TRUE(_pqp_cache->has(query));
+
+  // As above, this rule marks the plan as non-cacheable. However, since the optimizer is not invoked for the cached
+  // pipeline, the plan should still be cached in the LQP and PQP caches.
+  class MockRule : public AbstractRule {
+   public:
+    std::string name() const override {
+      return "MockRule";
+    }
+
+   protected:
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                           OptimizationContext& optimization_context) const override {
+      optimization_context.set_not_cacheable();
+    }
+  };
+
+  auto optimizer = Optimizer::create_default_optimizer();
+  optimizer->add_rule(std::make_unique<MockRule>());
+
+  auto sql_pipeline_non_cacheable = SQLPipelineBuilder{query}
+                                        .with_lqp_cache(_lqp_cache)
+                                        .with_pqp_cache(_pqp_cache)
+                                        .with_optimizer(optimizer)
+                                        .create_pipeline();
+
+  // Clear the PQP cache. Even though the new optimizer makes the plan non-cacheable, the previous plan should still be
+  // cached because the optimizer is not invoked. Thus, the new PQP should appear in the PQP cache again.
+  _pqp_cache->clear();
+
+  EXPECT_EQ(_lqp_cache->size(), 1u);
+  EXPECT_TRUE(_lqp_cache->has(query));
+
+  EXPECT_EQ(_pqp_cache->size(), 0u);
+  EXPECT_FALSE(_pqp_cache->has(query));
+
+  auto statement_non_cacheable = get_sql_pipeline_statements(sql_pipeline_non_cacheable).at(0);
+  const auto [pipeline_status, table] = statement_non_cacheable->get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
+
+  // The plan should be cached in the LQP and now also in the PQP.
+  EXPECT_EQ(_lqp_cache->size(), 1u);
+  EXPECT_TRUE(_lqp_cache->has(query));
+
+  EXPECT_EQ(_pqp_cache->size(), 1u);
+  EXPECT_TRUE(_pqp_cache->has(query));
 }
 
 TEST_F(SQLPipelineStatementTest, SQLTranslationInfo) {

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/table.hpp"
-#include "storage/table_column_definition.hpp"
 
 namespace hyrise {
 
@@ -24,6 +27,9 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   // Generates UCCs from table's soft key constraints. We use these soft key constraints for storing table key
   // constraints with CREATE TABLE statements.
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  // ODs cannot be specified for CREATE TABLE statements yet. Thus, we simply return an empty set.
+  OrderDependencies order_dependencies() const override;
 
   const std::shared_ptr<Table> table;
 

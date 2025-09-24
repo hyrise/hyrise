@@ -1,22 +1,23 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
 
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
 class AbstractLQPNode;
 class TableStatistics;
-class AbstractCardinalityEstimator;
+class CardinalityEstimator;
 
 /**
  * Base class of an algorithm that predicts Cost for operators and plans.
  */
 class AbstractCostEstimator {
  public:
-  explicit AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator);
+  explicit AbstractCostEstimator(const std::shared_ptr<CardinalityEstimator>& init_cardinality_estimator);
   virtual ~AbstractCostEstimator() = default;
 
   /**
@@ -31,7 +32,7 @@ class AbstractCostEstimator {
   /**
    * @return the estimated cost of a single node. The `cost_estimation_by_lqp_cache` will not be used
    */
-  virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const = 0;
+  virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node, const bool cacheable = true) const = 0;
 
   /**
    * @return a new instance of this estimator with a new instance of the wrapped cardinality estimator, both with empty
@@ -41,12 +42,15 @@ class AbstractCostEstimator {
 
   /**
    * Promises to the CostEstimator (and underlying CardinalityEstimator) that it will only be used to estimate bottom-up
-   * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
-   * This enables the usage of a <lqp-ptr> -> <cost> cache (`cost_estimation_by_lqp_cache`).
+   * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes. This enables the usage
+   * of a <lqp-ptr> -> <cost> cache (`cost_estimation_by_lqp_cache`).
+   *
+   * The plan's root node is forwarded to the CardinalityEstimator to guarantee that no relevant statistics are pruned
+   * during cardinality estimation (see `CardinalityEstimator::guarantee_bottom_up_construction()` for more details).
    */
-  void guarantee_bottom_up_construction();
+  void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp);
 
-  const std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
+  const std::shared_ptr<CardinalityEstimator> cardinality_estimator;
 
   mutable std::optional<std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>> cost_estimation_by_lqp_cache;
 

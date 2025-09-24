@@ -1,7 +1,19 @@
 #include "frame_of_reference_segment.hpp"
 
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -50,15 +62,13 @@ ChunkOffset FrameOfReferenceSegment<T, U>::size() const {
 }
 
 template <typename T, typename U>
-std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_block_minima = pmr_vector<T>(_block_minima, alloc);
-  auto new_offset_values = _offset_values->copy_using_allocator(alloc);
+std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_memory_resource(
+    MemoryResource& memory_resource) const {
+  auto new_block_minima = pmr_vector<T>(_block_minima, &memory_resource);
+  auto new_offset_values = _offset_values->copy_using_memory_resource(memory_resource);
 
-  std::optional<pmr_vector<bool>> null_values;
-  if (_null_values) {
-    null_values = pmr_vector<bool>(*_null_values, alloc);
-  }
+  auto null_values = _null_values ? pmr_vector<bool>(*_null_values, &memory_resource) :
+    std::optional<pmr_vector<bool>>{};
 
   auto copy = std::make_shared<FrameOfReferenceSegment>(std::move(new_block_minima), std::move(null_values),
                                                         std::move(new_offset_values));

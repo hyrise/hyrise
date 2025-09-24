@@ -117,6 +117,8 @@ set(
     logical_query_plan/create_view_node.hpp
     logical_query_plan/data_dependencies/functional_dependency.cpp
     logical_query_plan/data_dependencies/functional_dependency.hpp
+    logical_query_plan/data_dependencies/order_dependency.cpp
+    logical_query_plan/data_dependencies/order_dependency.hpp
     logical_query_plan/data_dependencies/unique_column_combination.cpp
     logical_query_plan/data_dependencies/unique_column_combination.hpp
     logical_query_plan/delete_node.cpp
@@ -171,7 +173,8 @@ set(
     lossless_cast.cpp
     lossless_cast.hpp
     lossy_cast.hpp
-    memory/boost_default_memory_resource.cpp
+    memory/default_memory_resource.cpp
+    memory/default_memory_resource.hpp
     memory/zero_allocator.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
@@ -297,6 +300,7 @@ set(
     optimizer/join_ordering/join_graph_edge.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
+    optimizer/optimization_context.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/between_composition_rule.cpp
@@ -396,13 +400,10 @@ set(
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    statistics/abstract_cardinality_estimator.cpp
-    statistics/abstract_cardinality_estimator.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
     statistics/base_attribute_statistics.cpp
     statistics/base_attribute_statistics.hpp
-    statistics/cardinality_estimation_cache.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
     statistics/generate_pruning_statistics.cpp
@@ -429,9 +430,10 @@ set(
     statistics/statistics_objects/null_value_ratio_statistics.hpp
     statistics/statistics_objects/range_filter.cpp
     statistics/statistics_objects/range_filter.hpp
+    statistics/statistics_objects/scaled_histogram.cpp
+    statistics/statistics_objects/scaled_histogram.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
-    storage/abstract_encoded_segment.cpp
     storage/abstract_encoded_segment.hpp
     storage/abstract_segment.cpp
     storage/abstract_segment.hpp
@@ -450,6 +452,8 @@ set(
     storage/chunk_encoder.hpp
     storage/constraints/abstract_table_constraint.cpp
     storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/constraint_utils.cpp
+    storage/constraints/constraint_utils.hpp
     storage/constraints/foreign_key_constraint.cpp
     storage/constraints/foreign_key_constraint.hpp
     storage/constraints/table_key_constraint.cpp
@@ -483,10 +487,6 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
-    storage/index/b_tree/b_tree_index.cpp
-    storage/index/b_tree/b_tree_index.hpp
-    storage/index/b_tree/b_tree_index_impl.cpp
-    storage/index/b_tree/b_tree_index_impl.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
@@ -714,11 +714,11 @@ if (NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
 endif()
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
-if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
+if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_LEAK_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
     add_library(hyrise_impl SHARED ${SOURCES})
 else()
-    # Use a static build for coverage information - otherwise .cpp files are missing from the report
-    # Also, the sanitizer builds on Mac require static linkage
+    # Use a static build for coverage information - otherwise .cpp files are missing from the report.
+    # Also, the sanitizer builds on Mac require static linkage.
     add_library(hyrise_impl STATIC ${SOURCES})
 endif()
 
@@ -749,11 +749,8 @@ target_link_libraries_system(
 
     ${BOOST_LIBS}
     concurrentqueue
-    cpp-btree
     cxxopts
-    flat-hash-map
     nlohmann_json::nlohmann_json
-    robin_map
     sparse_map
     SQLite::SQLite3
     tbb

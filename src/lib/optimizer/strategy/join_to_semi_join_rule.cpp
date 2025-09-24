@@ -1,13 +1,16 @@
 #include "join_to_semi_join_rule.hpp"
 
+#include <memory>
+#include <string>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -16,7 +19,8 @@ std::string JoinToSemiJoinRule::name() const {
   return name;
 }
 
-void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                           OptimizationContext& /*optimization_context*/) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
     // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'

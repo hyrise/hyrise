@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
@@ -98,7 +97,7 @@ TEST_F(ReferenceSegmentTest, RetrieveNullValueFromNullRowID) {
 
   auto ref_segment = ReferenceSegment(_test_table, ColumnID{0}, pos_list);
 
-  auto& segment = *(_test_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0u}));
+  auto& segment = *(_test_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
 
   EXPECT_EQ(ref_segment[ChunkOffset{0}], segment[ChunkOffset{0}]);
   EXPECT_EQ(ref_segment[ChunkOffset{1}], segment[ChunkOffset{1}]);

@@ -1,14 +1,23 @@
 #include "join_to_predicate_rewrite_rule.hpp"
 
+#include <memory>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "optimizer/optimization_context.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -155,7 +164,7 @@ std::string JoinToPredicateRewriteRule::name() const {
 }
 
 void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+    const std::shared_ptr<AbstractLQPNode>& lqp_root, OptimizationContext& /*optimization_context*/) const {
   // `rewritables finally contains all rewritable join nodes, their unused input side, and the predicates to be used for
   // the rewrites.
   auto rewritables = std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>{};

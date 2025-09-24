@@ -1,7 +1,13 @@
 #include "predicate_placement_rule.hpp"
 
-#include "all_parameter_variant.hpp"
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -10,11 +16,12 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -23,14 +30,18 @@ std::string PredicatePlacementRule::name() const {
   return name;
 }
 
-void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  // The traversal functions require the existence of a root of the LQP, so make sure we have that
+void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                               OptimizationContext& optimization_context) const {
+  // The traversal functions require the existence of a root of the LQP, so make sure we have that.
   const auto root_node = lqp_root->type == LQPNodeType::Root ? lqp_root : LogicalPlanRootNode::make(lqp_root);
 
-  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction();
+  const auto estimator = optimization_context.cost_estimator->cardinality_estimator->new_instance();
+  estimator->guarantee_bottom_up_construction(lqp_root);
+  // Turn off statistics pruning because we untie nodes while estimating cardinalities. Thus, not all required predicate
+  // expessions are part of the LQP when the required statistics are populated during the first estimation call.
+  estimator->do_not_prune_unused_statistics();
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> push_down_nodes;
+  auto push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);
 
   _pull_up_traversal(root_node, LQPInputSide::Left);
@@ -39,9 +50,9 @@ void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
                                                   const LQPInputSide input_side,
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
-                                                  AbstractCardinalityEstimator& estimator) {
+                                                  CardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
-  // Allow calling without checks
+  // Allow calling without checks.
   if (!input_node) {
     Assert(push_down_nodes.empty(), "Expected pushdown nodes to be already inserted.");
     return;
@@ -63,8 +74,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       }
 
       if (barrier_node->type == LQPNodeType::Join) {
-        const auto join_mode = static_cast<JoinNode&>(*barrier_node).join_mode;
-        return is_semi_or_anti_join(join_mode);
+        const auto& join_node = static_cast<const JoinNode&>(*barrier_node);
+        return is_semi_or_anti_join(join_node.join_mode) && join_node.join_predicates().size() == 1;
       }
 
       return false;
@@ -125,9 +136,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(input_node);
 
-      // We pick up semi and anti joins on the way and treat them as if they were predicates
-      if (is_semi_or_anti_join(join_node->join_mode)) {
-        // First, we need to recurse into the right side to make sure that it's optimized as well
+      // We pick up single-predicate semi- and anti-joins on the way and treat them as if they were predicates.
+      if (is_semi_or_anti_join(join_node->join_mode) && join_node->join_predicates().size() == 1) {
+        // First, we need to recurse into the right side to make sure that it is optimized as well.
         auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
         _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
 
@@ -135,14 +146,14 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         break;
       }
 
-      // Not a semi / anti join. We need to check if we can push the nodes in push_down_nodes past the join or if they
+      // Not a semi-/ anti-join. We need to check if we can push the nodes in push_down_nodes past the join or if they
       // need to be inserted here before proceeding.
 
       // Left empty for non-push-past joins
       auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
-      // It is safe to move predicates down past the named joins as doing so does not affect the presence of NULLs
+      // It is safe to move predicates down past the named joins as doing so does not affect the presence of NULLs.
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross) {
         for (const auto& push_down_node : push_down_nodes) {
           const auto move_to_left = _is_evaluable_on_lqp(push_down_node, join_node->left_input());
@@ -200,7 +211,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                   flatten_logical_expressions(push_down_predicate_node->predicate(), LogicalOperator::Or);
               for (const auto& expression_in_disjunction : outer_disjunction) {
                 // For the current expression_in_disjunction, these hold the PredicateExpressions that need to be true
-                // on the left/right side
+                // on the left/right side.
                 auto left_conjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
                 auto right_conjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
 
@@ -253,7 +264,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                     const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
                     const auto predicate_node = PredicateNode::make(expression, disjunction_input_node);
 
-                    // Determine the selectivity of the predicate if executed on disjunction_input_node
+                    // Determine the selectivity of the predicate if executed on disjunction_input_node.
                     const auto cardinality_in = estimator.estimate_cardinality(disjunction_input_node);
                     const auto cardinality_out = estimator.estimate_cardinality(predicate_node);
                     if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE) {
@@ -287,7 +298,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
           }
         }
       } else {
-        // We do not push past non-inner/cross joins, place all predicates here
+        // We do not push past non-inner/cross joins, place all predicates here.
         _insert_nodes(current_node, input_side, push_down_nodes);
       }
 
@@ -298,12 +309,12 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Alias:
     case LQPNodeType::Sort:
     case LQPNodeType::Projection: {
-      // We can push predicates past these nodes without further consideration
+      // We can push predicates past these nodes without further consideration.
       _push_down_traversal(input_node, LQPInputSide::Left, push_down_nodes, estimator);
     } break;
 
     case LQPNodeType::Aggregate: {
-      // We can push predicates below the aggregate if they do not depend on an aggregate expression
+      // We can push predicates below the aggregate if they do not depend on an aggregate expression.
       auto aggregate_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       for (const auto& push_down_node : push_down_nodes) {
         if (_is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
@@ -440,7 +451,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
 
   if (current_node->output_count() > 1) {
     // No pull up past nodes with more than one output, because if we did, the other outputs would lose the
-    // predicate we pulled up
+    // predicate we pulled up.
     _insert_nodes(current_node, input_side, candidate_nodes);
     return {};
   }
@@ -481,7 +492,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
     } break;
 
     default:
-      // No pull up past all other node types
+      // No pull up past all other node types.
       _insert_nodes(current_node, input_side, candidate_nodes);
       return {};
   }

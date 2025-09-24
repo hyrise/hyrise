@@ -1,5 +1,13 @@
 #include "generic_histogram_builder.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <utility>
+
+#include "all_type_variant.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -19,7 +27,8 @@ bool GenericHistogramBuilder<T>::empty() const {
 }
 
 template <typename T>
-void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, float height, float distinct_count) {
+void GenericHistogramBuilder<T>::add_bin(const T& min, const T& max, HistogramCountType height,
+                                         HistogramCountType distinct_count) {
   DebugAssert(_bin_minima.empty() || min > _bin_maxima.back(), "Bins must be sorted and cannot overlap");
   DebugAssert(min <= max, "Invalid bin slice");
 

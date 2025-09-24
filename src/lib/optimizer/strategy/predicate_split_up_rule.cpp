@@ -1,11 +1,24 @@
 #include "predicate_split_up_rule.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <boost/variant/apply_visitor.hpp>
+
+#include "abstract_rule.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -80,7 +93,8 @@ std::string PredicateSplitUpRule::name() const {
   return name;
 }
 
-void PredicateSplitUpRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void PredicateSplitUpRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                             OptimizationContext& /*optimization_context*/) const {
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
 
   auto predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};

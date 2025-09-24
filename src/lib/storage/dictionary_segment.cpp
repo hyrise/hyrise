@@ -1,10 +1,21 @@
 #include "dictionary_segment.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <memory>
-#include <string>
+#include <optional>
+#include <utility>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_dictionary_segment.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/segment_access_counter.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"
@@ -49,10 +60,10 @@ ChunkOffset DictionarySegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
-  auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, alloc);
+std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_memory_resource(
+    MemoryResource& memory_resource) const {
+  auto new_attribute_vector = _attribute_vector->copy_using_memory_resource(memory_resource);
+  auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, &memory_resource);
   auto copy = std::make_shared<DictionarySegment<T>>(std::move(new_dictionary), std::move(new_attribute_vector));
   copy->access_counter = access_counter;
   return copy;

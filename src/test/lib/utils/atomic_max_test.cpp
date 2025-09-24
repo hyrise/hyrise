@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "utils/atomic_max.hpp"
 
 namespace hyrise {
@@ -18,9 +17,9 @@ TEST_F(AtomicMaxTest, SingleUpdate) {
 
 TEST_F(AtomicMaxTest, IgnoreMaxCommitID) {
   // The CommitID specialization should treat MAX_COMMIT_ID like an unset value.
-  auto counter = std::atomic<CommitID>{MvccData::MAX_COMMIT_ID};
+  auto counter = std::atomic<CommitID>{MAX_COMMIT_ID};
 
-  EXPECT_EQ(counter.load(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(counter.load(), MAX_COMMIT_ID);
 
   set_atomic_max(counter, CommitID{0});
   EXPECT_EQ(counter.load(), CommitID{0});

@@ -3,6 +3,8 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "abstract_rule.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -27,7 +29,8 @@ class ChunkPruningRule : public AbstractRule {
   std::string name() const override;
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 
   static std::vector<PredicatePruningChain> _find_predicate_pruning_chains_by_stored_table_node(
       const std::shared_ptr<StoredTableNode>& stored_table_node);

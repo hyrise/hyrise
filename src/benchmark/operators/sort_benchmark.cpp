@@ -1,17 +1,16 @@
 #include <memory>
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
+#include "micro_benchmark_utils.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 #include "synthetic_table_generator.hpp"
-
-#include "micro_benchmark_utils.hpp"
 
 namespace hyrise {
 
@@ -49,10 +48,12 @@ static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, co
 
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   if (multi_column_sort) {
-    sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},
-                                                          SortColumnDefinition{ColumnID{1}, SortMode::Descending}}};
+    sort_definitions =
+        std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst},
+                                           SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}}};
   } else {
-    sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}};
+    sort_definitions =
+        std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}};
   }
 
   for (auto _ : state) {

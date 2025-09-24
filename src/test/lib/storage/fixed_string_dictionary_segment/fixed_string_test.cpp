@@ -2,7 +2,6 @@
 #include <string_view>
 
 #include "base_test.hpp"
-
 #include "storage/fixed_string_dictionary_segment/fixed_string.hpp"
 
 namespace hyrise {
@@ -27,7 +26,7 @@ TEST_F(FixedStringTest, Constructors) {
   auto str2 = FixedString(str1);
   EXPECT_EQ(str2, "foo");
 
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     EXPECT_THROW(str1 = FixedString(&charvector2[0], 6u), std::exception);
   } else {
     str1 = FixedString(&charvector2[0], 6u);
@@ -114,7 +113,7 @@ TEST_F(FixedStringTest, Swap) {
 }
 
 TEST_F(FixedStringTest, OutputToStream) {
-  std::stringstream sstream;
+  auto sstream = std::stringstream{};
   sstream << fixed_string1;
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }

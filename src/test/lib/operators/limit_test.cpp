@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
@@ -132,7 +131,7 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
 
   // Verify that the sorted_by flag is set when it's present in input.
   const auto sort_definition =
-      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)};
   auto sort = std::make_shared<Sort>(_table_wrapper, sort_definition);
   sort->execute();
 

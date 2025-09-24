@@ -12,39 +12,18 @@ You can still find the (archived) previous version of Hyrise on [Github](https:/
 
 ## Citation
 
-When referencing this version of Hyrise, please use the following bibtex entry:
-<details><summary>(click to expand)</summary>
-  
+When referencing this version of Hyrise, please use the following bibtex entry: 
 ```bibtex
-@inproceedings{DBLP:conf/edbt/DreselerK0KUP19,
-  author    = {Markus Dreseler and
-               Jan Kossmann and
-               Martin Boissier and
-               Stefan Klauck and
-               Matthias Uflacker and
-               Hasso Plattner},
-  editor    = {Melanie Herschel and
-               Helena Galhardas and
-               Berthold Reinwald and
-               Irini Fundulaki and
-               Carsten Binnig and
-               Zoi Kaoudi},
-  title     = {Hyrise Re-engineered: An Extensible Database System for Research in
-               Relational In-Memory Data Management},
-  booktitle = {Advances in Database Technology - 22nd International Conference on
-               Extending Database Technology, {EDBT} 2019, Lisbon, Portugal, March
-               26-29, 2019},
+@inproceedings{conf/edbt/DreselerK0KUP19,
+  author    = {Markus Dreseler and Jan Kossmann and Martin Boissier and Stefan Klauck and Matthias Uflacker and Hasso Plattner},
+  title     = {Hyrise Re-engineered: An Extensible Database System for Research in Relational In-Memory Data Management},
+  booktitle = {International Conference on Extending Database Technology ({EDBT})},
   pages     = {313--324},
   publisher = {OpenProceedings.org},
   year      = {2019},
-  url       = {https://doi.org/10.5441/002/edbt.2019.28},
   doi       = {10.5441/002/edbt.2019.28},
-  timestamp = {Mon, 18 Mar 2019 16:09:00 +0100},
-  biburl    = {https://dblp.org/rec/conf/edbt/DreselerK0KUP19.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 ```
-</details>
 
 ## Supported Systems
 Hyrise is developed for Linux (preferrably the most current Ubuntu version) and optimized to run on server hardware. We support Mac to facilitate the local development of Hyrise, but do not recommend it for benchmarking.
@@ -76,8 +55,19 @@ The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guid
 You can install the dependencies on your own or use the `install_dependencies.sh` script (**recommended**) which installs all of the therein listed dependencies and submodules.
 The install script was tested under macOS Monterey (12.4) and Ubuntu 22.04.
 
-See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
+See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use recent versions of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
+
+## Nix Setup
+You can build Hyrise using Nix. To do so, first [install Nix](https://nixos.wiki/wiki/Nix_Installation_Guide) on your current operating system. Afterward, run the following command in the root of the repository:
+
+```bash
+nix-shell resources/nix --pure
+```
+
+This will drop you into a shell with all dependencies installed. You can now build Hyrise as usual. Please note that using the `--pure` flag is recommended as it avoids using dependencies from the local system.
+
+For more information on Nix, see [Nix Packages](./resources/nix/README.md).
 
 ## Setup using Docker
 If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 
@@ -134,15 +124,16 @@ Subsets of all available tests can be selected via `--gtest_filter=`.
 *Requires clang on macOS and Linux.*
 
 ### Address/UndefinedBehavior Sanitizers
-`cmake -DENABLE_ADDR_UB_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
+`cmake -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON` will generate Makefiles with AddressSanitizer, LeakSanitizer, and Undefined Behavior options.
 Compile and run them as normal - if any issues are detected, they will be printed to the console.
 It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
 To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable.
-This seems to work out of the box on macOS - If not, make sure to have llvm installed.
+This seems to work out of the box on macOS - if not, make sure to have llvm installed.
 The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseTest`.
 
-`cmake -DENABLE_THREAD_SANITIZATION=ON` will work as above but with the ThreadSanitizer. Some sanitizers are mutually exclusive, which is why we use two configurations for this.
+`cmake -DENABLE_THREAD_SANITIZATION=ON` will work as above but with the ThreadSanitizer.
+Some sanitizers are mutually exclusive, which is why we use two configurations for this.
 
 ### Compile Times
 When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.
@@ -150,14 +141,14 @@ When trying to optimize the time spent building the project, it is often helpful
 
 ## Maintainers
 - Martin Boissier
-- Stefan Halfpap
 - Daniel Lindner
 - Marcel Weisgut
 
 Contact: firstname.lastname@hpi.de
 
-## Maintainers emeriti
+## Maintainers Emeriti
 - Markus Dreseler
+- Stefan Halfpap
 - Jan    Kossmann
 
 ## Contributors
@@ -165,6 +156,7 @@ Contact: firstname.lastname@hpi.de
 -   Lawrence  Benson
 -   Jasper    Blum
 -   Lukas     Budach
+-   Margarete Dippel
 -   Timo      Djürken
 -   Alexander Dubrawski
 -   Fabian    Dumke
@@ -180,6 +172,8 @@ Contact: firstname.lastname@hpi.de
 -   Johannes  Frohnhofen
 -   Pascal    Führlich
 -   Carl      Gödecken
+-   Lukas     Hagen
+-   Jan-Eric  Hellenberg
 -   Adrian    Holfter
 -   Theresa   Hradilak
 -   Ben       Hurdelhey
@@ -207,6 +201,7 @@ Contact: firstname.lastname@hpi.de
 -   Leander   Neiß
 -   Vincent   Rahn
 -   Hendrik   Rätz
+-   Robert    Richter
 -   Niklas    Riekenbrauck
 -   Alexander Riese
 -   Marc      Rosenau
@@ -219,9 +214,11 @@ Contact: firstname.lastname@hpi.de
 -   Daniel    Stolpe
 -   Jonathan  Striebel
 -   Nils      Thamm
+-   Kathrin   Thenhausen
 -   Hendrik   Tjabben
 -   Justin    Trautmann
 -   Carsten   Walther
+-   Robert    Weeke 
 -   Leo       Wendt
 -   Lukas     Wenzel
 -   Fabian    Wiebe

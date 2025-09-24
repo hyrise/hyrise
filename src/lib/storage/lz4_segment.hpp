@@ -3,6 +3,8 @@
 #include <array>
 #include <memory>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
@@ -153,7 +155,7 @@ class LZ4Segment : public AbstractEncodedSegment {
   std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> cached_block_index,
                                   std::vector<char>& cached_block) const;
 
-  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_memory_resource(MemoryResource& memory_resource) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode /*mode*/) const final;
 

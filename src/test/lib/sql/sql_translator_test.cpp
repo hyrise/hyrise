@@ -1,5 +1,6 @@
-#include "base_test.hpp"
+#include <optional>
 
+#include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -34,7 +35,9 @@
 #include "logical_query_plan/window_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
@@ -81,15 +84,21 @@ class SQLTranslatorTest : public BaseTest {
 
   std::pair<std::shared_ptr<AbstractLQPNode>, SQLTranslationInfo> sql_to_lqp_helper(
       const std::string& query, const UseMvcc use_mvcc = UseMvcc::No) {
-    hsql::SQLParserResult parser_result;
+    auto parser_result = hsql::SQLParserResult{};
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
     const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
     const auto lqps = translation_result.lqp_nodes;
 
-    Assert(lqps.size() == 1, "Expected just one LQP");
+    Assert(lqps.size() == 1, "Expected just one LQP.");
     return {lqps.at(0), translation_result.translation_info};
+  }
+
+  static bool is_valid_sql(const std::string& query) {
+    auto parser_result = hsql::SQLParserResult{};
+    hsql::SQLParser::parseSQLString(query, &parser_result);
+    return parser_result.isValid();
   }
 
   static inline std::shared_ptr<Table> int_float, int_string, int_float2, int_float5, int_int_int;
@@ -153,7 +162,7 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::AscendingNullsFirst},  // NOLINT(whitespace/line_length)
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
   // clang-format on
@@ -265,6 +274,32 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, Coalesce) {
+  // Coalesce is just syntactic sugar for a nested CASE WHEN expression IS NOT NULL THEN expression ...
+  const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT COALESCE(a, a + 1, 1) FROM int_float;");
+
+  // clang-format off
+  const auto expression = case_(is_not_null_(int_float_a),
+                                int_float_a,
+                                case_(is_not_null_(add_(int_float_a, 1)),
+                                      add_(int_float_a, 1),
+                                      1));
+  // clang-format on
+
+  const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+
+  // COALESCE list must not be empty.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE();"), InvalidInputException);
+
+  // All arguments must have the compatible data types: either all strings, all integral, or all floating-point.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, 0.0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, 0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, '0') FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, '0') FROM int_float;"), InvalidInputException);
+}
+
 TEST_F(SQLTranslatorTest, SelectListAlias) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("SELECT a AS column_a, b, b + a AS sum_column FROM int_float;");
@@ -349,7 +384,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInOrderBy) {
       sql_to_lqp_helper("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
 
   const auto aliases = std::vector<std::string>({"x", "y"});
-  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>({SortMode::AscendingNullsFirst, SortMode::AscendingNullsFirst});
 
   // clang-format off
   const auto expected_lqp =
@@ -999,7 +1034,7 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderBy) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(int_float_b), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(int_float_b), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(),
       stored_table_node_int_float));
   // clang-format on
@@ -1012,7 +1047,7 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjection) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::AscendingNullsFirst},  // NOLINT(whitespace/line_length)
     AggregateNode::make(expression_vector(add_(int_float_a, int_float_b)), expression_vector(),
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
@@ -1030,7 +1065,7 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjectionAndFurtherExpression) 
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(a_plus_b), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(a_plus_b), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     AggregateNode::make(expression_vector(a_plus_b, a_plus_c), expression_vector(),
       ProjectionNode::make(expression_vector(a_plus_c, a_plus_b, int_int_int_a, int_int_int_b, int_int_int_c),
         stored_table_node_int_int_int)));
@@ -1256,7 +1291,8 @@ TEST_F(SQLTranslatorTest, SubquerySelectList) {
 TEST_F(SQLTranslatorTest, OrderByTest) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a, a+b DESC, b ASC");
 
-  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>(
+      {SortMode::AscendingNullsFirst, SortMode::DescendingNullsFirst, SortMode::AscendingNullsFirst});
 
   // clang-format off
   const auto expected_lqp =
@@ -1267,6 +1303,45 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, OrderByNullOrdering) {
+  {
+    // (i) No ordering given. The default should be ASC NULLS FIRST.
+    const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a");
+    // clang-format off
+    const auto expected_lqp =
+    SortNode::make(expression_vector(int_float_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
+      stored_table_node_int_float);
+    // clang-format on
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // (ii) Ordering but no NULL ordering given. Our default should be ASC/DESC NULLS FIRST.
+    for (const auto ascending : {true, false}) {
+      const auto sort_mode = ascending ? SortMode::AscendingNullsFirst : SortMode::DescendingNullsFirst;
+      const auto sort_mode_str = ascending ? std::string{"ASC"} : std::string{"DESC"};
+      const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a " + sort_mode_str);
+      // clang-format off
+      const auto expected_lqp =
+      SortNode::make(expression_vector(int_float_a), std::vector<SortMode>{sort_mode},
+        stored_table_node_int_float);
+      // clang-format on
+      EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    }
+  }
+
+  {
+    // (iii) As of now, Hyrise supports only NULLS FIRST. Make sure that we notice when the parser supports explicitly
+    //       specifying NULLS FIRST/LAST. If it does, we fail here so we know we have to adapt the SQLTranslator code.
+    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a NULLS FIRST"));
+    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a NULLS LAST"));
+    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a ASC NULLS FIRST"));
+    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a ASC NULLS LAST"));
+    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a DESC NULLS FIRST"));
+    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a DESC NULLS LAST"));
+  }
 }
 
 TEST_F(SQLTranslatorTest, InArray) {
@@ -1438,12 +1513,7 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
   // Test that predicates in the JOIN condition that reference only the null-supplying side are pushed down
 
   const auto [actual_lqp_left, translation_info_1] = sql_to_lqp_helper(
-      "SELECT"
-      "  * "
-      "FROM "
-      "  int_float AS a LEFT JOIN int_float2 AS b "
-      "    ON b.a > 5 AND a.a = b.a "
-      "WHERE b.b < 2;");
+      "SELECT * FROM int_float AS a LEFT JOIN int_float2 AS b ON b.a > 5 AND a.a = b.a WHERE b.b < 2;");
 
   // clang-format off
 
@@ -1458,12 +1528,7 @@ TEST_F(SQLTranslatorTest, JoinSemiOuterPredicatesForNullSupplyingSide) {
   EXPECT_LQP_EQ(actual_lqp_left, expected_lqp_left);
 
   const auto [actual_lqp_right, translation_info_2] = sql_to_lqp_helper(
-      "SELECT"
-      "  * "
-      "FROM "
-      "  int_float AS a RIGHT JOIN int_float2 AS b "
-      "    ON a.a > 5 AND a.a = b.a "
-      "WHERE b.b < 2;");
+      "SELECT * FROM int_float AS a RIGHT JOIN int_float2 AS b ON a.a > 5 AND a.a = b.a WHERE b.b < 2;");
 
   // clang-format off
 
@@ -1497,13 +1562,8 @@ TEST_F(SQLTranslatorTest, JoinOuterPredicatesForNullPreservingSide) {
 TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
   // Also test that columns can be referenced after a natural join
 
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      "  * "
-      "FROM "
-      "  int_float AS a NATURAL JOIN int_float2 AS b "
-      "WHERE "
-      "  a.b > 10 AND a.a > 5");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT  * FROM int_float AS a NATURAL JOIN int_float2 AS b WHERE a.b > 10 AND a.a > 5");
 
   // clang-format off
   const auto expected_lqp =
@@ -1522,11 +1582,8 @@ TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
 TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   // Test that the Natural join can work with column aliases and that the output columns have the correct name
 
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      "  * "
-      "FROM "
-      "  int_float AS a NATURAL JOIN (SELECT a AS d, b AS a, c FROM int_int_int) AS b");
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS a NATURAL JOIN (SELECT a AS d, b AS a, c FROM int_int_int) AS b");
 
   const auto aliases = std::vector<std::string>{{"a", "b", "d", "c"}};
   const auto subquery_aliases = std::vector<std::string>{{"d", "a", "c"}};
@@ -1544,6 +1601,28 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, JoinNaturalSelectedConstant) {
+  // Test that the natural join can work with selected constants.
+
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float NATURAL JOIN (SELECT 123 as a) bar;");
+
+  // clang-format off
+  const auto derived_table_node =
+  AliasNode::make(expression_vector(123), std::vector<std::string>({"a"}),
+    ProjectionNode::make(expression_vector(123),
+      DummyTableNode::make()));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_a, 123),
+      stored_table_node_int_float,
+      derived_table_node));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM int_float JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;");
@@ -1556,6 +1635,102 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
     JoinNode::make(JoinMode::Cross,
       stored_table_node_int_float,
       stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsSimple) {
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float INNER JOIN int_float2 USING (a)");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
+      stored_table_node_int_float,
+      stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsColumnAlias) {
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+    std::vector<std::string>({"c", "d", "b"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+      JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
+        stored_table_node_int_float,
+        stored_table_node_int_float2)));
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsBadNamedColumn) {
+  // `int_float2` alias `(c,b)` does not contain a column named `d`.
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,b) USING (d)"),
+      InvalidInputException);
+
+  // `int_float2` alias `(c,c)` is ambiguous.
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,c) USING (c)"),
+      InvalidInputException);
+
+  // `int_float` alias `(c,c)` is ambiguous.
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,c) INNER JOIN int_float2 AS intfloat2(c,b) USING (c)"),
+      InvalidInputException);
+
+  // `int_float` alias `(c,b)` does not contain a column named `d`.
+  EXPECT_THROW(
+      sql_to_lqp_helper("SELECT * FROM int_float AS int_float(c,b) INNER JOIN int_float2 AS intfloat2(c,d) USING (d)"),
+      InvalidInputException);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsMultipleColumns) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT * FROM int_float AS int_float(c,d) INNER JOIN int_float2 AS intfloat2(c,d) USING (c,d)");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b), std::vector<std::string>({"c", "d"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+      JoinNode::make(JoinMode::Inner,
+        std::vector<std::shared_ptr<AbstractExpression>>{
+          equals_(int_float_a, int_float2_a),
+          equals_(int_float_b, int_float2_b)
+        },
+        stored_table_node_int_float,
+        stored_table_node_int_float2)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsNested) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT * FROM int_float JOIN "
+      "(SELECT a, int_float2.b, int_float5.d FROM int_float2 JOIN int_float5 USING (a))"
+      "AS int_float_comb(a, c, d) USING (a)");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b, int_float2_b, int_float5_d),
+    std::vector<std::string>({"a", "b", "c", "d"}),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b, int_float5_d),
+      JoinNode::make(
+        JoinMode::Inner,
+        equals_(int_float_a, int_float2_a), stored_table_node_int_float,
+        ProjectionNode::make(expression_vector(int_float2_a, int_float2_b, int_float5_d),
+          JoinNode::make(JoinMode::Inner, equals_(int_float2_a, int_float5_a),
+            stored_table_node_int_float2,
+            stored_table_node_int_float5)))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1700,15 +1875,14 @@ TEST_F(SQLTranslatorTest, LimitExpression) {
 }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  std::vector<DatetimeComponent> components{DatetimeComponent::Year,   DatetimeComponent::Month,
-                                            DatetimeComponent::Day,    DatetimeComponent::Hour,
-                                            DatetimeComponent::Minute, DatetimeComponent::Second};
+  const auto components = std::vector{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
+                                      DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
 
-  std::shared_ptr<AbstractLQPNode> actual_lqp;
-  std::shared_ptr<AbstractLQPNode> expected_lqp;
+  auto actual_lqp = std::shared_ptr<AbstractLQPNode>{};
+  auto expected_lqp = std::shared_ptr<AbstractLQPNode>{};
 
   for (const auto& component : components) {
-    std::stringstream query_str;
+    auto query_str = std::stringstream{};
     query_str << "SELECT EXTRACT(" << component << " FROM '1993-08-01');";
 
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query_str.str());
@@ -1779,7 +1953,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
 
   const auto query = "SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float";
 
-  hsql::SQLParserResult parser_result;
+  auto parser_result = hsql::SQLParserResult{};
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
@@ -1877,7 +2051,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
 TEST_F(SQLTranslatorTest, UseMvcc) {
   const auto query = "SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b";
 
-  hsql::SQLParserResult parser_result;
+  auto parser_result = hsql::SQLParserResult{};
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
@@ -1902,6 +2076,27 @@ TEST_F(SQLTranslatorTest, Substr) {
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_c, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, Abs) {
+  const auto actual_lqp_a = sql_to_lqp_helper("SELECT ABS(-1.2)").first;
+  const auto actual_lqp_b = sql_to_lqp_helper("SELECT ABS(a - b) FROM int_float").first;
+
+  // clang-format off
+  const auto expected_lqp_a =
+  ProjectionNode::make(expression_vector(abs_(unary_minus_(1.2))),
+    DummyTableNode::make());
+
+  const auto expected_lqp_b =
+  ProjectionNode::make(expression_vector(abs_(sub_(int_float_a, int_float_b))),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
+
+  // The absolute value of strings is undefined.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT ABS(b) FROM int_string"), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, Exists) {
@@ -2181,7 +2376,6 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
   // clang-format off
   const auto expected_lqp =
   ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Insert,
-    DummyTableNode::make(),
     ProjectionNode::make(expression_vector("foo"),
       DummyTableNode::make()));
   // clang-format on
@@ -2232,8 +2426,7 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
   const auto expected_lqp =
    ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
     PredicateNode::make(equals_(lqp_column_(select_node, meta_table->column_id_by_name("name")), "foo"),
-                        select_node),
-    DummyTableNode::make());
+                        select_node));
   // clang-format on
 
   EXPECT_FALSE(translation_info.cacheable);
@@ -2446,8 +2639,9 @@ TEST_F(SQLTranslatorTest, CreateTable) {
                              {"a_datetime", DataType::String, true}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  static_table_node->table->add_soft_key_constraint({{ColumnID{3}}, KeyConstraintType::UNIQUE});
-  static_table_node->table->add_soft_key_constraint({{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
+  static_table_node->table->add_soft_constraint(TableKeyConstraint{{ColumnID{3}}, KeyConstraintType::UNIQUE});
+  static_table_node->table->add_soft_constraint(
+      TableKeyConstraint{{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -2490,6 +2684,14 @@ TEST_F(SQLTranslatorTest, InvalidConstraints) {
                InvalidInputException);
   // Constraints must not contain unknown columns.
   EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER, UNIQUE(b_int))"), InvalidInputException);
+  // We currently do not support foreign keys. If we want to do so, we must ensure to store them as members of the
+  // table wrapped by the StaticTableNode that is the input of the CreateTableNode, and finally also add them to the
+  // newly created table in the CreateTable operator.
+  EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER REFERENCES b_table (a_int))"),
+               InvalidInputException);
+  EXPECT_THROW(
+      sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER, FOREIGN KEY (a_int) REFERENCES b_table (a_int))"),
+      InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
@@ -3020,16 +3222,16 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     IntersectNode::make(SetOperationMode::Unique,
       ProjectionNode::make(expression_vector(int_int_int_a),
-        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::Ascending},
+        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
                        stored_table_node_int_int_int)),
       LimitNode::make(value_(10),
         ExceptNode::make(SetOperationMode::Unique,
           ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c),
-            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{SortMode::Ascending},
+            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{SortMode::AscendingNullsFirst},
                            stored_table_node_int_int_int))))));
   // clang-format on
 
@@ -3039,31 +3241,83 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 TEST_F(SQLTranslatorTest, CopyStatementImport) {
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl';");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT TBL;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT TBL);");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT CSV;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT CSV);");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT BINARY;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BINARY);");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH FORMAT BIN;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN);");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   // Do not allow predicates on imported files.
   EXPECT_THROW(sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WHERE foo = 'bar';"), InvalidInputException);
+}
+
+TEST_F(SQLTranslatorTest, CopyStatementImportEncoding) {
+  {
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'Unencoded');");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::Unencoded);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'Dictionary');");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::Dictionary);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'RunLength');");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::RunLength);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'FixedStringDictionary');");
+    const auto expected_lqp =
+        ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::FixedStringDictionary);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'FrameOfReference');");
+    const auto expected_lqp =
+        ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::FrameOfReference);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'LZ4');");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, EncodingType::LZ4);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN);");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, std::nullopt);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    // The `ENCODING` option is case-sensitive.
+    EXPECT_THROW(sql_to_lqp_helper("COPY a_table FROM 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'dictionary');"),
+                 InvalidInputException);
+  }
 }
 
 TEST_F(SQLTranslatorTest, CopyStatementExport) {
@@ -3079,24 +3333,29 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT TBL;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT TBL);");
     const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Tbl, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT CSV;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT CSV);");
     const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Csv, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT BINARY;");
+    const auto [actual_lqp, translation_info] =
+        sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT BINARY);");
     const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Binary, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT BIN;");
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT BIN);");
     const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Binary, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    EXPECT_THROW(sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH (FORMAT BIN, ENCODING 'Unencoded');"),
+                 InvalidInputException);
   }
   {
     // clang-format off
@@ -3114,22 +3373,22 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
 TEST_F(SQLTranslatorTest, ImportStatement) {
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM TBL FILE 'a_file.tbl' INTO a_table;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM CSV FILE 'a_file.tbl' INTO a_table;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM BINARY FILE 'a_file.tbl' INTO a_table;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("IMPORT FROM BIN FILE 'a_file.tbl' INTO a_table;");
-    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary, std::nullopt);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 }
@@ -3256,7 +3515,7 @@ TEST_F(SQLTranslatorTest, BasicWindowFunction) {
   auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                 FrameBound{0, FrameBoundType::CurrentRow, false}};
   const auto window = window_(expression_vector(), expression_vector(int_float_a),
-                              std::vector<SortMode>{SortMode::Descending}, std::move(frame));
+                              std::vector<SortMode>{SortMode::DescendingNullsFirst}, std::move(frame));
   const auto expected_lqp = WindowNode::make(row_number_(window), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3284,7 +3543,7 @@ TEST_F(SQLTranslatorTest, WindowFunctionFrames) {
 
       auto frame = FrameDescription{frame_type, expected_starts[frame_bound_id], expected_ends[frame_bound_id]};
       const auto window = window_(expression_vector(), expression_vector(int_float_a),
-                                  std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+                                  std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame));
       const auto expected_lqp = WindowNode::make(row_number_(window), stored_table_node_int_float);
 
       EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3303,7 +3562,7 @@ TEST_F(SQLTranslatorTest, WindowDifferentFunctions) {
   auto partition_by_expressions = expression_vector(int_float_b);
   auto order_by_expressions = expression_vector(int_float_a);
   const auto window = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
-                              std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame));
   const auto expected_functions =
       expression_vector(rank_(window), dense_rank_(window), percent_rank_(window), cume_dist_(window),
                         row_number_(window), min_(int_float_a, window), max_(int_float_a, window),
@@ -3327,7 +3586,7 @@ TEST_F(SQLTranslatorTest, WindowFunctionWithProjections) {
   auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                 FrameBound{0, FrameBoundType::CurrentRow, false}};
   const auto window = window_(expression_vector(), expression_vector(add_(int_float_a, int_float_b)),
-                              std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame));
   const auto window_function = row_number_(window);
 
   // clang-format off
@@ -3350,7 +3609,7 @@ TEST_F(SQLTranslatorTest, MultipleWindowFunctions) {
   auto frame_b = frame_a;
   const auto window_a = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_a));
   const auto window_b = window_(expression_vector(), expression_vector(int_float_a),
-                                std::vector<SortMode>{SortMode::Ascending}, std::move(frame_b));
+                                std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame_b));
 
   // clang-format off
   const auto expected_lqp =
@@ -3400,6 +3659,14 @@ TEST_F(SQLTranslatorTest, InvalidWindowFunctions) {
                InvalidInputException);
   // Function must be a window function.
   EXPECT_THROW(sql_to_lqp_helper("SELECT substr(b, 1, 3) OVER () FROM int_string;"), InvalidInputException);
+
+  // We currently do not support specifying NULLS FIRST/LAST, not even in the parser.
+  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a NULLS FIRST) FROM int_float"));
+  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a NULLS LAST) FROM int_float"));
+  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a ASC NULLS FIRST) FROM int_float"));
+  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a ASC NULLS LAST) FROM int_float"));
+  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a DESC NULLS FIRST) FROM int_float"));
+  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a DESC NULLS LAST) FROM int_float"));
 }
 
 }  // namespace hyrise

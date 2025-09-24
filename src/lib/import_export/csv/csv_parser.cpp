@@ -1,38 +1,39 @@
 #include "csv_parser.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <exception>
 #include <fstream>
+#include <ios>
 #include <list>
 #include <memory>
-#include <optional>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv/csv_converter.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const ChunkOffset chunk_size,
-                                        const std::optional<CsvMeta>& csv_meta) {
-  // If no meta info is given as a parameter, look for a json file
-  auto meta = CsvMeta{};
-  if (csv_meta) {
-    meta = *csv_meta;
-  } else {
-    meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
-  }
-
-  auto escaped_linebreak = std::string(1, meta.config.delimiter_escape) + std::string(1, meta.config.delimiter);
-
-  auto table = _create_table_from_meta(chunk_size, meta);
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMeta& csv_meta,
+                                        const ChunkOffset chunk_size) {
+  const auto table = _create_table_from_meta(chunk_size, csv_meta);
 
   auto csvfile = std::ifstream{filename};
 
@@ -58,9 +59,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   csvfile.seekg(0);
   csvfile.read(content.data(), csvfile_size);
 
-  // make sure content ends with a delimiter for better row processing later
-  if (content.back() != meta.config.delimiter) {
-    content.push_back(meta.config.delimiter);
+  // The content should end with a delimiter for better row processing later.
+  if (content.back() != csv_meta.config.delimiter) {
+    content.push_back(csv_meta.config.delimiter);
   }
 
   auto content_view = std::string_view{content.c_str(), content.size()};
@@ -70,32 +71,36 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   auto field_ends = std::vector<size_t>{};
   auto append_chunk_mutex = std::mutex{};
-  while (_find_fields_in_chunk(content_view, *table, field_ends, meta)) {
-    // create empty chunk
+  const auto escaped_linebreak =
+      std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
+  while (_find_fields_in_chunk(content_view, *table, field_ends, csv_meta)) {
+    // Create empty chunk
     segments_by_chunks.emplace_back();
     auto& segments = segments_by_chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
     auto relevant_content = std::string_view{content_view.substr(0, field_ends.back())};
 
-    // Remove processed part of the csv content
+    // Remove processed part of the CSV content
     content_view = content_view.substr(field_ends.back() + 1);
 
-    // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends, &table, &segments, &meta,
-                                                  &escaped_linebreak, &append_chunk_mutex]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, segments, meta, escaped_linebreak, append_chunk_mutex);
+    // Create and start parsing task to fill chunk
+    tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends = std::move(field_ends), &table,
+                                                  &segments, &csv_meta, &escaped_linebreak, &append_chunk_mutex]() {
+      _parse_into_chunk(relevant_content, field_ends, *table, segments, csv_meta, escaped_linebreak,
+                        append_chunk_mutex);
     }));
     tasks.back()->schedule();
+    field_ends = std::vector<size_t>{};
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(tasks);
 
   for (auto& segments : segments_by_chunks) {
     DebugAssert(!segments.empty(), "Empty chunks shouldn't occur when importing CSV");
-    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), UNSET_COMMIT_ID);
     table->append_chunk(segments, mvcc_data);
-    table->last_chunk()->finalize();
+    table->last_chunk()->set_immutable();
   }
 
   return table;
@@ -219,8 +224,8 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
       }
     }
   } catch (const std::exception& exception) {
-    throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
-                           std::to_string(column_id) + ":\n" + exception.what());
+    Fail("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " + std::to_string(column_id) +
+         ":\n" + exception.what());
   }
 
   // Transform the field_offsets to segments and add segments to chunk.

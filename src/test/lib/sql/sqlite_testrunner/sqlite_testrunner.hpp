@@ -2,8 +2,10 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -11,10 +13,10 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include "base_test.hpp"
-
 #include "SQLParser.h"
 
+#include "base_test.hpp"
+#include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -49,7 +51,8 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
 
   using TableCache = std::map<std::string, TableCacheEntry>;
 
-  static void SetUpTestCase();
+  static void SetUpTestSuite();
+  static void TearDownTestSuite();
 
   void SetUp() override;
 
@@ -63,6 +66,8 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
 
   inline static std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
   inline static std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
+
+  inline static GDFSCache<std::string, std::shared_ptr<const Table>> _sqlite_result_cache{10};
 
   inline static bool _last_run_successful{true};
 };

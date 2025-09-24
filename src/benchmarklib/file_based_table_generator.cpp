@@ -1,19 +1,27 @@
 #include "file_based_table_generator.hpp"
 
+#include <filesystem>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
-#include <boost/algorithm/string.hpp>
-
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "benchmark_table_encoder.hpp"
+#include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
-#include "utils/format_duration.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
+#include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
-
-using namespace std::string_literals;  // NOLINT
 
 namespace hyrise {
 
@@ -22,7 +30,7 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
-  Assert(std::filesystem::is_directory(_path), std::string{"Table path "} + _path + " must be a directory");
+  Assert(std::filesystem::is_directory(_path), std::string{"Table path "} + _path + " must be a directory.");
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
@@ -52,10 +60,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     auto& table_info = table_info_by_name_iter->second;
 
     if (extension == ".bin") {
-      Assert(!table_info.binary_file_path, "Multiple binary files found for table '"s + table_name.string() + "'");
+      Assert(!table_info.binary_file_path,
+             std::string{"Multiple binary files found for table '"} + table_name.string() + "'");
       table_info.binary_file_path = directory_entry;
     } else {
-      Assert(!table_info.text_file_path, "Multiple text files found for table '"s + table_name.string() + "'");
+      Assert(!table_info.text_file_path,
+             std::string{"Multiple text files found for table '"} + table_name.string() + "'");
       table_info.text_file_path = directory_entry;
     }
   }
@@ -71,40 +81,50 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
       if (last_binary_write < last_text_write) {
         std::cout << "-  Binary file '" << (*table_info.binary_file_path)
-                  << "' is out of date and needs to be re-exported" << std::endl;
+                  << "' is out of date and needs to be re-exported\n";
         table_info.binary_file_out_of_date = true;
       }
     }
   }
 
   /**
-   * 3. Actually load the tables. Load from binary file if a up-to-date binary file exists for a Table.
+   * 3. Actually load the tables. Load from binary file if a up-to-date binary file exists for a table.
    */
-  for (auto& [table_name, table_info] : table_info_by_name) {
-    Timer timer;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(table_info_by_name.size());
+  for (auto& table_name_info_pair : table_info_by_name) {
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      auto timer = Timer{};
+      auto message = std::stringstream{};
+      message << "-  Loaded table '" << table_name_info_pair.first << "' ";
+      auto& table_info = table_name_info_pair.second;
 
-    std::cout << "-  Loading table '" << table_name << "' ";
-
-    // Pick a source file to load a table from, prefer the binary version
-    if (table_info.binary_file_path && !table_info.binary_file_out_of_date) {
-      std::cout << "from " << *table_info.binary_file_path << std::flush;
-      table_info.table = BinaryParser::parse(*table_info.binary_file_path);
-      table_info.loaded_from_binary = true;
-    } else {
-      std::cout << "from " << *table_info.text_file_path << std::flush;
-      const auto extension = table_info.text_file_path->extension();
-      if (extension == ".tbl") {
-        table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
-      } else if (extension == ".csv") {
-        table_info.table = CsvParser::parse(*table_info.text_file_path, _benchmark_config->chunk_size);
+      // Pick a source file to load a table from, prefer the binary version.
+      if (table_info.binary_file_path && !table_info.binary_file_out_of_date) {
+        message << "from " << *table_info.binary_file_path;
+        table_info.table = BinaryParser::parse(*table_info.binary_file_path);
+        table_info.loaded_from_binary = true;
       } else {
-        Fail("Unknown textual file format. This should have been caught earlier.");
+        message << "from " << *table_info.text_file_path;
+        const auto extension = table_info.text_file_path->extension();
+        if (extension == ".tbl") {
+          table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
+        } else if (extension == ".csv") {
+          table_info.table = CsvParser::parse(
+              *table_info.text_file_path,
+              process_csv_meta_file(table_info.text_file_path->string() + CsvMeta::META_FILE_EXTENSION),
+              _benchmark_config->chunk_size);
+        } else {
+          Fail("Unknown textual file format. This should have been caught earlier.");
+        }
       }
-    }
 
-    std::cout << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")" << std::endl;
+      message << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")\n";
+      std::cout << message.str() << std::flush;
+    }));
   }
 
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   return table_info_by_name;
 }
 

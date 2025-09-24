@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -60,11 +59,12 @@ TEST_F(WindowNodeTest, Description) {
   EXPECT_EQ(_window_node->description(), "[Window] MIN(a) OVER (RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)");
   auto frame_description = FrameDescription{FrameType::Rows, FrameBound{1, FrameBoundType::Preceding, false},
                                             FrameBound{2, FrameBoundType::Following, false}};
-  auto window = window_(expression_vector(_a), expression_vector(_b), std::vector<SortMode>{SortMode::Descending},
-                        std::move(frame_description));
+  auto window = window_(expression_vector(_a), expression_vector(_b),
+                        std::vector<SortMode>{SortMode::DescendingNullsFirst}, std::move(frame_description));
   auto window_node = WindowNode::make(rank_(window));
-  EXPECT_EQ(window_node->description(),
-            "[Window] RANK() OVER (PARTITION BY a ORDER BY b Descending ROWS BETWEEN 1 PRECEDING AND 2 FOLLOWING)");
+  EXPECT_EQ(
+      window_node->description(),
+      "[Window] RANK() OVER (PARTITION BY a ORDER BY b DescendingNullsFirst ROWS BETWEEN 1 PRECEDING AND 2 FOLLOWING)");
   frame_description = FrameDescription{FrameType::Rows, FrameBound{0, FrameBoundType::CurrentRow, false},
                                        FrameBound{0, FrameBoundType::Following, true}};
   window = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
@@ -95,15 +95,22 @@ TEST_F(WindowNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(*window_node_different_function, *_window_node);
 
   auto frame_description = _window->frame_description;
-  const auto window =
-      window_(expression_vector(_a), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
+  const auto window = window_(expression_vector(_a), expression_vector(_b),
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame_description));
   const auto window_node_different_window = WindowNode::make(rank_(window), _mock_node);
   EXPECT_NE(*window_node_different_window, *_window_node);
   EXPECT_NE(*window_node_different_window, *window_node_different_function);
 
+  frame_description = _window->frame_description;
+  const auto window_different_sort_order =
+      window_(expression_vector(_a), expression_vector(_b), std::vector<SortMode>{SortMode::AscendingNullsLast},
+              std::move(frame_description));
+  const auto window_node_different_sort_order = WindowNode::make(rank_(window_different_sort_order), _mock_node);
+  EXPECT_NE(*window_node_different_sort_order, *_window_node);
+  EXPECT_NE(*window_node_different_sort_order, *window_node_different_function);
+  EXPECT_NE(*window_node_different_sort_order, *window_node_different_window);
+
   EXPECT_EQ(node_copy->hash(), _window_node->hash());
-  EXPECT_NE(window_node_different_function->hash(), _window_node->hash());
-  EXPECT_NE(window_node_different_window->hash(), _window_node->hash());
 }
 
 TEST_F(WindowNodeTest, UniqueColumnCombinationsEmpty) {
@@ -123,6 +130,20 @@ TEST_F(WindowNodeTest, UniqueColumnCombinationsForwarding) {
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
+}
+
+TEST_F(WindowNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_window_node->order_dependencies().empty());
+
+  _mock_node->set_order_constraints({{{ColumnID{0}}, {ColumnID{1}}}});
+  const auto od = OrderDependency{{_a}, {_b}};
+  EXPECT_EQ(_mock_node->order_dependencies().size(), 1);
+  EXPECT_TRUE(_mock_node->order_dependencies().contains(od));
+
+  const auto& order_dependencies = _window_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise

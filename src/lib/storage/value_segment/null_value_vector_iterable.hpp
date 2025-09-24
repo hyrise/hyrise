@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iterator>
+#include <memory>
 #include <utility>
 
 #include "storage/segment_iterables.hpp"
@@ -9,7 +10,7 @@
 namespace hyrise {
 
 /**
- * This is an iterable for the null value vector of a value segment.
+ * This is an iterable for the null value vector used by, e.g, value, LZ4, or frame of reference segments.
  * It is used for example in the IS NULL implementation of the table scan.
  */
 class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueVectorIterable> {

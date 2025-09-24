@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -50,8 +49,8 @@ TEST_P(BinaryParserMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   auto table = BinaryParser::parse(reference_filename);
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
-  EXPECT_EQ(table->chunk_count(), 2u);
-  // The binary importer finalizes all chunks
+  EXPECT_EQ(table->chunk_count(), 2);
+  // The binary importer marks all chunks as immutable.
   EXPECT_FALSE(table->get_chunk(ChunkID{0})->is_mutable());
   EXPECT_FALSE(table->get_chunk(ChunkID{1})->is_mutable());
 }
@@ -394,13 +393,13 @@ TEST_F(BinaryParserTest, SortColumnDefinitions) {
   expected_table->append({2, 2});
   expected_table->append({1, 1});
 
-  expected_table->last_chunk()->finalize();
+  expected_table->last_chunk()->set_immutable();
 
   // Set sorted by information
   const auto chunk_0_sorted_columns = std::vector<SortColumnDefinition>{
-      SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
+      SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}};
   const auto chunk_1_sorted_columns =
-      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}};
   expected_table->get_chunk(ChunkID{0})->set_individually_sorted_by(chunk_0_sorted_columns);
   expected_table->get_chunk(ChunkID{1})->set_individually_sorted_by(chunk_1_sorted_columns);
 

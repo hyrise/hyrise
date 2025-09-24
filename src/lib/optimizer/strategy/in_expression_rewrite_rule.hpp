@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "abstract_rule.hpp"
 
 namespace hyrise {
@@ -28,7 +31,7 @@ class InExpressionRewriteRule : public AbstractRule {
 
   // With the auto strategy, IN expressions whose input has more than MIN_INPUT_ROWS_FOR_DISJUNCTION are rewritten
   // into disjunctive predicates.
-  constexpr static auto MIN_INPUT_ROWS_FOR_DISJUNCTION = 1'000'000.f;
+  constexpr static auto MIN_INPUT_ROWS_FOR_DISJUNCTION = Cardinality{1'000'000};
 
   // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi joins.
   constexpr static auto MIN_ELEMENTS_FOR_JOIN = 20;
@@ -39,11 +42,8 @@ class InExpressionRewriteRule : public AbstractRule {
   Strategy strategy{Strategy::Auto};
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
-
-  std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator() const;
-
-  mutable std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator_internal;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 };
 
 }  // namespace hyrise

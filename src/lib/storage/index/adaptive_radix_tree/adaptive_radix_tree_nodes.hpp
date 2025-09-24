@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "adaptive_radix_tree_index.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {

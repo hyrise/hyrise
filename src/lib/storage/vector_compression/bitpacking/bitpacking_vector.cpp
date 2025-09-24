@@ -1,7 +1,17 @@
 #include "bitpacking_vector.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <type_traits>
+#include <utility>
+
 #include "bitpacking_decompressor.hpp"
 #include "bitpacking_iterator.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -35,9 +45,9 @@ BitPackingIterator BitPackingVector::on_end() const {
   return BitPackingIterator(_data, _data.size());
 }
 
-std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto data_copy = pmr_compact_vector(_data.bits(), _data.size(), alloc);
+std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_memory_resource(
+    MemoryResource& memory_resource) const {
+  auto data_copy = pmr_compact_vector(_data.bits(), _data.size(), &memory_resource);
 
   // zero initialize the compact_vector's memory, see bitpacking_compressor.cpp
   using InternalType = std::remove_reference_t<decltype(*data_copy.get())>;

@@ -1,15 +1,22 @@
 #include "dependent_group_by_reduction_rule.hpp"
 
-#include <unordered_map>
+#include <algorithm>
+#include <iterator>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -73,7 +80,7 @@ std::string DependentGroupByReductionRule::name() const {
 }
 
 void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+    const std::shared_ptr<AbstractLQPNode>& lqp_root, OptimizationContext& /*optimization_context*/) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;

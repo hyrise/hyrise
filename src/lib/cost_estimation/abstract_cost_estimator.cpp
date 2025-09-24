@@ -1,23 +1,33 @@
 #include "abstract_cost_estimator.hpp"
 
+#include <memory>
+#include <optional>
 #include <queue>
 #include <unordered_set>
+#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-AbstractCostEstimator::AbstractCostEstimator(
-    const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator)
+AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<CardinalityEstimator>& init_cardinality_estimator)
     : cardinality_estimator(init_cardinality_estimator) {}
 
 Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Sum up the costs of all operators in the plan, while making sure to cost each operator exactly once, even in the
   // presence of diamond shapes.
 
-  // Breadth-first iteration of plan
+  if (cost_estimation_by_lqp_cache) {
+    const auto it = cost_estimation_by_lqp_cache->find(lqp);
+    if (it != cost_estimation_by_lqp_cache->end()) {
+      return it->second;
+    }
+  }
+
+  // Breadth-first iteration of plan.
   auto bfs_queue = std::queue<std::shared_ptr<AbstractLQPNode>>{};
   auto visited = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
 
@@ -40,7 +50,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
     // because their costs are never aggregated due to the traversal being a breadth-first search.
     const auto cached_cost = _get_subplan_cost_from_cache(current_node, visited);
     if (cached_cost) {
-      // Cost for subplan successfully retrieved from cache, no need to look at the inputs of the current_node
+      // Cost for subplan successfully retrieved from cache, no need to look at the inputs of `current_node`.
       cost += *cached_cost;
       continue;
     }
@@ -55,7 +65,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
     }
   }
 
-  // Store cost in cache
+  // Store cost in cache.
   if (cost_estimation_by_lqp_cache) {
     cost_estimation_by_lqp_cache->emplace(lqp, cost);
   }
@@ -63,17 +73,15 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
   return cost;
 }
 
-void AbstractCostEstimator::guarantee_bottom_up_construction() {
+void AbstractCostEstimator::guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) {
   cost_estimation_by_lqp_cache.emplace();
-  cardinality_estimator->guarantee_bottom_up_construction();
+  cardinality_estimator->guarantee_bottom_up_construction(lqp);
 }
 
 std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
     const std::shared_ptr<AbstractLQPNode>& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited) const {
-  /**
-   * Look up this subplan in cache if a cache is present.
-   * Needs to pay special attention to diamond shapes in the LQP to avoid costing nodes multiple times.
-   */
+  // Look up this subplan in cache if a cache is present. Pay special attention to diamond shapes in the LQP to avoid
+  // performing cost estimation multiple times per node.
   if (!cost_estimation_by_lqp_cache) {
     return std::nullopt;
   }
@@ -84,8 +92,8 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
   }
 
   // Check whether the cache entry can be used: This is only the case if the entire subplan has not yet been
-  // visited. If any node in it has already been visited, and we'd use the cache entry anyway, costs would get
-  // counted twice
+  // visited. If any node in it has already been visited and we would use the cache entry anyway, costs would get
+  // counted twice.
   auto subplan_already_visited = false;
   auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
@@ -105,7 +113,7 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
     return std::nullopt;
   }
 
-  // The subplan is "clean"/unvisited, mark all nodes in it as "visited" and return the cost from the cache entry
+  // The subplan is "clean"/unvisited, mark all nodes in it as "visited" and return the cost from the cache entry.
   for (const auto& subplan_node : subplan_nodes) {
     visited.emplace(subplan_node);
   }

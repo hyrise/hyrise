@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/get_table.hpp"
 

@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/group_key_index.hpp"

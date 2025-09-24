@@ -16,7 +16,7 @@ inline void set_atomic_max(std::atomic<T>& maximum_value, const T& value) noexce
 template <>
 inline void set_atomic_max(std::atomic<CommitID>& maximum_value, const CommitID& value) noexcept {
   auto prev_value = maximum_value.load();
-  while ((prev_value == MvccData::MAX_COMMIT_ID || prev_value < value) &&
+  while ((prev_value == MAX_COMMIT_ID || prev_value < value) &&
          !maximum_value.compare_exchange_weak(prev_value, value)) {}
 }
 

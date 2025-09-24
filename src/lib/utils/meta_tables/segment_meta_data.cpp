@@ -1,14 +1,26 @@
 #include "segment_meta_data.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <sstream>
+#include <unordered_set>
+
 #include "magic_enum.hpp"
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/segment_access_counter.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -36,7 +48,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
           encoding = pmr_string{magic_enum::enum_name(encoded_segment->encoding_type())};
 
           if (encoded_segment->compressed_vector_type()) {
-            std::stringstream sstream;
+            auto sstream = std::stringstream{};
             sstream << *encoded_segment->compressed_vector_type();
             vector_compression = pmr_string{sstream.str()};
           }
@@ -45,7 +57,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         auto distinct_value_count = NULL_VALUE;
         const auto& pruning_statistics = chunk->pruning_statistics();
         if (pruning_statistics) {
-          Assert(pruning_statistics->size() > column_id, "Malformed pruning statistics");
+          Assert(pruning_statistics->size() > column_id, "Malformed pruning statistics.");
           resolve_data_type(data_type, [&](auto type) {
             using ColumnDataType = typename decltype(type)::type;
 

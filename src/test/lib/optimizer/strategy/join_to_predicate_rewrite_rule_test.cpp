@@ -1,5 +1,3 @@
-#include "strategy_base_test.hpp"
-
 #include "magic_enum.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -18,6 +16,7 @@
 #include "logical_query_plan/update_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_predicate_rewrite_rule.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 
@@ -26,6 +25,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_b = MockNode::make(
@@ -42,7 +42,8 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<JoinToPredicateRewriteRule> rule;
-  std::shared_ptr<MockNode> node_a, node_b;
+  std::shared_ptr<MockNode> node_a;
+  std::shared_ptr<MockNode> node_b;
   std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w;
 };
 
@@ -63,30 +64,30 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
       GetParam() == JoinMode::Cross ? JoinNode::make(GetParam()) : JoinNode::make(GetParam(), equals_(a, u));
   join_node->set_left_input(node_a);
   join_node->set_right_input(PredicateNode::make(equals_(v, 0), node_b));
+
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     join_node);
 
   const auto subquery = ProjectionNode::make(expression_vector(u),
     PredicateNode::make(equals_(v, 0), node_b));
 
-  auto expected_lqp =
+  auto expected_lqp = std::static_pointer_cast<AbstractLQPNode>(
   ProjectionNode::make(expression_vector(b),
     PredicateNode::make(equals_(a, lqp_subquery_(subquery)),
-      node_a));
+      node_a)));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp->deep_copy());
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  expected_lqp = std::static_pointer_cast<ProjectionNode>(
-      apply_rule(std::make_shared<ColumnPruningRule>(), expected_lqp->deep_copy()));
+  join_node->mark_input_side_as_prunable(LQPInputSide::Right);
 
-  if (GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi) {
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-  } else {
-    EXPECT_LQP_EQ(actual_lqp, annotated_lqp->deep_copy());
+  if (GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) {
+    expected_lqp = _lqp->deep_copy();
   }
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
@@ -97,15 +98,20 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
-      node_a, node_b));
+      node_a,
+      node_b));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  const auto expected_lqp = _lqp->deep_copy();
+
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
@@ -115,16 +121,21 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Semi, equals_(a, u),
       node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
+      PredicateNode::make(equals_(v, 0),
+        node_b)));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  const auto expected_lqp = _lqp->deep_copy();
+
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
@@ -134,16 +145,20 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  const auto expected_lqp = _lqp->deep_copy();
+
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
@@ -154,37 +169,49 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b, u),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
+      PredicateNode::make(equals_(v, 0),
+        node_b)));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  const auto expected_lqp = _lqp->deep_copy();
+
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, Union) {
-  // Do not rewrite if there is a union on table b.
+  // Do not rewrite if there is a Union on table b that preserves the UCC but outputs more than one result tuple.
   auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
   key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
-      PredicateNode::make(equals_(v, 0),
-      UnionNode::make(SetOperationMode::Positions, node_b, node_b))));
+      UnionNode::make(SetOperationMode::Positions,
+        PredicateNode::make(equals_(v, 0),
+          node_b),
+        PredicateNode::make(equals_(v, 1),
+          node_b))));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  const auto expected_lqp = _lqp->deep_copy();
+
+  _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "concurrency/transaction_context.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {

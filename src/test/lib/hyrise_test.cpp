@@ -1,10 +1,12 @@
 #include "base_test.hpp"
-
 #include "concurrency/transaction_manager.hpp"
 #include "hyrise.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -57,6 +59,31 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
   EXPECT_EQ(get_plugins().size(), 0);
   EXPECT_FALSE(hyrise.storage_manager.has_table(table_name));
   EXPECT_EQ(hyrise.transaction_manager.last_commit_id(), CommitID{1});
+}
+
+TEST_F(HyriseTest, ChangingSchedulers) {
+  auto counter = std::atomic<uint32_t>{0};
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto task1 = std::make_shared<JobTask>([&]() {
+    ++counter;
+  });
+  task1->schedule();
+
+  // Implicitely tests that changing the scheduler calls `finish()` on the old scheduler. Thus, we explicitely do not
+  // wait for task1 here.
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+  const auto task2 = std::make_shared<JobTask>([&]() {
+    ++counter;
+  });
+  task2->schedule();
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto task3 = std::make_shared<JobTask>([&]() {
+    ++counter;
+  });
+  task3->schedule();
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+
+  EXPECT_EQ(counter, 3);
 }
 
 }  // namespace hyrise

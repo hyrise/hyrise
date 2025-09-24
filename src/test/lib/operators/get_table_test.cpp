@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -318,10 +317,11 @@ TEST_F(OperatorsGetTableTest, Copy) {
 
 TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   auto table = Hyrise::get().storage_manager.get_table("int_int_float");
-  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   table->get_chunk(ChunkID{1})
-      ->set_individually_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
-                                    SortColumnDefinition(ColumnID{2}, SortMode::Descending)});
+      ->set_individually_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst),
+                                    SortColumnDefinition(ColumnID{2}, SortMode::DescendingNullsFirst)});
 
   // single column pruned
   {
@@ -332,9 +332,10 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     EXPECT_EQ(get_table_output->column_count(), 2);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().front().column, ColumnID{0});
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{1});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().front().sort_mode,
+              SortMode::AscendingNullsFirst);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode,
-              SortMode::Descending);
+              SortMode::DescendingNullsFirst);
     EXPECT_TRUE(get_table_output->get_chunk(ChunkID{2})->individually_sorted_by().empty());
   }
 
@@ -349,7 +350,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().empty());
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{0});
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode,
-              SortMode::Descending);
+              SortMode::DescendingNullsFirst);
   }
 
   // no columns pruned
@@ -360,9 +361,11 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 3);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{1});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode,
+              SortMode::AscendingNullsFirst);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().back().column, ColumnID{2});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().back().sort_mode, SortMode::Descending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().back().sort_mode,
+              SortMode::DescendingNullsFirst);
   }
 
   // pruning the columns on which chunks are sorted
@@ -435,7 +438,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   EXPECT_THROW(get_table->execute(), std::logic_error);
 }
 
-TEST_F(OperatorsGetTableTest, FinalizedChunks) {
+TEST_F(OperatorsGetTableTest, ImmutableChunks) {
   // Insert one tuple into int_int_float to create a mutable chunk.
   const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
   EXPECT_EQ(table->chunk_count(), 4);

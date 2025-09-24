@@ -1,11 +1,20 @@
 #include "segment_access_counter.hpp"
 
-#include <sstream>
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+
+#include "magic_enum.hpp"
+
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
 SegmentAccessCounter::SegmentAccessCounter() {
-  DebugAssert(static_cast<size_t>(AccessType::Count) == access_type_string_mapping.size(),
+  DebugAssert(magic_enum::enum_count<AccessType>() == access_type_string_mapping.size(),
               "access_type_string_mapping should contain as many entries as there are access types.");
 }
 
@@ -38,8 +47,8 @@ const SegmentAccessCounter::CounterType& SegmentAccessCounter::operator[](const 
 
 std::string SegmentAccessCounter::to_string() const {
   std::string result = std::to_string(_counters[0]);
-  result.reserve(static_cast<size_t>(AccessType::Count) * 19);
-  for (auto access_type = size_t{1}; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
+  result.reserve(magic_enum::enum_count<AccessType>() * 19);
+  for (auto access_type = size_t{1}; access_type < magic_enum::enum_count<AccessType>(); ++access_type) {
     result.append(",");
     result.append(std::to_string(_counters[access_type]));
   }

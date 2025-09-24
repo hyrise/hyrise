@@ -4,13 +4,11 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -25,18 +23,18 @@ class SchedulerTest : public BaseTest {
  protected:
   void stress_linear_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
-      auto current_value = 0u;
-      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      auto current_value = uint32_t{0};
+      auto successful = counter.compare_exchange_strong(current_value, 1);
       ASSERT_TRUE(successful);
     });
     const auto task2 = std::make_shared<JobTask>([&]() {
-      auto current_value = 1u;
-      auto successful = counter.compare_exchange_strong(current_value, 2u);
+      auto current_value = uint32_t{1};
+      auto successful = counter.compare_exchange_strong(current_value, 2);
       ASSERT_TRUE(successful);
     });
     const auto task3 = std::make_shared<JobTask>([&]() {
-      auto current_value = 2u;
-      auto successful = counter.compare_exchange_strong(current_value, 3u);
+      auto current_value = uint32_t{2};
+      auto successful = counter.compare_exchange_strong(current_value, 3);
       ASSERT_TRUE(successful);
     });
 
@@ -46,14 +44,20 @@ class SchedulerTest : public BaseTest {
     task3->schedule();
     task1->schedule();
     task2->schedule();
+
+    Hyrise::get().scheduler()->wait_for_tasks({task1, task2, task3});
   }
 
   void stress_multiple_dependencies(std::atomic_uint32_t& counter) {
-    const auto task1 = std::make_shared<JobTask>([&]() { counter += 1u; });
-    const auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
+    const auto task1 = std::make_shared<JobTask>([&]() {
+      counter += 1;
+    });
+    const auto task2 = std::make_shared<JobTask>([&]() {
+      counter += 2;
+    });
     const auto task3 = std::make_shared<JobTask>([&]() {
-      auto current_value = 3u;
-      auto successful = counter.compare_exchange_strong(current_value, 4u);
+      auto current_value = uint32_t{3};
+      auto successful = counter.compare_exchange_strong(current_value, 4);
       ASSERT_TRUE(successful);
     });
 
@@ -63,19 +67,25 @@ class SchedulerTest : public BaseTest {
     task3->schedule();
     task1->schedule();
     task2->schedule();
+
+    Hyrise::get().scheduler()->wait_for_tasks({task1, task2, task3});
   }
 
   void stress_diamond_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
-      auto current_value = 0u;
-      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      auto current_value = uint32_t{0};
+      auto successful = counter.compare_exchange_strong(current_value, 1);
       ASSERT_TRUE(successful);
     });
-    const auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
-    const auto task3 = std::make_shared<JobTask>([&]() { counter += 3u; });
+    const auto task2 = std::make_shared<JobTask>([&]() {
+      counter += 2;
+    });
+    const auto task3 = std::make_shared<JobTask>([&]() {
+      counter += 3;
+    });
     const auto task4 = std::make_shared<JobTask>([&]() {
-      auto current_value = 6u;
-      auto successful = counter.compare_exchange_strong(current_value, 7u);
+      auto current_value = uint32_t{6};
+      auto successful = counter.compare_exchange_strong(current_value, 7);
       ASSERT_TRUE(successful);
     });
 
@@ -88,15 +98,19 @@ class SchedulerTest : public BaseTest {
     task3->schedule();
     task1->schedule();
     task2->schedule();
+
+    Hyrise::get().scheduler()->finish();
   }
 
   void increment_counter_in_subtasks(std::atomic_uint32_t& counter) {
-    std::vector<std::shared_ptr<AbstractTask>> tasks;
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     for (auto outer_counter = size_t{0}; outer_counter < 10; ++outer_counter) {
       auto task = std::make_shared<JobTask>([&]() {
-        std::vector<std::shared_ptr<AbstractTask>> jobs;
+        auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
         for (auto inner_counter = size_t{0}; inner_counter < 3; ++inner_counter) {
-          auto job = std::make_shared<JobTask>([&]() { ++counter; });
+          auto job = std::make_shared<JobTask>([&]() {
+            ++counter;
+          });
 
           job->schedule();
           jobs.emplace_back(job);
@@ -117,111 +131,127 @@ TEST_F(SchedulerTest, BasicTest) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0};
+  auto counter = std::atomic_uint32_t{0};
 
   increment_counter_in_subtasks(counter);
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 30u);
-
-  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+  EXPECT_EQ(counter, 30);
 }
 
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
-  std::atomic_uint32_t counter{0};
+  auto counter = std::atomic_uint32_t{0};
   increment_counter_in_subtasks(counter);
-  ASSERT_EQ(counter, 30u);
+  EXPECT_EQ(counter, 30);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0u};
+  auto counter = std::atomic_uint32_t{0};
 
   stress_linear_dependencies(counter);
 
-  Hyrise::get().scheduler()->finish();
-
-  ASSERT_EQ(counter, 3u);
+  EXPECT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, Grouping) {
   // Tests the grouping described in AbstractScheduler::schedule_and_wait_for_tasks and
-  // NodeQueueScheduler::_group_tasks. Also tests that successor tasks are called immediately after their dependencies
-  // finish. Not really a multi-threading test, though.
+  // NodeQueueScheduler::_group_tasks. We check that tasks of each group are executed in order. Note that the execution
+  // of groups might happen interleaved as workers use randomness (see worker.cpp).
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  auto output = std::vector<size_t>{};
+  const auto task_count = 5'000;
+
+  auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler::NUM_GROUPS, 0);
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
-  constexpr auto TASK_COUNT = 50;
-
-  for (auto task_id = 0; task_id < TASK_COUNT; ++task_id) {
-    tasks.emplace_back(std::make_shared<JobTask>([&output, task_id] { output.emplace_back(task_id); }));
+  for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+    tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
+      const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
+      const auto prev_task_id = previous_task_id_per_group[group_id];
+      if (prev_task_id > 0) {
+        EXPECT_EQ(prev_task_id + NodeQueueScheduler::NUM_GROUPS, task_id);
+      }
+      previous_task_id_per_group[group_id] = task_id;
+    }));
   }
+
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   Hyrise::get().scheduler()->finish();
-
-  // We expect NUM_GROUPS chains of tasks to be created. As tasks are added to the chains by calling
-  // AbstractTask::set_predecessor_of, the first task in the input vector ends up being the last task being called. This
-  // results in [40 30 20 10 0 41 31 21 11 1 ...]
-  const auto num_groups = NodeQueueScheduler::NUM_GROUPS;
-  EXPECT_EQ(TASK_COUNT % num_groups, 0);
-  auto expected_output = std::vector<size_t>{};
-  for (auto group = 0; group < num_groups; ++group) {
-    for (auto task_id = 0; task_id < TASK_COUNT / num_groups; ++task_id) {
-      expected_output.emplace_back(tasks.size() - (task_id + 1) * num_groups + group);
-    }
-  }
-
-  EXPECT_EQ(output, expected_output);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0u};
+  auto counter = std::atomic_uint32_t{0};
 
   stress_multiple_dependencies(counter);
 
-  Hyrise::get().scheduler()->finish();
-
-  ASSERT_EQ(counter, 4u);
+  EXPECT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0};
+  auto counter = std::atomic_uint32_t{0};
 
   stress_diamond_dependencies(counter);
 
-  Hyrise::get().scheduler()->finish();
-
-  ASSERT_EQ(counter, 7u);
+  EXPECT_EQ(counter, 7);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0u};
+  auto counter = std::atomic_uint32_t{0};
   stress_linear_dependencies(counter);
-  ASSERT_EQ(counter, 3u);
+  EXPECT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0u};
+  auto counter = std::atomic_uint32_t{0};
   stress_multiple_dependencies(counter);
-  ASSERT_EQ(counter, 4u);
+  EXPECT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0};
+  auto counter = std::atomic_uint32_t{0};
   stress_diamond_dependencies(counter);
-  ASSERT_EQ(counter, 7u);
+  EXPECT_EQ(counter, 7);
+}
+
+TEST_F(SchedulerTest, NotAllDependenciesPassedToScheduler) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  const auto task1 = std::make_shared<JobTask>([&]() {});
+  const auto task2 = std::make_shared<JobTask>([&]() {});
+  const auto task3 = std::make_shared<JobTask>([&]() {});
+
+  task1->set_as_predecessor_of(task2);
+  task2->set_as_predecessor_of(task3);
+
+  const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{task1, task2};
+
+  // The scheduler should complain that not all dependencies (task3 is a successor of task2) are passed.
+  EXPECT_THROW(Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks), std::logic_error);
+}
+
+TEST_F(SchedulerTest, DuplicatePredecessorTasks) {
+  const auto task1 = std::make_shared<JobTask>([&]() {});
+  const auto task2 = std::make_shared<JobTask>([&]() {});
+
+  task1->set_as_predecessor_of(task2);
+  task1->set_as_predecessor_of(task2);
+  EXPECT_EQ(task1->successors().size(), 1);
+  const auto task2_2 = task2;
+  task1->set_as_predecessor_of(task2_2);
+  EXPECT_EQ(task1->successors().size(), 1);
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {
@@ -306,7 +336,9 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
 
   auto task_done = false;
   auto task = std::make_shared<JobTask>([&task_done]() {
-    const auto subtask = std::make_shared<JobTask>([&task_done]() { task_done = true; });
+    const auto subtask = std::make_shared<JobTask>([&task_done]() {
+      task_done = true;
+    });
 
     subtask->schedule();
     Hyrise::get().scheduler()->wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
@@ -344,8 +376,12 @@ void merge_sort(Iterator first, Iterator last) {
 
   auto middle = first + (std::distance(first, last) / 2);
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(first, middle); }));
-  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(middle, last); }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    merge_sort(first, middle);
+  }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    merge_sort(middle, last);
+  }));
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
@@ -374,25 +410,6 @@ TEST_F(SchedulerTest, MergeSort) {
   EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
 }
 
-TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
-  if (std::thread::hardware_concurrency() < 4) {
-    // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
-    // worker count to the number of cores, therefore failing the assertions.
-    GTEST_SKIP();
-  }
-
-  const auto thread_count = std::thread::hardware_concurrency();
-
-  Hyrise::get().topology.use_fake_numa_topology(thread_count, thread_count / 4);
-  for (auto loop_id = size_t{0}; loop_id < 256; ++loop_id) {
-    auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-    Hyrise::get().set_scheduler(node_queue_scheduler);
-    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), thread_count);
-    Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
-    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), 0);
-  }
-}
-
 TEST_F(SchedulerTest, ShutdownTaskDecrement) {
   auto counter_1 = std::atomic_int64_t{1};
   auto shutdown_task_1 = ShutdownTask{counter_1};
@@ -409,6 +426,40 @@ TEST_F(SchedulerTest, ShutdownTaskDecrement) {
   EXPECT_TRUE(shutdown_task_2.try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_2.load(), 0);
   EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
+}
+
+TEST_F(SchedulerTest, GetThisThreadWorker) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().topology.use_fake_numa_topology(1, 1);
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  // Even though we use the NodeQueueScheduler, calling `get_this_thread_worker()` not from a worker (here, called from
+  // the main thread) returns a nullptr.
+  EXPECT_EQ(Worker::get_this_thread_worker(), nullptr);
+
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    EXPECT_NE(Worker::get_this_thread_worker(), nullptr);
+  }));
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+}
+
+// `execute_next()` should only be called from within an active worker.
+TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().topology.use_fake_numa_topology(1, 1);
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  EXPECT_EQ(node_queue_scheduler->workers().size(), 1);
+  const auto& worker = node_queue_scheduler->workers()[0];
+  EXPECT_EQ(node_queue_scheduler->active_worker_count(), 1);
+  auto empty_task = std::make_shared<JobTask>([&]() {});
+  EXPECT_THROW(worker->execute_next(empty_task), std::logic_error);
 }
 
 }  // namespace hyrise

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>
@@ -25,7 +27,8 @@ class SortedSegmentSearch {
         _first_search_value{search_value},
         _second_search_value{std::nullopt},
         _nullable{nullable},
-        _is_ascending{sorted_by == SortMode::Ascending} {}
+        _is_ascending{sorted_by == SortMode::AscendingNullsFirst || sorted_by == SortMode::AscendingNullsLast},
+        _is_nulls_last{sorted_by == SortMode::AscendingNullsLast || sorted_by == SortMode::DescendingNullsLast} {}
 
   // For SortedSegmentBetweenSearch
   SortedSegmentSearch(IteratorType begin, IteratorType end, const SortMode& sorted_by, const bool nullable,
@@ -37,15 +40,22 @@ class SortedSegmentSearch {
         _first_search_value{left_value},
         _second_search_value{right_value},
         _nullable{nullable},
-        _is_ascending{sorted_by == SortMode::Ascending} {}
+        _is_ascending{sorted_by == SortMode::AscendingNullsFirst || sorted_by == SortMode::AscendingNullsLast},
+        _is_nulls_last{sorted_by == SortMode::AscendingNullsLast || sorted_by == SortMode::DescendingNullsLast} {}
 
   void scan_sorted_segment(const ChunkID chunk_id, RowIDPosList& matches,
                            const std::shared_ptr<const AbstractPosList>& position_filter) {
     if (_nullable) {
-      // Decrease the effective sort range by excluding null values.
-      _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& /* unused */) {
-        return segment_position.is_null();
-      });
+      // Decrease the effective sort range by excluding NULL values.
+      if (_is_nulls_last) {
+        _end = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& /* unused */) {
+          return !segment_position.is_null();
+        });
+      } else {
+        _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& /* unused */) {
+          return segment_position.is_null();
+        });
+      }
     }
 
     // Early out if segment contains only NULLs.
@@ -369,6 +379,7 @@ class SortedSegmentSearch {
   const std::optional<SearchValueType> _second_search_value;
   const bool _nullable;
   const bool _is_ascending;
+  const bool _is_nulls_last;
 };
 
 }  // namespace hyrise

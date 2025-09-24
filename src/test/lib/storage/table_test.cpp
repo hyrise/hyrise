@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "memory/zero_allocator.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
@@ -135,7 +135,7 @@ TEST_F(StorageTableTest, GetRows) {
   EXPECT_TRUE(variant_is_null(rows.at(3).at(1)));
 }
 
-TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
+TEST_F(StorageTableTest, FillingUpAChunkSetImmutable) {
   table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
   table->append({4, "Hello,"});
@@ -143,7 +143,7 @@ TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
   const auto chunk = table->get_chunk(ChunkID{0});
   const auto mvcc_data = chunk->mvcc_data();
   ASSERT_TRUE(mvcc_data);
-  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MAX_COMMIT_ID);
   EXPECT_TRUE(chunk->is_mutable());
 
   table->append({6, "world"});

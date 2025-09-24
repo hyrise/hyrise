@@ -2,7 +2,9 @@
 
 #include <filesystem>
 #include <functional>
+#include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "benchmark_item_result.hpp"

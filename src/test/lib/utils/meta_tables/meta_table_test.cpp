@@ -1,6 +1,5 @@
 #include "base_test.hpp"
 #include "lib/utils/meta_tables/meta_mock_table.hpp"
-
 #include "operators/table_wrapper.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -94,7 +93,11 @@ auto meta_table_test_formatter = [](const ::testing::TestParamInfo<MetaTable> in
   stream << info.param->name();
 
   auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+  string.erase(std::remove_if(string.begin(), string.end(),
+                              [](char c) {
+                                return !std::isalnum(c);
+                              }),
+               string.end());
 
   return string;
 };
@@ -114,7 +117,7 @@ TEST_P(MultiMetaTablesTest, IsImmutable) {
 }
 
 TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
-  std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
+  auto suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
 
   const auto meta_table = generate_meta_table(GetParam());
@@ -126,7 +129,7 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
 }
 
 TEST_P(MultiMetaTablesTest, IsDynamic) {
-  std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
+  auto suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
 
   {
@@ -141,7 +144,7 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
     Hyrise::get()
         .storage_manager.get_table("int_int")
         ->get_chunk(ChunkID{0})
-        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst));
   }
 
   {

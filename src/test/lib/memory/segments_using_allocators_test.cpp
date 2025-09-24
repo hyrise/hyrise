@@ -1,5 +1,4 @@
 #include "../storage/encoding_test.hpp"
-
 #include "base_test.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
@@ -9,23 +8,23 @@
 
 namespace hyrise {
 
-// A simple polymorphic memory resource that tracks how much memory was allocated
-class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
+// A simple polymorphic memory resource that tracks how much memory was allocated.
+class SimpleTrackingMemoryResource : public MemoryResource {
  public:
   size_t allocated{0};
 
   void* do_allocate(std::size_t bytes, std::size_t alignment) override {
     allocated += bytes;
-    return std::malloc(bytes);  // NOLINT
+    return std::malloc(bytes);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
 
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
     allocated -= bytes;
-    std::free(p);  // NOLINT
+    std::free(p);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
 
   bool do_is_equal(const memory_resource& other) const noexcept override {
-    Fail("Not implemented");
+    Fail("Not implemented.");
   }
 };
 
@@ -89,8 +88,7 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   }
 
   auto resource = SimpleTrackingMemoryResource{};
-  const auto allocator = PolymorphicAllocator<size_t>(&resource);
-  const auto copied_segment = encoded_segment->copy_using_allocator(allocator);
+  const auto copied_segment = encoded_segment->copy_using_memory_resource(resource);
 
   // The segment control structure (i.e., the object itself) and its members are not stored using PMR. Thus, we
   // retrieve the size of an empty segment for later subtraction.
@@ -119,7 +117,9 @@ TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
     encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
   }
-  segment_iterate(*encoded_segment, [](const auto position) { (void)position.value(); });
+  segment_iterate(*encoded_segment, [](const auto position) {
+    (void)position.value();
+  });
 
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -130,8 +130,7 @@ TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
   });
 
   auto resource = SimpleTrackingMemoryResource{};
-  const auto allocator = PolymorphicAllocator<size_t>(&resource);
-  const auto copied_segment = encoded_segment->copy_using_allocator(allocator);
+  const auto copied_segment = encoded_segment->copy_using_memory_resource(resource);
 
   const auto& copied_counters = copied_segment->access_counter;
   EXPECT_EQ(copied_counters[SegmentAccessCounter::AccessType::Sequential], 300);
@@ -140,7 +139,7 @@ TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
 
 inline std::string segments_using_allocator_test_formatter(
     const testing::TestParamInfo<std::tuple<DataType, SegmentEncodingSpec, bool>>& param_info) {
-  std::stringstream stringstream;
+  auto stringstream = std::stringstream{};
   stringstream << std::get<0>(param_info.param);
   stringstream << all_segment_encoding_specs_formatter(
       testing::TestParamInfo<EncodingTest::ParamType>{std::get<1>(param_info.param), 0});

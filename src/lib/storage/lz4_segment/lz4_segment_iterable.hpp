@@ -1,10 +1,12 @@
 #pragma once
 
+#include <memory>
 #include <type_traits>
-
-#include "storage/segment_iterables.hpp"
+#include <utility>
+#include <vector>
 
 #include "storage/lz4_segment.hpp"
+#include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace hyrise {
@@ -24,12 +26,12 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += decompressed_segment.size();
     if (_segment.null_values()) {
       auto begin =
-          Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values()->cbegin(), ChunkOffset{0u}};
+          Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values()->cbegin(), ChunkOffset{0}};
       auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values()->cend(),
                                          static_cast<ChunkOffset>(decompressed_segment.size())};
       functor(begin, end);
     } else {
-      auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), std::nullopt, ChunkOffset{0u}};
+      auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), std::nullopt, ChunkOffset{0}};
       auto end = Iterator<ValueIterator>{decompressed_segment.cend(), std::nullopt,
                                          static_cast<ChunkOffset>(decompressed_segment.size())};
       functor(begin, end);

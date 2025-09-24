@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
@@ -56,8 +57,8 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
     return _data.cend();
   }
 
-  std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-    auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
+  std::unique_ptr<const BaseCompressedVector> on_copy_using_memory_resource(MemoryResource& memory_resource) const {
+    auto data_copy = pmr_vector<UnsignedIntType>{_data, &memory_resource};
     return std::make_unique<FixedWidthIntegerVector<UnsignedIntType>>(std::move(data_copy));
   }
 

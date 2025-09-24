@@ -47,4 +47,15 @@ imdb_data/
 jcch_data/
 ssb_data/
 
+# Python poetry
+poetry.lock
+pyproject.toml
+# Sublime SFTP files
+sftp*
+
+# Clangd files
+compile_commands.json
+.cache/
+
+# Buffer manager files
 buffer_manager_data/

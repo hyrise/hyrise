@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <queue>
 #include <unordered_set>
 
@@ -34,10 +35,8 @@ void visit_tasks(const std::shared_ptr<Task>& task, Visitor visitor) {
     }
 
     if (visitor(current_task) == TaskVisitation::VisitPredecessors) {
-      for (const auto& predecessor_ref : current_task->predecessors()) {
-        const auto predecessor = predecessor_ref.lock();
-        Assert(predecessor, "Predecessor expired.");
-        task_queue.push(predecessor);
+      for (const auto& predecessor : current_task->predecessors()) {
+        task_queue.push(predecessor.get().shared_from_this());
       }
     }
   }
@@ -71,7 +70,7 @@ void visit_tasks_upwards(const std::shared_ptr<Task>& task, Visitor visitor) {
 
     if (visitor(current_task) == TaskUpwardVisitation::VisitSuccessors) {
       for (const auto& successor : current_task->successors()) {
-        task_queue.push(successor);
+        task_queue.push(successor.get().shared_from_this());
       }
     }
   }

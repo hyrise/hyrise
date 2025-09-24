@@ -1,18 +1,22 @@
 #include "equal_distinct_count_histogram.hpp"
 
-#include <cmath>
+#include <cstddef>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "boost/sort/sort.hpp"
-#include "tsl/robin_map.h"
+#include <boost/sort/pdqsort/pdqsort.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 
-#include "generic_histogram.hpp"
-#include "resolve_type.hpp"
+#include "all_type_variant.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -23,9 +27,7 @@ using namespace hyrise;  // NOLINT
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
 // where hashing is somewhat expensive.
 template <typename T>
-using ValueDistributionMap =
-    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
+using ValueDistributionMap = boost::unordered_flat_map<T, HistogramCountType>;
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
@@ -66,8 +68,9 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
   value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
-  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
-                       [&](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs.first < rhs.first;
+  });
 
   return value_distribution;
 }
@@ -178,7 +181,7 @@ BinID EqualDistinctCountHistogram<T>::bin_count() const {
 }
 
 template <typename T>
-BinID EqualDistinctCountHistogram<T>::_bin_for_value(const T& value) const {
+BinID EqualDistinctCountHistogram<T>::bin_for_value(const T& value) const {
   const auto iter = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
   const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), iter));
 
@@ -190,7 +193,7 @@ BinID EqualDistinctCountHistogram<T>::_bin_for_value(const T& value) const {
 }
 
 template <typename T>
-BinID EqualDistinctCountHistogram<T>::_next_bin_for_value(const T& value) const {
+BinID EqualDistinctCountHistogram<T>::next_bin_for_value(const T& value) const {
   const auto it = std::upper_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
 
   if (it == _bin_maxima.cend()) {

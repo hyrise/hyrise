@@ -29,7 +29,7 @@ class BaseAttributeStatistics {
    *                            `statistics->set_statistics_object(stat_obj->sliced(...))` without having to check
    *                            whether `sliced()` returned a nullptr.
    */
-  virtual void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) = 0;
+  virtual void set_statistics_object(const std::shared_ptr<const AbstractStatisticsObject>& statistics_object) = 0;
 
   /**
    * Creates a new AttributeStatistics with all members of this slice scaled as requested. We use this method to estima-
@@ -37,14 +37,14 @@ class BaseAttributeStatistics {
    * (e.g., another column was sliced by the predicate and we scale the current column down with the selectivity). When
    * we cannot be sure how the statistics will change, we assume the worst-case scenario (i.e., nothing changes).
    */
-  virtual std::shared_ptr<BaseAttributeStatistics> scaled(const Selectivity selectivity) const = 0;
+  virtual std::shared_ptr<const BaseAttributeStatistics> scaled(const Selectivity selectivity) const = 0;
 
   /**
    * Creates a new AttributeStatistics with all members of this slice sliced as requested. We use this method to estima-
    * te how the statistics would change if we executed the given predicate (i.e., a ColumnVsValue/ColumnBetween
    * TableScan) on the column/segment.
    */
-  virtual std::shared_ptr<BaseAttributeStatistics> sliced(
+  virtual std::shared_ptr<const BaseAttributeStatistics> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
@@ -53,7 +53,7 @@ class BaseAttributeStatistics {
    * pruned. That is, remove num_values_pruned that DO NOT satisfy the predicate from the statistics, assuming
    * equidistribution.
    */
-  virtual std::shared_ptr<BaseAttributeStatistics> pruned(
+  virtual std::shared_ptr<const BaseAttributeStatistics> pruned(
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 

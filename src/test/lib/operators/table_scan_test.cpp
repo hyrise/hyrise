@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/limit.hpp"
@@ -95,13 +94,13 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   std::shared_ptr<TableWrapper> get_int_sorted_op() {
     return load_and_encode_table(
         "resources/test_data/tbl/int_sorted.tbl", ChunkOffset{4},
-        std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
+        std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::AscendingNullsFirst)});
   }
 
   std::shared_ptr<TableWrapper> get_int_only_null_op() {
     return load_and_encode_table(
         "resources/test_data/tbl/int_only_null.tbl", ChunkOffset{4},
-        std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
+        std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::AscendingNullsFirst)});
   }
 
   std::shared_ptr<TableWrapper> get_int_string_op() {
@@ -154,7 +153,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       table->append({i});
     }
 
-    table->get_chunk(static_cast<ChunkID>(ChunkID{0}))->finalize();
+    table->get_chunk(static_cast<ChunkID>(ChunkID{0}))->set_immutable();
 
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{_encoding_type});
 
@@ -246,7 +245,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       const auto& actual_sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
       ASSERT_TRUE(!actual_sorted_by.empty());
       const auto expected_sorted_by =
-          std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+          std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)};
       EXPECT_EQ(actual_sorted_by, expected_sorted_by);
     }
   }
@@ -681,7 +680,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_2.tbl", ChunkOffset{4});
-  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst));
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -696,7 +696,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_2.tbl", ChunkOffset{4});
-  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Descending));
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsFirst));
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -705,6 +706,38 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegm
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {1, 2}},
                                                                                {PredicateCondition::IsNotNull, {3, 4}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegmentsNullsLast) {
+  const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_nulls_last_2.tbl", ChunkOffset{4});
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsLast));
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {3, 4}},
+                                                                               {PredicateCondition::IsNotNull, {1, 2}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegmentsNullsLast) {
+  const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_nulls_last_2.tbl", ChunkOffset{4});
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsLast));
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {3, 4}},
+                                                                               {PredicateCondition::IsNotNull, {1, 2}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -1170,7 +1203,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagDataSegments) {
   EXPECT_TRUE(ref_segment->pos_list()->references_single_chunk());
 
   const auto expected_sorted_by =
-      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)};
   EXPECT_EQ(result_chunk_sorted->individually_sorted_by(), expected_sorted_by);
 }
 
@@ -1197,10 +1230,12 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
-  ref_table->get_chunk(ChunkID{1})->finalize();
-  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-  ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
+  ref_table->get_chunk(ChunkID{1})->set_immutable();
+  ref_table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
+  ref_table->get_chunk(ChunkID{1})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
@@ -1216,7 +1251,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
     EXPECT_TRUE(ref_segment->pos_list()->references_single_chunk());
 
     const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
-    ASSERT_EQ(chunk_sorted_by, std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)});
+    ASSERT_EQ(chunk_sorted_by, std::vector{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)});
   }
 }
 
@@ -1241,10 +1276,12 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
-  ref_table->get_chunk(ChunkID{1})->finalize();
-  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-  ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
+  ref_table->get_chunk(ChunkID{1})->set_immutable();
+  ref_table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
+  ref_table->get_chunk(ChunkID{1})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
@@ -1265,7 +1302,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
     const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(ChunkID{1});
     const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
     ASSERT_EQ(chunk_sorted_by.size(), 1);
-    ASSERT_EQ(chunk_sorted_by.at(0), SortColumnDefinition(ColumnID(0), SortMode::Ascending));
+    ASSERT_EQ(chunk_sorted_by.at(0), SortColumnDefinition(ColumnID(0), SortMode::AscendingNullsFirst));
   }
 }
 
@@ -1288,8 +1325,9 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto segment = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
-  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
+  ref_table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 

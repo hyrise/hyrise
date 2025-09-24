@@ -1,26 +1,31 @@
 #include "generate_pruning_statistics.hpp"
 
-#include <atomic>
-#include <iostream>
-#include <thread>
+#include <memory>
+#include <type_traits>
 #include <unordered_set>
+#include <vector>
 
-#include "operators/table_wrapper.hpp"
+#include <boost/sort/pdqsort/pdqsort.hpp>
+
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "statistics/statistics_objects/generic_histogram_builder.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
-#include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT (build/namespaces)
 
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
@@ -40,13 +45,16 @@ void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_stati
 }  // namespace
 
 namespace hyrise {
+bool is_immutable_chunk_without_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
+  // We do not generate statistics for chunks as long as they are mutable.
+  // Also, pruning statistics should be stable no matter what encoding or sort order is used.
+  // Hence, when they are present they are up to date, and we can skip the recreation.
+  return chunk && !chunk->is_mutable() && !chunk->pruning_statistics();
+}
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
-  if (chunk->pruning_statistics()) {
-    // Pruning statistics should be stable no matter what encoding or sort order is used. Hence, when they are present
-    // they are up to date and we can skip the recreation.
-    return;
-  }
+  DebugAssert(is_immutable_chunk_without_pruning_statistics(chunk),
+              "Method should only be called for qualifying chunks.");
 
   auto chunk_statistics = ChunkPruningStatistics{chunk->column_count()};
 
@@ -59,22 +67,23 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
 
       const auto segment_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
+      // TODO(anyone): use dictionary-optimized path for FixedStringDictionarySegments as well.
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
-        // we can use the fact that dictionary segments have an accessor for the dictionary
+        // We can use the fact that dictionary segments have an accessor for the dictionary.
         const auto& dictionary = *typed_segment.dictionary();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
-        // if we have a generic segment we create the dictionary ourselves
+        // If we have a generic segment, we create the dictionary ourselves.
         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-        std::unordered_set<ColumnDataType> values;
+        auto values = std::unordered_set<ColumnDataType>{};
         iterable.for_each([&](const auto& value) {
-          // we are only interested in non-null values
+          // We are only interested in non-null values.
           if (!value.is_null()) {
             values.insert(value.value());
           }
         });
-        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
-        std::sort(dictionary.begin(), dictionary.end());
+        auto dictionary = pmr_vector<ColumnDataType>{values.cbegin(), values.cend()};
+        boost::sort::pdqsort(dictionary.begin(), dictionary.end());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 
@@ -87,15 +96,21 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
   const auto chunk_count = table->chunk_count();
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(chunk_count);
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
 
-    if (!chunk || chunk->is_mutable()) {
+    if (!is_immutable_chunk_without_pruning_statistics(chunk)) {
       continue;
     }
 
-    generate_chunk_pruning_statistics(chunk);
+    jobs.emplace_back(std::make_shared<JobTask>([&, chunk]() {
+      generate_chunk_pruning_statistics(chunk);
+    }));
   }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 }  // namespace hyrise

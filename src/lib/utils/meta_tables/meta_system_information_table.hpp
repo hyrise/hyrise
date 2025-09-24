@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {
