@@ -194,7 +194,7 @@ class LikeMatcher {
         return;
       }
 
-      return functor(boost::regex{cased_pattern, boost::regex::optimize});
+      return functor(boost::regex{sql_like_to_regex(cased_pattern), boost::regex::optimize});
     });
   }
 
@@ -265,7 +265,7 @@ class LikeMatcher {
         functor([&](const auto& string) -> bool {
           return resolve_case(string, [&](const auto& cased_string) -> bool {
             if constexpr(std::is_same_v<std::decay_t<decltype(cased_string)>, pmr_string>) {
-              return boost::regex_match(cased_string.c_str(), typed_pattern) ^ invert_results;
+              return boost::regex_match(cased_string, typed_pattern) ^ invert_results;
             } else {
               return boost::regex_match(cased_string.data(), typed_pattern) ^ invert_results;
             }
