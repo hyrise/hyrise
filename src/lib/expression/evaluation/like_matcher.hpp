@@ -194,7 +194,7 @@ class LikeMatcher {
         return;
       }
 
-      return functor(boost::regex{sql_like_to_regex(cased_pattern), boost::regex::optimize});
+      return functor(boost::regex{sql_like_to_regex(cased_pattern)});
     });
   }
 
