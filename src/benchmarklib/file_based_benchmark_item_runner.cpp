@@ -45,7 +45,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   } else {
     // Recursively walk through the specified directory and add all files on the way.
     for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
-      const auto file_path = entry.path();
+      const auto& file_path = entry.path();
       if (is_sql_file(query_path) || filename_blacklist.contains(file_path.filename())) {
         continue;
       }

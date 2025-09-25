@@ -458,7 +458,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
   for (const auto& table_file : std::filesystem::directory_iterator(cache_directory)) {
-    const auto file_path = table_file.path();
+    const auto& file_path = table_file.path();
     if (file_path.extension() != ".bin") {
       continue;
     }

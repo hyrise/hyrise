@@ -30,6 +30,7 @@ namespace {
 // When sorting left and right input poslists, we first add both lists sizes. When the sum is larger than
 // `PARALLEL_SORTING_THRESHOLD`, we run both sorts in parallel.
 constexpr auto PARALLEL_SORTING_THRESHOLD = size_t{20'000};
+
 }  // namespace
 
 /**

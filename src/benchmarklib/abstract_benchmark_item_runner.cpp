@@ -34,7 +34,7 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
   std::cout << "- Loading expected result tables\n";
 
   for (const auto& entry : std::filesystem::directory_iterator(expected_results_directory_path)) {
-    const auto file_path = entry.path();
+    const auto& file_path = entry.path();
     if (file_path.extension() != ".tbl") {
       continue;
     }

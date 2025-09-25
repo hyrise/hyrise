@@ -1,6 +1,7 @@
 #include "variable_length_key_base.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cassert>
 #include <climits>
 #include <cstdint>

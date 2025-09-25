@@ -41,7 +41,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    * binary version of a table.
    */
   for (const auto& directory_entry : std::filesystem::directory_iterator(_path)) {
-    const auto file_path = directory_entry.path();
+    const auto& file_path = directory_entry.path();
     const auto extension = file_path.extension();
     if (!table_extensions.contains(extension)) {
       continue;
