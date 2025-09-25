@@ -73,7 +73,8 @@ void NodeQueueScheduler::begin() {
   _min_task_count_for_regrouping =
       std::max(size_t{16}, static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
 
-  // For every task list of at least this size, we use the max value for grouping.
+  // For every task list of at least this size, we use the max value for grouping. For 64 workers, a queue load of 640
+  // (i.e., ~640 normal priority tasks) is enough to use the minimum number of groups.
   _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {

@@ -13,7 +13,7 @@ enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, Right
 
 /**
  *  General description
- * 
+ *
  *  This file contains helpers for writing the join output. There are several challenges when writing join outputs:
  *    - positions might need to be resolved (references to reference segments are not allowed)
  *    - PosLists might be joined when deemed beneficial (to avoid very small chunks)
