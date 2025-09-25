@@ -104,7 +104,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   const std::string& name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
@@ -224,7 +224,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   const std::string& name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<T(const std::vector<size_t>&)>& generator_function) {
     const std::function<std::vector<T>(const std::vector<size_t>&)> wrapped_generator_function =
         [generator_function](const std::vector<size_t>& indices) {
@@ -244,7 +244,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   const std::string& name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function) {
     const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)> wrapped_generator_function =
         [generator_function](const std::vector<size_t>& indices) {

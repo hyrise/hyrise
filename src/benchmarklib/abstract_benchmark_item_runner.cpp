@@ -29,25 +29,23 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
   Assert(std::filesystem::is_directory(expected_results_directory_path),
          "Expected results path (" + expected_results_directory_path.string() + ") has to be a directory.");
 
-  const auto is_tbl_file = [](const std::string& filename) {
-    return filename.ends_with(".tbl");
-  };
-
   _dedicated_expected_results.resize(items().size());
 
   std::cout << "- Loading expected result tables\n";
 
   for (const auto& entry : std::filesystem::directory_iterator(expected_results_directory_path)) {
-    if (is_tbl_file(entry.path())) {
-      const auto item_name = entry.path().stem().string();
+    const auto file_path = entry.path();
+    if (file_path.extension() != ".tbl") {
+      continue;
+    }
 
-      const auto iter = std::find_if(items().cbegin(), items().cend(), [this, &item_name](const auto& item) {
-        return this->item_name(item) == item_name;
-      });
-      if (iter != items().cend()) {
-        std::cout << "-  Loading result table " + entry.path().string() << "\n";
-        _dedicated_expected_results[*iter] = load_table(entry.path().string());
-      }
+    const auto item_name = file_path.stem().string();
+    const auto iter = std::find_if(items().cbegin(), items().cend(), [this, &item_name](const auto& item) {
+      return this->item_name(item) == item_name;
+    });
+    if (iter != items().cend()) {
+      std::cout << "-  Loading result table " + file_path.string() << "\n";
+      _dedicated_expected_results[*iter] = load_table(file_path.string());
     }
   }
 }

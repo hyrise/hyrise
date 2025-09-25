@@ -9,8 +9,7 @@ namespace hyrise {
 
 void LogManager::add_message(const std::string& reporter, const std::string& message, const LogLevel log_level) {
   const auto now = std::chrono::system_clock::now();
-  const auto log_entry = LogEntry{.timestamp = now, .log_level = log_level, .reporter = reporter, .message = message};
-  _log_entries.emplace_back(log_entry);
+  _log_entries.emplace_back(now, log_level, reporter, message);
 }
 
 const tbb::concurrent_vector<LogEntry>& LogManager::log_entries() const {

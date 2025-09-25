@@ -25,6 +25,13 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
+namespace {
+
+// When sorting left and right input poslists, we first add both lists sizes. When the sum is larger than
+// `PARALLEL_SORTING_THRESHOLD`, we run both sorts in parallel.
+constexpr auto PARALLEL_SORTING_THRESHOLD = size_t{20'000};
+}  // namespace
+
 /**
  * ### UnionPositions implementation
  * The UnionPositions operator turns each input table into a ReferenceMatrix.
@@ -128,7 +135,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
                          VirtualPosListCmpContext{reference_matrix_right});
   };
 
-  if (virtual_pos_list_left.size() + virtual_pos_list_right.size() > 20'000) {
+  if (virtual_pos_list_left.size() + virtual_pos_list_right.size() > PARALLEL_SORTING_THRESHOLD) {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>(2);
     jobs[0] = std::make_shared<JobTask>(sort_left);
     jobs[1] = std::make_shared<JobTask>(sort_right);

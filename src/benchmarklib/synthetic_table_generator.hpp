@@ -17,32 +17,10 @@ class Table;
 enum class DataDistributionType { Uniform, NormalSkewed, Pareto };
 
 struct ColumnDataDistribution {
-  static ColumnDataDistribution make_uniform_config(const double min, const double max) {
-    auto config = ColumnDataDistribution{};
-    config.min_value = min;
-    config.max_value = max;
-    config.num_different_values = static_cast<int>(std::floor(max - min));
-    return config;
-  }
-
-  static ColumnDataDistribution make_pareto_config(const double pareto_scale = 1.0, const double pareto_shape = 1.0) {
-    auto config = ColumnDataDistribution{};
-    config.pareto_scale = pareto_scale;
-    config.pareto_shape = pareto_shape;
-    config.distribution_type = DataDistributionType::Pareto;
-    return config;
-  }
-
+  static ColumnDataDistribution make_uniform_config(const double min, const double max);
+  static ColumnDataDistribution make_pareto_config(const double pareto_scale = 1.0, const double pareto_shape = 1.0);
   static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 0.0,
-                                                          const double skew_scale = 1.0,
-                                                          const double skew_shape = 0.0) {
-    auto config = ColumnDataDistribution{};
-    config.skew_location = skew_location;
-    config.skew_scale = skew_scale;
-    config.skew_shape = skew_shape;
-    config.distribution_type = DataDistributionType::NormalSkewed;
-    return config;
-  }
+                                                          const double skew_scale = 1.0, const double skew_shape = 0.0);
 
   DataDistributionType distribution_type = DataDistributionType::Uniform;
 

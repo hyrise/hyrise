@@ -32,8 +32,8 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::unordered_set<std::string>& filename_blacklist,
     const std::optional<std::unordered_set<std::string>>& query_subset)
     : AbstractBenchmarkItemRunner(config) {
-  const auto is_sql_file = [](const std::string& filename) {
-    return filename.ends_with(".sql");
+  const auto is_sql_file = [](const std::filesystem::path& file_path) {
+    return file_path.extension() == ".sql";
   };
 
   const auto path = std::filesystem::path{query_path};
@@ -44,20 +44,19 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     _parse_query_file(query_path, query_subset);
   } else {
     // Recursively walk through the specified directory and add all files on the way.
-    for (const auto& entry : std::filesystem::directory_iterator(path)) {
-      if (is_sql_file(entry.path())) {
-        if (filename_blacklist.contains(entry.path().filename())) {
-          continue;
-        }
-        _parse_query_file(entry.path(), query_subset);
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
+      const auto file_path = entry.path();
+      if (is_sql_file(query_path) || filename_blacklist.contains(file_path.filename())) {
+        continue;
       }
+      _parse_query_file(file_path, query_subset);
     }
   }
 
   _items.resize(_queries.size());
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
-  // Sort queries by name
+  // Sort queries by name.
   std::ranges::sort(_queries, [](const auto& lhs, const auto& rhs) {
     return lhs.name < rhs.name;
   });
@@ -83,7 +82,7 @@ const std::vector<BenchmarkItemID>& FileBasedBenchmarkItemRunner::items() const 
 
 void FileBasedBenchmarkItemRunner::_parse_query_file(
     const std::filesystem::path& query_file_path, const std::optional<std::unordered_set<std::string>>& query_subset) {
-  std::ifstream file(query_file_path);
+  auto file = std::ifstream{query_file_path};
 
   // The names of queries from, e.g., "queries/TPCH-7.sql" will be prefixed with "TPCH-7."
   const auto item_name_prefix = query_file_path.stem().string();
@@ -95,13 +94,13 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
    * We use the SQLParser to split up the content of the file into the individual SQL statements.
    */
 
-  hsql::SQLParserResult parse_result;
+  auto parse_result = hsql::SQLParserResult{};
   hsql::SQLParser::parse(content, &parse_result);
   Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
 
-  std::vector<Query> queries_in_file{parse_result.size()};
+  auto queries_in_file = std::vector<Query>{parse_result.size()};
 
-  size_t sql_string_offset{0u};
+  auto sql_string_offset = size_t{0};
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
     const auto item_name = item_name_prefix + '.' + std::to_string(statement_idx);
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;

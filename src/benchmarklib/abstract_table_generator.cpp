@@ -458,10 +458,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
   for (const auto& table_file : std::filesystem::directory_iterator(cache_directory)) {
-    const auto table_name = table_file.path().stem();
+    const auto file_path = table_file.path();
+    if (file_path.extension() != ".bin") {
+      continue;
+    }
+
+    const auto table_name = file_path.stem();
     auto table_info = BenchmarkTableInfo{};
     table_info.loaded_from_binary = true;
-    table_info.binary_file_path = table_file.path();
+    table_info.binary_file_path = file_path;
     table_info_by_name[table_name] = std::move(table_info);
   }
 

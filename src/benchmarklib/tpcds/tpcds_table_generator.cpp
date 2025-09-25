@@ -198,11 +198,11 @@ std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& ad
     return std::nullopt;
   }
 
-  if (address.street_name2 == nullptr) {
-    return std::optional{pmr_string{address.street_name1}};
+  if (address.street_name2) {
+    return pmr_string{address.street_name1};
   }
 
-  return std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
+  return pmr_string{address.street_name1} + " " + address.street_name2;
 }
 
 // Mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):

@@ -41,13 +41,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    * binary version of a table.
    */
   for (const auto& directory_entry : std::filesystem::directory_iterator(_path)) {
-    const auto extension = directory_entry.path().extension();
-
+    const auto file_path = directory_entry.path();
+    const auto extension = file_path.extension();
     if (!table_extensions.contains(extension)) {
       continue;
     }
 
-    auto table_name = directory_entry.path().filename();
+    auto table_name = file_path.filename();
     table_name.replace_extension("");
 
     auto table_info_by_name_iter = table_info_by_name.find(table_name);
@@ -61,11 +61,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     if (extension == ".bin") {
       Assert(!table_info.binary_file_path,
              std::string{"Multiple binary files found for table '"} + table_name.string() + "'");
-      table_info.binary_file_path = directory_entry.path();
+      table_info.binary_file_path = file_path;
     } else {
       Assert(!table_info.text_file_path,
              std::string{"Multiple text files found for table '"} + table_name.string() + "'");
-      table_info.text_file_path = directory_entry.path();
+      table_info.text_file_path = file_path;
     }
   }
 

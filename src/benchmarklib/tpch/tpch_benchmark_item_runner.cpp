@@ -56,7 +56,7 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _scale_factor(scale_factor),
       _clustering_configuration(clustering_configuration),
       _items(items) {
-  for (const auto& benchmark_item_id : _items) {
+  for (const auto benchmark_item_id : _items) {
     Assert(benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22, "Invalid TPC-H item ID.");
   }
 }
