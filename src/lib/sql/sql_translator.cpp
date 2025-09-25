@@ -1979,8 +1979,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprParameter: {
-      Assert(expr.ival >= 0 && static_cast<ValuePlaceholderID::base_type>(expr.ival) <=
-                                   std::numeric_limits<ValuePlaceholderID::base_type>::max(),
+      Assert(expr.ival >= 0 &&
+             std::cmp_less_equal(expr.ival, std::numeric_limits<ValuePlaceholderID::base_type>::max()),
              "ValuePlaceholderID out of range.");
       auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
       return placeholder_(_parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
