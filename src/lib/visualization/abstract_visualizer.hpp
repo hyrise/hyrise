@@ -8,14 +8,8 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
-
-// False positive with GCC, finding accesses to unitialized memory in adjacency_list.hpp
-// (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194).
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
-#pragma GCC diagnostic pop
 
 #include "operators/print.hpp"
 
