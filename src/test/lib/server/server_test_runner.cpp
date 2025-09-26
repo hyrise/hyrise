@@ -2,8 +2,13 @@
 #include <future>
 #include <thread>
 
+// GCC in release mode finds potentially uninitialized memory in pqxx. Looking at param.hxx, this appears to be a false
+// positive.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include <pqxx/connection>      // NOLINT(build/include_order): cpplint considers pqxx as C system headers.
 #include <pqxx/nontransaction>  // NOLINT(build/include_order)
+#pragma GCC diagnostic pop
 
 #include "base_test.hpp"
 #include "hyrise.hpp"
