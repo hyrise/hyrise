@@ -6,6 +6,8 @@
 
 #include <unistd.h>
 
+#include <string>
+
 namespace hyrise {
 
 void DebugAssertPageAlignment(const std::byte* data) {
