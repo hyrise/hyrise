@@ -35,7 +35,7 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
 
   for (const auto& entry : std::filesystem::directory_iterator(expected_results_directory_path)) {
     const auto& file_path = entry.path();
-    if (file_path.extension() != ".tbl") {
+    if (!entry.is_regular_file() || file_path.extension() != ".tbl") {
       continue;
     }
 

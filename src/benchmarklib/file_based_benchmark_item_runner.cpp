@@ -33,7 +33,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::optional<std::unordered_set<std::string>>& query_subset)
     : AbstractBenchmarkItemRunner(config) {
   const auto is_sql_file = [](const std::filesystem::path& file_path) {
-    return file_path.extension() == ".sql";
+    return std::filesystem::is_regular_file(file_path) && file_path.extension() == ".sql";
   };
 
   const auto path = std::filesystem::path{query_path};
@@ -46,9 +46,10 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     // Recursively walk through the specified directory and add all files on the way.
     for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
       const auto& file_path = entry.path();
-      if (is_sql_file(query_path) || filename_excludelist.contains(file_path.filename())) {
+      if (!is_sql_file(entry) || filename_excludelist.contains(file_path.filename())) {
         continue;
       }
+
       _parse_query_file(file_path, query_subset);
     }
   }
