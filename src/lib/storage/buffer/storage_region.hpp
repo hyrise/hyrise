@@ -64,6 +64,9 @@ class StorageRegion final : public Noncopyable {
 
     // Filename of backing file
     std::filesystem::path backing_file_name;
+
+    // Use for block devices.
+    size_t offset = 0;
   };
 
   const Mode _mode;
