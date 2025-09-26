@@ -264,11 +264,7 @@ class LikeMatcher {
       } else if constexpr (std::is_same_v<Pattern, boost::regex>) {
         functor([&](const auto& string) -> bool {
           return resolve_case(string, [&](const auto& cased_string) -> bool {
-            if constexpr(std::is_same_v<std::decay_t<decltype(cased_string)>, pmr_string>) {
-              return boost::regex_match(cased_string, typed_pattern) ^ invert_results;
-            } else {
-              return boost::regex_match(cased_string.data(), typed_pattern) ^ invert_results;
-            }
+            return boost::regex_match(cased_string.begin(), cased_string.end(), typed_pattern) ^ invert_results;
           });
         });
 
