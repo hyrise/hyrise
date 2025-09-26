@@ -6,7 +6,7 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"

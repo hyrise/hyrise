@@ -13,7 +13,7 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"

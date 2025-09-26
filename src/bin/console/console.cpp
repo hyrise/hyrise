@@ -28,7 +28,7 @@
 #include <readline/history.h>   // NOLINT(build/include_order): cpplint considers readline headers as C system headers.
 #include <readline/readline.h>  // NOLINT(build/include_order)
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 

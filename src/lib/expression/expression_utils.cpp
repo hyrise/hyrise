@@ -11,7 +11,7 @@
 
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"

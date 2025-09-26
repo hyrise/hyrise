@@ -27,7 +27,7 @@
 #include <boost/variant/apply_visitor.hpp>
 
 #include "cxxopts.hpp"
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
 #include "abstract_benchmark_item_runner.hpp"

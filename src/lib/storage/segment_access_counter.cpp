@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "utils/assert.hpp"

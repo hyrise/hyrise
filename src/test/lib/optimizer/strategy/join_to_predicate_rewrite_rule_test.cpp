@@ -1,4 +1,4 @@
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"

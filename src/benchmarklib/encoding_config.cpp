@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
 #include "all_type_variant.hpp"
