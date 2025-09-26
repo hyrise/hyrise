@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-
 #include "storage/buffer/storage_region.hpp"
 #include "types.hpp"
 #include "utils/list_directory.hpp"
@@ -95,21 +94,25 @@ TEST_F(StorageRegionTest, ReadFailsWithUnalignedData) {
 }
 
 TEST_F(StorageRegionTest, WritingTwiceOverridesPreviousData) {
-  auto write_page = Page{};
+  auto write_page1 = Page{};
   auto read_page1 = Page{};
   auto page_id = PageID{PageSizeType::KiB16, 20};
 
   // Perform first write
-  std::memset(write_page.data.data(), 0x1, page_id.byte_count());
-  storage_region->write_page(page_id, write_page.data.data());
+  std::memset(write_page1.data.data(), 0x1, page_id.byte_count());
+  storage_region->write_page(page_id, write_page1.data.data());
   storage_region->read_page(page_id, read_page1.data.data());
-  EXPECT_EQ(std::memcmp(read_page1.data.data(), read_page1.data.data(), page_id.byte_count()), 0);
+  EXPECT_EQ(std::memcmp(read_page1.data.data(), write_page1.data.data(), page_id.byte_count()), 0);
 
   // Perform second write and check that the data was overwritten
+  auto write_page2 = Page{};
   auto read_page2 = Page{};
-  std::memset(write_page.data.data(), 0x2, page_id.byte_count());
-  storage_region->write_page(page_id, write_page.data.data());
+  std::memset(write_page2.data.data(), 0x2, page_id.byte_count());
+  storage_region->write_page(page_id, write_page2.data.data());
+  EXPECT_NE(std::memcmp(write_page1.data.data(), write_page2.data.data(), page_id.byte_count()), 0);
+  storage_region->read_page(page_id, read_page2.data.data());
   EXPECT_NE(std::memcmp(read_page1.data.data(), read_page2.data.data(), page_id.byte_count()), 0);
+  EXPECT_EQ(std::memcmp(read_page2.data.data(), write_page2.data.data(), page_id.byte_count()), 0);
 }
 
 }  // namespace hyrise
