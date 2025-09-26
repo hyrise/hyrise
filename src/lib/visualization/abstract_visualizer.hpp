@@ -130,7 +130,7 @@ class AbstractVisualizer {
 
     // mkstemp returns a file descriptor. Unfortunately, we cannot directly create an ofstream from a file descriptor.
     close(file_descriptor);
-    std::ofstream file(tmpname);
+    auto file = std::ofstream(tmpname);
 
     // This unique_ptr serves as a scope guard that guarantees the deletion of the temp file once we return from this
     // method.
@@ -148,27 +148,22 @@ class AbstractVisualizer {
     const auto normalize_penwidths = [&](auto iter_pair) {
       const auto max_normalized_width = 8.0;
       const auto log_base = std::log(1.5);
-      double max_unnormalized_width = 0.0;
-      // // False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
-      // #pragma GCC diagnostic push
-      // #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+      auto max_unnormalized_width = 0.0;
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         max_unnormalized_width = std::max(max_unnormalized_width, std::log(_graph[*iter].pen_width) / log_base);
       }
 
-      double offset = max_unnormalized_width - (max_normalized_width - 1.0);
-
+      const auto offset = max_unnormalized_width - (max_normalized_width - 1.0);
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         auto& pen_width = _graph[*iter].pen_width;
         if (max_unnormalized_width == 0.0) {
-          // All widths are the same, set pen width to 1
+          // All widths are the same, set pen width to 1.
           pen_width = 1.0;
         } else {
-          // Set normalized pen width
+          // Set normalized pen width.
           pen_width = 1.0 + std::max(0.0, std::log(pen_width) / log_base - offset);
         }
       }
-      // #pragma GCC diagnostic pop
     };
     normalize_penwidths(boost::vertices(_graph));
     normalize_penwidths(boost::edges(_graph));
