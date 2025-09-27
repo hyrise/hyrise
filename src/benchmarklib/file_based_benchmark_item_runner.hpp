@@ -15,7 +15,7 @@ namespace hyrise {
 class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
   // @param query_path            can be either a folder or a single .sql file
-  // @param filename_excludelist    list of filenames to ignore
+  // @param filename_excludelist  list of filenames to ignore
   // @param query_subset          if set, only the queries with the specified names (derived from the filename) will be
   //                              generated. If "q7.sql" contains a single query, the query has the name "q7". If
   //                              it contains multiple queries, they are called "q7.0", "q7.1", ...
