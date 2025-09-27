@@ -118,7 +118,7 @@ in constant_mappings.cpp.
 The encoding is always required, the compression is optional.
 
 {
-  "default": {
+  "preferred": {
     "encoding": <ENCODING_TYPE_STRING>,               // required
     "compression": <VECTOR_COMPRESSION_TYPE_STRING>,  // optional
   },
