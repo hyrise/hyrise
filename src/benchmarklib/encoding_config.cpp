@@ -38,7 +38,7 @@ std::optional<SegmentEncodingSpec> EncodingConfig::encoding_spec_from_strings(co
 
 std::optional<EncodingType> EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
   if (encoding_str == "Automatic") {
-    return std::nullopt;
+    return {};
   }
 
   const auto type = magic_enum::enum_cast<EncodingType>(encoding_str);

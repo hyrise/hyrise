@@ -151,13 +151,15 @@ bool column_is_unique(const std::shared_ptr<Table>& table, const ColumnID column
   return false;
 }
 
-std::vector<bool> unique_columns(const std::shared_ptr<Table>& table) {
+std::vector<ColumnID> unique_columns(const std::shared_ptr<Table>& table) {
   const auto column_count = table->column_count();
-  auto unique_columns = std::vector<bool>(column_count);
+  auto columns = std::vector<ColumnID>();
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    unique_columns[column_id] = column_is_unique(table, column_id);
+    if (column_is_unique(table, column_id)) {
+      columns.push_back(column_id);
+    }
   }
-  return unique_columns;
+  return columns;
 }
 
 }  // namespace hyrise
