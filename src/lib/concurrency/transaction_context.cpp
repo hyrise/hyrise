@@ -25,36 +25,27 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
 }
 
 TransactionContext::~TransactionContext() {
-  DebugAssert(([this]() {
-                auto an_operator_failed = false;
-                for (const auto& op : _read_write_operators) {
-                  if (op->state() == ReadWriteOperatorState::Conflicted) {
-                    an_operator_failed = true;
-                    break;
-                  }
-                }
+  if constexpr (HYRISE_DEBUG) {
+    // Note: When thrown during stack unwinding, exceptions from the following assertions might hide previous
+    // exceptions. If you are seeing this, either use a debugger and break on exceptions or turn off these assertions as
+    // a trial.
+    const auto is_rolled_back_after_conflict = _phase == TransactionPhase::RolledBackAfterConflict;
+    for (const auto& op : _read_write_operators) {
+      const auto operator_has_conflict = op->state() == ReadWriteOperatorState::Conflicted;
+      Assert(!operator_has_conflict || is_rolled_back_after_conflict,
+             "A registered operator failed but the transaction has not been rolled back. You may also see this "
+             "exception if an operator threw an uncaught exception.");
+    }
 
-                const auto is_rolled_back_after_conflict = _phase == TransactionPhase::RolledBackAfterConflict;
-                return !an_operator_failed || is_rolled_back_after_conflict;
-              }()),
-              "A registered operator failed but the transaction has not been rolled back. You may also see this "
-              "exception if an operator threw an uncaught exception.");
+    const auto has_registered_operators = !_read_write_operators.empty();
+    const auto committed_or_rolled_back = _phase == TransactionPhase::Committed ||
+                                          _phase == TransactionPhase::RolledBackByUser ||
+                                          _phase == TransactionPhase::RolledBackAfterConflict;
+    Assert(!has_registered_operators || committed_or_rolled_back,
+           "Has registered operators but has neither been committed nor rolled back (see comment in code).");
+  }
 
-  DebugAssert(([this]() {
-                const auto has_registered_operators = !_read_write_operators.empty();
-                const auto committed_or_rolled_back = _phase == TransactionPhase::Committed ||
-                                                      _phase == TransactionPhase::RolledBackByUser ||
-                                                      _phase == TransactionPhase::RolledBackAfterConflict;
-                return !has_registered_operators || committed_or_rolled_back;
-                // Note: When thrown during stack unwinding, this exception might hide previous exceptions. If you are
-                // seeing this, either use a debugger and break on exceptions or disable this exception as a trial.
-              }()),
-              "Has registered operators but has neither been committed nor rolled back (see comment in code).");
-
-  /**
-   * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
-   * that this transaction has finished.
-   */
+  // Tell the TransactionManager, which keeps track of active snapshot-commit-ids, that this transaction has finished.
   Hyrise::get().transaction_manager._deregister_transaction(_snapshot_commit_id);
 }
 
@@ -71,7 +62,7 @@ AutoCommit TransactionContext::is_auto_commit() const {
 }
 
 CommitID TransactionContext::commit_id() const {
-  Assert(_commit_context, "TransactionContext cid only available after commit context has been created.");
+  Assert(_commit_context, "TransactionContext CommitID only available after commit context has been created.");
 
   return _commit_context->commit_id();
 }
@@ -137,15 +128,11 @@ void TransactionContext::_mark_as_conflicted() {
 }
 
 void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
-  DebugAssert(([this]() {
-                for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::RolledBack) {
-                    return false;
-                  }
-                }
-                return true;
-              }()),
-              "All read/write operators need to have been rolled back.");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& op : _read_write_operators) {
+      Assert(op->state() == ReadWriteOperatorState::RolledBack, "All read/write operators must have been rolled back.");
+    }
+  }
 
   if (rollback_reason == RollbackReason::User) {
     _transition(TransactionPhase::Active, TransactionPhase::RolledBackByUser);
@@ -156,15 +143,12 @@ void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
 }
 
 void TransactionContext::_prepare_commit() {
-  DebugAssert(([this]() {
-                for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::Executed) {
-                    return false;
-                  }
-                }
-                return true;
-              }()),
-              "All read/write operators need to be in state Executed (especially not Failed).");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& op : _read_write_operators) {
+      Assert(op->state() == ReadWriteOperatorState::Executed,
+             "All read/write operators must have been executed (especially not failed).");
+    }
+  }
 
   _transition(TransactionPhase::Active, TransactionPhase::Committing);
 
@@ -174,15 +158,11 @@ void TransactionContext::_prepare_commit() {
 }
 
 void TransactionContext::_mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback) {
-  DebugAssert(([this]() {
-                for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::Committed) {
-                    return false;
-                  }
-                }
-                return true;
-              }()),
-              "All read/write operators need to have been committed.");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& op : _read_write_operators) {
+      Assert(op->state() == ReadWriteOperatorState::Committed, "All read/write operators must have been committed.");
+    }
+  }
 
   auto context_weak_ptr = std::weak_ptr<TransactionContext>{this->shared_from_this()};
   _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback](auto transaction_id) {
