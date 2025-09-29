@@ -220,13 +220,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   // Create a mapping from output columns to input columns for future use. This is necessary as the order may have been
   // changed. The mapping only contains column IDs that are forwarded without modfications.
-  auto output_column_to_input_column = std::unordered_map<ColumnID, ColumnID>{};
+  auto input_column_to_output_column = std::unordered_multimap<ColumnID, ColumnID>{};
   for (auto expression_id = ColumnID{0}; expression_id < expression_count; ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
       if (forwarded_pqp_columns.contains(expression)) {
         const auto& original_id = pqp_column_expression->column_id;
-        output_column_to_input_column[expression_id] = original_id;
+        input_column_to_output_column.emplace(original_id, expression_id);
       }
     }
   }
@@ -275,24 +275,29 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       }
     }
 
-    // Forward sorted_by flags, mapping column ids
+    // Forward `sorted_by` flags from input to output chunks, adapting them for the projection's column mapping
+    // (which can reorder, duplicate, or discard columns).
     const auto& sorted_by = input_chunk->individually_sorted_by();
-    if (!sorted_by.empty()) {
+
+    // Only forward sort information if the input is sorted AND if any of the columns involved in the sort are
+    // actually being forwarded. If not, the output is not sorted in any meaningful way.
+    if (!sorted_by.empty() && !input_column_to_output_column.empty()) {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
 
-      // We need to iterate both sorted information and the output/input mapping as multiple output columns might
-      // originate from the same sorted input column.
-      for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
-        const auto iter =
-            std::find_if(sorted_by.begin(), sorted_by.end(), [input_column_id = input_column_id](const auto sort) {
-              return input_column_id == sort.column;
-            });
-        if (iter != sorted_by.end()) {
-          transformed.emplace_back(output_column_id, iter->sort_mode);
+      for (const auto& sort_info : sorted_by) {
+        const auto range = input_column_to_output_column.equal_range(sort_info.column);
+        for (auto it = range.first; it != range.second; ++it) {
+          const auto& output_column_id = it->second;
+          transformed.emplace_back(output_column_id, sort_info.sort_mode);
         }
       }
+
       if (!transformed.empty()) {
+        // Sort by column ID to have a defined order for the `sorted_by` property.
+        std::ranges::sort(transformed, [](const auto& a, const auto& b) {
+          return a.column < b.column;
+        });
         chunk->set_individually_sorted_by(transformed);
       }
     }
