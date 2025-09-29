@@ -24,7 +24,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   const auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{3});
 
   const auto compression_task1 = std::make_shared<ChunkCompressionTask>(table_dict, ChunkID{0});
-  compression_task1->set_done_callback([]() {
+  compression_task1->set_done_callback([table_dict]() {
     const auto compression_task2 =
         std::make_shared<ChunkCompressionTask>(table_dict, std::vector<ChunkID>{ChunkID{1}, ChunkID{2}});
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression_task2});
@@ -60,7 +60,8 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table_dict->get_chunk(chunk_id);
     for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
-      EXPECT_TRUE(std::dynamic_pointer_cast<const BaseDictionarySegment>(chunk->get_segment(column_id)));
+      const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(chunk->get_segment(column_id));
+      ASSERT_TRUE(dict_segment);
       EXPECT_EQ(dict_segment->unique_values_count(), dictionary_sizes[chunk_id][column_id]);
     }
   }
@@ -91,15 +92,15 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression});
 
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count() - 1; ++chunk_id) {
-    const auto segment = table->get_chunk(chunk_id)->get_segment(ColumnID{0})
-                             EXPECT_TRUE(std::dynamic_pointer_cast<const BaseDictionarySegment>(segment));
+    const auto segment = table->get_chunk(chunk_id)->get_segment(ColumnID{0});
+    EXPECT_TRUE(std::dynamic_pointer_cast<const BaseDictionarySegment>(segment));
   }
 
   const auto get_table_2 = std::make_shared<GetTable>("table_insert");
   get_table_2->execute();
   const auto validate = std::make_shared<Validate>(get_table_2);
-  context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  validate->set_transaction_context(context);
+  const auto context_2 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  validate->set_transaction_context(context_2);
   validate->execute();
   EXPECT_EQ(validate->get_output()->row_count(), 12);
 }
