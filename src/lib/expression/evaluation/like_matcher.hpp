@@ -3,13 +3,12 @@
 #include <functional>
 #include <optional>
 #include <ostream>
+#include <regex>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <boost/regex.hpp>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -194,7 +193,7 @@ class LikeMatcher {
         return;
       }
 
-      return functor(boost::regex{sql_like_to_regex(cased_pattern)});
+      return functor(std::regex{sql_like_to_regex(cased_pattern)});
     });
   }
 
@@ -261,10 +260,10 @@ class LikeMatcher {
           });
         });
 
-      } else if constexpr (std::is_same_v<Pattern, boost::regex>) {
+      } else if constexpr (std::is_same_v<Pattern, std::regex>) {
         functor([&](const auto& string) -> bool {
           return resolve_case(string, [&](const auto& cased_string) -> bool {
-            return boost::regex_match(cased_string.begin(), cased_string.end(), typed_pattern) ^ invert_results;
+            return std::regex_match(cased_string.cbegin(), cased_string.cend(), typed_pattern) ^ invert_results;
           });
         });
 
