@@ -182,15 +182,16 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
 
   with_between_comparator(PredicateCondition::BetweenUpperExclusive, lower_bound_value_id, upper_bound_value_id,
                           [&](auto between_comparator_function) {
-                            attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-                              // No need to check for NULL because NULL would be represented
-                              // as a value ID outside of our range
-                              _scan_with_iterators<false>(
-                                  [&](const auto& position) {
-                                    return between_comparator_function(position.value());
-                                  },
-                                  left_it, left_end, chunk_id, matches);
-                            });
+                            attribute_vector_iterable.with_iterators(
+                                position_filter, [&](const auto& left_it, const auto& left_end) {
+                                  // No need to check for NULL because NULL would be represented
+                                  // as a value ID outside of our range
+                                  _scan_with_iterators<false>(
+                                      [&](const auto& position) {
+                                        return between_comparator_function(position.value());
+                                      },
+                                      left_it, left_end, chunk_id, matches);
+                                });
                           });
 }
 
