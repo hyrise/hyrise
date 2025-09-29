@@ -28,6 +28,7 @@
 #include "expression/cast_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
 #include "expression/evaluation/expression_result.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -40,7 +41,6 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
-#include "like_matcher.hpp"
 #include "lossless_cast.hpp"
 #include "lossy_cast.hpp"
 #include "null_value.hpp"
@@ -330,15 +330,13 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
    * NOTE: This code path is NOT taken for LIKEs in predicates. That is `SELECT * FROM t WHERE a LIKE '%Hello%'` is
    *       handled in the TableScan. This code path is for `SELECT a LIKE 'bla' FROM ...` and alike.
    */
-
-  Assert(expression.predicate_condition == PredicateCondition::Like ||
-             expression.predicate_condition == PredicateCondition::NotLike,
-         "Expected PredicateCondition Like or NotLike.");
+  const auto condition = expression.predicate_condition;
+  Assert(condition == PredicateCondition::Like || condition == PredicateCondition::NotLike ||
+             condition == PredicateCondition::LikeInsensitive || condition == PredicateCondition::NotLikeInsensitive,
+         "Expected PredicateCondition (Not)Like or (Not)LikeInsensitive.");
 
   const auto left_results = evaluate_expression_to_result<pmr_string>(*expression.left_operand());
   const auto right_results = evaluate_expression_to_result<pmr_string>(*expression.right_operand());
-
-  const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
   const auto result_size = _result_size(left_results->size(), right_results->size());
   auto result_values = pmr_vector<ExpressionEvaluator::Bool>(result_size, 0);
@@ -353,28 +351,35 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
   const auto both_are_literals = left_results->is_literal() && right_results->is_literal();
   const auto both_are_series = !left_results->is_literal() && !right_results->is_literal();
   if (both_are_literals || both_are_series) {
-    // E.g., `a LIKE b` - A new matcher for each row and a different value as well
-    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
-        result_values[row_idx] = matcher(left_results->values[row_idx]);
-      });
-    }
+    // E.g., `a LIKE b` - A new matcher for each row and a different value as well.
+    LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
+      using Predicate = std::decay_t<decltype(predicate)>;
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+        LikeMatcher::resolve_pattern<Predicate>(right_results->values[row_idx], [&](const auto& matcher) {
+          result_values[row_idx] = matcher(left_results->values[row_idx]);
+        });
+      }
+    });
   } else if (!left_results->is_literal() && right_results->is_literal()) {
-    // E.g., `a LIKE '%hello%'` -- A single matcher for all rows
-    const auto like_matcher = LikeMatcher{right_results->values.front()};
-
-    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      like_matcher.resolve(invert_results, [&](const auto& matcher) {
-        result_values[row_idx] = matcher(left_results->values[row_idx]);
+    // E.g., `a LIKE '%hello%'` - A single matcher for all rows.
+    LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
+      using Predicate = std::decay_t<decltype(predicate)>;
+      LikeMatcher::resolve_pattern<Predicate>(right_results->values.front(), [&](const auto& matcher) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+          result_values[row_idx] = matcher(left_results->values[row_idx]);
+        }
       });
-    }
+    });
   } else {
-    // E.g., `'hello' LIKE b` -- A new matcher for each row but the value to check is constant
-    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
-        result_values[row_idx] = matcher(left_results->values.front());
-      });
-    }
+    // E.g., `'hello' LIKE b` - A new matcher for each row but the value to check is constant.
+    LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
+      using Predicate = std::decay_t<decltype(predicate)>;
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+        LikeMatcher::resolve_pattern<Predicate>(right_results->values[row_idx], [&](const auto& matcher) {
+          result_values[row_idx] = matcher(left_results->values.front());
+        });
+      }
+    });
   }
 
   auto result_nulls = _evaluate_default_null_logic(left_results->nulls, right_results->nulls);
@@ -697,6 +702,8 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+    case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       return _evaluate_like_expression(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::IsNull:
@@ -1227,7 +1234,9 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::In:
         case PredicateCondition::NotIn:
         case PredicateCondition::Like:
-        case PredicateCondition::NotLike: {
+        case PredicateCondition::NotLike:
+        case PredicateCondition::LikeInsensitive:
+        case PredicateCondition::NotLikeInsensitive: {
           // Evaluating (Not)In and (Not)Like to PosLists uses evaluate_expression_to_result() and scans the Series
           // it returns for matches. This is probably slower than a dedicated evaluate-to-PosList implementation
           // for these ExpressionTypes could be. But
