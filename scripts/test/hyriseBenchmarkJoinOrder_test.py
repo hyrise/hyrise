@@ -24,7 +24,7 @@ def main():
     arguments["--runs"] = "100"
     arguments["--output"] = "'json_output.txt'"
     arguments["--mode"] = "'Shuffled'"
-    arguments["--encoding"] = "'Unencoded'"
+    arguments["--encoding"] = "'FrameOfReference'"
     arguments["--clients"] = "1"
     arguments["--scheduler"] = "false"
 
@@ -40,7 +40,7 @@ def main():
     benchmark.expect_exact("Running in single-threaded mode")
     benchmark.expect_exact("1 simulated client is scheduling items")
     benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
-    benchmark.expect_exact("Encoding is 'Unencoded'")
+    benchmark.expect_exact("Encoding is 'FrameOfReference'")
     benchmark.expect_exact("Max runs per item is 100")
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("No warmup runs are performed")
