@@ -8,8 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "encoding_config.hpp"
-#include "storage/chunk.hpp"
+#include "nlohmann/json.hpp"
+
+#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace hyrise {
