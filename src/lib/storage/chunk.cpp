@@ -212,7 +212,7 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
     bytes += segment->memory_usage(mode);
   }
 
-  // TODO(anybody) Index memory usage missing
+  // TODO(anybody): Add index memory usage.
 
   if (_mvcc_data) {
     bytes += _mvcc_data->memory_usage();
@@ -266,6 +266,7 @@ void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
 
 void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
   Assert(!is_mutable(), "Cannot set_individually_sorted_by on mutable chunks.");
+
   // Currently, we assume that `set_individually_sorted_by` is called only once at most. Thus, there should be no
   // existing sorting and the new sorting should contain at least one column. Feel free to remove this assertion if
   // necessary.

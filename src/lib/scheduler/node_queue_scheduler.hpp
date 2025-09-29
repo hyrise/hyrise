@@ -78,8 +78,8 @@ class NodeQueueScheduler final : public AbstractScheduler {
 
   const std::atomic_int64_t& active_worker_count() const;
 
-  // Number of groups for _group_tasks
-  static constexpr auto NUM_GROUPS = 10;
+  // Number of groups for _group_tasks.
+  static constexpr auto NUM_GROUPS = 48;
 
  protected:
   /**
