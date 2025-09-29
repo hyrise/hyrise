@@ -50,7 +50,9 @@ def main():
     benchmark.expect_exact("Benchmarking queries from third_party/join-order-benchmark")
     benchmark.expect_exact("Running on tables from resources/test_data/imdb_sample/")
     benchmark.expect_exact("Running subset of queries: 21c,22b,23c,24a")
-    benchmark.expect_exact("Column 'movie_info.note' of type string cannot be encoded as FrameOfReference. Hence, its encoding is chosen automatically.")
+    benchmark.expect_exact(
+        "Column 'movie_info.note' of type string cannot be encoded as FrameOfReference. Hence, its encoding is chosen automatically."
+    )
     benchmark.expect_exact("-> Executed")
 
     close_benchmark(benchmark)
