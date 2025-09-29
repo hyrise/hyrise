@@ -444,6 +444,8 @@ set(
     storage/buffer/frame.cpp
     storage/buffer/frame.hpp
     storage/buffer/page_id.hpp
+    storage/buffer/storage_region.cpp
+    storage/buffer/storage_region.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
