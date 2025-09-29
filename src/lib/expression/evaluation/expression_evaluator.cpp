@@ -617,6 +617,19 @@ bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& 
       return;
     }
 
+    // Filter out trivial cases here, as with_between_comparator assumes that lower and upper bound
+    // are set such that values could match the predicate.
+    if constexpr (std::is_integral_v<DataType>) {
+      const auto difference = *upper_bound - *lower_bound -
+                              !is_lower_inclusive_between(expression.predicate_condition) -
+                              !is_upper_inclusive_between(expression.predicate_condition);
+      // Predicate is always false, just output an empty result.
+      if (difference < 0) {
+        success = true;
+        return;
+      }
+    }
+
     const auto expression_result = evaluate_expression_to_result<DataType>(*operand);
     expression_result->as_view([&](const auto& view) {
       const auto result_size = _chunk ? _chunk->size() : static_cast<ChunkOffset>(view.size());
@@ -625,10 +638,9 @@ bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& 
         result_values.resize(result_size);
       }
 
-      with_between_comparator(expression.predicate_condition, [&](const auto& comparator) {
+      with_between_comparator(expression.predicate_condition, lower_bound, upper_bound, [&](const auto& comparator) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-          const auto value_matches =
-              !view.is_null(chunk_offset) && comparator(view.value(chunk_offset), lower_bound, upper_bound);
+          const auto value_matches = !view.is_null(chunk_offset) && comparator(view.value(chunk_offset));
 
           if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
             result_values[chunk_offset] = static_cast<Bool>(value_matches);

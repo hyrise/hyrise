@@ -81,12 +81,25 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
       const auto typed_left_value = boost::get<ColumnDataType>(left_value);
       const auto typed_right_value = boost::get<ColumnDataType>(right_value);
 
-      with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
-        auto between_comparator = [&](const auto& position) {
-          return between_comparator_function(position.value(), typed_left_value, typed_right_value);
-        };
-        _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
-      });
+      // Filter out trivial cases here, as with_between_comparator assumes that lower and upper bound
+      // are set such that values could match the predicate.
+      if constexpr (std::is_integral_v<ColumnDataType>) {
+        const auto difference = typed_right_value - typed_left_value -
+                                !is_lower_inclusive_between(predicate_condition) -
+                                !is_upper_inclusive_between(predicate_condition);
+        // Predicate is always false, just output an empty result.
+        if (difference < 0) {
+          return;
+        }
+      }
+
+      with_between_comparator(predicate_condition, typed_left_value, typed_right_value,
+                              [&](auto between_comparator_function) {
+                                auto between_comparator = [&](const auto& position) {
+                                  return between_comparator_function(position.value());
+                                };
+                                _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
+                              });
     } else {
       Fail("Dictionary and Reference segments have their own code paths and should be handled there");
     }
@@ -167,18 +180,18 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
     upper_bound_value_id = segment.unique_values_count();
   }
 
-  const auto value_id_diff = upper_bound_value_id - lower_bound_value_id;
-  const auto comparator = [lower_bound_value_id, value_id_diff](const auto& position) {
-    // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
-    // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
-    // This is quite a bit faster.
-    return (position.value() - lower_bound_value_id) < value_id_diff;
-  };
-
-  attribute_vector_iterable.with_iterators(position_filter, [&](const auto& left_it, const auto& left_end) {
-    // No need to check for NULL because NULL would be represented as a value ID outside of our range
-    _scan_with_iterators<false>(comparator, left_it, left_end, chunk_id, matches);
-  });
+  with_between_comparator(PredicateCondition::BetweenUpperExclusive, lower_bound_value_id, upper_bound_value_id,
+                          [&](auto between_comparator_function) {
+                            attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
+                              // No need to check for NULL because NULL would be represented
+                              // as a value ID outside of our range
+                              _scan_with_iterators<false>(
+                                  [&](const auto& position) {
+                                    return between_comparator_function(position.value());
+                                  },
+                                  left_it, left_end, chunk_id, matches);
+                            });
+                          });
 }
 
 void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id,
