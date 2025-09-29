@@ -11,7 +11,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
-#include "storage/base_dictionary_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
@@ -392,7 +392,8 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutable) {
     EXPECT_FALSE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
     // Making chunks immutable should trigger encoding and generation of pruning statistics.
-    EXPECT_TRUE(std::dynamic_pointer_cast<BaseDictionarySegment>(target_table->last_chunk()->get_segment(ColumnID{0})));
+    EXPECT_TRUE(
+        std::dynamic_pointer_cast<AbstractEncodedSegment>(target_table->last_chunk()->get_segment(ColumnID{0})));
     EXPECT_TRUE(target_table->last_chunk()->pruning_statistics());
   }
 }
@@ -452,7 +453,8 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutableMultipleOperators) {
     EXPECT_FALSE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
     // Making chunks immutable should trigger encoding and generation of pruning statistics.
-    EXPECT_TRUE(std::dynamic_pointer_cast<BaseDictionarySegment>(target_table->last_chunk()->get_segment(ColumnID{0})));
+    EXPECT_TRUE(
+        std::dynamic_pointer_cast<AbstractEncodedSegment>(target_table->last_chunk()->get_segment(ColumnID{0})));
     EXPECT_TRUE(target_table->last_chunk()->pruning_statistics());
   }
 }
@@ -505,7 +507,7 @@ TEST_F(OperatorsInsertTest, MarkMultipleChunksImmutable) {
       const auto& chunk = target_table->get_chunk(chunk_id);
       EXPECT_FALSE(chunk->is_mutable());
       EXPECT_EQ(chunk->mvcc_data()->pending_inserts(), 0);
-      EXPECT_TRUE(std::dynamic_pointer_cast<BaseDictionarySegment>(chunk->get_segment(ColumnID{0})));
+      EXPECT_TRUE(std::dynamic_pointer_cast<AbstractEncodedSegment>(chunk->get_segment(ColumnID{0})));
       EXPECT_TRUE(chunk->pruning_statistics());
     }
   }

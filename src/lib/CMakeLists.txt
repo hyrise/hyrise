@@ -582,6 +582,8 @@ set(
     storage/vector_compression/vector_compression.cpp
     storage/vector_compression/vector_compression.hpp
     strong_typedef.hpp
+    tasks/chunk_compression_task.cpp
+    tasks/chunk_compression_task.hpp
     type_comparison.hpp
     types.cpp
     types.hpp

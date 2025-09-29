@@ -119,26 +119,45 @@ void with_comparator_light(const PredicateCondition predicate_condition, const F
 // Function that calls a functor with a functor that decides whether a value matches a Between-PredicateCondition.
 // This function cannot be integrated into with_comparator, because the created function takes 3 instead of 2
 // parameters.
-template <typename Functor>
-void with_between_comparator(const PredicateCondition predicate_condition, const Functor& func) {
+template <typename Functor, typename DataType>
+void with_between_comparator(const PredicateCondition predicate_condition, const DataType& lower_value,
+                             const DataType& upper_value, const Functor& func) {
+  // For integral types, we can assume that lower <= upper and therefore save one comparison by rearranging
+  // the equation: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
+  // This is quite a bit faster.
+  if constexpr (std::is_integral_v<DataType>) {
+    const auto lower_bound = is_lower_inclusive_between(predicate_condition) ? lower_value : lower_value + 1;
+    const auto upper_bound = is_upper_inclusive_between(predicate_condition) ? upper_value : upper_value - 1;
+
+    DebugAssert(lower_bound <= upper_bound,
+                "Query asks for between predicate with empty range. This should have been filtered out earlier.");
+
+    using UnsignedDataType = std::make_unsigned_t<DataType>;
+    const auto value_difference = static_cast<UnsignedDataType>(upper_bound - lower_bound);
+
+    return func([lower_bound, value_difference](const DataType value) {
+      return static_cast<UnsignedDataType>(value - lower_bound) <= value_difference;
+    });
+  }
+
   switch (predicate_condition) {
     case PredicateCondition::BetweenInclusive:
-      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+      return func([&lower_value, &upper_value](const DataType& value) {
         return value >= lower_value && value <= upper_value;
       });
 
     case PredicateCondition::BetweenLowerExclusive:
-      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+      return func([&lower_value, &upper_value](const DataType& value) {
         return value > lower_value && value <= upper_value;
       });
 
     case PredicateCondition::BetweenUpperExclusive:
-      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+      return func([&lower_value, &upper_value](const DataType& value) {
         return value >= lower_value && value < upper_value;
       });
 
     case PredicateCondition::BetweenExclusive:
-      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+      return func([&lower_value, &upper_value](const DataType& value) {
         return value > lower_value && value < upper_value;
       });
 

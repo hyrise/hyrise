@@ -2,6 +2,7 @@
 #include "base_test.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
@@ -73,7 +74,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
   }
 
   DataType data_type;
-  SegmentEncodingSpec encoding_spec;
+  SegmentEncodingSpec encoding_spec{EncodingType::Unencoded};
   bool contains_null_values;
 
   std::shared_ptr<BaseValueSegment> original_segment;

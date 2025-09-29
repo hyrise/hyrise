@@ -13,9 +13,9 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "tasks/chunk_compression_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/atomic_max.hpp"
@@ -264,7 +264,9 @@ void Insert::_on_commit_records(const CommitID cid) {
     const auto active_inserts = mvcc_data->deregister_insert();
     if (active_inserts == 0 && target_chunk->try_set_immutable()) {
       // We were the first ones to mark the chunk as immutable. Thus, we have to take care the chunk is encoded.
-      spawn_encoding_task(target_chunk);
+      const auto compression_task =
+          std::make_shared<ChunkCompressionTask>(_target_table_name, target_chunk_range.chunk_id);
+      compression_task->schedule();
     }
   }
 }
@@ -291,7 +293,9 @@ void Insert::_on_rollback_records() {
     const auto active_inserts = mvcc_data->deregister_insert();
     if (active_inserts == 0 && target_chunk->try_set_immutable()) {
       // We were the first ones to mark the chunk as immutable. Thus, we have to take care the chunk is encoded.
-      spawn_encoding_task(target_chunk);
+      const auto compression_task =
+          std::make_shared<ChunkCompressionTask>(_target_table_name, target_chunk_range.chunk_id);
+      compression_task->schedule();
     }
   }
 }
