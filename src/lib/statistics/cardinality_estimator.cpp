@@ -63,7 +63,7 @@ namespace {
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
-constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1;
+// constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1;
 constexpr auto PLACEHOLDER_SELECTIVITY_MEDIUM = 0.5;
 constexpr auto PLACEHOLDER_SELECTIVITY_HIGH = 0.9;
 constexpr auto PLACEHOLDER_SELECTIVITY_ALL = 1.0;
