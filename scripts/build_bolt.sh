@@ -70,7 +70,7 @@ do
       shift  2
       ;;
     -b | --benchmark)
-      benchmarks += ("$2")
+      benchmarks+=("$2")
       shift 2
       ;;
     --)
