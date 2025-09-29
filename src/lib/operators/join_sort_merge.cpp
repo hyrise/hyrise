@@ -587,8 +587,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           right_run_start = right_run_end;
           right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
           break;
-        default:
-          throw std::logic_error("Unknown CompareResult.");
       }
     }
 
