@@ -63,7 +63,7 @@ namespace {
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
-// constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1;
+constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1;
 constexpr auto PLACEHOLDER_SELECTIVITY_MEDIUM = 0.5;
 constexpr auto PLACEHOLDER_SELECTIVITY_HIGH = 0.9;
 constexpr auto PLACEHOLDER_SELECTIVITY_ALL = 1.0;
@@ -1142,13 +1142,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         if (predicate.predicate_condition == PredicateCondition::Like) {
           // Lacking better options, assume a "magic" selectivity for LIKE. Any number would be equally
           // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
-          selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
+          selectivity = PLACEHOLDER_SELECTIVITY_LOW;
           return;
         }
         if (predicate.predicate_condition == PredicateCondition::NotLike) {
           // Lacking better options, assume a "magic" selectivity for NOT LIKE. Any number would be equally
           // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
-          selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
+          selectivity = PLACEHOLDER_SELECTIVITY_HIGH;
           return;
         }
         if (predicate.predicate_condition == PredicateCondition::LikeInsensitive ||
