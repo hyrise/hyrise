@@ -40,9 +40,9 @@ void gather_expressions_not_computed_by_expression_evaluator(
   // required_expressions, as it is not a top-level expression.
 
   // If an expression that is not a top-level expression is already an input, we require it
-  if (std::ranges::find_if(input_expressions, [&expression](const auto& other) {
+  if (std::ranges::any_of(input_expressions, [&expression](const auto& other) {
         return *expression == *other;
-      }) != input_expressions.end()) {
+      })) {
     if (!top_level) {
       required_expressions.emplace(expression);
     }
