@@ -69,6 +69,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 90 --slave /usr/bin/g++ g++ /usr/bin/g++-14
                 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-17 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-17 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-17 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-17 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-17  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-17
 
+                # Bolt searches for this binary at this position when instrumenting a binary.
                 ln -s /usr/lib/llvm-17/lib/libbolt_rt_instr.a /usr/lib/libbolt_rt_instr.a
             else
                 echo "Error during installation."

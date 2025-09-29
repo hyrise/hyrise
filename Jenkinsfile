@@ -165,7 +165,7 @@ try {
             stage('bolt') {
               sh "mkdir cmake-build-bolt"
               sh "cd cmake-build-bolt && cmake ${relwithdebinfo} ${clang} ${unity} ${ninja} -DCOMPILE_FOR_BOLT=TRUE .."
-              sh "cd cmake-build-bolt && ../scripts/build_bolt.sh -t 120 -n 4 -c \$(( \$(nproc)  / 7)) hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkStarSchema"
+              sh "cd cmake-build-bolt && ../scripts/build_bolt.sh -t 120 -n 4 -c \$(( \$(nproc)  / 7))"
               sh "cd cmake-build-bolt && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1 ./hyriseTest"
             }
           }
