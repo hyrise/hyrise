@@ -105,9 +105,9 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
     const auto& flat_conjunction = flat_disjunction_and_conjunction[conjunction_idx];
 
     for (auto common_iter = common_conjunctions.begin(); common_iter != common_conjunctions.end();) {
-      if (std::ranges::find_if(flat_conjunction, [&](const auto& expression) {
+      if (std::ranges::none_of(flat_conjunction, [&](const auto& expression) {
             return *expression == *(*common_iter);
-          }) == flat_conjunction.end()) {
+          })) {
         common_iter = common_conjunctions.erase(common_iter);
       } else {
         ++common_iter;
@@ -119,9 +119,9 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
   //         flat_disjunction_and_conjunction = [[c], [d, e]]
   for (auto& flat_conjunction : flat_disjunction_and_conjunction) {
     for (auto expression_iter = flat_conjunction.begin(); expression_iter != flat_conjunction.end();) {
-      if (std::ranges::find_if(common_conjunctions, [&](const auto& expression) {
+      if (std::ranges::any_of(common_conjunctions, [&](const auto& expression) {
             return *expression == *(*expression_iter);
-          }) != common_conjunctions.end()) {
+          })) {
         expression_iter = flat_conjunction.erase(expression_iter);
       } else {
         ++expression_iter;

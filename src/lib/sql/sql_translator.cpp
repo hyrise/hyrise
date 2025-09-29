@@ -1417,10 +1417,10 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
             }
           }
 
-          AssertInput(std::ranges::find_if(group_by_expressions,
+          AssertInput(std::ranges::any_of(group_by_expressions,
                                            [&](const auto& group_by_expression) {
                                              return *pre_aggregate_expression == *group_by_expression;
-                                           }) != group_by_expressions.end(),
+                                           }),
                       std::string("Expression ") + pre_aggregate_expression->as_column_name() +
                           " was added to SELECT list when resolving *, but it is not part of the GROUP BY clause.");
         }

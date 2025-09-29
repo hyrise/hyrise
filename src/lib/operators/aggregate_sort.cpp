@@ -338,9 +338,9 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
     // values.
     const auto single_column_group_by = groupby_column_ids.size() == 1;
     const auto chunk_sorted_by_first_group_by_column =
-        std::ranges::find_if(chunk_sorted_by, [&](const auto& sort_definition) {
+        std::ranges::any_of(chunk_sorted_by, [&](const auto& sort_definition) {
           return groupby_column_ids[0] == sort_definition.column;
-        }) != chunk_sorted_by.cend();
+        });
 
     if (single_column_group_by && chunk_sorted_by_first_group_by_column) {
       if (input_table->type() == TableType::Data) {

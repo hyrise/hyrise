@@ -124,8 +124,8 @@ bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) {
 std::vector<JoinGraphEdge> JoinGraphBuilder::_join_edges_from_predicates(
     const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
     const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
-  std::map<JoinGraphVertexSet, size_t> vertices_to_edge_idx;
-  std::vector<JoinGraphEdge> edges;
+  auto vertices_to_edge_idx = std::map<JoinGraphVertexSet, size_t>{};
+  auto edges = std::vector<JoinGraphEdge>{};
 
   for (const auto& predicate : predicates) {
     const auto vertex_set = _get_vertex_set_accessed_by_expression(*predicate, vertices);
@@ -165,12 +165,12 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
    * different edges, say CD and EF would result in a better plan. We ignore this possibility for now.
    */
 
-  std::unordered_set<size_t> remaining_vertex_indices;
+  auto remaining_vertex_indices =  std::unordered_set<size_t>{};
   for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx) {
     remaining_vertex_indices.insert(vertex_idx);
   }
 
-  std::vector<size_t> one_vertex_per_component;
+  auto one_vertex_per_component = std::vector<size_t>{};
 
   while (!remaining_vertex_indices.empty()) {
     const auto vertex_idx = *remaining_vertex_indices.begin();
@@ -214,7 +214,7 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
     return {};
   }
 
-  std::vector<JoinGraphEdge> inter_component_edges;
+  auto inter_component_edges = std::vector<JoinGraphEdge>{};
   inter_component_edges.reserve(one_vertex_per_component.size() - 1);
 
   for (auto component_idx = size_t{1}; component_idx < one_vertex_per_component.size(); ++component_idx) {

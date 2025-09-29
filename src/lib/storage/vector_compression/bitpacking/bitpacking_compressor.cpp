@@ -25,8 +25,8 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
 
   auto required_bits = size_t{1};
   if (max_element_it != vector.cend() && *max_element_it != 0) {
-    // add 1 to the maximum value because log2(1) = 0 but we need one bit to represent it.
-    required_bits = static_cast<uint32_t>(std::ceil(log2(*max_element_it + 1u)));
+    // Add 1 to the maximum value because log2(1) = 0 but we need one bit to represent it.
+    required_bits = static_cast<size_t>(std::ceil(log2(*max_element_it + 1)));
   }
 
   auto data = pmr_compact_vector(required_bits, vector.size(), alloc);
@@ -42,7 +42,6 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
    * and fill it with zeroes. For this, data.bytes() gives the number of allocated bytes for the internal
    * memory (word-aligned, see bitpacking_vector_type.hpp).
    * When the word size gets changed by us in the template (for example to uint32_t), this still works.
-   *
    */
 
   using InternalType = std::remove_reference_t<decltype(*data.get())>;

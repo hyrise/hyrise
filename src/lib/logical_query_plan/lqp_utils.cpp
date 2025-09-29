@@ -565,10 +565,10 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
     if (dependents.empty()) {
       continue;
     }
-    DebugAssert(std::ranges::find_if(fds,
+    DebugAssert(std::ranges::none_of(fds,
                                      [&determinants, &dependents](const auto& fd) {
                                        return (fd.determinants == determinants) && (fd.dependents == dependents);
-                                     }) == fds.cend(),
+                                     }),
                 "Creating duplicate functional dependencies is unexpected.");
     fds.emplace(std::move(determinants), std::move(dependents));
   }
