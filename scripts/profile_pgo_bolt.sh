@@ -1,11 +1,5 @@
 #!/bin/bash
-# This builds an optimized version of the binary with bolt.
-#
-# The profile data is captured by binary instrumentation via bolt. You can find a file where the profile is captured
-# using perf here: https://github.com/hyrise/hyrise/blob/d0c46cb61dca9d3dcbbf1f39c0e886bcb6c844fe/scripts/bolt-lbr.sh.
-# In our experience, instrumentation resulted in similar performance and was more portable. This file needs to be
-# executed inside a cmake build folder. We recommend having a separate cmake folder for bolt as this file changes the
-# cmake configuration.
+# This builds an optimized version of the binary with PGO and bolt.
 #
 # For a usage string, run this binary with -h
 
@@ -97,38 +91,26 @@ then
   benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkJoinOrder" "hyriseBenchmarkStarSchema")
 fi
 
-# We have to use RelWithDebInfo, so BOLT can work. We also have to add a few compile flags:
-# > BOLT operates on X86-64 and AArch64 ELF binaries. At the minimum, the binaries should have an unstripped symbol
-# > table, and, to get maximum performance gains, they should be linked with relocations (--emit-relocs or -q linker
-# > flag).
-# > NOTE: BOLT is currently incompatible with the -freorder-blocks-and-partition compiler option. Since GCC8 enables
-# > this option by default, you have to explicitly disable it by adding -fno-reorder-blocks-and-partition flag if you
-# > are compiling with GCC8 or above.
-# https://github.com/llvm/llvm-project/tree/main/bolt
-cmake -DCOMPILE_FOR_BOLT=TRUE ..
+cmake -DCOMPILE_FOR_BOLT=TRUE -DPGO_INSTRUMENT ..
 
 ninja clean
 # Only compile the benchmarks that we need.
-time ninja ${arr[@]} -j "$compile_cores"
+ninja ${arr[@]} -j "$compile_cores"
 
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
-time llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
+llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
 
 pushd ..
-
-echo "Benchmarks are: ${benchmarks[*]}"
 
 for benchmark in $benchmarks
 do
   # We use shuffled runs with high pressure to profile cases that are relevant.
-  time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled
+  "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled
   mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
+  mv default.profraw "$build_folder/$benchmark.profraw"
 done
 
 popd
 
-time merge-fdata-17 *.fdata > bolt.fdata
-
-time llvm-bolt-17 lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
-
-time strip lib/libhyrise_impl.so
+merge-fdata-17 *.fdata > ../resources/bolt.fdata
+llvm-profdata merge -output ../resources/pgo.profdata *.profraw
