@@ -193,7 +193,7 @@ class LikeMatcher {
         return;
       }
 
-      return functor(std::regex{sql_like_to_regex(cased_pattern)});
+      return functor(std::regex{sql_like_to_regex(cased_pattern), std::regex::optimize});
     });
   }
 
