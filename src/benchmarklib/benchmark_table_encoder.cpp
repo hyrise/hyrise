@@ -112,7 +112,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
       auto output = std::ostringstream{};
       output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type " << column_data_type
              << " cannot be encoded as " << preferred_encoding_spec->encoding_type
-             << " and its encoding is chosen automatically.\n";
+             << ". Hence, its encoding is chosen automatically.\n";
       std::cout << output.str();
     }
 
