@@ -19,6 +19,21 @@ add_executable(
 
 target_link_libraries(
     hyrisePlayground
+
+    hyrise
+    hyriseBenchmarkLib
+)
+
+# Configure DYODEvaluation
+add_executable(
+    hyriseDYODEvaluation
+
+    dyod_evaluation.cpp
+)
+
+target_link_libraries(
+    hyriseDYODEvaluation
+
     hyrise
     hyriseBenchmarkLib
 )

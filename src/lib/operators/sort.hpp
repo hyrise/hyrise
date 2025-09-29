@@ -10,6 +10,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "resolve_type.hpp"
+#include "sort_algorithms/parallel_merge_sorter.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "types.hpp"
 
@@ -24,7 +25,7 @@ class Sort : public AbstractReadOnlyOperator {
  public:
   enum class ForceMaterialization : bool { Yes = true, No = false };
 
-  enum class OperatorSteps : uint8_t { MaterializeSortColumns, Sort, TemporaryResultWriting, WriteOutput };
+  enum class OperatorSteps : uint8_t { Preparation, MaterializeSortColumns, Sort, WriteOutput };
 
   Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
        const std::vector<SortColumnDefinition>& sort_definitions,
@@ -52,6 +53,7 @@ class Sort : public AbstractReadOnlyOperator {
   const std::vector<SortColumnDefinition> _sort_definitions;
   const ChunkOffset _output_chunk_size;
   const ForceMaterialization _force_materialization;
+  const std::unique_ptr<AbstractRowIDSorter<std::function<bool(const RowID&, const RowID&)>>> _rowid_sorter;
 };
 
 }  // namespace hyrise
