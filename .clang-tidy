@@ -48,7 +48,7 @@ Checks: '
          -modernize-use-constraints
          '
 # TODO(anybody-update): `modernize-use-constraints` is temporarily inactive until clang-tidy 21 is used
-                       (https://github.com/llvm/llvm-project/pull/152938 landed in LLVM 21)
+#                       (https://github.com/llvm/llvm-project/pull/152938 landed in LLVM 21)
 
 WarningsAsErrors: '*'
 
