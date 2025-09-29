@@ -105,9 +105,9 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
     const auto& flat_conjunction = flat_disjunction_and_conjunction[conjunction_idx];
 
     for (auto common_iter = common_conjunctions.begin(); common_iter != common_conjunctions.end();) {
-      if (std::ranges::find_if(flat_conjunction, [&](const auto& expression) {
+      if (std::ranges::none_of(flat_conjunction, [&](const auto& expression) {
             return *expression == *(*common_iter);
-          }) == flat_conjunction.end()) {
+          })) {
         common_iter = common_conjunctions.erase(common_iter);
       } else {
         ++common_iter;
