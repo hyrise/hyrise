@@ -650,7 +650,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    return {};
+    return std::nullopt;
   }
 
   // Looks for the first value in a sorted materialized table that fulfills the specified condition, but searches
@@ -671,7 +671,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    return {};
+    return std::nullopt;
   }
 
   // Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=).
