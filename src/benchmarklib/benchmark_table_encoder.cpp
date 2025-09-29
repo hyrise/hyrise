@@ -1,6 +1,8 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
+#include <iosfwd>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
