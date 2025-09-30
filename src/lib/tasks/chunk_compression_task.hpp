@@ -1,15 +1,16 @@
 #pragma once
 
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "scheduler/abstract_task.hpp"
 #include "storage/encoding_type.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
 class Chunk;
+class Table;
 
 /**
  * @brief Compresses a chunk of a table using the default encoding
@@ -34,26 +35,18 @@ class Chunk;
  */
 class ChunkCompressionTask : public AbstractTask {
  public:
-  explicit ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id);
-  explicit ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids);
-  explicit ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id,
+  explicit ChunkCompressionTask(const std::shared_ptr<Table>& table, const ChunkID chunk_id);
+  explicit ChunkCompressionTask(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids);
+  explicit ChunkCompressionTask(const std::shared_ptr<Table>& table, const ChunkID chunk_id,
                                 const ChunkEncodingSpec& chunk_encoding_spec);
-  explicit ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
+  explicit ChunkCompressionTask(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                 const ChunkEncodingSpec& chunk_encoding_spec);
 
  protected:
   void _on_execute() override;
 
  private:
-  /**
-   * @brief Checks if a chunks is completed
-   *
-   * See class comment for further explanation
-   */
-  static bool _chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t target_chunk_size);
-
- private:
-  const std::string _table_name;
+  const std::shared_ptr<Table> _table;
   const std::vector<ChunkID> _chunk_ids;
   std::optional<ChunkEncodingSpec> _chunk_encoding_spec;
 };

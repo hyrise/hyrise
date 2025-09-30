@@ -12,6 +12,7 @@ namespace hyrise {
 class AbstractEncodedSegment;
 class BaseSegmentEncoder;
 class BaseValueSegment;
+class Chunk;
 
 /**
  * @brief Creates an encoder by encoding type
