@@ -522,16 +522,21 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 
 // This is the cacheline size on our most commonly benchmarked hardware. Other systems will also run fine with this value.
 constexpr auto BYTES_PER_CACHELINE = size_t{64};
+// This is a tunable parameter
+constexpr auto MIN_CACHELINES_PER_STORE = size_t{3};
 
 template <typename T>
   requires std::is_trivially_destructible_v<T>
 union TemporaryRadixBucket {
   static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
-  // We want the bytecount to be a divisor of the size of this container.
-  // If the bytecount of an element is not a power of two, we have to extract the part that is
+  // We want the BYTES_PER_ELEMENT to be a divisor of the size of this container.
+  // If it is not a power of two, we have to extract the part that is
   // not a power of 2 an use it as a factor. For all types in hyrise, this is either 1 or 3.
-  static constexpr auto CACHELINES_PER_STORE = BYTES_PER_ELEMENT >>
-                                               static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
+  static constexpr auto CACHELINES_PER_STORE_FACTOR = BYTES_PER_ELEMENT >>
+                                                      static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
+  static constexpr auto CACHELINES_PER_STORE =
+      ((MIN_CACHELINES_PER_STORE + CACHELINES_PER_STORE_FACTOR - 1) / CACHELINES_PER_STORE_FACTOR) *
+      CACHELINES_PER_STORE_FACTOR;
   static constexpr auto BYTES_PER_STORE = BYTES_PER_CACHELINE * CACHELINES_PER_STORE;
   static constexpr auto ELEMENTS_PER_STORE = BYTES_PER_STORE / BYTES_PER_ELEMENT;
 
