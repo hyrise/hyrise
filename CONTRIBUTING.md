@@ -55,7 +55,7 @@
     * Prefer an explicit expression for empty results if it exists:
       * `return std::nullopt` for empty optionals
       * `return nullptr;` for (smart) pointers
-      * `return NULL_VALUE` over `return AllTypeVariant{}`; (see above)
+      * `return NULL_VALUE` over `return AllTypeVariant{}`;
   * Don't write `this->` if you don't have to.
   * Be explicit with types: Use `[u]int(8|16|32|64)_t` instead of `int, long, uint` and prefer `uint32_t{0}` over `0u`.
   * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = int64_t{17};` or
