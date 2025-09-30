@@ -116,9 +116,7 @@ time llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
 
 pushd ..
 
-echo "Benchmarks are: ${benchmarks[*]}"
-
-for benchmark in $benchmarks
+for benchmark in ${benchmarks[@]}
 do
   # We use shuffled runs with high pressure to profile cases that are relevant.
   time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled
@@ -131,4 +129,4 @@ time merge-fdata-17 *.fdata > bolt.fdata
 
 time llvm-bolt-17 lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 
-time strip lib/libhyrise_impl.so
+# time strip lib/libhyrise_impl.so
