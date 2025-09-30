@@ -13,7 +13,7 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -168,7 +168,7 @@ void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& 
   };
 
   // Sort by ColumnID.
-  std::sort(expressions_vector.begin(), expressions_vector.end(), [&](const auto& lhs, const auto& rhs) {
+  std::ranges::sort(expressions_vector, [&](const auto& lhs, const auto& rhs) {
     return minimal_column_id(lhs) < minimal_column_id(rhs);
   });
 

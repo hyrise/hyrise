@@ -79,9 +79,9 @@ std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target
   // try_lexical_convert() covers, e.g., string with integrals > INT_MAX.
   if (boost::conversion::detail::try_lexical_convert(source, result)) {
     return result;
-  } else {
-    return std::nullopt;
   }
+
+  return std::nullopt;
 }
 
 // String to floating point
@@ -120,9 +120,9 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
   auto integral = static_cast<Source>(floating_point);
   if (source == integral) {
     return floating_point;
-  } else {
-    return std::nullopt;
   }
+
+  return std::nullopt;
 }
 
 // floating point type to 32/64 bit integral type
@@ -182,13 +182,13 @@ std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>
   // Casting any double greater/less than the respective bound to float is UB according to UBSan
   if (source > 340282346638528859811704183484516925440.0 || source < -340282346638528859811704183484516925440.0) {
     return std::nullopt;
-  } else {
-    if (static_cast<float>(source) == source) {
-      return static_cast<float>(source);
-    } else {
-      return std::nullopt;
-    }
   }
+
+  if (static_cast<float>(source) == source) {
+    return static_cast<float>(source);
+  }
+
+  return std::nullopt;
 }
 
 template <typename Target>
