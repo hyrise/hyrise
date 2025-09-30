@@ -92,7 +92,7 @@ then
 fi
 
 # Check if the benchmarks array is empty. This can only happen if the user does not supply any benchmarks.
-if [ ${#arr[@]} -eq 0 ]
+if [ ${#benchmarks[@]} -eq 0 ]
 then
   benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkJoinOrder" "hyriseBenchmarkStarSchema")
 fi
@@ -109,7 +109,7 @@ cmake -DCOMPILE_FOR_BOLT=TRUE ..
 
 ninja clean
 # Only compile the benchmarks that we need.
-time ninja ${arr[@]} -j "$compile_cores"
+time ninja ${benchmarks[@]} -j "$compile_cores"
 
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
 time llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
