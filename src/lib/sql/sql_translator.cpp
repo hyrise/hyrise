@@ -1418,9 +1418,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
           }
 
           AssertInput(std::ranges::any_of(group_by_expressions,
-                                           [&](const auto& group_by_expression) {
-                                             return *pre_aggregate_expression == *group_by_expression;
-                                           }),
+                                          [&](const auto& group_by_expression) {
+                                            return *pre_aggregate_expression == *group_by_expression;
+                                          }),
                       std::string("Expression ") + pre_aggregate_expression->as_column_name() +
                           " was added to SELECT list when resolving *, but it is not part of the GROUP BY clause.");
         }
@@ -1979,9 +1979,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprParameter: {
-      Assert(expr.ival >= 0 &&
-             std::cmp_less_equal(expr.ival, std::numeric_limits<ValuePlaceholderID::base_type>::max()),
-             "ValuePlaceholderID out of range.");
+      Assert(
+          expr.ival >= 0 && std::cmp_less_equal(expr.ival, std::numeric_limits<ValuePlaceholderID::base_type>::max()),
+          "ValuePlaceholderID out of range.");
       auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
       return placeholder_(_parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
     }

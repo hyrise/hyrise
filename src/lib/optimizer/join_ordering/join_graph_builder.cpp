@@ -165,7 +165,7 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
    * different edges, say CD and EF would result in a better plan. We ignore this possibility for now.
    */
 
-  auto remaining_vertex_indices =  std::unordered_set<size_t>{};
+  auto remaining_vertex_indices = std::unordered_set<size_t>{};
   for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx) {
     remaining_vertex_indices.insert(vertex_idx);
   }
