@@ -31,18 +31,18 @@ TEST_F(MockNodeTest, Description) {
 }
 
 TEST_F(MockNodeTest, OutputColumnExpression) {
-  ASSERT_EQ(_mock_node_a->output_expressions().size(), 4u);
+  ASSERT_EQ(_mock_node_a->output_expressions().size(), 4);
   EXPECT_EQ(*_mock_node_a->output_expressions().at(0), *lqp_column_(_mock_node_a, ColumnID{0}));
   EXPECT_EQ(*_mock_node_a->output_expressions().at(1), *lqp_column_(_mock_node_a, ColumnID{1}));
   EXPECT_EQ(*_mock_node_a->output_expressions().at(2), *lqp_column_(_mock_node_a, ColumnID{2}));
   EXPECT_EQ(*_mock_node_a->output_expressions().at(3), *lqp_column_(_mock_node_a, ColumnID{3}));
 
-  ASSERT_EQ(_mock_node_b->output_expressions().size(), 2u);
+  ASSERT_EQ(_mock_node_b->output_expressions().size(), 2);
   EXPECT_EQ(*_mock_node_b->output_expressions().at(0), *lqp_column_(_mock_node_b, ColumnID{0}));
   EXPECT_EQ(*_mock_node_b->output_expressions().at(1), *lqp_column_(_mock_node_b, ColumnID{1}));
 
   _mock_node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{3}});
-  EXPECT_EQ(_mock_node_a->output_expressions().size(), 2u);
+  EXPECT_EQ(_mock_node_a->output_expressions().size(), 2);
   EXPECT_EQ(*_mock_node_a->output_expressions().at(0), *lqp_column_(_mock_node_a, ColumnID{1}));
   EXPECT_EQ(*_mock_node_a->output_expressions().at(1), *lqp_column_(_mock_node_a, ColumnID{2}));
 }
@@ -78,7 +78,7 @@ TEST_F(MockNodeTest, Copy) {
 }
 
 TEST_F(MockNodeTest, NodeExpressions) {
-  ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u);
+  ASSERT_EQ(_mock_node_a->node_expressions.size(), 0);
 }
 
 TEST_F(MockNodeTest, UniqueColumnCombinations) {
@@ -90,7 +90,7 @@ TEST_F(MockNodeTest, UniqueColumnCombinations) {
 
   EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());
 
-  const auto& unique_column_combinations = _mock_node_a->unique_column_combinations();
+  const auto unique_column_combinations = _mock_node_a->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 2);
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
@@ -114,7 +114,7 @@ TEST_F(MockNodeTest, UniqueColumnCombinationsPrunedColumns) {
   EXPECT_EQ(_mock_node_a->key_constraints().size(), 3);
 
   {
-    const auto& unique_column_combinations = _mock_node_a->unique_column_combinations();
+    const auto unique_column_combinations = _mock_node_a->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 3);
     EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
@@ -124,7 +124,7 @@ TEST_F(MockNodeTest, UniqueColumnCombinationsPrunedColumns) {
     // Prune column a, which should remove two UCCs.
     _mock_node_a->set_pruned_column_ids({ColumnID{0}});
 
-    const auto& unique_column_combinations = _mock_node_a->unique_column_combinations();
+    const auto unique_column_combinations = _mock_node_a->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
     EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
@@ -141,7 +141,7 @@ TEST_F(MockNodeTest, OrderDependencies) {
 
   // Forward ODs.
   {
-    const auto& order_dependencies = _mock_node_a->order_dependencies();
+    const auto order_dependencies = _mock_node_a->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 2);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
     EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
@@ -150,8 +150,35 @@ TEST_F(MockNodeTest, OrderDependencies) {
   // Discard ODs that involve pruned columns.
   {
     _mock_node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
-    const auto& order_dependencies = _mock_node_a->order_dependencies();
+    const auto order_dependencies = _mock_node_a->order_dependencies();
     EXPECT_TRUE(order_dependencies.empty());
+  }
+}
+
+TEST_F(MockNodeTest, InclusionDependencies) {
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_mock_node_a->get_column("a")}, {ColumnID{0}}, dummy_table};
+  const auto ind_a_b = InclusionDependency{
+      {_mock_node_a->get_column("a"), _mock_node_a->get_column("b")}, {ColumnID{0}, ColumnID{1}}, dummy_table};
+  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
+  const auto foreign_key_constraint_a_b =
+      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, dummy_table, {ColumnID{0}, ColumnID{1}}, nullptr};
+  _mock_node_a->set_foreign_key_constraints({foreign_key_constraint_a, foreign_key_constraint_a_b});
+
+  // Forward INDs.
+  {
+    const auto inclusion_dependencies = _mock_node_a->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 2);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
+  }
+
+  // Discard INDs that involve pruned columns.
+  {
+    _mock_node_a->set_pruned_column_ids({ColumnID{1}});
+    const auto inclusion_dependencies = _mock_node_a->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
   }
 }
 

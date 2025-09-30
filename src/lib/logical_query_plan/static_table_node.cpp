@@ -12,6 +12,7 @@
 
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
@@ -85,6 +86,10 @@ UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
 
 OrderDependencies StaticTableNode::order_dependencies() const {
   return OrderDependencies{};
+}
+
+InclusionDependencies StaticTableNode::inclusion_dependencies() const {
+  return InclusionDependencies{};
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
