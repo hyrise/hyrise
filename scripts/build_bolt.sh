@@ -16,15 +16,16 @@ os="$(uname -s)"
 case "${os}" in
   Linux*)   num_cores="$(lscpu -p | grep -Ev '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
   Darwin*)  num_cores="$(sysctl -n hw.physicalcpu)";;
+  *)        echo 'Unsupported operating system. Aborting.' && exit 1;;
 esac
 
 # We recommend profiling for at least some time. However, this value is overwritten in the CI for faster runs.
 seconds_per_benchmark=1800
-benchmarks=()
+benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkJoinOrder" "hyriseBenchmarkStarSchema")
 
 # Parse cli args
-VALID_ARGS=$(getopt -o "ht:n:c:b:" --longoptions "help,time:,num-cores:,compile-cores:benchmark:" -- "$@")
-USAGE="Usage: $(basename $0) [-h] [-t seconds per benchmark] [-n num cores and clients while profiling] [-c num cores while building] [-b benchmark to be run (can be repeated)]"
+VALID_ARGS=$(getopt -o "ht:c" --longoptions "help,time:,cli" -- "$@")
+USAGE="Usage: $(basename $0) [-h] [-t seconds per benchmark] [--cli]"
 if [[ $? -ne 0 ]]
 then
   exit 1
@@ -39,16 +40,6 @@ do
       echo -e "Build an optimized version of the hyrise binary with BOLT\n$USAGE"
       exit 0
       ;;
-    -n | --num-cores)
-      # Check if num cores is a number
-      if ! [[ "$2" =~ ^[0-9]+$ ]]
-      then
-          echo -e "$2 is not a valid number of cores\n$USAGE"
-          exit 1
-      fi
-      num_cores="$2"
-      shift 2
-      ;;
     -t | --time)
       # Check if time is a number
       if ! [[ "$2" =~ ^[0-9]+$ ]]
@@ -59,23 +50,12 @@ do
       seconds_per_benchmark="$2"
       shift 2
       ;;
-    -c | --compile-cores)
-      # Check if num compile cores is a number
-      if ! [[ "$2" =~ ^[0-9]+$ ]]
-      then
-          echo -e "$2 is not a valid number of cores\n$USAGE"
-          exit 1
-      fi
-      compile_cores="$2"
-      shift  2
-      ;;
-    -b | --benchmark)
-      benchmarks+=("$2")
-      shift 2
-      ;;
-    --)
+    -c | --cli)
+      seconds_per_benchmark=120
+      benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkStarSchema")
+      num_cores=4
+      cli=1
       shift
-      break
       ;;
     *)
       echo -e "Unknown positional argument $1\n$USAGE"
@@ -84,20 +64,8 @@ do
   esac
 done
 
-# Check if time is empty. This can only happen if the os and the user both did not provide a value.
-if [ -z "$seconds_per_benchmark" ]
-then
-  echo 'Error: Cannot read the number of cores from the operating system and no number of cores specified in cli args.'
-  exit 1
-fi
 
-# Check if the benchmarks array is empty. This can only happen if the user does not supply any benchmarks.
-if [ ${#benchmarks[@]} -eq 0 ]
-then
-  benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkJoinOrder" "hyriseBenchmarkStarSchema")
-fi
-
-# We have to use RelWithDebInfo, so BOLT can work. We also have to add a few compile flags:
+# We have to add a few compile flags, so BOLT can work:
 # > BOLT operates on X86-64 and AArch64 ELF binaries. At the minimum, the binaries should have an unstripped symbol
 # > table, and, to get maximum performance gains, they should be linked with relocations (--emit-relocs or -q linker
 # > flag).
@@ -109,7 +77,7 @@ cmake -DCOMPILE_FOR_BOLT=TRUE ..
 
 ninja clean
 # Only compile the benchmarks that we need.
-time ninja ${benchmarks[@]} -j "$compile_cores"
+time ninja ${benchmarks[@]} -j "$num_cores"
 
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
 time llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
@@ -119,7 +87,20 @@ pushd ..
 for benchmark in ${benchmarks[@]}
 do
   # We use shuffled runs with high pressure to profile cases that are relevant.
-  time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled
+  if [ "$cli" -eq 1 ]
+  then
+    # Use a minimum scale factor for runs in cli
+    if [ "$benchmark" == "hyriseBenchmarkTPCH" -o "$benchmark" == "hyriseBenchmarkStarSchema" ]
+    then
+      # These benchmarks support floating point scaling factors
+      time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s .01
+    else
+      # These benchmarks require integer scaling factors
+      time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s 1
+    fi
+  else
+    time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled
+  fi
   mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
 done
 
