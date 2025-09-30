@@ -216,6 +216,10 @@ class Table : private Noncopyable {
    */
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
+  /**
+   * NOTE: All key constraints are currently stored. If a constraint is invalidated it is not deleted. To check if a 
+   * key constraint is guaranteed to be valid, use `key_constraint_is_confidently_valid`.
+   */
   const TableKeyConstraints& soft_key_constraints() const;
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
@@ -288,8 +292,8 @@ class Table : private Noncopyable {
   ForeignKeyConstraints _referenced_foreign_key_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
-  std::shared_ptr<TableStatistics> _table_statistics{};
-  std::mutex _append_mutex{};
+  std::shared_ptr<TableStatistics> _table_statistics;
+  std::mutex _append_mutex;
   std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
   std::vector<TableIndexStatistics> _table_indexes_statistics;
   pmr_vector<std::shared_ptr<PartialHashIndex>> _table_indexes;

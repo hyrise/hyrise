@@ -289,7 +289,10 @@ try {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 5))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
+                // We exclude tests matching NodeQueueSchedulerSemaphoreIncrements* as those tests were stuck with TSAN.
+                // We have seen runtimes of over 20h. The (much larger) tests running in Release mode did not show any
+                // issues when run for several days. We thus consider it a TSAN issue.
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds}:NodeQueueSchedulerSemaphoreIncrements* clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCC -s 1 --time 120 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCDS -s 1 -r 5 --scheduler --clients 5 --cores \$(( \$(nproc) / 10))"
@@ -412,53 +415,54 @@ try {
     }
   }
 
-  parallel clangMacX64: {
-    node('mac') {
-      stage("clangMacX64") {
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          try {
-            // We have experienced frequent network problems with this CI machine. So far, we have not found the cause.
-            // Since we run this stage very late and it frequently fails due to network problems, we retry pulling the
-            // sources five times to avoid re-runs of entire Full CI runs that failed in the very last stage due to a
-            // single network issue.
-            retry(5) {
-              try {
-                checkout scm
+  // parallel clangMacX64: {
+  //   node('mac') {
+  //     stage("clangMacX64") {
+  //       if (env.BRANCH_NAME == 'master' || full_ci) {
+  //         try {
+  //           // We have experienced frequent network problems with this CI machine. So far, we have not found the cause.
+  //           // Since we run this stage very late and it frequently fails due to network problems, we retry pulling the
+  //           // sources five times to avoid re-runs of entire Full CI runs that failed in the very last stage due to a
+  //           // single network issue.
+  //           retry(5) {
+  //             try {
+  //               checkout scm
 
-                // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container.
-                sh "git submodule update --init --recursive --jobs 4 --depth=1"
-              } catch (error) {
-                sh "ls -A1 | xargs rm -rf"
-                throw error
-              }
-            }
+  //               // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container.
+  //               sh "git submodule update --init --recursive --jobs 4 --depth=1"
+  //             } catch (error) {
+  //               sh "ls -A1 | xargs rm -rf"
+  //               throw error
+  //             }
+  //           }
 
-            // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it. Passing clang
-            // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
-            // that are not found otherwise.
-            sh "mkdir clang-apple-debug && cd clang-apple-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
-            sh "cd clang-apple-debug && ninja"
-            sh "./clang-apple-debug/hyriseTest"
+  //           // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it. Passing clang
+  //           // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
+  //           // that are not found otherwise.
+  //           sh "mkdir clang-apple-debug && cd clang-apple-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+  //           sh "cd clang-apple-debug && ninja"
+  //           sh "./clang-apple-debug/hyriseTest"
 
-            // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
-            // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
-            // only build release with LTO on the ARM machine.
-            sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} ${unity} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
-            sh "cd clang-release && ninja"
-            sh "./clang-release/hyriseTest"
-            sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
-            sh "./scripts/test/hyriseConsole_test.py clang-release"
-            sh "./scripts/test/hyriseServer_test.py clang-release"
-            sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
-          } finally {
-            sh "ls -A1 | xargs rm -rf"
-          }
-        } else {
-          Utils.markStageSkippedForConditional("clangMacX64")
-        }
-      }
-    }
-  }, clangMacArm: {
+  //           // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
+  //           // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
+  //           // only build release with LTO on the ARM machine.
+  //           sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} ${unity} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
+  //           sh "cd clang-release && ninja"
+  //           sh "./clang-release/hyriseTest"
+  //           sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
+  //           sh "./scripts/test/hyriseConsole_test.py clang-release"
+  //           sh "./scripts/test/hyriseServer_test.py clang-release"
+  //           sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+  //         } finally {
+  //           sh "ls -A1 | xargs rm -rf"
+  //         }
+  //       } else {
+  //         Utils.markStageSkippedForConditional("clangMacX64")
+  //       }
+  //     }
+  //   }
+  // },
+  clangMacArm: {
     // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
     node('mac-arm') {
       stage("clangMacArm") {

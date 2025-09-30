@@ -50,6 +50,9 @@ imdb_data/
 jcch_data/
 ssb_data/
 
+# Python poetry
+poetry.lock
+pyproject.toml
 # Sublime SFTP files
 sftp*
 
