@@ -1,10 +1,11 @@
 #pragma once
 
-// #include <array>
+#include <atomic>
 // #include <cstdint>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 
 namespace hyrise {
 
@@ -27,8 +28,12 @@ class MinMaxPredicate : public BaseMinMaxPredicate {
 
   void insert(const DataType& value) {
     if constexpr (std::is_same_v<DataType, int32_t>) {
-      _min_value = std::min(_min_value, value);
-      _max_value = std::max(_max_value, value);
+      if (_min_value > value) {
+        _min_value = value;
+      }
+      if (_max_value < value) {
+        _max_value = value;
+      }
     }
   }
 
@@ -43,10 +48,8 @@ class MinMaxPredicate : public BaseMinMaxPredicate {
 
   void merge_from(const MinMaxPredicate& other) {
     if constexpr (std::is_same_v<DataType, int32_t>) {
-      if (other._min_value < _min_value)
-        _min_value = other._min_value;
-      if (other._max_value > _max_value)
-        _max_value = other._max_value;
+      set_atomic_min(_min_value, other._min_value);
+      set_atomic_max(_max_value, other._max_value);
     }
   }
 
@@ -59,8 +62,8 @@ class MinMaxPredicate : public BaseMinMaxPredicate {
   }
 
  private:
-  int32_t _min_value;
-  int32_t _max_value;
+  std::atomic<int32_t> _min_value;
+  std::atomic<int32_t> _max_value;
 };
 
 // template class MinMaxPredicate<int32_t>;

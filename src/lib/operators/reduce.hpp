@@ -9,6 +9,7 @@
 #include "types.hpp"
 #include "utils/bloom_filter.hpp"
 #include "utils/min_max_predicate.hpp"
+#include "scheduler/job_task.hpp"
 
 namespace hyrise {
 
@@ -60,7 +61,6 @@ class Reduce : public AbstractReadOnlyOperator {
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.resize(chunk_count);
 
-      // If reduce_mode is ReduceMode::BuildAndProbe, new filters must be build while the old ones are probed.
       std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter;
       std::shared_ptr<MinMaxPredicate<ColumnDataType>> new_min_max_filter;
 
@@ -69,17 +69,6 @@ class Reduce : public AbstractReadOnlyOperator {
 
         if constexpr (use_min_max == UseMinMax::Yes) {
           new_min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();
-        }
-      }
-
-      std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter1;
-      std::shared_ptr<MinMaxPredicate<ColumnDataType>> new_min_max_filter1;
-
-      if constexpr (reduce_mode != ReduceMode::Probe) {
-        new_bloom_filter1 = std::make_shared<BloomFilter<20, 2>>();
-
-        if constexpr (use_min_max == UseMinMax::Yes) {
-          new_min_max_filter1 = std::make_shared<MinMaxPredicate<ColumnDataType>>();
         }
       }
 
@@ -112,6 +101,18 @@ class Reduce : public AbstractReadOnlyOperator {
           (void)input_chunk;
           (void)input_segment;
 
+            
+          std::shared_ptr<BloomFilter<20, 2>> partial_bloom_filter;
+          std::shared_ptr<MinMaxPredicate<ColumnDataType>> partial_min_max_filter;
+
+          if constexpr (reduce_mode != ReduceMode::Probe) {
+            partial_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+
+            if constexpr (use_min_max == UseMinMax::Yes) {
+              partial_min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();
+            }
+          }
+
           auto matches = std::make_shared<RowIDPosList>();
           if constexpr (reduce_mode != ReduceMode::Build) {
             matches->guarantee_single_chunk();
@@ -123,10 +124,10 @@ class Reduce : public AbstractReadOnlyOperator {
               boost::hash_combine(seed, position.value());
 
               if constexpr (reduce_mode == ReduceMode::Build) {
-                new_bloom_filter->insert(static_cast<uint64_t>(seed));
+                partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
                 if constexpr (use_min_max == UseMinMax::Yes) {
-                  new_min_max_filter->insert(position.value());
+                  partial_min_max_filter->insert(position.value());
                 }
               } else {
                 auto found = _bloom_filter->probe(static_cast<uint64_t>(seed));
@@ -139,10 +140,10 @@ class Reduce : public AbstractReadOnlyOperator {
                   matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
 
                   if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
-                    new_bloom_filter->insert(static_cast<uint64_t>(seed));
+                    partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
                     if constexpr (use_min_max == UseMinMax::Yes) {
-                      new_min_max_filter->insert(position.value());
+                      partial_min_max_filter->insert(position.value());
                     }
                   }
                 }
@@ -223,10 +224,20 @@ class Reduce : public AbstractReadOnlyOperator {
               output_chunks[chunk_index] = output_chunk;
             }
           }
+
+          if constexpr (reduce_mode != ReduceMode::Probe) {
+            new_bloom_filter->merge_from(*partial_bloom_filter);
+
+            if constexpr (use_min_max == UseMinMax::Yes) {
+              new_min_max_filter->merge_from(*partial_min_max_filter);
+            }
+          }
         };
 
-        job();
+        jobs.emplace_back(std::make_shared<JobTask>(job));
       }
+
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
       if constexpr (reduce_mode != ReduceMode::Build) {
         std::erase_if(output_chunks, [](const auto& ptr) {
@@ -239,6 +250,7 @@ class Reduce : public AbstractReadOnlyOperator {
       if constexpr (reduce_mode != ReduceMode::Probe) {
         std::cout << "Reducer setting new filters\n";
         _bloom_filter = new_bloom_filter;
+        std::cout << "New bloom filter saturation: " << _bloom_filter->saturation() << "\n";
         _min_max_filter = new_min_max_filter;
         // _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
         // _min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();

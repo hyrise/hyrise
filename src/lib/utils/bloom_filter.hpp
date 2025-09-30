@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <array>
 #include <cstdint>
 
@@ -34,7 +35,8 @@ class BloomFilter {
 
   void merge_from(const BloomFilter& other) {
     for (size_t i = 0; i < array_size; ++i) {
-      _filter[i] |= other._filter[i];
+      const uint64_t other_word = other._filter[i].load(std::memory_order_acquire);
+      _filter[i].fetch_or(other_word, std::memory_order_acq_rel);
     }
   }
 
@@ -99,7 +101,7 @@ class BloomFilter {
 
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
-  std::array<std::uint64_t, array_size> _filter;
+  std::array<std::atomic<uint64_t>, array_size> _filter;
 };
 
 template class BloomFilter<16, 1>;
