@@ -20,7 +20,6 @@ class ChunkCompressionTaskTest : public BaseTest {};
 
 TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   const auto table = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{12});
-
   const auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{3});
 
   const auto compression_task1 = std::make_shared<ChunkCompressionTask>(table_dict, ChunkID{0});
@@ -103,6 +102,24 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   validate->set_transaction_context(context_2);
   validate->execute();
   EXPECT_EQ(validate->get_output()->row_count(), 12);
+}
+
+TEST_F(ChunkCompressionTaskTest, IgnoreDeletedChunk) {
+  const auto table = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{8});
+  table->get_chunk(ChunkID{0})->increase_invalid_row_count(ChunkOffset{8});
+  table->remove_chunk(ChunkID{0});
+
+  const auto compression_task =
+      std::make_shared<ChunkCompressionTask>(table, std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression_task});
+
+  ASSERT_EQ(table->chunk_count(), 2);
+  EXPECT_FALSE(table->get_chunk(ChunkID{0}));
+  const auto encoded_chunk = table->get_chunk(ChunkID{1});
+  ASSERT_TRUE(encoded_chunk);
+  ASSERT_EQ(encoded_chunk->column_count(), 2);
+  EXPECT_TRUE(std::dynamic_pointer_cast<AbstractEncodedSegment>(encoded_chunk->get_segment(ColumnID{0})));
+  EXPECT_TRUE(std::dynamic_pointer_cast<AbstractEncodedSegment>(encoded_chunk->get_segment(ColumnID{1})));
 }
 
 }  // namespace hyrise

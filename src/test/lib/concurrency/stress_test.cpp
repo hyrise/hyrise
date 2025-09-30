@@ -21,7 +21,7 @@
 #include "scheduler/task_queue.hpp"
 #include "scheduler/worker.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "storage/base_dictionary_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/table.hpp"
@@ -598,8 +598,8 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     ASSERT_TRUE(chunk);
     EXPECT_EQ(chunk->size(), 3);
     EXPECT_FALSE(chunk->is_mutable());
-    // Immutable chunks should have pruning statistics and be encoded, currently with dictionary encoding.
-    EXPECT_TRUE(std::static_pointer_cast<BaseDictionarySegment>(chunk->get_segment(ColumnID{0})));
+    // Immutable chunks should have pruning statistics and should be encoded.
+    EXPECT_TRUE(std::static_pointer_cast<AbstractEncodedSegment>(chunk->get_segment(ColumnID{0})));
     EXPECT_TRUE(chunk->pruning_statistics());
   }
 

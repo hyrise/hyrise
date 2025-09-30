@@ -303,14 +303,15 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
-  DebugAssert(([this, chunk_id]() {  // NOLINT
-                const auto chunk = get_chunk(chunk_id);
-                return (chunk->invalid_row_count() == chunk->size());
-              }()),
-              "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
   Assert(_type == TableType::Data, "Removing chunks from other tables than data tables is not intended yet.");
-  std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
+  if constexpr (HYRISE_DEBUG) {
+    Assert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
+    const auto chunk = get_chunk(chunk_id);
+    Assert(chunk && chunk->invalid_row_count() == chunk->size(),
+           "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
+  }
+
+  std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>{});
 }
 
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT

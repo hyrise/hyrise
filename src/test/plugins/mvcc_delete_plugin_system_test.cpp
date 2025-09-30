@@ -38,10 +38,10 @@ class MvccDeletePluginSystemTest : public BaseTest {
     // Add three chunks and fill them with values from 0-599
     auto begin_value = 0;
     for (auto chunk_id = ChunkID{0}; chunk_id < INITIAL_CHUNK_COUNT; ++chunk_id) {
-      pmr_vector<int32_t> values(CHUNK_SIZE);
+      auto values = pmr_vector<int32_t>(CHUNK_SIZE);
       std::iota(values.begin(), values.end(), begin_value);
 
-      const auto value_segment = std::make_shared<ValueSegment<int>>(std::move(values));
+      const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values));
       auto segments = Segments{};
       segments.emplace_back(value_segment);
       const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
@@ -73,7 +73,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     const auto validate = std::make_shared<Validate>(gt);
 
     const auto column = pqp_column_(ColumnID{0}, DataType::Int, false, "number");
-    const auto where = std::make_shared<TableScan>(validate, equals_(column, static_cast<int>(_counter)));
+    const auto where = std::make_shared<TableScan>(validate, equals_(column, static_cast<int32_t>(_counter)));
 
     const auto update = std::make_shared<Update>(_t_name_test, where, where);
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);

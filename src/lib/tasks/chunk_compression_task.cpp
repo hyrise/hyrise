@@ -1,15 +1,11 @@
 #include "chunk_compression_task.hpp"
 
-#include <cstdint>
 #include <memory>
 #include <vector>
 
-#include "hyrise.hpp"
-#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/mvcc_data.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -40,7 +36,10 @@ void ChunkCompressionTask::_on_execute() {
   for (const auto chunk_id : _chunk_ids) {
     Assert(chunk_id < _table->chunk_count(), "Chunk with given ID does not exist.");
     const auto chunk = _table->get_chunk(chunk_id);
-    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+    if (!chunk) {
+      // We access the table directly (not via a GetTable operator). Thus, the chunk might have been deleted.
+      continue;
+    }
     Assert(!chunk->is_mutable(), "Mutable chunks cannot be compressed.");
 
     ChunkEncoder::encode_chunk(chunk, _table->column_data_types(), chunk_encoding_spec);
