@@ -68,7 +68,7 @@ std::optional<CommitID> TransactionManager::get_lowest_active_snapshot_commit_id
     return std::nullopt;
   }
 
-  return *std::ranges::min_element(_active_snapshot_commit_ids);
+  return std::ranges::min(_active_snapshot_commit_ids);
 }
 
 /**
