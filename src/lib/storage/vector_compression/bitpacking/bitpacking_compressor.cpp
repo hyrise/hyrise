@@ -21,32 +21,31 @@ class BitPackingVector;
 std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
     const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc,
     const UncompressedVectorInfo& /*meta_info*/) {
+  const auto max_element_it = std::ranges::max_element(vector);
+
   auto required_bits = size_t{1};
-  if (!vector.empty()) {
-    const auto max_element = std::ranges::max(vector);
-    if (max_element != 0) {
-      // Add 1 to the maximum value because log2(1) = 0 but we need one bit to represent it.
-      required_bits = static_cast<size_t>(std::ceil(log2(max_element + 1)));
-    }
+  if (max_element_it != vector.cend() && *max_element_it != 0) {
+    // Add 1 to the maximum value because log2(1) = 0 but we need one bit to represent it.
+    required_bits = static_cast<size_t>(std::ceil(log2(*max_element_it + 1)));
   }
 
   auto data = pmr_compact_vector(required_bits, vector.size(), alloc);
 
   /**
-   * The compact_vector does not zero initialize its memory, which leads to non-reproducible tests that use the binary
-   * writer (which checks written bytes one by one, writing uninitialized bytes at the end of the vector thus leads to
-   * "random" bytes written to disk). The compact_vector allocates memory aligned to its word size and due to this, some
-   * memory at the end is not always overwritten. Hence, fill the internal memory with zeroes. Unfortunately,
-   * compact_vector does not give us a better interface.
-   * Therefore, we proceed to work with a raw pointer to the compact_vector's internal memory and fill it with zeroes.
-   * For this, data.bytes() gives the number of allocated bytes for the internal memory (word-aligned, see
-   * bitpacking_vector_type.hpp). When the word size gets changed by us in the template (for example to uint32_t), this
-   * still works.
+   * The compact_vector does not zero initialize its memory, which leads to non-reproducible tests that
+   * use the binary writer (which checks written bytes one by one, writing uninitialized bytes at the end
+   * of the vector thus leads to "random" bytes written to disk). The compact_vector allocates memory
+   * aligned to its word size and due to this, some memory at the end is not always overwritten.
+   * Hence, fill the internal memory with zeroes. Unfortunately, compact_vector does not give us a better
+   * interface.
+   * Therefore, we proceed to work with a raw pointer to the compact_vector's internal memory
+   * and fill it with zeroes. For this, data.bytes() gives the number of allocated bytes for the internal
+   * memory (word-aligned, see bitpacking_vector_type.hpp).
+   * When the word size gets changed by us in the template (for example to uint32_t), this still works.
    */
 
-  // TODO(Martin): check back ...
-  // using InternalType = std::remove_reference_t<decltype(*data.get())>;
-  // std::fill_n(data.get(), data.bytes() / sizeof(InternalType), InternalType{0});
+  using InternalType = std::remove_reference_t<decltype(*data.get())>;
+  std::fill_n(data.get(), data.bytes() / sizeof(InternalType), InternalType{0});
 
   // NOLINTNEXTLINE(modernize-use-ranges): iterator is not std::ranges-compliant.
   std::copy(vector.cbegin(), vector.cend(), data.begin());
