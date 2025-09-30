@@ -35,15 +35,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
 
   /**
-   * 1. Explore the directory and identify tables to be loaded
+   * 1. Explore the directory and identify tables to be loaded.
    * Recursively walk through the specified directory and collect all tables found on the way. A tables name is
    * determined by its filename. Multiple file extensions per table are allowed, for example there could be a CSV and a
    * binary version of a table.
    */
-  for (const auto& directory_entry : std::filesystem::directory_iterator(_path)) {
+  for (const auto& directory_entry : std::filesystem::recursive_directory_iterator(_path)) {
     const auto& file_path = directory_entry.path();
     const auto extension = file_path.extension();
-    if (!table_extensions.contains(extension)) {
+    if (!directory_entry.is_regular_file() || !table_extensions.contains(extension)) {
       continue;
     }
 
