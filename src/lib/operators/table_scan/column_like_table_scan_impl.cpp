@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -48,11 +49,11 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(
 void ColumnLikeTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](const auto& iter, [[maybe_unused]] const auto& end) {
     // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
     // via position_filter
-    if constexpr (!is_reference_segment_iterable_v<typename decltype(iter)::IterableType>) {
-      using ColumnDataType = typename decltype(iter)::ValueType;
+    if constexpr (!is_reference_segment_iterable_v<typename std::decay_t<decltype(iter)>::IterableType>) {
+      using ColumnDataType = typename std::decay_t<decltype(iter)>::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
@@ -93,7 +94,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
   // LIKE matches all rows, but we still need to check for NULL
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+    attribute_vector_iterable.with_iterators(position_filter, [&](const auto& iter, const auto& end) {
       static const auto always_true = [](const auto&) {
         return true;
       };
@@ -113,7 +114,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     return dictionary_matches[position.value()];
   };
 
-  attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+  attribute_vector_iterable.with_iterators(position_filter, [&](const auto& iter, const auto& end) {
     _scan_with_iterators<true>(dictionary_lookup, iter, end, chunk_id, matches);
   });
 }
@@ -129,22 +130,11 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   dictionary_matches.reserve(dictionary.size());
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
-#ifdef __clang__
-// For the loop through the dictionary, we want to use const auto& for DictionarySegments. However,
-// FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
-// error about a potential copy for the loop value.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wrange-loop-analysis"
-#endif
     for (const auto& value : dictionary) {
       const auto matches = matcher(value);
       count += static_cast<size_t>(matches);
       dictionary_matches.push_back(matches);
     }
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
   });
 
   return result;
