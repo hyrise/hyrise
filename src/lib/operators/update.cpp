@@ -32,9 +32,9 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   // 0. Validate input.
   Assert(context, "Update needs a transaction context.");
   Assert(left_input_table()->row_count() == right_input_table()->row_count(),
-              "Update requires identical layouts from its input tables.");
+         "Update requires identical layouts from its input tables.");
   Assert(left_input_table()->column_data_types() == right_input_table()->column_data_types(),
-              "Update requires identical layouts from its input tables.");
+         "Update requires identical layouts from its input tables.");
 
   // 1. Delete obsolete data with the Delete operator. Delete does not accept empty input data.
   if (left_input_table()->row_count() > 0) {

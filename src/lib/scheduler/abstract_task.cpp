@@ -237,7 +237,7 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
     }
     case TaskState::AssignedToWorker: {
       if (_state >= TaskState::AssignedToWorker) {
-         return false;
+        return false;
       }
 
       // If are not yet assigned, we try to assign to the worker. This can be done if the current status either
