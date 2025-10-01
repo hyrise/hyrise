@@ -684,7 +684,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           }
 
           // Variant A: Just regular copy
-          // std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
+          std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
 
           // Variant B: Copy with OpenMP Pragma
 //           const auto copy_from = tmp.data[radix].elements.data();
@@ -695,9 +695,9 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 //           }
 
           // Variant C: Google Highway streaming copy
-          highway::copy_nontemporal(reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data()),
-                                    TMP::bucket::BYTES_PER_STORE,
-                                    reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx));
+          // highway::copy_nontemporal(reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data()),
+          //                           TMP::bucket::BYTES_PER_STORE,
+          //                           reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx));
 
           if constexpr (keep_null_values) {
             std::ranges::copy(tmp.null_values[radix], null_values_as_char[radix].begin() + output_idx);
