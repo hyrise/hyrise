@@ -8,7 +8,7 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"

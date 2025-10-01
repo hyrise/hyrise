@@ -18,9 +18,7 @@
 namespace hyrise {
 UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,
                    const std::shared_ptr<const AbstractOperator>& right_in)
-    : AbstractReadOnlyOperator(OperatorType::UnionAll, left_in, right_in) {
-  // nothing to do here
-}
+    : AbstractReadOnlyOperator(OperatorType::UnionAll, left_in, right_in) {}
 
 const std::string& UnionAll::name() const {
   static const auto name = std::string{"UnionAll"};
@@ -29,8 +27,8 @@ const std::string& UnionAll::name() const {
 
 std::shared_ptr<const Table> UnionAll::_on_execute() {
   Assert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
-         "Input tables must have same number of columns");
-  DebugAssert(left_input_table()->type() == right_input_table()->type(), "Input tables must have the same type");
+         "Input tables must have same number of columns.");
+  DebugAssert(left_input_table()->type() == right_input_table()->type(), "Input tables must have the same type.");
 
   auto output_chunks =
       std::vector<std::shared_ptr<Chunk>>{left_input_table()->chunk_count() + right_input_table()->chunk_count()};
@@ -44,15 +42,15 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
       const auto chunk = input->get_chunk(in_chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-      // creating empty chunk to add segments with positions
-      Segments output_segments;
+      // Creating empty chunk to add segments with positions.
+      auto output_segments = Segments{};
 
-      // iterating over all segments of the current chunk
+      // Iterating over all segments of the current chunk.
       for (auto column_id = ColumnID{0}; column_id < input->column_count(); ++column_id) {
         output_segments.push_back(chunk->get_segment(column_id));
       }
 
-      // adding newly filled chunk to the output table
+      // Adding newly filled chunk to the output table.
       output_chunks[output_chunk_idx] = std::make_shared<Chunk>(output_segments);
       ++output_chunk_idx;
     }

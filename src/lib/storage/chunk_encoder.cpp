@@ -60,7 +60,7 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
       auto contains_nulls = false;
 
       auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
-      iterable.with_iterators([&](auto it, const auto end) {
+      iterable.with_iterators([&](auto it, const auto& end) {
         const auto segment_size = std::distance(it, end);
         values.resize(segment_size);
         null_values.resize(segment_size);

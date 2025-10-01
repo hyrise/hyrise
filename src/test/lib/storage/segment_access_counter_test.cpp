@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "base_test.hpp"
 #include "storage/create_iterable_from_segment.hpp"

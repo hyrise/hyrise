@@ -51,7 +51,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                                    ExpressionUnorderedSet& visualized_sub_queries,
                                    const CardinalityEstimator& cardinality_estimator) {
   // Avoid drawing dataflows/nodes redundantly in diamond-shaped plans.
-  if (visualized_nodes.find(node) != visualized_nodes.end()) {
+  if (visualized_nodes.contains(node)) {
     return;
   }
   visualized_nodes.insert(node);
