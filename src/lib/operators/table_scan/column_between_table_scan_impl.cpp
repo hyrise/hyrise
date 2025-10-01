@@ -131,7 +131,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
   if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
     if (_column_is_nullable) {
       // We still have to check for NULLs
-      attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
+      attribute_vector_iterable.with_iterators(position_filter, [&](const auto& left_it, const auto& left_end) {
         static const auto always_true = [](const auto&) {
           return true;
         };
@@ -206,7 +206,7 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
       Fail("Expected ReferenceSegments to be handled before calling this method");
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
-      segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
+      segment_iterable.with_iterators(position_filter, [&](const auto& segment_begin, const auto& segment_end) {
         const auto typed_left_value = boost::get<ColumnDataType>(left_value);
         const auto typed_right_value = boost::get<ColumnDataType>(right_value);
         auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, sort_mode, _column_is_nullable,

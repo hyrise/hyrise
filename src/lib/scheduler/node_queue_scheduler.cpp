@@ -180,7 +180,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
 void NodeQueueScheduler::finish() {
   // Lock finish() to ensure that the shutdown tasks are not sent twice.
-  const auto lock = std::lock_guard<std::mutex>{_finish_mutex};
+  const auto lock = std::lock_guard{_finish_mutex};
 
   if (!_active) {
     return;
@@ -244,8 +244,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   // If the current node is requested, try to obtain node from current worker.
-  const auto& worker = Worker::get_this_thread_worker();
-  if (worker) {
+  if (const auto& worker = Worker::get_this_thread_worker()) {
     return worker->queue()->node_id();
   }
 
@@ -347,8 +346,8 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   const auto task_count = tasks.size();
 
-  // Per group, this vector stores the offset into the task list for the task that will be the successor of the current
-  // task. Initialize with -1 to denote an invalid offset.
+  // For each group, this vector stores the offset of the task that will be successor of the current task. Tasks are
+  // identified by their offset in the task list. Initialize with -1 to denote an invalid offset.
   auto grouped_task_offsets = std::vector<int32_t>(group_count, -1);
   auto common_node_id = std::optional<NodeID>{};
 

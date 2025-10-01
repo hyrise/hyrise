@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <memory>
-#include <thread>
 #include <vector>
 
 #include "abstract_scheduler.hpp"
@@ -54,18 +53,18 @@ class NodeQueueScheduler final : public AbstractScheduler {
 
  public:
   NodeQueueScheduler();
-  ~NodeQueueScheduler() final;
+  ~NodeQueueScheduler() override final;
 
   /**
    * Create a TaskQueue on every node and a worker for every core.
    */
-  void begin() final;
+  void begin() override final;
 
-  void finish() final;
+  void finish() override final;
 
-  bool active() const final;
+  bool active() const override final;
 
-  const std::vector<std::shared_ptr<TaskQueue>>& queues() const final;
+  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override final;
 
   const std::vector<std::shared_ptr<Worker>>& workers() const;
 
@@ -86,26 +85,25 @@ class NodeQueueScheduler final : public AbstractScheduler {
    */
   std::optional<size_t> determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
 
-  void wait_for_all_tasks() final;
+  void wait_for_all_tasks() override final;
 
   const std::atomic_int64_t& active_worker_count() const;
 
  protected:
   /**
-   * @brief Adds predecessor/successor relationships between tasks so that only N tasks (determined by
-   *        `determine_group_count()`) can be executed in parallel (tasks with predecessors/successors are not
-   *        scheduled). Grouping thus reduces load on the task queues and allows workers to process multiple tasks
-   *        without coordinating with task queues. On the other hand, it can reduce potential parallelism if too few
-   *        groups are formed. We use a round robin assignment due to the assumption that chunk characteristics change
-   *        for older data (e.g., old and infrequently accessed data might be tiered or heavily compressed). A simpler
-   *        grouping (e.g., forming the first chain with the first N tasks) could cause chain processing to be
-   *        inbalanced (chains processing frequently accessed data might be less expensive than ones processing tiered
-   *        data).
+   * @brief Adds predecessor/successor relationships between tasks so that only `group_count` tasks can be executed in
+   *        parallel (tasks with predecessors/successors are not scheduled). Grouping thus reduces load on the task
+   *        queues and allows workers to process multiple tasks without coordinating with task queues. On the other
+   *        hand, it can reduce potential parallelism if too few groups are formed. We use a round robin assignment due
+   *        to the assumption that chunk characteristics change for older data (e.g., old and infrequently accessed data
+   *        might be tiered or heavily compressed). A simpler grouping (e.g., forming the first chain with the first
+   *        `group_count` tasks) could cause chain processing to be inbalanced (chains processing frequently accessed
+   *        data might be less expensive than ones processing tiered data).
    *
    * @param tasks: list of tasks to group
    */
-  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
   static void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count);
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override final;
 
   /**
    * @param task
@@ -114,7 +112,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
    * @param priority
    */
   void _schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                 SchedulePriority priority = SchedulePriority::Default) final;
+                 SchedulePriority priority = SchedulePriority::Default) override final;
 
  private:
   std::atomic<TaskID::base_type> _task_counter{0};

@@ -12,11 +12,8 @@
 
 namespace hyrise {
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables):
-//   See https://github.com/llvm/llvm-project/issues/47384. Should be fixed with clang-tidy versions >17.
 thread_local std::minstd_rand AbstractTPCCProcedure::_random_engine{42};
 thread_local TPCCRandomGenerator AbstractTPCCProcedure::_tpcc_random_generator{42};
-// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 AbstractTPCCProcedure::AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor) : _sql_executor(sql_executor) {
   PerformanceWarning(
@@ -35,8 +32,8 @@ bool AbstractTPCCProcedure::execute() {
   auto success = _on_execute();
 
   DebugAssert(transaction_context->phase() == TransactionPhase::Committed ||
-              transaction_context->phase() == TransactionPhase::RolledBackByUser ||
-              transaction_context->phase() == TransactionPhase::RolledBackAfterConflict,
+                  transaction_context->phase() == TransactionPhase::RolledBackByUser ||
+                  transaction_context->phase() == TransactionPhase::RolledBackAfterConflict,
               "Expected TPC-C transaction to either commit or roll back the MVCC transaction");
 
   return success;

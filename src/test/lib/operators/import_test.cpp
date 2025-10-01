@@ -4,7 +4,7 @@
 #include <string>
 #include <tuple>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "base_test.hpp"
 #include "hyrise.hpp"
