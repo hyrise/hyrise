@@ -90,7 +90,7 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
 
     case LQPNodeType::Sort:
       // n * log(n) for sorting, plus n for output writing.
-      return left_input_row_count * std::log(left_input_row_count) + output_row_count;
+      return (left_input_row_count * std::log(left_input_row_count)) + output_row_count;
 
     case LQPNodeType::Union: {
       const auto union_mode = static_cast<const UnionNode&>(*node).set_operation_mode;
@@ -98,8 +98,8 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
       switch (union_mode) {
         case SetOperationMode::Positions:
           // To merge the PosLists, we have to sort them. Thus, n * log(n) for each input plus output writing.
-          return left_input_row_count * std::log(left_input_row_count) +
-                 right_input_row_count * std::log(right_input_row_count) + output_row_count;
+          return (left_input_row_count * std::log(left_input_row_count)) +
+                 (right_input_row_count * std::log(right_input_row_count)) + output_row_count;
         case SetOperationMode::All:
           // UnionAll simply appends its two inputs and does not touch the actual data.
           return 0.0;
@@ -117,7 +117,7 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
     case LQPNodeType::Predicate: {
       const auto& predicate = static_cast<const PredicateNode&>(*node).predicate();
       // n * number of scanned columns + output writing.
-      return left_input_row_count * expression_cost_multiplier(predicate) + output_row_count;
+      return (left_input_row_count * expression_cost_multiplier(predicate)) + output_row_count;
     }
 
     default:

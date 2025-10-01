@@ -51,7 +51,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             if sudo apt-get update >/dev/null; then
 
                 # Packages added here should also be added to the Dockerfile
-                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-16 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-14 gcc-14 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-17 man parallel postgresql-server-dev-all valgrind bolt-17; then
+                if ! sudo apt-get install --no-install-recommends -y software-properties-common lsb-release git python3 python3-pip autoconf bash-completion bc clang-19 llvm-20 clang-20 clang-format-20 clang-tidy-20 libclang-rt-dev cmake curl dos2unix g++-15 gcc-15 graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-20 man parallel postgresql-server-dev-all valgrind bolt-20; then
                     echo "Error during apt-get installations."
                     exit 1
                 fi
@@ -66,11 +66,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 90 --slave /usr/bin/g++ g++ /usr/bin/g++-14
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-17 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-17 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-17 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-17 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-17  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-17
-
-                # Bolt searches for this binary at this position when instrumenting a binary.
-                ln -s /usr/lib/llvm-17/lib/libbolt_rt_instr.a /usr/lib/libbolt_rt_instr.a
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 90 --slave /usr/bin/g++ g++ /usr/bin/g++-15
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-20 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-20 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-20 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-20 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-20  --slave /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-20 --slave /usr/bin/llvm-bolt llvm-bolt /usr/bin/llvm-bolt-20 --slave /usr/bin/merge-fdata merge-fdata /usr/bin/merge-fdata-20 --slave /usr/lib/libbolt_rt_instr.a libbolt_rt_instr.a /usr/lib/llvm-20/lib/libbolt_rt_instr.a
             else
                 echo "Error during installation."
                 exit 1
