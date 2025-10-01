@@ -137,7 +137,7 @@ class Reduce : public AbstractReadOnlyOperator {
                 }
 
                 if (found) {
-                  matches->emplace_back(RowID{chunk_index, position.chunk_offset()});
+                  matches->emplace_back(chunk_index, position.chunk_offset());
 
                   if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
                     partial_bloom_filter->insert(static_cast<uint64_t>(seed));
