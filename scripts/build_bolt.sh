@@ -80,7 +80,7 @@ ninja clean
 time ninja ${benchmarks[@]} -j "$num_cores"
 
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
-time llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
+time llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
 
 pushd ..
 
@@ -106,8 +106,8 @@ done
 
 popd
 
-time merge-fdata-17 *.fdata > bolt.fdata
+time merge-fdata *.fdata > bolt.fdata
 
-time llvm-bolt-17 lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+time llvm-bolt lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 
 # time strip lib/libhyrise_impl.so

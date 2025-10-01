@@ -98,7 +98,7 @@ ninja clean
 ninja ${arr[@]} -j "$compile_cores"
 
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
-llvm-bolt-17 lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
+llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
 
 pushd ..
 
@@ -112,5 +112,5 @@ done
 
 popd
 
-merge-fdata-17 *.fdata > ../resources/bolt.fdata
+merge-fdata *.fdata > ../resources/bolt.fdata
 llvm-profdata merge -output ../resources/pgo.profdata *.profraw
