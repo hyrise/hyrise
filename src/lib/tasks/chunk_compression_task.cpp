@@ -8,7 +8,10 @@
 #include "hyrise.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/mvcc_data.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -20,10 +23,21 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
 ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids)
     : _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
+ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id,
+                                           const ChunkEncodingSpec& chunk_encoding_spec)
+    : _table_name(table_name), _chunk_ids{std::vector<ChunkID>{chunk_id}}, _chunk_encoding_spec(chunk_encoding_spec) {}
+
+ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
+                                           const ChunkEncodingSpec& chunk_encoding_spec)
+    : _table_name(table_name), _chunk_ids{chunk_ids}, _chunk_encoding_spec(chunk_encoding_spec) {}
+
 void ChunkCompressionTask::_on_execute() {
   const auto& table = Hyrise::get().storage_manager.get_table(_table_name);
 
   Assert(table, "Table does not exist.");
+
+  const auto default_encoding_spec = auto_select_chunk_encoding_spec(table->column_data_types(), unique_columns(table));
+  const auto chunk_encoding_spec = _chunk_encoding_spec.value_or(default_encoding_spec);
 
   for (const auto chunk_id : _chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
@@ -36,7 +50,7 @@ void ChunkCompressionTask::_on_execute() {
     DebugAssert(_chunk_is_completed(chunk, table->target_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");
 
-    ChunkEncoder::encode_chunk(chunk, table->column_data_types());
+    ChunkEncoder::encode_chunk(chunk, table->column_data_types(), chunk_encoding_spec);
   }
 }
 

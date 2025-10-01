@@ -39,13 +39,9 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
   }
 
   // Compare dependants.
-  for (const auto& expression : other.dependents) {
-    if (!dependents.contains(expression)) {
-      return false;
-    }
-  }
-
-  return true;
+  return std::ranges::all_of(other.dependents, [&](const auto& expression) {
+    return dependents.contains(expression);
+  });
 }
 
 bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {

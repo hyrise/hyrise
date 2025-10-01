@@ -45,9 +45,9 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
   }
 
   node_expressions.resize(group_by_expressions.size() + aggregate_expressions.size());
-  std::copy(group_by_expressions.begin(), group_by_expressions.end(), node_expressions.begin());
-  std::copy(aggregate_expressions.begin(), aggregate_expressions.end(),
-            node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(group_by_expressions.size()));
+  std::ranges::copy(group_by_expressions, node_expressions.begin());
+  std::ranges::copy(aggregate_expressions,
+                    node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(group_by_expressions.size()));
 }
 
 std::string AggregateNode::description(const DescriptionMode mode) const {

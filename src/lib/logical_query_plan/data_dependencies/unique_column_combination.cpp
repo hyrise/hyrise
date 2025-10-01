@@ -21,8 +21,9 @@ bool UniqueColumnCombination::operator==(const UniqueColumnCombination& rhs) con
   if (expressions.size() != rhs.expressions.size()) {
     return false;
   }
-  return std::ranges::all_of(expressions, [&](const auto& expression) {
-    return rhs.expressions.contains(expression);
+
+  return std::ranges::all_of(expressions, [&rhs](const auto& column_expression) {
+    return rhs.expressions.contains(column_expression);
   });
 }
 

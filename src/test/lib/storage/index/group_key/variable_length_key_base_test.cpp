@@ -142,7 +142,7 @@ TEST_F(VariableLengthKeyBaseTest, OrAssignmentWithKeyLongerThan64Bit) {
   uint64_t expected_low = 0xFF00FF00F0F0FF00u;
   uint64_t expected_high = 0x0000000000000000u;
 
-  if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+  if constexpr (std::endian::native == std::endian::little) {
     EXPECT_EQ(expected_high, memory[1]);
     EXPECT_EQ(expected_low, memory[0]);
   } else {
@@ -177,7 +177,7 @@ TEST_F(VariableLengthKeyBaseTest, ShiftAndSet) {
   uint64_t memory = 0xFF000000F0F0FF00u;
   VariableLengthKeyBase key;
   // create key pointing to lower half of memory
-  if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+  if constexpr (std::endian::native == std::endian::little) {
     key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&memory), sizeof(uint32_t));
   } else {
     key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&memory) + sizeof(uint32_t), sizeof(uint32_t));

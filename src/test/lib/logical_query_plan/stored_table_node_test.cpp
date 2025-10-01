@@ -12,6 +12,7 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "types.hpp"
@@ -25,7 +26,7 @@ class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
-    ChunkEncoder::encode_all_chunks(_table_a);
+    ChunkEncoder::encode_all_chunks(_table_a, SegmentEncodingSpec{EncodingType::Dictionary});
     _table_b = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
 
     Hyrise::get().storage_manager.add_table("t_a", _table_a);
