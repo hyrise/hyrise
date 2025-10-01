@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -18,6 +19,7 @@
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -72,14 +74,14 @@ Cost weighted_predicate_cost(const std::shared_ptr<AbstractLQPNode>& node,
         return ExpressionVisitation::VisitArguments;
       }
 
-      // Penalize every LIKE predicate in the (possibly complex and nested) predicate.
+      // Penalize if there is a LIKE predicate.
       const auto predicate_condition = static_cast<const AbstractPredicateExpression&>(*expression).predicate_condition;
       if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike ||
           predicate_condition == PredicateCondition::LikeInsensitive ||
           predicate_condition == PredicateCondition::NotLikeInsensitive) {
-        penalty += PredicateReorderingRule::PREDICATE_PENALTY;
+        penalty = PredicateReorderingRule::PREDICATE_PENALTY;
       }
-      return ExpressionVisitation::VisitArguments;
+      return ExpressionVisitation::DoNotVisitArguments;
     });
   }
   return estimated_cost * std::max(Cost{1}, penalty) + output_cardinality;
