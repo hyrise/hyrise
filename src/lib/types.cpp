@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "utils/assert.hpp"
 

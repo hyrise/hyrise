@@ -28,7 +28,7 @@
 #include <readline/history.h>   // NOLINT(build/include_order): cpplint considers readline headers as C system headers.
 #include <readline/readline.h>  // NOLINT(build/include_order)
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
@@ -123,7 +123,8 @@ std::vector<std::string> tokenize(std::string input) {
   const auto both_are_spaces = [](char left, char right) {
     return (left == right) && (left == ' ');
   };
-  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
+  const auto unique_range = std::ranges::unique(input, both_are_spaces);
+  input.erase(unique_range.begin(), unique_range.end());
 
   auto tokens = std::vector<std::string>{};
   boost::algorithm::split(tokens, input, boost::is_space());
@@ -278,7 +279,8 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   const auto both_are_spaces = [](char left, char right) {
     return (left == right) && (left == ' ');
   };
-  args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
+  const auto unique_range = std::ranges::unique(args, both_are_spaces);
+  args.erase(unique_range.begin(), unique_range.end());
 
   return static_cast<int>(func(args));
 }
@@ -395,8 +397,8 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  auto size_y = int{0};
-  auto size_x = int{0};
+  auto size_y = int32_t{0};
+  auto size_x = int32_t{0};
   rl_get_screen_size(&size_y, &size_x);
 
   auto stream = std::stringstream{};
@@ -764,7 +766,7 @@ int Console::_visualize(const std::string& input) {
   }
 
   // Determine the plan type to visualize.
-  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
+  enum class PlanType : uint8_t { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
   if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||

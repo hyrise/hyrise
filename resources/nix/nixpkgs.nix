@@ -11,10 +11,10 @@
 let
   fetchCommit = commit: fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/${commit}.tar.gz";
-    sha256 = "0043xxvs81chfbn01irfj81pj8j9nzwnv4srmaqy38y3bzacv6ra";
+    sha256 = "0lgrjym6wgskgm9514zb4ccs584kzgixsa2c9ich61yf19vvcwq2";
   };
 in
 
-import (fetchCommit "3563ebc663d7b75c7781085229ee13c17ea93d12") {
+import (fetchCommit "af0f7e3f6f6f9e4b96ffe7115b04d637819ecf40") {
   overlays = [];
 }

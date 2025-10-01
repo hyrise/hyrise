@@ -13,7 +13,7 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
