@@ -53,7 +53,7 @@ do
     -c | --cli)
       seconds_per_benchmark=120
       benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkStarSchema")
-      num_cores=4
+      num_cores=8
       cli=1
       shift
       ;;
