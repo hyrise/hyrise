@@ -1,10 +1,13 @@
 #include <algorithm>
+#include <memory>
+#include <utility>
 
 #include "base_test.hpp"
 #include "operators/join_hash/join_hash_steps.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -37,6 +40,11 @@ class JoinHashStepsTest : public BaseTest {
         create_table_scan(_table_with_nulls_and_zeros, ColumnID{0}, PredicateCondition::GreaterThan, 0);
     _table_with_nulls_and_zeros_scanned->never_clear_output();
     _table_with_nulls_and_zeros_scanned->execute();
+
+    _table_with_many_values = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/int_equal_distribution.tbl", ChunkOffset{200}));
+    _table_with_many_values->never_clear_output();
+    _table_with_many_values->execute();
   }
 
   void SetUp() override {}
@@ -54,7 +62,7 @@ class JoinHashStepsTest : public BaseTest {
   inline static auto _table_size_zero_one = ChunkOffset{1'000};
   inline static auto _chunk_size_zero_one = ChunkOffset{10};
   inline static std::shared_ptr<Table> _table_zero_one;
-  inline static std::shared_ptr<TableWrapper> _table_int_with_nulls, _table_with_nulls_and_zeros;
+  inline static std::shared_ptr<TableWrapper> _table_int_with_nulls, _table_with_nulls_and_zeros, _table_with_many_values;
   inline static std::shared_ptr<TableScan> _table_with_nulls_and_zeros_scanned;
 };
 
@@ -327,5 +335,24 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
   EXPECT_THROW((partition_by_radix<int, int, true>)(materialized_without_null_handling, histograms, radix_bit_count),
                std::logic_error);
 }
+
+TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
+  const size_t radix_bit_count = 3;
+  std::vector<std::vector<size_t>> histograms;
+  BloomFilter bloom_filter;  // Ignored in this test
+
+  const auto materialized = materialize_input<int, int, false>(
+      _table_with_many_values->get_output(), ColumnID{3}, histograms, radix_bit_count, bloom_filter);
+
+  const auto radix_cluster_result =
+      partition_by_radix<int, int, false>(materialized, histograms, radix_bit_count);
+
+  for (auto partition_id = size_t{0}; partition_id < radix_cluster_result.size(); ++partition_id) {
+    for (auto element : radix_cluster_result[partition_id].elements) {
+      EXPECT_EQ(element.value, partition_id);
+    }
+  }
+}
+
 
 }  // namespace hyrise
