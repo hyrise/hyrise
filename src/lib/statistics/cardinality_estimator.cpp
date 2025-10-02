@@ -147,12 +147,12 @@ std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::Dummy
 }
 
 void CardinalityEstimator::prune_unused_statistics() const {
-  Assert(cardinality_estimation_cache.statistics_by_lqp, "Statistics pruning requires caching.");
-  cardinality_estimation_cache.required_column_expressions.emplace();
+  Assert(_cardinality_estimation_cache.statistics_by_lqp, "Statistics pruning requires caching.");
+  _cardinality_estimation_cache.required_column_expressions.emplace();
 }
 
 void CardinalityEstimator::do_not_prune_unused_statistics() const {
-  cardinality_estimation_cache.required_column_expressions.reset();
+  _cardinality_estimation_cache.required_column_expressions.reset();
 }
 
 // Ensure that the available statistics required to estimate a node are provided, unless they are aggregates etc., which
@@ -232,17 +232,17 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 }
 
 void CardinalityEstimator::guarantee_join_graph(const JoinGraph& join_graph) const {
-  cardinality_estimation_cache.join_graph_statistics_cache.emplace(
+  _cardinality_estimation_cache.join_graph_statistics_cache.emplace(
       JoinGraphStatisticsCache::from_join_graph(join_graph));
 }
 
 void CardinalityEstimator::guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) const {
-  cardinality_estimation_cache.statistics_by_lqp.emplace();
+  _cardinality_estimation_cache.statistics_by_lqp.emplace();
   // Turn on statistics pruning, but do not populate the required columns yet. We do that lazily when we perform the
   // first estimations. This helps to avoid overhead for optimizer rules that do not perform the anticipated rewrites
   // because they handle cases that are not present in the LQP (e.g., in TPC-C).
   prune_unused_statistics();
-  cardinality_estimation_cache.lqp = lqp;
+  _cardinality_estimation_cache.lqp = lqp;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
@@ -259,9 +259,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    *
    * Also try a lookup in the temporary cache used for the estimation of a single LQP.
    */
-  if (cardinality_estimation_cache.statistics_by_lqp) {
-    const auto plan_statistics_iter = cardinality_estimation_cache.statistics_by_lqp->find(lqp);
-    if (plan_statistics_iter != cardinality_estimation_cache.statistics_by_lqp->end()) {
+  if (_cardinality_estimation_cache.statistics_by_lqp) {
+    const auto plan_statistics_iter = _cardinality_estimation_cache.statistics_by_lqp->find(lqp);
+    if (plan_statistics_iter != _cardinality_estimation_cache.statistics_by_lqp->end()) {
       return plan_statistics_iter->second;
     }
   }
@@ -272,11 +272,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   }
 
   auto join_graph_bitmask = std::optional<JoinGraphStatisticsCache::Bitmask>{};
-  if (cardinality_estimation_cache.join_graph_statistics_cache) {
-    join_graph_bitmask = cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
+  if (_cardinality_estimation_cache.join_graph_statistics_cache) {
+    join_graph_bitmask = _cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
     if (join_graph_bitmask) {
-      auto cached_statistics =
-          cardinality_estimation_cache.join_graph_statistics_cache->get(*join_graph_bitmask, lqp->output_expressions());
+      auto cached_statistics = _cardinality_estimation_cache.join_graph_statistics_cache->get(
+          *join_graph_bitmask, lqp->output_expressions());
       if (cached_statistics) {
         return cached_statistics;
       }
@@ -289,7 +289,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * 2. Cache lookup failed - perform an actual cardinality estimation.
    */
   auto output_table_statistics = std::shared_ptr<TableStatistics>{};
-  auto& required_columns = cardinality_estimation_cache.required_column_expressions;
+  auto& required_columns = _cardinality_estimation_cache.required_column_expressions;
   const auto left_input_table_statistics =
       lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable, statistics_cache) : nullptr;
   const auto right_input_table_statistics =
@@ -433,12 +433,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * 3. Store output_table_statistics in cache.
    */
   if (join_graph_bitmask && cacheable) {
-    cardinality_estimation_cache.join_graph_statistics_cache->set(*join_graph_bitmask, lqp->output_expressions(),
-                                                                  output_table_statistics);
+    _cardinality_estimation_cache.join_graph_statistics_cache->set(*join_graph_bitmask, lqp->output_expressions(),
+                                                                   output_table_statistics);
   }
 
-  if (cardinality_estimation_cache.statistics_by_lqp && cacheable) {
-    cardinality_estimation_cache.statistics_by_lqp->emplace(lqp, output_table_statistics);
+  if (_cardinality_estimation_cache.statistics_by_lqp && cacheable) {
+    _cardinality_estimation_cache.statistics_by_lqp->emplace(lqp, output_table_statistics);
   }
 
   // We can always cache statistics during a single invocation, which is useful for diamonds in the plan.
@@ -1574,12 +1574,12 @@ std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate
 
 void CardinalityEstimator::_populate_required_column_expressions() const {
   // Do nothing if there is no plan referenced in the cache or statistics pruning is not turned on.
-  if (!cardinality_estimation_cache.lqp || !cardinality_estimation_cache.required_column_expressions) {
+  if (!_cardinality_estimation_cache.lqp || !_cardinality_estimation_cache.required_column_expressions) {
     return;
   }
 
   auto node_queue = std::queue<std::shared_ptr<const AbstractLQPNode>>{};
-  node_queue.push(cardinality_estimation_cache.lqp);
+  node_queue.push(_cardinality_estimation_cache.lqp);
   auto visited_nodes = std::unordered_set<std::shared_ptr<const AbstractLQPNode>>{};
 
   while (!node_queue.empty()) {
@@ -1594,7 +1594,7 @@ void CardinalityEstimator::_populate_required_column_expressions() const {
       for (const auto& root_expression : node->node_expressions) {
         visit_expression(root_expression, [&](const auto& expression) {
           if (expression->type == ExpressionType::LQPColumn) {
-            cardinality_estimation_cache.required_column_expressions->emplace(expression);
+            _cardinality_estimation_cache.required_column_expressions->emplace(expression);
           } else if (expression->type == ExpressionType::LQPSubquery) {
             node_queue.push(static_cast<const LQPSubqueryExpression&>(*expression).lqp);
           }
@@ -1613,7 +1613,7 @@ void CardinalityEstimator::_populate_required_column_expressions() const {
   }
 
   // Unset the plan so we do not populate the columns again if there are multiple base tables.
-  cardinality_estimation_cache.lqp = nullptr;
+  _cardinality_estimation_cache.lqp = nullptr;
 }
 
 }  // namespace hyrise

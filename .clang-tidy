@@ -51,6 +51,8 @@ Checks: '
 #                       (https://github.com/llvm/llvm-project/pull/152938 landed in LLVM 21)
 
 WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: 'third_party'
 
 # Explanation of inactive checks:
 #   - *-default-arguments*                                      We do use default arguments (and like them).
@@ -93,7 +95,7 @@ WarningsAsErrors: '*'
 #   - misc-no-recursion                                         Ignore general recommendation to avoid recursion, which we commonly use when working with query plans.
 #   - bugprone-easily-swappable-parameters                      Ignore issues with swappable parameters as we found them to be of no help.
 #   - bugprone-suspicious-include                               Unity builds use `#include`s for cpp files. However, unity builds significantly improve the runtime of clang-tidy,
-#                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for 
+#                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for
 #                                                                these includes as well.
 #   - bugprone-unchecked-optional-access                        Too many false positives (with clang-tidy 14/15). TODO(anyone): Re-evaluate for future clang versions.
 #   - llvm-header-guard                                         We prefer the simpler `#pragma once`. The main arguments (e.g., lacking support in old compilers)

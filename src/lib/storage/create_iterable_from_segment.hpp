@@ -44,31 +44,31 @@ class ReferenceSegmentIterable;
  * @{
  */
 
-template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
+template <typename T, bool erase_segment_type = HYRISE_DEBUG>
 auto create_iterable_from_segment(const ValueSegment<T>& segment);
 
-template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
+template <typename T, bool erase_segment_type = HYRISE_DEBUG>
 auto create_iterable_from_segment(const DictionarySegment<T>& segment);
 
-template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
+template <typename T, bool erase_segment_type = HYRISE_DEBUG>
 auto create_iterable_from_segment(const RunLengthSegment<T>& segment);
 
-template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
+template <typename T, bool erase_segment_type = HYRISE_DEBUG>
 auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment);
 
-template <typename T, typename Enabled, bool EraseSegmentType = HYRISE_DEBUG>
+template <typename T, typename Enabled, bool erase_segment_type = HYRISE_DEBUG>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& segment);
 
 // Fix template deduction so that we can call `create_iterable_from_segment<T, false>` on FrameOfReferenceSegments
-template <typename T, bool EraseSegmentType, typename Enabled>
+template <typename T, bool erase_segment_type, typename Enabled>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& segment) {
-  return create_iterable_from_segment<T, Enabled, EraseSegmentType>(segment);
+  return create_iterable_from_segment<T, Enabled, erase_segment_type>(segment);
 }
 
-template <typename T, bool EraseSegmentType = true>
+template <typename T, bool erase_segment_type = true>
 auto create_iterable_from_segment(const LZ4Segment<T>& segment);
 
-template <typename T, bool EraseSegmentType = HYRISE_DEBUG,
+template <typename T, bool erase_segment_type = HYRISE_DEBUG,
           EraseReferencedSegmentType = (HYRISE_DEBUG ? EraseReferencedSegmentType::Yes
                                                      : EraseReferencedSegmentType::No)>
 auto create_iterable_from_segment(const ReferenceSegment& segment);

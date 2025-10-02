@@ -35,7 +35,7 @@ std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type)
  *
  * Use data_types if the encoding supports all data types.
  */
-constexpr auto supported_data_types_for_encoding_type = hana::make_map(
+constexpr auto SUPPORTED_DATA_TYPES_FOR_ENCODING_TYPE = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Unencoded>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
@@ -51,7 +51,7 @@ constexpr auto supported_data_types_for_encoding_type = hana::make_map(
  */
 template <typename SegmentEncodingType, typename ColumnDataType>
 constexpr auto encoding_supports_data_type(SegmentEncodingType encoding_type, ColumnDataType data_type) {
-  return hana::contains(hana::at_key(supported_data_types_for_encoding_type, encoding_type), data_type);
+  return hana::contains(hana::at_key(SUPPORTED_DATA_TYPES_FOR_ENCODING_TYPE, encoding_type), data_type);
 }
 
 // Version for when EncodingType and DataType are only known at runtime
@@ -77,6 +77,6 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
-inline constexpr auto encoding_types = magic_enum::enum_values<EncodingType>();
+inline constexpr auto ENCODING_TYPES = magic_enum::enum_values<EncodingType>();
 
 }  // namespace hyrise

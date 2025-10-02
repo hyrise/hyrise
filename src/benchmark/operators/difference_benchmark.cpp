@@ -4,7 +4,8 @@
 
 #include "micro_benchmark_basic_fixture.hpp"
 #include "operators/difference.hpp"
-#include "operators/table_wrapper.hpp"
+// This header is needed for the conversion from TableWrapper to AbstractOperator
+#include "operators/table_wrapper.hpp"  // IWYU pragma: keep
 
 namespace hyrise {
 

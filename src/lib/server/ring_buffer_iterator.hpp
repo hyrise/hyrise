@@ -8,7 +8,7 @@
 
 namespace hyrise {
 
-static constexpr size_t SERVER_BUFFER_SIZE = 4096u;
+static constexpr auto SERVER_BUFFER_SIZE = size_t{4096};
 
 // This class implements an iterator on an array to let it behave like a circular buffer. If all data has been
 // processed and the end of the underlying data structure is reached, the iterator wraps around and starts at the

@@ -61,6 +61,8 @@ class BaseSegmentEncoder {
 
 template <typename Derived>
 class SegmentEncoder : public BaseSegmentEncoder {
+  SegmentEncoder() = default;
+
  public:
   /**
    * @defgroup Virtual interface implementation
@@ -112,7 +114,6 @@ class SegmentEncoder : public BaseSegmentEncoder {
 
   /**@}*/
 
- public:
   /**
    * @defgroup Non-virtual interface
    * @{
@@ -150,7 +151,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
   /**@}*/
 
  protected:
-  VectorCompressionType vector_compression_type() const {
+  VectorCompressionType _get_vector_compression_type() const {
     return _vector_compression_type;
   }
 
@@ -160,7 +161,6 @@ class SegmentEncoder : public BaseSegmentEncoder {
                                                        ? VectorCompressionType::BitPacking
                                                        : VectorCompressionType::FixedWidthInteger;
 
- private:
   Derived& _self() {
     return static_cast<Derived&>(*this);
   }
@@ -168,6 +168,8 @@ class SegmentEncoder : public BaseSegmentEncoder {
   const Derived& _self() const {
     return static_cast<const Derived&>(*this);
   }
+
+  friend Derived;
 };
 
 }  // namespace hyrise

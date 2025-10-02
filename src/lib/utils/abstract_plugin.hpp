@@ -15,6 +15,7 @@ namespace hyrise {
 
 class AbstractBenchmarkItemRunner;
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,bugprone-macro-parentheses)
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid ugly mangled names. Use
 // EXPORT in the implementation file of your plugin.
 // clang-format off
@@ -25,6 +26,7 @@ class AbstractBenchmarkItemRunner;
   }                                                         \
   static_assert(true, "End call of macro with a semicolon.")
 // clang-format on
+// NOLINTEND(cppcoreguidelines-macro-usage,bugprone-macro-parentheses)
 
 using PluginFunctionName = std::string;
 using PluginFunctionPointer = std::function<void(void)>;

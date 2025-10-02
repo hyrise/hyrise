@@ -52,8 +52,8 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
-  const size_t _num_warehouses;
-  const time_t _current_date = std::time(nullptr);
+  const size_t num_warehouses;
+  const time_t current_date = std::time(nullptr);
 
  protected:
   IndexesByTable _indexes_by_table() const override;
@@ -66,13 +66,13 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   template <typename T>
   void _add_order_line_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                              std::string name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
+                              const std::string& name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                               OrderLineCounts order_line_counts,
                               const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function);
 
   // Used to generate not only random numbers, but also non-uniform numbers and random last names as defined by the
   // TPC-C Specification.
-  static thread_local TPCCRandomGenerator _random_gen;
+  static thread_local TPCCRandomGenerator random_gen;
 
   /**
    * In TPCC and TPCH table sizes are usually defined relatively to each other.
@@ -104,11 +104,11 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
+                   const std::string& name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
-    auto is_first_column = column_definitions.size() == 0;
+    auto is_first_column = column_definitions.empty();
 
     auto has_null_value = false;
 
@@ -117,7 +117,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
      * For the CUSTOMER table this calculates 1*10*3000
      */
     auto loop_count =
-        std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
+        std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), size_t{1}, std::multiplies<size_t>());
 
     auto data = pmr_vector<T>{};
     data.reserve(chunk_size);
@@ -145,7 +145,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        * indices[0]   | indices[1]  | indices[2]
        */
       for (auto loop = size_t{0}; loop < cardinalities->size(); ++loop) {
-        auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1u,
+        auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1,
                                        std::multiplies<size_t>());
         indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
       }
@@ -244,7 +244,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
+                   const std::string& name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function) {
     const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)> wrapped_generator_function =
         [generator_function](const std::vector<size_t>& indices) {

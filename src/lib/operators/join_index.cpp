@@ -326,7 +326,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
 // join loop that joins two segments of two columns using an iterator for the probe side,
 // and an index for the index side
 template <typename ProbeIterator>
-void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
+void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, const ProbeIterator& probe_end,
                                                     const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
                                                     const std::shared_ptr<AbstractChunkIndex>& index) {
   for (; probe_iter != probe_end; ++probe_iter) {
@@ -340,8 +340,8 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
 
 template <typename ProbeIterator>
 void JoinIndex::_reference_join_two_segments_using_index(
-    ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-    const std::shared_ptr<AbstractChunkIndex>& index,
+    ProbeIterator probe_iter, const ProbeIterator& probe_end, const ChunkID probe_chunk_id,
+    const ChunkID index_chunk_id, const std::shared_ptr<AbstractChunkIndex>& index,
     const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
     auto index_scan_pos_list = RowIDPosList{};
@@ -368,7 +368,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
 }
 
 template <typename SegmentPosition>
-std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
+std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition& probe_side_position,
                                                            const std::shared_ptr<AbstractChunkIndex>& index) const {
   auto index_ranges = std::vector<IndexRange>{};
   index_ranges.reserve(2);

@@ -18,7 +18,7 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
     return *this;
   }
 
-  FixedWidthIntegerDecompressor& operator=(FixedWidthIntegerDecompressor&& other) {
+  FixedWidthIntegerDecompressor& operator=(FixedWidthIntegerDecompressor&& other) noexcept {
     DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor.");
     return *this;
   }

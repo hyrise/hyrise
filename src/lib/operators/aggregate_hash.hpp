@@ -64,8 +64,8 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 struct AggregateResult {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
-  using DistinctValues = boost::unordered_flat_set<ColumnDataType, std::hash<ColumnDataType>,
-                                                   std::equal_to<ColumnDataType>, PolymorphicAllocator<ColumnDataType>>;
+  using DistinctValues = boost::unordered_flat_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<>,
+                                                   PolymorphicAllocator<ColumnDataType>>;
 
   // Find the correct accumulator type using nested conditionals.
   using AccumulatorType = std::conditional_t<
@@ -190,11 +190,11 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
 
-  std::atomic_size_t _expected_result_size{};
+  std::atomic_size_t _expected_result_size;
   bool _use_immediate_key_shortcut{};
 
-  std::chrono::nanoseconds groupby_columns_writing_duration{};
-  std::chrono::nanoseconds aggregate_columns_writing_duration{};
+  std::chrono::nanoseconds _groupby_columns_writing_duration{};
+  std::chrono::nanoseconds _aggregate_columns_writing_duration{};
 };
 
 }  // namespace hyrise
@@ -202,7 +202,7 @@ class AggregateHash : public AbstractAggregateOperator {
 namespace std {
 template <>
 struct hash<hyrise::EmptyAggregateKey> {
-  size_t operator()(const hyrise::EmptyAggregateKey& key) const {
+  size_t operator()(const hyrise::EmptyAggregateKey& /*key*/) const {
     return 0;
   }
 };

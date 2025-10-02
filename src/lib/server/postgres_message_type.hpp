@@ -4,7 +4,7 @@ namespace hyrise {
 
 // Each message contains a field (4 bytes) indicating the packet's size including itself. Using extra variable here to
 // avoid magic numbers.
-static constexpr auto LENGTH_FIELD_SIZE = 4u;
+static constexpr auto LENGTH_FIELD_SIZE = size_t{4};
 
 // Documentation of the message types can be found here:
 // https://www.postgresql.org/docs/12/protocol-message-formats.html

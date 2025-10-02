@@ -151,7 +151,7 @@ TEST_F(CostEstimatorLogicalTest, CardinalityCaching) {
   // Enable cardinality estimation caching.
   const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
   cardinality_estimator->guarantee_bottom_up_construction(predicate_node_1);
-  const auto& cardinality_cache = cardinality_estimator->cardinality_estimation_cache.statistics_by_lqp;
+  const auto& cardinality_cache = cardinality_estimator->_cardinality_estimation_cache.statistics_by_lqp;
   ASSERT_TRUE(cardinality_cache);
   EXPECT_TRUE(cardinality_cache->empty());
 

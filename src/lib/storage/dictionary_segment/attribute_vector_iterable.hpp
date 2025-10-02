@@ -7,7 +7,7 @@
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace hyrise {
-
+// NOLINTBEGIN(readability-identifier-naming)
 class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeVectorIterable> {
  public:
   using ValueType = ValueID;
@@ -56,7 +56,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   const ValueID _null_value_id;
   SegmentAccessCounter& _access_counter;
 
- private:
   template <typename CompressedVectorIterator>
   class Iterator : public AbstractSegmentIterator<Iterator<CompressedVectorIterator>, SegmentPosition<ValueID>> {
    public:
@@ -98,7 +97,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return {value_id, is_null, _chunk_offset};
     }
 
-   private:
     const ValueID _null_value_id;
     CompressedVectorIterator _attribute_it;
     ChunkOffset _chunk_offset;
@@ -125,7 +123,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<ValueID> dereference() const {
-      const auto& chunk_offsets = this->chunk_offsets();
+      const auto& chunk_offsets = this->_chunk_offsets();
 
       const auto value_id = static_cast<ValueID>(_attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk));
       const auto is_null = (value_id == _null_value_id);
@@ -133,10 +131,11 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     const ValueID _null_value_id;
     mutable Decompressor _attribute_decompressor;
   };
 };
 
 }  // namespace hyrise
+
+// NOLINTEND(readability-identifier-naming)

@@ -383,7 +383,7 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
         // lossy_variant_cast returns std::nullopt when it casts from a NULL value. We have handled this above.
         result = *lossy_variant_cast<TargetDataType>(value_expression.value);
       } catch (boost::bad_lexical_cast&) {
-        Fail("Cannot cast " + cast_expression.argument()->as_column_name() + " as " +
+        Fail(std::string{"Cannot cast "} + cast_expression.argument()->as_column_name() + " as " +
              std::string{magic_enum::enum_name(expression.data_type())} + ".");
       }
     });

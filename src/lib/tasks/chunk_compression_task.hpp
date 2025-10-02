@@ -52,7 +52,6 @@ class ChunkCompressionTask : public AbstractTask {
    */
   static bool _chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t target_chunk_size);
 
- private:
   const std::string _table_name;
   const std::vector<ChunkID> _chunk_ids;
   std::optional<ChunkEncodingSpec> _chunk_encoding_spec;

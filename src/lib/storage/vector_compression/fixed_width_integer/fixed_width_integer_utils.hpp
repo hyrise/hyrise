@@ -23,13 +23,13 @@ inline size_t byte_width_for_fixed_width_integer_type(CompressedVectorType type)
 
   switch (type) {
     case CompressedVectorType::FixedWidthInteger4Byte:
-      return 4u;
+      return 4;
     case CompressedVectorType::FixedWidthInteger2Byte:
-      return 2u;
+      return 2;
     case CompressedVectorType::FixedWidthInteger1Byte:
-      return 1u;
+      return 1;
     case CompressedVectorType::BitPacking:
-      return 0u;
+      return 0;
   }
 
   Fail("GCC thinks this is reachable.");
