@@ -188,6 +188,26 @@ else()
     endif()
 endif()
 
+# Needed when building a binary for optimization with BOLT
+option(COMPILE_FOR_BOLT "Set to TRUE to build Hyrise for further optimization / instrumentation / profiling with BOLT. Default: FALSE" FALSE)
+if (${COMPILE_FOR_BOLT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options(-fno-reorder-blocks-and-partition)
+    endif()
+    add_link_options(-Wl,--emit-relocs)
+    add_compile_options(-g)
+endif()
+
+option(PGO_INSTRUMENT "Set to TRUE to build an instrumented hyrise binary that will generate pgo profile data when run. Default: FALSE" FALSE)
+if (${PGO_INSTRUMENT})
+    add_compile_options(-fprofile-generate)
+endif()
+
+set(PGO_PROFILE "" CACHE PATH "Set to the path to a PGO profile to use PGO")
+if (PGO_PROFILE)
+    add_compile_options(-fprofile-use=${PGO_OPTIMIZE})
+endif()
+
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
 
@@ -230,7 +250,6 @@ foreach(no_lto_target gtest gtest_main gmock gmock_main)
     endif()
 endforeach(no_lto_target)
 add_subdirectory(src)
-
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort
