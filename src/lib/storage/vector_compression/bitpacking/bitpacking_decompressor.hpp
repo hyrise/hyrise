@@ -22,7 +22,7 @@ class BitPackingDecompressor : public BaseVectorDecompressor {
     return *this;
   }
 
-  BitPackingDecompressor& operator=(BitPackingDecompressor&& other) {
+  BitPackingDecompressor& operator=(BitPackingDecompressor&& other) noexcept {
     DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor.");
     return *this;
   }

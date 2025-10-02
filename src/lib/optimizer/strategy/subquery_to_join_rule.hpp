@@ -68,7 +68,7 @@ class SubqueryToJoinRule : public AbstractRule {
      * This is a vector instead of an unordered_set so that tests are reproducible. Since correlation is usually very
      * low there shouldn't be much of a performance difference.
      */
-    std::vector<std::shared_ptr<AbstractExpression>> required_output_expressions = {};
+    std::vector<std::shared_ptr<AbstractExpression>> required_output_expressions;
   };
 
   /**

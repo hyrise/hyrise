@@ -55,11 +55,11 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
     return base_size + (string_vector.capacity() * sizeof(StringType));
   }
 
-  constexpr auto sampling_factor = 0.005f;
-  constexpr auto min_rows = size_t{10};
+  constexpr auto SAMPLING_FACTOR = 0.005f;
+  constexpr auto MIN_ROWS = size_t{10};
 
   const auto samples_to_draw =
-      std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * static_cast<float>(string_vector.size()))));
+      std::max(MIN_ROWS, static_cast<size_t>(std::ceil(SAMPLING_FACTOR * static_cast<float>(string_vector.size()))));
 
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
     // Run the (expensive) calculation of aggregating the whole vector's string sizes when full estimation is desired

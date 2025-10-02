@@ -137,11 +137,7 @@ std::vector<std::string> tokenize(std::string input) {
 namespace hyrise {
 
 Console::Console()
-    : _prompt("> "),
-      _out(std::cout.rdbuf()),
-      _log("console.log", std::ios_base::app | std::ios_base::out),
-      _verbose(false),
-      _pagination_active(false) {
+    : _prompt("> "), _out(std::cout.rdbuf()), _log("console.log", std::ios_base::app | std::ios_base::out) {
   // Init readline basics, tells readline to use our custom command completion function.
   rl_attempted_completion_function = &Console::_command_completion;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)

@@ -151,8 +151,8 @@ class Console : public Singleton<Console> {
   RegisteredCommands _commands;
   std::ostream _out;
   std::ofstream _log;
-  bool _verbose;
-  bool _pagination_active;
+  bool _verbose{false};
+  bool _pagination_active{false};
   std::string _path;
   bool _binary_caching{true};
 

@@ -1,4 +1,6 @@
+#include <cstddef>
 #include <memory>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 
@@ -8,10 +10,11 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/chunk.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 constexpr auto NUMBER_OF_CHUNKS = size_t{50};
@@ -35,14 +38,14 @@ void clear_cache() {
 
 namespace hyrise {
 
-std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
+static std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
   const auto chunk_size = static_cast<ChunkOffset>(number_of_rows / NUMBER_OF_CHUNKS);
   Assert(chunk_size > 0, "The chunk size is 0 or less, cannot generate such a table.");
 
   auto table =
-      table_generator->generate_table(1ul, number_of_rows, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary});
+      table_generator->generate_table(1, number_of_rows, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary});
 
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -62,8 +65,8 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
 }
 
 template <class C>
-void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_wrapper_left,
-                  std::shared_ptr<TableWrapper> table_wrapper_right) {
+static void bm_join_impl(benchmark::State& state, const std::shared_ptr<TableWrapper>& table_wrapper_left,
+                         const std::shared_ptr<TableWrapper>& table_wrapper_right) {
   clear_cache();
 
   auto warm_up = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,

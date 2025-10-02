@@ -1,10 +1,16 @@
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_function_expression.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
@@ -31,7 +37,7 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-pmr_vector<int32_t> generate_ids(const size_t table_size) {
+static pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
   const auto max_value = static_cast<int32_t>(TABLE_SIZE * SELECTIVITY) + 1;
@@ -44,13 +50,13 @@ pmr_vector<int32_t> generate_ids(const size_t table_size) {
     values[row_index] = dist(random_engine);
   }
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   return values;
 }
 
 // Generates a vector of zip codes with various numbers of representation
-pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
+static pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
   auto zip_count = int32_t{1};
@@ -75,7 +81,7 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
   return values;
 }
 
-pmr_vector<int32_t> generate_ages(const size_t table_size) {
+static pmr_vector<int32_t> generate_ages(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
   auto random_engine = std::default_random_engine(SEED);
 
@@ -85,12 +91,12 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
     values[row_index] = dist(random_engine);
   }
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   return values;
 }
 
-std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<int32_t>& values) {
+static std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<int32_t>& values) {
   const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS_JOIN_AGGREGATE);
 
   auto table_column_definitions = TableColumnDefinitions{};
@@ -116,7 +122,7 @@ std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<in
   return table;
 }
 
-std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
+static std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   auto zip_values = generate_zip_codes(table_size);
 
   auto zip_table = create_table(table_size, zip_values);
@@ -132,7 +138,7 @@ std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   return std::make_shared<TableWrapper>(zip_table);
 }
 
-std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
+static std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
   auto ages_values = generate_ages(table_size);
 
   auto ages_table = create_table(table_size, ages_values);
@@ -148,7 +154,7 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
 }
 
 template <typename AggregateType, typename JoinType>
-void BM_Join_Aggregate(benchmark::State& state) {
+static void bm_join_aggregate(benchmark::State& state) {
   auto table_wrapper_left = create_ages_table(TABLE_SIZE);
   table_wrapper_left->never_clear_output();
   table_wrapper_left->execute();
@@ -180,9 +186,9 @@ void BM_Join_Aggregate(benchmark::State& state) {
   }
 }
 
-BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinHash);
-BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateHash, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateHash, JoinHash);
 
 }  // namespace hyrise

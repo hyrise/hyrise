@@ -231,7 +231,7 @@ bool ColumnVsValueTableScanImpl::_value_matches_all(const BaseDictionarySegment&
   switch (predicate_condition) {
     case PredicateCondition::Equals:
       return search_value_id != INVALID_VALUE_ID && segment.value_of_value_id(search_value_id) == value &&
-             segment.unique_values_count() == size_t{1u};
+             segment.unique_values_count() == size_t{1};
 
     case PredicateCondition::NotEquals:
       return search_value_id == INVALID_VALUE_ID || segment.value_of_value_id(search_value_id) != value;
@@ -242,7 +242,7 @@ bool ColumnVsValueTableScanImpl::_value_matches_all(const BaseDictionarySegment&
 
     case PredicateCondition::GreaterThanEquals:
     case PredicateCondition::GreaterThan:
-      return search_value_id == ValueID{0u};
+      return search_value_id == ValueID{0};
 
     default:
       Fail("Unsupported comparison type encountered");
@@ -257,11 +257,11 @@ bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment
 
     case PredicateCondition::NotEquals:
       return search_value_id != INVALID_VALUE_ID && value == segment.value_of_value_id(search_value_id) &&
-             segment.unique_values_count() == size_t{1u};
+             segment.unique_values_count() == size_t{1};
 
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
-      return search_value_id == ValueID{0u};
+      return search_value_id == ValueID{0};
 
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals:

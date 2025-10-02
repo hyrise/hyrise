@@ -136,7 +136,7 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfigurati
       _clustering_configuration(clustering_configuration) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
-  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
+  Assert(_scale_factor < 1 || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
 
   const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
@@ -186,7 +186,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    */
 
   for (auto order_idx = size_t{0}; order_idx < order_count; ++order_idx) {
-    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
+    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, int64_t{0});
 
     order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,

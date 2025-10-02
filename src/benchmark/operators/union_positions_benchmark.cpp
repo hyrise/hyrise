@@ -1,12 +1,16 @@
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <random>
-#include <utility>
+#include <string>
 
 #include "benchmark/benchmark.h"
 
+#include "all_type_variant.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -38,7 +42,7 @@ std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_c
     const auto chunk_id = hyrise::ChunkID{chunk_id_distribution(random_engine)};
     const auto chunk_offset = hyrise::ChunkOffset{chunk_offset_distribution(random_engine)};
 
-    pos_list->emplace_back(hyrise::RowID{chunk_id, chunk_offset});
+    pos_list->emplace_back(chunk_id, chunk_offset);
   }
 
   return pos_list;
@@ -47,8 +51,8 @@ std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_c
 
 namespace hyrise {
 
-std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_table, size_t num_rows,
-                                              size_t num_columns) {
+static std::shared_ptr<Table> create_reference_table(const std::shared_ptr<Table>& referenced_table, size_t num_rows,
+                                                     size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
   auto column_definitions = TableColumnDefinitions{};
@@ -128,12 +132,12 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
     auto& left = *pos_list_left;
     auto& right = *pos_list_right;
 
-    std::sort(left.begin(), left.end());
-    std::sort(right.begin(), right.end());
+    std::ranges::sort(left);
+    std::ranges::sort(right);
 
     RowIDPosList result;
     result.reserve(std::min(left.size(), right.size()));
-    std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(result));
+    std::ranges::set_union(left, right, std::back_inserter(result));
   }
 }
 

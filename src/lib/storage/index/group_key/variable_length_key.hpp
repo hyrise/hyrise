@@ -56,8 +56,7 @@ class VariableLengthKey {
   explicit VariableLengthKey(const VariableLengthKeyBase& other);
   VariableLengthKey& operator=(const VariableLengthKeyBase& other);
 
- private:
   std::unique_ptr<VariableLengthKeyWord[]> _owned_data;
-  VariableLengthKeyBase _impl;
+  VariableLengthKeyBase _impl{};
 };
 }  // namespace hyrise
