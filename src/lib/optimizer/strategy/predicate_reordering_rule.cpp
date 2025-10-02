@@ -10,7 +10,8 @@
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/abstract_predicate_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -69,21 +70,46 @@ Cost weighted_predicate_cost(const std::shared_ptr<AbstractLQPNode>& node,
     penalty = PredicateReorderingRule::PREDICATE_PENALTY;
   } else if (node->type == LQPNodeType::Predicate) {
     DebugAssert(node->node_expressions.size() == 1, "PredicateNode should have exactly one predicate.");
+
+    auto column_count = Cost{0};
+    auto like_column_count = Cost{0};
+
+    const auto is_column_like_expression = [](const auto& expression) {
+      return expression->type == ExpressionType::LQPColumn ||
+             (expression->type == ExpressionType::LQPSubquery &&
+              static_cast<LQPSubqueryExpression&>(*expression).is_correlated());
+    };
+
     visit_expression(node->node_expressions.front(), [&](const auto& expression) {
-      if (expression->type != ExpressionType::Predicate) {
-        return ExpressionVisitation::VisitArguments;
+      if (is_column_like_expression(expression)) {
+        ++column_count;
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+
+      if (expression->type == ExpressionType::List) {
+        return ExpressionVisitation::DoNotVisitArguments;
       }
 
       // Penalize if there is a LIKE predicate.
-      const auto predicate_condition = static_cast<const AbstractPredicateExpression&>(*expression).predicate_condition;
-      if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike ||
-          predicate_condition == PredicateCondition::LikeInsensitive ||
-          predicate_condition == PredicateCondition::NotLikeInsensitive) {
-        penalty = PredicateReorderingRule::PREDICATE_PENALTY;
+      const auto binary_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(expression);
+      if (binary_predicate && (binary_predicate->predicate_condition == PredicateCondition::Like ||
+                               binary_predicate->predicate_condition == PredicateCondition::NotLike ||
+                               binary_predicate->predicate_condition == PredicateCondition::LikeInsensitive ||
+                               binary_predicate->predicate_condition == PredicateCondition::NotLikeInsensitive)) {
+        if (is_column_like_expression(binary_predicate->left_operand())) {
+          ++like_column_count;
+        }
+
+        if (is_column_like_expression(binary_predicate->right_operand())) {
+          ++like_column_count;
+        }
       }
-      return ExpressionVisitation::DoNotVisitArguments;
+      return ExpressionVisitation::VisitArguments;
     });
+
+    penalty = (like_column_count / column_count) * PredicateReorderingRule::PREDICATE_PENALTY;
   }
+
   return estimated_cost * std::max(Cost{1}, penalty) + output_cardinality;
 }
 
