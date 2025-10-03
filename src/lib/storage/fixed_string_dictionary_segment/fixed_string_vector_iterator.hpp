@@ -14,10 +14,10 @@ namespace hyrise {
 
 // We need a custom iterator for this vector, since we have to perform jumps when iterating over the vector.
 // Depending on OnConstStorage, it either returns a (mutable) FixedString or an (immutable) std::string_view
-template <bool OnConstStorage,
-          typename Storage = std::conditional_t<OnConstStorage, const pmr_vector<char>, pmr_vector<char>>,
-          typename DereferenceValue = std::conditional_t<OnConstStorage, const std::string_view, FixedString>>
-class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<OnConstStorage>, DereferenceValue,
+template <bool on_const_storage,
+          typename Storage = std::conditional_t<on_const_storage, const pmr_vector<char>, pmr_vector<char>>,
+          typename DereferenceValue = std::conditional_t<on_const_storage, const std::string_view, FixedString>>
+class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<on_const_storage>, DereferenceValue,
                                                           std::random_access_iterator_tag, DereferenceValue> {
   using ValueType = std::string_view;
 
@@ -62,13 +62,13 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
     _pos -= _string_length;
   }
 
-  template <bool OnConstStorageLocal = OnConstStorage>
-  std::enable_if_t<OnConstStorageLocal, const std::string_view> dereference() const {  // NOLINT
+  template <bool on_const_storage_local = on_const_storage>
+  std::enable_if_t<on_const_storage_local, const std::string_view> dereference() const {  // NOLINT
     return std::string_view{&_chars[_pos], strnlen(&_chars[_pos], _string_length)};
   }
 
-  template <bool OnConstStorageLocal = OnConstStorage>
-  std::enable_if_t<!OnConstStorageLocal, FixedString> dereference() const {  // NOLINT
+  template <bool on_const_storage_local = on_const_storage>
+  std::enable_if_t<!on_const_storage_local, FixedString> dereference() const {  // NOLINT
     return FixedString{&_chars[_pos], _string_length};
   }
 

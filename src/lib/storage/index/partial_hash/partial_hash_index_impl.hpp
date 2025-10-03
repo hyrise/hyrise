@@ -74,8 +74,9 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
-  size_t insert(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) final;
-  size_t remove(const std::vector<ChunkID>&) final;
+  size_t insert(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& /*unused*/,
+                const ColumnID /*unused*/) final;
+  size_t remove(const std::vector<ChunkID>& /*unused*/) final;
 
   bool indexed_null_values() const final;
 
@@ -93,7 +94,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
  private:
   tsl::sparse_map<DataType, std::vector<RowID>> _positions;
   tsl::sparse_map<DataType, std::vector<RowID>> _null_positions;
-  tsl::sparse_set<ChunkID> _indexed_chunk_ids = {};
+  tsl::sparse_set<ChunkID> _indexed_chunk_ids;
 };
 
 }  // namespace hyrise

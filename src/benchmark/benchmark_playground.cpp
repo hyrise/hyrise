@@ -1,4 +1,7 @@
-#include <memory>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 
@@ -42,7 +45,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     // Fill the vector with 1M values in the pattern 0, 1, 2, 3, 0, 1, 2, 3, ...
     // The "TableScan" will scan for one value (2), so it will select 25%.
     _vec.resize(1'000'000);
-    std::generate(_vec.begin(), _vec.end(), []() {
+    std::ranges::generate(_vec, []() {
       static ValueT value = 0;
       value = (value + 1) % 4;
       return value;

@@ -30,6 +30,8 @@ class AbstractLQPNode;
  */
 template <typename DerivedNode>
 class EnableMakeForLQPNode {
+  EnableMakeForLQPNode() = default;
+
  public:
   // The following declaration is a variadic function template taking any number of arguments of arbitrary types.
   template <typename... ArgumentTypes>
@@ -43,13 +45,13 @@ class EnableMakeForLQPNode {
           // Check if the second to last function argument represents an LQP node as well.
           if constexpr (IsLQPNodeArgument<sizeof...(ArgumentTypes) - 2, ArgumentTypes...>::value) {
             // Use function arguments, except for the last two, to construct the LQP node.
-            auto node = create_lqp_node(arguments_tuple, std::make_index_sequence<sizeof...(ArgumentTypes) - 2>());
+            auto node = _create_lqp_node(arguments_tuple, std::make_index_sequence<sizeof...(ArgumentTypes) - 2>());
             node->set_left_input(std::get<sizeof...(ArgumentTypes) - 2>(arguments_tuple));
             node->set_right_input(std::get<sizeof...(ArgumentTypes) - 1>(arguments_tuple));
             return node;
           } else {
             // Use function arguments, except for the last, to construct the LQP node.
-            auto node = create_lqp_node(arguments_tuple, std::make_index_sequence<sizeof...(ArgumentTypes) - 1>());
+            auto node = _create_lqp_node(arguments_tuple, std::make_index_sequence<sizeof...(ArgumentTypes) - 1>());
             node->set_left_input(std::get<sizeof...(ArgumentTypes) - 1>(arguments_tuple));
             return node;
           }
@@ -61,7 +63,7 @@ class EnableMakeForLQPNode {
         }
       } else {
         // Additional LQP input nodes were not passed as last arguments.
-        return create_lqp_node(arguments_tuple, std::make_index_sequence<sizeof...(ArgumentTypes)>());
+        return _create_lqp_node(arguments_tuple, std::make_index_sequence<sizeof...(ArgumentTypes)>());
       }
     } else {
       // No arguments were passed to this function.
@@ -70,15 +72,16 @@ class EnableMakeForLQPNode {
   }
 
  private:
-  template <class ArgumentsTupleType, size_t... ConstructorIndices>
-  static std::shared_ptr<DerivedNode> create_lqp_node(const ArgumentsTupleType& arguments_tuple,
-                                                      std::index_sequence<ConstructorIndices...> /* indices */) {
-    return std::make_shared<DerivedNode>(std::get<ConstructorIndices>(arguments_tuple)...);
+  template <class ArgumentsTupleType, size_t... constructor_indices>
+  static std::shared_ptr<DerivedNode> _create_lqp_node(const ArgumentsTupleType& arguments_tuple,
+                                                       std::index_sequence<constructor_indices...> /* indices */) {
+    return std::make_shared<DerivedNode>(std::get<constructor_indices>(arguments_tuple)...);
   }
 
-  template <size_t ArgumentIndex, typename... ArgumentTypes>
-  using IsLQPNodeArgument = std::is_convertible<std::tuple_element_t<ArgumentIndex, std::tuple<ArgumentTypes...>>,
+  template <size_t argument_index, typename... ArgumentTypes>
+  using IsLQPNodeArgument = std::is_convertible<std::tuple_element_t<argument_index, std::tuple<ArgumentTypes...>>,
                                                 std::shared_ptr<AbstractLQPNode>>;
+  friend DerivedNode;
 };
 
 }  // namespace hyrise

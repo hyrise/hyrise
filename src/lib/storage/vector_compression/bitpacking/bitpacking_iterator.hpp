@@ -8,7 +8,7 @@
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
 namespace hyrise {
-
+// NOLINTBEGIN(readability-identifier-naming)
 class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterator> {
  public:
   explicit BitPackingIterator(const pmr_compact_vector& data, const size_t absolute_index = 0)
@@ -27,7 +27,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
     return *this;
   }
 
-  BitPackingIterator& operator=(BitPackingIterator&& other) {
+  BitPackingIterator& operator=(BitPackingIterator&& other) noexcept {
     if (this == &other) {
       return *this;
     }
@@ -66,9 +66,9 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
     return _data[_absolute_index];
   }
 
- private:
   const pmr_compact_vector& _data;
   size_t _absolute_index = 0;
 };
 
+// NOLINTEND(readability-identifier-naming)
 }  // namespace hyrise

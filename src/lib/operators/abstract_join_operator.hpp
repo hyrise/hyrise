@@ -19,7 +19,7 @@ struct JoinConfiguration {
   PredicateCondition predicate_condition;
   DataType left_data_type;
   DataType right_data_type;
-  bool secondary_predicates;
+  bool secondary_predicates{};
   // Only for JoinIndex
   std::optional<TableType> left_table_type{std::nullopt};
   std::optional<TableType> right_table_type{std::nullopt};

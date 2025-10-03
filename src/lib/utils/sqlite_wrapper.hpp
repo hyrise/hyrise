@@ -37,7 +37,7 @@ class SQLiteWrapper final {
     explicit Connection(const std::string& uri);
 
     Connection(const Connection&) = delete;
-    Connection(Connection&&) noexcept;
+    Connection(Connection&& /*other*/) noexcept;
     Connection& operator=(const Connection&) = delete;
     Connection& operator=(Connection&&) = delete;
     ~Connection();

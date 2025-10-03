@@ -50,18 +50,18 @@ class UidAllocator;
 class NodeQueueScheduler final : public AbstractScheduler {
  public:
   NodeQueueScheduler();
-  ~NodeQueueScheduler() override final;
+  ~NodeQueueScheduler() final;
 
   /**
    * Create a TaskQueue on every node and a worker for every core.
    */
-  void begin() override final;
+  void begin() final;
 
-  void finish() override final;
+  void finish() final;
 
-  bool active() const override final;
+  bool active() const final;
 
-  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override final;
+  const std::vector<std::shared_ptr<TaskQueue>>& queues() const final;
 
   const std::vector<std::shared_ptr<Worker>>& workers() const;
 
@@ -73,7 +73,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
    */
   NodeID determine_queue_id(const NodeID preferred_node_id) const;
 
-  void wait_for_all_tasks() override final;
+  void wait_for_all_tasks() final;
 
   const std::atomic_int64_t& active_worker_count() const;
 
@@ -88,9 +88,9 @@ class NodeQueueScheduler final : public AbstractScheduler {
    * @param priority
    */
   void _schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                 SchedulePriority priority = SchedulePriority::Default) override final;
+                 SchedulePriority priority = SchedulePriority::Default) final;
 
-  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override final;
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
 
  private:
   std::atomic<TaskID::base_type> _task_counter{0};
@@ -105,7 +105,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
   size_t _node_count{1};
   std::vector<size_t> _workers_per_node;
 
-  std::mutex _finish_mutex{};
+  std::mutex _finish_mutex;
 };
 
 }  // namespace hyrise

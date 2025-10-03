@@ -716,7 +716,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           case WindowFunction::PercentRank:
           case WindowFunction::Rank:
           case WindowFunction::RowNumber:
-            Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
+            Fail(std::string{"Unsupported aggregate function "} +
+                 window_function_to_string.left.at(aggregate->window_function));
         }
       }
     });
@@ -784,7 +785,7 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
     case WindowFunction::PercentRank:
     case WindowFunction::Rank:
     case WindowFunction::RowNumber:
-      Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate_function));
+      Fail(std::string{"Unsupported aggregate function "} + window_function_to_string.left.at(aggregate_function));
   }
 }
 

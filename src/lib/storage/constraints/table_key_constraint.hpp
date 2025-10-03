@@ -11,6 +11,7 @@
 
 namespace hyrise {
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
 
 enum class ValidationResultType { VALID, INVALID };
@@ -88,7 +89,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   mutable std::atomic<CommitID> _last_validated_on;
   /**
    * Commit ID of the snapshot this constraint was last invalidated on. Similarly, as above, this constraint will still
-   * be invalid during transactions with larger commit IDs if only insertions have been performed since the last CID. 
+   * be invalid during transactions with larger commit IDs if only insertions have been performed since the last CID.
    */
   mutable std::atomic<CommitID> _last_invalidated_on;
 };

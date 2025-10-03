@@ -1149,7 +1149,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
 
   // Enable statistics caching.
   estimator.guarantee_bottom_up_construction(predicate_node_1);
-  const auto& statistics_cache = estimator.cardinality_estimation_cache.statistics_by_lqp;
+  const auto& statistics_cache = estimator._cardinality_estimation_cache.statistics_by_lqp;
   ASSERT_TRUE(statistics_cache);
   EXPECT_TRUE(statistics_cache->empty());
 
@@ -1178,8 +1178,8 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
 
   // Pruning without caching is not permitted.
   EXPECT_THROW(estimator.prune_unused_statistics(), std::logic_error);
-  EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
-  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
+  EXPECT_FALSE(estimator._cardinality_estimation_cache.statistics_by_lqp);
+  EXPECT_FALSE(estimator._cardinality_estimation_cache.required_column_expressions);
 
   // Ensure required but pruned expressions are noticed.
   if constexpr (HYRISE_DEBUG) {
@@ -1199,17 +1199,17 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
 
     // Restore the LQP and the caches.
     lqp->set_left_input(projection);
-    estimator.cardinality_estimation_cache.statistics_by_lqp.reset();
-    estimator.cardinality_estimation_cache.required_column_expressions.reset();
+    estimator._cardinality_estimation_cache.statistics_by_lqp.reset();
+    estimator._cardinality_estimation_cache.required_column_expressions.reset();
   }
 
   // Guaranteeing bottom-up construction (i.e., allowing caching) should enable statistics pruning and set the LQP in
   // the cache. The required columns are not populated, yet.
   estimator.guarantee_bottom_up_construction(lqp);
-  EXPECT_TRUE(estimator.cardinality_estimation_cache.statistics_by_lqp);
-  EXPECT_EQ(estimator.cardinality_estimation_cache.lqp, lqp);
-  ASSERT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions);
-  ASSERT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->empty());
+  EXPECT_TRUE(estimator._cardinality_estimation_cache.statistics_by_lqp);
+  EXPECT_EQ(estimator._cardinality_estimation_cache.lqp, lqp);
+  ASSERT_TRUE(estimator._cardinality_estimation_cache.required_column_expressions);
+  ASSERT_TRUE(estimator._cardinality_estimation_cache.required_column_expressions->empty());
 
   // Estimate with caching.
   auto statistics = estimator.estimate_statistics(lqp);
@@ -1225,14 +1225,14 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[4]));
 
   // After invocation, the required columns should be populated.
-  EXPECT_EQ(estimator.cardinality_estimation_cache.required_column_expressions->size(), 3);
-  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_a));
-  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_b));
-  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_a));
-  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_b));
+  EXPECT_EQ(estimator._cardinality_estimation_cache.required_column_expressions->size(), 3);
+  EXPECT_TRUE(estimator._cardinality_estimation_cache.required_column_expressions->contains(a_a));
+  EXPECT_TRUE(estimator._cardinality_estimation_cache.required_column_expressions->contains(a_b));
+  EXPECT_TRUE(estimator._cardinality_estimation_cache.required_column_expressions->contains(b_a));
+  EXPECT_FALSE(estimator._cardinality_estimation_cache.required_column_expressions->contains(b_b));
   // The memorized LQP should have been unset when populating the required expressions. Otherwise, we would do
   // superfluous work for plans that have multiple StoredTableNodes.
-  EXPECT_FALSE(estimator.cardinality_estimation_cache.lqp);
+  EXPECT_FALSE(estimator._cardinality_estimation_cache.lqp);
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {

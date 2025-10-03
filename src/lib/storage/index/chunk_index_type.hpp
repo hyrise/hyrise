@@ -21,7 +21,7 @@ class PartialHashIndex;
 
 namespace detail {
 
-constexpr auto chunk_index_map =
+constexpr auto CHUNK_INDEX_MAP =
     hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, ChunkIndexType::GroupKey),
                    hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, ChunkIndexType::CompositeGroupKey),
                    hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, ChunkIndexType::AdaptiveRadixTree));
@@ -30,7 +30,7 @@ constexpr auto chunk_index_map =
 
 template <typename IndexType>
 ChunkIndexType get_chunk_index_type_of() {
-  return detail::chunk_index_map[hana::type_c<IndexType>];
+  return detail::CHUNK_INDEX_MAP[hana::type_c<IndexType>];
 }
 
 }  // namespace hyrise

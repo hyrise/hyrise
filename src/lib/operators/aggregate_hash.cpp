@@ -311,7 +311,7 @@ void prepare_output(std::vector<Segments>& output, const size_t chunk_count, con
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
 // By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
 // aggregate functions can then retrieve the index from the AggregateKey.
-constexpr auto CACHE_MASK = AggregateKeyEntry{1} << 63u;  // See explanation below
+constexpr auto CACHE_MASK = AggregateKeyEntry{1} << 63;  // See explanation below
 
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
 typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,
@@ -837,9 +837,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 if (position.is_null()) {
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys[chunk_offset] = 0u;
+                    keys[chunk_offset] = 0;
                   } else {
-                    keys[chunk_offset][group_column_index] = 0u;
+                    keys[chunk_offset][group_column_index] = 0;
                   }
                 } else {
                   // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
@@ -1164,8 +1164,8 @@ void AggregateHash::_aggregate() {
             case WindowFunction::PercentRank:
             case WindowFunction::Rank:
             case WindowFunction::RowNumber:
-              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) +
-                   ".");
+              Fail(std::string{"Unsupported aggregate function "} +
+                   window_function_to_string.left.at(aggregate->window_function) + ".");
           }
         });
 
@@ -1211,9 +1211,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     auto groupby_columns_writing_timer = Timer{};
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, context->results,
                          _output_column_definitions, _intermediate_result);
-    DebugAssert(groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-                "groupby_columns_writing_duration() was apparently called more than once.");
-    groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
+    DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
+                "_groupby_columns_writing_duration() was apparently called more than once.");
+    _groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
   }
 
   /*
@@ -1261,7 +1261,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         case WindowFunction::PercentRank:
         case WindowFunction::Rank:
         case WindowFunction::RowNumber:
-          Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) + ".");
+          Fail(std::string{"Unsupported aggregate function "} +
+               window_function_to_string.left.at(aggregate->window_function) + ".");
       }
     });
 
@@ -1362,8 +1363,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
-  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, groupby_columns_writing_duration);
-  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, aggregate_columns_writing_duration);
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, _groupby_columns_writing_duration);
+  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, _aggregate_columns_writing_duration);
 
   return operator_output;
 }
@@ -1401,9 +1402,9 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, results, _output_column_definitions,
                          _intermediate_result);
     const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
-    DebugAssert(groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-                "groupby_columns_writing_duration() was apparently called more than once.");
-    groupby_columns_writing_duration = groupby_columns_writing_runtime;
+    DebugAssert(_groupby_columns_writing_duration == std::chrono::nanoseconds{0},
+                "_groupby_columns_writing_duration() was apparently called more than once.");
+    _groupby_columns_writing_duration = groupby_columns_writing_runtime;
     excluded_time = groupby_columns_writing_runtime;
   }
 
@@ -1449,7 +1450,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
     _intermediate_result[segment_id][output_column_id] = output_segment;
   }
 
-  aggregate_columns_writing_duration += timer.lap() - excluded_time;
+  _aggregate_columns_writing_duration += timer.lap() - excluded_time;
 }
 
 template <typename AggregateKey>
@@ -1491,7 +1492,8 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       case WindowFunction::PercentRank:
       case WindowFunction::Rank:
       case WindowFunction::RowNumber:
-        Fail("Unsupported aggregate function '" + window_function_to_string.left.at(aggregate_function) + "'.");
+        Fail(std::string{"Unsupported aggregate function '"} + window_function_to_string.left.at(aggregate_function) +
+             "'.");
     }
   });
 

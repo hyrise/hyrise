@@ -124,7 +124,6 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
 
   /**@}*/
 
- public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
 
   AnySegmentIterator& operator=(const AnySegmentIterator& other) {
@@ -138,6 +137,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
+  // NOLINTBEGIN(readability-identifier-naming)
   void increment() {
     _wrapper->increment();
   }
@@ -162,7 +162,8 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
     return _wrapper->dereference();
   }
 
- private:
+  // NOLINTEND(readability-identifier-naming)
+
   std::unique_ptr<hyrise::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
 

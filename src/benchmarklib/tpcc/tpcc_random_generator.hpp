@@ -55,7 +55,7 @@ class TPCCRandomGenerator : public RandomGenerator {
       i = nurand(255, 0, 999);
     }
 
-    std::string last_name("");
+    std::string last_name;
     last_name += syllables[(i / 100) % 10];
     last_name += syllables[(i / 10) % 10];
     last_name += syllables[i % 10];
@@ -85,7 +85,7 @@ class TPCCRandomGenerator : public RandomGenerator {
   std::vector<size_t> permutation(size_t lower, size_t upper) {
     auto values = std::vector<size_t>(upper - lower);
     std::iota(values.begin(), values.end(), lower);
-    std::shuffle(values.begin(), values.end(), engine);
+    std::shuffle(values.begin(), values.end(), _engine);
     return values;
   }
 

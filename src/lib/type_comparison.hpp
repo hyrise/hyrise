@@ -12,6 +12,7 @@
 namespace hyrise {
 
 // source: http://stackoverflow.com/questions/16893992/check-if-type-can-be-explicitly-converted
+// NOLINTBEGIN(readability-identifier-naming)
 template <class From, class To>
 struct is_explicitly_convertible {
   enum { value = std::is_constructible_v<To, From> && !std::is_convertible_v<From, To> };
@@ -27,6 +28,7 @@ struct is_lex_castable<T, decltype(void(std::declval<std::ostream&>() << std::de
 template <typename T>
 inline constexpr bool is_lex_castable_v = is_lex_castable<T>::value;
 
+// NOLINTEND(readability-identifier-naming)
 /* EQUAL */
 // L and R are implicitly convertible
 template <typename L, typename R>
@@ -51,7 +53,8 @@ std::enable_if_t<std::is_arithmetic_v<R> && is_lex_castable_v<L> && !std::is_ari
 /* SMALLER */
 // L and R are implicitly convertible
 template <typename L, typename R>
-std::enable_if_t<std::is_convertible_v<L, R> && std::is_convertible_v<R, L>, bool> value_smaller(L l, R r) {
+std::enable_if_t<std::is_convertible_v<L, R> && std::is_convertible_v<R, L>, bool> value_smaller(const L& l,
+                                                                                                 const R& r) {
   return l < r;
 }
 
@@ -72,7 +75,8 @@ std::enable_if_t<std::is_arithmetic_v<R> && is_lex_castable_v<L> && !std::is_ari
 /* GREATER > */
 // L and R are implicitly convertible
 template <typename L, typename R>
-std::enable_if_t<std::is_convertible_v<L, R> && std::is_convertible_v<R, L>, bool> value_greater(L l, R r) {
+std::enable_if_t<std::is_convertible_v<L, R> && std::is_convertible_v<R, L>, bool> value_greater(const L& l,
+                                                                                                 const R& r) {
   return l > r;
 }
 

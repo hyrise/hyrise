@@ -24,7 +24,7 @@ using UserExecutableFunctionMap =
     std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, PluginNameFunctionNameHash>;
 
 struct PluginHandleWrapper {
-  PluginHandle handle;
+  PluginHandle handle{};
   std::unique_ptr<AbstractPlugin> plugin;
 };
 

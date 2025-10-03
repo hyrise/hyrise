@@ -114,10 +114,10 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  */
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
-                   const std::shared_ptr<const AbstractOperator>& right = nullptr,
-                   std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
-                       std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
+  explicit AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                            const std::shared_ptr<const AbstractOperator>& right = nullptr,
+                            std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
+                                std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
   virtual ~AbstractOperator();
 

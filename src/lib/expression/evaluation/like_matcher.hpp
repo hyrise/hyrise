@@ -129,7 +129,7 @@ class LikeMatcher {
       auto searchers = std::vector<Searcher>{};
       searchers.reserve(contains_strs.size());
       for (const auto& contains_str : contains_strs) {
-        searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
+        searchers.emplace_back(contains_str.begin(), contains_str.end());
       }
 
       functor([&](const auto& string) -> bool {

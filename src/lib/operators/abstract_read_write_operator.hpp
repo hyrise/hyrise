@@ -87,7 +87,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
   void _mark_as_failed();
 
  private:
-  ReadWriteOperatorState _rw_state;
+  ReadWriteOperatorState _rw_state{ReadWriteOperatorState::Pending};
 };
 
 }  // namespace hyrise

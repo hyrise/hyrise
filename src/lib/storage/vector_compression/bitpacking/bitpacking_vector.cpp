@@ -38,7 +38,7 @@ BitPackingDecompressor BitPackingVector::on_create_decompressor() const {
 }
 
 BitPackingIterator BitPackingVector::on_begin() const {
-  return BitPackingIterator(_data, 0u);
+  return BitPackingIterator(_data, 0);
 }
 
 BitPackingIterator BitPackingVector::on_end() const {

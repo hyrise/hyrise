@@ -123,7 +123,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Add an operator to the list of read-write operators.
    */
-  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) {
+  void register_read_write_operator(const std::shared_ptr<AbstractReadWriteOperator>& op) {
     _read_write_operators.push_back(op);
   }
 
@@ -195,7 +195,6 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    */
   void _transition(TransactionPhase from_phase, TransactionPhase to_phase);
 
- private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
   const AutoCommit _is_auto_commit;

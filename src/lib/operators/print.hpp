@@ -15,11 +15,7 @@ namespace hyrise {
  * PrintFlags::IgnoreChunkBoundaries: If set, print a logical view of the Table, i.e., do not print info about Chunks or
  *                                    Segment types.
  */
-enum class PrintFlags : uint8_t {
-  None = uint8_t{0},
-  Mvcc = uint8_t{1} << 0,
-  IgnoreChunkBoundaries = uint8_t{1} << 1
-};
+enum class PrintFlags : uint8_t { None = uint8_t{0}, Mvcc = uint8_t{1} << 0, IgnoreChunkBoundaries = uint8_t{1} << 1 };
 
 /**
  * operator to print the table with its data
@@ -54,7 +50,7 @@ class Print : public AbstractReadOnlyOperator {
   PrintFlags _flags;
   std::ostream& _out;
 
-  static constexpr uint16_t _min_cell_width = 8;
-  static constexpr uint16_t _max_cell_width = 20;
+  static constexpr uint16_t MIN_CELL_WIDTH = 8;
+  static constexpr uint16_t MAX_CELL_WIDTH = 20;
 };
 }  // namespace hyrise

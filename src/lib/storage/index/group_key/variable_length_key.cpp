@@ -17,9 +17,9 @@ VariableLengthKey::VariableLengthKey(CompositeKeyLength bytes_per_key)
       _impl(_owned_data.get(), bytes_per_key) {}
 
 VariableLengthKey::VariableLengthKey(const VariableLengthKeyBase& other)
-    : _owned_data(std::make_unique<VariableLengthKeyWord[]>(other._size)),  // NOLINT
-      _impl(_owned_data.get(), other._size) {
-  std::copy(other._data, other._data + other._size, _impl._data);
+    : _owned_data(std::make_unique<VariableLengthKeyWord[]>(other.size)),  // NOLINT
+      _impl(_owned_data.get(), other.size) {
+  std::copy(other.data, other.data + other.size, _impl.data);
 }
 
 VariableLengthKey::VariableLengthKey(const VariableLengthKey& other) : VariableLengthKey(other._impl) {}
@@ -75,7 +75,7 @@ VariableLengthKey& VariableLengthKey::shift_and_set(uint64_t value, uint8_t bits
 }
 
 CompositeKeyLength VariableLengthKey::bytes_per_key() const {
-  return _impl._size;
+  return _impl.size;
 }
 
 std::ostream& operator<<(std::ostream& stream, const VariableLengthKey& key) {

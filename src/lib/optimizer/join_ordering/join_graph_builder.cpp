@@ -38,7 +38,7 @@ std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Abst
   edges.insert(edges.end(), cross_edges.begin(), cross_edges.end());
 
   // A single vertex without predicates is not considered a JoinGraph
-  if (_vertices.size() <= 1u && edges.empty()) {
+  if (_vertices.size() <= 1 && edges.empty()) {
     return std::nullopt;
   }
 

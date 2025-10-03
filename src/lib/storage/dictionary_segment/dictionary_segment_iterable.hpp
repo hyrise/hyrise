@@ -10,6 +10,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
+// NOLINTBEGIN(readability-identifier-naming)
 namespace hyrise {
 
 template <typename T, typename Dictionary>
@@ -35,7 +36,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0}};
       auto end = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
+          _dictionary->cbegin(), _segment.null_value_id(), vector.cend(), _segment.size()};
 
       functor(begin, end);
     });
@@ -117,7 +118,6 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
     }
 
-   private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     CompressedVectorIterator _attribute_it;
@@ -146,7 +146,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
-      const auto& chunk_offsets = this->chunk_offsets();
+      const auto& chunk_offsets = this->_chunk_offsets();
 
       const auto value_id = _attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk);
       const auto is_null = (value_id == _null_value_id);
@@ -158,13 +158,11 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     mutable Decompressor _attribute_decompressor;
   };
 
- private:
   const BaseDictionarySegment& _segment;
   std::shared_ptr<const Dictionary> _dictionary;
 };
@@ -183,3 +181,5 @@ template <typename T>
 inline constexpr bool is_dictionary_segment_iterable_v = is_dictionary_segment_iterable<T>::value;
 
 }  // namespace hyrise
+
+// NOLINTEND(readability-identifier-naming)

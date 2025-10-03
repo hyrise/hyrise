@@ -41,7 +41,7 @@ struct VizGraphInfo {
 };
 
 struct VizVertexInfo {
-  uintptr_t id;
+  uintptr_t id{};
   std::string label;
   std::string tooltip;
   std::string color = "white";
@@ -77,7 +77,7 @@ class AbstractVisualizer {
                                       VizVertexInfo, VizEdgeInfo, VizGraphInfo>;
 
   // No label in a node should be wider than this many characters. If it is longer, line breaks should be added.
-  static const uint8_t MAX_LABEL_WIDTH = 50;
+  static constexpr uint8_t MAX_LABEL_WIDTH = 50;
 
  public:
   enum class InputSide { Left, Right };
@@ -145,7 +145,7 @@ class AbstractVisualizer {
     // so that the thickest pen has a width of max_normalized_width and the thinnest one has a width of 1. Using
     // a logarithm makes the operators that follow the most expensive one more visible. Not sure if this is what
     // statisticians would do, but it makes for beautiful images.
-    const auto normalize_penwidths = [&](auto iter_pair) {
+    const auto normalize_penwidths = [&](const auto& iter_pair) {
       const auto max_normalized_width = 8.0;
       const auto log_base = std::log(1.5);
       auto max_unnormalized_width = 0.0;

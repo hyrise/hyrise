@@ -50,8 +50,8 @@ namespace detail {
 
 }  // namespace detail
 
-#define Fail(msg)                                                                                             \
-  hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+#define Fail(msg)                                                                                               \
+  hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + (msg)); \
   static_assert(true, "End call of macro with a semicolon.")
 
 [[noreturn]] inline void FailInput(const std::string& msg) {  // NOLINT(readability-identifier-naming)
@@ -66,10 +66,10 @@ namespace detail {
   }                               \
   static_assert(true, "End call of macro with a semicolon.")
 
-#define AssertInput(expr, msg)                                               \
-  if (!static_cast<bool>(expr)) {                                            \
-    throw InvalidInputException(std::string("Invalid input error: ") + msg); \
-  }                                                                          \
+#define AssertInput(expr, msg)                                                 \
+  if (!static_cast<bool>(expr)) {                                              \
+    throw InvalidInputException(std::string("Invalid input error: ") + (msg)); \
+  }                                                                            \
   static_assert(true, "End call of macro with a semicolon.")
 
 #if HYRISE_DEBUG

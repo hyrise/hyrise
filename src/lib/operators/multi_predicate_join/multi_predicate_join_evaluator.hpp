@@ -50,9 +50,8 @@ class MultiPredicateJoinEvaluator {
       // for all other JoinModes.
       if (!left_value || !right_value) {
         return _join_mode == JoinMode::AntiNullAsTrue;
-      } else {
-        return _compare_functor(*left_value, *right_value);
       }
+      return _compare_functor(*left_value, *right_value);
     }
 
    private:

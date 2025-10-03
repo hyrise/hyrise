@@ -26,7 +26,7 @@ namespace hyrise {
 struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds sql_translation_duration{};
   std::chrono::nanoseconds optimization_duration{};
-  std::vector<OptimizerRuleMetrics> optimizer_rule_durations{};
+  std::vector<OptimizerRuleMetrics> optimizer_rule_durations;
   std::chrono::nanoseconds lqp_translation_duration{};
   std::chrono::nanoseconds plan_execution_duration{};
 

@@ -236,7 +236,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    * This one is important. An LQP can contain the same Subquery multiple times (see the LQP constructed below).
    * We need make sure that each LQP is only optimized once and that all SubqueryExpressions point to the same LQP after
    * optimization.
-   * 
+   *
    * This is not just "nice to have". If we do not do this properly and multiple SubqueryExpressions point to the same LQP
    * then we would potentially break all the other SubqueryExpressions while moving nodes around when optimizing a single
    * one of them.
@@ -394,7 +394,7 @@ TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {
   }
 
   // Unempty `join_graph_statistics_cache`.
-  auto& estimation_cache = cardinality_estimator->cardinality_estimation_cache;
+  auto& estimation_cache = cardinality_estimator->_cardinality_estimation_cache;
   auto vertex_indices = JoinGraphStatisticsCache::VertexIndexMap{};
   auto predicate_indices = JoinGraphStatisticsCache::PredicateIndexMap{};
   estimation_cache.join_graph_statistics_cache.emplace(std::move(vertex_indices), std::move(predicate_indices));

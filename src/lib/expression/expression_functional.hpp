@@ -57,6 +57,7 @@
  * ...and I think that's beautiful.
  */
 
+// NOLINTBEGIN(readability-identifier-naming)
 namespace hyrise {
 
 class AbstractOperator;
@@ -296,3 +297,5 @@ std::shared_ptr<WindowExpression> window_(std::vector<std::shared_ptr<AbstractEx
 }  // namespace expression_functional
 
 }  // namespace hyrise
+
+// NOLINTEND(readability-identifier-naming)

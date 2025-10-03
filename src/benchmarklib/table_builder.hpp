@@ -22,14 +22,14 @@ namespace hyrise {
 namespace table_builder {
 // similar to std::optional but has_value is known at compile time, so "if constexpr" can be used
 // boost::hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
-template <typename T, bool _has_value, typename Enable = void>
+template <typename T, bool has_value, typename Enable = void>
 class OptionalConstexpr {
  public:
   template <typename... Args>
   explicit OptionalConstexpr(Args&&... args) : _value{std::forward<Args>(args)...} {}
 
-  static_assert(_has_value);
-  static constexpr bool has_value = true;
+  static_assert(has_value);
+  static constexpr bool HAS_VALUE = true;
 
   T& value() {
     return _value;
@@ -39,14 +39,14 @@ class OptionalConstexpr {
   T _value;
 };
 
-template <typename T, bool _has_value>
-class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
+template <typename T, bool has_value>
+class OptionalConstexpr<T, has_value, std::enable_if_t<!has_value>> {
  public:
   template <typename... Args>
   explicit OptionalConstexpr(Args&&... /*args*/) {}
 
-  static_assert(!_has_value);
-  static constexpr bool has_value = false;
+  static_assert(!has_value);
+  static constexpr bool HAS_VALUE = false;
 
   T& value() {
     Fail("Empty optional has no value.");
@@ -54,6 +54,7 @@ class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
   }
 };
 
+// NOLINTBEGIN(readability-identifier-naming)
 template <typename T, typename Enable = void>
 struct is_optional : std::false_type {};
 
@@ -63,6 +64,8 @@ struct is_optional<T, std::enable_if_t<std::is_same_v<T, std::optional<typename 
 // is_optional_v<T> <=> T is of type std::optional<?>
 template <typename T>
 constexpr bool is_optional_v = is_optional<T>::value;
+
+// NOLINTEND(readability-identifier-naming)
 
 template <typename T, typename Enable = void>
 struct GetValueType {
@@ -114,7 +117,7 @@ class TableBuilder {
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
                const ChunkOffset estimated_rows = ChunkOffset{0})
-      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
+      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
@@ -135,7 +138,7 @@ class TableBuilder {
       values.reserve(_estimated_rows_per_chunk);
     });
     boost::hana::for_each(_null_value_vectors, [&](auto& null_values) {
-      if constexpr (std::decay_t<decltype(null_values)>::has_value) {
+      if constexpr (std::decay_t<decltype(null_values)>::HAS_VALUE) {
         null_values.value().reserve(_estimated_rows_per_chunk);
       }
     });
@@ -170,10 +173,10 @@ class TableBuilder {
       // the type of optional_or_value is either std::optional<T> or just T, hence the variable name
       auto& optional_or_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
 
-      constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
+      constexpr auto COLUMN_IS_NULLABLE = std::decay_t<decltype(null_values)>::HAS_VALUE;
       auto value_is_null = table_builder::is_null(optional_or_value);
 
-      DebugAssert(column_is_nullable || !value_is_null, "Cannot insert null value into not-NULL column.");
+      DebugAssert(COLUMN_IS_NULLABLE || !value_is_null, "Cannot insert null value into not-NULL column.");
 
       if (value_is_null) {
         values.emplace_back();
@@ -181,7 +184,7 @@ class TableBuilder {
         values.emplace_back(std::move(table_builder::get_value(optional_or_value)));
       }
 
-      if constexpr (column_is_nullable) {
+      if constexpr (COLUMN_IS_NULLABLE) {
         null_values.value().emplace_back(value_is_null);
       }
     });
@@ -207,7 +210,7 @@ class TableBuilder {
   ChunkOffset _estimated_rows_per_chunk;
 
   // _table->row_count() only counts completed chunks but we want the total number of rows added to this table builder
-  size_t _row_count;
+  size_t _row_count{0};
 
   boost::hana::tuple<pmr_vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
   boost::hana::tuple<table_builder::OptionalConstexpr<pmr_vector<bool>, (table_builder::is_optional<DataTypes>())>...>
@@ -220,19 +223,19 @@ class TableBuilder {
   void _emit_chunk() {
     auto segments = Segments{};
 
-    auto _value_vectors_and_null_value_vectors = boost::hana::zip_with(
+    auto value_vectors_and_null_value_vectors = boost::hana::zip_with(
         [](auto& values, auto& null_values) {
           return boost::hana::make_tuple(std::reference_wrapper(values), std::reference_wrapper(null_values));
         },
         _value_vectors, _null_value_vectors);
 
     // Create a segment from each value vector and add it to the Chunk, then re-initialize the vector
-    boost::hana::for_each(_value_vectors_and_null_value_vectors, [&](auto& values_and_null_values) {
+    boost::hana::for_each(value_vectors_and_null_value_vectors, [&](auto& values_and_null_values) {
       auto& values = values_and_null_values[boost::hana::llong_c<0>].get();
       auto& null_values = values_and_null_values[boost::hana::llong_c<1>].get();
 
       using T = typename std::decay_t<decltype(values)>::value_type;
-      if constexpr (std::decay_t<decltype(null_values)>::has_value) {  // column is nullable
+      if constexpr (std::decay_t<decltype(null_values)>::HAS_VALUE) {  // column is nullable
         segments.emplace_back(std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values.value())));
 
         null_values.value() = pmr_vector<bool>{};

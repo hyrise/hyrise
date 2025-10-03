@@ -16,7 +16,7 @@
 
 namespace moodycamel {  //
 class LightweightSemaphore;
-}
+}  // namespace moodycamel
 
 namespace hyrise {
 

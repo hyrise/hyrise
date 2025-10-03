@@ -388,7 +388,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::_generate_table(const std::string& t
     return generate_web_site();
   }
 
-  Fail("Unexpected table name: " + table_name);
+  Fail(std::string{"Unexpected table name: "} + table_name);
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::_generate_sales_and_returns_tables(
@@ -405,7 +405,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::_
     return generate_web_sales_and_returns();
   }
 
-  Fail("Unexpected sales table name: " + sales_table_name);
+  Fail(std::string{"Unexpected sales table name: "} + sales_table_name);
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_rows) const {

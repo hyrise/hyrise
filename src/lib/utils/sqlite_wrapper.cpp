@@ -1,9 +1,12 @@
 #include "sqlite_wrapper.hpp"
 
+#include <sqlite3.h>
+
 #include <cstdint>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/variant/get.hpp>
@@ -154,7 +157,7 @@ SQLiteWrapper::Connection::Connection(const std::string& uri) {
                       nullptr);
   if (ret != SQLITE_OK) {
     sqlite3_close(db);
-    Fail("Cannot open database '" + std::string(sqlite3_errmsg(db)) + "'.");
+    Fail(std::string{"Cannot open database '"} + std::string(sqlite3_errmsg(db)) + "'.");
   }
 
   // Make LIKE case sensitive, just like in Hyrise
@@ -234,7 +237,7 @@ void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql) const 
   if (return_code != SQLITE_OK) {
     auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
-    Fail("Failed to execute query (" + sql + "). SQL error: " + msg + "\n");
+    Fail(std::string{"Failed to execute query ("} + sql + "). SQL error: " + msg + "\n");
   }
 }
 
@@ -269,7 +272,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     create_table_query << table.column_definitions()[column_id].name << " " << column_types[column_id];
 
-    if (column_id + 1u < column_count) {
+    if (std::cmp_less(column_id + 1, column_count)) {
       create_table_query << ", ";
     }
   }
@@ -281,7 +284,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   insert_into_stream << "INSERT INTO " << escaped_table_name << " VALUES (";
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     insert_into_stream << "?";
-    if (static_cast<ColumnCount>(column_id + 1u) < column_count) {
+    if (static_cast<ColumnCount>(column_id + 1) < column_count) {
       insert_into_stream << ", ";
     }
   }

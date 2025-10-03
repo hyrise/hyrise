@@ -67,18 +67,18 @@ class JoinIndex : public AbstractJoinOperator {
                              MultiPredicateJoinEvaluator& secondary_predicate_evaluator);
 
   template <typename ProbeIterator>
-  void _data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
+  void _data_join_two_segments_using_index(ProbeIterator probe_iter, const ProbeIterator& probe_end,
                                            const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
                                            const std::shared_ptr<AbstractChunkIndex>& index);
 
   template <typename ProbeIterator>
   void _reference_join_two_segments_using_index(
-      ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-      const std::shared_ptr<AbstractChunkIndex>& index,
+      ProbeIterator probe_iter, const ProbeIterator& probe_end, const ChunkID probe_chunk_id,
+      const ChunkID index_chunk_id, const std::shared_ptr<AbstractChunkIndex>& index,
       const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
-  std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
+  std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition& probe_side_position,
                                                   const std::shared_ptr<AbstractChunkIndex>& index) const;
 
   void _append_matches(const AbstractChunkIndex::Iterator& range_begin, const AbstractChunkIndex::Iterator& range_end,

@@ -50,7 +50,7 @@ class CsvConverter : public BaseCsvConverter {
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
   void insert(std::string& value, ChunkOffset position) override {
-    if (_is_nullable && value.length() == 0) {
+    if (_is_nullable && value.empty()) {
       _null_values[position] = true;
       return;
     }
@@ -87,9 +87,8 @@ class CsvConverter : public BaseCsvConverter {
   std::unique_ptr<AbstractSegment> finish() override {
     if (_is_nullable) {
       return std::make_unique<ValueSegment<T>>(std::move(_parsed_values), std::move(_null_values));
-    } else {
-      return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
     }
+    return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
   }
 
  private:

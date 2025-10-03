@@ -33,7 +33,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using reverse_iterator = Vector::reverse_iterator;
   using const_reverse_iterator = Vector::const_reverse_iterator;
 
-  /* (1 ) */ RowIDPosList() noexcept(noexcept(allocator_type())) {}
+  /* (1 ) */ RowIDPosList() noexcept(noexcept(allocator_type())) = default;
 
   /* (1 ) */ explicit RowIDPosList(const allocator_type& allocator) noexcept : Vector(allocator) {}
 
@@ -44,7 +44,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
       : Vector(count, alloc) {}
 
   /* (4 ) */ template <class InputIt>
-  RowIDPosList(InputIt first, InputIt last, const allocator_type& alloc = allocator_type())
+  RowIDPosList(InputIt first, InputIt last, const allocator_type& /*alloc*/ = allocator_type())
       : Vector(std::move(first), std::move(last)) {}
 
   /* (5 ) */  // RowIDPosList(const Vector& other) : Vector(other); - Oh no, you don't.
@@ -60,7 +60,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   /* (7+) */ RowIDPosList(Vector&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
 
   /* (8 ) */ RowIDPosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
-      : Vector(std::move(init), alloc) {}
+      : Vector(init, alloc) {}
 
   RowIDPosList& operator=(RowIDPosList&& other) = default;
 

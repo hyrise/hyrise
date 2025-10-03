@@ -102,7 +102,6 @@ class CompositeGroupKeyIndex : public AbstractChunkIndex {
    */
   Iterator _get_position_iterator_for_key(const VariableLengthKey& key) const;
 
- private:
   // The segments the index is based on.
   std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;
 

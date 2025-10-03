@@ -15,7 +15,7 @@ Frame::Frame() {
 }
 
 void Frame::set_node_id(const NodeID node_id) {
-  DebugAssert(node_id <= (_node_id_mask >> _node_id_shift), "NUMA node must be smaller than 128.");
+  DebugAssert(node_id <= (NODE_ID_MASK >> NODE_ID_SHIFT), "NUMA node must be smaller than 128.");
   DebugAssert(node_id != INVALID_NODE_ID, "Cannot set empty NUMA node");
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set NUMA node.");
   auto old_state_and_version = _state_and_version.load();
@@ -24,9 +24,9 @@ void Frame::set_node_id(const NodeID node_id) {
   while (true) {
     auto new_state_and_version =
         old_state_and_version ^
-        ((old_state_and_version ^ static_cast<Frame::StateVersionType>(node_id) << _node_id_shift) & _node_id_mask);
+        ((old_state_and_version ^ static_cast<Frame::StateVersionType>(node_id) << NODE_ID_SHIFT) & NODE_ID_MASK);
     if (_state_and_version.compare_exchange_strong(old_state_and_version, new_state_and_version)) {
-      DebugAssert((old_state_and_version & ~_node_id_mask) == (new_state_and_version & ~_node_id_mask),
+      DebugAssert((old_state_and_version & ~NODE_ID_MASK) == (new_state_and_version & ~NODE_ID_MASK),
                   "Settings the NUMA node failed.");
       break;
     }
@@ -38,11 +38,11 @@ void Frame::set_node_id(const NodeID node_id) {
 
 void Frame::mark_dirty() {
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
-  _state_and_version |= _dirty_mask;
+  _state_and_version |= DIRTY_MASK;
 }
 
 void Frame::reset_dirty() {
-  _state_and_version &= ~_dirty_mask;
+  _state_and_version &= ~DIRTY_MASK;
 }
 
 void Frame::unlock_exclusive_and_set_evicted() {
@@ -61,15 +61,15 @@ bool Frame::try_mark(const Frame::StateVersionType old_state_and_version) {
 }
 
 bool Frame::is_dirty() const {
-  return ((_state_and_version.load() & _dirty_mask) >> _dirty_shift) != 0;
+  return ((_state_and_version.load() & DIRTY_MASK) >> DIRTY_SHIFT) != 0;
 }
 
 Frame::StateVersionType Frame::state(const Frame::StateVersionType state_and_version) {
-  return (state_and_version & _state_mask) >> _state_shift;
+  return (state_and_version & STATE_MASK) >> STATE_SHIFT;
 }
 
 Frame::StateVersionType Frame::version(const Frame::StateVersionType state_and_version) {
-  return state_and_version & _version_mask;
+  return state_and_version & VERSION_MASK;
 }
 
 Frame::StateVersionType Frame::state_and_version() const {
@@ -81,7 +81,7 @@ NodeID Frame::node_id() const {
 }
 
 NodeID Frame::node_id(const Frame::StateVersionType state_and_version) {
-  return static_cast<NodeID>((state_and_version & _node_id_mask) >> _node_id_shift);
+  return static_cast<NodeID>((state_and_version & NODE_ID_MASK) >> NODE_ID_SHIFT);
 }
 
 bool Frame::try_lock_shared(const Frame::StateVersionType old_state_and_version) {
@@ -137,14 +137,14 @@ void Frame::unlock_exclusive() {
 
 Frame::StateVersionType Frame::_update_state_with_same_version(const Frame::StateVersionType old_version_and_state,
                                                                const Frame::StateVersionType new_state) {
-  constexpr auto SHIFT = _bit_width - _state_shift;
-  return ((old_version_and_state << SHIFT) >> SHIFT) | (new_state << _state_shift);
+  constexpr auto SHIFT = BIT_WIDTH - STATE_SHIFT;
+  return ((old_version_and_state << SHIFT) >> SHIFT) | (new_state << STATE_SHIFT);
 }
 
 Frame::StateVersionType Frame::_update_state_with_incremented_version(
     const Frame::StateVersionType old_version_and_state, const Frame::StateVersionType new_state) {
-  constexpr auto SHIFT = _bit_width - _state_shift;
-  return (((old_version_and_state << SHIFT) >> SHIFT) + 1) | (new_state << _state_shift);
+  constexpr auto SHIFT = BIT_WIDTH - STATE_SHIFT;
+  return (((old_version_and_state << SHIFT) >> SHIFT) + 1) | (new_state << STATE_SHIFT);
 }
 
 bool Frame::is_unlocked() const {

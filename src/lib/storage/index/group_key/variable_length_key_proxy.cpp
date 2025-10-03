@@ -19,7 +19,7 @@ VariableLengthKeyConstProxy::operator VariableLengthKey() const {
 }
 
 CompositeKeyLength VariableLengthKeyConstProxy::bytes_per_key() const {
-  return _impl._size;
+  return _impl.size;
 }
 
 bool VariableLengthKeyConstProxy::operator==(const VariableLengthKeyConstProxy& other) const {
@@ -57,10 +57,10 @@ VariableLengthKeyProxy::VariableLengthKeyProxy(VariableLengthKeyWord* data, Comp
 
 VariableLengthKeyProxy& VariableLengthKeyProxy::operator=(const VariableLengthKeyBase& other) {
   DebugAssert(
-      (_impl._size == other._size),
+      (_impl.size == other.size),
       "Copying the data of a VariableLengthKey to a VariableLenghtKeyProxy requires that both have the same key size.");
 
-  std::copy(other._data, other._data + _impl._size, _impl._data);
+  std::copy(other.data, other.data + _impl.size, _impl.data);
   return *this;
 }
 

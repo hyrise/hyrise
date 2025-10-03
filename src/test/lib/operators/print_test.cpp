@@ -55,7 +55,7 @@ class PrintWrapper : public Print {
   }
 
   uint16_t get_max_cell_width() {
-    return _max_cell_width;
+    return MAX_CELL_WIDTH;
   }
 
   bool is_printing_mvcc_information() {

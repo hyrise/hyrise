@@ -136,7 +136,7 @@ BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cend() c
 
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
-  auto bytes = size_t{0u};
+  auto bytes = size_t{0};
   bytes += sizeof(_indexed_chunk_ids);
 
   // It is not trivial to estimate the memory consumption of a hash set. We use a tsl::sparse_set, so that the result

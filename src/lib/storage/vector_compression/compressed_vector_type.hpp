@@ -43,7 +43,7 @@ class BitPackingVector;
  *
  * Note: Add your vector class here!
  */
-constexpr auto compressed_vector_for_type = hana::make_map(
+constexpr auto COMPRESSED_VECTOR_FOR_TYPE = hana::make_map(
     hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedWidthInteger4Byte>,
                     hana::type_c<FixedWidthIntegerVector<uint32_t>>),
     hana::make_pair(enum_c<CompressedVectorType, CompressedVectorType::FixedWidthInteger2Byte>,
@@ -61,7 +61,7 @@ template <typename CompressedVectorT>
 CompressedVectorType get_compressed_vector_type() {
   auto compression_type = std::optional<CompressedVectorType>{};
 
-  hana::fold(compressed_vector_for_type, false, [&](auto match_found, auto pair) {
+  hana::fold(COMPRESSED_VECTOR_FOR_TYPE, false, [&](auto match_found, auto pair) {
     if (!match_found && (hana::second(pair) == hana::type_c<CompressedVectorT>)) {
       compression_type = hana::value(hana::first(pair));
       return true;

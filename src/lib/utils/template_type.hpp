@@ -19,6 +19,7 @@ struct TemplateType {
  * hana::type objects from class templates.
  */
 template <template <typename...> typename TemplateT>
+// NOLINTNEXTLINE(readability-identifier-naming)
 constexpr auto template_c = hana::type_c<TemplateType<TemplateT>>;
 
 }  // namespace hyrise

@@ -46,49 +46,49 @@ class SQLIdentifierResolverTest : public BaseTest {
 };
 
 TEST_F(SQLIdentifierResolverTest, ResolveIdentifier) {
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"c"s}), expression_c);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T2"}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"b"s}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"c"s}), expression_c);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "T1"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "T2"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"x"s}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"x"s, "T1"}), nullptr);
 }
 
 TEST_F(SQLIdentifierResolverTest, ColumnNamesChange) {
   context.add_column_name(expression_a, "x");
 
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T2"}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "T1"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"x"s, "T1"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"x"s, "T2"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"x"s}), expression_a);
 
-  EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"b"s}), expression_b);
 }
 
 TEST_F(SQLIdentifierResolverTest, ResetColumnNames) {
   context.reset_column_names(expression_a);
 
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"b"s, "T1"}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "T1"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"b"s}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"b"s, "T1"}), expression_b);
 }
 
 TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
   context.add_column_name(expression_a, "x");
   context.set_table_name(expression_a, "X");
 
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "X"}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "X"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "T1"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "X"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"x"s}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"x"s, "T1"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"x"s, "X"}), expression_a);
 
-  EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"b"s, "T1"}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"b"s}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"b"s, "T1"}), expression_b);
 }
 
 TEST_F(SQLIdentifierResolverTest, ColumnNameRedundancy) {
@@ -97,12 +97,12 @@ TEST_F(SQLIdentifierResolverTest, ColumnNameRedundancy) {
   context.add_column_name(expression_a2, {"a"s});
 
   // "a" is ambiguous now
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s}), nullptr);
 
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "T1"}), expression_a);
 
   context.set_table_name(expression_a2, "T2");
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T2"}), expression_a2);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "T2"}), expression_a2);
 }
 
 TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
@@ -141,21 +141,22 @@ TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
   /**
    * Test whether identifiers are resolved correctly
    */
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"b"}), expression_b);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"b", "T1"}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"b"}), expression_b);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"b", "T1"}), expression_b);
 
-  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b", "Intermediate"}),
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed(SQLIdentifier{"b", "Intermediate"}),
             *correlated_parameter_(ParameterID{0}, intermediate_expression_b));
-  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a"}),
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed(SQLIdentifier{"intermediate_a"}),
             *correlated_parameter_(ParameterID{1}, intermediate_expression_a));
-  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b"}),
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed(SQLIdentifier{"b"}),
             *correlated_parameter_(ParameterID{0}, intermediate_expression_b));
-  EXPECT_EQ(intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a", "Intermediate"}), nullptr);
+  EXPECT_EQ(intermediate_context_proxy->resolve_identifier_relaxed(SQLIdentifier{"intermediate_a", "Intermediate"}),
+            nullptr);
 
-  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"outermost_a"}),
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed(SQLIdentifier{"outermost_a"}),
             *correlated_parameter_(ParameterID{2}, outermost_expression_a));
-  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b", "Outermost"}),
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed(SQLIdentifier{"b", "Outermost"}),
             *correlated_parameter_(ParameterID{3}, outermost_expression_b));
 
   /**
@@ -184,9 +185,9 @@ TEST_F(SQLIdentifierResolverTest, DeepEqualsIsUsed) {
   const std::vector<SQLIdentifier> expressions = {SQLIdentifier("a"s, "T2"), SQLIdentifier("a2"s, "T2")};
   context.add_column_name(expression_a2, "a2");
   context.set_table_name(expression_a2, "T2");
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T2"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a"s, "T2"}), expression_a);
   EXPECT_EQ(context.get_expression_identifiers(expression_a), expressions);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"a2"s, "T2"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed(SQLIdentifier{"a2"s, "T2"}), expression_a);
   EXPECT_EQ(context.get_expression_identifiers(expression_a2), expressions);
 }
 

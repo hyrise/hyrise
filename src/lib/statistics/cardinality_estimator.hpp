@@ -285,7 +285,7 @@ class CardinalityEstimator {
 
   void _populate_required_column_expressions() const;
 
-  mutable CardinalityEstimationCache cardinality_estimation_cache;
+  mutable CardinalityEstimationCache _cardinality_estimation_cache;
 };
 
 std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);

@@ -12,19 +12,22 @@ namespace hyrise {
 template <typename T>
 class Singleton : public Noncopyable {
  public:
-  inline static T& get() {
+  static T& get() {
     static T instance;
     return instance;
   }
 
-  virtual ~Singleton() {}
+  virtual ~Singleton() = default;
 
  protected:
   // If you need to overwrite the constructor make sure to friend this Singleton class. Otherwise it cannot call
   // the protected constructor of a derived class.
-  Singleton() {}
+ private:
+  Singleton() = default;
 
+ protected:
   Singleton& operator=(Singleton&&) = default;
+  friend T;
 };
 
 }  // namespace hyrise

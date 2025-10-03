@@ -60,8 +60,8 @@ class LQPColumnExpression;
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
-  AbstractLQPNode(const LQPNodeType node_type,
-                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
+  explicit AbstractLQPNode(const LQPNodeType node_type,
+                           const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
   virtual ~AbstractLQPNode();
 
   /**
@@ -260,7 +260,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * the optimizer explaining that a node was added as a semi-join reduction node (see SubqueryToJoinRule). It is not
    * automatically added to the description.
    */
-  std::string comment{};
+  std::string comment;
 
  protected:
   /**
@@ -319,7 +319,7 @@ struct LQPNodeSharedPtrHash final {
 // std::shared_ptr<AbstractLQPNode>
 struct LQPNodeSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs) const {
-    return lhs == rhs || *lhs == *rhs;
+    return static_cast<size_t>(lhs == rhs || *lhs == *rhs);
   }
 };
 

@@ -21,37 +21,37 @@ class AbstractPosList : private Noncopyable {
   class PosListIterator : public boost::iterator_facade<PosListIterator<PosListType, DereferenceReturnType>, RowID,
                                                         boost::random_access_traversal_tag, DereferenceReturnType> {
    public:
-    PosListIterator(const PosListType* pos_list, const ChunkOffset offset)
-        : _pos_list(pos_list), _chunk_offset(offset) {}
+    PosListIterator(const PosListType* init_pos_list, const ChunkOffset offset)
+        : pos_list(init_pos_list), chunk_offset(offset) {}
 
     void increment() {
-      ++_chunk_offset;
+      ++chunk_offset;
     }
 
     void decrement() {
-      --_chunk_offset;
+      --chunk_offset;
     }
 
     void advance(std::ptrdiff_t n) {
-      _chunk_offset += n;
+      chunk_offset += n;
     }
 
     bool equal(const PosListIterator& other) const {
-      DebugAssert(_pos_list == other._pos_list, "PosListIterator compared to iterator on different PosList instance.");
-      return other._chunk_offset == _chunk_offset;
+      DebugAssert(pos_list == other.pos_list, "PosListIterator compared to iterator on different PosList instance.");
+      return other.chunk_offset == chunk_offset;
     }
 
     std::ptrdiff_t distance_to(const PosListIterator& other) const {
-      return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
+      return static_cast<std::ptrdiff_t>(other.chunk_offset) - chunk_offset;
     }
 
     DereferenceReturnType dereference() const {
-      DebugAssert(_chunk_offset < _pos_list->size(), "Past-the-end PosListIterator dereferenced.");
-      return (*_pos_list)[_chunk_offset];
+      DebugAssert(chunk_offset < pos_list->size(), "Past-the-end PosListIterator dereferenced.");
+      return (*pos_list)[chunk_offset];
     }
 
-    const PosListType* _pos_list;
-    ChunkOffset _chunk_offset;
+    const PosListType* pos_list;
+    ChunkOffset chunk_offset;
   };
 
   virtual ~AbstractPosList() = default;
@@ -83,6 +83,7 @@ class AbstractPosList : private Noncopyable {
 
 inline bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs) {
   PerformanceWarning("Using slow PosList comparison.");
+  // NOLINTNEXTLINE(modernize-use-ranges)
   return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 

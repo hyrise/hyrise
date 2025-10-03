@@ -10,7 +10,7 @@
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace hyrise {
-
+// NOLINTBEGIN(readability-identifier-naming)
 template <typename T>
 class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentIterable<T>> {
  public:
@@ -55,7 +55,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     // element. If the requested element is not within that block, the next block will be decompressed and written to
     // `cached_block` while the value and the new block id are returned. In case the requested element is within the
     // cached block, the value and the input block id are returned.
-    for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+    for (auto index = size_t{0}; index < position_filter_size; ++index) {
       const auto& position = (*position_filter)[index];
       // NOLINTNEXTLINE
       auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
@@ -92,7 +92,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   mutable std::vector<char> cached_block;
   mutable std::optional<size_t> cached_block_index = std::nullopt;
 
- private:
   template <typename ValueIterator>
   class Iterator : public AbstractSegmentIterator<Iterator<ValueIterator>, SegmentPosition<T>> {
    public:
@@ -100,10 +99,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     using IterableType = LZ4SegmentIterable<T>;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
-   public:
     // Begin and End Iterator
     explicit Iterator(ValueIterator data_it, std::optional<NullValueIterator> null_value_it, ChunkOffset chunk_offset)
-        : _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{std::move(null_value_it)} {}
+        : _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{null_value_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -144,7 +142,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       return SegmentPosition<T>{*_data_it, _null_value_it ? **_null_value_it : false, _chunk_offset};
     }
 
-   private:
     ChunkOffset _chunk_offset;
     ValueIterator _data_it;
     std::optional<NullValueIterator> _null_value_it;
@@ -166,22 +163,22 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
                                              PosListIteratorType>{std::move(position_filter_begin),
                                                                   std::move(position_filter_it)},
           _data_it{std::move(data_it)},
-          _null_value_it{std::move(null_value_it)} {}
+          _null_value_it{null_value_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
-      const auto& chunk_offsets = this->chunk_offsets();
+      const auto& chunk_offsets = this->_chunk_offsets();
       const auto& value = *(_data_it + chunk_offsets.offset_in_poslist);
       const auto is_null = _null_value_it && *(*_null_value_it + chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
-   private:
     DataIteratorType _data_it;
     std::optional<NullValueIterator> _null_value_it;
   };
 };
 
+// NOLINTEND(readability-identifier-naming)
 }  // namespace hyrise

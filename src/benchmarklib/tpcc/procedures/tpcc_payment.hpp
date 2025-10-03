@@ -8,7 +8,7 @@ namespace hyrise {
 
 class TPCCPayment : public AbstractTPCCProcedure {
  public:
-  TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
+  TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& init_sql_executor);
 
   [[nodiscard]] bool _on_execute() override;
 
