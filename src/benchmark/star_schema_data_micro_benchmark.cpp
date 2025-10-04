@@ -283,31 +283,6 @@ class ReductionBenchmarks : public MicroBenchmarkBasicFixture {
     Assert(scan_selectivity > 0.8 && scan_selectivity < 0.9, "Selectivity:" + std::to_string(scan_selectivity));
   }
 
-  void setup_synthetic_tables_uniform(const double left_min, const double right_min, const double left_max, const double right_max, const size_t left_num_rows, const size_t right_num_rows, const ChunkOffset left_chunk_size = Chunk::DEFAULT_SIZE, const ChunkOffset right_chunk_size = Chunk::DEFAULT_SIZE) {
-    auto table_generator = std::make_shared<SyntheticTableGenerator>();
-    auto uniform_distribution = ColumnDataDistribution::make_uniform_config(left_min, left_max);
-
-    auto left_table = table_generator->generate_table(
-        {{uniform_distribution, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary}, "column_1"}},
-        left_num_rows,
-        left_chunk_size
-    );
-
-    auto right_table = table_generator->generate_table(
-        {{uniform_distribution, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary}, "column_1"}},
-        right_num_rows,
-        right_chunk_size
-    );
-
-    _left_input = std::make_shared<TableWrapper>(left_table);
-    _left_input->never_clear_output();
-    _left_input->execute();
-
-    _right_input = std::make_shared<TableWrapper>(right_table);
-    _right_input->never_clear_output();
-    _right_input->execute();
-  }
-
   std::shared_ptr<AbstractReadOnlyOperator> _left_input;
   std::shared_ptr<AbstractReadOnlyOperator> _right_input;
 
@@ -538,32 +513,6 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, BadCaseReduce)(benchmark::State& state) 
 //   }
 // }
 
-// BENCHMARK_DEFINE_F(ReductionBenchmarks, SyntheticUniformPrototype)(benchmark::State& state) {
-//   setup_synthetic_tables_uniform(static_cast<double>(state.range(2)), static_cast<double>(state.range(3)), static_cast<double>(state.range(4)), static_cast<double>(state.range(5)), state.range(6), state.range(7));
-
-//   const auto filter_size = state.range(0);
-//   const auto hash_count = state.range(1);
-//   setenv("SIZE", std::to_string(filter_size).c_str(), 1);
-//   setenv("HASH", std::to_string(hash_count).c_str(), 1);
-
-//   Assert(_left_input && _right_input, "Left and right input must be set up before running the benchmark.");
-//   Assert(_left_input->executed() && _right_input->executed(),
-//          "Left and right input must be executed before running the benchmark.");
-
-//   const auto join_dryrun = std::make_shared<Reduce>(_left_input, _right_input,
-//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-//   join_dryrun->execute();
-
-//   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-//   state.counters["output_count"] = static_cast<double>(join_dryrun->get_output()->row_count());
-
-//   for (auto _ : state) {
-//     const auto join = std::make_shared<Reduce>(_left_input, _right_input,
-//       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals}, false);
-//     join->execute();
-//   }
-// }
-
 BENCHMARK_REGISTER_F(ReductionBenchmarks, WorstCaseReduce)
   ->ArgsProduct({
     {1, 2, 3, 4, 5, 7, 14, 28},
@@ -581,8 +530,5 @@ BENCHMARK_REGISTER_F(ReductionBenchmarks, BadCaseReduce)
     {1, 2, 3, 4, 5, 7, 14, 28},
     {1, 10, 20, 100}
   });
-
-// BENCHMARK_REGISTER_F(ReductionBenchmarks, SyntheticUniformPrototype)
-//   ->Args({20, 3, 0, 0, 100, 1000, 10000000, 100000});
 
 }  // namespace hyrise
