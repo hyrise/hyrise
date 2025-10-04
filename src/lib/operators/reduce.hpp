@@ -39,8 +39,8 @@ class Reduce : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override {
-    std::cout << "Reducer called with mode: " << magic_enum::enum_name(reduce_mode)
-              << " use_min_max: " << magic_enum::enum_name(use_min_max) << "\n";
+    // std::cout << "Reducer called with mode: " << magic_enum::enum_name(reduce_mode)
+    //           << " use_min_max: " << magic_enum::enum_name(use_min_max) << "\n";
     std::shared_ptr<const Table> input_table;
     std::shared_ptr<const Table> output_table;
     auto column_id = ColumnID{};
@@ -248,16 +248,16 @@ class Reduce : public AbstractReadOnlyOperator {
       }
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
-        std::cout << "Reducer setting new filters\n";
+        // std::cout << "Reducer setting new filters\n";
         _bloom_filter = new_bloom_filter;
-        std::cout << "New bloom filter saturation: " << _bloom_filter->saturation() << "\n";
+        // std::cout << "New bloom filter saturation: " << _bloom_filter->saturation() << "\n";
         _min_max_filter = new_min_max_filter;
         // _bloom_filter = std::make_shared<BloomFilter<20, 2>>();
         // _min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();
       }
     });
 
-    std::cout << "About to exit reducer\n";
+    // std::cout << "About to exit reducer\n";
     return output_table;
   }
 
