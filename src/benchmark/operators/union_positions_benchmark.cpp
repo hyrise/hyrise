@@ -1,16 +1,12 @@
 #include <algorithm>
-#include <cstddef>
-#include <iterator>
 #include <memory>
 #include <random>
-#include <string>
+#include <utility>
 
 #include "benchmark/benchmark.h"
 
-#include "all_type_variant.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -42,7 +38,7 @@ std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_c
     const auto chunk_id = hyrise::ChunkID{chunk_id_distribution(random_engine)};
     const auto chunk_offset = hyrise::ChunkOffset{chunk_offset_distribution(random_engine)};
 
-    pos_list->emplace_back(chunk_id, chunk_offset);
+    pos_list->emplace_back(hyrise::RowID{chunk_id, chunk_offset});
   }
 
   return pos_list;
@@ -51,8 +47,8 @@ std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_c
 
 namespace hyrise {
 
-static std::shared_ptr<Table> create_reference_table(const std::shared_ptr<Table>& referenced_table, size_t num_rows,
-                                                     size_t num_columns) {
+std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_table, size_t num_rows,
+                                              size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
   auto column_definitions = TableColumnDefinitions{};
@@ -109,7 +105,6 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
   table_wrapper_right->never_clear_output();
   table_wrapper_right->execute();
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto set_union = std::make_shared<UnionPositions>(table_wrapper_left, table_wrapper_right);
     set_union->execute();
@@ -128,18 +123,17 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
   auto pos_list_left = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
   auto pos_list_right = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     // Create copies, this would need to be done the UnionPositions Operator as well
     auto& left = *pos_list_left;
     auto& right = *pos_list_right;
 
-    std::ranges::sort(left);
-    std::ranges::sort(right);
+    std::sort(left.begin(), left.end());
+    std::sort(right.begin(), right.end());
 
     RowIDPosList result;
     result.reserve(std::min(left.size(), right.size()));
-    std::ranges::set_union(left, right, std::back_inserter(result));
+    std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(result));
   }
 }
 

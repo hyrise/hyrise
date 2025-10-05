@@ -1,23 +1,11 @@
 #include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
-#include "cxxopts.hpp"
-
-#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpcc/constants.hpp"
 #include "tpcc/tpcc_benchmark_item_runner.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "utils/assert.hpp"
 
 using namespace hyrise;  // NOLINT
 
@@ -43,7 +31,7 @@ using namespace hyrise;  // NOLINT
 
 namespace {
 void check_consistency(const size_t num_warehouses);
-}  // namespace
+}
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-C Benchmark");
@@ -96,7 +84,7 @@ int main(int argc, char* argv[]) {
 }
 
 namespace {
-template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+template <typename T, typename = std::enable_if<std::is_floating_point_v<T>>>
 bool floats_near(T a, T b) {
   if (a == b) {
     return true;
@@ -304,7 +292,7 @@ void check_consistency(const size_t num_warehouses) {
                       SELECT C_W_ID, C_D_ID, C_ID, MAX(C_BALANCE), SUM_H_AMOUNT
                         (CASE WHEN SUM_OL_AMOUNT IS NULL THEN 0 ELSE SUM_OL_AMOUNT END) AS SUM_OL_AMOUNT_NONNULL,
                       FROM CUSTOMER
-                      LEFT JOIN
+                      LEFT JOIN 
                         (SELECT O_W_ID, O_D_ID, O_C_ID, SUM(OL_AMOUNT)
                          FROM "ORDER", ORDER_LINE
                          WHERE

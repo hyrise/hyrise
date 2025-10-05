@@ -1,15 +1,10 @@
-#include <cstdint>
-#include <filesystem>
+#include <chrono>
 #include <fstream>
 #include <iostream>
-#include <memory>
 #include <string>
-#include <unordered_set>
-#include <utility>
 
 #include "cxxopts.hpp"
 
-#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
@@ -21,17 +16,17 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 namespace {
 
-std::unordered_set<std::string> filename_excludelist() {
+const std::unordered_set<std::string> filename_excludelist() {
   auto filename_excludelist = std::unordered_set<std::string>{};
-  constexpr auto EXCLUDELIST_FILE_PATH = "resources/benchmark/tpcds/query_excludelist.cfg";
-  auto excludelist_file = std::ifstream(EXCLUDELIST_FILE_PATH);
+  const auto excludelist_file_path = "resources/benchmark/tpcds/query_excludelist.cfg";
+  auto excludelist_file = std::ifstream(excludelist_file_path);
 
   if (!excludelist_file) {
-    std::cerr << "Cannot open the excludelist file: " << EXCLUDELIST_FILE_PATH << "\n";
+    std::cerr << "Cannot open the excludelist file: " << excludelist_file_path << "\n";
   } else {
     auto filename = std::string{};
     while (std::getline(excludelist_file, filename)) {
-      if (!filename.empty() && filename.at(0) != '#') {
+      if (filename.size() > 0 && filename.at(0) != '#') {
         filename_excludelist.emplace(filename);
       }
     }

@@ -1,34 +1,17 @@
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <functional>
-#include <map>
 #include <memory>
 #include <numeric>
 #include <random>
-#include <string>
-#include <utility>
-#include <vector>
 
 #include "benchmark/benchmark.h"
 
-#include "all_type_variant.hpp"
-#include "expression/abstract_predicate_expression.hpp"
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/encoding_type.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
-#include "storage/table_column_definition.hpp"
-#include "storage/value_segment.hpp"
-#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -37,9 +20,9 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 namespace {
 
-constexpr auto ROWS = 1'000'000;
-constexpr auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
-constexpr auto STRING_SIZE = 512;
+const auto ROWS = 1'000'000;
+const auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
+const auto STRING_SIZE = 512;
 
 TableColumnDefinitions create_column_definitions(const DataType data_type) {
   auto table_column_definitions = TableColumnDefinitions();
@@ -89,9 +72,9 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     std::shuffle(chunk_values.begin(), chunk_values.end(), generator);
   }
 
-  for (auto chunk_index = size_t{0}; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
-    const auto first = chunk_values.cbegin() + (CHUNK_SIZE * chunk_index);
-    const auto last = chunk_values.cbegin() + (CHUNK_SIZE * (chunk_index + 1));
+  for (auto chunk_index = 0u; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
+    const auto first = chunk_values.cbegin() + CHUNK_SIZE * chunk_index;
+    const auto last = chunk_values.cbegin() + CHUNK_SIZE * (chunk_index + 1);
     auto value_vector = pmr_vector<Type>(first, last);
     if (mode == "SortedDescending") {
       std::reverse(value_vector.begin(), value_vector.end());
@@ -134,10 +117,10 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
 }  // namespace
 
-static void bm_table_scan_sorted(
+void BM_TableScanSorted(
     benchmark::State& state, const int table_size, const double selectivity, const EncodingType encoding_type,
     const std::string& mode, const bool is_between_scan, const bool is_reference_scan,
-    const std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)>& table_creator) {
+    const std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)> table_creator) {
   micro_benchmark_clear_cache();
 
   // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
@@ -150,7 +133,7 @@ static void bm_table_scan_sorted(
 
   const auto column_index = ColumnID(0);
 
-  const auto& column_definition = table_column_definitions.at(column_index);
+  const auto column_definition = table_column_definitions.at(column_index);
 
   std::shared_ptr<AbstractPredicateExpression> predicate;
   std::shared_ptr<AbstractPredicateExpression> reference_scan_predicate;
@@ -211,7 +194,6 @@ static void bm_table_scan_sorted(
     warm_up->execute();
   }
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto table_scan = std::make_shared<TableScan>(input, predicate);
     table_scan->execute();
@@ -220,7 +202,7 @@ static void bm_table_scan_sorted(
 
 namespace {
 
-void register_table_scan_sorted_benchmarks() {
+void registerTableScanSortedBenchmarks() {
   using EncodingAndSupportedDataTypes = std::pair<EncodingType, std::vector<std::string>>;
   const std::map<std::string, EncodingAndSupportedDataTypes> encoding_types{
       {"None", EncodingAndSupportedDataTypes(EncodingType::Unencoded, {"Int", "String"})},
@@ -234,10 +216,10 @@ void register_table_scan_sorted_benchmarks() {
 
   const std::map<std::string, std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)>>
       table_types{{"Int",
-                   [&](const EncodingType encoding_type, const std::string& mode) {
+                   [&](const EncodingType encoding_type, const std::string mode) {
                      return create_table<int32_t>(DataType::Int, ROWS, generate_values<int32_t>, encoding_type, mode);
                    }},
-                  {"String", [&](const EncodingType encoding_type, const std::string& mode) {
+                  {"String", [&](const EncodingType encoding_type, const std::string mode) {
                      return create_table<pmr_string>(DataType::String, ROWS, generate_values<pmr_string>, encoding_type,
                                                      mode);
                    }}};
@@ -258,11 +240,12 @@ void register_table_scan_sorted_benchmarks() {
 
               const std::string between_label = is_between_scan ? "Between" : "";
               const std::string ref_scan_label = is_reference_scan ? "ReferenceTableScan" : "DataTableScan";
-              auto name = std::stringstream{};
-              name << "BM_Table" << between_label << "ScanSorted/" << ref_scan_label << "/" << encoding_name << "/"
-                   << selectivity << "/" << data_type << "/" << mode;
-              benchmark::RegisterBenchmark(name.str(), bm_table_scan_sorted, ROWS, selectivity, encoding_type, mode,
-                                           is_between_scan, is_reference_scan, table_generator);
+              benchmark::RegisterBenchmark(
+                  ("BM_Table" + between_label + "ScanSorted/" + ref_scan_label + "/" + encoding_name + "/" +
+                   std::to_string(selectivity) + "/" + data_type + "/" + mode)
+                      .c_str(),
+                  BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan, is_reference_scan,
+                  table_generator);
             }
           }
         }
@@ -278,11 +261,11 @@ void register_table_scan_sorted_benchmarks() {
 class StartUp {
  public:
   StartUp() {
-    register_table_scan_sorted_benchmarks();
+    registerTableScanSortedBenchmarks();
   }
 };
 
-const auto startup = StartUp{};
+StartUp startup;
 
 }  // namespace
 
