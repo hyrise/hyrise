@@ -134,7 +134,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
     return *this;
   }
 
-  AnySegmentIterator(const AnySegmentIterator&&) = default;
+  AnySegmentIterator(AnySegmentIterator&&) = default;
   AnySegmentIterator& operator=(AnySegmentIterator&&) = default;
   ~AnySegmentIterator() = default;
 
