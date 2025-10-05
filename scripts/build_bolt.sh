@@ -57,6 +57,9 @@ do
       cli=1
       shift
       ;;
+    --)
+      shift
+      break
     *)
       echo -e "Unknown positional argument $1\n$USAGE"
       shift
