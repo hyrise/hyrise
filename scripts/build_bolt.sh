@@ -60,6 +60,7 @@ do
     --)
       shift
       break
+      ;;
     *)
       echo -e "Unknown positional argument $1\n$USAGE"
       shift
