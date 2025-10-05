@@ -40,7 +40,7 @@ class BetweenCompositionRule : public AbstractRule {
    * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE) and if it is a
    * boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
    */
-  enum class ColumnBoundaryType {
+  enum class ColumnBoundaryType : uint8_t {
     None,
     LowerBoundaryInclusive,
     LowerBoundaryExclusive,

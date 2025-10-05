@@ -12,10 +12,16 @@ namespace hyrise {
  * keep_running() returns false once enough iterations or time has passed.
  */
 struct BenchmarkState {
-  enum class State { NotStarted, Running, Over };
+  enum class State : uint8_t { NotStarted, Running, Over };
 
+  ~BenchmarkState() = default;
   explicit BenchmarkState(const Duration init_max_duration, const int64_t init_max_runs);
+  BenchmarkState(const BenchmarkState& other);
   BenchmarkState& operator=(const BenchmarkState& other);
+  // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+  BenchmarkState(BenchmarkState&& other);
+  // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+  BenchmarkState& operator=(BenchmarkState&& other);
 
   bool keep_running();
 

@@ -109,6 +109,7 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
   table_wrapper_right->never_clear_output();
   table_wrapper_right->execute();
 
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto set_union = std::make_shared<UnionPositions>(table_wrapper_left, table_wrapper_right);
     set_union->execute();
@@ -127,6 +128,7 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
   auto pos_list_left = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
   auto pos_list_right = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
 
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     // Create copies, this would need to be done the UnionPositions Operator as well
     auto& left = *pos_list_left;

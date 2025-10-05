@@ -130,7 +130,7 @@ std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSeg
 // Used as a template parameter that is passed whenever we conditionally erase the type of the position list. This is
 // done to reduce the compile time at the cost of the runtime performance. We do not re-use EraseTypes here, as it
 // might confuse readers who could think that the setting erases all types within the functor.
-enum class ErasePosListType { OnlyInDebugBuild, Always };
+enum class ErasePosListType : uint8_t { OnlyInDebugBuild, Always };
 
 template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
 void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped_pos_list, const Functor& functor) {

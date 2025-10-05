@@ -47,7 +47,7 @@ class TPCCRandomGenerator : public RandomGenerator {
    * @return    a string representing the last name
    */
   std::string last_name(size_t i) {
-    const std::string syllables[] = {
+    const auto syllables = std::array<std::string, 10>{
         "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
     };
 

@@ -26,10 +26,12 @@ namespace hyrise {
 template <auto encoding>
 class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<encoding>> {
  public:
+  // NOLINTNEXTLINE(readability-identifier-naming)
   static constexpr auto _encoding_type = enum_c<EncodingType, encoding>;
-  static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
+  static constexpr auto USES_VECTOR_COMPRESSION = true;  // see base_segment_encoder.hpp for details
 
   template <typename T>
+  // NOLINTNEXTLINE(readability-identifier-naming)
   std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T>& segment_iterable,
                                                      const PolymorphicAllocator<T>& allocator) {
     // Vectors to gather the input segment's data. This data is used in a later step to

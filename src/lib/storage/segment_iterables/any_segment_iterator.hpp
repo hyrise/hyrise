@@ -134,6 +134,10 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
     return *this;
   }
 
+  AnySegmentIterator(const AnySegmentIterator&&) = default;
+  AnySegmentIterator& operator=(AnySegmentIterator&&) = default;
+  ~AnySegmentIterator() = default;
+
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 

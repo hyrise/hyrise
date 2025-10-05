@@ -5,7 +5,7 @@
 namespace hyrise {
 
 // Precedence levels for parenthesizing expression arguments. See AbstractExpression::_enclose_argument
-enum class ExpressionPrecedence : uint32_t {
+enum class ExpressionPrecedence : uint8_t {
   Highest = 0,
   UnaryPredicate,
   MultiplicationDivision,

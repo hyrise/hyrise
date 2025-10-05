@@ -46,8 +46,6 @@ class AdaptiveRadixTreeIndex : public AbstractChunkIndex {
 
   explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
-  AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;
-
   /**
    *All keys in the ART have to be binary comparable in the sense that if the most significant differing bit between
    *BinaryComparable a and BinaryComparable b is greater for a <=> a > b.

@@ -125,9 +125,6 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
     static_assert(!is_any_segment_iterable_v<UnerasedIterable>, "Iterables should not be wrapped twice.");
   }
 
-  AnySegmentIterable(const AnySegmentIterable&) = default;
-  AnySegmentIterable(AnySegmentIterable&&) noexcept = default;
-
   // NOLINTBEGIN(readability-identifier-naming)
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {

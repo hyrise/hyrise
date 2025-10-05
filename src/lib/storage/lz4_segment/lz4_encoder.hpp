@@ -46,8 +46,9 @@ namespace hyrise {
  */
 class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
+  // NOLINTNEXTLINE(readability-identifier-naming)
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
-  static constexpr auto _uses_vector_compression = true;
+  static constexpr auto USES_VECTOR_COMPRESSION = true;
   /**
    * A block size of 16 KB was chosen, since the recommended minimal amount of data to train a zstd dictionary is around
    * 20 KB. Therefore, there is no point in trying to train a dictionary with less data than that (and the training

@@ -181,16 +181,10 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       const auto segment_right = chunk_right->get_segment(right_column_id);
-      const auto params = JoinParams{.pos_list_left = *pos_list_left,
-                                     .pos_list_right = *pos_list_right,
-                                     .left_matches = left_matches,
-                                     .right_matches = right_matches_by_chunk[chunk_id_right],
-                                     .track_left_matches = track_left_matches,
-                                     .track_right_matches = track_right_matches,
-                                     .mode = _mode,
-                                     .predicate_condition = maybe_flipped_predicate_condition,
-                                     .secondary_predicate_evaluator = secondary_predicate_evaluator,
-                                     .write_pos_lists = !semi_or_anti_join};
+      const auto params =
+          JoinParams(*pos_list_left, *pos_list_right, left_matches, right_matches_by_chunk[chunk_id_right],
+                     track_left_matches, track_right_matches, _mode, maybe_flipped_predicate_condition,
+                     secondary_predicate_evaluator, !semi_or_anti_join);
       _join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right, params);
     }
 

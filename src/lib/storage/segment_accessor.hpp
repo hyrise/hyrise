@@ -47,6 +47,11 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(
 template <typename T, typename SegmentType>
 class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
+  SegmentAccessor(const SegmentAccessor&) = default;
+  SegmentAccessor(SegmentAccessor&&) = default;
+  SegmentAccessor& operator=(const SegmentAccessor&) = default;
+  SegmentAccessor& operator=(SegmentAccessor&&) = default;
+
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
   std::optional<T> access(ChunkOffset offset) const final {
@@ -107,6 +112,11 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
 template <typename T, typename Segment>
 class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
+  SingleChunkReferenceSegmentAccessor(const SingleChunkReferenceSegmentAccessor&) = default;
+  SingleChunkReferenceSegmentAccessor(SingleChunkReferenceSegmentAccessor&&) = default;
+  SingleChunkReferenceSegmentAccessor& operator=(const SingleChunkReferenceSegmentAccessor&) = default;
+  SingleChunkReferenceSegmentAccessor& operator=(SingleChunkReferenceSegmentAccessor&&) = default;
+
   explicit SingleChunkReferenceSegmentAccessor(const AbstractPosList& pos_list, const ChunkID chunk_id,
                                                const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}

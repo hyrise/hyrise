@@ -103,7 +103,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
   }
 
   bool uses_vector_compression() const final {
-    return Derived::_uses_vector_compression;
+    return Derived::USES_VECTOR_COMPRESSION;
   }
 
   void set_vector_compression(VectorCompressionType type) final {

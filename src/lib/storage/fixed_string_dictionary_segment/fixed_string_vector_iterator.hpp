@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -22,17 +23,32 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<on
   using ValueType = std::string_view;
 
  public:
-  FixedStringIterator(size_t string_length, Storage& vector, size_t pos = 0)
+  FixedStringIterator(size_t string_length, Storage& vector, ptrdiff_t pos = 0)
       : _string_length(string_length), _chars(vector), _pos(pos) {}
 
   FixedStringIterator(const FixedStringIterator&) = default;
+  FixedStringIterator(FixedStringIterator&&) = default;
 
   FixedStringIterator& operator=(const FixedStringIterator& other) {
+    if (this == &other) {
+      return *this;
+    }
     DebugAssert(_string_length == other._string_length && &_chars == &other._chars,
                 "can't convert pointers from different vectors");
     _pos = other._pos;
     return *this;
   }
+
+  // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+  FixedStringIterator& operator=(FixedStringIterator&& other) {
+    if (this == &other) {
+      return *this;
+    }
+    *this = const_cast<const FixedStringIterator&>(other);
+    return *this;
+  }
+
+  ~FixedStringIterator() = default;
 
  private:
   friend class boost::iterator_core_access;
@@ -43,11 +59,12 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<on
     return &_chars == &other._chars && _pos == other._pos;
   }
 
-  size_t distance_to(FixedStringIterator const& other) const {  // NOLINT
+  ptrdiff_t distance_to(FixedStringIterator const& other) const {  // NOLINT
     if (_string_length == 0) {
       return 0;
     }
-    return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / std::intptr_t(_string_length);
+    return (static_cast<intptr_t>(other._pos) - static_cast<intptr_t>(this->_pos)) /
+           static_cast<intptr_t>(_string_length);
   }
 
   void advance(size_t n) {  // NOLINT
@@ -74,7 +91,7 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<on
 
   const size_t _string_length;
   Storage& _chars;
-  size_t _pos;
+  ptrdiff_t _pos;
 };
 
 }  // namespace hyrise

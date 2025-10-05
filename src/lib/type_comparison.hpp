@@ -15,7 +15,7 @@ namespace hyrise {
 // NOLINTBEGIN(readability-identifier-naming)
 template <class From, class To>
 struct is_explicitly_convertible {
-  enum { value = std::is_constructible_v<To, From> && !std::is_convertible_v<From, To> };
+  enum : uint8_t { value = std::is_constructible_v<To, From> && !std::is_convertible_v<From, To> };
 };
 
 // source: http://stackoverflow.com/questions/27709461/check-if-type-can-be-an-argument-to-boostlexical-caststring

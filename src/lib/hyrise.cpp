@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <memory_resource>
+#include <utility>
 
 #include "concurrency/transaction_manager.hpp"
 #include "memory/default_memory_resource.hpp"
@@ -32,6 +33,28 @@ Hyrise::Hyrise() {
   log_manager = LogManager{};
   topology = Topology{};
   _scheduler = std::make_shared<ImmediateExecutionScheduler>();
+}
+
+Hyrise& Hyrise::operator=(Hyrise&& other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+
+  // It is important to assign these values in the order that
+  // the old values of the old instance should be destructed.
+  set_scheduler(other.scheduler());
+  benchmark_runner = std::move(other.benchmark_runner);
+  default_lqp_cache = std::move(other.default_lqp_cache);
+  default_pqp_cache = std::move(other.default_pqp_cache);
+  topology = std::move(other.topology);
+  log_manager = std::move(other.log_manager);
+  settings_manager = std::move(other.settings_manager);
+  meta_table_manager = std::move(other.meta_table_manager);
+  transaction_manager = std::move(other.transaction_manager);
+  plugin_manager = std::move(other.plugin_manager);
+  storage_manager = std::move(other.storage_manager);
+
+  return *this;
 }
 
 void Hyrise::reset() {

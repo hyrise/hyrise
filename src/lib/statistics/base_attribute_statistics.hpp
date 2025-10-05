@@ -8,7 +8,7 @@
 namespace hyrise {
 
 class AbstractStatisticsObject;
-enum class PredicateCondition;
+enum class PredicateCondition : uint8_t;
 
 /**
  * Statistically represents

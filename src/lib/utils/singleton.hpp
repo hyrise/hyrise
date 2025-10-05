@@ -18,6 +18,9 @@ class Singleton : public Noncopyable {
   }
 
   virtual ~Singleton() = default;
+  // NOLINTNEXTLINE(bugprone-crtp-constructor-accessibility)
+  Singleton(const Singleton&) = delete;
+  Singleton& operator=(const Singleton&) = delete;
 
  protected:
   // If you need to overwrite the constructor make sure to friend this Singleton class. Otherwise it cannot call
@@ -25,8 +28,8 @@ class Singleton : public Noncopyable {
  private:
   Singleton() = default;
 
- protected:
   Singleton& operator=(Singleton&&) = default;
+  Singleton(Singleton&&) = default;
   friend T;
 };
 

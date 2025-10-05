@@ -27,6 +27,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& stat
 
   auto warm_up = std::make_shared<AggregateHash>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto aggregate = std::make_shared<AggregateHash>(_table_wrapper_a, aggregates, groupby_columns);
     aggregate->execute();
@@ -43,6 +44,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedNoGroupBy)(benc
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
     aggregate->execute();
@@ -67,6 +69,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchma
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby_columns);
     aggregate->execute();
@@ -83,6 +86,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedOneGroupBy)(ben
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
     aggregate->execute();
@@ -107,6 +111,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchm
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby_columns);
     aggregate->execute();
@@ -123,6 +128,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedMultipleGroupBy
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto aggregate = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
     aggregate->execute();
@@ -147,6 +153,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(b
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby_columns);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto aggregate = std::make_shared<AggregateSort>(table_wrapper_sorted, aggregates, groupby_columns);
     aggregate->execute();

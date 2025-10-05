@@ -136,7 +136,8 @@ class OperatorsJoinIndexTest : public BaseTest {
 
 TEST_F(OperatorsJoinIndexTest, Supports) {
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
-  auto configuration = JoinConfiguration{};
+  auto configuration =
+      JoinConfiguration(JoinMode::Inner, PredicateCondition::Equals, DataType::Int, DataType::Int, false);
 
   auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
                                                    std::vector<OperatorJoinPredicate>{}, IndexSide::Left);

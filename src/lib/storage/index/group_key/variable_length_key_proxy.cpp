@@ -74,6 +74,11 @@ VariableLengthKeyProxy& VariableLengthKeyProxy::operator=(const VariableLengthKe
   return *this;
 }
 
+VariableLengthKeyProxy& VariableLengthKeyProxy::operator=(VariableLengthKeyProxy&& other) noexcept {
+  operator=(other._impl);
+  return *this;
+}
+
 VariableLengthKeyProxy& VariableLengthKeyProxy::operator<<=(CompositeKeyLength shift) {
   _impl <<= shift;
   return *this;

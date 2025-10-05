@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <ctime>
 #include <functional>
 #include <map>
@@ -117,7 +118,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
      * For the CUSTOMER table this calculates 1*10*3000
      */
     auto loop_count =
-        std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), size_t{1}, std::multiplies<size_t>());
+        std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), size_t{1}, std::multiplies<>());
 
     auto data = pmr_vector<T>{};
     data.reserve(chunk_size);
@@ -144,9 +145,10 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        * WAREHOUSE_ID | DISTRICT_ID | CUSTOMER_ID
        * indices[0]   | indices[1]  | indices[2]
        */
-      for (auto loop = size_t{0}; loop < cardinalities->size(); ++loop) {
-        auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1,
-                                       std::multiplies<size_t>());
+      const auto num_cardinalities = cardinalities->size();
+      for (auto loop = ptrdiff_t{0}; std::cmp_less(loop, num_cardinalities); ++loop) {
+        auto divisor =
+            std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1, std::multiplies<>());
         indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
       }
 

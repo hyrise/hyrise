@@ -142,7 +142,7 @@ class AbstractTableScanImpl {
         const auto& left = *left_it;
 
         if constexpr (std::is_same_v<RightIterator, std::false_type>) {
-          mask |= ((!check_for_null | !left.is_null()) && func(left)) << index;
+          mask |= static_cast<uint16_t>(((!check_for_null | !left.is_null()) && func(left)) << index);
         } else {
           const auto& right = *right_it;
           mask |= ((!check_for_null | (!left.is_null() && !right.is_null())) & func(left, right)) << index;
@@ -196,7 +196,7 @@ class AbstractTableScanImpl {
 #ifndef __AVX512VL__
       // "Slow" path for non-AVX512VL systems
       for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
-        if (mask >> index & 1) {
+        if (uint32_t{mask} >> index & uint32_t{1}) {
           matches_out[matches_out_index++].chunk_offset = offsets[index];
         }
       }

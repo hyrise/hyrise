@@ -12,8 +12,12 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
 
   FixedWidthIntegerDecompressor(const FixedWidthIntegerDecompressor&) = default;
   FixedWidthIntegerDecompressor(FixedWidthIntegerDecompressor&&) = default;
+  ~FixedWidthIntegerDecompressor() override = default;
 
   FixedWidthIntegerDecompressor& operator=(const FixedWidthIntegerDecompressor& other) {
+    if (this == &other) {
+      return *this;
+    }
     DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor.");
     return *this;
   }

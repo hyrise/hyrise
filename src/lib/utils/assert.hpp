@@ -50,6 +50,7 @@ namespace detail {
 
 }  // namespace detail
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define Fail(msg)                                                                                               \
   hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + (msg)); \
   static_assert(true, "End call of macro with a semicolon.")
@@ -77,3 +78,5 @@ namespace detail {
 #else
 #define DebugAssert(expr, msg)
 #endif
+
+// NOLINTEND(cppcoreguidelines-macro-usage)

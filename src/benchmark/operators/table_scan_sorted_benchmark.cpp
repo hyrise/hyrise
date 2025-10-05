@@ -211,6 +211,7 @@ static void bm_table_scan_sorted(
     warm_up->execute();
   }
 
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto table_scan = std::make_shared<TableScan>(input, predicate);
     table_scan->execute();
@@ -257,10 +258,10 @@ void register_table_scan_sorted_benchmarks() {
 
               const std::string between_label = is_between_scan ? "Between" : "";
               const std::string ref_scan_label = is_reference_scan ? "ReferenceTableScan" : "DataTableScan";
-              benchmark::RegisterBenchmark("BM_Table" + between_label + "ScanSorted/" + ref_scan_label + "/" +
-                                               encoding_name + "/" + std::to_string(selectivity) + "/" + data_type +
-                                               "/" + mode,
-                                           bm_table_scan_sorted, ROWS, selectivity, encoding_type, mode,
+              auto name = std::stringstream{};
+              name << "BM_Table" << between_label << "ScanSorted/" << ref_scan_label << "/" << encoding_name << "/"
+                   << selectivity << "/" << data_type << "/" << mode;
+              benchmark::RegisterBenchmark(name.str(), bm_table_scan_sorted, ROWS, selectivity, encoding_type, mode,
                                            is_between_scan, is_reference_scan, table_generator);
             }
           }
@@ -281,7 +282,7 @@ class StartUp {
   }
 };
 
-StartUp startup;
+const auto startup = StartUp{};
 
 }  // namespace
 

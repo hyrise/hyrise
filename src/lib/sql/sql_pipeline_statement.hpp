@@ -33,7 +33,7 @@ struct SQLPipelineStatementMetrics {
   bool query_plan_cache_hit = false;
 };
 
-enum class SQLPipelineStatus {
+enum class SQLPipelineStatus : uint8_t {
   NotExecuted,  // The pipeline or the pipeline statement has not been executed yet.
   Success,      // The pipeline or the pipeline statement has been executed successfully. This includes user-initiated
                 //     rollbacks, conforming to PostgreSQL's behavior. If use_mvcc is set but no transaction_context

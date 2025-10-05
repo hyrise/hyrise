@@ -33,7 +33,7 @@ void TestPlugin::start() {
 }
 
 void TestPlugin::stop() {
-  Hyrise::get().storage_manager.drop_table("DummyTable");
+  storage_manager.drop_table("DummyTable");
 }
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::provided_user_executable_functions() {

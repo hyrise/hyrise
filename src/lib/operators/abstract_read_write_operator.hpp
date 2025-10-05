@@ -11,7 +11,7 @@
 
 namespace hyrise {
 
-enum class ReadWriteOperatorState {
+enum class ReadWriteOperatorState : uint8_t {
   Pending,     // The operator has been instantiated.
   Executed,    // Execution succeeded.
   Conflicted,  // The execution identified a conflict, which has not yet been resolved.

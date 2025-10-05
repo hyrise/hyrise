@@ -16,7 +16,7 @@ namespace hyrise {
 class AbstractLQPNode;
 class AbstractOperator;
 
-enum class ExpressionType {
+enum class ExpressionType : uint8_t {
   Arithmetic,
   Cast,
   Case,
@@ -86,7 +86,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   /**
    * @return the expression's column name or, optionally, a more detailed description of the expression
    */
-  enum class DescriptionMode {
+  enum class DescriptionMode : uint8_t {
     ColumnName,  // returns only the column name
     Detailed     // additionally includes the address of referenced nodes
   };

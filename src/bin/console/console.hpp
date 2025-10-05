@@ -22,10 +22,14 @@ class TransactionContext;
  */
 class Console : public Singleton<Console> {
  public:
+  Console(const Console&) = delete;
+  Console(Console&&) = delete;
+  Console& operator=(const Console&) = delete;
+  Console& operator=(Console&&) = delete;
   using CommandFunction = std::function<int(const std::string&)>;
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
-  enum ReturnCode { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
+  enum ReturnCode : int8_t { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
 
   /*
    * Prompts user for one line of input, evaluates the given input, and prints out the result.
@@ -87,12 +91,13 @@ class Console : public Singleton<Console> {
    */
   static void handle_signal(int sig);
 
+  ~Console() override;
+
  protected:
   /*
    * Non-public constructor, since Console is a Singleton.
    */
   Console();
-  ~Console() override;
 
   friend class Singleton;
 

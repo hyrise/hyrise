@@ -311,7 +311,7 @@ void prepare_output(std::vector<Segments>& output, const size_t chunk_count, con
 // calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
 // By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
 // aggregate functions can then retrieve the index from the AggregateKey.
-constexpr auto CACHE_MASK = AggregateKeyEntry{1} << 63;  // See explanation below
+constexpr auto CACHE_MASK = AggregateKeyEntry{1} << uint8_t{63};  // See explanation below
 
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
 typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,

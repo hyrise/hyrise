@@ -50,9 +50,6 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   // cautious when using this method in any other context (see comments in #2526).
   uint64_t num_finished_tasks() const;
 
-  void operator=(const Worker&) = delete;
-  void operator=(Worker&&) = delete;
-
  protected:
   enum class AllowSleep : bool { Yes = true, No = false };
 

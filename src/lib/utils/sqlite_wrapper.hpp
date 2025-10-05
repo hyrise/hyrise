@@ -39,7 +39,7 @@ class SQLiteWrapper final {
     Connection(const Connection&) = delete;
     Connection(Connection&& /*other*/) noexcept;
     Connection& operator=(const Connection&) = delete;
-    Connection& operator=(Connection&&) = delete;
+    Connection& operator=(Connection&&) noexcept;
     ~Connection();
 
     sqlite3* db{nullptr};

@@ -941,7 +941,7 @@ int Console::_exec_script(const std::string& script_file) {
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
   auto return_code = magic_enum::enum_underlying(ReturnCode::Ok);
   while (std::getline(script, command)) {
-    return_code = _eval(command);
+    return_code = static_cast<int8_t>(_eval(command));
     if (return_code == ReturnCode::Error || return_code == ReturnCode::Quit) {
       break;
     }
@@ -1168,7 +1168,7 @@ int main(int argc, char** argv) {
 
   // Execute .sql script if specified.
   if (argc == 2) {
-    return_code = console.execute_script(std::string(argv[1]));
+    return_code = static_cast<int8_t>(console.execute_script(std::string(argv[1])));
     // Terminate Console if an error occured during script execution
     if (return_code == Return::Error) {
       return_code = Return::Quit;
@@ -1194,7 +1194,7 @@ int main(int argc, char** argv) {
 
   // Main REPL loop.
   while (return_code != Return::Quit) {
-    return_code = console.read();
+    return_code = static_cast<int8_t>(console.read());
     if (return_code == Return::Ok) {
       console.set_prompt("> ");
     } else if (return_code == Return::Multiline) {

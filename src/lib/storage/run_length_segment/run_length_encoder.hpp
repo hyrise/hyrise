@@ -13,8 +13,9 @@ namespace hyrise {
 
 class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
  public:
+  // NOLINTNEXTLINE(readability-identifier-naming)
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::RunLength>;
-  static constexpr auto _uses_vector_compression = false;
+  static constexpr auto USES_VECTOR_COMPRESSION = false;
 
   template <typename T>
   std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T>& segment_iterable,

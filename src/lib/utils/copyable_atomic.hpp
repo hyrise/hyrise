@@ -28,17 +28,25 @@ class CopyableAtomic {
  public:
   CopyableAtomic() noexcept = default;
 
+  CopyableAtomic(CopyableAtomic&&) = default;
+  CopyableAtomic& operator=(CopyableAtomic&&) = default;
+  ~CopyableAtomic() = default;
+
   CopyableAtomic(const CopyableAtomic<T>& other) {
     _atomic.store(other._atomic.load());
   }
 
   explicit constexpr CopyableAtomic(T desired) noexcept : _atomic{desired} {}
 
+  // NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
   T operator=(T desired) noexcept {
     return _atomic.operator=(desired);
   }
 
   CopyableAtomic& operator=(const CopyableAtomic<T>& other) {
+    if (this == &other) {
+      return *this;
+    }
     _atomic.store(other._atomic.load());
     return *this;
   }

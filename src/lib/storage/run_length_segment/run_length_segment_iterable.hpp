@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <utility>
 
@@ -90,7 +91,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   static EndPositionIterator search_end_positions_for_chunk_offset(
       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions, const ChunkOffset old_chunk_offset,
-      const ChunkOffset new_chunk_offset, const size_t previous_end_position_index,
+      const ChunkOffset new_chunk_offset, const ptrdiff_t previous_end_position_index,
       const size_t linear_search_threshold) {
     const int64_t step_size = static_cast<int64_t>(new_chunk_offset) - old_chunk_offset;
 

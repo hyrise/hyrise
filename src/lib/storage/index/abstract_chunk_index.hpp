@@ -62,6 +62,7 @@ class AbstractChunkIndex : private Noncopyable {
   AbstractChunkIndex() = delete;
   explicit AbstractChunkIndex(const ChunkIndexType type);
   AbstractChunkIndex(AbstractChunkIndex&&) = default;
+  AbstractChunkIndex& operator=(AbstractChunkIndex&&) = default;
   virtual ~AbstractChunkIndex() = default;
 
   /**
@@ -161,6 +162,6 @@ class AbstractChunkIndex : private Noncopyable {
   std::vector<ChunkOffset> _null_positions;
 
  private:
-  const ChunkIndexType _type;
+  ChunkIndexType _type;
 };
 }  // namespace hyrise

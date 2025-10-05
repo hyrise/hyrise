@@ -168,6 +168,20 @@ SQLiteWrapper::Connection::Connection(Connection&& other) noexcept : db(other.db
   other.db = nullptr;
 }
 
+SQLiteWrapper::Connection& SQLiteWrapper::Connection::operator=(SQLiteWrapper::Connection&& other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+
+  if (db) {
+    sqlite3_close(db);
+  }
+
+  db = other.db;
+  other.db = nullptr;
+  return *this;
+}
+
 SQLiteWrapper::Connection::~Connection() {
   if (db) {
     sqlite3_close(db);

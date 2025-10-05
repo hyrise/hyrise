@@ -193,6 +193,8 @@ int main(int argc, char* argv[]) {
    * unzipping is straight forward in Python (and we suspect in C++ it might be... cumbersome).
    */
   const auto setup_imdb_command = "python3 scripts/setup_imdb.py " + table_path;
+  // On Linux, system is thread safe https://man7.org/linux/man-pages/man3/system.3.html
+  // NOLINTNEXTLINE(concurrency-mt-unsafe)
   const auto setup_imdb_return_code = std::system(setup_imdb_command.c_str());
   Assert(setup_imdb_return_code == 0, "setup_imdb.py failed. Did you run the benchmark from the project root dir?");
 

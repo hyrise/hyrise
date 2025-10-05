@@ -15,12 +15,18 @@ static constexpr auto SERVER_BUFFER_SIZE = size_t{4096};
 // beginning of the data structure.
 class RingBufferIterator : public boost::iterator_facade<RingBufferIterator, char, std::forward_iterator_tag, char&> {
  public:
+  RingBufferIterator(RingBufferIterator&&) = default;
+  ~RingBufferIterator() = default;
+
   explicit RingBufferIterator(std::array<char, SERVER_BUFFER_SIZE>& data, size_t position = 0)
       : _data(data), _position(position) {}
 
   RingBufferIterator(const RingBufferIterator&) = default;
 
   RingBufferIterator& operator=(const RingBufferIterator& other) {
+    if (this == &other) {
+      return *this;
+    }
     DebugAssert(&_data == &other._data, "Cannot convert iterators from different arrays.");
     _position = other._position;
     return *this;

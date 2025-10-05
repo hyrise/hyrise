@@ -15,6 +15,13 @@ namespace hyrise {
 struct PausableLoopThread {
  public:
   PausableLoopThread(std::chrono::milliseconds loop_sleep_time, const std::function<void(size_t)>& loop_func);
+  PausableLoopThread(const PausableLoopThread&) = delete;
+  PausableLoopThread& operator=(const PausableLoopThread&) = delete;
+
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted
+  // You can implement them, but you should think about the implications for this class.
+  PausableLoopThread(PausableLoopThread&&) = delete;
+  PausableLoopThread& operator=(PausableLoopThread&&) = delete;
 
   ~PausableLoopThread();
   void pause();

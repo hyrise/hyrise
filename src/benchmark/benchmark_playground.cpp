@@ -66,6 +66,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::State& state) {
   // Add some benchmark-specific setup here
 
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto result = std::vector<size_t>{};
     benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
@@ -85,6 +86,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
   // Add some benchmark-specific setup here
 
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     std::vector<size_t> result;
     benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector

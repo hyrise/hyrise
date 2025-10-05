@@ -62,6 +62,9 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   /* (8 ) */ RowIDPosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(init, alloc) {}
 
+  RowIDPosList(const RowIDPosList&) = delete;
+  RowIDPosList& operator=(const RowIDPosList&) = delete;
+  ~RowIDPosList() override = default;
   RowIDPosList& operator=(RowIDPosList&& other) = default;
 
   // If we know that all entries in the RowIDPosList share a single ChunkID, we can optimize the indirection by

@@ -18,7 +18,7 @@ namespace hyrise {
 class Chunk;
 class Table;
 
-enum class TPCHTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
+enum class TPCHTable : uint8_t { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
 
 extern const std::unordered_map<TPCHTable, std::string> tpch_table_names;
 

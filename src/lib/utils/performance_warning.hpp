@@ -59,6 +59,13 @@ class PerformanceWarningDisabler {
  public:
   PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::_disable()) {}
 
+  // This class is not really ment for usage, so these are not implemented.
+  // You can probably implement them without much issue.
+  PerformanceWarningDisabler(const PerformanceWarningDisabler&) = delete;
+  PerformanceWarningDisabler(PerformanceWarningDisabler&&) = delete;
+  PerformanceWarningDisabler& operator=(const PerformanceWarningDisabler&) = delete;
+  PerformanceWarningDisabler& operator=(PerformanceWarningDisabler&&) = delete;
+
   ~PerformanceWarningDisabler() {
     if (!_previously_disabled) {
       PerformanceWarningClass::_enable();
@@ -66,6 +73,7 @@ class PerformanceWarningDisabler {
   }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define PerformanceWarning(text)                                                                             \
   {                                                                                                          \
     static const PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \

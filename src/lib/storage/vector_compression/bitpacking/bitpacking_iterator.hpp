@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <memory>
 
 #include "bitpacking_decompressor.hpp"
@@ -11,7 +12,7 @@ namespace hyrise {
 // NOLINTBEGIN(readability-identifier-naming)
 class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterator> {
  public:
-  explicit BitPackingIterator(const pmr_compact_vector& data, const size_t absolute_index = 0)
+  explicit BitPackingIterator(const pmr_compact_vector& data, const ptrdiff_t absolute_index = 0)
       : _data{data}, _absolute_index{absolute_index} {}
 
   BitPackingIterator(const BitPackingIterator& other) = default;
@@ -67,7 +68,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   }
 
   const pmr_compact_vector& _data;
-  size_t _absolute_index = 0;
+  ptrdiff_t _absolute_index = 0;
 };
 
 // NOLINTEND(readability-identifier-naming)

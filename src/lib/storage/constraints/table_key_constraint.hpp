@@ -12,9 +12,9 @@
 namespace hyrise {
 
 // NOLINTNEXTLINE(readability-identifier-naming)
-enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
+enum class KeyConstraintType : uint8_t { PRIMARY_KEY, UNIQUE };
 
-enum class ValidationResultType { VALID, INVALID };
+enum class ValidationResultType : uint8_t { VALID, INVALID };
 
 /**
  * Container class to define uniqueness constraints for tables. As defined by SQL, two types of keys are supported:

@@ -80,7 +80,7 @@ class AbstractVisualizer {
   static constexpr uint8_t MAX_LABEL_WIDTH = 50;
 
  public:
-  enum class InputSide { Left, Right };
+  enum class InputSide : uint8_t { Left, Right };
 
   AbstractVisualizer() : AbstractVisualizer(GraphvizConfig{}, VizGraphInfo{}, VizVertexInfo{}, VizEdgeInfo{}) {}
 
@@ -135,8 +135,10 @@ class AbstractVisualizer {
     // This unique_ptr serves as a scope guard that guarantees the deletion of the temp file once we return from this
     // method.
     const auto delete_temp_file = [&tmpname](auto ptr) {
+      // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
       delete ptr;
-      std::remove(tmpname);
+      const auto return_code = std::remove(tmpname);
+      Assert(return_code == 0, "Temp file could not be deleted.");
     };
     const auto delete_guard = std::unique_ptr<char, decltype(delete_temp_file)>(new char, delete_temp_file);
 
@@ -174,6 +176,8 @@ class AbstractVisualizer {
     auto format = _graphviz_config.format;
 
     auto cmd = renderer + " -T" + format + " \"" + tmpname + "\" > \"" + img_filename + "\"";
+    // On Linux, system is thread safe https://man7.org/linux/man-pages/man3/system.3.html
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
     auto ret = system(cmd.c_str());
 
     Assert(ret == 0, "Calling graphviz' " + renderer +
@@ -195,7 +199,7 @@ class AbstractVisualizer {
     return reinterpret_cast<uintptr_t>(v.get());
   }
 
-  enum class WrapLabel { On, Off };
+  enum class WrapLabel : uint8_t { On, Off };
 
   template <typename T>
   void _add_vertex(const T& vertex, const std::string& label = "", const WrapLabel wrap_label = WrapLabel::On) {

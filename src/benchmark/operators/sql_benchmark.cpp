@@ -32,6 +32,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
 
   // Run a benchmark that compiles the given SQL query.
   void bm_compile_query(benchmark::State& state) {
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -42,6 +43,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
 
   // Run a benchmark that only parses the given SQL query.
   void bm_parse_query(benchmark::State& state) {
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -52,6 +54,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   void bm_plan_query(benchmark::State& state) {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
       auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result).lqp_nodes.at(0);
       LQPTranslator{}.translate_node(result_node);
@@ -64,6 +67,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
 
     pqp_cache->resize(16);
 
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
       auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(pqp_cache).create_pipeline();
       pipeline_statement.get_physical_plans();

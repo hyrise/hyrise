@@ -27,7 +27,7 @@ constexpr auto TABLE_SIZE_BIG = size_t{10'000'000};
 
 void clear_cache() {
   auto clear = std::vector<int>();
-  clear.resize(500 * 1000 * 1000, 42);
+  clear.resize(size_t{500} * 1000 * 1000, 42);
   const auto clear_cache_size = clear.size();
   for (auto index = size_t{0}; index < clear_cache_size; index++) {
     clear[index] += 1;
@@ -72,6 +72,7 @@ static void bm_join_impl(benchmark::State& state, const std::shared_ptr<TableWra
   auto warm_up = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                                      OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto join = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                                     OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
