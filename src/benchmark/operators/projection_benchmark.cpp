@@ -3,21 +3,23 @@
 
 #include "benchmark/benchmark.h"
 
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "operators/projection.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/table_wrapper.hpp"
+// This header is needed for TableWrapper
+#include "operators/table_wrapper.hpp"  // IWYU pragma: keep
 
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
-                               const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+static void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& in,
+                                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   auto warm_up = std::make_shared<Projection>(in, expressions);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto projection = std::make_shared<Projection>(in, expressions);
     projection->execute();

@@ -1,21 +1,27 @@
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 
+#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
-                              ColumnID left_column_id, const PredicateCondition predicate_condition,
-                              const AllParameterVariant right_parameter) {
+static void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& in,
+                                     ColumnID left_column_id, const PredicateCondition predicate_condition,
+                                     const AllParameterVariant& right_parameter) {
   const auto left_operand = pqp_column_(left_column_id, in->get_output()->column_data_type(left_column_id),
                                         in->get_output()->column_is_nullable(left_column_id), "");
   auto right_operand = std::shared_ptr<AbstractExpression>{};
@@ -32,6 +38,7 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
 
   auto warm_up = std::make_shared<TableScan>(in, predicate);
   warm_up->execute();
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto table_scan = std::make_shared<TableScan>(in, predicate);
     table_scan->execute();
@@ -73,6 +80,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& sta
       {"l_comment", pmr_string{"%quick_y__above%even%"}},
   });
 
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     for (const auto& column_name_and_pattern : column_names_and_patterns) {
       const auto column_id = lineitem_table->column_id_by_name(column_name_and_pattern.first);

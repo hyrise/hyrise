@@ -1,3 +1,0 @@
-# Disables all checks in the test folder, which are not linted anyway.
-# This way clangd does not highlight errors in test files in your IDE.
-Checks: '-*'
