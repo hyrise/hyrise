@@ -3,7 +3,6 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -215,40 +214,59 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
    * This function must be locked to prevent race conditions. A different thread might be able to change _state
    * successfully while this thread is still between the validity check and _state.exchange(new_state).
    */
-  const auto lock = std::lock_guard<std::mutex>{_transition_to_mutex};
+  auto expected_scheduled = TaskState::Scheduled;
   switch (new_state) {
-    case TaskState::Scheduled:
+    case TaskState::Scheduled: {
       if (_state >= TaskState::Scheduled) {
         return false;
       }
+
       Assert(_state == TaskState::Created, "Illegal state transition to TaskState::Scheduled.");
-      break;
-    case TaskState::Enqueued:
+      auto expected_created = TaskState::Created;
+      return _state.compare_exchange_strong(expected_created, new_state);
+    }
+    case TaskState::Enqueued: {
       if (_state >= TaskState::Enqueued) {
         return false;
       }
-      Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued.");
-      break;
-    case TaskState::AssignedToWorker:
+
+      // We check that enqueued tasks are not in state Created. They should be either in state Scheduled, or they have
+      // been already enqueued between the check above and this assert.
+      Assert(_state != TaskState::Created, "Illegal state transition to TaskState::Enqueued.");
+      return _state.compare_exchange_strong(expected_scheduled, new_state);
+    }
+    case TaskState::AssignedToWorker: {
       if (_state >= TaskState::AssignedToWorker) {
         return false;
       }
-      Assert(_state == TaskState::Scheduled || _state == TaskState::Enqueued,
-             "Illegal state transition to TaskState::AssignedToWorker.");
-      break;
-    case TaskState::Started:
+
+      // If are not yet assigned, we try to assign to the worker. This can be done if the current status either
+      // `Scheduled` or `Enqueued`.
+      if (_state.compare_exchange_strong(expected_scheduled, new_state)) {
+        return true;
+      }
+
+      auto expected_enqueued = TaskState::Enqueued;
+      return _state.compare_exchange_strong(expected_enqueued, new_state);
+    }
+    case TaskState::Started: {
       Assert(_state == TaskState::Scheduled || _state == TaskState::AssignedToWorker,
              "Illegal state transition to TaskState::Started: Task should have been scheduled before being executed.");
-      break;
-    case TaskState::Done:
+      if (_state.compare_exchange_strong(expected_scheduled, new_state)) {
+        return true;
+      }
+
+      auto expected_assigned = TaskState::AssignedToWorker;
+      return _state.compare_exchange_strong(expected_assigned, new_state);
+    }
+    case TaskState::Done: {
       Assert(_state == TaskState::Started, "Illegal state transition to TaskState::Done.");
-      break;
+      auto expected_started = TaskState::Started;
+      return _state.compare_exchange_strong(expected_started, new_state);
+    }
     default:
       Fail("Unexpected target state in AbstractTask.");
   }
-
-  _state.exchange(new_state);
-  return true;
 }
 
 }  // namespace hyrise
