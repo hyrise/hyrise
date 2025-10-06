@@ -25,7 +25,7 @@ enum class PageSizeType : uint8_t { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB
 #endif
 
 // Get the number of bytes for a given PageSizeType.
-constexpr inline uint64_t bytes_for_size_type(const PageSizeType size) {
+constexpr uint64_t bytes_for_size_type(const PageSizeType size) {
   // We assume that the OS page size is either 4 KiB on Linux or 16 KiB on Mac OS.
   // The page size types increase by power of two.
   return OS_PAGE_SIZE << static_cast<uint64_t>(size);
@@ -91,7 +91,7 @@ struct PageID {
  private:
   PageIDType _valid : 1;
   PageIDType _size_type : PAGE_SIZE_TYPE_BITS;
-  PageIDType _index : sizeof(PageIDType) * std::numeric_limits<unsigned char>::digits - PAGE_SIZE_TYPE_BITS - 1;
+  PageIDType _index : (sizeof(PageIDType) * std::numeric_limits<unsigned char>::digits) - PAGE_SIZE_TYPE_BITS - 1;
 };
 
 static_assert(sizeof(PageID) == 8, "PageID must be 64 bit");

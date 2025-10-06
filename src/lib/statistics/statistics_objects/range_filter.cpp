@@ -12,7 +12,6 @@
 
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
-#include "resolve_type.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

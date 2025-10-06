@@ -1,5 +1,6 @@
 #include "min_max_filter.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -7,7 +8,6 @@
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
 #include "expression/evaluation/like_matcher.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

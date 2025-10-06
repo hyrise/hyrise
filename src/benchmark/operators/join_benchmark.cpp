@@ -83,7 +83,7 @@ static void bm_join_impl(benchmark::State& state, const std::shared_ptr<TableWra
 }
 
 template <class C>
-void BM_Join_SmallAndSmall(benchmark::State& state) {  // 1,000 x 1,000
+static void bm_join_small_and_small(benchmark::State& state) {  // 1,000 x 1,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_SMALL);
 
@@ -91,7 +91,7 @@ void BM_Join_SmallAndSmall(benchmark::State& state) {  // 1,000 x 1,000
 }
 
 template <class C>
-void BM_Join_SmallAndBig(benchmark::State& state) {  // 1,000 x 10,000,000
+static void bm_join_small_and_big(benchmark::State& state) {  // 1,000 x 10,000,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_BIG);
 
@@ -99,25 +99,25 @@ void BM_Join_SmallAndBig(benchmark::State& state) {  // 1,000 x 10,000,000
 }
 
 template <class C>
-void BM_Join_MediumAndMedium(benchmark::State& state) {  // 100,000 x 100,000
+static void bm_join_medium_and_medium(benchmark::State& state) {  // 100,000 x 100,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_MEDIUM);
   auto table_wrapper_right = generate_table(TABLE_SIZE_MEDIUM);
 
   bm_join_impl<C>(state, table_wrapper_left, table_wrapper_right);
 }
 
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinNestedLoop);
+BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinNestedLoop);
 
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinIndex);
-BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinIndex);
-BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinIndex);
+BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinIndex);
+BENCHMARK_TEMPLATE(bm_join_small_and_big, JoinIndex);
+BENCHMARK_TEMPLATE(bm_join_medium_and_medium, JoinIndex);
 
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinHash);
-BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinHash);
-BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_small_and_big, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_medium_and_medium, JoinHash);
 
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_small_and_big, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_medium_and_medium, JoinSortMerge);
 
 }  // namespace hyrise

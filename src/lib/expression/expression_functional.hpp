@@ -235,7 +235,7 @@ std::shared_ptr<FunctionExpression> substr_(const String& string, const Start& s
 }
 
 template <typename... Args>
-std::shared_ptr<FunctionExpression> concat_(const Args... args) {
+std::shared_ptr<FunctionExpression> concat_(const Args&... args) {
   return std::make_shared<FunctionExpression>(FunctionType::Concatenate, expression_vector(to_expression(args)...));
 }
 
