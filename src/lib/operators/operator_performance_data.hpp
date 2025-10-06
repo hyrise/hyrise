@@ -18,7 +18,7 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
   };
 
   AbstractOperatorPerformanceData() = default;
-  virtual ~AbstractOperatorPerformanceData() = default;
+  ~AbstractOperatorPerformanceData() override = default;
   AbstractOperatorPerformanceData(const AbstractOperatorPerformanceData&) = delete;
   AbstractOperatorPerformanceData(AbstractOperatorPerformanceData&&) = default;
   AbstractOperatorPerformanceData& operator=(const AbstractOperatorPerformanceData&) = delete;

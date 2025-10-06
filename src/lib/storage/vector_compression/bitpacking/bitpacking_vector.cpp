@@ -42,7 +42,7 @@ BitPackingIterator BitPackingVector::on_begin() const {
 }
 
 BitPackingIterator BitPackingVector::on_end() const {
-  return BitPackingIterator(_data, _data.size());
+  return BitPackingIterator(_data, static_cast<ptrdiff_t>(_data.size()));
 }
 
 std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_memory_resource(

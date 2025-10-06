@@ -63,7 +63,7 @@ class AbstractChunkIndex : private Noncopyable {
   explicit AbstractChunkIndex(const ChunkIndexType type);
   AbstractChunkIndex(AbstractChunkIndex&&) = default;
   AbstractChunkIndex& operator=(AbstractChunkIndex&&) = default;
-  virtual ~AbstractChunkIndex() = default;
+  ~AbstractChunkIndex() override = default;
 
   /**
    * Checks whether the given segments are covered by the index. This is the case when the order of the given columns

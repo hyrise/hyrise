@@ -256,12 +256,12 @@ class Noncopyable {
  public:
   Noncopyable(const Noncopyable&) = delete;
   Noncopyable& operator=(const Noncopyable&) = delete;
+  virtual ~Noncopyable() = default;
 
  protected:
   Noncopyable() = default;
   Noncopyable(Noncopyable&&) noexcept = default;
   Noncopyable& operator=(Noncopyable&&) noexcept = default;
-  ~Noncopyable() = default;
 };
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value

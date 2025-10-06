@@ -185,6 +185,7 @@ inline const detail::ternary<PredicateCondition::BetweenExclusive, BetweenExpres
 
 template <typename... Args>
 std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<AbstractLQPNode>& lqp,
+  // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
                                                      Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
@@ -202,6 +203,7 @@ std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<Abstr
 template <typename... Args>
 std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<AbstractOperator>& pqp,
                                                      const DataType data_type, const bool nullable,
+  // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
                                                      Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
@@ -216,6 +218,7 @@ std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<Abstr
 }
 
 template <typename... Args>
+// NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
 std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... args) {
   return std::vector<std::shared_ptr<AbstractExpression>>({to_expression(args)...});
 }

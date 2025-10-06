@@ -54,7 +54,7 @@ class AbstractPosList : private Noncopyable {
     ChunkOffset chunk_offset;
   };
 
-  virtual ~AbstractPosList() = default;
+  ~AbstractPosList() override = default;
 
   AbstractPosList& operator=(AbstractPosList&& other) = default;
 

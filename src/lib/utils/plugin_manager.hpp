@@ -47,7 +47,7 @@ class PluginManager : public Noncopyable {
   bool has_pre_benchmark_hook(const PluginName& plugin_name) const;
   bool has_post_benchmark_hook(const PluginName& plugin_name) const;
 
-  ~PluginManager();
+  ~PluginManager() override;
   PluginManager(const PluginManager&) = delete;
   PluginManager& operator=(const PluginManager&) = delete;
 
@@ -56,7 +56,7 @@ class PluginManager : public Noncopyable {
   friend class Hyrise;
 
   PluginManager(PluginManager&&) = default;
-  PluginManager& operator=(PluginManager&&) noexcept;
+  PluginManager& operator=(PluginManager&& other) noexcept;
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
   UserExecutableFunctionMap _user_executable_functions;
   std::unordered_map<PluginName, PreBenchmarkHook> _pre_benchmark_hooks;

@@ -51,7 +51,7 @@ class Hyrise : public Singleton<Hyrise> {
   Hyrise(Hyrise&&) noexcept = default;
   ~Hyrise() override = default;
   Hyrise& operator=(const Hyrise&) = delete;
-  Hyrise& operator=(Hyrise&&) noexcept;
+  Hyrise& operator=(Hyrise&& other) noexcept;
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.

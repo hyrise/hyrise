@@ -25,7 +25,7 @@ class ARTNode : private Noncopyable {
  public:
   ARTNode() = default;
 
-  virtual ~ARTNode() = default;
+  ~ARTNode() override = default;
 
   virtual std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
                                                                size_t depth) const = 0;

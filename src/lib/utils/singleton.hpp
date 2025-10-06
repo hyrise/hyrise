@@ -17,7 +17,7 @@ class Singleton : public Noncopyable {
     return instance;
   }
 
-  virtual ~Singleton() = default;
+  ~Singleton() override = default;
   // NOLINTNEXTLINE(bugprone-crtp-constructor-accessibility)
   Singleton(const Singleton&) = delete;
   Singleton& operator=(const Singleton&) = delete;

@@ -27,7 +27,7 @@ class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<
  public:
   explicit AbstractSetting(const std::string& init_name);
 
-  virtual ~AbstractSetting() = default;
+  ~AbstractSetting() override = default;
 
   virtual const std::string& description() const = 0;
 

@@ -27,7 +27,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   using IteratorRange = std::pair<Iterator, Iterator>;
   using IteratorRangePair = std::pair<IteratorRange, IteratorRange>;
 
-  virtual ~BasePartialHashIndexImpl() = default;
+  ~BasePartialHashIndexImpl() override = default;
 
   /**
    * Adds the given chunks to this index. If a chunk is already indexed, it is not indexed again.
@@ -58,7 +58,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual tsl::sparse_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
 
-/** 
+/**
  * Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
  * Chunks can be added via `insert()`.
  *

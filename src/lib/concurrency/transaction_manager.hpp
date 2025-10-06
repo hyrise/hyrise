@@ -69,9 +69,10 @@ class TransactionManager : public Noncopyable {
    */
   std::optional<CommitID> get_lowest_active_snapshot_commit_id() const;
 
+  ~TransactionManager() override;
+
  private:
   TransactionManager();
-  ~TransactionManager();
 
   friend class Hyrise;
   friend class TransactionContext;

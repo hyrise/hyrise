@@ -23,10 +23,9 @@ JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std:
 JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
                                        ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
-    : AbstractTableGenerator(benchmark_config),
-      TPCHTableGenerator(scale_factor, clustering_configuration, benchmark_config),
-      FileBasedTableGenerator(benchmark_config, data_path + "/"),
-      _dbgen_path(dbgen_path) {}
+    : TPCHTableGenerator(scale_factor, clustering_configuration, benchmark_config),
+      _dbgen_path(dbgen_path),
+      _file_based_table_generator(benchmark_config, data_path + "/") {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate() {
   auto table_names = std::vector<std::string>{};
@@ -35,14 +34,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
     table_names.emplace_back(table_name);
   }
 
-  generate_csv_tables_with_external_dbgen(_dbgen_path, table_names, "resources/benchmark/jcch", _path, _scale_factor,
+  generate_csv_tables_with_external_dbgen(_dbgen_path, table_names, "resources/benchmark/jcch", _file_based_table_generator.path(), _scale_factor,
                                           "-k");
 
   // Having generated the .csv files, call the FileBasedTableGenerator just as if those files were user-provided
-  const auto& generated_tables = FileBasedTableGenerator::generate();
+  const auto& generated_tables = _file_based_table_generator.generate();
 
   // FileBasedTableGenerator automatically stores a binary file. Remove the CSV data to save some space.
-  remove_csv_tables(_path);
+  remove_csv_tables(_file_based_table_generator.path());
 
   return generated_tables;
 }

@@ -15,7 +15,7 @@ namespace hyrise {
 class AbstractStatisticsObject : private Noncopyable {
  public:
   explicit AbstractStatisticsObject(const DataType init_data_type);
-  virtual ~AbstractStatisticsObject() = default;
+  ~AbstractStatisticsObject() override = default;
 
   /**
    * @return A statistics object that represents the data after the predicate has been applied.

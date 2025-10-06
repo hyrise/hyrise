@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
   context.emplace("clustering", magic_enum::enum_name(clustering_configuration));
   context.emplace("use_prepared_statements", use_prepared_statements);
 
-  auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
+  auto table_generator = std::unique_ptr<TPCHTableGenerator>{};
   auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
 
   if (jcch) {
