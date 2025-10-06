@@ -16,7 +16,7 @@
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 #include <boost/variant/get.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -929,8 +929,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
     Assert(datetime_component == DatetimeComponent::Second, "Only SECOND is extracted as Double.");
     return _evaluate_extract_component<double>(from_result, [](const auto& timestamp) {
       const auto& time_of_day = timestamp.time_of_day();
-      return static_cast<double>(time_of_day.seconds()) + static_cast<double>(time_of_day.fractional_seconds()) /
-                                                              static_cast<double>(time_of_day.ticks_per_second());
+      return static_cast<double>(time_of_day.seconds()) + (static_cast<double>(time_of_day.fractional_seconds()) /
+                                                           static_cast<double>(time_of_day.ticks_per_second()));
     });
   }
 
@@ -1254,13 +1254,11 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
       switch (logical_expression.logical_operator) {
         case LogicalOperator::And:
-          std::set_intersection(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(),
-                                right_pos_list.end(), std::back_inserter(result_pos_list));
+          std::ranges::set_intersection(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
           break;
 
         case LogicalOperator::Or:
-          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(),
-                         std::back_inserter(result_pos_list));
+          std::ranges::set_union(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
           break;
       }
     } break;
@@ -1484,9 +1482,9 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
   const auto right_size = right.size();
   if (left_size == right_size) {
     auto nulls = pmr_vector<bool>(left_size);
-    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](const auto lhs, const auto rhs) {
-      return lhs || rhs;
-    });
+    for (auto index = size_t{0}; index < left_size; ++index) {
+      nulls[index] = left[index] || right[index];
+    }
     return nulls;
   }
 

@@ -11,7 +11,7 @@
 
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -39,10 +39,9 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
-  return std::equal(expressions_a.begin(), expressions_a.end(), expressions_b.begin(), expressions_b.end(),
-                    [&](const auto& expression_a, const auto& expression_b) {
-                      return *expression_a == *expression_b;
-                    });
+  return std::ranges::equal(expressions_a, expressions_b, [&](const auto& expression_a, const auto& expression_b) {
+    return *expression_a == *expression_b;
+  });
 }
 
 bool expressions_equal_to_expressions_in_different_lqp(
@@ -356,7 +355,7 @@ bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpr
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
   if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression does not have a value set.");
-    return *correlated_parameter_expression->value();
+    return correlated_parameter_expression->value();
   }
 
   if (expression.type == ExpressionType::Value) {
