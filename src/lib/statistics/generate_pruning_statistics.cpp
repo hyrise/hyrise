@@ -25,7 +25,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT (build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,

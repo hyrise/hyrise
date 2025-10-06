@@ -2,7 +2,7 @@
 
 namespace hyrise {
 
-bool PerformanceWarningClass::disabled = []() {  // NOLINT
+bool PerformanceWarningClass::disabled = []() {
   // Static initializer hack to print some warnings in various binaries.
 
   if constexpr (HYRISE_DEBUG) {

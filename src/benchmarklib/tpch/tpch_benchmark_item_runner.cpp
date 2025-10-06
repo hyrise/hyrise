@@ -470,7 +470,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
   }
 
   return _substitute_placeholders(item_id, parameters);
-}  // NOLINT
+}  // NOLINT(readability/fn_size)
 
 std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkItemID item_id) const {
   DebugAssert(item_id < 22, "There are only 22 TPC-H queries.");

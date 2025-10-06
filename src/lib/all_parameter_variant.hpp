@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 
 #include <boost/lexical_cast.hpp>
 
@@ -19,10 +20,9 @@ namespace hana = boost::hana;
  */
 
 // This holds pairs of all types and their respective string representation
-static constexpr auto PARAMETER_TYPES =
-    hana::make_tuple(hana::make_pair("AllTypeVariant", hana::type_c<AllTypeVariant>),
-                     hana::make_pair("ColumnID", hana::type_c<ColumnID>),       // NOLINT
-                     hana::make_pair("Parameter", hana::type_c<ParameterID>));  // NOLINT
+static constexpr auto PARAMETER_TYPES = hana::make_tuple(
+    hana::make_pair("AllTypeVariant", hana::type_c<AllTypeVariant>),
+    hana::make_pair("ColumnID", hana::type_c<ColumnID>), hana::make_pair("Parameter", hana::type_c<ParameterID>));
 
 // This holds only the possible data types.
 static constexpr auto PARAMETER_TYPES_AS_HANA_SEQUENCE = hana::transform(PARAMETER_TYPES, hana::second);

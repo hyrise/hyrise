@@ -155,12 +155,14 @@ int main(int argc, char* argv[]) {
   constexpr auto DEFAULT_TABLE_PATH = "imdb_data";
   constexpr auto DEFAULT_QUERY_PATH = "third_party/join-order-benchmark";
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   cli_options.add_options()
-  ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH)) // NOLINT
-  ("query_path", "Directory containing the .sql files of the Join Order Benchmark", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH)) // NOLINT
-  ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
+  ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH))
+  ("query_path", "Directory containing the .sql files of the Join Order Benchmark", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH))
+  ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all"));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   auto benchmark_config = std::shared_ptr<BenchmarkConfig>{};
   auto query_path = std::string{};

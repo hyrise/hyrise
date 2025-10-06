@@ -1783,7 +1783,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
@@ -1835,7 +1836,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   return prepared_plan->instantiate(parameters);
 }
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
   // Querying tables that are freshly loaded is not easy as we need meta information, such as column names and data
   // types, to resolve queries and build the query plans. For instance, we need an origin node for column expressions
@@ -1854,7 +1856,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
                           import_type_to_file_type(import_statement.type), encoding);
 }
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};

@@ -29,7 +29,7 @@
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
@@ -49,19 +49,21 @@ using namespace hyrise;  // NOLINT
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (10.0 ~ 10 GB)", cxxopts::value<float>()->default_value("10"))
-    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
-    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>())
+    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false"))
     ("j,jcch", "Use JCC-H data and query generators instead of TPC-H. If this parameter is used, table data always "
                "contains skew. With --jcch=skewed, queries are generated to be affected by this skew. With "
-               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")) // NOLINT
+               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value(""))
     ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
                    "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
                    "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
-                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")); // NOLINT
+                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None"));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   auto config = std::shared_ptr<BenchmarkConfig>{};
   auto comma_separated_queries = std::string{};
@@ -91,7 +93,7 @@ int main(int argc, char* argv[]) {
     const auto jcch_mode = cli_parse_result["jcch"].as<std::string>();
     if (jcch_mode == "skewed") {
       jcch_skewed = true;
-    } else if (jcch_mode == "normal") {  // NOLINT
+    } else if (jcch_mode == "normal") {
       jcch_skewed = false;
     } else {
       Fail("Invalid JCC-H mode, use skewed or normal.");

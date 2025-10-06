@@ -656,7 +656,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate() {
-  const auto cache_directory = std::string{"tpcc_cached_tables/sf-"} + std::to_string(num_warehouses);  // NOLINT
+  const auto cache_directory = std::string{"tpcc_cached_tables/sf-"} + std::to_string(num_warehouses);
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     return _load_binary_tables_from_path(cache_directory);
   }
@@ -763,6 +763,6 @@ void TPCCTableGenerator::_add_constraints(
   foreign_key_constraint(stock_table, {"S_I_ID"}, item_table, {"I_ID"});
 }
 
-thread_local TPCCRandomGenerator TPCCTableGenerator::random_gen;  // NOLINT
+thread_local TPCCRandomGenerator TPCCTableGenerator::random_gen;
 
 }  // namespace hyrise

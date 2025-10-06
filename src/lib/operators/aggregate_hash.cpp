@@ -544,7 +544,8 @@ AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& input_oper
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
-  // NOLINTNEXTLINE - clang-tidy wants _has_aggregate_functions in the member initializer list.
+  // clang-tidy wants _has_aggregate_functions in the member initializer list.
+  // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
   _has_aggregate_functions =
       !_aggregates.empty() && !std::ranges::all_of(_aggregates, [](const auto& aggregate_expression) {
         return aggregate_expression->window_function == WindowFunction::Any;

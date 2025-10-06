@@ -432,7 +432,8 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 int Console::_exit(const std::string& /*args*/) {
   return ReturnCode::Quit;
 }

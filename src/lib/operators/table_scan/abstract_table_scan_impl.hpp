@@ -133,7 +133,6 @@ class AbstractTableScanImpl {
       // We do not use the OpenMP runtime, but only the compiler pragmas (look up -fopenmp-simd).
 
       // This empty block is used to convince clang-format to keep the pragma indented
-      // NOLINTNEXTLINE
       {}  // clang-format off
       #pragma omp simd reduction(|:mask) safelen(BLOCK_SIZE)
       // clang-format on
@@ -170,7 +169,6 @@ class AbstractTableScanImpl {
         // save us the memory lookup
         const auto first_offset = left_it_for_offsets->chunk_offset();
 
-        // NOLINTNEXTLINE
         {}  // clang-format off
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
@@ -182,7 +180,6 @@ class AbstractTableScanImpl {
       } else {
         // Slow path - the chunk offsets are not guaranteed to be linear
 
-        // NOLINTNEXTLINE
         {}  // clang-format off
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
@@ -216,7 +213,6 @@ class AbstractTableScanImpl {
       // than stopping at the number of matching rows because we do not need a branch for this. The loop will be
       // vectorized automatically.
 
-      // NOLINTNEXTLINE
       {}  // clang-format off
       #pragma omp simd safelen(BLOCK_SIZE)
       // clang-format on

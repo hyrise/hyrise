@@ -55,11 +55,11 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<on
 
   // We have a couple of NOLINTs here becaues the facade expects these method names:
 
-  bool equal(FixedStringIterator const& other) const {  // NOLINT
+  bool equal(FixedStringIterator const& other) const {  // NOLINT(readability-identifier-naming)
     return &_chars == &other._chars && _pos == other._pos;
   }
 
-  ptrdiff_t distance_to(FixedStringIterator const& other) const {  // NOLINT
+  ptrdiff_t distance_to(FixedStringIterator const& other) const {  // NOLINT(readability-identifier-naming)
     if (_string_length == 0) {
       return 0;
     }
@@ -67,25 +67,26 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<on
            static_cast<intptr_t>(_string_length);
   }
 
-  void advance(size_t n) {  // NOLINT
+  void advance(size_t n) {  // NOLINT(readability-identifier-naming)
     _pos += n * _string_length;
   }
 
-  void increment() {  // NOLINT
+  void increment() {  // NOLINT(readability-identifier-naming)
     _pos += _string_length;
   }
 
-  void decrement() {  // NOLINT
+  void decrement() {  // NOLINT(readability-identifier-naming)
     _pos -= _string_length;
   }
 
   template <bool on_const_storage_local = on_const_storage>
-  std::enable_if_t<on_const_storage_local, const std::string_view> dereference() const {  // NOLINT
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  std::enable_if_t<on_const_storage_local, const std::string_view> dereference() const {
     return std::string_view{&_chars[_pos], strnlen(&_chars[_pos], _string_length)};
   }
 
   template <bool on_const_storage_local = on_const_storage>
-  std::enable_if_t<!on_const_storage_local, FixedString> dereference() const {  // NOLINT
+  std::enable_if_t<!on_const_storage_local, FixedString> dereference() const {  // NOLINT(readability-identifier-naming)
     return FixedString{&_chars[_pos], _string_length};
   }
 

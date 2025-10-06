@@ -134,7 +134,7 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates, configuration.radix_bits);
-    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT
+    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
       Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
                                          configuration.secondary_predicates, *configuration.index_side);
@@ -190,12 +190,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
+    // NOLINTBEGIN(whitespace/line_length)
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), ENCODING_TYPES.front()},  // NOLINT
+        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), ENCODING_TYPES.front()},
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), ENCODING_TYPES.front()},  // NOLINT
+        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), ENCODING_TYPES.front()},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -208,6 +209,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       std::nullopt
     };
     // clang-format on
+    // NOLINTEND(whitespace/line_length)
 
     /**
      * Returns a set of adapted configurations if the join type provides further configuration possibilities that

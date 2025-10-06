@@ -694,12 +694,14 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
    * Build LQP and translate to PQP.
    */
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),  // NOLINT
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),
     ProjectionNode::make(expression_vector(int_float_b, int_float_a, add_(int_float_b, int_float_a)),
       int_float_node));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
   const auto op = LQPTranslator{}.translate_node(lqp);
 
   /**

@@ -155,7 +155,7 @@ INSTANTIATE_TEST_SUITE_P(Variations, SortTest,
                            // Empty input tables with forced materialization.
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"},             // NOLINT(whitespace/line_length)
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}},                                                           true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"}              // NOLINT(whitespace/line_length)
-                          ),  // NOLINT
+                          ),  // NOLINT(whitespace/parens)
                          sort_test_formatter);
 
 // clang-format on

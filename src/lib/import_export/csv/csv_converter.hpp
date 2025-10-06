@@ -71,7 +71,7 @@ class CsvConverter : public BaseCsvConverter {
     // clang-format off
     if constexpr(std::is_same_v<T, pmr_string>) {
       unescape(value, _config);
-    } else {  // NOLINT
+    } else {
       // clang-format on
       if (_config.reject_quoted_nonstrings) {
         Assert(value == unescape_copy(value, _config),

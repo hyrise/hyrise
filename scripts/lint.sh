@@ -10,7 +10,7 @@ exitcode=0
 #  - readability/inheritance: cpplint complains about "override final" as being redundant, but it is not.
 #  - whitespace/braces: Does not work with {} initialization (see https://github.com/cpplint/cpplint/issues/204#issuecomment-1146769949).
 #  - build/include_subdir: Does not work well with our structure of using lib, test, and third_party directories.
-find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-runtime/references,-build/c++11,-build/c++17,-readability/nolint,-readability/inheritance,-whitespace/braces,-build/include_subdir --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
+find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-runtime/references,-build/c++11,-build/c++17,-readability/nolint,-readability/inheritance,-whitespace/braces,-build/include_subdir,-whitespace/indent_namespace --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
 let "exitcode |= $?"
 #                             /------------------ runs in parallel -------------------\
 # Conceptual: find | parallel python cpplint \| grep -v \| test \${PIPESTATUS[0]} -eq 0

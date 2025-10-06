@@ -13,11 +13,11 @@
 namespace hyrise {
 
 VariableLengthKey::VariableLengthKey(CompositeKeyLength bytes_per_key)
-    : _owned_data(std::make_unique<std::vector<VariableLengthKeyWord>>(bytes_per_key)),  // NOLINT
+    : _owned_data(std::make_unique<std::vector<VariableLengthKeyWord>>(bytes_per_key)),
       _impl(_owned_data->data(), bytes_per_key) {}
 
 VariableLengthKey::VariableLengthKey(const VariableLengthKeyBase& other)
-    : _owned_data(std::make_unique<std::vector<VariableLengthKeyWord>>(other.size)),  // NOLINT
+    : _owned_data(std::make_unique<std::vector<VariableLengthKeyWord>>(other.size)),
       _impl(_owned_data->data(), other.size) {
   std::copy(other.data, other.data + other.size, _impl.data);
 }

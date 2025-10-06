@@ -297,7 +297,7 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
 
 void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
-  DebugAssert(([this, chunk_id]() {  // NOLINT
+  DebugAssert(([this, chunk_id]() {
                 const auto chunk = get_chunk(chunk_id);
                 return (chunk->invalid_row_count() == chunk->size());
               }()),
@@ -306,7 +306,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
   std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
 }
 
-void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
+void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,
                          PolymorphicAllocator<Chunk> alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables if MVCC is enabled.");

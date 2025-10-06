@@ -31,7 +31,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Ceiling of integer division
 size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {

@@ -6,8 +6,8 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-std::string hyrise::test_data_path;        // NOLINT
-std::string hyrise::test_executable_path;  // NOLINT
+std::string hyrise::test_data_path;        // NOLINT(runtime/string)
+std::string hyrise::test_executable_path;  // NOLINT(runtime/string)
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
   Assert(!std::filesystem::exists(hyrise::test_data_path),

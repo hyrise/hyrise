@@ -57,7 +57,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     // cached block, the value and the input block id are returned.
     for (auto index = size_t{0}; index < position_filter_size; ++index) {
       const auto& position = (*position_filter)[index];
-      // NOLINTNEXTLINE
       auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
       decompressed_filtered_segment[index] = std::move(value);
       cached_block_index = block_index;

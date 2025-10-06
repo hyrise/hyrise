@@ -33,7 +33,7 @@ class PredicateNode;
  * this rule adds the semi join reduction directly below the join, the PredicatePlacementRule will push in below the
  * aggregate. As a result, the LQP after this rule looks like this:
  *
- * [ part p1 ] -> [ Predicate p_container IN (...) ] -----------------------------------------------------------------> ...  // NOLINT
+ * [ part p1 ] -> [ Predicate p_container IN (...) ] -----------------------------------------------------------------> ...
  *                                                   \                                                               /
  * [ part p2 ] --------------------------------------> [ Semi Join p1.p_container = p2.p_container ] -> [ Aggregate ]
  *

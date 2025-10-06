@@ -37,15 +37,15 @@ class RingBufferIterator : public boost::iterator_facade<RingBufferIterator, cha
 
   // We have a couple of NOLINTs here because the facade expects these method names:
 
-  bool equal(RingBufferIterator const& other) const {  // NOLINT
+  bool equal(RingBufferIterator const& other) const {  // NOLINT(readability-identifier-naming)
     return &_data == &other._data && _position == other._position;
   }
 
-  void increment() {  // NOLINT
+  void increment() {  // NOLINT(readability-identifier-naming)
     _position = (_position + 1) % SERVER_BUFFER_SIZE;
   }
 
-  reference dereference() const {  // NOLINT
+  reference dereference() const {  // NOLINT(readability-identifier-naming)
     return _data[_position];
   }
 

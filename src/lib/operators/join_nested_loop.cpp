@@ -27,7 +27,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 void __attribute__((noinline)) process_match(RowID left_row_id, RowID right_row_id,
                                              const JoinNestedLoop::JoinParams& params) {
@@ -310,9 +310,10 @@ void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_
   /**
    * SLOW PATH
    */
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {  // NOLINT
-    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {  // NOLINT
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {
+    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {
       using LeftType = typename std::decay_t<decltype(left_it)>::ValueType;
       using RightType = typename std::decay_t<decltype(right_it)>::ValueType;
 
@@ -334,6 +335,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_
     });
   });
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 }
 
 void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,

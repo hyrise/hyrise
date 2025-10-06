@@ -83,7 +83,7 @@ static void bm_join_impl(benchmark::State& state, const std::shared_ptr<TableWra
 }
 
 template <class C>
-void BM_Join_SmallAndSmall(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+void BM_Join_SmallAndSmall(benchmark::State& state) {  // 1,000 x 1,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_SMALL);
 
@@ -91,7 +91,7 @@ void BM_Join_SmallAndSmall(benchmark::State& state) {  // NOLINT 1,000 x 1,000
 }
 
 template <class C>
-void BM_Join_SmallAndBig(benchmark::State& state) {  // NOLINT 1,000 x 10,000,000
+void BM_Join_SmallAndBig(benchmark::State& state) {  // 1,000 x 10,000,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_BIG);
 
@@ -99,7 +99,7 @@ void BM_Join_SmallAndBig(benchmark::State& state) {  // NOLINT 1,000 x 10,000,00
 }
 
 template <class C>
-void BM_Join_MediumAndMedium(benchmark::State& state) {  // NOLINT 100,000 x 100,000
+void BM_Join_MediumAndMedium(benchmark::State& state) {  // 100,000 x 100,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_MEDIUM);
   auto table_wrapper_right = generate_table(TABLE_SIZE_MEDIUM);
 
