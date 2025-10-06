@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.hpp"
 #include "create_iterable_from_non_reference_segment.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

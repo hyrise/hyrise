@@ -34,8 +34,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
     table_names.emplace_back(table_name);
   }
 
-  generate_csv_tables_with_external_dbgen(_dbgen_path, table_names, "resources/benchmark/jcch", _file_based_table_generator.path(), _scale_factor,
-                                          "-k");
+  generate_csv_tables_with_external_dbgen(_dbgen_path, table_names, "resources/benchmark/jcch",
+                                          _file_based_table_generator.path(), _scale_factor, "-k");
 
   // Having generated the .csv files, call the FileBasedTableGenerator just as if those files were user-provided
   const auto& generated_tables = _file_based_table_generator.generate();

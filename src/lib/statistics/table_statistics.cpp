@@ -82,7 +82,7 @@ TableStatistics::TableStatistics(std::vector<std::shared_ptr<const BaseAttribute
 
 DataType TableStatistics::column_data_type(const ColumnID column_id) const {
   DebugAssert(column_id < column_statistics.size(), "ColumnID out of bounds");
-  return column_statistics[column_id]->data_type;
+  return column_statistics[column_id]->data_type();
 }
 
 std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_statistics) {
@@ -94,7 +94,7 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_stat
       stream << *dummy_statistics << '\n';
       continue;
     }
-    resolve_data_type(column_statistics->data_type, [&](const auto data_type_t) {
+    resolve_data_type(column_statistics->data_type(), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       stream << *std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(column_statistics);
     });

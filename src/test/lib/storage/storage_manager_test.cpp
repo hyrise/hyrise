@@ -60,8 +60,8 @@ TEST_F(StorageManagerTest, StatisticsCreationOnAddTable) {
   EXPECT_EQ(table->table_statistics()->row_count, 3.0);
   const auto chunk = table->get_chunk(ChunkID{0});
   EXPECT_TRUE(chunk->pruning_statistics());
-  EXPECT_EQ(chunk->pruning_statistics()->at(0)->data_type, DataType::Int);
-  EXPECT_EQ(chunk->pruning_statistics()->at(1)->data_type, DataType::Float);
+  EXPECT_EQ(chunk->pruning_statistics()->at(0)->data_type(), DataType::Int);
+  EXPECT_EQ(chunk->pruning_statistics()->at(1)->data_type(), DataType::Float);
 }
 
 TEST_F(StorageManagerTest, NoSuperfluousStatisticsGeneration) {

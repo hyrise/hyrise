@@ -20,8 +20,7 @@
 namespace hyrise {
 
 template <typename T>
-RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges)
-    : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(init_ranges)) {
+RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges) : ranges(std::move(init_ranges)) {
   DebugAssert(!ranges.empty(), "Cannot construct empty RangeFilter.");
 }
 
@@ -329,6 +328,13 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
     default:
       return false;
   }
+}
+
+template <typename T>
+std::shared_ptr<const AbstractStatisticsObject> RangeFilter<T>::pruned(
+    const size_t /* num_values_pruned */, const PredicateCondition /* predicate_condition */,
+    const AllTypeVariant& /* variant_value */, const std::optional<AllTypeVariant>& /* variant_value2 */) const {
+  Fail("Pruning has not yet been implemented for the given statistics object");
 }
 
 template class RangeFilter<int32_t>;

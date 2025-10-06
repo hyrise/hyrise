@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "histogram_domain.hpp"
+#include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/abstract_segment.hpp"
 #include "types.hpp"
@@ -84,6 +85,10 @@ class AbstractHistogram : public AbstractStatisticsObject, public std::enable_sh
   using HistogramWidthType = std::conditional_t<std::is_same_v<T, pmr_string>, StringHistogramDomain::IntegralType, T>;
 
   explicit AbstractHistogram(const HistogramDomain<T>& domain = {});
+
+  constexpr DataType data_type() const override {
+    return data_type_from_type<T>();
+  }
 
   /**
    * @return name of the histogram type, e.g., "EqualDistinctCount"

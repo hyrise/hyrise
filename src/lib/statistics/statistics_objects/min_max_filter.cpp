@@ -14,8 +14,7 @@
 namespace hyrise {
 
 template <typename T>
-MinMaxFilter<T>::MinMaxFilter(T init_min, T init_max)
-    : AbstractStatisticsObject{data_type_from_type<T>()}, min{std::move(init_min)}, max{std::move(init_max)} {}
+MinMaxFilter<T>::MinMaxFilter(T init_min, T init_max) : min{std::move(init_min)}, max{std::move(init_max)} {}
 
 template <typename T>
 Cardinality MinMaxFilter<T>::estimate_cardinality(const PredicateCondition /*predicate_condition*/,
@@ -191,6 +190,13 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     default:
       return false;
   }
+}
+
+template <typename T>
+std::shared_ptr<const AbstractStatisticsObject> MinMaxFilter<T>::pruned(
+    const size_t /* num_values_pruned */, const PredicateCondition /* predicate_condition */,
+    const AllTypeVariant& /* variant_value */, const std::optional<AllTypeVariant>& /* variant_value2 */) const {
+  Fail("Pruning has not yet been implemented for the given statistics object");
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(MinMaxFilter);

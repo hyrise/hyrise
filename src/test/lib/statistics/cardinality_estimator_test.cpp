@@ -895,7 +895,7 @@ TEST_F(CardinalityEstimatorTest, StaticTable) {
   const auto dummy_statistics = estimator.estimate_statistics(static_table_node);
   EXPECT_DOUBLE_EQ(dummy_statistics->row_count, 3.0);
   ASSERT_EQ(dummy_statistics->column_statistics.size(), 1);
-  ASSERT_EQ(dummy_statistics->column_statistics[0]->data_type, DataType::Int);
+  ASSERT_EQ(dummy_statistics->column_statistics[0]->data_type(), DataType::Int);
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*dummy_statistics->column_statistics[0]));
 
   // Case (ii): Statistics available, simply forward them.
@@ -1441,7 +1441,7 @@ TEST_F(CardinalityEstimatorTest, EstimationsOnDummyStatistics) {
 TEST_F(CardinalityEstimatorTest, DummyStatistics) {
   const auto dummy_statistics = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Int);
 
-  EXPECT_EQ(dummy_statistics->data_type, DataType::Int);
+  EXPECT_EQ(dummy_statistics->data_type(), DataType::Int);
 
   // Dummy statistics forward themselves when scaled.
   EXPECT_EQ(dummy_statistics->scaled(0.2), dummy_statistics);

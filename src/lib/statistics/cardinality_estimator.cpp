@@ -123,8 +123,17 @@ std::shared_ptr<TableStatistics> prune_column_statistics(
 
 }  // namespace
 
-CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_type)
-    : BaseAttributeStatistics(init_data_type) {}
+CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_type) : _data_type(init_data_type) {}
+
+std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::DummyStatistics::pruned(
+    const size_t /* num_values_pruned */, const PredicateCondition /* predicate_condition */,
+    const AllTypeVariant& /* variant_value */, const std::optional<AllTypeVariant>& /* variant_value2 */) const {
+  Fail("Pruning has not yet been implemented for the given statistics object");
+}
+
+DataType CardinalityEstimator::DummyStatistics::data_type() const {
+  return _data_type;
+}
 
 void CardinalityEstimator::DummyStatistics::set_statistics_object(
     const std::shared_ptr<const AbstractStatisticsObject>& /*statistics_object*/) {
