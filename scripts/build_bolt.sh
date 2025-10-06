@@ -81,7 +81,12 @@ cmake -DCOMPILE_FOR_BOLT=TRUE ..
 
 ninja clean
 # Only compile the benchmarks that we need.
-time ninja ${benchmarks[@]} -j "$num_cores"
+if [ "$cli" -eq 1 ]
+then
+  time ninja ${benchmarks[@]} hyriseTest -j "$num_cores"
+else
+  time ninja
+fi
 
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
 time llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
