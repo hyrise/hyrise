@@ -10,7 +10,6 @@ using namespace hwy::HWY_NAMESPACE;
 #pragma clang diagnostic ignored "-Wused-but-marked-unused"
 
 void copy_nontemporal(const uint8_t* HWY_RESTRICT in_ptr, size_t count, uint8_t* HWY_RESTRICT out_ptr) {
-  std::cerr << "HWY_TARGET: " << HWY_TARGET << '\n';
   const auto tag = ScalableTag<uint8_t>{};
   for (auto i = size_t{0}; i <= count; i += Lanes(tag)) {
     const auto vec = Load(tag, in_ptr + i);
