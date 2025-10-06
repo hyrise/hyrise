@@ -135,8 +135,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           std::min<size_t>(_target_table->target_chunk_size() - target_chunk->size(), remaining_rows);
 
       _target_chunk_ranges.emplace_back(
-          ChunkRange{target_chunk_id, target_chunk->size(),
-                     static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
+          ChunkRange{.chunk_id = target_chunk_id,
+                     .begin_chunk_offset = target_chunk->size(),
+                     .end_chunk_offset = static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
 
       // Mark new (but still empty) rows as being under modification by current transaction. Do so before resizing the
       // Segments, because the resize of `Chunk::_segments.front()` is what releases the new row count.

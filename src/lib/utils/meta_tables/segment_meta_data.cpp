@@ -6,7 +6,7 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -108,7 +108,7 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
 
     auto distinct_values = std::unordered_set<ColumnDataType>{};
     auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
-    iterable.with_iterators([&](auto it, const auto end) {
+    iterable.with_iterators([&](auto it, const auto& end) {
       for (; it != end; ++it) {
         const auto segment_item = *it;
         if (!segment_item.is_null()) {

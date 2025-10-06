@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
 #include "all_type_variant.hpp"
@@ -29,7 +29,7 @@ std::optional<SegmentEncodingSpec> EncodingConfig::encoding_spec_from_strings(co
                                                                               const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
   if (!encoding) {
-    return {};
+    return std::nullopt;
   }
 
   const auto compression = EncodingConfig::compression_string_to_type(compression_str);
@@ -38,7 +38,7 @@ std::optional<SegmentEncodingSpec> EncodingConfig::encoding_spec_from_strings(co
 
 std::optional<EncodingType> EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
   if (encoding_str == "Automatic") {
-    return {};
+    return std::nullopt;
   }
 
   const auto type = magic_enum::enum_cast<EncodingType>(encoding_str);

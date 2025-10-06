@@ -61,8 +61,7 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
 
         auto edge_label_stream = std::stringstream{};
         for (const auto& predicate : edge.predicates) {
-          edge_label_stream << predicate->as_column_name();
-          edge_label_stream << "\n";
+          edge_label_stream << predicate->as_column_name() << "\n";
         }
 
         VizEdgeInfo edge_info;
