@@ -50,12 +50,12 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   /* (5 ) */  // RowIDPosList(const Vector& other) : Vector(other); - Oh no, you don't.
   /* (5 ) */  // RowIDPosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
   /* (6 ) */ RowIDPosList(RowIDPosList&& other) noexcept
-      : Vector(std::move(other)), _references_single_chunk{other._references_single_chunk} {}
+      : RowIDPosList(std::move(other), other._references_single_chunk) {}
 
   /* (6+) */ explicit RowIDPosList(Vector&& other) noexcept : Vector(std::move(other)) {}
 
   /* (7 ) */ RowIDPosList(RowIDPosList&& other, const allocator_type& alloc)
-      : Vector(std::move(other), alloc), _references_single_chunk{other._references_single_chunk} {}
+      : RowIDPosList(std::move(other), alloc, other._references_single_chunk) {}
 
   /* (7+) */ RowIDPosList(Vector&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
 
@@ -131,6 +131,12 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   size_t memory_usage(const MemoryUsageCalculationMode /*mode*/) const final;
 
  private:
+  RowIDPosList(Vector&& other, bool references_single_chunk) noexcept
+      : Vector(std::move(other)), _references_single_chunk(references_single_chunk) {}
+
+  RowIDPosList(Vector&& other, const allocator_type& alloc, bool references_single_chunk)
+      : Vector(std::move(other), alloc), _references_single_chunk(references_single_chunk) {}
+
   bool _references_single_chunk = false;
 };
 
