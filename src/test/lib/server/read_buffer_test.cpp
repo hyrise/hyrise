@@ -1,8 +1,17 @@
+#include <gtest/gtest.h>
+#include <netinet/in.h>
+
+#include <cstdint>
+#include <memory>
+#include <string>
+
 #include <boost/asio.hpp>
 
 #include "base_test.hpp"
 #include "mock_socket.hpp"
 #include "server/read_buffer.hpp"
+#include "server/ring_buffer_iterator.hpp"
+#include "server/server_types.hpp"
 
 namespace hyrise {
 

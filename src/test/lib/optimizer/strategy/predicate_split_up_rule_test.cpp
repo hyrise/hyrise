@@ -1,6 +1,8 @@
+#include <gtest/gtest.h>
+
 #include <memory>
 
-#include "expression/abstract_expression.hpp"
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -9,6 +11,8 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/predicate_split_up_rule.hpp"
 #include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

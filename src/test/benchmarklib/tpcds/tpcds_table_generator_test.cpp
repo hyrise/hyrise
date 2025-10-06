@@ -1,6 +1,18 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <tuple>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
+#include "testing_assert.hpp"
+#include "tpcds-kit/tools/config.h"  // IWYU pragma: keep
+#include "tpcds-kit/tools/porting.h"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
 

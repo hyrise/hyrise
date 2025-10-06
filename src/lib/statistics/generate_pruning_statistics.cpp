@@ -19,6 +19,7 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

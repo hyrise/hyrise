@@ -1,19 +1,30 @@
+#include <gtest/gtest.h>
+
+#include <cstddef>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_set>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

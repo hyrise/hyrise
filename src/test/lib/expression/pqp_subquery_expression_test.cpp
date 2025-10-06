@@ -1,5 +1,11 @@
-#include <regex>
+#include <gtest/gtest.h>
 
+#include <memory>
+#include <regex>
+#include <string>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -7,6 +13,7 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"

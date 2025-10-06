@@ -1,7 +1,20 @@
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <cstddef>
+#include <limits>
+#include <memory>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

@@ -1,14 +1,27 @@
+#include <gtest/gtest.h>
+
+#include <algorithm>
 #include <filesystem>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/lqp_view.hpp"
+#include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
 namespace hyrise {

@@ -1,10 +1,14 @@
+#include <gtest/gtest.h>
+
 #include <array>
 #include <cmath>
-#include <limits>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"

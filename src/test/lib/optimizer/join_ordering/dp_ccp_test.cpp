@@ -1,17 +1,21 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <memory>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "statistics/table_statistics.hpp"
-#include "utils/load_table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 /**
  * The number of tests in here might seem few, but actually all main parts of DPccp are covered: Join order, Join

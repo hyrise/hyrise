@@ -1,3 +1,6 @@
+#include <vector>
+
+#include "gtest/gtest.h"
 #include "sqlite_testrunner.hpp"
 #include "storage/encoding_type.hpp"
 

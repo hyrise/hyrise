@@ -1,3 +1,12 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -8,6 +17,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

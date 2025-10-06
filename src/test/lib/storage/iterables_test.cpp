@@ -1,22 +1,29 @@
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+#include <gtest/internal/gtest-param-util.h>
+
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
-#include <limits>
 #include <memory>
 #include <string>
+#include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "encoding_test.hpp"
+#include "base_test.hpp"
+#include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/lz4_segment/lz4_segment_iterable.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

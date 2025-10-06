@@ -1,12 +1,16 @@
+#include <gtest/gtest.h>
+
 #include <memory>
+#include <vector>
 
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "storage/prepared_plan.hpp"
+#include "types.hpp"
+#include "utils/string_utils.hpp"
 
 namespace hyrise {
 

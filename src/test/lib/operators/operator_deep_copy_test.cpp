@@ -1,8 +1,17 @@
-#include <memory>
-#include <utility>
+#include <gtest/gtest-typed-test.h>
+#include <gtest/gtest.h>
+#include <gtest/internal/gtest-type-util.h>
 
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/difference.hpp"
@@ -17,8 +26,11 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 

@@ -1,14 +1,19 @@
+#include <gtest/gtest.h>
+
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/lz4_segment/lz4_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 

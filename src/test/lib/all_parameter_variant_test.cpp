@@ -1,8 +1,11 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
 #include <string>
 
 #include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "types.hpp"
 
 namespace hyrise {

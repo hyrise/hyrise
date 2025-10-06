@@ -1,5 +1,15 @@
+#include <gtest/gtest-typed-test.h>
+#include <gtest/gtest.h>
+#include <gtest/internal/gtest-type-util.h>
+
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
 #include "base_test.hpp"
 #include "operators/join_hash/join_hash_steps.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

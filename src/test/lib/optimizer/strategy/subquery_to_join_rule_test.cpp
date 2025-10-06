@@ -1,5 +1,17 @@
-#include <memory>
+#include <gtest/gtest.h>
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
+#include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -8,6 +20,7 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -16,6 +29,7 @@
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
 
 namespace hyrise {

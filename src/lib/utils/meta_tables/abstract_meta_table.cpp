@@ -1,6 +1,7 @@
 #include "abstract_meta_table.hpp"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "all_type_variant.hpp"

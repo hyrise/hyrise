@@ -1,13 +1,22 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "magic_enum/magic_enum.hpp"
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -31,13 +40,15 @@
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "logical_query_plan/window_node.hpp"
+#include "null_value.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/lqp_view.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 

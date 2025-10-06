@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <optional>
+#include <string>
 
 #include "base_test.hpp"
 #include "utils/assert.hpp"

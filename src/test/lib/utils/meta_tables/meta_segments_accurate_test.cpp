@@ -1,5 +1,17 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "utils/meta_tables/meta_segments_accurate_table.hpp"
+#include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/distinct_value_count.hpp"
+#include "storage/chunk.hpp"
+#include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

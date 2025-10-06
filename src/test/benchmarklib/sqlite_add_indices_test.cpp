@@ -1,9 +1,15 @@
-#include <memory>
+#include <gtest/gtest.h>
 
+#include <memory>
+#include <stdexcept>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
-#include "operators/print.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 #include "utils/sqlite_add_indices.hpp"
 #include "utils/sqlite_wrapper.hpp"
 

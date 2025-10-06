@@ -1,12 +1,24 @@
-#include <memory>
+#include <gtest/gtest.h>
 
+#include <algorithm>
+#include <cstdint>
+#include <exception>
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/index/chunk_index_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/segment_encoding_utils.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {

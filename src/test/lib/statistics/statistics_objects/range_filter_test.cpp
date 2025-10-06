@@ -1,16 +1,18 @@
-#include <algorithm>
-#include <functional>
+#include <gtest/gtest-typed-test.h>
+#include <gtest/gtest.h>
+#include <gtest/internal/gtest-type-util.h>
+
 #include <limits>
 #include <memory>
-#include <string>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

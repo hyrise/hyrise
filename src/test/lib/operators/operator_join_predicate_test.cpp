@@ -1,8 +1,13 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,9 +1,13 @@
-#include <bitset>
-#include <iostream>
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 
 #include "base_test.hpp"
 #include "storage/segment_encoding_utils.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"

@@ -1,3 +1,7 @@
+#include <gtest/gtest.h>
+
+#include <string>
+
 #include "base_test.hpp"
 #include "utils/string_utils.hpp"
 

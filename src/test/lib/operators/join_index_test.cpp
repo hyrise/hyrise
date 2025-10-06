@@ -1,19 +1,27 @@
-#include <map>
+#include <gtest/gtest.h>
+
+#include <cstddef>
 #include <memory>
-#include <numeric>
-#include <utility>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_verification.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

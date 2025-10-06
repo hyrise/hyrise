@@ -1,18 +1,27 @@
+#include <gtest/gtest.h>
+
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/abstract_encoded_segment.hpp"
-#include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

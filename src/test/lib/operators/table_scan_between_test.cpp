@@ -1,14 +1,24 @@
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <memory>
+#include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
-#include "operators/operator_scan_predicate.hpp"
-#include "operators/print.hpp"
+#include "all_type_variant.hpp"
+#include "null_value.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "typed_operator_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,13 +1,25 @@
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
+#include "magic_enum/magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 

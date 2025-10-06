@@ -1,3 +1,8 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/mock_node.hpp"

@@ -1,5 +1,13 @@
+#include <gtest/gtest.h>
+
+#include <exception>
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {

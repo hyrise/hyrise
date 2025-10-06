@@ -1,20 +1,35 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <initializer_list>
+#include <memory>
 #include <sstream>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "magic_enum/magic_enum.hpp"
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_join_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

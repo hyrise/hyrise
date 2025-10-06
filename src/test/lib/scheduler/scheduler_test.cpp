@@ -1,11 +1,17 @@
-#include <chrono>
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <utility>
+#include <stdexcept>
+#include <thread>
 #include <vector>
 
 #include "base_test.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
@@ -14,6 +20,10 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

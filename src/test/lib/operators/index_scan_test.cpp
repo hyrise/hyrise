@@ -1,26 +1,24 @@
-#include <map>
+#include <gtest/gtest.h>
+
+#include <algorithm>
 #include <memory>
 #include <numeric>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
-#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/table_wrapper.hpp"
-#include "operators/union_all.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace {
 

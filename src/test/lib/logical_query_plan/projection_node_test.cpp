@@ -1,3 +1,9 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+#include <optional>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"

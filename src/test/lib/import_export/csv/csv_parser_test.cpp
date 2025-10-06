@@ -1,10 +1,21 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <exception>
+#include <memory>
+#include <stdexcept>
+#include <string>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
-#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

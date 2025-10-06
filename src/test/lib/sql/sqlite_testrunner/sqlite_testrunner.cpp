@@ -1,5 +1,30 @@
 #include "sqlite_testrunner.hpp"
 
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "magic_enum/magic_enum.hpp"
+
+#include "base_test.hpp"
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/table.hpp"
+#include "utils/check_table_equal.hpp"
+#include "utils/load_table.hpp"
+#include "utils/sqlite_wrapper.hpp"
+
 namespace hyrise {
 
 void SQLiteTestRunner::SetUpTestSuite() {

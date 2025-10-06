@@ -1,9 +1,13 @@
+#include <gtest/gtest.h>
+
 #include <memory>
-#include <numeric>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "storage/constraints/abstract_table_constraint.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

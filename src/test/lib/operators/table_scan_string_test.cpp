@@ -1,20 +1,21 @@
-#include <iostream>
-#include <map>
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+
+#include <exception>
 #include <memory>
-#include <set>
 #include <string>
-#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
-#include "expression/evaluation/like_matcher.hpp"
-#include "operators/abstract_read_only_operator.hpp"
-#include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_scan/column_like_table_scan_impl.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

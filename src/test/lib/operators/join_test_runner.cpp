@@ -1,15 +1,43 @@
-#include <fstream>
-#include <set>
+#include <bits/basic_string.h>
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/join_verification.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/check_table_equal.hpp"
 #include "utils/load_table.hpp"
 
 /**

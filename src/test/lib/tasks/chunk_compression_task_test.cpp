@@ -1,5 +1,9 @@
 
+#include <gtest/gtest.h>
+
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -9,10 +13,12 @@
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/frame_of_reference_segment.hpp"
 #include "tasks/chunk_compression_task.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

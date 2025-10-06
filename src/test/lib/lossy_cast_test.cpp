@@ -1,5 +1,13 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <limits>
+#include <optional>
+
 #include "base_test.hpp"
 #include "lossy_cast.hpp"
+#include "null_value.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

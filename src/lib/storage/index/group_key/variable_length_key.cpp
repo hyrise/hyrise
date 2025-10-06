@@ -5,6 +5,7 @@
 #include <memory>
 #include <ostream>
 #include <utility>
+#include <vector>
 
 #include "storage/index/group_key/variable_length_key_base.hpp"
 #include "variable_length_key_proxy.hpp"

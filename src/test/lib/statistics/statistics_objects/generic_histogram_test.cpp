@@ -1,12 +1,21 @@
+#include <gtest/gtest.h>
+
+#include <cmath>
+#include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "utils/load_table.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
+#include "types.hpp"
 
 /**
  * As well as testing GenericHistogram, we also test a lot of the functionally implemented in AbstractHistogram here.

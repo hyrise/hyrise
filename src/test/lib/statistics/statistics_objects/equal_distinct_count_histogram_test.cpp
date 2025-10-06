@@ -1,10 +1,13 @@
-#include <limits>
+#include <gtest/gtest.h>
+
+#include <cstdint>
 #include <memory>
 #include <string>
 
 #include "base_test.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {

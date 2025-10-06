@@ -1,3 +1,13 @@
+#include <bits/cpu-set.h>
+#include <gtest/gtest.h>
+#include <pthread.h>
+
+#include <cstdint>
+#include <cstring>
+#include <memory>
+
+#include "storage/table.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #ifdef __linux__
 #include <sched.h>
 #endif
