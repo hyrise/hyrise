@@ -32,8 +32,8 @@ class AbstractPosList : private Noncopyable {
       --chunk_offset;
     }
 
-    void advance(std::ptrdiff_t n) {
-      chunk_offset += n;
+    void advance(std::ptrdiff_t distance) {
+      chunk_offset += distance;
     }
 
     bool equal(const PosListIterator& other) const {
@@ -65,7 +65,7 @@ class AbstractPosList : private Noncopyable {
   // For chunks that share a common ChunkID, returns that ID.
   virtual ChunkID common_chunk_id() const = 0;
 
-  virtual RowID operator[](size_t n) const = 0;
+  virtual RowID operator[](size_t distance) const = 0;
 
   PosListIterator<> begin() const;
   PosListIterator<> end() const;

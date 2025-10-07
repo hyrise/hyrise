@@ -96,8 +96,8 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
     --_position_filter_it;
   }
 
-  void advance(std::ptrdiff_t n) {
-    _position_filter_it += n;
+  void advance(std::ptrdiff_t distance) {
+    _position_filter_it += distance;
   }
 
   bool equal(const AbstractPointAccessSegmentIterator& other) const {

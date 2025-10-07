@@ -67,8 +67,8 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<on
            static_cast<intptr_t>(_string_length);
   }
 
-  void advance(size_t n) {  // NOLINT(readability-identifier-naming)
-    _pos += n * _string_length;
+  void advance(size_t distance) {  // NOLINT(readability-identifier-naming)
+    _pos += distance * _string_length;
   }
 
   void increment() {  // NOLINT(readability-identifier-naming)

@@ -121,11 +121,11 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       }
     }
 
-    void advance(std::ptrdiff_t n) {
-      _chunk_offset += n;
-      _data_it += n;
+    void advance(std::ptrdiff_t distance) {
+      _chunk_offset += distance;
+      _data_it += distance;
       if (_null_value_it) {
-        *_null_value_it += n;
+        *_null_value_it += distance;
       }
     }
 

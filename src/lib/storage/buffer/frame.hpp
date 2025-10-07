@@ -173,5 +173,5 @@ class Frame final : private Noncopyable {
   std::atomic<StateVersionType> _state_and_version;
 };
 
-std::ostream& operator<<(std::ostream& os, const Frame& frame);
+std::ostream& operator<<(std::ostream& ostream, const Frame& frame);
 }  // namespace hyrise

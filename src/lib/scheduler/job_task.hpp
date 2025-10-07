@@ -28,9 +28,9 @@ namespace hyrise {
  */
 class JobTask : public AbstractTask {
  public:
-  explicit JobTask(const std::function<void()>& fn, SchedulePriority priority = SchedulePriority::Default,
+  explicit JobTask(const std::function<void()>& function, SchedulePriority priority = SchedulePriority::Default,
                    bool stealable = true)
-      : AbstractTask{priority, stealable}, _fn{fn} {}
+      : AbstractTask{priority, stealable}, _fn{function} {}
 
  protected:
   void _on_execute() override;

@@ -28,30 +28,30 @@ class HistogramDomain {};
 template <typename T>
 class HistogramDomain<T, std::enable_if_t<std::is_integral_v<T>>> {
  public:
-  T next_value_clamped(T v) const {
-    if (v == std::numeric_limits<T>::max()) {
-      return v;
+  T next_value_clamped(T value) const {
+    if (value == std::numeric_limits<T>::max()) {
+      return value;
     }
-    return v + 1;
+    return value + 1;
   }
 
-  T previous_value_clamped(T v) const {
-    if (v == std::numeric_limits<T>::min()) {
-      return v;
+  T previous_value_clamped(T value) const {
+    if (value == std::numeric_limits<T>::min()) {
+      return value;
     }
-    return v - 1;
+    return value - 1;
   }
 };
 
 template <typename T>
 class HistogramDomain<T, std::enable_if_t<std::is_floating_point_v<T>>> {
  public:
-  T next_value_clamped(T v) const {
-    return std::nextafter(v, std::numeric_limits<T>::infinity());
+  T next_value_clamped(T value) const {
+    return std::nextafter(value, std::numeric_limits<T>::infinity());
   }
 
-  T previous_value_clamped(T v) const {
-    return std::nextafter(v, -std::numeric_limits<T>::infinity());
+  T previous_value_clamped(T value) const {
+    return std::nextafter(value, -std::numeric_limits<T>::infinity());
   }
 };
 

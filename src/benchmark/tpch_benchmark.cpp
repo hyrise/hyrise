@@ -134,8 +134,8 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- Benchmarking Queries: [ ";
   auto printable_item_ids = std::vector<std::string>(item_ids.size());
-  std::ranges::transform(item_ids, printable_item_ids.begin(), [&](auto& id) {
-    return std::to_string(id + 1);
+  std::ranges::transform(item_ids, printable_item_ids.begin(), [&](auto& item_id) {
+    return std::to_string(item_id + 1);
   });
   std::cout << boost::algorithm::join(printable_item_ids, ", ") << " ]\n";
 

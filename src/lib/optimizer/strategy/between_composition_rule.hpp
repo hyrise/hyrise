@@ -76,7 +76,8 @@ class BetweenCompositionRule : public AbstractRule {
 
   static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary);
 
-  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
+  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
+                                      const size_t expression_id);
 };
 
 }  // namespace hyrise

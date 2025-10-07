@@ -163,9 +163,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       }
     }
 
-    void advance(std::ptrdiff_t n) {
+    void advance(std::ptrdiff_t distance) {
       const auto previous_chunk_offset = _chunk_offset;
-      _chunk_offset += n;
+      _chunk_offset += distance;
       _end_positions_it = search_end_positions_for_chunk_offset(
           _end_positions, previous_chunk_offset, _chunk_offset,
           std::distance(_end_positions->cbegin(), _end_positions_it), _linear_search_threshold);

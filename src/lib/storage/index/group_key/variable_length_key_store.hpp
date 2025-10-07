@@ -144,8 +144,8 @@ class VariableLengthKeyStore {
       _data -= _key_alignment;
     }
 
-    void advance(size_t n) {
-      _data += n * _key_alignment;
+    void advance(size_t distance) {
+      _data += distance * _key_alignment;
     }
 
     Proxy dereference() const {

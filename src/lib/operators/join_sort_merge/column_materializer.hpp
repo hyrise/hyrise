@@ -24,10 +24,10 @@ template <typename T>
 struct MaterializedValue {
   MaterializedValue() = default;
 
-  MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
+  MaterializedValue(RowID row, T init_value) : row_id{row}, value{init_value} {}
 
-  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T v)
-      : row_id{chunk_id, chunk_offset}, value{std::move(v)} {}
+  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T init_value)
+      : row_id{chunk_id, chunk_offset}, value{std::move(init_value)} {}
 
   RowID row_id;
   T value{};

@@ -9,7 +9,7 @@
 #include <iterator>
 #include <string>
 #include <string_view>
-#include <utility>
+#include <utility> // IWYU pragma: keep
 
 #include "utils/assert.hpp"
 

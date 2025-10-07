@@ -190,13 +190,13 @@ class AbstractVisualizer {
   virtual void _build_graph(const GraphBase& graph_base) = 0;
 
   template <typename T>
-  static uintptr_t _get_id(const T& v) {
-    return reinterpret_cast<uintptr_t>(&v);
+  static uintptr_t _get_id(const T& vertex) {
+    return reinterpret_cast<uintptr_t>(&vertex);
   }
 
   template <typename T>
-  static uintptr_t _get_id(const std::shared_ptr<T>& v) {
-    return reinterpret_cast<uintptr_t>(v.get());
+  static uintptr_t _get_id(const std::shared_ptr<T>& vertex) {
+    return reinterpret_cast<uintptr_t>(vertex.get());
   }
 
   enum class WrapLabel : uint8_t { On, Off };
@@ -226,19 +226,19 @@ class AbstractVisualizer {
   }
 
   template <typename T, typename K>
-  void _add_edge(const T& from, const K& to) {
-    _add_edge(from, to, _default_edge);
+  void _add_edge(const T& source, const K& destination) {
+    _add_edge(source, destination, _default_edge);
   }
 
   template <typename T, typename K>
-  void _add_edge(const T& from, const K& to, const VizEdgeInfo& edge_info) {
-    auto from_id = _get_id(from);
-    auto to_id = _get_id(to);
+  void _add_edge(const T& source, const K& destination, const VizEdgeInfo& edge_info) {
+    auto source_id = _get_id(source);
+    auto destination_id = _get_id(destination);
 
-    auto from_pos = _id_to_position.at(from_id);
-    auto to_pos = _id_to_position.at(to_id);
+    auto source_pos = _id_to_position.at(source_id);
+    auto destination_pos = _id_to_position.at(destination_id);
 
-    boost::add_edge(from_pos, to_pos, edge_info, _graph);
+    boost::add_edge(source_pos, destination_pos, edge_info, _graph);
   }
 
   template <typename T>

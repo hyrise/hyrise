@@ -26,8 +26,8 @@ inline bool to_bool(const NullValue& /*value*/) {
 
 // Cast a value/NULL into another type
 template <typename T, typename V>
-T to_value(const V& v) {
-  return static_cast<T>(v);
+T to_value(const V& value) {
+  return static_cast<T>(value);
 }
 
 template <typename T>
@@ -134,13 +134,13 @@ struct STLArithmeticFunctorWrapper {
   };
 
   template <typename Result, typename ArgA, typename ArgB>
-  void operator()(Result& result, const ArgA& a, const ArgB& b) {
+  void operator()(Result& result, const ArgA& arg_a, const ArgB& arg_b) {
     if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> ||
                   std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
       result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(
-          static_cast<std::common_type_t<ArgA, ArgB>>(a), static_cast<std::common_type_t<ArgA, ArgB>>(b)));
+          static_cast<std::common_type_t<ArgA, ArgB>>(arg_a), static_cast<std::common_type_t<ArgA, ArgB>>(arg_b)));
     }
   }
 };

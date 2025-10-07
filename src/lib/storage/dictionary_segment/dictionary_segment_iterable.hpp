@@ -94,9 +94,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       --_chunk_offset;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _attribute_it += n;
-      _chunk_offset += n;
+    void advance(std::ptrdiff_t distance) {
+      _attribute_it += distance;
+      _chunk_offset += distance;
     }
 
     bool equal(const Iterator& other) const {

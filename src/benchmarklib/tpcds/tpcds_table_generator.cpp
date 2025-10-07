@@ -124,12 +124,12 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
 
   if (k_first_row != 1) {
     row_skip(table_id, static_cast<int>(k_first_row - 1));
-    if ((tdefs.flags & FL_PARENT) != 0) {
+    if ((static_cast<uint32_t>(tdefs.flags) & uint32_t{FL_PARENT}) != 0) {
       row_skip(tdefs.nParam, static_cast<int>(k_first_row - 1));
     }
   }
 
-  if ((tdefs.flags & FL_SMALL) != 0) {
+  if ((static_cast<uint32_t>(tdefs.flags) & uint32_t{FL_SMALL}) != 0) {
     resetCountCount();
   }
 

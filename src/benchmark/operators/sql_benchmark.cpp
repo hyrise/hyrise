@@ -85,20 +85,20 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
         HAVING COUNT(orderitems.o_orderkey) >= 100;)";
 };
 
-BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) {
-  bm_compile_query(st);
+BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& state) {
+  bm_compile_query(state);
 }
 
-BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) {
-  bm_parse_query(st);
+BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& state) {
+  bm_parse_query(state);
 }
 
-BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) {
-  bm_plan_query(st);
+BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& state) {
+  bm_plan_query(state);
 }
 
-BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) {
-  bm_query_plan_cache(st);
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& state) {
+  bm_query_plan_cache(state);
 }
 
 }  // namespace hyrise

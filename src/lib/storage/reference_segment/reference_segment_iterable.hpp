@@ -168,8 +168,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       --_pos_list_it;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _pos_list_it += n;
+    void advance(std::ptrdiff_t distance) {
+      _pos_list_it += distance;
     }
 
     bool equal(const MultipleChunkIterator& other) const {

@@ -122,7 +122,7 @@ BENCHMARK(BM_UnionPositions);
  * Measure what sorting and merging two pos lists would cost - that's the core of the UnionPositions implementation and sets
  * a performance base line for what UnionPositions could achieve in an overhead-free implementation.
  */
-void BM_UnionPositionsBaseLine(::benchmark::State& state) {
+static void bm_union_positions_base_line(::benchmark::State& state) {
   auto num_table_rows = 500000;
 
   auto pos_list_left = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
@@ -143,5 +143,5 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_UnionPositionsBaseLine);
+BENCHMARK(bm_union_positions_base_line);
 }  // namespace hyrise

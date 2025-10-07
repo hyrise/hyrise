@@ -45,18 +45,18 @@ class TableWrapper;
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& /*state*/) override {
-    auto& sm = Hyrise::get().storage_manager;
+    auto& storage_manager = Hyrise::get().storage_manager;
     const auto scale_factor = float{10};
     const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
-    if (!sm.has_table("lineitem")) {
+    if (!storage_manager.has_table("lineitem")) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and automatic encoding:\n";
       TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, benchmark_config).generate_and_store();
     }
 
-    table_wrapper_map = create_table_wrappers(sm);
+    table_wrapper_map = create_table_wrappers(storage_manager);
 
-    auto lineitem_table = sm.get_table("lineitem");
+    auto lineitem_table = storage_manager.get_table("lineitem");
 
     // Predicates as in TPC-H Q6, ordered by selectivity. Not necessarily the same order as determined by the optimizer
     tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
@@ -99,10 +99,10 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
   void TearDown(::benchmark::State& /*state*/) override {}
 
-  static std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
+  static std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& storage_manager) {
     std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
-    for (const auto& table_name : sm.table_names()) {
-      auto table = sm.get_table(table_name);
+    for (const auto& table_name : storage_manager.table_names()) {
+      auto table = storage_manager.get_table(table_name);
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->never_clear_output();
       table_wrapper->execute();
@@ -338,8 +338,8 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
 
   const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
 
-  const auto& sm = Hyrise::get().storage_manager;
-  const auto& lineitem_table = sm.get_table("lineitem");
+  const auto& storage_manager = Hyrise::get().storage_manager;
+  const auto& lineitem_table = storage_manager.get_table("lineitem");
 
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, lineitem_table->row_count() / 2'000));
 

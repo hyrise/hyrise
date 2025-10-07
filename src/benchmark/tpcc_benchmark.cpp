@@ -97,12 +97,12 @@ int main(int argc, char* argv[]) {
 
 namespace {
 template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
-bool floats_near(T a, T b) {
-  if (a == b) {
+bool floats_near(T float1, T float2) {
+  if (float1 == float2) {
     return true;
   }
   // Tolerate 0.1% discrepancy due to float variations
-  return std::max(a, b) / std::min(a, b) <= 1.001;
+  return std::max(float1, float2) / std::min(float1, float2) <= 1.001;
 }
 
 void check_consistency(const size_t num_warehouses) {

@@ -28,8 +28,8 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
     static constexpr auto BLOCK_SIZE = FrameOfReferenceSegment<T>::BLOCK_SIZE;
 
     // Ceiling of integer division
-    const auto div_ceil = [](auto x, auto y) {
-      return (x + y - 1) / y;
+    const auto div_ceil = [](auto numerator, auto denominator) {
+      return (numerator + denominator - 1) / denominator;
     };
 
     // holds the minimum of each block

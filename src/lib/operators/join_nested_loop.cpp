@@ -313,7 +313,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_
   // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {
-    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {
+    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_right, [&](const auto& right_it, [[maybe_unused]] const auto& right_end) {
       using LeftType = typename std::decay_t<decltype(left_it)>::ValueType;
       using RightType = typename std::decay_t<decltype(right_it)>::ValueType;
 

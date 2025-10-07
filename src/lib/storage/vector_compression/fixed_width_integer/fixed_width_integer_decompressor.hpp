@@ -27,8 +27,8 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
     return *this;
   }
 
-  uint32_t get(size_t i) final {
-    return _data[i];
+  uint32_t get(size_t index) final {
+    return _data[index];
   }
 
   size_t size() const final {

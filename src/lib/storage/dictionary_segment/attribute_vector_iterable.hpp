@@ -81,9 +81,9 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       return _attribute_it == other._attribute_it;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _attribute_it += n;
-      _chunk_offset += n;
+    void advance(std::ptrdiff_t distance) {
+      _attribute_it += distance;
+      _chunk_offset += distance;
     }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {

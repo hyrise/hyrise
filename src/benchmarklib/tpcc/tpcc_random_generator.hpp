@@ -31,6 +31,7 @@ class TPCCRandomGenerator : public RandomGenerator {
   /**
    * Generates a non-uniform random number based on a formula defined by TPCC.
    */
+  // NOLINTBEGIN(readability-identifier-length)
   size_t nurand(size_t a, size_t x, size_t y) {
     auto c_iter = _nurand_constants_c.find(a);
     if (c_iter == _nurand_constants_c.end()) {
@@ -40,25 +41,27 @@ class TPCCRandomGenerator : public RandomGenerator {
     return (((random_number(0, a) | random_number(x, y)) + c) % (y - x + 1)) + x;
   }
 
+  // NOLINTEND(readability-identifier-length)
+
   /**
    * Generates a random last name based on a set of syllables.
    * @param i   given input i, a string is created in which each digit of i represents a syllable; if input i is larger
    *            than 999, use first create non-uniform random number between 255 and 1000
    * @return    a string representing the last name
    */
-  std::string last_name(size_t i) {
+  std::string last_name(size_t index) {
     const auto syllables = std::array<std::string, 10>{
         "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
     };
 
-    if (i >= 1000) {
-      i = nurand(255, 0, 999);
+    if (index >= 1000) {
+      index = nurand(255, 0, 999);
     }
 
     std::string last_name;
-    last_name += syllables[(i / 100) % 10];
-    last_name += syllables[(i / 10) % 10];
-    last_name += syllables[i % 10];
+    last_name += syllables[(index / 100) % 10];
+    last_name += syllables[(index / 10) % 10];
+    last_name += syllables[index % 10];
 
     return last_name;
   }
