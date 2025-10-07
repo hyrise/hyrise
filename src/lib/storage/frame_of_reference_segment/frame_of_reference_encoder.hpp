@@ -23,8 +23,8 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
   static constexpr auto USES_VECTOR_COMPRESSION = true;  // see base_segment_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T>& segment_iterable,
-                                                     const PolymorphicAllocator<T>& allocator) {
+  std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<T>& segment_iterable,
+                                                    const PolymorphicAllocator<T>& allocator) {
     static constexpr auto BLOCK_SIZE = FrameOfReferenceSegment<T>::BLOCK_SIZE;
 
     // Ceiling of integer division

@@ -18,8 +18,8 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
   static constexpr auto USES_VECTOR_COMPRESSION = false;
 
   template <typename T>
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T>& segment_iterable,
-                                                     const PolymorphicAllocator<T>& allocator) {
+  std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<T>& segment_iterable,
+                                                    const PolymorphicAllocator<T>& allocator) {
     auto values = std::make_shared<pmr_vector<T>>(allocator);
     auto null_values = std::make_shared<pmr_vector<bool>>(allocator);
     auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(allocator);

@@ -31,8 +31,8 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<encoding>> {
   static constexpr auto USES_VECTOR_COMPRESSION = true;  // see base_segment_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T>& segment_iterable,
-                                                     const PolymorphicAllocator<T>& allocator) {
+  std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<T>& segment_iterable,
+                                                    const PolymorphicAllocator<T>& allocator) {
     // Vectors to gather the input segment's data. This data is used in a later step to
     // construct the actual dictionary and attribute vector.
     std::vector<T> dense_values;    // contains the actual values (no NULLs)

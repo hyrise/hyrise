@@ -147,7 +147,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*abstract_segment);
 
     // For now, we allocate without a specific memory source.
-    return _self()._on_encode(iterable, PolymorphicAllocator<ColumnDataType>{});
+    return _self().on_encode(iterable, PolymorphicAllocator<ColumnDataType>{});
   }
 
   /**@}*/

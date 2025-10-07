@@ -148,7 +148,7 @@ void bm_union_positions_base_line(::benchmark::State& state) {
   }
 }
 
-}
+}  // namespace
 
 BENCHMARK(bm_union_positions_base_line);
 }  // namespace hyrise
