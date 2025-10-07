@@ -16,8 +16,9 @@ namespace hyrise {
 // inheritance. By making the inheritance private and this class final, we can assure that the problems that come with
 // a non-virtual destructor do not occur.
 
-// I tried to make AbstractPosList a pure virtual class, but it is very difficult because of the begin and end functions.
-// These return completely different types in RowIDPosList and EntireChunkPosList, so I can't make this function virtual.
+// I tried to make AbstractPosList a pure virtual class, but it is very difficult because of the begin and end
+// functions. These return completely different types in RowIDPosList and EntireChunkPosList, so I can't make this
+// function virtual.
 // NOLINTNEXTLINE(fuchsia-multiple-inheritance)
 class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
  public:

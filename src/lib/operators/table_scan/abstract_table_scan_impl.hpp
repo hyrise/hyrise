@@ -138,7 +138,7 @@ class AbstractTableScanImpl {
       // This empty block is used to convince clang-format to keep the pragma indented
       {}  // clang-format off
       #pragma omp simd reduction(|:mask) safelen(BLOCK_SIZE)
-        // clang-format on
+      // clang-format on
       // We could use requirements to enforce the use of noexcept functions, but since *iter rarely ever is noexcept,
       // we would have to change a lot of code to enforce this. So we ignore the problem instead.
       // NOLINTNEXTLINE(openmp-exception-escape)
