@@ -52,6 +52,10 @@ class NodeQueueScheduler final : public AbstractScheduler {
   NodeQueueScheduler();
   NodeQueueScheduler(const NodeQueueScheduler&) = delete;
   NodeQueueScheduler& operator=(const NodeQueueScheduler&) = delete;
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted
+  // You can implement them, but you should think about the implications for this class.
+  NodeQueueScheduler(NodeQueueScheduler&&) = delete;
+  NodeQueueScheduler& operator=(NodeQueueScheduler&&) = delete;
   ~NodeQueueScheduler() final;
 
   /**

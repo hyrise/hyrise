@@ -14,6 +14,8 @@ class BaseSegmentAccessor {
   BaseSegmentAccessor() = default;
   BaseSegmentAccessor(const BaseSegmentAccessor&) = default;
   BaseSegmentAccessor(BaseSegmentAccessor&&) = default;
+  BaseSegmentAccessor& operator=(const BaseSegmentAccessor&) = default;
+  BaseSegmentAccessor& operator=(BaseSegmentAccessor&&) = default;
 
   virtual ~BaseSegmentAccessor() = default;
 };

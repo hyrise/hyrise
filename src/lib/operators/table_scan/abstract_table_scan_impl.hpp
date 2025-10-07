@@ -22,6 +22,8 @@ namespace hyrise {
 /**
  * @brief the base class of all table scan impls
  */
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractTableScanImpl {
  public:
   virtual ~AbstractTableScanImpl() = default;

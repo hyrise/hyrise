@@ -55,8 +55,6 @@ class TaskQueue;
 
 class AbstractScheduler : public Noncopyable {
  public:
-  ~AbstractScheduler() override = default;
-
   /**
    * Begin the scheduler's lifecycle as the global Scheduler instance.
    */

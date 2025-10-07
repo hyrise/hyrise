@@ -15,8 +15,11 @@ class AbstractTPCCProcedure {
   explicit AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor);
   virtual ~AbstractTPCCProcedure() = default;
 
-  AbstractTPCCProcedure(const AbstractTPCCProcedure& other) = default;
+  AbstractTPCCProcedure(const AbstractTPCCProcedure&) = default;
+  AbstractTPCCProcedure(AbstractTPCCProcedure&&) = default;
   AbstractTPCCProcedure& operator=(const AbstractTPCCProcedure& other);
+  // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+  AbstractTPCCProcedure& operator=(AbstractTPCCProcedure&& other);
 
   // Executes the procedure; returns true if it was successful and false if a transaction conflict occurred
   [[nodiscard]] bool execute();

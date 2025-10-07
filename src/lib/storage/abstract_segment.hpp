@@ -14,8 +14,6 @@ class AbstractSegment : private Noncopyable {
  public:
   explicit AbstractSegment(const DataType data_type);
 
-  ~AbstractSegment() override = default;
-
   // The type of the data contained in this segment.
   DataType data_type() const;
 

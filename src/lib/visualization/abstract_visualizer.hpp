@@ -70,6 +70,8 @@ struct SeparateThousandsFacet : std::numpunct<char> {
 };
 
 template <typename GraphBase>
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractVisualizer {
   //                                  Edge list    Vertex list   Directed graph
   using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,

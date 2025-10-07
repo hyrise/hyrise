@@ -24,6 +24,8 @@ class AbstractReadOnlyOperator : public AbstractOperator {
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
   // found in table_scan.hpp.
+  // This class has to have a virtual destructor because it is virtual.
+  // NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
   class AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractReadOnlyOperatorImpl() = default;

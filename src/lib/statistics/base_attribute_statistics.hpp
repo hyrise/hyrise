@@ -17,6 +17,8 @@ enum class PredicateCondition : uint8_t;
  *
  * Contains any number of AbstractStatisticsObjects (histograms, filters, etc.).
  */
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class BaseAttributeStatistics {
  public:
   virtual ~BaseAttributeStatistics() = default;

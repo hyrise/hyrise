@@ -23,6 +23,8 @@ namespace hyrise {
  * The base class BaseCsvConverter allows us to handle different types of columns uniformly.
  */
 
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class BaseCsvConverter {
  public:
   virtual ~BaseCsvConverter() = default;

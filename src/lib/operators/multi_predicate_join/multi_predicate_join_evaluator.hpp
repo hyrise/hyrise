@@ -25,7 +25,6 @@ class MultiPredicateJoinEvaluator {
   class BaseFieldComparator : public Noncopyable {
    public:
     virtual bool compare(const RowID& left, const RowID& right) const = 0;
-    ~BaseFieldComparator() override = default;
   };
 
   template <typename CompareFunctor, typename L, typename R>

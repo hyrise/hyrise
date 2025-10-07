@@ -112,6 +112,8 @@ enum class OperatorState : uint8_t { Created, Running, ExecutedAndAvailable, Exe
  *
  * Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
  */
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
   explicit AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,

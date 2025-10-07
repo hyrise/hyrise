@@ -32,8 +32,6 @@ class AbstractMetaTable : public Noncopyable {
   virtual bool can_update() const;
   virtual bool can_delete() const;
 
-  ~AbstractMetaTable() override = default;
-
  protected:
   friend class MetaTableManager;
   friend class MetaTableManagerTest;

@@ -77,6 +77,8 @@ static_assert(static_cast<std::underlying_type_t<TaskState>>(TaskState::Created)
  *
  * Derive and implement logic in _on_execute().
  */
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   // The reason for using AbstractScheduler as friend classes here is that the _join method must absolutely not be
   // called from anyone but the scheduler. As the interface could tempt developers to do so if that method was public,

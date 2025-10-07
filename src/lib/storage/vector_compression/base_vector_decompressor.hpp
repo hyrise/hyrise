@@ -21,6 +21,8 @@ class BaseVectorDecompressor {
   BaseVectorDecompressor() = default;
   BaseVectorDecompressor(const BaseVectorDecompressor&) = default;
   BaseVectorDecompressor(BaseVectorDecompressor&&) = default;
+  BaseVectorDecompressor& operator=(const BaseVectorDecompressor&) = default;
+  BaseVectorDecompressor& operator=(BaseVectorDecompressor&&) = default;
 
   virtual uint32_t get(size_t index) = 0;
   virtual size_t size() const = 0;

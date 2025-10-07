@@ -19,6 +19,9 @@ namespace hyrise {
 // query, for example a TPC-H query. Examples for more complex items are those of the TPC-C benchmark, which combine
 // multiple queries and logic in an item such as "NewOrder".
 // Parameters can be randomized for some benchmarks (e.g., TPC-H).
+
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractBenchmarkItemRunner {
  public:
   explicit AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config);

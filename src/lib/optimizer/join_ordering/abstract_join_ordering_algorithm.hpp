@@ -20,6 +20,8 @@ class JoinGraph;
  * These may be StoredTableNodes, but could also be more complex subplans that are treated as a single table for the
  * purpose of join ordering.
  */
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractJoinOrderingAlgorithm {
  public:
   virtual ~AbstractJoinOrderingAlgorithm() = default;

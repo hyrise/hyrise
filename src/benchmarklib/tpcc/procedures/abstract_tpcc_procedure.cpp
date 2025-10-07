@@ -47,4 +47,12 @@ AbstractTPCCProcedure& AbstractTPCCProcedure::operator=(const AbstractTPCCProced
   return *this;
 }
 
+// NOLINTNEXTLINE(cert-oop54-cpp,cppcoreguidelines-noexcept-move-operations,hicpp-noexcept-move,performance-noexcept-move-constructor)
+AbstractTPCCProcedure& AbstractTPCCProcedure::operator=(AbstractTPCCProcedure&& other) {
+  DebugAssert(&_sql_executor == &other._sql_executor,
+              "Can only assign AbstractTPCCProcedure if the _sql_executors are the same.");
+  // Doesn't assign anything as the only member _sql_executor is already the same.
+  return *this;
+}
+
 }  // namespace hyrise

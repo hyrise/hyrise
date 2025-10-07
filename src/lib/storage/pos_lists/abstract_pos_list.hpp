@@ -54,10 +54,6 @@ class AbstractPosList : private Noncopyable {
     ChunkOffset chunk_offset;
   };
 
-  ~AbstractPosList() override = default;
-
-  AbstractPosList& operator=(AbstractPosList&& other) = default;
-
   // Returns whether it is guaranteed that the PosList references a single ChunkID.
   // However, it may be false even if this is the case.
   virtual bool references_single_chunk() const = 0;

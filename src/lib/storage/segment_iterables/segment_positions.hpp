@@ -25,6 +25,9 @@ class AbstractSegmentPosition {
 
   AbstractSegmentPosition() = default;
   AbstractSegmentPosition(const AbstractSegmentPosition&) = default;
+  AbstractSegmentPosition(AbstractSegmentPosition&&) = default;
+  AbstractSegmentPosition& operator=(const AbstractSegmentPosition&) = default;
+  AbstractSegmentPosition& operator=(AbstractSegmentPosition&&) = default;
   virtual ~AbstractSegmentPosition() = default;
 
   virtual const T& value() const = 0;

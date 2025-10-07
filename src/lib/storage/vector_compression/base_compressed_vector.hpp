@@ -27,8 +27,6 @@ namespace hyrise {
  */
 class BaseCompressedVector : private Noncopyable {
  public:
-  ~BaseCompressedVector() override = default;
-
   /**
    * @brief Returns the number of elements in the vector
    */
