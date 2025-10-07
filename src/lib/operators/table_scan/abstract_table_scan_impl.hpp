@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #ifdef __AVX512VL__
 #include <x86intrin.h>
@@ -137,7 +138,10 @@ class AbstractTableScanImpl {
       // This empty block is used to convince clang-format to keep the pragma indented
       {}  // clang-format off
       #pragma omp simd reduction(|:mask) safelen(BLOCK_SIZE)
-      // clang-format on
+        // clang-format on
+      // We could use requirements to enforce the use of noexcept functions, but since *iter rarely ever is noexcept,
+      // we would have to change a lot of code to enforce this. So we ignore the problem instead.
+      // NOLINTNEXTLINE(openmp-exception-escape)
       for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
         // Fill `mask` with 1s at positions where the condition is fulfilled
         const auto& left = *left_it;
