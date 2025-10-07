@@ -15,8 +15,9 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-static void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
-                                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+namespace {
+void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
+                               const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   auto warm_up = std::make_shared<Projection>(input, expressions);
   warm_up->execute();
   // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
@@ -25,6 +26,8 @@ static void benchmark_projection_impl(benchmark::State& state, const std::shared
     projection->execute();
   }
 }
+
+}  // namespace
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& state) {
   _clear_cache();

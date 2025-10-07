@@ -20,9 +20,10 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-static void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
-                                     ColumnID left_column_id, const PredicateCondition predicate_condition,
-                                     const AllParameterVariant& right_parameter) {
+namespace {
+void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
+                              ColumnID left_column_id, const PredicateCondition predicate_condition,
+                              const AllParameterVariant& right_parameter) {
   const auto left_operand = pqp_column_(left_column_id, input->get_output()->column_data_type(left_column_id),
                                         input->get_output()->column_is_nullable(left_column_id), "");
   auto right_operand = std::shared_ptr<AbstractExpression>{};
@@ -45,6 +46,8 @@ static void benchmark_tablescan_impl(benchmark::State& state, const std::shared_
     table_scan->execute();
   }
 }
+
+}  // namespace
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
   _clear_cache();

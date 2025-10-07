@@ -37,8 +37,8 @@ void clear_cache() {
 }  // namespace
 
 namespace hyrise {
-
-static std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
+namespace {
+std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
   const auto chunk_size = static_cast<ChunkOffset>(number_of_rows / NUMBER_OF_CHUNKS);
@@ -65,8 +65,8 @@ static std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows)
 }
 
 template <class C>
-static void bm_join_impl(benchmark::State& state, const std::shared_ptr<TableWrapper>& table_wrapper_left,
-                         const std::shared_ptr<TableWrapper>& table_wrapper_right) {
+void bm_join_impl(benchmark::State& state, const std::shared_ptr<TableWrapper>& table_wrapper_left,
+                  const std::shared_ptr<TableWrapper>& table_wrapper_right) {
   clear_cache();
 
   auto warm_up = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
@@ -83,7 +83,7 @@ static void bm_join_impl(benchmark::State& state, const std::shared_ptr<TableWra
 }
 
 template <class C>
-static void bm_join_small_and_small(benchmark::State& state) {  // 1,000 x 1,000
+void bm_join_small_and_small(benchmark::State& state) {  // 1,000 x 1,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_SMALL);
 
@@ -91,7 +91,7 @@ static void bm_join_small_and_small(benchmark::State& state) {  // 1,000 x 1,000
 }
 
 template <class C>
-static void bm_join_small_and_big(benchmark::State& state) {  // 1,000 x 10,000,000
+void bm_join_small_and_big(benchmark::State& state) {  // 1,000 x 10,000,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_BIG);
 
@@ -99,12 +99,14 @@ static void bm_join_small_and_big(benchmark::State& state) {  // 1,000 x 10,000,
 }
 
 template <class C>
-static void bm_join_medium_and_medium(benchmark::State& state) {  // 100,000 x 100,000
+void bm_join_medium_and_medium(benchmark::State& state) {  // 100,000 x 100,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_MEDIUM);
   auto table_wrapper_right = generate_table(TABLE_SIZE_MEDIUM);
 
   bm_join_impl<C>(state, table_wrapper_left, table_wrapper_right);
 }
+
+}  // namespace
 
 BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinNestedLoop);
 

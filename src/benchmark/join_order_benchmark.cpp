@@ -35,7 +35,8 @@
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-static void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
+namespace {
+void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   // Get all tables.
   const auto& aka_name_table = table_info_by_name.at("aka_name").table;
   const auto& aka_title_table = table_info_by_name.at("aka_title").table;
@@ -148,6 +149,8 @@ static void add_key_constraints(std::unordered_map<std::string, BenchmarkTableIn
   primary_key_constraint(title_table, {"id"});
   foreign_key_constraint(title_table, {"kind_id"}, kind_type_table, {"id"});
 }
+
+}  // namespace
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Join Order Benchmark");

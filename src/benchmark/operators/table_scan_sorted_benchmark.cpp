@@ -132,9 +132,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   return table_wrapper;
 }
 
-}  // namespace
-
-static void bm_table_scan_sorted(
+void bm_table_scan_sorted(
     benchmark::State& state, const int table_size, const double selectivity, const EncodingType encoding_type,
     const std::string& mode, const bool is_between_scan, const bool is_reference_scan,
     const std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)>& table_creator) {
@@ -217,6 +215,8 @@ static void bm_table_scan_sorted(
     table_scan->execute();
   }
 }
+
+}  // namespace
 
 namespace {
 

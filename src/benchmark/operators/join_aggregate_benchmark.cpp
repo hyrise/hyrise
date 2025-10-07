@@ -37,7 +37,8 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-static pmr_vector<int32_t> generate_ids(const size_t table_size) {
+namespace {
+pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
   const auto max_value = static_cast<int32_t>(TABLE_SIZE * SELECTIVITY) + 1;
@@ -56,7 +57,7 @@ static pmr_vector<int32_t> generate_ids(const size_t table_size) {
 }
 
 // Generates a vector of zip codes with various numbers of representation
-static pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
+pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
   auto zip_count = int32_t{1};
@@ -81,7 +82,7 @@ static pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
   return values;
 }
 
-static pmr_vector<int32_t> generate_ages(const size_t table_size) {
+pmr_vector<int32_t> generate_ages(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
   auto random_engine = std::default_random_engine(SEED);
 
@@ -96,7 +97,7 @@ static pmr_vector<int32_t> generate_ages(const size_t table_size) {
   return values;
 }
 
-static std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<int32_t>& values) {
+std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<int32_t>& values) {
   const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS_JOIN_AGGREGATE);
 
   auto table_column_definitions = TableColumnDefinitions{};
@@ -122,7 +123,7 @@ static std::shared_ptr<Table> create_table(const size_t table_size, const pmr_ve
   return table;
 }
 
-static std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
+std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   auto zip_values = generate_zip_codes(table_size);
 
   auto zip_table = create_table(table_size, zip_values);
@@ -138,7 +139,7 @@ static std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   return std::make_shared<TableWrapper>(zip_table);
 }
 
-static std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
+std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
   auto ages_values = generate_ages(table_size);
 
   auto ages_table = create_table(table_size, ages_values);
@@ -154,7 +155,7 @@ static std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) 
 }
 
 template <typename AggregateType, typename JoinType>
-static void bm_join_aggregate(benchmark::State& state) {
+void bm_join_aggregate(benchmark::State& state) {
   auto table_wrapper_left = create_ages_table(TABLE_SIZE);
   table_wrapper_left->never_clear_output();
   table_wrapper_left->execute();
@@ -186,6 +187,8 @@ static void bm_join_aggregate(benchmark::State& state) {
     aggregate->execute();
   }
 }
+
+}  // namespace
 
 BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinSortMerge);
 BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinHash);
