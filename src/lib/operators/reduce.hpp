@@ -61,7 +61,7 @@ class Reduce : public AbstractReadOnlyOperator {
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.resize(chunk_count);
 
-      std::shared_ptr<BloomFilter<20, 2>> new_bloom_filter;
+      auto new_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
       std::shared_ptr<MinMaxPredicate<ColumnDataType>> new_min_max_filter;
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
@@ -103,14 +103,10 @@ class Reduce : public AbstractReadOnlyOperator {
 
             
           std::shared_ptr<BloomFilter<20, 2>> partial_bloom_filter;
-          std::shared_ptr<MinMaxPredicate<ColumnDataType>> partial_min_max_filter;
+          MinMaxPredicate<ColumnDataType> partial_min_max_filter;
 
           if constexpr (reduce_mode != ReduceMode::Probe) {
             partial_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
-
-            if constexpr (use_min_max == UseMinMax::Yes) {
-              partial_min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();
-            }
           }
 
           auto matches = std::make_shared<RowIDPosList>();
@@ -127,7 +123,7 @@ class Reduce : public AbstractReadOnlyOperator {
                 partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
                 if constexpr (use_min_max == UseMinMax::Yes) {
-                  partial_min_max_filter->insert(position.value());
+                  partial_min_max_filter.insert(position.value());
                 }
               } else {
                 auto found = _bloom_filter->probe(static_cast<uint64_t>(seed));
@@ -143,7 +139,7 @@ class Reduce : public AbstractReadOnlyOperator {
                     partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
                     if constexpr (use_min_max == UseMinMax::Yes) {
-                      partial_min_max_filter->insert(position.value());
+                      partial_min_max_filter.insert(position.value());
                     }
                   }
                 }
@@ -157,7 +153,6 @@ class Reduce : public AbstractReadOnlyOperator {
               auto output_segments = Segments{};
               output_segments.reserve(column_count);
 
-              auto keep_chunk_sort_order = true;
               if (input_table->type() == TableType::References) {
                 if (matches->size() == input_chunk->size()) {
                   for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
@@ -183,8 +178,6 @@ class Reduce : public AbstractReadOnlyOperator {
                       filtered_pos_list = std::make_shared<RowIDPosList>(matches->size());
                       if (pos_list_in->references_single_chunk()) {
                         filtered_pos_list->guarantee_single_chunk();
-                      } else {
-                        keep_chunk_sort_order = false;
                       }
 
                       auto offset = size_t{0};
@@ -218,7 +211,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
               const auto output_chunk = std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
               output_chunk->set_immutable();
-              if (keep_chunk_sort_order && !input_chunk->individually_sorted_by().empty()) {
+              if (!input_chunk->individually_sorted_by().empty()) {
                 output_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
               }
               output_chunks[chunk_index] = output_chunk;
@@ -229,7 +222,7 @@ class Reduce : public AbstractReadOnlyOperator {
             new_bloom_filter->merge_from(*partial_bloom_filter);
 
             if constexpr (use_min_max == UseMinMax::Yes) {
-              new_min_max_filter->merge_from(*partial_min_max_filter);
+              new_min_max_filter->merge_from(partial_min_max_filter);
             }
           }
         };
