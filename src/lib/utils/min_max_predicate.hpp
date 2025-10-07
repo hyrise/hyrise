@@ -12,11 +12,6 @@ namespace hyrise {
 class BaseMinMaxPredicate {
  public:
   virtual ~BaseMinMaxPredicate() = default;
-
-  //   virtual void insert(const int32_t& value) = 0;
-  //   virtual bool probe(const int32_t& value) const = 0;
-  //   virtual int32_t min_value() const = 0;
-  //   virtual int32_t max_value() const = 0;
 };
 
 template <typename DataType>
@@ -26,39 +21,27 @@ class MinMaxPredicate : public BaseMinMaxPredicate {
     Assert((std::is_same<DataType, int32_t>::value), "MinMaxPredicate can only be instantiated with int32_t.");
   }
 
-  void insert(const DataType& value) {
+  void merge_from(const DataType& minimum, const DataType& maximum) {
     if constexpr (std::is_same_v<DataType, int32_t>) {
-      if (_min_value > value) {
-        _min_value = value;
-      }
-      if (_max_value < value) {
-        _max_value = value;
-      }
-    }
-  }
-
-  bool probe(const DataType& value) const {
-    // return false;
-    if constexpr (std::is_same_v<DataType, int32_t>) {
-      return value >= _min_value && value <= _max_value;
+      set_atomic_min(_min_value, minimum);
+      set_atomic_max(_max_value, maximum);
     } else {
-      return true;  // Default behavior for unsupported types
+      Fail("MinMaxPredicate only supports int32_t values.");
     }
   }
 
-  void merge_from(const MinMaxPredicate& other) {
+  DataType min_value() const {
     if constexpr (std::is_same_v<DataType, int32_t>) {
-      set_atomic_min(_min_value, other._min_value);
-      set_atomic_max(_max_value, other._max_value);
+      return _min_value;
     }
+    Fail("MinMaxPredicate only supports int32_t values.");
   }
 
-  int32_t min_value() const {
-    return _min_value;
-  }
-
-  int32_t max_value() const {
-    return _max_value;
+  DataType max_value() const {
+    if constexpr (std::is_same_v<DataType, int32_t>) {
+      return _max_value;
+    }
+    Fail("MinMaxPredicate only supports int32_t values.");
   }
 
  private:

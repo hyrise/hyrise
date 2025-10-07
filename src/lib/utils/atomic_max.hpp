@@ -28,17 +28,9 @@ inline void set_atomic_max(std::atomic<CommitID>& maximum_value, const CommitID&
 
 // std::min()-like assignment for std::atomic<T>
 template <typename T>
-inline void set_atomic_min(std::atomic<T>& minimum_value, const std::atomic<T>& value) noexcept {
+inline void set_atomic_min(std::atomic<T>& minimum_value, const T& value) noexcept {
   auto prev_value = minimum_value.load();
   while (prev_value > value && !minimum_value.compare_exchange_weak(prev_value, value)) {}
 }
-
-// Specialization for CommitID: Ignore MAX_COMMIT_ID as reserved value and treat it like it was unset.
-// template <>
-// inline void set_atomic_min(std::atomic<CommitID>& minimum_value, const CommitID& value) noexcept {
-//   auto prev_value = minimum_value.load();
-//   while ((prev_value == MAX_COMMIT_ID || prev_value > value) &&
-//          !minimum_value.compare_exchange_weak(prev_value, value)) {}
-// }
 
 }  // namespace hyrise

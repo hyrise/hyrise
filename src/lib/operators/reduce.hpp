@@ -85,11 +85,15 @@ class Reduce : public AbstractReadOnlyOperator {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(chunk_count);
 
-      auto casted_min_max_filter = std::shared_ptr<MinMaxPredicate<ColumnDataType>>();
+      auto minimum = ColumnDataType{};
+      auto maximum = ColumnDataType{};
+
       if constexpr (reduce_mode != ReduceMode::Build && use_min_max == UseMinMax::Yes) {
         Assert(_min_max_filter, "Min max filter is null.");
-        casted_min_max_filter = std::dynamic_pointer_cast<MinMaxPredicate<ColumnDataType>>(_min_max_filter);
+        auto casted_min_max_filter = std::dynamic_pointer_cast<MinMaxPredicate<ColumnDataType>>(_min_max_filter);
         Assert(casted_min_max_filter, "Failed to cast min max filter.");
+        minimum = casted_min_max_filter->min_value();
+        maximum = casted_min_max_filter->max_value();
       }
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
@@ -101,18 +105,15 @@ class Reduce : public AbstractReadOnlyOperator {
           (void)input_chunk;
           (void)input_segment;
 
-            
           std::shared_ptr<BloomFilter<20, 2>> partial_bloom_filter;
-          MinMaxPredicate<ColumnDataType> partial_min_max_filter;
+          auto partial_minimum = ColumnDataType{};
+          auto partial_maximum = ColumnDataType{};
 
           if constexpr (reduce_mode != ReduceMode::Probe) {
             partial_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
           }
 
           auto matches = std::make_shared<RowIDPosList>();
-          if constexpr (reduce_mode != ReduceMode::Build) {
-            matches->guarantee_single_chunk();
-          }
 
           segment_iterate<ColumnDataType>(*input_segment, [&](const auto& position) {
             if (!position.is_null()) {
@@ -123,13 +124,14 @@ class Reduce : public AbstractReadOnlyOperator {
                 partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
                 if constexpr (use_min_max == UseMinMax::Yes) {
-                  partial_min_max_filter.insert(position.value());
+                  partial_minimum = std::min(partial_minimum, position.value());
+                  partial_maximum = std::max(partial_maximum, position.value());
                 }
               } else {
                 auto found = _bloom_filter->probe(static_cast<uint64_t>(seed));
 
                 if constexpr (use_min_max == UseMinMax::Yes) {
-                  found = found && casted_min_max_filter->probe(position.value());
+                  found = found && position.value() >= minimum && position.value() <= maximum;
                 }
 
                 if (found) {
@@ -139,7 +141,8 @@ class Reduce : public AbstractReadOnlyOperator {
                     partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
                     if constexpr (use_min_max == UseMinMax::Yes) {
-                      partial_min_max_filter.insert(position.value());
+                      partial_minimum = std::min(partial_minimum, position.value());
+                      partial_maximum = std::max(partial_maximum, position.value());
                     }
                   }
                 }
@@ -222,7 +225,7 @@ class Reduce : public AbstractReadOnlyOperator {
             new_bloom_filter->merge_from(*partial_bloom_filter);
 
             if constexpr (use_min_max == UseMinMax::Yes) {
-              new_min_max_filter->merge_from(partial_min_max_filter);
+              new_min_max_filter->merge_from(partial_minimum, partial_maximum);
             }
           }
         };
