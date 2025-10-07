@@ -45,7 +45,7 @@ Checks: '
          -llvm-header-guard,
          -boost-use-ranges,
          -portability-template-virtual-member-function,
-         -modernize-use-constraints
+         -modernize-use-constraints,
          -cppcoreguidelines-avoid-const-or-ref-data-members
          '
 # TODO(anybody-update): `modernize-use-constraints` is temporarily inactive until clang-tidy 21 is used
