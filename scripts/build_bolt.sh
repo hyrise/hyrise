@@ -77,7 +77,7 @@ done
 # > this option by default, you have to explicitly disable it by adding -fno-reorder-blocks-and-partition flag if you
 # > are compiling with GCC8 or above.
 # https://github.com/llvm/llvm-project/tree/main/bolt
-cmake -DCOMPILE_FOR_BOLT=TRUE -DPGO_INSTRUMENT ..
+cmake -DCOMPILE_FOR_BOLT=ON -DPGO_INSTRUMENT=ON ..
 
 ninja clean
 # Only compile the benchmarks that we need.
@@ -119,7 +119,7 @@ popd
 time merge-fdata *.fdata > bolt.fdata
 time llvm-profdata merge -output pgo.profdata *.profraw
 
-cmake -DCOMPILE_FOR_BOLT=TRUE -DPGO_PROFILE=pgo.profdata ..
+cmake -DCOMPILE_FOR_BOLT=ON -DPGO_PROFILE=pgo.profdata ..
 ninja clean
 # Only compile the benchmarks that we need.
 if [ "$cli" -eq 1 ]
