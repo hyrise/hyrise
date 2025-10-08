@@ -58,7 +58,7 @@ WarningsAsErrors: '*'
 # needed to enable header linting and ExcludeHeaderFilterRegex disables linting of third party headers. Just setting
 # HeaderFilterRegex to src/.* does not work, as it will lint third_party/sql-parser/src/.*
 HeaderFilterRegex: '.*'
-ExcludeHeaderFilterRegex: 'third_party'
+ExcludeHeaderFilterRegex: 'third_party|version.hpp'
 
 # Explanation of inactive checks:
 #   - *-default-arguments*                                      We do use default arguments (and like them).
