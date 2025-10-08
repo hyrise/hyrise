@@ -41,7 +41,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
   explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : AbstractCache<Key, Value>(capacity) {}
 
   void set(const Key& key, const Value& value, double /*cost*/ = 1.0, double size = 1.0) final {
-    const std::unique_lock<std::shared_mutex> lock(_mutex);
+    const auto lock = std::unique_lock{_mutex};
     if (this->_capacity == 0) {
       return;
     }
@@ -49,7 +49,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
-      const Handle handle = it->second;
+      const auto handle = it->second;
 
       GDFSCacheEntry& entry = (*handle);
       entry.value = value;
@@ -75,7 +75,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
   }
 
   std::optional<Value> try_get(const Key& query) final {
-    const std::unique_lock<std::shared_mutex> lock(_mutex);
+    const auto lock = std::unique_lock{_mutex};
     auto it = _map.find(query);
     if (it == _map.end()) {
       return std::nullopt;
@@ -90,23 +90,23 @@ class GDFSCache : public AbstractCache<Key, Value> {
   }
 
   bool has(const Key& key) const final {
-    const std::shared_lock<std::shared_mutex> lock(_mutex);
+    const auto lock = std::shared_lock{_mutex};
     return _map.contains(key);
   }
 
   size_t size() const final {
-    const std::shared_lock<std::shared_mutex> lock(_mutex);
+    const auto lock = std::shared_lock{_mutex};
     return _map.size();
   }
 
   void clear() final {
-    const std::unique_lock<std::shared_mutex> lock(_mutex);
+    const auto lock = std::unique_lock{_mutex};
     _map.clear();
     _queue.clear();
   }
 
   void resize(size_t capacity) final {
-    const std::unique_lock<std::shared_mutex> lock(_mutex);
+    const auto lock = std::unique_lock{_mutex};
     while (_queue.size() > capacity) {
       _evict();
     }
@@ -114,7 +114,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
   }
 
   std::unordered_map<Key, SnapshotEntry> snapshot() const final {
-    const std::shared_lock<std::shared_mutex> lock(_mutex);
+    const auto lock = std::shared_lock{_mutex};
     std::unordered_map<Key, SnapshotEntry> map_copy(_map.size());
     for (const auto& [key, entry] : _map) {
       map_copy[key] = SnapshotEntry{(*entry).value, (*entry).frequency};

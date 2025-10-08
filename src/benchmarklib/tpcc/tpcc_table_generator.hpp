@@ -109,7 +109,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
                    const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
-    auto is_first_column = column_definitions.empty();
+    const auto is_first_column = column_definitions.empty();
 
     auto has_null_value = false;
 
@@ -117,7 +117,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
      * Calculate the total row count for this column based on the cardinalities of the influencing tables.
      * For the CUSTOMER table this calculates 1*10*3000
      */
-    auto loop_count =
+    const auto loop_count =
         std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), size_t{1}, std::multiplies<>());
 
     auto data = pmr_vector<T>{};
@@ -147,8 +147,8 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        */
       const auto num_cardinalities = cardinalities->size();
       for (auto loop = ptrdiff_t{0}; std::cmp_less(loop, num_cardinalities); ++loop) {
-        auto divisor =
-            std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1, std::multiplies<>());
+        const auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), size_t{1},
+                                             std::multiplies<>());
         indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
       }
 

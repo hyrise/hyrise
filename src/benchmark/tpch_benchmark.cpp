@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  if (cli_parse_result.count("queries") != size_t{0}) {
+  if (cli_parse_result.count("queries") > size_t{0}) {
     comma_separated_queries = cli_parse_result["queries"].as<std::string>();
   }
 

@@ -31,7 +31,7 @@ T to_value(const V& value) {
 }
 
 template <typename T>
-T to_value(const NullValue& /*v*/) {
+T to_value(const NullValue& /*value*/) {
   return T{};
 }
 

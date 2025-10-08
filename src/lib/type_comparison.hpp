@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <string>
 #include <type_traits>
 
 #include <boost/lexical_cast.hpp>
@@ -11,86 +10,75 @@
 
 namespace hyrise {
 
-// source: http://stackoverflow.com/questions/16893992/check-if-type-can-be-explicitly-converted
-// NOLINTBEGIN(readability-identifier-naming)
-template <class From, class To>
-struct is_explicitly_convertible {
-  enum : uint8_t { value = std::is_constructible_v<To, From> && !std::is_convertible_v<From, To> };
+// source: http://stackoverflow.com/questions/27709461/check-if-type-can-be-an-argument-to-boostlexical-caststring
+template <typename T>
+concept LexCastable = requires(std::ostream& stream, T value) {
+  { stream << value };  // NOLINT(readability/braces)
 };
 
-// source: http://stackoverflow.com/questions/27709461/check-if-type-can-be-an-argument-to-boostlexical-caststring
-template <typename T, typename = void>
-struct is_lex_castable : std::false_type {};
-
-template <typename T>
-struct is_lex_castable<T, decltype(void(std::declval<std::ostream&>() << std::declval<T>()))> : std::true_type {};
-
-template <typename T>
-inline constexpr bool is_lex_castable_v = is_lex_castable<T>::value;
-
-// NOLINTEND(readability-identifier-naming)
 /* EQUAL */
 // L and R are implicitly convertible
 template <typename L, typename R>
-std::enable_if_t<std::is_convertible_v<L, R> && std::is_convertible_v<R, L>, bool> value_equal(L left, R right) {
+  requires std::is_convertible_v<L, R> && std::is_convertible_v<R, L>
+bool value_equal(L left, R right) {
   return left == right;
 }
 
 // L is arithmetic, R is explicitly convertible to L
-template <typename L, typename R>
-std::enable_if_t<std::is_arithmetic_v<L> && is_lex_castable_v<R> && !std::is_arithmetic_v<R>, bool> value_equal(
-    L left, R right) {
+template <typename L, LexCastable R>
+  requires std::is_arithmetic_v<L> && (!std::is_arithmetic_v<R>)
+bool value_equal(L left, R right) {
   return boost::lexical_cast<L>(right) == left;
 }
 
 // R is arithmetic, L is explicitly convertible to R
-template <typename L, typename R>
-std::enable_if_t<std::is_arithmetic_v<R> && is_lex_castable_v<L> && !std::is_arithmetic_v<L>, bool> value_equal(
-    L left, R right) {
+template <LexCastable L, typename R>
+  requires std::is_arithmetic_v<R> && (!std::is_arithmetic_v<L>)
+bool value_equal(L left, R right) {
   return boost::lexical_cast<R>(left) == right;
 }
 
 /* SMALLER */
 // L and R are implicitly convertible
 template <typename L, typename R>
-std::enable_if_t<std::is_convertible_v<L, R> && std::is_convertible_v<R, L>, bool> value_smaller(const L& left,
-                                                                                                 const R& right) {
+  requires std::is_convertible_v<L, R> && std::is_convertible_v<R, L>
+bool value_smaller(const L& left, const R& right) {
   return left < right;
 }
 
 // L is arithmetic, R is explicitly convertible to L
-template <typename L, typename R>
-std::enable_if_t<std::is_arithmetic_v<L> && is_lex_castable_v<R> && !std::is_arithmetic_v<R>, bool> value_smaller(
-    L left, R right) {
+template <typename L, LexCastable R>
+  requires std::is_arithmetic_v<L> && (!std::is_arithmetic_v<R>)
+bool value_smaller(L left, R right) {
   return boost::lexical_cast<L>(right) < left;
 }
 
 // R is arithmetic, L is explicitly convertible to R
-template <typename L, typename R>
-std::enable_if_t<std::is_arithmetic_v<R> && is_lex_castable_v<L> && !std::is_arithmetic_v<L>, bool> value_smaller(
-    L left, R right) {
+template <LexCastable L, typename R>
+  requires std::is_arithmetic_v<R> && (!std::is_arithmetic_v<L>)
+bool value_smaller(L left, R right) {
   return boost::lexical_cast<R>(left) < right;
 }
 
 /* GREATER > */
 // L and R are implicitly convertible
 template <typename L, typename R>
-std::enable_if_t<std::is_convertible_v<L, R> && std::is_convertible_v<R, L>, bool> value_greater(const L& left,
-                                                                                                 const R& right) {
+  requires std::is_convertible_v<L, R> && std::is_convertible_v<R, L>
+bool value_greater(const L& left, const R& right) {
   return left > right;
 }
 
 // L is arithmetic, R is explicitly convertible to L
-template <typename L, typename R>
-std::enable_if_t<std::is_arithmetic_v<L> && is_lex_castable_v<R> && !std::is_arithmetic_v<R>, bool> value_greater(
-    L left, R right) {
+template <typename L, LexCastable R>
+  requires std::is_arithmetic_v<L> && (!std::is_arithmetic_v<R>)
+bool value_greater(L left, R right) {
   return boost::lexical_cast<L>(right) > left;
 }
 
 // R is arithmetic, L is explicitly convertible to R
-template <typename L, typename R>
-std::enable_if_t<std::is_arithmetic_v<R> && is_lex_castable_v<L> && !std::is_arithmetic_v<L>, bool> value_greater(
-    L left, R right) {
+template <LexCastable L, typename R>
+  requires std::is_arithmetic_v<R> && (!std::is_arithmetic_v<L>)
+bool value_greater(L left, R right) {
   return boost::lexical_cast<R>(left) > right;
 }
 

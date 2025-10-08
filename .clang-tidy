@@ -52,6 +52,11 @@ Checks: '
 #                       (https://github.com/llvm/llvm-project/pull/152938 landed in LLVM 21)
 
 WarningsAsErrors: '*'
+
+# These ensure that header files are linted when their respective code files are linted. We need to lint header files this way
+# as it is the only way that we know the compile commands used for this header file. HeaderFilterRegex is a match all, which is
+# needed to enable header linting and ExcludeHeaderFilterRegex disables linting of third party headers. Just setting
+# HeaderFilterRegex to src/.* does not work, as it will lint third_party/sql-parser/src/.*
 HeaderFilterRegex: '.*'
 ExcludeHeaderFilterRegex: 'third_party'
 
@@ -103,7 +108,7 @@ ExcludeHeaderFilterRegex: 'third_party'
 #                                                               do not matter with our limited set of supported compilers.
 #   - boost-use-ranges                                          As most boost-ranges implementations are now in C++20, we prefer `std::ranges`.
 #   - portability-template-virtual-member-function              We do not mind being incompatible with the MSVC compiler.
-#   - cppcoreguidelines-avoid-const-or-ref-data-members        We have quite a few const and ref data members. This is a bad thing, but it would take quite a while to fix it all.
+#   - cppcoreguidelines-avoid-const-or-ref-data-members         We have quite a few const and ref data members. This is a bad thing, but it would take quite a while to fix it all.
 #                                                               These make constrcutors / assignments more expensive, but we use shared pointers, which should negate that.
 
 CheckOptions:

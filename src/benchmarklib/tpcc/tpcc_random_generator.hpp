@@ -50,7 +50,7 @@ class TPCCRandomGenerator : public RandomGenerator {
    * @return    a string representing the last name
    */
   std::string last_name(size_t index) {
-    const auto syllables = std::array<std::string, 10>{
+    const auto syllables = std::array{
         "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
     };
 
@@ -58,7 +58,7 @@ class TPCCRandomGenerator : public RandomGenerator {
       index = nurand(255, 0, 999);
     }
 
-    std::string last_name;
+    auto last_name = std::string{};
     last_name += syllables[(index / 100) % 10];
     last_name += syllables[(index / 10) % 10];
     last_name += syllables[index % 10];

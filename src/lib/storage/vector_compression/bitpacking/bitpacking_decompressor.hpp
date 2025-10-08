@@ -32,7 +32,7 @@ class BitPackingDecompressor : public BaseVectorDecompressor {
 
   ~BitPackingDecompressor() override = default;
 
-  uint32_t get(size_t index) final {
+  uint32_t get(size_t index) const final {
     return _data[index];
   }
 
