@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
