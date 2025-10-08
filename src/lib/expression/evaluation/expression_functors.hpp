@@ -105,12 +105,12 @@ struct STLComparisonFunctorWrapper {
   static constexpr bool supports_v = Supports<Result, ArgA, ArgB>::value;
 
   template <typename Result, typename ArgA, typename ArgB>
-  void operator()(Result& result, const ArgA& a, const ArgB& b) {
+  void operator()(Result& result, const ArgA& left, const ArgB& right) {
     if constexpr (std::is_same_v<NullValue, ArgA> || std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
       result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(
-          static_cast<std::common_type_t<ArgA, ArgB>>(a), static_cast<std::common_type_t<ArgA, ArgB>>(b)));
+          static_cast<std::common_type_t<ArgA, ArgB>>(left), static_cast<std::common_type_t<ArgA, ArgB>>(right)));
     }
   }
 };

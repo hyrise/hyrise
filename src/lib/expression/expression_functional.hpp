@@ -224,8 +224,8 @@ std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... arg
 }
 
 template <typename A, typename B, typename C>
-std::shared_ptr<CaseExpression> case_(const A& a, const B& b, const C& c) {
-  return std::make_shared<CaseExpression>(to_expression(a), to_expression(b), to_expression(c));
+std::shared_ptr<CaseExpression> case_(const A& when, const B& then, const C& otherwise) {
+  return std::make_shared<CaseExpression>(to_expression(when), to_expression(then), to_expression(otherwise));
 }
 
 template <typename String, typename Start, typename Length>
