@@ -77,7 +77,7 @@ done
 # > this option by default, you have to explicitly disable it by adding -fno-reorder-blocks-and-partition flag if you
 # > are compiling with GCC8 or above.
 # https://github.com/llvm/llvm-project/tree/main/bolt
-cmake -DCOMPILE_FOR_BOLT=TRUE ..
+cmake -DCOMPILE_FOR_BOLT=TRUE -DPGO_INSTRUMENT ..
 
 ninja clean
 # Only compile the benchmarks that we need.
@@ -111,11 +111,24 @@ do
     time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled
   fi
   mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
+  mv default.profraw "$build_folder/$benchmark.profraw"
 done
 
 popd
 
 time merge-fdata *.fdata > bolt.fdata
+time llvm-profdata merge -output pgo.profdata *.profraw
+
+cmake -DCOMPILE_FOR_BOLT=TRUE -DPGO_PROFILE=pgo.profdata ..
+ninja clean
+# Only compile the benchmarks that we need.
+if [ "$cli" -eq 1 ]
+then
+  time ninja ${benchmarks[@]} hyriseTest -j "$num_cores"
+else
+  time ninja
+fi
+mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
 
 time llvm-bolt lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 
