@@ -524,7 +524,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 // This is the cacheline size on our most commonly benchmarked hardware. Other systems will also run fine with this value.
 constexpr auto BYTES_PER_CACHELINE = size_t{64};
 // This is a tunable parameter
-constexpr auto MIN_CACHELINES_PER_STORE = size_t{3};
+constexpr auto MIN_CACHELINES_PER_STORE = size_t{1};
 
 template <typename T>
   requires std::is_trivially_destructible_v<T>
@@ -687,17 +687,17 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           // std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
 
           // Variant B: Copy with OpenMP Pragma
-//           const auto copy_from = tmp.data[radix].elements.data();
-//           const auto copy_to = output[radix].elements.data() + output_idx;
-// #pragma omp simd nontemporal(copy_to), aligned(copy_to, copy_from : BYTES_PER_CACHELINE)
-//           for (auto index = size_t{0}; index < TMP::ELEMENTS_PER_STORE; ++index) {
-//             copy_to[index] = copy_from[index];
-//           }
+          const auto copy_from = tmp.data[radix].elements.data();
+          const auto copy_to = output[radix].elements.data() + output_idx;
+#pragma omp simd nontemporal(copy_to), aligned(copy_to, copy_from : BYTES_PER_CACHELINE)
+          for (auto index = size_t{0}; index < TMP::ELEMENTS_PER_STORE; ++index) {
+            copy_to[index] = copy_from[index];
+          }
 
           // Variant C: Google Highway streaming copy
-          highway::copy_nontemporal(reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data()),
-                                    TMP::bucket::BYTES_PER_STORE,
-                                    reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx));
+          // highway::copy_nontemporal(reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data()),
+          //                           TMP::bucket::BYTES_PER_STORE,
+          //                           reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx));
 
           if constexpr (keep_null_values) {
             std::ranges::copy(tmp.null_values[radix], null_values_as_char[radix].begin() + output_idx);
