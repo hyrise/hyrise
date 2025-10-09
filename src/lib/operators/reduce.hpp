@@ -116,7 +116,7 @@ class Reduce : public AbstractReadOnlyOperator {
           }
 
           for (; chunk_index < last_chunk_index; ++chunk_index) {
-            auto matches = std::make_shared<RowIDPosList>(); 
+            auto matches = std::make_shared<RowIDPosList>();
 
             const auto& input_chunk = input_table->get_chunk(chunk_index);
             const auto& input_segment = input_chunk->get_segment(column_id);
@@ -240,16 +240,15 @@ class Reduce : public AbstractReadOnlyOperator {
               }
             }
           }
-            if constexpr (reduce_mode != ReduceMode::Probe) {
-              new_bloom_filter->merge_from(*partial_bloom_filter);
+          if constexpr (reduce_mode != ReduceMode::Probe) {
+            new_bloom_filter->merge_from(*partial_bloom_filter);
 
-              if constexpr (use_min_max == UseMinMax::Yes) {
-                if (!first_value) {
-                  new_min_max_filter->merge_from(partial_minimum, partial_maximum);
-                }
+            if constexpr (use_min_max == UseMinMax::Yes) {
+              if (!first_value) {
+                new_min_max_filter->merge_from(partial_minimum, partial_maximum);
               }
             }
-          
+          }
         };
 
         jobs.emplace_back(std::make_shared<JobTask>(job));
