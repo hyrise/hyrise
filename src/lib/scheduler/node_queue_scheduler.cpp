@@ -37,8 +37,8 @@ namespace {
  * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
  * _workers_per_node).
  */
-constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
-constexpr auto NUM_GROUPS_MAX_FACTOR = 2.0f;
+constexpr auto NUM_GROUPS_MIN_FACTOR = 0.16f;
+constexpr auto NUM_GROUPS_MAX_FACTOR = 0.16f;
 constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
 // This factor is used to determine at which queue load we use the maximum number of groups.
@@ -69,7 +69,7 @@ void NodeQueueScheduler::begin() {
   _workers_per_node.reserve(_node_count);
 
   // For task lists with few tasks, we do not determine the number of groups to avoid grouping overheads. Assuming
-  // NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group tasks with less than 25 tasks (2 * 128 * 0.1).
+  // NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group task lists with less than 25 tasks (2 * 128 * 0.1).
   _min_task_count_for_regrouping =
       std::max(size_t{16}, static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
 
@@ -299,9 +299,9 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
 
   // Using max() for small machines where NUM_GROUPS_MIN_FACTOR * cores can yield group_counts smaller one.
   const auto group_count =
-      std::max(size_t{2}, static_cast<size_t>(static_cast<float>(_worker_count) * group_count_factor));
-  // If the resulting groups are smaller than 4 tasks, skip grouping.
-  if ((task_count / group_count) < 4) {
+      std::max(size_t{1}, static_cast<size_t>(static_cast<float>(_worker_count) * group_count_factor));
+  // If the resulting groups are smaller than two tasks, skip grouping.
+  if ((task_count / group_count) < 2) {
     return std::nullopt;
   }
 
@@ -332,9 +332,11 @@ void NodeQueueScheduler::_schedule(std::shared_ptr<AbstractTask> task, NodeID pr
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   const auto group_count = determine_group_count(tasks);
   if (!group_count) {  // Skip grouping when not beneficial.
+    //std::cerr << std::format("Skip grouping for list size of {}\n", tasks.size());
     return;
   }
 
+  //std::cerr << std::format("Grouping -- task count: {} - group count: {}\n", tasks.size(), *group_count);
   _group_tasks(tasks, *group_count);
 }
 
