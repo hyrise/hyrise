@@ -381,21 +381,21 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, WorstCaseReduce)(benchmark::State& state
   const auto predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals};
   const auto build_reduce_dryrun =
       std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_left_input, _right_input, predicate);
-  const auto probe_reduce_dryrun =
-      std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce_dryrun, predicate);
+  // const auto probe_reduce_dryrun =
+  //     std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce_dryrun, predicate);
   build_reduce_dryrun->execute();
-  probe_reduce_dryrun->execute();
+  // probe_reduce_dryrun->execute();
 
   state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
-  state.counters["output_count"] = static_cast<double>(probe_reduce_dryrun->get_output()->row_count());
+  // state.counters["output_count"] = static_cast<double>(probe_reduce_dryrun->get_output()->row_count());
 
   for (auto _ : state) {
     const auto build_reduce =
         std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_left_input, _right_input, predicate);
-    const auto probe_reduce =
-        std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce, predicate);
+    // const auto probe_reduce =
+    //     std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce, predicate);
     build_reduce->execute();
-    probe_reduce->execute();
+    // probe_reduce->execute();
   }
 }
 
@@ -528,18 +528,18 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, BadCaseReduce)(benchmark::State& state) 
 //   }
 // }
 
-// BENCHMARK_REGISTER_F(ReductionBenchmarks, WorstCaseReduce)
-//     ->ArgsProduct({// {1, 2, 3, 4, 5, 7, 14, 28},
-//                    {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
-//                     15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
-//                    {1, 5, 10, 20, 100}});
-
-BENCHMARK_REGISTER_F(ReductionBenchmarks, BestCaseReduce)
+BENCHMARK_REGISTER_F(ReductionBenchmarks, WorstCaseReduce)
     ->ArgsProduct({// {1, 2, 3, 4, 5, 7, 14, 28},
                    {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
                     15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
-                  //  {1, 5, 10, 20, 100}});
                    {20}});
+
+// BENCHMARK_REGISTER_F(ReductionBenchmarks, BestCaseReduce)
+//     ->ArgsProduct({// {1, 2, 3, 4, 5, 7, 14, 28},
+//                    {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
+//                     15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
+//                   //  {1, 5, 10, 20, 100}});
+//                    {20}});
 
 // BENCHMARK_REGISTER_F(ReductionBenchmarks, BadCaseReduce)
 //     ->ArgsProduct({// {1, 2, 3, 4, 5, 7, 14, 28},
