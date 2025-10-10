@@ -378,20 +378,20 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, WorstCaseReduce)(benchmark::State& state
   Assert(_left_input->executed() && _right_input->executed(),
          "Left and right input must be executed before running the benchmark.");
 
-  const auto predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals};
+  const auto predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{3}), PredicateCondition::Equals};
   const auto build_reduce_dryrun =
-      std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_left_input, _right_input, predicate);
+      std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input, _left_input, predicate);
   // const auto probe_reduce_dryrun =
   //     std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce_dryrun, predicate);
   build_reduce_dryrun->execute();
   // probe_reduce_dryrun->execute();
 
-  state.counters["input_count"] = static_cast<double>(_left_input->get_output()->row_count());
+  state.counters["input_count"] = static_cast<double>(build_reduce_dryrun->right_input()->get_output()->row_count());
   // state.counters["output_count"] = static_cast<double>(probe_reduce_dryrun->get_output()->row_count());
 
   for (auto _ : state) {
     const auto build_reduce =
-        std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_left_input, _right_input, predicate);
+        std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input, _left_input, predicate);
     // const auto probe_reduce =
     //     std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce, predicate);
     build_reduce->execute();
