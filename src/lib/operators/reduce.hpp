@@ -106,7 +106,7 @@ class Reduce : public AbstractReadOnlyOperator {
       if constexpr (reduce_mode != ReduceMode::Build) {
         Assert(_right_input->executed(), "Build Reducer was not executed.");
         const auto build_reduce =
-            std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input);
+            std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::No>>(_right_input);
         Assert(build_reduce, "Failed to cast build reduce.");
 
         _bloom_filter = build_reduce->get_bloom_filter();
