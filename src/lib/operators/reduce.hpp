@@ -92,11 +92,11 @@ class Reduce : public AbstractReadOnlyOperator {
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.resize(chunk_count);
 
-      auto new_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
+      // auto new_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
       std::shared_ptr<MinMaxPredicate<ColumnDataType>> new_min_max_filter;
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
-        new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+        // new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
 
         if constexpr (use_min_max == UseMinMax::Yes) {
           new_min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();
@@ -106,10 +106,10 @@ class Reduce : public AbstractReadOnlyOperator {
       if constexpr (reduce_mode != ReduceMode::Build) {
         Assert(_right_input->executed(), "Build Reducer was not executed.");
         const auto build_reduce =
-            std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::No>>(_right_input);
+            std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input);
         Assert(build_reduce, "Failed to cast build reduce.");
 
-        _bloom_filter = build_reduce->get_bloom_filter();
+        // _bloom_filter = build_reduce->get_bloom_filter();
         _min_max_filter = build_reduce->get_min_max_filter();
       }
 
@@ -143,13 +143,13 @@ class Reduce : public AbstractReadOnlyOperator {
           const auto job_index = static_cast<uint32_t>(chunk_index / chunks_per_worker);
 
           auto first_value = bool{true};
-          auto partial_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
+          // auto partial_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
           auto partial_minimum = ColumnDataType{};
           auto partial_maximum = ColumnDataType{};
 
-          if constexpr (reduce_mode != ReduceMode::Probe) {
-            partial_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
-          }
+          // if constexpr (reduce_mode != ReduceMode::Probe) {
+          //   partial_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+          // }
 
           auto last_chunk_index = chunk_index + chunks_per_worker;
           if (last_chunk_index > chunk_count) {
@@ -176,7 +176,7 @@ class Reduce : public AbstractReadOnlyOperator {
                 boost::hash_combine(seed, position.value());
 
                 if constexpr (reduce_mode == ReduceMode::Build) {
-                  partial_bloom_filter->insert(static_cast<uint64_t>(seed));
+                  // partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
                   if constexpr (use_min_max == UseMinMax::Yes) {
                     if (first_value) {
@@ -189,7 +189,7 @@ class Reduce : public AbstractReadOnlyOperator {
                     }
                   }
                 } else {
-                  auto found = _bloom_filter->probe(static_cast<uint64_t>(seed));
+                  auto found = true;
 
                   if constexpr (use_min_max == UseMinMax::Yes) {
                     found = found && position.value() >= minimum && position.value() <= maximum;
@@ -199,7 +199,7 @@ class Reduce : public AbstractReadOnlyOperator {
                     matches->emplace_back(chunk_index, position.chunk_offset());
 
                     if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
-                      partial_bloom_filter->insert(static_cast<uint64_t>(seed));
+                      // partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
                       if constexpr (use_min_max == UseMinMax::Yes) {
                         if (first_value) {
@@ -303,7 +303,7 @@ class Reduce : public AbstractReadOnlyOperator {
           // Measure and store merge cost separately
           if constexpr (reduce_mode != ReduceMode::Probe) {
             // const auto merge_t0 = std::chrono::steady_clock::now();
-            new_bloom_filter->merge_from(*partial_bloom_filter);
+            // new_bloom_filter->merge_from(*partial_bloom_filter);
             if constexpr (use_min_max == UseMinMax::Yes) {
               if (!first_value) {
                 new_min_max_filter->merge_from(partial_minimum, partial_maximum);
@@ -333,7 +333,7 @@ class Reduce : public AbstractReadOnlyOperator {
       }
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
-        _bloom_filter = new_bloom_filter;
+        // _bloom_filter = new_bloom_filter;
         _min_max_filter = new_min_max_filter;
       }
 
