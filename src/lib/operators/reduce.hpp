@@ -140,6 +140,11 @@ class Reduce : public AbstractReadOnlyOperator {
         const auto job = [&, chunk_index]() mutable {
           const auto job_index = static_cast<uint32_t>(chunk_index / chunks_per_worker);
 
+          // Local accumulation to avoid false sharing on the vectors
+          auto local_scan = std::chrono::nanoseconds{0};
+          auto local_output = std::chrono::nanoseconds{0};
+          auto local_merge = std::chrono::nanoseconds{0};
+
           auto first_value = bool{true};
           // auto partial_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
           auto partial_minimum = ColumnDataType{};
@@ -154,24 +159,20 @@ class Reduce : public AbstractReadOnlyOperator {
             last_chunk_index = chunk_count;
           }
 
-          // std::chrono::nanoseconds scan_ns{0};
-          // std::chrono::nanoseconds out_ns{0};
-          // std::chrono::nanoseconds merge_ns{0};  // added
           auto timer = Timer{};
 
           for (; chunk_index < last_chunk_index; ++chunk_index) {
             auto matches = std::make_shared<RowIDPosList>();
-
             const auto& input_chunk = input_table->get_chunk(chunk_index);
+            matches->reserve(input_chunk->size());
             const auto& input_segment = input_chunk->get_segment(column_id);
 
-            // const auto scan_t0 = std::chrono::steady_clock::now();
             timer.lap();
 
             segment_iterate<ColumnDataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
-                auto seed = size_t{4615968};
-                boost::hash_combine(seed, position.value());
+                // auto seed = size_t{4615968};
+                // boost::hash_combine(seed, position.value());
 
                 if constexpr (reduce_mode == ReduceMode::Build) {
                   // partial_bloom_filter->insert(static_cast<uint64_t>(seed));
@@ -211,7 +212,8 @@ class Reduce : public AbstractReadOnlyOperator {
             });
             // const auto scan_t1 = std::chrono::steady_clock::now();
             // scan_ns += std::chrono::duration_cast<std::chrono::nanoseconds>(scan_t1 - scan_t0);
-            job_iteration_times[job_index]+= timer.lap();
+            // Was: job_iteration_times[job_index] += timer.lap();
+            local_scan += timer.lap();
 
             if constexpr (reduce_mode != ReduceMode::Build) {
               if (!matches->empty()) {
@@ -289,7 +291,8 @@ class Reduce : public AbstractReadOnlyOperator {
                 // out_ns += std::chrono::duration_cast<std::chrono::nanoseconds>(out_t1 - out_t0);
               }
 
-              job_output_times[job_index] += timer.lap();
+              // Was: job_output_times[job_index] += timer.lap();
+              local_output += timer.lap();
             }
           }  // for chunks
 
@@ -303,12 +306,14 @@ class Reduce : public AbstractReadOnlyOperator {
             
             // const auto merge_t1 = std::chrono::steady_clock::now();
             // merge_ns += std::chrono::duration_cast<std::chrono::nanoseconds>(merge_t1 - merge_t0);  // added
-            job_merge_times[job_index] += timer.lap();  // added
+            // Was: job_merge_times[job_index] += timer.lap();
+            local_merge += timer.lap();
           }
 
-          // job_iteration_times[job_index] = scan_ns;
-          // job_output_times[job_index] = out_ns;
-          // job_merge_times[job_index] = merge_ns;  // added
+          // Single writes at the end – no inner-loop sharing
+          job_iteration_times[job_index] = local_scan;
+          job_output_times[job_index] = local_output;
+          job_merge_times[job_index] = local_merge;
         };
 
         jobs.emplace_back(std::make_shared<JobTask>(job));
