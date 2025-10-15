@@ -98,9 +98,7 @@ class Reduce : public AbstractReadOnlyOperator {
       if constexpr (reduce_mode != ReduceMode::Probe) {
         // new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
 
-        if constexpr (use_min_max == UseMinMax::Yes) {
           new_min_max_filter = std::make_shared<MinMaxPredicate<ColumnDataType>>();
-        }
       }
 
       if constexpr (reduce_mode != ReduceMode::Build) {
@@ -116,7 +114,7 @@ class Reduce : public AbstractReadOnlyOperator {
       auto minimum = ColumnDataType{};
       auto maximum = ColumnDataType{};
 
-      if constexpr (reduce_mode != ReduceMode::Build && use_min_max == UseMinMax::Yes) {
+      if constexpr (reduce_mode != ReduceMode::Build) {
         Assert(_min_max_filter, "Min max filter is null.");
         auto casted_min_max_filter = std::dynamic_pointer_cast<MinMaxPredicate<ColumnDataType>>(_min_max_filter);
         Assert(casted_min_max_filter, "Failed to cast min max filter.");
@@ -178,7 +176,6 @@ class Reduce : public AbstractReadOnlyOperator {
                 if constexpr (reduce_mode == ReduceMode::Build) {
                   // partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
-                  if constexpr (use_min_max == UseMinMax::Yes) {
                     if (first_value) {
                       partial_minimum = position.value();
                       partial_maximum = position.value();
@@ -187,13 +184,10 @@ class Reduce : public AbstractReadOnlyOperator {
                       partial_minimum = std::min(partial_minimum, position.value());
                       partial_maximum = std::max(partial_maximum, position.value());
                     }
-                  }
+                  
                 } else {
-                  auto found = true;
-
-                  if constexpr (use_min_max == UseMinMax::Yes) {
-                    found = found && position.value() >= minimum && position.value() <= maximum;
-                  }
+                  auto found = position.value() >= minimum && position.value() <= maximum;
+            
 
                   if (found) {
                     matches->emplace_back(chunk_index, position.chunk_offset());
@@ -201,7 +195,6 @@ class Reduce : public AbstractReadOnlyOperator {
                     if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
                       // partial_bloom_filter->insert(static_cast<uint64_t>(seed));
 
-                      if constexpr (use_min_max == UseMinMax::Yes) {
                         if (first_value) {
                           partial_minimum = position.value();
                           partial_maximum = position.value();
@@ -210,7 +203,7 @@ class Reduce : public AbstractReadOnlyOperator {
                           partial_minimum = std::min(partial_minimum, position.value());
                           partial_maximum = std::max(partial_maximum, position.value());
                         }
-                      }
+                      
                     }
                   }
                 }
@@ -304,11 +297,10 @@ class Reduce : public AbstractReadOnlyOperator {
           if constexpr (reduce_mode != ReduceMode::Probe) {
             // const auto merge_t0 = std::chrono::steady_clock::now();
             // new_bloom_filter->merge_from(*partial_bloom_filter);
-            if constexpr (use_min_max == UseMinMax::Yes) {
               if (!first_value) {
                 new_min_max_filter->merge_from(partial_minimum, partial_maximum);
               }
-            }
+            
             // const auto merge_t1 = std::chrono::steady_clock::now();
             // merge_ns += std::chrono::duration_cast<std::chrono::nanoseconds>(merge_t1 - merge_t0);  // added
             job_merge_times[job_index] += timer.lap();  // added
