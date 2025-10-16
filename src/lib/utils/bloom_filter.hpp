@@ -9,17 +9,12 @@ namespace hyrise {
 template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter {
  public:
-  // BloomFilter() {
-  //   _filter.fill(~0ULL);
-  // }
 
   void insert(uint64_t hash) {
-    // std::cout << hash << " -> ";
     for (uint8_t i = 0; i < K; ++i) {
       const auto bit_index = _extract_bits(hash, i);
       _set_bit(bit_index);
     }
-    // std::cout << std::endl;
   }
 
   bool probe(uint64_t hash) const {

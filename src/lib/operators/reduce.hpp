@@ -140,21 +140,23 @@ class Reduce : public AbstractReadOnlyOperator {
           auto local_output = std::chrono::nanoseconds{0};
           auto local_merge = std::chrono::nanoseconds{0};
 
+          auto hasher = boost::hash<ColumnDataType>{};
           for (; chunk_index < last_chunk_index; ++chunk_index) {
-            auto matches = std::make_shared<RowIDPosList>();
-
             const auto& input_chunk = input_table->get_chunk(chunk_index);
             const auto& input_segment = input_chunk->get_segment(column_id);
+
+            auto matches = std::make_shared<RowIDPosList>();
+            matches->reserve(input_chunk->size() / 2);
 
             timer.lap();
 
             segment_iterate<ColumnDataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
-                auto seed = size_t{4615968};
-                boost::hash_combine(seed, position.value());
+                auto hash = hasher(position.value());
+                // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
                 if constexpr (reduce_mode == ReduceMode::Build) {
-                  partial_bloom_filter->insert(static_cast<uint64_t>(seed));
+                  partial_bloom_filter->insert(static_cast<uint64_t>(hash));
 
                   if constexpr (use_min_max == UseMinMax::Yes) {
                     if (first_value) {
@@ -167,7 +169,7 @@ class Reduce : public AbstractReadOnlyOperator {
                     }
                   }
                 } else {
-                  auto found = _bloom_filter->probe(static_cast<uint64_t>(seed));
+                  auto found = _bloom_filter->probe(static_cast<uint64_t>(hash));
 
                   if constexpr (use_min_max == UseMinMax::Yes) {
                     found = found && position.value() >= minimum && position.value() <= maximum;
@@ -177,7 +179,7 @@ class Reduce : public AbstractReadOnlyOperator {
                     matches->emplace_back(chunk_index, position.chunk_offset());
 
                     if constexpr (reduce_mode == ReduceMode::BuildAndProbe) {
-                      partial_bloom_filter->insert(static_cast<uint64_t>(seed));
+                      partial_bloom_filter->insert(static_cast<uint64_t>(hash));
 
                       if constexpr (use_min_max == UseMinMax::Yes) {
                         if (first_value) {
