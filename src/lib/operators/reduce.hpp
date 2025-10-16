@@ -48,24 +48,6 @@ class Reduce : public AbstractReadOnlyOperator {
 
   using OperatorSteps = ReduceOperatorSteps;
   struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
-    // void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
-
-    // size_t radix_bits{0};
-    // // Initially, the left input is the build side and the right side is the probe side.
-    // bool left_input_is_build_side{true};
-
-    // // Due to the used Bloom filters, the number of actually joined tuples can significantly differ from the sizes of
-    // // the input tables. To enable analyses of the Bloom filter efficiency, we store the number of values that were
-    // // eventually materialized; i.e., "input_row_count - filtered_values_by_Bloom_filter".
-    // size_t build_side_materialized_value_count{0};
-    // size_t probe_side_materialized_value_count{0};
-
-    // // In build(), the Bloom filter potentially reduces the distinct values in the hash table (i.e., the size of the
-    // // hash table) and the number of rows (in case of non-semi/anti* joins).
-    // // Note, depending on the order of materialization, build_side_materialized_value_count is not necessarily equal to
-    // // build_side_position_count (see order of materialization in hash_join.cpp).
-    // size_t hash_tables_distinct_value_count{0};
-    // std::optional<size_t> hash_tables_position_count;
   };
 
  protected:
@@ -130,9 +112,6 @@ class Reduce : public AbstractReadOnlyOperator {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(worker_count);
 
-      // const auto job_count =
-      //     static_cast<size_t>((static_cast<uint32_t>(chunk_count) + static_cast<uint32_t>(chunks_per_worker) - 1) /
-      //                         static_cast<uint32_t>(chunks_per_worker));
       std::vector<std::chrono::nanoseconds> job_iteration_times(worker_count);
       std::vector<std::chrono::nanoseconds> job_output_times(worker_count);
       std::vector<std::chrono::nanoseconds> job_merge_times(worker_count);
@@ -156,10 +135,10 @@ class Reduce : public AbstractReadOnlyOperator {
             last_chunk_index = chunk_count;
           }
 
-          // std::chrono::nanoseconds scan_ns{0};
-          // std::chrono::nanoseconds out_ns{0};
-          // std::chrono::nanoseconds merge_ns{0};  // added
           auto timer = Timer{};
+          auto local_scan = std::chrono::nanoseconds{0};
+          auto local_output = std::chrono::nanoseconds{0};
+          auto local_merge = std::chrono::nanoseconds{0};
 
           for (; chunk_index < last_chunk_index; ++chunk_index) {
             auto matches = std::make_shared<RowIDPosList>();
@@ -167,7 +146,6 @@ class Reduce : public AbstractReadOnlyOperator {
             const auto& input_chunk = input_table->get_chunk(chunk_index);
             const auto& input_segment = input_chunk->get_segment(column_id);
 
-            // const auto scan_t0 = std::chrono::steady_clock::now();
             timer.lap();
 
             segment_iterate<ColumnDataType>(*input_segment, [&](const auto& position) {
@@ -216,14 +194,11 @@ class Reduce : public AbstractReadOnlyOperator {
                 }
               }
             });
-            // const auto scan_t1 = std::chrono::steady_clock::now();
-            // scan_ns += std::chrono::duration_cast<std::chrono::nanoseconds>(scan_t1 - scan_t0);
-            job_iteration_times[job_index]+= timer.lap();
+
+            local_scan += timer.lap();
 
             if constexpr (reduce_mode != ReduceMode::Build) {
               if (!matches->empty()) {
-                // const auto out_t0 = std::chrono::steady_clock::now();
-
                 const auto column_count = input_table->column_count();
                 auto output_segments = Segments{};
                 output_segments.reserve(column_count);
@@ -292,31 +267,27 @@ class Reduce : public AbstractReadOnlyOperator {
                 }
                 output_chunks[chunk_index] = output_chunk;
 
-                // const auto out_t1 = std::chrono::steady_clock::now();
-                // out_ns += std::chrono::duration_cast<std::chrono::nanoseconds>(out_t1 - out_t0);
               }
 
-              job_output_times[job_index] += timer.lap();
+              local_output += timer.lap();
             }
-          }  // for chunks
+          } 
 
           // Measure and store merge cost separately
           if constexpr (reduce_mode != ReduceMode::Probe) {
-            // const auto merge_t0 = std::chrono::steady_clock::now();
             new_bloom_filter->merge_from(*partial_bloom_filter);
             if constexpr (use_min_max == UseMinMax::Yes) {
               if (!first_value) {
                 new_min_max_filter->merge_from(partial_minimum, partial_maximum);
               }
             }
-            // const auto merge_t1 = std::chrono::steady_clock::now();
-            // merge_ns += std::chrono::duration_cast<std::chrono::nanoseconds>(merge_t1 - merge_t0);  // added
-            job_merge_times[job_index] += timer.lap();  // added
+
+            local_merge += timer.lap();
           }
 
-          // job_iteration_times[job_index] = scan_ns;
-          // job_output_times[job_index] = out_ns;
-          // job_merge_times[job_index] = merge_ns;  // added
+          job_iteration_times[job_index] = local_scan;
+          job_output_times[job_index] = local_output;
+          job_merge_times[job_index] = local_merge;
         };
 
         jobs.emplace_back(std::make_shared<JobTask>(job));
