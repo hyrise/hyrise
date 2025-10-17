@@ -4,7 +4,7 @@
 
 #include <boost/hana/for_each.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 

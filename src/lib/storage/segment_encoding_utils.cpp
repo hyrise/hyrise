@@ -3,7 +3,9 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -13,6 +15,7 @@
 #include "storage/run_length_segment/run_length_encoder.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -71,6 +74,40 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
       return VectorCompressionType::BitPacking;
   }
   Fail("Invalid enum value.");
+}
+
+ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
+                                                  const std::vector<ColumnID>& unique_columns) {
+  const auto column_count = types.size();
+  auto chunk_encoding_spec = ChunkEncodingSpec{};
+  chunk_encoding_spec.reserve(column_count);
+  auto unique_columns_iter = unique_columns.begin();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    const auto segment_values_are_unique =
+        unique_columns_iter != unique_columns.end() && *unique_columns_iter == column_id;
+    if (segment_values_are_unique) {
+      ++unique_columns_iter;
+    }
+    chunk_encoding_spec.push_back(auto_select_segment_encoding_spec(types[column_id], segment_values_are_unique));
+  }
+  return chunk_encoding_spec;
+}
+
+/**
+ * Selects and encoding for a column based on its data type and whether its values are guaranteed to be unique.
+ * For more details, see #2696. This PR includes a comparison of different encoding strategies:
+ * https://github.com/hyrise/hyrise/pull/2696#pullrequestreview-3087933111
+ */
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type, const bool segment_values_are_unique) {
+  if (segment_values_are_unique) {
+    return SegmentEncodingSpec{EncodingType::Unencoded};
+  }
+
+  if (type == DataType::Int) {
+    return SegmentEncodingSpec{EncodingType::FrameOfReference};
+  }
+
+  return SegmentEncodingSpec{EncodingType::Dictionary};
 }
 
 }  // namespace hyrise

@@ -827,7 +827,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
 
   for (auto bin_id = BinID{0}; bin_id < result_bin_count; ++bin_id) {
     const auto& bin_min = candidate_edges[bin_id * 2];
-    const auto& bin_max = candidate_edges[bin_id * 2 + 1];
+    const auto& bin_max = candidate_edges[(bin_id * 2) + 1];
 
     const auto estimate =
         estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, bin_min, bin_max);

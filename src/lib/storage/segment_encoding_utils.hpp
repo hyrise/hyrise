@@ -1,9 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <optional>
+#include <vector>
 
-#include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -30,5 +29,15 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
  * For the difference of the two, please take a look at compressed_vector_type.hpp.
  */
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
+
+/**
+ * Selects and encoding for a column based on its data type and whether its values are guaranteed to be unique.
+ * For more details, see #2696. This PR includes a comparison of different encoding strategies:
+ * https://github.com/hyrise/hyrise/pull/2696#pullrequestreview-3087933111
+ */
+ChunkEncodingSpec auto_select_chunk_encoding_spec(const std::vector<DataType>& types,
+                                                  const std::vector<ColumnID>& unique_columns);
+SegmentEncodingSpec auto_select_segment_encoding_spec(const DataType type,
+                                                      const bool segment_values_are_unique = false);
 
 }  // namespace hyrise

@@ -14,7 +14,7 @@ namespace hyrise {
  * "Ordered" runs each item a number of times and then the next one.
  * "Shuffled" runs the items in a random order.
  */
-enum class BenchmarkMode { Ordered, Shuffled };
+enum class BenchmarkMode : uint8_t { Ordered, Shuffled };
 
 using Duration = std::chrono::nanoseconds;
 // `steady_clock` guarantees that the clock is not adjusted while benchmarking.
@@ -40,13 +40,13 @@ class BenchmarkConfig {
 
   BenchmarkMode benchmark_mode{BenchmarkMode::Ordered};
   ChunkOffset chunk_size{Chunk::DEFAULT_SIZE};
-  EncodingConfig encoding_config{};
+  EncodingConfig encoding_config;
   bool chunk_indexes{false};
   bool table_indexes{false};
   int64_t max_runs{-1};
   Duration max_duration{std::chrono::seconds{60}};
   Duration warmup_duration{0};
-  std::optional<std::string> output_file_path{};
+  std::optional<std::string> output_file_path;
   bool enable_scheduler{false};
   uint32_t cores{0};
   uint32_t data_preparation_cores{0};
@@ -58,7 +58,7 @@ class BenchmarkConfig {
   bool cache_binary_tables{false};
   bool system_metrics{false};
   bool pipeline_metrics{false};
-  std::vector<std::string> plugins{};
+  std::vector<std::string> plugins;
 };
 
 }  // namespace hyrise
