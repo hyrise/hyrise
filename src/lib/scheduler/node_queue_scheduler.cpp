@@ -37,12 +37,13 @@ namespace {
  * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
  * _workers_per_node).
  */
-constexpr auto NUM_GROUPS_MIN_FACTOR = 0.16f;
-constexpr auto NUM_GROUPS_MAX_FACTOR = 0.16f;
-constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
+// std::cout << std::getenv("NUM_GROUPS_MIN_FACTOR");
+const auto NUM_GROUPS_MIN_FACTOR = std::strtof(std::getenv("NUM_GROUPS_MIN_FACTOR"), nullptr);
+const auto NUM_GROUPS_MAX_FACTOR = std::strtof(std::getenv("NUM_GROUPS_MAX_FACTOR"), nullptr);
+const auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
 // This factor is used to determine at which queue load we use the maximum number of groups.
-constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{10};
+const auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{std::strtoul(std::getenv("UPPER_LIMIT_QUEUE_SIZE_FACTOR"), nullptr, 10)};
 }  // namespace
 
 namespace hyrise {
@@ -67,6 +68,9 @@ void NodeQueueScheduler::begin() {
   _node_count = Hyrise::get().topology.nodes().size();
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
+
+  Assert(NUM_GROUPS_MIN_FACTOR <= NUM_GROUPS_MAX_FACTOR, "Unexpected #1.");
+  Assert(UPPER_LIMIT_QUEUE_SIZE_FACTOR > 0, "Unexpected #2.");
 
   // For task lists with few tasks, we do not determine the number of groups to avoid grouping overheads. Assuming
   // NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group task lists with less than 25 tasks (2 * 128 * 0.1).
