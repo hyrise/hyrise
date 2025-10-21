@@ -128,6 +128,52 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   }
 }
 
+Table::Table(Table&& other) noexcept {
+  auto lock = other.acquire_append_mutex();
+  // NOLINTBEGIN(cppcoreguidelines-prefer-member-initializer)
+  _column_definitions = std::move(other._column_definitions);
+  _type = other._type;
+  _use_mvcc = other._use_mvcc;
+  _target_chunk_size = other._target_chunk_size;
+  _chunks = std::move(other._chunks);
+  _table_key_constraints = std::move(other._table_key_constraints);
+  _table_order_constraints = std::move(other._table_order_constraints);
+  _foreign_key_constraints = std::move(other._foreign_key_constraints);
+  _referenced_foreign_key_constraints = std::move(other._referenced_foreign_key_constraints);
+  _value_clustered_by = std::move(other._value_clustered_by);
+  _table_statistics = std::move(other._table_statistics);
+  _chunk_indexes_statistics = std::move(other._chunk_indexes_statistics);
+  _table_indexes_statistics = std::move(other._table_indexes_statistics);
+  _table_indexes = std::move(other._table_indexes);
+  _cached_row_count = other._cached_row_count;
+  // NOLINTEND(cppcoreguidelines-prefer-member-initializer)
+}
+
+Table& Table::operator=(Table&& other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+
+  auto lock = other.acquire_append_mutex();
+  _cached_row_count = other._cached_row_count;
+  _table_indexes = std::move(other._table_indexes);
+  _table_indexes_statistics = std::move(other._table_indexes_statistics);
+  _chunk_indexes_statistics = std::move(other._chunk_indexes_statistics);
+  _table_statistics = std::move(other._table_statistics);
+  _value_clustered_by = std::move(other._value_clustered_by);
+  _referenced_foreign_key_constraints = std::move(other._referenced_foreign_key_constraints);
+  _foreign_key_constraints = std::move(other._foreign_key_constraints);
+  _table_order_constraints = std::move(other._table_order_constraints);
+  _table_key_constraints = std::move(other._table_key_constraints);
+  _chunks = std::move(other._chunks);
+  _target_chunk_size = other._target_chunk_size;
+  _use_mvcc = other._use_mvcc;
+  _type = other._type;
+  _column_definitions = std::move(other._column_definitions);
+
+  return *this;
+}
+
 const TableColumnDefinitions& Table::column_definitions() const {
   return _column_definitions;
 }
