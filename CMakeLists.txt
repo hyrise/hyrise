@@ -201,11 +201,13 @@ endif()
 option(PGO_INSTRUMENT "Set to TRUE to build an instrumented hyrise binary that will generate pgo profile data when run. Default: FALSE" FALSE)
 if (${PGO_INSTRUMENT})
     add_compile_options(-fprofile-generate)
+    add_link_options(-fprofile-generate)
 endif()
 
 set(PGO_PROFILE "" CACHE PATH "Set to the path to a PGO profile to use PGO")
 if (PGO_PROFILE)
     add_compile_options(-fprofile-use=${PGO_OPTIMIZE})
+    add_link_options(-fprofile-use=${PGO_OPTIMIZE})
 endif()
 
 # Require NCurses over Curses
