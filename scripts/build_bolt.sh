@@ -119,7 +119,7 @@ popd
 time merge-fdata *.fdata > bolt.fdata
 time llvm-profdata merge -output pgo.profdata *.profraw
 
-cmake -DCOMPILE_FOR_BOLT=ON -DPGO_PROFILE=pgo.profdata ..
+cmake -DPGO_INSTRUMENT=OFF -DPGO_PROFILE=pgo.profdata ..
 ninja clean
 # Only compile the benchmarks that we need.
 if [ "$cli" -eq 1 ]
