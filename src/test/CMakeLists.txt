@@ -178,7 +178,6 @@ set(
     lib/statistics/statistics_objects/range_filter_test.cpp
     lib/statistics/statistics_objects/scaled_histogram_test.cpp
     lib/statistics/statistics_objects/string_histogram_domain_test.cpp
-    lib/statistics/statistics_objects/max_diff_histogram_test.cpp
     lib/statistics/table_statistics_test.cpp
     lib/storage/any_segment_iterable_test.cpp
     lib/storage/buffer/page_id_test.cpp
