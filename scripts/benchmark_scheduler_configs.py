@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
-from datetime import datetime
 import json
 import matplotlib
 import multiprocessing
 import os
 import socket
 import sys
+
+from datetime import datetime
+from pathlib import Path
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
@@ -26,7 +28,7 @@ def get_parser():
     "--cores",
     action="store",
     type=int,
-    help="Cores to be used for the benchmarks",
+    help="Cores to be used for the benchmarks.",
   )
   parser.add_argument(
     "-b",
@@ -57,7 +59,7 @@ if __name__ == "__main__":
   os.system("git submodule update --recursive --init")
   os.system(f"ninja -C {build_dir}")
 
-  runtime = 1800 if not args.verbose else 5
+  runtime = 1200 if not args.verbose else 5
   runs = 50 if not args.verbose else 1
   core_count = args.cores if args.cores else MAX_CORE_COUNT
 
