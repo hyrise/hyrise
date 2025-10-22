@@ -75,9 +75,12 @@ if __name__ == "__main__":
             output_filename = f'./{hostname}/{"master" if args.master else "branch"}__{benchmark}__min_{NUM_GROUPS_MIN_FACTOR}__max_{NUM_GROUPS_MAX_FACTOR}__limit_{UPPER_LIMIT_QUEUE_SIZE_FACTOR}__clients_{client_count}__cores_{core_count}.json'
             scale = "" if benchmark == "JoinOrder" else ("--scale=1" if args.verbose else "--scale=10")
 
+            if Path(output_filename).exists():
+              print(f"Skipping as result JSON already exists ({output_filename}).")
+              continue
+
             try:
               os.system(f"NUM_GROUPS_MIN_FACTOR={NUM_GROUPS_MIN_FACTOR} NUM_GROUPS_MAX_FACTOR={NUM_GROUPS_MAX_FACTOR} UPPER_LIMIT_QUEUE_SIZE_FACTOR={UPPER_LIMIT_QUEUE_SIZE_FACTOR} ./{build_dir}/hyriseBenchmark{benchmark} --mode={mode} --clients={client_count} --cores={core_count} --scheduler -o {output_filename} {run_limit} --warmup=1 {scale}")
-              print(f"NUM_GROUPS_MIN_FACTOR={NUM_GROUPS_MIN_FACTOR} NUM_GROUPS_MAX_FACTOR={NUM_GROUPS_MAX_FACTOR} UPPER_LIMIT_QUEUE_SIZE_FACTOR={UPPER_LIMIT_QUEUE_SIZE_FACTOR} ./{build_dir}_clang/hyriseBenchmark{benchmark} --mode={mode} --clients={client_count} --cores={core_count} --scheduler -o {output_filename} {run_limit} --warmup=1 {scale}")
             except KeyboardInterrupt:
               print("An error occurred.")
               sys.exit()
