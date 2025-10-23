@@ -111,15 +111,14 @@ do
     time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled
   fi
   mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
-  mv default.profraw "$build_folder/$benchmark.profraw"
 done
 
 popd
 
 time merge-fdata *.fdata > bolt.fdata
-time llvm-profdata merge -output pgo.profdata *.profraw
+time llvm-profdata merge -output all.profdata default*.profraw
 
-cmake -DPGO_INSTRUMENT=OFF -DPGO_PROFILE=pgo.profdata ..
+cmake -DPGO_INSTRUMENT=OFF -DPGO_PROFILE=all.profdata ..
 ninja clean
 # Only compile the benchmarks that we need.
 if [ "$cli" -eq 1 ]
