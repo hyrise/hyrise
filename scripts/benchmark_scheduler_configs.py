@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
-from datetime import datetime
 import json
 import matplotlib
 import multiprocessing
 import os
 import socket
 import sys
+
+from datetime import datetime
+from pathlib import Path
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
@@ -26,7 +28,7 @@ def get_parser():
     "--cores",
     action="store",
     type=int,
-    help="Cores to be used for the benchmarks",
+    help="Cores to be used for the benchmarks.",
   )
   parser.add_argument(
     "-b",
@@ -57,7 +59,7 @@ if __name__ == "__main__":
   os.system("git submodule update --recursive --init")
   os.system(f"ninja -C {build_dir} hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema")
 
-  runtime = 1800 if not args.verbose else 5
+  runtime = 1200 if not args.verbose else 5
   runs = 50 if not args.verbose else 1
   core_count = args.cores if args.cores else MAX_CORE_COUNT
 
@@ -74,6 +76,10 @@ if __name__ == "__main__":
             run_limit = f"--runs={runs}" if mode == "Ordered" else f"--time={runtime}"
             output_filename = f'./{hostname}/{"master" if args.master else "branch"}__{benchmark}__min_{NUM_GROUPS_MIN_FACTOR}__max_{NUM_GROUPS_MAX_FACTOR}__limit_{UPPER_LIMIT_QUEUE_SIZE_FACTOR}__clients_{client_count}__cores_{core_count}.json'
             scale = "" if benchmark == "JoinOrder" else ("--scale=1" if args.verbose else "--scale=10")
+
+            if Path(output_filename).exists():
+              print(f"Skipping as result JSON already exists ({output_filename}).")
+              continue
 
             try:
               os.system(f"NUM_GROUPS_MIN_FACTOR={NUM_GROUPS_MIN_FACTOR} NUM_GROUPS_MAX_FACTOR={NUM_GROUPS_MAX_FACTOR} UPPER_LIMIT_QUEUE_SIZE_FACTOR={UPPER_LIMIT_QUEUE_SIZE_FACTOR} ./{build_dir}/hyriseBenchmark{benchmark} --mode={mode} --clients={client_count} --cores={core_count} --scheduler -o {output_filename} {run_limit} --warmup=1 {scale}")
