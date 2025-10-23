@@ -55,7 +55,7 @@ if __name__ == "__main__":
     os.system("git checkout martin/perf/num_groups")
 
   os.system("git submodule update --recursive --init")
-  os.system(f"ninja -C {build_dir}")
+  os.system(f"ninja -C {build_dir} hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema")
 
   runtime = 1800 if not args.verbose else 5
   runs = 50 if not args.verbose else 1
@@ -77,7 +77,6 @@ if __name__ == "__main__":
 
             try:
               os.system(f"NUM_GROUPS_MIN_FACTOR={NUM_GROUPS_MIN_FACTOR} NUM_GROUPS_MAX_FACTOR={NUM_GROUPS_MAX_FACTOR} UPPER_LIMIT_QUEUE_SIZE_FACTOR={UPPER_LIMIT_QUEUE_SIZE_FACTOR} ./{build_dir}/hyriseBenchmark{benchmark} --mode={mode} --clients={client_count} --cores={core_count} --scheduler -o {output_filename} {run_limit} --warmup=1 {scale}")
-              print(f"NUM_GROUPS_MIN_FACTOR={NUM_GROUPS_MIN_FACTOR} NUM_GROUPS_MAX_FACTOR={NUM_GROUPS_MAX_FACTOR} UPPER_LIMIT_QUEUE_SIZE_FACTOR={UPPER_LIMIT_QUEUE_SIZE_FACTOR} ./{build_dir}_clang/hyriseBenchmark{benchmark} --mode={mode} --clients={client_count} --cores={core_count} --scheduler -o {output_filename} {run_limit} --warmup=1 {scale}")
             except KeyboardInterrupt:
               print("An error occurred.")
               sys.exit()
