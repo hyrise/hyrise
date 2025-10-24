@@ -19,6 +19,14 @@ add_executable(
 
 target_link_libraries(
     hyrisePlayground
+
+    hyrise
+    hyriseBenchmarkLib
+    perf-cpp-wrapper
+)
+
+target_link_libraries(
+    hyrisePlayground
     hyrise
     hyriseBenchmarkLib
 )

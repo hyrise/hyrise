@@ -1,5 +1,8 @@
 #include <iostream>
 
+// This playground only compiles on Linux as we require `perf`.
+#include "perfcpp/event_counter.h"
+
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
