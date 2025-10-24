@@ -6,7 +6,6 @@
 
 #include "nlohmann/json_fwd.hpp"
 
-#include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace hyrise {
@@ -20,20 +19,19 @@ using TableSegmentEncodingMapping =
 // View EncodingConfig::description to see format of encoding JSON
 class EncodingConfig {
  public:
-  EncodingConfig();
-  EncodingConfig(const SegmentEncodingSpec& default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
-                 TableSegmentEncodingMapping encoding_mapping);
-  explicit EncodingConfig(const SegmentEncodingSpec& default_encoding_spec);
+  explicit EncodingConfig(const std::optional<SegmentEncodingSpec>& init_preferred_encoding_spec = {},
+                          DataTypeEncodingMapping init_type_encoding_mapping = {},
+                          TableSegmentEncodingMapping init_encoding_mapping = {});
 
   static EncodingConfig unencoded();
 
-  SegmentEncodingSpec default_encoding_spec;
+  std::optional<SegmentEncodingSpec> preferred_encoding_spec;
   DataTypeEncodingMapping type_encoding_mapping;
   TableSegmentEncodingMapping custom_encoding_mapping;
 
-  static SegmentEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
-                                                        const std::string& compression_str);
-  static EncodingType encoding_string_to_type(const std::string& encoding_str);
+  static std::optional<SegmentEncodingSpec> encoding_spec_from_strings(const std::string& encoding_str,
+                                                                       const std::string& compression_str);
+  static std::optional<EncodingType> encoding_string_to_type(const std::string& encoding_str);
   static std::optional<VectorCompressionType> compression_string_to_type(const std::string& compression_str);
 
   nlohmann::json to_json() const;

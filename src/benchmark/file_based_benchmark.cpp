@@ -70,13 +70,13 @@ int main(int argc, char* argv[]) {
   }
 
   // Ignore no .sql files in the directory for now (TODO(anybody): add CLI option if required)
-  const auto query_filename_blacklist = std::unordered_set<std::string>{};
+  const auto query_filename_excludelist = std::unordered_set<std::string>{};
 
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
   auto benchmark_item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path,
-                                                                              query_filename_blacklist, query_subset);
+                                                                              query_filename_excludelist, query_subset);
 
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
                                                             std::move(table_generator), context);
