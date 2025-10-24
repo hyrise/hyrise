@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <iostream>  // added
 
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"
@@ -134,6 +135,20 @@ void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
+
+  // Print table name and a basic column list, marking pruned ColumnIDs with '*'.
+  // {
+  //   std::ostringstream out;
+  //   out << "GetTable called for table: " << _name << "\n";
+  //   out << "Columns (ColumnID: ColumnName), '*' marks pruned:\n";
+  //   const auto print_column_count = stored_table->column_count();
+  //   for (auto cid = ColumnID{0}; cid < print_column_count; ++cid) {
+  //     const bool is_pruned = std::ranges::binary_search(_pruned_column_ids, cid);
+  //     const auto& col_def = stored_table->column_definitions()[cid];
+  //     out << static_cast<uint16_t>(cid) << ": " << col_def.name << (is_pruned ? "*" : "") << "\n";
+  //   }
+  //   std::cout << out.str();
+  // }
 
   // The chunk count might change while we are in this method as other threads concurrently insert new data. MVCC
   // guarantees that rows that are inserted after this transaction was started (and thus after GetTable started to
