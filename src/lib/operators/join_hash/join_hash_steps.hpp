@@ -26,6 +26,7 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/timer.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -436,7 +437,10 @@ Build all the hash tables for the partitions of the build column. One job per pa
 template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits,
-                                                           const BloomFilter& input_bloom_filter) {
+                                                           const BloomFilter& input_bloom_filter,
+                                                           JoinHash::PerformanceData& performance_data) {
+  auto build_duration_ns = std::atomic<size_t>{};
+  auto finalize_duration_ns = std::atomic<size_t>{};
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
 
   if (radix_container.empty()) {
@@ -447,7 +451,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   NUMA notes:
   The hash tables for each partition P should also reside on the same node as the build and probe partitions.
   */
-  std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+  auto hash_tables = std::vector<std::optional<PosHashTable<HashedType>>>{};
 
   if (radix_bits == 0) {
     auto total_size = size_t{0};
@@ -460,20 +464,22 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     hash_tables.resize(radix_container.size());
   }
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(radix_container.size());
 
-  for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
-    // Skip empty partitions, so that we don't have too many empty jobs and hash tables
+  const auto radix_container_count = radix_container.size();
+  for (auto partition_idx = size_t{0}; partition_idx < radix_container_count; ++partition_idx) {
+    // Skip empty partitions, so that we don't have too many empty jobs and hash tables.
     if (radix_container[partition_idx].elements.empty()) {
       continue;
     }
-    const std::hash<HashedType> hash_function;
+    const auto hash_function = std::hash<HashedType>{};
 
     const auto& elements = radix_container[partition_idx].elements;
     const auto elements_count = elements.size();
 
     const auto insert_into_hash_table = [&, partition_idx, elements_count]() {
+      auto timer = Timer{};
       const auto hash_table_idx = radix_bits > 0 ? partition_idx : 0;
 
       auto& hash_table = hash_tables[hash_table_idx];
@@ -493,8 +499,12 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 
       if (radix_bits > 0) {
         // In case only a single hash table is built, shrink to fit is called outside of the loop.
+        auto finalize_timer = Timer{};
         hash_table->finalize();
+        finalize_duration_ns += finalize_timer.lap().count();
       }
+
+      build_duration_ns += timer.lap().count();
     };
 
     if (radix_bits == 0 || JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
@@ -510,8 +520,15 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 
   // If radix partitioning is used, `finalize()` is called above.
   if (radix_bits == 0) {
+    auto finalize_timer = Timer{};
     hash_tables[0]->finalize();
+    finalize_duration_ns += finalize_timer.lap().count();
   }
+
+  const auto finalize_duration = std::chrono::nanoseconds{finalize_duration_ns};
+  performance_data.set_step_runtime(JoinHash::OperatorSteps::Finalizing, finalize_duration);
+  const auto build_duration = std::chrono::nanoseconds{build_duration_ns};
+  performance_data.set_step_runtime(JoinHash::OperatorSteps::Building, build_duration);
 
   return hash_tables;
 }

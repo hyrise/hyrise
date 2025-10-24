@@ -44,6 +44,7 @@ class JoinHash : public AbstractJoinOperator {
     ProbeSideMaterializing,
     Clustering,
     Building,
+    Finalizing,
     Probing,
     OutputWriting
   };

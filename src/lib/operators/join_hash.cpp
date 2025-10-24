@@ -447,15 +447,13 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
-    auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
-                                                       _radix_bits, probe_side_bloom_filter);
+                                                       _radix_bits, probe_side_bloom_filter, _performance_data);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter);
+                                                       probe_side_bloom_filter, _performance_data);
     }
-    _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
     // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
     // less values stored than in the initial input table.

@@ -402,8 +402,8 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   stringstream << performance_data;
   EXPECT_TRUE(
       stringstream.str().starts_with("Output: 1 row in 1 chunk, 35 ns. Operator step runtimes: BuildSideMaterializing"
-                                     " 17 ns, ProbeSideMaterializing 0 ns, Clustering 0 ns, Building 0 ns, Probing"
-                                     " 17 ns, OutputWriting 0 ns."));
+                                     " 17 ns, ProbeSideMaterializing 0 ns, Clustering 0 ns, Building 0 ns, Finalizing"
+                                     " 0 ns, Probing 17 ns, OutputWriting 0 ns."));
 }
 
 TEST_F(OperatorPerformanceDataTest, OutputToStream) {

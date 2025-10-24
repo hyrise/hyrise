@@ -293,7 +293,8 @@ TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
   auto container = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0},
                                                       histograms, 1, output_bloom_filter);
 
-  auto hash_tables = build<int, int>(container, JoinHashBuildMode::AllPositions, 0, input_bloom_filter);
+  auto performance_data = JoinHash::PerformanceData{};
+  auto hash_tables = build<int, int>(container, JoinHashBuildMode::AllPositions, 0, input_bloom_filter, performance_data);
 
   EXPECT_EQ(hash_tables.size(), 1);
   const auto& hash_table = hash_tables[0];
