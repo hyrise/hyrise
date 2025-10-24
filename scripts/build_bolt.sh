@@ -116,7 +116,7 @@ done
 popd
 
 time merge-fdata *.fdata > bolt.fdata
-time llvm-profdata merge -output all.profdata default*.profraw
+sh -c "time llvm-profdata merge -output all.profdata default*.profraw"
 
 cmake -DPGO_INSTRUMENT=OFF -DPGO_PROFILE=all.profdata ..
 ninja clean
