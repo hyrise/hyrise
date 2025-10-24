@@ -1,9 +1,9 @@
 #pragma once
 
 #include <atomic>
-#include <memory>
 #include <chrono>
 #include <map>
+#include <memory>
 
 #include "abstract_read_only_operator.hpp"
 #include "operator_join_predicate.hpp"
@@ -20,17 +20,17 @@ enum class ReduceMode : uint8_t { Build, Probe, ProbeAndBuild };
 
 enum class UseMinMax : bool { Yes = true, No = false };
 
-enum class ReduceOperatorSteps : uint8_t {
-    Iteration,
-    OutputWriting,
-    FilterMerging
-};
+enum class ReduceOperatorSteps : uint8_t { Iteration, OutputWriting, FilterMerging };
 
 class Reduce : public AbstractReadOnlyOperator {
  public:
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
-                  const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate, const ReduceMode reduce_mode, const UseMinMax use_min_max)
-      : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input, std::make_unique<PerformanceData>()}, _predicate{predicate}, _reduce_mode{reduce_mode}, _use_min_max{use_min_max} {}
+                  const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate,
+                  const ReduceMode reduce_mode, const UseMinMax use_min_max)
+      : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input, std::make_unique<PerformanceData>()},
+        _predicate{predicate},
+        _reduce_mode{reduce_mode},
+        _use_min_max{use_min_max} {}
 
   const std::string& name() const override {
     static const auto name = std::string{"Reduce"};
@@ -46,30 +46,36 @@ class Reduce : public AbstractReadOnlyOperator {
   }
 
   using OperatorSteps = ReduceOperatorSteps;
-  struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
-  };
+
+  struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {};
 
  protected:
   std::shared_ptr<const Table> _on_execute() override {
     switch (_reduce_mode) {
       case ReduceMode::Build:
         switch (_use_min_max) {
-          case UseMinMax::Yes: return _on_execute_templated<ReduceMode::Build, UseMinMax::Yes>();
-          case UseMinMax::No:  return _on_execute_templated<ReduceMode::Build, UseMinMax::No>();
+          case UseMinMax::Yes:
+            return _on_execute_templated<ReduceMode::Build, UseMinMax::Yes>();
+          case UseMinMax::No:
+            return _on_execute_templated<ReduceMode::Build, UseMinMax::No>();
         }
         break;
 
       case ReduceMode::Probe:
         switch (_use_min_max) {
-          case UseMinMax::Yes: return _on_execute_templated<ReduceMode::Probe, UseMinMax::Yes>();
-          case UseMinMax::No:  return _on_execute_templated<ReduceMode::Probe, UseMinMax::No>();
+          case UseMinMax::Yes:
+            return _on_execute_templated<ReduceMode::Probe, UseMinMax::Yes>();
+          case UseMinMax::No:
+            return _on_execute_templated<ReduceMode::Probe, UseMinMax::No>();
         }
         break;
 
       case ReduceMode::ProbeAndBuild:
         switch (_use_min_max) {
-          case UseMinMax::Yes: return _on_execute_templated<ReduceMode::ProbeAndBuild, UseMinMax::Yes>();
-          case UseMinMax::No:  return _on_execute_templated<ReduceMode::ProbeAndBuild, UseMinMax::No>();
+          case UseMinMax::Yes:
+            return _on_execute_templated<ReduceMode::ProbeAndBuild, UseMinMax::Yes>();
+          case UseMinMax::No:
+            return _on_execute_templated<ReduceMode::ProbeAndBuild, UseMinMax::No>();
         }
         break;
     }
@@ -142,7 +148,6 @@ class Reduce : public AbstractReadOnlyOperator {
       std::atomic<size_t> total_merge_time{0};
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
-
         const auto job = [&, chunk_index]() mutable {
           auto partial_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
 
@@ -282,12 +287,11 @@ class Reduce : public AbstractReadOnlyOperator {
                   output_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
                 }
                 output_chunks[chunk_index] = output_chunk;
-
               }
 
               local_output += timer.lap();
             }
-          } 
+          }
 
           // Measure and store merge cost separately
           if constexpr (reduce_mode != ReduceMode::Probe) {
@@ -324,11 +328,11 @@ class Reduce : public AbstractReadOnlyOperator {
 
       auto& reduce_performance_data = static_cast<PerformanceData&>(*performance_data);
 
-      reduce_performance_data.set_step_runtime(OperatorSteps::Iteration, 
+      reduce_performance_data.set_step_runtime(OperatorSteps::Iteration,
                                                std::chrono::nanoseconds{total_iteration_time.load()});
-      reduce_performance_data.set_step_runtime(OperatorSteps::OutputWriting, 
+      reduce_performance_data.set_step_runtime(OperatorSteps::OutputWriting,
                                                std::chrono::nanoseconds{total_output_time.load()});
-      reduce_performance_data.set_step_runtime(OperatorSteps::FilterMerging, 
+      reduce_performance_data.set_step_runtime(OperatorSteps::FilterMerging,
                                                std::chrono::nanoseconds{total_merge_time.load()});
     });
 

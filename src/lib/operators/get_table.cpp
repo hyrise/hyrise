@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>  // added
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -13,7 +14,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <iostream>  // added
 
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"
