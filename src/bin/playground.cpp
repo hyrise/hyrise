@@ -28,7 +28,14 @@
 using namespace hyrise;                 // NOLINT(build/namespaces)
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-const auto scale_factor = float{0.1f};
+const auto scale_factor = []() -> float {
+  if (const char* sf = std::getenv("SF"); sf && *sf) {
+    char* end = nullptr;
+    const float val = std::strtof(sf, &end);
+    if (end != sf) return val;
+  }
+  return 0.1f;
+}();
 
 int main() {
   auto& sm = Hyrise::get().storage_manager;
@@ -95,6 +102,8 @@ int main() {
    */
   auto counters = perf::CounterDefinition{};
   auto event_counter = perf::EventCounter{counters};
+
+  std::cout << "\n scale factor: " << scale_factor << "\n";
 
   // Specify hardware events to count.
   event_counter.add({"seconds", "instructions", "cycles", "cache-misses", "dTLB-miss-ratio"});
