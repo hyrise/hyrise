@@ -380,9 +380,9 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, WorstCaseReduce)(benchmark::State& state
 
   const auto predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{3}), PredicateCondition::Equals};
   const auto build_reduce_dryrun =
-      std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input, _left_input, predicate);
+      std::make_shared<Reduce>(_right_input, _left_input, predicate, ReduceMode::Build, UseMinMax::Yes);
   // const auto probe_reduce_dryrun =
-  //     std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce_dryrun, predicate);
+  //     std::make_shared<Reduce>(_left_input, build_reduce_dryrun, predicate, ReduceMode::Probe, UseMinMax::Yes);
   build_reduce_dryrun->execute();
   // probe_reduce_dryrun->execute();
 
@@ -391,7 +391,7 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, WorstCaseReduce)(benchmark::State& state
 
   for (auto _ : state) {
     const auto build_reduce =
-        std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_right_input, _left_input, predicate);
+        std::make_shared<Reduce>(_right_input, _left_input, predicate, ReduceMode::Build, UseMinMax::Yes);
     // const auto probe_reduce =
     //     std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce, predicate);
     build_reduce->execute();
@@ -412,9 +412,9 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, BestCaseReduce)(benchmark::State& state)
 
   const auto predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals};
   const auto build_reduce_dryrun =
-      std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_left_input, _right_input, predicate);
+      std::make_shared<Reduce>(_left_input, _right_input, predicate, ReduceMode::Build, UseMinMax::Yes);
   const auto probe_reduce_dryrun =
-      std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce_dryrun, predicate);
+      std::make_shared<Reduce>(_left_input, build_reduce_dryrun, predicate, ReduceMode::Probe, UseMinMax::Yes);
   build_reduce_dryrun->execute();
   probe_reduce_dryrun->execute();
 
@@ -423,9 +423,9 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, BestCaseReduce)(benchmark::State& state)
 
   for (auto _ : state) {
     const auto build_reduce =
-        std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_left_input, _right_input, predicate);
+        std::make_shared<Reduce>(_left_input, _right_input, predicate, ReduceMode::Build, UseMinMax::Yes);
     const auto probe_reduce =
-        std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce, predicate);
+        std::make_shared<Reduce>(_left_input, build_reduce, predicate, ReduceMode::Probe, UseMinMax::Yes);
     build_reduce->execute();
     probe_reduce->execute();
   }
@@ -444,9 +444,9 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, BadCaseReduce)(benchmark::State& state) 
 
   const auto predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{3}, ColumnID{0}), PredicateCondition::Equals};
   const auto build_reduce_dryrun =
-      std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_left_input, _right_input, predicate);
+      std::make_shared<Reduce>(_left_input, _right_input, predicate, ReduceMode::Build, UseMinMax::Yes);
   const auto probe_reduce_dryrun =
-      std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce_dryrun, predicate);
+      std::make_shared<Reduce>(_left_input, build_reduce_dryrun, predicate, ReduceMode::Probe, UseMinMax::Yes);
   build_reduce_dryrun->execute();
   probe_reduce_dryrun->execute();
 
@@ -455,9 +455,9 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, BadCaseReduce)(benchmark::State& state) 
 
   for (auto _ : state) {
     const auto build_reduce =
-        std::make_shared<Reduce<ReduceMode::Build, UseMinMax::Yes>>(_left_input, _right_input, predicate);
+        std::make_shared<Reduce>(_left_input, _right_input, predicate, ReduceMode::Build, UseMinMax::Yes);
     const auto probe_reduce =
-        std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce, predicate);
+        std::make_shared<Reduce>(_left_input, build_reduce, predicate, ReduceMode::Probe, UseMinMax::Yes);
     build_reduce->execute();
     probe_reduce->execute();
   }

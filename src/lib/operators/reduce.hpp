@@ -26,12 +26,11 @@ enum class ReduceOperatorSteps : uint8_t {
     FilterMerging
 };
 
-template <ReduceMode reduce_mode, UseMinMax use_min_max>
 class Reduce : public AbstractReadOnlyOperator {
  public:
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
-                  const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate)
-      : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input, std::make_unique<PerformanceData>()}, _predicate{predicate} {}
+                  const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate, const ReduceMode reduce_mode, const UseMinMax use_min_max)
+      : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input, std::make_unique<PerformanceData>()}, _predicate{predicate}, _reduce_mode{reduce_mode}, _use_min_max{use_min_max} {}
 
   const std::string& name() const override {
     static const auto name = std::string{"Reduce"};
@@ -52,6 +51,33 @@ class Reduce : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override {
+    switch (_reduce_mode) {
+      case ReduceMode::Build:
+        switch (_use_min_max) {
+          case UseMinMax::Yes: return _on_execute_templated<ReduceMode::Build, UseMinMax::Yes>();
+          case UseMinMax::No:  return _on_execute_templated<ReduceMode::Build, UseMinMax::No>();
+        }
+        break;
+
+      case ReduceMode::Probe:
+        switch (_use_min_max) {
+          case UseMinMax::Yes: return _on_execute_templated<ReduceMode::Probe, UseMinMax::Yes>();
+          case UseMinMax::No:  return _on_execute_templated<ReduceMode::Probe, UseMinMax::No>();
+        }
+        break;
+
+      case ReduceMode::ProbeAndBuild:
+        switch (_use_min_max) {
+          case UseMinMax::Yes: return _on_execute_templated<ReduceMode::ProbeAndBuild, UseMinMax::Yes>();
+          case UseMinMax::No:  return _on_execute_templated<ReduceMode::ProbeAndBuild, UseMinMax::No>();
+        }
+        break;
+    }
+    Fail("Invalid ReduceMode / UseMinMax combination");
+  }
+
+  template <ReduceMode reduce_mode, UseMinMax use_min_max>
+  std::shared_ptr<const Table> _on_execute_templated() {
     // std::cout << "Reducer called with mode: " << magic_enum::enum_name(reduce_mode)
     //           << " use_min_max: " << magic_enum::enum_name(use_min_max) << "\n";
     std::shared_ptr<const Table> input_table;
@@ -87,8 +113,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
       if constexpr (reduce_mode != ReduceMode::Build) {
         Assert(_right_input->executed(), "Build Reducer was not executed.");
-        const auto build_reduce =
-            std::dynamic_pointer_cast<const Reduce<ReduceMode::Build, UseMinMax::No>>(_right_input);
+        const auto build_reduce = std::dynamic_pointer_cast<const Reduce>(_right_input);
         Assert(build_reduce, "Failed to cast build reduce.");
 
         _bloom_filter = build_reduce->get_bloom_filter();
@@ -112,15 +137,13 @@ class Reduce : public AbstractReadOnlyOperator {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(worker_count);
 
-      std::vector<std::chrono::nanoseconds> job_iteration_times(worker_count);
-      std::vector<std::chrono::nanoseconds> job_output_times(worker_count);
-      std::vector<std::chrono::nanoseconds> job_merge_times(worker_count);
+      std::atomic<size_t> total_iteration_time{0};
+      std::atomic<size_t> total_output_time{0};
+      std::atomic<size_t> total_merge_time{0};
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
 
         const auto job = [&, chunk_index]() mutable {
-          const auto job_index = static_cast<uint32_t>(chunk_index / chunks_per_worker);
-
           auto partial_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
 
           auto partial_minimum = std::numeric_limits<DataType>::max();
@@ -276,9 +299,9 @@ class Reduce : public AbstractReadOnlyOperator {
             local_merge += timer.lap();
           }
 
-          job_iteration_times[job_index] = local_scan;
-          job_output_times[job_index] = local_output;
-          job_merge_times[job_index] = local_merge;
+          total_iteration_time.fetch_add(local_scan.count(), std::memory_order_relaxed);
+          total_output_time.fetch_add(local_output.count(), std::memory_order_relaxed);
+          total_merge_time.fetch_add(local_merge.count(), std::memory_order_relaxed);
         };
 
         jobs.emplace_back(std::make_shared<JobTask>(job));
@@ -299,20 +322,14 @@ class Reduce : public AbstractReadOnlyOperator {
         _min_max_predicate = new_min_max_predicate;
       }
 
-      auto& reduce_performance_data = static_cast<PerformanceData&>(*performance_data);  // fixed pointer usage
-      const auto sum_time = [](const std::vector<std::chrono::nanoseconds>& v) {
-        std::chrono::nanoseconds s{0};
-        for (const auto& x : v) s += x;
-        return s;
-      };
+      auto& reduce_performance_data = static_cast<PerformanceData&>(*performance_data);
 
-      const auto total_scan = sum_time(job_iteration_times);
-      const auto total_output = sum_time(job_output_times);
-      const auto total_merge = sum_time(job_merge_times);
-
-      reduce_performance_data.set_step_runtime(OperatorSteps::Iteration, total_scan);
-      reduce_performance_data.set_step_runtime(OperatorSteps::OutputWriting, total_output);
-      reduce_performance_data.set_step_runtime(OperatorSteps::FilterMerging, total_merge);
+      reduce_performance_data.set_step_runtime(OperatorSteps::Iteration, 
+                                               std::chrono::nanoseconds{total_iteration_time.load()});
+      reduce_performance_data.set_step_runtime(OperatorSteps::OutputWriting, 
+                                               std::chrono::nanoseconds{total_output_time.load()});
+      reduce_performance_data.set_step_runtime(OperatorSteps::FilterMerging, 
+                                               std::chrono::nanoseconds{total_merge_time.load()});
     });
 
     // std::cout << "About to exit reducer\n";
@@ -325,12 +342,14 @@ class Reduce : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override {
-    return std::make_shared<Reduce<reduce_mode, use_min_max>>(copied_left_input, copied_right_input, _predicate);
+    return std::make_shared<Reduce>(copied_left_input, copied_right_input, _predicate, _reduce_mode, _use_min_max);
   }
 
   const OperatorJoinPredicate _predicate;
   std::shared_ptr<BloomFilter<20, 2>> _bloom_filter;
   std::shared_ptr<BaseMinMaxPredicate> _min_max_predicate;
+  const ReduceMode _reduce_mode;
+  const UseMinMax _use_min_max;
 };
 
 }  // namespace hyrise
