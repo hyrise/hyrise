@@ -24,7 +24,7 @@ seconds_per_benchmark=1800
 benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkJoinOrder" "hyriseBenchmarkStarSchema")
 
 # Parse cli args
-VALID_ARGS=$(getopt -o "ht:n:c" --longoptions "help,time:,ncpu:cli" -- "$@")
+VALID_ARGS=$(getopt -o "ht:n:c" --longoptions "help,time:,ncpu:,cli" -- "$@")
 USAGE="Usage: $(basename $0) [-h] [-t seconds per benchmark] [-n number of cores used] [--cli]"
 if [[ $? -ne 0 ]]
 then
@@ -121,7 +121,7 @@ mv *.profraw "$build_folder/libhyrise.profraw"
 popd
 
 # Prepare profiles for optimization. For BOLT, we have to merge the different profiles. For PGO, we have to change the
-# format of the profile.
+# format of the profile. https://clang.llvm.org/docs/UsersManual.html#profiling-with-instrumentation
 time merge-fdata *.fdata > bolt.fdata
 time llvm-profdata merge -output all.profdata libhyrise.profraw
 
