@@ -79,12 +79,7 @@ done
 # Build with PGO instrumentation
 cmake -DCOMPILE_FOR_BOLT=ON -DPGO_INSTRUMENT=ON ..
 ninja clean
-if [ "$cli" == "1" ]
-then
-  time ninja ${benchmarks[@]} -j "$num_cores"
-else
-  time ninja -j "$num_cores"
-fi
+time ninja ${benchmarks[@]} -j "$num_cores"
 
 # Instrument with BOLT
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
