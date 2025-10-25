@@ -128,7 +128,7 @@ time llvm-profdata merge -output all.profdata libhyrise.profraw
 # Build with PGO optimization
 cmake -DPGO_INSTRUMENT=OFF -DPGO_PROFILE=all.profdata ..
 ninja clean
-if [ "$cli" -eq 1 ]
+if [ "$cli" == "1" ]
 then
   time ninja hyriseTest -j "$num_cores"
 else
@@ -141,3 +141,5 @@ time llvm-bolt lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fda
 
 # Strip static relocations (which have been added to support BOLT)
 time strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so
+
+cmake -DCOMPILE_FOR_BOLT=OFF -UPGO_PROFILE ..
