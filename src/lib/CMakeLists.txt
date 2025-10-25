@@ -3,7 +3,14 @@
 # scope
 include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
 
-# Needed when building a binary for optimization with BOLT
+# We have to add a few compile flags, so BOLT can work:
+# > BOLT operates on X86-64 and AArch64 ELF binaries. At the minimum, the binaries should have an unstripped symbol
+# > table, and, to get maximum performance gains, they should be linked with relocations (--emit-relocs or -q linker
+# > flag).
+# > NOTE: BOLT is currently incompatible with the -freorder-blocks-and-partition compiler option. Since GCC8 enables
+# > this option by default, you have to explicitly disable it by adding -fno-reorder-blocks-and-partition flag if you
+# > are compiling with GCC8 or above.
+# https://github.com/llvm/llvm-project/tree/main/bolt
 option(COMPILE_FOR_BOLT "Set to TRUE to build Hyrise for further optimization / instrumentation / profiling with BOLT. Default: FALSE" FALSE)
 if (${COMPILE_FOR_BOLT})
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
