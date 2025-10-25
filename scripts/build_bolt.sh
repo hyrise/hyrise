@@ -24,8 +24,8 @@ seconds_per_benchmark=1800
 benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkJoinOrder" "hyriseBenchmarkStarSchema")
 
 # Parse cli args
-VALID_ARGS=$(getopt -o "ht:c" --longoptions "help,time:,cli" -- "$@")
-USAGE="Usage: $(basename $0) [-h] [-t seconds per benchmark] [--cli]"
+VALID_ARGS=$(getopt -o "ht:n:c" --longoptions "help,time:,ncpu:cli" -- "$@")
+USAGE="Usage: $(basename $0) [-h] [-t seconds per benchmark] [-n number of cores used] [--cli]"
 if [[ $? -ne 0 ]]
 then
   exit 1
@@ -50,10 +50,17 @@ do
       seconds_per_benchmark="$2"
       shift 2
       ;;
+    -n | --ncpu)
+      # Check if this is a number
+      if ! [[ "$2" =~ ^[0-9]+$ ]]
+      then
+          echo -e "$2 is not a valid number of cores\n$USAGE"
+          exit 1
+      fi
+      num_cores="$2"
+      shift 2
+      ;;
     -c | --cli)
-      seconds_per_benchmark=120
-      benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkStarSchema")
-      num_cores=8
       cli=1
       shift
       ;;
@@ -81,11 +88,11 @@ cmake -DCOMPILE_FOR_BOLT=ON -DPGO_INSTRUMENT=ON ..
 
 ninja clean
 # Only compile the benchmarks that we need.
-if [ "$cli" -eq 1 ]
+if [ "$cli" == "1" ]
 then
-  time ninja ${benchmarks[@]} hyriseTest -j "$num_cores"
+  time ninja ${benchmarks[@]} -j "$num_cores"
 else
-  time ninja
+  time ninja -j "$num_cores"
 fi
 
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
@@ -93,25 +100,25 @@ time llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
 
 pushd ..
 
-for benchmark in ${benchmarks[@]}
-do
-  # We use shuffled runs with high pressure to profile cases that are relevant.
-  if [ "$cli" -eq 1 ]
-  then
+if [ "$cli" == "1" ]
+then
     # Use a minimum scale factor for runs in cli
-    if [ "$benchmark" == "hyriseBenchmarkTPCH" -o "$benchmark" == "hyriseBenchmarkStarSchema" ]
-    then
-      # These benchmarks support floating point scaling factors
-      time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s .01
-    else
-      # These benchmarks require integer scaling factors
-      time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s 1
-    fi
-  else
+    time "$build_folder/hyriseBenchmarkTPCH" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s .01
+    mv /tmp/prof.fdata "$build_folder/hyriseBenchmarkTPCH.fdata"
+    time "$build_folder/hyriseBenchmarkStarSchema" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s .01
+    mv /tmp/prof.fdata "$build_folder/hyriseBenchmarkStarSchema.fdata"
+    time "$build_folder/hyriseBenchmarkTPCDS" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s 1
+    mv /tmp/prof.fdata "$build_folder/hyriseBenchmarkTPCDS.fdata"
+    time "$build_folder/hyriseBenchmarkTPCC" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s 1
+    mv /tmp/prof.fdata "$build_folder/hyriseBenchmarkTPCC.fdata"
+else
+  for benchmark in ${benchmarks[@]}
+  do
+    # We use shuffled runs with high pressure to profile cases that are relevant.
     time "$build_folder/$benchmark" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled
-  fi
-  mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
-done
+    mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
+  done
+fi
 
 mv *.profraw "$build_folder"
 
@@ -125,9 +132,9 @@ ninja clean
 # Only compile the benchmarks that we need.
 if [ "$cli" -eq 1 ]
 then
-  time ninja ${benchmarks[@]} hyriseTest -j "$num_cores"
+  time ninja hyriseTest -j "$num_cores"
 else
-  time ninja
+  time ninja -j "$num_cores"
 fi
 mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
 
