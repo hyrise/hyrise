@@ -92,19 +92,24 @@ do
     continue
   fi
 
+  # Checkout and build from scratch, tracking the compile time.
+  git checkout "$commit"
+  git submodule update --init --recursive
+
   if [ -f ../resources/bolt.fdata ]
   then
-    cmake -DCOMPILE_FOR_BOLT ..
+    cmake -DCOMPILE_FOR_BOLT=On ..
+  else
+    cmake -DCOMPILE_FOR_BOLT=Off ..
   fi
 
   if [ -f ../resources/pgo.profdata ]
   then
     cmake -DPGO_PROFILE=../resources/pgo.profdata ..
+  else
+    cmake -UPGO_PROFILE ..
   fi
 
-  # Checkout and build from scratch, tracking the compile time.
-  git checkout "$commit"
-  git submodule update --init --recursive
   echo "Building $commit..."
   $build_system clean
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
@@ -112,8 +117,8 @@ do
   if [ -f ../resources/bolt.fdata ]
   then
     mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
-    llvm-bolt-17 lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
-    strip lib/libhyrise_impl.so
+    llvm-bolt lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+    strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so
   fi
 
   # Run the benchmarks.
