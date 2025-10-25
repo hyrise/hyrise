@@ -113,10 +113,12 @@ do
   mv /tmp/prof.fdata "$build_folder/$benchmark.fdata"
 done
 
+mv *.profraw "$build_folder"
+
 popd
 
 time merge-fdata *.fdata > bolt.fdata
-sh -c "time llvm-profdata merge -output all.profdata default*.profraw"
+time llvm-profdata merge -output all.profdata *.profraw
 
 cmake -DPGO_INSTRUMENT=OFF -DPGO_PROFILE=all.profdata ..
 ninja clean
@@ -131,4 +133,4 @@ mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
 
 time llvm-bolt lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 
-# time strip lib/libhyrise_impl.so
+time strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so
