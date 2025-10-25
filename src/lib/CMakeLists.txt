@@ -10,7 +10,6 @@ if (${COMPILE_FOR_BOLT})
         add_compile_options(-fno-reorder-blocks-and-partition)
     endif()
     add_link_options(-Wl,--emit-relocs)
-    add_compile_options(-g)
 endif()
 
 option(PGO_INSTRUMENT "Set to TRUE to build an instrumented hyrise binary that will generate pgo profile data when run. Default: FALSE" FALSE)
