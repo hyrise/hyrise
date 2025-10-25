@@ -24,8 +24,8 @@ seconds_per_benchmark=1800
 benchmarks=("hyriseBenchmarkTPCH" "hyriseBenchmarkTPCDS" "hyriseBenchmarkTPCC" "hyriseBenchmarkJoinOrder" "hyriseBenchmarkStarSchema")
 
 # Parse cli args
-VALID_ARGS=$(getopt -o "ht:n:c" --longoptions "help,time:,ncpu:,cli" -- "$@")
-USAGE="Usage: $(basename $0) [-h] [-t seconds per benchmark] [-n number of cores used] [--cli]"
+VALID_ARGS=$(getopt -o "ht:n:c" --longoptions "help,time:,ncpu:,ci" -- "$@")
+USAGE="Usage: $(basename $0) [-h] [-t seconds per benchmark] [-n number of cores used] [--ci]"
 if [[ $? -ne 0 ]]
 then
   exit 1
@@ -60,8 +60,8 @@ do
       num_cores="$2"
       shift 2
       ;;
-    -c | --cli)
-      cli=1
+    -c | --ci)
+      ci=1
       shift
       ;;
     --)
@@ -79,7 +79,7 @@ done
 # Build the benchmarks with PGO instrumentation
 cmake -DCOMPILE_FOR_BOLT=ON -DPGO_INSTRUMENT=ON ..
 ninja clean
-if [ "$cli" == "1" ]
+if [ "$ci" == "1" ]
 then
   time ninja hyriseBenchmarkTPCH hyriseBenchmarkStarSchema hyriseBenchmarkTPCDS hyriseBenchmarkTPCC -j "$num_cores"
 else
@@ -93,9 +93,9 @@ time llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so
 # Run benchmarks and move prof.fdata (BOLT) and *.profraw (PGO) to the build folder
 pushd ..
 
-if [ "$cli" == "1" ]
+if [ "$ci" == "1" ]
 then
-    # We use a minimum scale factor for runs in cli
+    # We use a minimum scale factor for runs in ci
     time "$build_folder/hyriseBenchmarkTPCH" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s .01
     mv /tmp/prof.fdata "$build_folder/hyriseBenchmarkTPCH.fdata"
     time "$build_folder/hyriseBenchmarkStarSchema" --scheduler --clients "$num_cores" --cores "$num_cores" -t "$seconds_per_benchmark" -m Shuffled -s .01
@@ -128,7 +128,7 @@ time llvm-profdata merge -output all.profdata libhyrise.profraw
 # Build with PGO optimization
 cmake -DPGO_INSTRUMENT=OFF -DPGO_OPTIMIZE=all.profdata ..
 ninja clean
-if [ "$cli" == "1" ]
+if [ "$ci" == "1" ]
 then
   time ninja hyriseTest -j "$num_cores"
 else
