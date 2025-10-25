@@ -1,5 +1,5 @@
 #!/bin/bash
-# This builds an optimized version of the binary with bolt.
+# This script builds an optimized version of the binary with bolt.
 #
 # The profile data is captured by binary instrumentation via bolt. You can find a file where the profile is captured
 # using perf here: https://github.com/hyrise/hyrise/blob/d0c46cb61dca9d3dcbbf1f39c0e886bcb6c844fe/scripts/bolt-lbr.sh.
@@ -76,7 +76,7 @@ do
 done
 
 
-# Build with PGO instrumentation
+# Build the benchmarks with PGO instrumentation
 cmake -DCOMPILE_FOR_BOLT=ON -DPGO_INSTRUMENT=ON ..
 ninja clean
 time ninja ${benchmarks[@]} -j "$num_cores"
@@ -108,13 +108,17 @@ else
   done
 fi
 
-mv *.profraw "$build_folder"
+# PGO can merge the profile of multiple runs while generating it, so we don't need to move the profile after every
+# benchmark. The name of the profile is default_<some id assigned to the hyrise lib>.profraw. PGO assigns those ids to
+# distinguish profile data from different files. So there should only be a single .profraw file.
+mv *.profraw "$build_folder/libhyrise.profraw"
 
 popd
 
-# Prepare profiles for optimization
+# Prepare profiles for optimization. For BOLT, we have to merge the different profiles. For PGO, we have to change the
+# format of the profile.
 time merge-fdata *.fdata > bolt.fdata
-time llvm-profdata merge -output all.profdata *.profraw
+time llvm-profdata merge -output all.profdata libhyrise.profraw
 
 # Build with PGO optimization
 cmake -DPGO_INSTRUMENT=OFF -DPGO_PROFILE=all.profdata ..
