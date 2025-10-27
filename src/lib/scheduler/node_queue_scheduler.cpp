@@ -37,13 +37,18 @@ namespace {
  * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
  * _workers_per_node).
  */
-// std::cout << std::getenv("NUM_GROUPS_MIN_FACTOR");
-const auto NUM_GROUPS_MIN_FACTOR = std::strtof(std::getenv("NUM_GROUPS_MIN_FACTOR"), nullptr);
-const auto NUM_GROUPS_MAX_FACTOR = std::strtof(std::getenv("NUM_GROUPS_MAX_FACTOR"), nullptr);
-const auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
+constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
+constexpr auto NUM_GROUPS_MAX_FACTOR = 2.0f;
+constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
+
+// For small machines where NUM_GROUPS_MIN_FACTOR * cores can yield small group_counts, we cut of at `MIN_GROUP_COUNT`.
+// We found for "small" machines (e.g., 12-core MacBooks but also 32-thread servers), the calculated minimal group
+// counts perform worse then ensuring at least a group count of eight.
+constexpr auto MIN_GROUP_COUNT = size_t{8};
 
 // This factor is used to determine at which queue load we use the maximum number of groups.
-const auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{std::strtoul(std::getenv("UPPER_LIMIT_QUEUE_SIZE_FACTOR"), nullptr, 10)};
+const auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{4};
+
 }  // namespace
 
 namespace hyrise {
@@ -69,13 +74,10 @@ void NodeQueueScheduler::begin() {
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
 
-  Assert(NUM_GROUPS_MIN_FACTOR <= NUM_GROUPS_MAX_FACTOR, "Unexpected #1.");
-  Assert(UPPER_LIMIT_QUEUE_SIZE_FACTOR > 0, "Unexpected #2.");
-
   // For task lists with few tasks, we do not determine the number of groups to avoid grouping overheads. Assuming
   // NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group task lists with less than 25 tasks (2 * 128 * 0.1).
   _min_task_count_for_regrouping =
-      std::max(size_t{16}, static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
+      std::max(size_t{2 * MIN_GROUP_COUNT}, static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
 
   // For every task list of at least this size, we use the max value for grouping. For 64 workers, a queue load of 640
   // (i.e., ~640 normal priority tasks) is enough to use the minimum number of groups.
@@ -300,10 +302,8 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
   const auto fill_level = 1.0f - (static_cast<float>(std::min(queue_load, _regrouping_upper_limit)) /
                                   static_cast<float>(_regrouping_upper_limit));
   const auto group_count_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_level);
-
-  // Using max() for small machines where NUM_GROUPS_MIN_FACTOR * cores can yield group_counts smaller one.
   const auto group_count =
-      std::max(size_t{1}, static_cast<size_t>(static_cast<float>(_worker_count) * group_count_factor));
+      std::max(size_t{MIN_GROUP_COUNT}, static_cast<size_t>(static_cast<float>(_worker_count) * group_count_factor));
   // If the resulting groups are smaller than two tasks, skip grouping.
   if ((task_count / group_count) < 2) {
     return std::nullopt;
@@ -400,3 +400,4 @@ const std::atomic_int64_t& NodeQueueScheduler::active_worker_count() const {
 }
 
 }  // namespace hyrise
+
