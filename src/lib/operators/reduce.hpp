@@ -37,7 +37,7 @@ class Reduce : public AbstractReadOnlyOperator {
     return name;
   }
 
-  std::shared_ptr<BloomFilter<20, 1>> get_bloom_filter() const {
+  std::shared_ptr<BloomFilter<20, 2>> get_bloom_filter() const {
     return _bloom_filter;
   }
 
@@ -106,11 +106,11 @@ class Reduce : public AbstractReadOnlyOperator {
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.resize(chunk_count);
 
-      auto new_bloom_filter = std::shared_ptr<BloomFilter<20, 1>>{};
+      auto new_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
       std::shared_ptr<MinMaxPredicate<DataType>> new_min_max_predicate;
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
-        new_bloom_filter = std::make_shared<BloomFilter<20, 1>>();
+        new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
 
         if constexpr (use_min_max == UseMinMax::Yes) {
           new_min_max_predicate = std::make_shared<MinMaxPredicate<DataType>>();
@@ -149,13 +149,13 @@ class Reduce : public AbstractReadOnlyOperator {
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
         const auto job = [&, chunk_index]() mutable {
-          auto partial_bloom_filter = std::shared_ptr<BloomFilter<20, 1>>{};
+          auto partial_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
 
           auto partial_minimum = std::numeric_limits<DataType>::max();
           auto partial_maximum = std::numeric_limits<DataType>::lowest();
 
           if constexpr (reduce_mode != ReduceMode::Probe) {
-            partial_bloom_filter = std::make_shared<BloomFilter<20, 1>>();
+            partial_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
           }
 
           auto last_chunk_index = chunk_index + chunks_per_worker;
@@ -350,7 +350,7 @@ class Reduce : public AbstractReadOnlyOperator {
   }
 
   const OperatorJoinPredicate _predicate;
-  std::shared_ptr<BloomFilter<20, 1>> _bloom_filter;
+  std::shared_ptr<BloomFilter<20, 2>> _bloom_filter;
   std::shared_ptr<BaseMinMaxPredicate> _min_max_predicate;
   const ReduceMode _reduce_mode;
   const UseMinMax _use_min_max;
