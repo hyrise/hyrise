@@ -10,6 +10,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
@@ -68,6 +69,10 @@ UniqueColumnCombinations WindowNode::unique_column_combinations() const {
 
 OrderDependencies WindowNode::order_dependencies() const {
   return _forward_left_order_dependencies();
+}
+
+InclusionDependencies WindowNode::inclusion_dependencies() const {
+  return _forward_left_inclusion_dependencies();
 }
 
 size_t WindowNode::_on_shallow_hash() const {
