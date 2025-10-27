@@ -1,3 +1,4 @@
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
@@ -6,8 +7,11 @@
 #include "nlohmann/json.hpp"
 
 #include "../../plugins/ucc_discovery_plugin.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "lib/storage/encoding_test.hpp"
@@ -18,15 +22,83 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "operators/delete.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
+#include "utils/template_type.hpp"
+
+namespace {
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+void encode_table(const std::shared_ptr<Table>& table, const SegmentEncodingSpec& encoding_spec) {
+  auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
+
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    if (encoding_supports_data_type(encoding_spec.encoding_type, table->column_data_type(column_id))) {
+      chunk_encoding_spec[column_id] = encoding_spec;
+    }
+  }
+  ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
+}
+
+std::shared_ptr<TransactionContext> insert_row(const std::string& table_name,
+                                               const TableColumnDefinitions& column_definitions,
+                                               const std::vector<AllTypeVariant>& values,
+                                               const bool commit_transaction = true) {
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+  const auto table = Table::create_dummy_table(column_definitions);
+  table->append(values);
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  const auto insert_op = std::make_shared<Insert>(table_name, table_wrapper);
+  insert_op->set_transaction_context(transaction_context);
+  insert_op->execute();
+
+  if (commit_transaction) {
+    transaction_context->commit();
+  }
+
+  return transaction_context;
+}
+
+std::shared_ptr<TransactionContext> delete_row(const std::shared_ptr<Table> table, const size_t row_index,
+                                               const bool commit_transaction = true) {
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  const auto table_scan =
+      create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::Equals, table->get_row(row_index).at(0));
+  table_scan->execute();
+
+  const auto delete_op = std::make_shared<Delete>(table_scan);
+  delete_op->set_transaction_context(transaction_context);
+  delete_op->execute();
+
+  if (commit_transaction) {
+    transaction_context->commit();
+  }
+
+  return transaction_context;
+}
+
+}  // namespace
 
 namespace hyrise {
 
@@ -61,17 +133,6 @@ class UccDiscoveryPluginTest : public BaseTest {
 
   void _validate_ucc_candidates(const UccCandidates& candidates) {
     UccDiscoveryPlugin::_validate_ucc_candidates(candidates);
-  }
-
-  void _encode_table(const std::shared_ptr<Table>& table, const SegmentEncodingSpec& encoding_spec) {
-    auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};
-
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      if (encoding_supports_data_type(encoding_spec.encoding_type, table->column_data_type(column_id))) {
-        chunk_encoding_spec[column_id] = encoding_spec;
-      }
-    }
-    ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
   const std::string _table_name_A{"uniquenessTestTableA"};
@@ -230,8 +291,8 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
-  _encode_table(_table_A, GetParam());
-  _encode_table(_table_B, GetParam());
+  encode_table(_table_A, GetParam());
+  encode_table(_table_B, GetParam());
 
   // Insert all columns as candidates
   auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}},
@@ -246,15 +307,167 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   const auto& constraints_A = _table_A->soft_key_constraints();
   const auto& constraints_B = _table_B->soft_key_constraints();
 
-  EXPECT_EQ(constraints_A.size(), 2);
-  EXPECT_EQ(constraints_B.size(), 1);
+  EXPECT_EQ(constraints_A.size(), 3);
+  EXPECT_EQ(constraints_B.size(), 2);
 
-  EXPECT_TRUE(constraints_A.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.contains({{ColumnID{2}}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_A.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+  const auto& table_key_constraint_A_0 =
+      constraints_A.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(table_key_constraint_A_0, constraints_A.end());
+  EXPECT_EQ(table_key_constraint_A_0->last_validation_result(), ValidationResultType::VALID);
 
-  EXPECT_TRUE(constraints_B.contains({{ColumnID{0}}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_B.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
+  const auto& table_key_constraint_A_2 =
+      constraints_A.find(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE});
+  EXPECT_NE(table_key_constraint_A_2, constraints_A.end());
+  EXPECT_EQ(table_key_constraint_A_2->last_validation_result(), ValidationResultType::VALID);
+
+  const auto& table_key_constraint_A_1 =
+      constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(table_key_constraint_A_1, constraints_A.end());
+  EXPECT_EQ(table_key_constraint_A_1->last_validation_result(), ValidationResultType::INVALID);
+
+  const auto& table_key_constraint_B_0 =
+      constraints_B.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(table_key_constraint_B_0, constraints_B.end());
+  EXPECT_EQ(table_key_constraint_B_0->last_validation_result(), ValidationResultType::VALID);
+
+  const auto& table_key_constraint_B_1 =
+      constraints_B.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(table_key_constraint_B_1, constraints_B.end());
+  EXPECT_EQ(table_key_constraint_B_1->last_validation_result(), ValidationResultType::INVALID);
+}
+
+TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterDuplicateInsertion) {
+  encode_table(_table_A, GetParam());
+  const auto& constraints_A = _table_A->soft_key_constraints();
+  EXPECT_EQ(constraints_A.size(), 0);  // No constraints known for the table yet.
+
+  // Delete row of _table_A that had a duplicate value regarding column 1 such that column 1 is unique afterwards.
+  delete_row(_table_A, 3);
+
+  // We are only interested in column 1, since it was not unique before the deletion but should be now.
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
+
+  _validate_ucc_candidates(ucc_candidates);
+
+  EXPECT_EQ(constraints_A.size(), 1);
+  const auto& constraint_A_1 = constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(constraint_A_1, constraints_A.end());
+  EXPECT_EQ(constraint_A_1->last_validation_result(), ValidationResultType::VALID);
+
+  // Insert single row into table A that adds a duplicate value in column 1. Do not commit to first test that UCC
+  // stays valid.
+  auto transaction_context = insert_row(_table_name_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
+
+  // Re-validate UCCs.
+  _validate_ucc_candidates(ucc_candidates);
+
+  EXPECT_EQ(constraints_A.size(), 1);
+  const auto& constraint_A_1_after_insert =
+      constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(constraint_A_1_after_insert, constraints_A.end());
+  EXPECT_EQ(constraint_A_1_after_insert->last_validation_result(), ValidationResultType::VALID);
+
+  // Commit transaction and re-validate UCCs.
+  transaction_context->commit();
+
+  // Validate for a second time. This time, the UCC should be invalid.
+  _validate_ucc_candidates(ucc_candidates);
+
+  EXPECT_EQ(constraints_A.size(), 1);
+  const auto& constraint_A_1_after_commit =
+      constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(constraint_A_1_after_commit, constraints_A.end());
+  EXPECT_EQ(constraint_A_1_after_commit->last_validation_result(), ValidationResultType::INVALID);
+}
+
+TEST_P(UccDiscoveryPluginMultiEncodingTest, InvalidateCandidatesAfterUpdate) {
+  encode_table(_table_A, GetParam());
+  const auto& constraints_A = _table_A->soft_key_constraints();
+  EXPECT_EQ(constraints_A.size(), 0);  // No constraints known for the table yet.
+
+  // Delete row of _table_A that had a duplicate value in column 1. Column 1 is unique afterwards.
+  delete_row(_table_A, 3);
+
+  // We are only interested in column 1, since it was not unique before the deletion but should be now.
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
+
+  _validate_ucc_candidates(ucc_candidates);
+
+  EXPECT_EQ(constraints_A.size(), 1);
+  const auto& constraint_A_1 = constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(constraint_A_1, constraints_A.end());
+  EXPECT_EQ(constraint_A_1->last_validation_result(), ValidationResultType::VALID);
+
+  // Delete and then insert a row. After the delete was committed, the UCC should still be valid but after the insert
+  // it should not.
+  delete_row(_table_A, 2, true);
+  auto transaction_context = insert_row(_table_name_A, _table_A->column_definitions(), {2, 3, "duplicate"}, false);
+
+  // Re-validate UCCs. The UCC should remain valid since only a delete was committed.
+  _validate_ucc_candidates(ucc_candidates);
+
+  EXPECT_EQ(constraints_A.size(), 1);
+  const auto& constraint_A_1_after_delete =
+      constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(constraint_A_1_after_delete, constraints_A.end());
+  EXPECT_EQ(constraint_A_1_after_delete->last_validation_result(), ValidationResultType::VALID);
+
+  // Commit transaction and re-validate UCCs.
+  transaction_context->commit();
+
+  // Validate for a second time. This time the UCC should be invalid.
+  _validate_ucc_candidates(ucc_candidates);
+
+  EXPECT_EQ(constraints_A.size(), 1);
+  const auto& constraint_A_1_after_insert =
+      constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(constraint_A_1_after_insert, constraints_A.end());
+  EXPECT_EQ(constraint_A_1_after_insert->last_validation_result(), ValidationResultType::INVALID);
+}
+
+TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimestamp) {
+  encode_table(_table_A, GetParam());
+  const auto& constraints_A = _table_A->soft_key_constraints();
+  EXPECT_EQ(constraints_A.size(), 0);  // No constraints known for the table yet.
+
+  // Add permanent UCC to table A.
+  _table_A->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  delete_row(_table_A, 3);
+
+  const auto ucc_candidates =
+      UccCandidates{{"uniquenessTestTableA", ColumnID{0}}, {"uniquenessTestTableA", ColumnID{1}}};
+  _validate_ucc_candidates(ucc_candidates);
+
+  // Perform a transaction that does not affect table A but increments the global CommitID.
+  delete_row(_table_B, 0);
+
+  EXPECT_EQ(constraints_A.size(), 2);  // One permanent UCC and one non-permanent UCC.
+
+  const auto search_constraint_A = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto column_0_constraint = constraints_A.find(search_constraint_A);
+  ASSERT_NE(column_0_constraint, constraints_A.end());
+  // The permanent UCC should remain permanent.
+  EXPECT_EQ(column_0_constraint->last_validated_on(), MAX_COMMIT_ID);
+
+  const auto search_constraint_B = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto column_1_constraint = constraints_A.find(search_constraint_B);
+  ASSERT_NE(column_1_constraint, constraints_A.end());
+  // The non-permanent UCC should have been validated.
+  const auto first_validation_timestamp = column_1_constraint->last_validated_on();
+  EXPECT_NE(first_validation_timestamp, MAX_COMMIT_ID);
+
+  // The following validation should change the timestamp as the validity of the UCC is visible by examining the
+  // MVCC data of the tables chunks (see `key_constraint_is_confidently_valid`).
+  _validate_ucc_candidates(ucc_candidates);
+  EXPECT_EQ(column_1_constraint->last_validated_on(), first_validation_timestamp);
+
+  const auto& constraint_A_0_after_revalidation =
+      constraints_A.find(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  EXPECT_EQ(constraint_A_0_after_revalidation->last_validation_result(), ValidationResultType::VALID);
+
+  const auto& constraint_A_1_after_revalidation =
+      constraints_A.find(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  EXPECT_EQ(constraint_A_1_after_revalidation->last_validation_result(), ValidationResultType::VALID);
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
@@ -266,8 +479,8 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   // clang-format on
   Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
-  _encode_table(_table_A, GetParam());
-  _encode_table(_table_B, GetParam());
+  encode_table(_table_A, GetParam());
+  encode_table(_table_B, GetParam());
 
   // Run UCC discovery: we expect both join columns and the predicate on table A to be identified as unique.
   _discover_uccs();
@@ -277,17 +490,108 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   const auto& constraints_B = _table_B->soft_key_constraints();
 
   EXPECT_EQ(constraints_A.size(), 2);
-  EXPECT_EQ(constraints_B.size(), 1);
+  EXPECT_EQ(constraints_B.size(), 2);
 
-  EXPECT_TRUE(constraints_A.contains({{_join_columnA->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.contains({{_predicate_column_A->original_column_id}, KeyConstraintType::UNIQUE}));
+  const auto join_column_A_constraint =
+      constraints_A.find(TableKeyConstraint{{_join_columnA->original_column_id}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(join_column_A_constraint, constraints_A.end());
+  EXPECT_EQ(join_column_A_constraint->last_validation_result(), ValidationResultType::VALID);
 
-  EXPECT_TRUE(constraints_B.contains({{_join_columnB->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_B.contains({{_predicate_column_B->original_column_id}, KeyConstraintType::UNIQUE}));
+  const auto predicate_column_A_constraint =
+      constraints_A.find(TableKeyConstraint{{_predicate_column_A->original_column_id}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(predicate_column_A_constraint, constraints_A.end());
+  EXPECT_EQ(predicate_column_A_constraint->last_validation_result(), ValidationResultType::VALID);
+
+  const auto join_column_B_constraint =
+      constraints_B.find(TableKeyConstraint{{_join_columnB->original_column_id}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(join_column_B_constraint, constraints_B.end());
+  EXPECT_EQ(join_column_B_constraint->last_validation_result(), ValidationResultType::VALID);
+
+  const auto predicate_column_B_constraint =
+      constraints_B.find(TableKeyConstraint{{_predicate_column_B->original_column_id}, KeyConstraintType::UNIQUE});
+  ASSERT_NE(predicate_column_B_constraint, constraints_B.end());
+  EXPECT_EQ(predicate_column_B_constraint->last_validation_result(), ValidationResultType::INVALID);
 
   // Ensure we clear the plan caches.
   EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 0);
   EXPECT_EQ(Hyrise::get().default_pqp_cache->size(), 0);
+}
+
+TEST_F(UccDiscoveryPluginMultiEncodingTest, PluginIntegrationTestWithInvalidation) {
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  const auto exec_groupby_statement = [&]() {
+    auto pipeline = SQLPipelineBuilder{"SELECT b,c FROM " + _table_name_A + " GROUP BY b,c;"}.create_pipeline();
+    const auto& [pipeline_status, _] = pipeline.get_result_table();
+    EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  };
+
+  const auto exec_insert_statement = [&]() {
+    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+    auto pipeline = SQLPipelineBuilder{"INSERT INTO " + _table_name_A + " (A_a, b, c) VALUES (14, 12, 'duplicate_b');"}
+                        .with_transaction_context(transaction_context)
+                        .create_pipeline();
+    const auto& [pipeline_status, _] = pipeline.get_result_table();
+    EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+    transaction_context->commit();
+  };
+
+  // Perform a single query to populate the LQPCache for `identify_ucc_candidates`.
+  exec_groupby_statement();
+
+  EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 1);
+
+  // Discover UCCs used in previous query.
+  auto& plugin_manager = Hyrise::get().plugin_manager;
+  plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+  plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+
+  // Check that key constraint was added to the table.
+  const auto constraint_A_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+
+  EXPECT_EQ(_table_A->soft_key_constraints().size(), 2);
+
+  const auto constraint_A_c_after_discovery = _table_A->soft_key_constraints().find(constraint_A_c);
+  EXPECT_NE(constraint_A_c_after_discovery, _table_A->soft_key_constraints().end());
+  EXPECT_EQ(constraint_A_c_after_discovery->last_validation_result(), ValidationResultType::VALID);
+
+  exec_groupby_statement();
+  exec_insert_statement();
+  // The second insert leads to duplicate values in all columns. None of the constraints should be valid anymore.
+  exec_insert_statement();
+
+  // Check that validity of constraint is not guaranteed anymore.
+  const auto constraint_A = _table_A->soft_key_constraints().find(constraint_A_c);
+  ASSERT_NE(constraint_A, _table_A->soft_key_constraints().end());
+  EXPECT_FALSE(key_constraint_is_confidently_valid(_table_A, *constraint_A));
+
+  // Flush and repopulate the cache.
+  Hyrise::get().default_pqp_cache->clear();
+  Hyrise::get().default_lqp_cache->clear();
+  exec_groupby_statement();
+
+  // Check that key constraint is properly invalidated.
+  plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+
+  const auto constraint_A_c_after_invalidation = _table_A->soft_key_constraints().find(constraint_A_c);
+  ASSERT_NE(constraint_A_c_after_invalidation, _table_A->soft_key_constraints().end());
+  EXPECT_EQ(constraint_A_c_after_invalidation->last_validation_result(), ValidationResultType::INVALID);
+
+  // Remove duplicates.
+  {
+    auto pipeline = SQLPipelineBuilder{"DELETE FROM " + _table_name_A + " WHERE b > 10;"}.create_pipeline();
+    pipeline.get_result_table();
+  }
+
+  // Repopulate the cache.
+  exec_groupby_statement();
+  plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+
+  // Check that the key constraint is valid again.
+  const auto constraint_A_c_after_revalidation = _table_A->soft_key_constraints().find(constraint_A_c);
+  ASSERT_NE(constraint_A_c_after_revalidation, _table_A->soft_key_constraints().end());
+  EXPECT_EQ(constraint_A_c_after_revalidation->last_validation_result(), ValidationResultType::VALID);
 }
 
 INSTANTIATE_TEST_SUITE_P(UccDiscoveryPluginMultiEncodingTestInstances, UccDiscoveryPluginMultiEncodingTest,

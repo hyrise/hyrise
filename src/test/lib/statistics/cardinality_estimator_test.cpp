@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
@@ -48,6 +48,9 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class CardinalityEstimatorTest : public BaseTest {
  public:
   void SetUp() override {
+    // Turn off statistics pruning to see if everything works as expected.
+    estimator.do_not_prune_unused_statistics();
+
     /**
      * node_a
      */
@@ -871,7 +874,7 @@ TEST_F(CardinalityEstimatorTest, Projection) {
 TEST_F(CardinalityEstimatorTest, Sort) {
   // clang-format off
   const auto input_lqp =
-  SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::AscendingNullsFirst},
                  node_a);
   // clang-format on
 
@@ -1145,7 +1148,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
   const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
 
   // Enable statistics caching.
-  estimator.guarantee_bottom_up_construction();
+  estimator.guarantee_bottom_up_construction(predicate_node_1);
   const auto& statistics_cache = estimator.cardinality_estimation_cache.statistics_by_lqp;
   ASSERT_TRUE(statistics_cache);
   EXPECT_TRUE(statistics_cache->empty());
@@ -1161,6 +1164,251 @@ TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
   estimator.estimate_cardinality(predicate_node_2, false);
   EXPECT_EQ(statistics_cache->size(), 2);
   EXPECT_FALSE(statistics_cache->contains(predicate_node_2));
+}
+
+TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(greater_than_(a_a, 50),
+    ProjectionNode::make(expression_vector(add_(a_a, 1), a_a, a_b, b_a, b_b),
+      JoinNode::make(JoinMode::Inner, equals_(a_b, b_a),
+        node_a,
+        node_b)));
+  // clang-format on
+
+  // Pruning without caching is not permitted.
+  EXPECT_THROW(estimator.prune_unused_statistics(), std::logic_error);
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
+
+  // Ensure required but pruned expressions are noticed.
+  if constexpr (HYRISE_DEBUG) {
+    // Because the cardinality estimator collects the required columns during estimation, we sneak in empty cached
+    // statistics. We trick the estimator to believe `node_a` was the entire LQP.
+    estimator.guarantee_bottom_up_construction(node_a);
+
+    // Now, the cardinality estimator prunes all statistics and caches these completely pruned statistics for `node_a`.
+    estimator.estimate_cardinality(node_a);
+    estimator.estimate_cardinality(node_b);
+
+    // Any estimation that actually requires statistics should notice that statistics are missing.
+    EXPECT_THROW(estimator.estimate_statistics(lqp), std::logic_error);
+    const auto projection = lqp->left_input();
+    lqp->set_left_input(node_a);
+    EXPECT_THROW(estimator.estimate_statistics(lqp), std::logic_error);
+
+    // Restore the LQP and the caches.
+    lqp->set_left_input(projection);
+    estimator.cardinality_estimation_cache.statistics_by_lqp.reset();
+    estimator.cardinality_estimation_cache.required_column_expressions.reset();
+  }
+
+  // Guaranteeing bottom-up construction (i.e., allowing caching) should enable statistics pruning and set the LQP in
+  // the cache. The required columns are not populated, yet.
+  estimator.guarantee_bottom_up_construction(lqp);
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.statistics_by_lqp);
+  EXPECT_EQ(estimator.cardinality_estimation_cache.lqp, lqp);
+  ASSERT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions);
+  ASSERT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->empty());
+
+  // Estimate with caching.
+  auto statistics = estimator.estimate_statistics(lqp);
+  ASSERT_EQ(statistics->column_statistics.size(), 5);
+  // The first column is a computed projection `add_(a_a, 1)` that does not have statistics. It is also not required
+  // by any predicate further up in the LQP.
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[0]));
+  // Columns a_a, a_b, and b_b were required to estimate the PredicateNode and the JoinNode.
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[1]));
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[2]));
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[3]));
+  // Column b_b was not required by any predicate and, thus, was pruned.
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[4]));
+
+  // After invocation, the required columns should be populated.
+  EXPECT_EQ(estimator.cardinality_estimation_cache.required_column_expressions->size(), 3);
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_a));
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_b));
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_a));
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_b));
+  // The memorized LQP should have been unset when populating the required expressions. Otherwise, we would do
+  // superfluous work for plans that have multiple StoredTableNodes.
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.lqp);
+}
+
+TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
+  const auto table_u = load_table("resources/test_data/tbl/all_data_types_sorted.tbl");
+  const auto node_u = StaticTableNode::make(table_u);
+
+  // clang-format off
+  const auto lqp_u =
+  PredicateNode::make(greater_than_(lqp_column_(node_u, ColumnID{2}), 0),
+    PredicateNode::make(greater_than_(lqp_column_(node_u, ColumnID{6}), 0.0),
+      PredicateNode::make(greater_than_(lqp_column_(node_u, ColumnID{8}), "0"),
+        node_u)));
+  // clang-format on
+
+  // Round one: node_u does not have base table statistics. All statistics are dummy statistics.
+  const auto lqp_u_dummy_statistics = estimator.estimate_statistics(lqp_u);
+  for (const auto& statistics : lqp_u_dummy_statistics->column_statistics) {
+    EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics));
+  }
+
+  // Adding the table to the StorageManager creates statistics.
+  Hyrise::get().storage_manager.add_table("table_u", table_u);
+  EXPECT_TRUE(table_u->table_statistics());
+
+  // Round two: The node has base table statistics. There should not be statistics for pruned and unused columns. We
+  // only used predicates that select all tuples, thus, the input statistics should be forwared for used columns.
+  // For node_u, no columns are pruned. However, only columns 2, 6, and 8 are used.
+  estimator.guarantee_bottom_up_construction(lqp_u);
+  const auto lqp_u_statistics = estimator.estimate_statistics(lqp_u);
+  ASSERT_EQ(lqp_u_statistics->column_statistics.size(), 10);
+  const auto& table_u_statistics = table_u->table_statistics()->column_statistics;
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[1]));
+  EXPECT_EQ(lqp_u_statistics->column_statistics[2], table_u_statistics[2]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[3]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[4]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[5]));
+  EXPECT_EQ(lqp_u_statistics->column_statistics[6], table_u_statistics[6]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[7]));
+  EXPECT_EQ(lqp_u_statistics->column_statistics[8], table_u_statistics[8]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[9]));
+
+  // Create the same query as for the StaticTableNode, but with pruned columns.
+  const auto node_v = StoredTableNode::make("table_u");
+  const auto pruned_column_ids = std::vector{{ColumnID{1}, ColumnID{3}, ColumnID{4}, ColumnID{7}, ColumnID{9}}};
+  node_v->set_pruned_column_ids(pruned_column_ids);
+
+  // clang-format off
+  const auto lqp_v =
+  PredicateNode::make(greater_than_(lqp_column_(node_v, ColumnID{2}), 0),
+    PredicateNode::make(greater_than_(lqp_column_(node_v, ColumnID{6}), 0.0),
+      PredicateNode::make(greater_than_(lqp_column_(node_v, ColumnID{8}), "0"),
+        node_v)));
+  // clang-format on
+
+  // For node_v, columns 1, 3, 4, 7, and 9 have been pruned. Thus, columns 0, 2, 5, 6 and 8 remain, of which 2, 6, and
+  // 8 are used.
+  estimator.guarantee_bottom_up_construction(lqp_v);
+  const auto lqp_v_statistics = estimator.estimate_statistics(lqp_v);
+  ASSERT_EQ(lqp_v_statistics->column_statistics.size(), 5);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[0]));
+  EXPECT_EQ(lqp_v_statistics->column_statistics[1], table_u_statistics[2]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[2]));
+  EXPECT_EQ(lqp_v_statistics->column_statistics[3], table_u_statistics[6]);
+  EXPECT_EQ(lqp_v_statistics->column_statistics[4], table_u_statistics[8]);
+
+  // clang-format off
+  const auto lqp_d =
+  PredicateNode::make(greater_than_(d_c, 0),
+    node_d);
+  // clang-format on
+
+  // For node_d, column 0 is pruned and column 2 is used.
+  node_d->set_pruned_column_ids({ColumnID{0}});
+  estimator.guarantee_bottom_up_construction(lqp_d);
+  const auto lqp_d_statistics = estimator.estimate_statistics(lqp_d);
+  const auto node_d_statistics = node_d->table_statistics();
+  ASSERT_EQ(lqp_d_statistics->column_statistics.size(), 2);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_d_statistics->column_statistics[0]));
+  EXPECT_EQ(lqp_d_statistics->column_statistics[1], node_d_statistics->column_statistics[2]);
+}
+
+TEST_F(CardinalityEstimatorTest, AssertRequiredStatistics) {
+  // Fail if required statistics are not present. Exceptions are if the statistics are not for a column (but, e.g.,
+  // for an aggregation) or no statistics are provided at all (e.g., for a StaticTableNode).
+
+  const auto table_u = load_table("resources/test_data/tbl/int_float_double_string.tbl");
+  Hyrise::get().storage_manager.add_table("table_u", table_u);
+  // After adding to the StorageManager, the table should have statistics.
+  const auto table_u_statistics = table_u->table_statistics();
+  ASSERT_TRUE(table_u_statistics);
+  const auto node_u = StoredTableNode::make("table_u");
+  const auto u_a = node_u->get_column("i");
+  const auto u_b = node_u->get_column("f");
+  const auto u_d = node_u->get_column("s");
+
+  const auto table_v = load_table("resources/test_data/tbl/int_float.tbl");
+  const auto node_v = StaticTableNode::make(table_v);
+  const auto v_a = lqp_column_(node_v, ColumnID{0});
+
+  // The LQP's output expressions look like this: e_a, e_b, u_a, u_b, min_(u_d), v_a, v_b.
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(e_a, u_a),
+    node_e,
+    JoinNode::make(JoinMode::Inner, equals_(u_b, v_a),
+      AggregateNode::make(expression_vector(u_a, u_b), expression_vector(min_(u_d)),
+        node_u),
+      node_v));
+  // clang-format off
+
+  // Create input table statistics.
+  auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(7);
+  column_statistics[1] = node_e->table_statistics()->column_statistics[1];
+  column_statistics[2] = table_u_statistics->column_statistics[0];
+  column_statistics[3] = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Float);
+  column_statistics[4] = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::String);
+  column_statistics[5] = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Int);
+  column_statistics[6] = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Float);
+  const auto statistics = std::make_shared<TableStatistics>(std::move(column_statistics), 123);
+
+  // First statistics object is nullptr.
+  EXPECT_THROW(estimator.assert_required_statistics(ColumnID{0}, lqp, statistics), std::logic_error);
+  // Second statistics object is present.
+  estimator.assert_required_statistics(ColumnID{1}, lqp, statistics);
+  // Third statistics object is present.
+  estimator.assert_required_statistics(ColumnID{2}, lqp, statistics);
+  // Fourth statistics object is dummy, but there is a base statistics object for this column.
+  EXPECT_THROW(estimator.assert_required_statistics(ColumnID{3}, lqp, statistics), std::logic_error);
+  // Fifth statistics object is dummy. This is okay because the expression is not an LQPColumnExpression.
+  estimator.assert_required_statistics(ColumnID{4}, lqp, statistics);
+  // Sixth statistics object is dummy. This is okay because the column belongs to a table without table statistics.
+  estimator.assert_required_statistics(ColumnID{5}, lqp, statistics);
+  // Seventh statistics object is dummy. This is okay because the column belongs to a table without table statistics.
+  estimator.assert_required_statistics(ColumnID{6}, lqp, statistics);
+
+  // Estimation should work anyway.
+  estimator.guarantee_bottom_up_construction(lqp);
+  estimator.estimate_cardinality(lqp);
+}
+
+
+TEST_F(CardinalityEstimatorTest, AssertRequiredStatisticsOnComputedExpressions) {
+  // If we have statistics for any expressions that are not simple columns (e.g., aggregates, window functions),
+  // `assert_required_statistics()` should throw an error. Thus, we notice that we added actual estimations for these
+  // cases. If we do so, we must not forget to add a check in the method.
+  auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                            FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window =
+      window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
+
+  // clang-format off
+  const auto lqp =
+  WindowNode::make(min_(d_a, window),
+    ProjectionNode::make(expression_vector(d_a, min_(d_c), add_(d_b, value_(1)), cast_(d_a, DataType::Int), case_(1, 1 , 1), abs_(d_a), equals_(d_a, 1)),  // NOLINT(whitespace/line_length)
+      AggregateNode::make(expression_vector(d_a, d_b), expression_vector(min_(d_c)),
+        node_d)));
+  // clang-format on
+
+  const auto output_expressions = lqp->output_expressions();
+  const auto column_count = output_expressions.size();
+  auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(column_count);
+  for (auto& statistics : column_statistics) {
+    statistics = std::make_shared<AttributeStatistics<int32_t>>();
+  }
+  const auto statistics = std::make_shared<TableStatistics>(std::move(column_statistics), 123);
+
+  // The first column still is an LQPColumnExpression.
+  estimator.assert_required_statistics(ColumnID{0}, lqp, statistics);
+
+  // All other columns are no LQPColumnExpressions. We should notice that there are unexpected statistics.
+  for (auto column_id = ColumnID{1}; column_id < column_count; ++column_id) {
+    EXPECT_THROW(estimator.assert_required_statistics(column_id, lqp, statistics), std::logic_error)
+        << " ColumnID: " << column_id << ", " << magic_enum::enum_name(output_expressions[column_id]->type)
+        << " expression " << output_expressions[column_id]->description();
+  }
 }
 
 TEST_F(CardinalityEstimatorTest, EstimationsOnDummyStatistics) {

@@ -6,7 +6,6 @@
 #include <optional>
 #include <ostream>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -235,7 +234,8 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
 
   const auto output_relation_count = output_relations.size();
   for (auto output_idx = size_t{0}; output_idx < output_relation_count; ++output_idx) {
-    output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
+    output_relations[output_idx] =
+        LQPOutputRelation{.output = outputs[output_idx], .input_side = input_sides[output_idx]};
   }
 
   return output_relations;
@@ -437,7 +437,7 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
     for (const auto& fd : non_trivial_fds) {
-      auto [_, inserted] = fds.insert(fd);
+      const auto [_, inserted] = fds.insert(fd);
       Assert(inserted, "FDs with the same set of determinant expressions should be merged.");
 
       for (const auto& fd_determinant_expression : fd.determinants) {
@@ -446,10 +446,10 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
         Assert(!is_column_nullable(get_column_id(*fd_determinant_expression)),
                "Expected FD's determinant expressions to be non-nullable.");
       }
-      Assert(std::all_of(fd.dependents.cbegin(), fd.dependents.cend(),
-                         [&output_expressions_set](const auto& fd_dependent_expression) {
-                           return output_expressions_set.contains(fd_dependent_expression);
-                         }),
+      Assert(std::ranges::all_of(fd.dependents,
+                                 [&output_expressions_set](const auto& fd_dependent_expression) {
+                                   return output_expressions_set.contains(fd_dependent_expression);
+                                 }),
              "Expected the FD's dependent expressions to be a subset of the node's output expressions.");
     }
   }
@@ -531,7 +531,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
 }
 
 void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
-  const auto iter = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) {
+  const auto iter = std::ranges::find_if(_outputs, [&](const auto& other) {
     /**
      * HACK!
      *  Normally we'd just check `&output == other.lock().get()` here.
@@ -543,7 +543,7 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
      * auto node_b = Node::make(..., node_a)
      *
      * node_b.reset(); // node_b::~AbstractLQPNode() will call `node_a.remove_output_pointer(node_b)`
-     *                 // But we can't lock node_b anymore, since its ref count is already 0
+     *                 // But we cannot lock node_b anymore, since its ref count is already 0.
      */
     return &output == other.lock().get() || other.expired();
   });

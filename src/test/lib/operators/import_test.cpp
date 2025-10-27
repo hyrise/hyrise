@@ -1,11 +1,14 @@
+#include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_parser.hpp"
 #include "import_export/file_type.hpp"
 #include "operators/import.hpp"
 #include "resolve_type.hpp"
@@ -18,6 +21,7 @@
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -68,19 +72,21 @@ TEST_P(OperatorsImportMultiFileTypeAndEncodingTest, ImportWithEncodingAndFileTyp
   const auto& [file_type, encoding] = GetParam();
 
   // Apply the encoding to the table.
-  if (encoding) {
-    const auto segment_encoding_spec_col1 =
-        SegmentEncodingSpec{*encoding != EncodingType::FixedStringDictionary ? *encoding : EncodingType::Dictionary};
-    const auto segment_encoding_spec_col2 =
-        SegmentEncodingSpec{*encoding != EncodingType::FrameOfReference ? *encoding : EncodingType::Dictionary};
+  if (file_type != FileType::Binary) {
+    if (encoding) {
+      const auto segment_encoding_spec_col1 = SegmentEncodingSpec{
+          *encoding != EncodingType::FixedStringDictionary ? *encoding : EncodingType::FrameOfReference};
+      const auto segment_encoding_spec_col2 =
+          SegmentEncodingSpec{*encoding != EncodingType::FrameOfReference ? *encoding : EncodingType::Dictionary};
 
-    const auto chunk_encoding_spec = ChunkEncodingSpec{segment_encoding_spec_col1, segment_encoding_spec_col2};
-    ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
-  } else if (file_type != FileType::Binary) {
-    // If no encoding is specified, we want to check if the defaults are as expected. The binary file is unencoded, so
-    // we do not have to change the encoding of `expected_table`. For `.csv` and `.tbl`, the default encoding should be
-    // `EncodingType::Dictionary`.
-    ChunkEncoder::encode_all_chunks(expected_table, SegmentEncodingSpec{});
+      const auto chunk_encoding_spec = ChunkEncodingSpec{segment_encoding_spec_col1, segment_encoding_spec_col2};
+      ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
+    } else {
+      // No encoding is specified, go with the default that should be selected by `auto_select_segment_encoding_spec`
+      const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::FrameOfReference},
+                                                         SegmentEncodingSpec{EncodingType::Dictionary}};
+      ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
+    }
   }
 
   const auto reference_filename =
@@ -130,11 +136,11 @@ TEST_P(OperatorsImportFileTypesTest, ImportWithAutoFileType) {
 
   const auto& file_type = GetParam();
 
-  // For the `.csv` and `.tbl` files we expect a default encoding of `Dictionary`. The `.bin` file we load is stored
-  // and therefore expected to be `Unencoded`.
+  // The `.bin` file we load is stored and therefore expected to be `Unencoded`.
   if (file_type != FileType::Binary) {
-    const auto encoding_spec = SegmentEncodingSpec{EncodingType::Dictionary};
-    ChunkEncoder::encode_all_chunks(expected_table, encoding_spec);
+    const auto chunk_encoding_spec = ChunkEncodingSpec{SegmentEncodingSpec{EncodingType::FrameOfReference},
+                                                       SegmentEncodingSpec{EncodingType::Dictionary}};
+    ChunkEncoder::encode_all_chunks(expected_table, chunk_encoding_spec);
   }
 
   const auto reference_filename =
@@ -193,12 +199,29 @@ TEST_F(OperatorsImportTest, UnknownFileExtension) {
   EXPECT_THROW(std::make_shared<Import>("not_existing_file.mp3", "a"), std::exception);
 }
 
-TEST_F(OperatorsImportTest, ReplaceExistingTable) {
-  auto old_table = load_table("resources/test_data/tbl/float.tbl");
-  Hyrise::get().storage_manager.add_table("a", old_table);
+TEST_F(OperatorsImportTest, RetrieveCsvMetaFromEmptyTable) {
+  auto existing_table = CsvParser::create_table_from_meta_file("resources/test_data/csv/float.csv.json");
 
-  auto expected_table = load_table("resources/test_data/tbl/int.tbl");
-  auto importer = std::make_shared<Import>("resources/test_data/tbl/int.tbl", "a");
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+}
+
+TEST_F(OperatorsImportTest, AppendToExistingTable) {
+  auto existing_table = load_table("resources/test_data/tbl/float.tbl");
+
+  Hyrise::get().storage_manager.add_table("a", existing_table);
+
+  auto expected_table = load_table("resources/test_data/tbl/float.tbl");
+  Assert(expected_table->chunk_count() == 1, "Testing code was only written to support single chunk tables");
+  const auto chunk = expected_table->get_chunk(ChunkID{0});
+  expected_table->append_chunk(chunk->segments(), chunk->mvcc_data());
+
+  auto importer = std::make_shared<Import>("resources/test_data/csv/float.csv", "a");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);

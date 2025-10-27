@@ -20,6 +20,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -52,9 +53,9 @@ std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::stri
 }
 
 void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids) {
-  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
-  DebugAssert(std::adjacent_find(pruned_chunk_ids.begin(), pruned_chunk_ids.end()) == pruned_chunk_ids.end(),
-              "Expected vector of unique ChunkIDs");
+  DebugAssert(std::ranges::is_sorted(pruned_chunk_ids), "Expected sorted vector of ChunkIDs.");
+  DebugAssert(std::ranges::adjacent_find(pruned_chunk_ids) == pruned_chunk_ids.end(),
+              "Expected vector of unique ChunkIDs.");
 
   _pruned_chunk_ids = pruned_chunk_ids;
 }
@@ -64,15 +65,14 @@ const std::vector<ChunkID>& StoredTableNode::pruned_chunk_ids() const {
 }
 
 void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs");
-  DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
-              "Expected vector of unique ColumnIDs");
+  DebugAssert(std::ranges::is_sorted(pruned_column_ids), "Expected sorted vector of ColumnIDs.");
+  DebugAssert(std::ranges::adjacent_find(pruned_column_ids) == pruned_column_ids.end(),
+              "Expected vector of unique ColumnIDs.");
 
   // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at
   // least one column in the output of this node, which is used by Table::size() to determine the number of 5's.
   const auto stored_column_count = Hyrise::get().storage_manager.get_table(table_name)->column_count();
-  Assert(pruned_column_ids.size() < static_cast<size_t>(stored_column_count), "Cannot exclude all columns from Table.");
+  Assert(pruned_column_ids.size() < static_cast<size_t>(stored_column_count), "Cannot exclude all columns from table.");
 
   _pruned_column_ids = pruned_column_ids;
 
@@ -85,10 +85,10 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 
 void StoredTableNode::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes) {
-  DebugAssert(std::all_of(predicate_nodes.cbegin(), predicate_nodes.cend(),
-                          [](const auto& node) {
-                            return node.lock() && node.lock()->type == LQPNodeType::Predicate;
-                          }),
+  DebugAssert(std::ranges::all_of(predicate_nodes,
+                                  [](const auto& node) {
+                                    return node.lock() && node.lock()->type == LQPNodeType::Predicate;
+                                  }),
               "No PredicateNode set as prunable predicate.");
   _prunable_subquery_predicates = predicate_nodes;
 }
@@ -138,6 +138,12 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
   for (const auto& table_key_constraint : table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     if (contains_any_column_id(table_key_constraint.columns(), _pruned_column_ids)) {
+      continue;
+    }
+
+    // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
+    // otherwise these optimizations could produce invalid query results.
+    if (!key_constraint_is_confidently_valid(table, table_key_constraint)) {
       continue;
     }
 
@@ -235,7 +241,7 @@ InclusionDependencies StoredTableNode::inclusion_dependencies() const {
 }
 
 std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {
-  DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
+  DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf.");
 
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   if (_pruned_column_ids.empty()) {
@@ -246,25 +252,22 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
   const auto column_id_mapping = pruned_column_id_mapping(table->column_count(), _pruned_column_ids);
 
   // Update index statistics
-  // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
-  // when remove(iterator) invalidates the iterator.
-  pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
-                                                 [&](auto& statistics) {
-                                                   for (auto& original_column_id : statistics.column_ids) {
-                                                     const auto updated_column_id =
-                                                         column_id_mapping[original_column_id];
-                                                     if (updated_column_id == INVALID_COLUMN_ID) {
-                                                       // Indexed column was pruned - remove index from statistics
-                                                       return true;
-                                                     }
+  // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues when
+  // remove(iterator) invalidates the iterator.
+  const auto [remove_begin, remove_end] = std::ranges::remove_if(pruned_indexes_statistics, [&](auto& statistics) {
+    for (auto& original_column_id : statistics.column_ids) {
+      const auto updated_column_id = column_id_mapping[original_column_id];
+      if (updated_column_id == INVALID_COLUMN_ID) {
+        // Indexed column was pruned - remove index from statistics.
+        return true;
+      }
 
-                                                     // Update column id
-                                                     original_column_id = updated_column_id;
-                                                   }
-                                                   return false;
-                                                 }),
-                                  pruned_indexes_statistics.end());
-
+      // Update ColumnID.
+      original_column_id = updated_column_id;
+    }
+    return false;
+  });
+  pruned_indexes_statistics.erase(remove_begin, remove_end);
   return pruned_indexes_statistics;
 }
 
@@ -285,7 +288,7 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
   for (const auto& index_statistic : index_statistics) {
     // TODO(anyone): When chunk indexes are removed, TableIndexStatistics should no longer store a vector of ColumnIDs
     // as multi-column indexes are no longer supported.
-    DebugAssert(index_statistic.column_ids.size() == 1, "Unexpected multi-column index");
+    DebugAssert(index_statistic.column_ids.size() == 1, "Unexpected multi-column index.");
 
     const auto& updated_column_id = column_id_mapping[index_statistic.column_ids[0]];
     if (updated_column_id == INVALID_COLUMN_ID) {

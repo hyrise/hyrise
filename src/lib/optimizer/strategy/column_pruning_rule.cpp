@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -39,9 +40,9 @@ void gather_expressions_not_computed_by_expression_evaluator(
   // required_expressions, as it is not a top-level expression.
 
   // If an expression that is not a top-level expression is already an input, we require it
-  if (std::find_if(input_expressions.begin(), input_expressions.end(), [&expression](const auto& other) {
+  if (std::ranges::any_of(input_expressions, [&expression](const auto& other) {
         return *expression == *other;
-      }) != input_expressions.end()) {
+      })) {
     if (!top_level) {
       required_expressions.emplace(expression);
     }
@@ -306,9 +307,9 @@ void prune_projection_node(
   for (const auto& expression : projection_node->node_expressions) {
     for (const auto& output : node->outputs()) {
       const auto& required_expressions = required_expressions_by_node.at(output);
-      if (std::find_if(required_expressions.begin(), required_expressions.end(), [&expression](const auto& other) {
+      if (std::ranges::any_of(required_expressions, [&expression](const auto& other) {
             return *expression == *other;
-          }) != required_expressions.end()) {
+          })) {
         new_node_expressions.emplace_back(expression);
         break;
       }
@@ -327,7 +328,8 @@ std::string ColumnPruningRule::name() const {
   return name;
 }
 
-void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                          OptimizationContext& /*optimization_context*/) const {
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its
   // successors (i.e., nodes to which this node is an input). After collecting this information, we walk through all
   // identified nodes and perform the pruning.
@@ -355,7 +357,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
         auto pruned_column_ids = std::vector<ColumnID>{};
         const auto& node_output_expressions = node->output_expressions();
         for (const auto& expression : node_output_expressions) {
-          if (required_expressions.find(expression) != required_expressions.end()) {
+          if (required_expressions.contains(expression)) {
             continue;
           }
 

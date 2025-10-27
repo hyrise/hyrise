@@ -14,6 +14,7 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -32,10 +33,9 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list.
-  if (!std::all_of(fd.determinants.cbegin(), fd.determinants.cend(),
-                   [&group_by_columns](const std::shared_ptr<AbstractExpression>& expression) {
-                     return group_by_columns.contains(expression);
-                   })) {
+  if (!std::ranges::all_of(fd.determinants, [&group_by_columns](const std::shared_ptr<AbstractExpression>& expression) {
+        return group_by_columns.contains(expression);
+      })) {
     return false;
   }
 
@@ -46,18 +46,18 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
       // Remove column from group-by list.
       // Further, decrement the aggregate's index which denotes the end of group-by expressions.
       const auto begin_idx_before = aggregate_node.aggregate_expressions_begin_idx;
-      aggregate_node.node_expressions.erase(
-          std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
-                         [&](const auto node_expression) {
-                           if (*node_expression == *group_by_column) {
-                             // Adjust the number of group by expressions.
-                             --aggregate_node.aggregate_expressions_begin_idx;
-                             group_by_list_changed = true;
-                             return true;
-                           }
-                           return false;
-                         }),
-          aggregate_node.node_expressions.end());
+      const auto [erase_begin, erase_end] =
+          std::ranges::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
+                                 [&](const auto& node_expression) {
+                                   if (*node_expression == *group_by_column) {
+                                     // Adjust the number of group by expressions.
+                                     --aggregate_node.aggregate_expressions_begin_idx;
+                                     group_by_list_changed = true;
+                                     return true;
+                                   }
+                                   return false;
+                                 });
+      aggregate_node.node_expressions.erase(erase_begin, erase_end);
       Assert(aggregate_node.aggregate_expressions_begin_idx < begin_idx_before,
              "Failed to remove column from group-by list.");
       // Add the ANY() aggregate to the list of aggregate columns.
@@ -79,7 +79,7 @@ std::string DependentGroupByReductionRule::name() const {
 }
 
 void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+    const std::shared_ptr<AbstractLQPNode>& lqp_root, OptimizationContext& /*optimization_context*/) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
@@ -140,7 +140,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
         Assert(column_id, "Could not find column " + expression->as_column_name());
         column_ids.emplace_back(*column_id);
       }
-      std::sort(column_ids.begin(), column_ids.end());
+      std::ranges::sort(column_ids);
       return column_ids;
     };
 
