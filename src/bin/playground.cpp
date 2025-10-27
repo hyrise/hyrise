@@ -28,16 +28,14 @@
 using namespace hyrise;                 // NOLINT(build/namespaces)
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-const auto scale_factor = []() -> float {
-  if (const char* sf = std::getenv("SF"); sf && *sf) {
-    char* end = nullptr;
-    const float val = std::strtof(sf, &end);
-    if (end != sf) return val;
-  }
-  return 0.1f;
-}();
-
 int main() {
+  float scale_factor = 0.1f;
+
+  const char* env = std::getenv("SF");
+  if (env) {
+    scale_factor = std::stof(env);
+  }
+
   auto& sm = Hyrise::get().storage_manager;
   const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
