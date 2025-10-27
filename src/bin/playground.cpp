@@ -125,14 +125,14 @@ int main() {
 
   // Build phase: build reduction structure from filtered part table
   auto build_reduce =
-      std::make_shared<Reduce>(get_table_lineitem, table_scan1, join_predicate, ReduceMode::Build, UseMinMax::Yes);
-  build_reduce->execute();
+      std::make_shared<Reduce>(get_table_lineitem, table_scan1, join_predicate, ReduceMode::Build, UseMinMax::No);
 
   // Probe phase: reduce lineitem table using the built structure
   auto probe_reduce =
-      std::make_shared<Reduce>(get_table_lineitem, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::Yes);
+      std::make_shared<Reduce>(get_table_lineitem, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::No);
 
   event_counter.start();
+  build_reduce->execute();
   probe_reduce->execute();
   event_counter.stop();
 
