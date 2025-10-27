@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/regex.hpp>
 
 #include "types.hpp"
 #include "utils/string_utils.hpp"
@@ -146,7 +147,7 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
     return MultipleContainsPattern{strings};
   }
 
-  return std::regex{sql_like_to_regex(cased_pattern), std::regex::optimize};
+  return boost::regex{sql_like_to_regex(cased_pattern), boost::regex::optimize};
 }
 
 std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::bounds(const pmr_string& pattern) {
