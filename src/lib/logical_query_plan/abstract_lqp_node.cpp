@@ -347,12 +347,13 @@ bool AbstractLQPNode::has_matching_od(
   return false;
 }
 
-bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<AbstractExpression>>& foreign_key_expressions,
-                                       const std::vector<std::shared_ptr<AbstractExpression>>& key_expressions) const {
-  const auto ind_size = key_expressions.size();
+bool AbstractLQPNode::has_matching_ind(
+    const std::vector<std::shared_ptr<AbstractExpression>>& included_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& referenced_expressions) const {
+  const auto ind_size = referenced_expressions.size();
   Assert(ind_size > 0, "Invalid input. Set of expressions should not be empty.");
-  DebugAssert(ind_size == foreign_key_expressions.size(), "Invlid IND requested.");
-  DebugAssert(has_output_expressions({key_expressions.cbegin(), key_expressions.cend()}),
+  DebugAssert(ind_size == included_expressions.size(), "IND is invalid.");
+  DebugAssert(has_output_expressions({referenced_expressions.cbegin(), referenced_expressions.cend()}),
               "The given expressions are not a subset of the LQP's output expressions.");
 
   // Gather valid INDs for current node.
@@ -361,14 +362,14 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
     return false;
   }
 
-  // Translate required `foreign_key_expressions` to ColumnIDs of the actual stored table.
+  // Translate required `included_expressions` to ColumnIDs of the actual stored table.
   auto required_table = std::shared_ptr<Table>{};
   auto required_column_id_for_expression = std::vector<std::pair<ColumnID, std::shared_ptr<AbstractExpression>>>{};
   required_column_id_for_expression.reserve(ind_size);
 
   for (auto expression_idx = ColumnID{0}; expression_idx < ind_size; ++expression_idx) {
-    const auto& expression = foreign_key_expressions[expression_idx];
-    DebugAssert(expression->type == ExpressionType::LQPColumn, "Expected column expression.");
+    const auto& expression = included_expressions[expression_idx];
+    Assert(expression->type == ExpressionType::LQPColumn, "Expected column expression.");
     const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*expression);
     const auto original_node = lqp_column_expression.original_node.lock();
     Assert(original_node, "Could not resolve original node. LQP is invalid.");
@@ -382,10 +383,10 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
       required_table = table;
     } else {
       // Columns must come from a single table.
-      Assert(required_table == table, "Invalid IND requested.");
+      Assert(required_table == table, "Invalid IND passed: Cannot reference multiple tables.");
     }
     required_column_id_for_expression.emplace_back(lqp_column_expression.original_column_id,
-                                                   key_expressions[expression_idx]);
+                                                   referenced_expressions[expression_idx]);
   }
   // INDs can be equivalent, e.g., [A.a, A.b] in [B.x, B.y] is the same as [A.b, A.a] in [B.y, B.x]. Thus, we sort
   // persisted ForeignKeyConstraints by the foreign key's ColumnIDs. We do the same here to compare with the valid INDs
@@ -400,8 +401,9 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
       continue;
     }
     // IND references the same included table. Now, check that it also has the required columns in the correct order.
+    DebugAssert(std::ranges::is_sorted(ind.included_column_ids), "Included columns should be ordered.");
     auto required_columns_it = required_column_id_for_expression.cbegin();
-    const auto found_ind_size = ind.expressions.size();
+    const auto found_ind_size = ind.referenced_expressions.size();
     const auto required_columns_end = required_column_id_for_expression.cend();
     for (auto expression_idx = ColumnID{0};
          expression_idx < found_ind_size && required_columns_it != required_columns_end; ++expression_idx) {
@@ -412,7 +414,7 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
 
       // IND does not match if the current ColumnID is missing there or it references the wrong column.
       if (required_columns_it->first < ind.included_column_ids[expression_idx] ||
-          *required_columns_it->second != *ind.expressions[expression_idx]) {
+          *required_columns_it->second != *ind.referenced_expressions[expression_idx]) {
         break;
       }
 
@@ -600,7 +602,7 @@ InclusionDependencies AbstractLQPNode::_forward_left_inclusion_dependencies() co
     // Check whether output expressions are missing.
     const auto output_expressions = this->output_expressions();
     for (const auto& ind : input_inclusion_dependencies) {
-      Assert(contains_all_expressions(ind.expressions, output_expressions),
+      Assert(contains_all_expressions(ind.referenced_expressions, output_expressions),
              "Forwarding of IND is illegal because node misses output expressions.");
     }
   }

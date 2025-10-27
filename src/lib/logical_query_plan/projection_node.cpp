@@ -86,7 +86,7 @@ InclusionDependencies ProjectionNode::inclusion_dependencies() const {
   // Forward inclusion dependencies, if applicable.
   const auto input_inclusion_dependencies = left_input()->inclusion_dependencies();
   for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
-    if (!contains_all_expressions(input_inclusion_dependency.expressions, node_expressions)) {
+    if (!contains_all_expressions(input_inclusion_dependency.referenced_expressions, node_expressions)) {
       continue;
     }
     inclusion_dependencies.emplace(input_inclusion_dependency);

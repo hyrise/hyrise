@@ -236,11 +236,18 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual InclusionDependencies inclusion_dependencies() const = 0;
 
   /**
-   * @return True if there is an inclusion dependency (IND) matching the given list of output expressions and the given
-   *         list of expressions to be included from another input.
+   * @return True if there is an inclusion dependency (IND) matching the given lists of expressions. That means this
+   *         node provides the referenced expressions, no tuples were removed in this (sub-)plan, and there exists a
+   *         foreign key relationship on a table level where the passed referenced expressions are on the FK side and
+   *         the included expressions are on the PK side.
+   *
+   * Example: - Assume two StoredTableNodes nation and region, "n_regionkey" is a foreign key to "r_regionkey".
+   *          - `region->has_matching_ind({nation->get_column("n_regionkey")}, {region->get_column("r_regionkey")})`
+   *            returns true.
+   *          - A PredicateNode with `r_name = ASIA` on top of the region node returns false for the same IND.
    */
-  bool has_matching_ind(const std::vector<std::shared_ptr<AbstractExpression>>& foreign_key_expressions,
-                        const std::vector<std::shared_ptr<AbstractExpression>>& key_expressions) const;
+  bool has_matching_ind(const std::vector<std::shared_ptr<AbstractExpression>>& included_expressions,
+                        const std::vector<std::shared_ptr<AbstractExpression>>& referenced_expressions) const;
 
   /**
    * Perform a deep equality check

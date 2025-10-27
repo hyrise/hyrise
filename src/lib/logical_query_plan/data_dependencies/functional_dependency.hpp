@@ -28,6 +28,11 @@ namespace hyrise {
  *
  * Currently, the determinant expressions are required to be non-nullable to be involved in FDs. Combining null values
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
+ *
+ * NOTE: Because functional dependencies can be derived from soft key constraints, which are not verified to be valid
+ *       (especially for data changes), we cannot really safely assume that all FDs are valid. Handling that is future
+ *       work. For FDs derived from discovered unique constraints, i.e., not defined by the DDL, we currently have means
+ *       to guarantee correct query plans even for changing data.
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents);

@@ -46,11 +46,11 @@ InclusionDependencies PredicateNode::inclusion_dependencies() const {
     const auto& operand = is_null_expression->operand();
 
     for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
-      if (input_inclusion_dependency.expressions.size() > 1) {
+      if (input_inclusion_dependency.referenced_expressions.size() > 1) {
         continue;
       }
 
-      if (*operand != *input_inclusion_dependency.expressions.front()) {
+      if (*operand != *input_inclusion_dependency.referenced_expressions.front()) {
         continue;
       }
 

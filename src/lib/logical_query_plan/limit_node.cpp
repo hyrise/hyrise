@@ -33,6 +33,7 @@ OrderDependencies LimitNode::order_dependencies() const {
 }
 
 InclusionDependencies LimitNode::inclusion_dependencies() const {
+  // Removing rows from the including side can invalidate any IND.
   return InclusionDependencies{};
 }
 

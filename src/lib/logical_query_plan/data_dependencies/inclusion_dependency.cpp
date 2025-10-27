@@ -1,5 +1,6 @@
 #include "inclusion_dependency.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -13,21 +14,22 @@
 
 namespace hyrise {
 
-InclusionDependency::InclusionDependency(std::vector<std::shared_ptr<AbstractExpression>>&& init_expressions,
+InclusionDependency::InclusionDependency(std::vector<std::shared_ptr<AbstractExpression>>&& init_referenced_expressions,
                                          std::vector<ColumnID>&& init_included_column_ids,
                                          const std::shared_ptr<Table>& init_included_table)
-    : expressions{std::move(init_expressions)},
+    : referenced_expressions{std::move(init_referenced_expressions)},
       included_column_ids{std::move(init_included_column_ids)},
       included_table{init_included_table} {
-  Assert(!expressions.empty(), "InclusionDependency cannot be empty.");
-  Assert(expressions.size() == included_column_ids.size(),
-         "InclusionDependency expects same amount of including and included columns.");
+  Assert(!referenced_expressions.empty(), "InclusionDependency cannot be empty.");
+  Assert(referenced_expressions.size() == included_column_ids.size(),
+         "InclusionDependency expects same amount of included and referenced columns.");
   Assert(included_table, "InclusionDependency must reference a table.");
+  DebugAssert(std::ranges::is_sorted(included_column_ids), "InclusionDependency's included columns should be ordered.");
 }
 
 bool InclusionDependency::operator==(const InclusionDependency& rhs) const {
-  const auto expression_count = expressions.size();
-  if (included_table != rhs.included_table || expression_count != rhs.expressions.size()) {
+  const auto expression_count = referenced_expressions.size();
+  if (included_table != rhs.included_table || expression_count != rhs.referenced_expressions.size()) {
     return false;
   }
 
@@ -37,7 +39,7 @@ bool InclusionDependency::operator==(const InclusionDependency& rhs) const {
   // foreign_key_constraint.cpp). Thus, we do not have to handle these cases here and we can assume that equal INDs
   // have their expressions ordered in the same way.
   for (auto expression_idx = size_t{0}; expression_idx < expression_count; ++expression_idx) {
-    if (*expressions[expression_idx] != *rhs.expressions[expression_idx] ||
+    if (*referenced_expressions[expression_idx] != *rhs.referenced_expressions[expression_idx] ||
         included_column_ids[expression_idx] != rhs.included_column_ids[expression_idx]) {
       return false;
     }
@@ -52,8 +54,8 @@ bool InclusionDependency::operator!=(const InclusionDependency& rhs) const {
 
 size_t InclusionDependency::hash() const {
   auto hash = boost::hash_value(included_table);
-  boost::hash_combine(hash, expressions.size());
-  for (const auto& expression : expressions) {
+  boost::hash_combine(hash, referenced_expressions.size());
+  for (const auto& expression : referenced_expressions) {
     boost::hash_combine(hash, expression->hash());
   }
 
@@ -71,9 +73,9 @@ std::ostream& operator<<(std::ostream& stream, const InclusionDependency& ind) {
     stream << ", " << ind.included_table << "." << ind.included_column_ids[column_id];
   }
   stream << "] in [";
-  stream << ind.expressions[0]->as_column_name();
-  for (auto expression_idx = size_t{1}; expression_idx < ind.expressions.size(); ++expression_idx) {
-    stream << ", " << ind.expressions[expression_idx]->as_column_name();
+  stream << ind.referenced_expressions[0]->as_column_name();
+  for (auto expression_idx = size_t{1}; expression_idx < ind.referenced_expressions.size(); ++expression_idx) {
+    stream << ", " << ind.referenced_expressions[expression_idx]->as_column_name();
   }
   stream << "]";
   return stream;

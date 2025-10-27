@@ -8,10 +8,9 @@
 namespace hyrise {
 
 /**
- * Base class for LQP nodes that do not query data (e.g, DML and DDL nodes) and therefore do not output columns.
- *
- * Helper class that provides overrides for output expressions, data dependencies, and other information we use during
- * query optimization.
+ * Abstract super class for LQP nodes that do not query data (e.g, DML and DDL nodes) and, thus, do not output columns.
+ * It provides overrides for output expressions, data dependencies, and other information we use during query
+ * optimization.
  */
 class AbstractNonQueryNode : public AbstractLQPNode {
  public:

@@ -287,7 +287,9 @@ TEST_F(StorageTableTest, StableChunks) {
   // The vector should have been resized / expanded by now
 
   EXPECT_EQ(first_chunk, &chunks_vector[0]);
-  EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant{100});
+  EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0})) [ChunkOffset{0}], AllTypeVariant {
+    100
+  });
 }
 
 TEST_F(StorageTableTest, LastChunkOfReferenceTable) {

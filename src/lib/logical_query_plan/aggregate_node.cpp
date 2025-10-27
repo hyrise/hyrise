@@ -199,7 +199,7 @@ InclusionDependencies AggregateNode::inclusion_dependencies() const {
   const auto output_expressions = this->output_expressions();
 
   for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
-    if (contains_all_expressions(input_inclusion_dependency.expressions, output_expressions)) {
+    if (contains_all_expressions(input_inclusion_dependency.referenced_expressions, output_expressions)) {
       inclusion_dependencies.emplace(input_inclusion_dependency);
     }
   }
