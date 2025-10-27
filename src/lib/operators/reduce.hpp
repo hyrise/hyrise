@@ -168,7 +168,6 @@ class Reduce : public AbstractReadOnlyOperator {
           auto local_output = std::chrono::nanoseconds{0};
           auto local_merge = std::chrono::nanoseconds{0};
 
-          auto hasher = boost::hash<DataType>{};
           for (; chunk_index < last_chunk_index; ++chunk_index) {
             const auto& input_chunk = input_table->get_chunk(chunk_index);
             const auto& input_segment = input_chunk->get_segment(column_id);
@@ -180,7 +179,8 @@ class Reduce : public AbstractReadOnlyOperator {
 
             segment_iterate<DataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
-                auto hash = hasher(position.value());
+                auto hash = size_t{4615968};
+                boost::hash_combine(hash, position.value());
                 // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
                 if constexpr (reduce_mode == ReduceMode::Build) {
