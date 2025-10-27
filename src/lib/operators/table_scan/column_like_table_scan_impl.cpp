@@ -123,7 +123,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
 template <typename D>
 std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(const D& dictionary) const {
-  auto count = size_t{0};
+  auto match_count = size_t{0};
   const auto dictionary_size = dictionary.size();
   auto dictionary_matches = std::vector<bool>(dictionary_size);
   auto offset = ChunkOffset{0};
@@ -133,14 +133,14 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
     LikeMatcher::resolve_pattern<Predicate>(_pattern, [&](const auto& matcher) {
       for (const auto& value : dictionary) {
         const auto matches = matcher(value);
-        count += static_cast<size_t>(matches);
+        match_count += static_cast<size_t>(matches);
         dictionary_matches[offset] = matches;
         ++offset;
       }
     });
   });
 
-  return {count, std::move(dictionary_matches)};
+  return {match_count, std::move(dictionary_matches)};
 }
 
 }  // namespace hyrise

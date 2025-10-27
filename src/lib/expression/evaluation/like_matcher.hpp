@@ -139,21 +139,21 @@ class LikeMatcher {
 
       if (tokens.size() == 2 && std::holds_alternative<pmr_string>(tokens[0]) &&
           tokens[1] == PatternToken{Wildcard::AnyChars}) {
-        // Pattern has the form 'hello%'
+        // Pattern has the form 'hello%'.
         functor(StartsWithPattern{std::get<pmr_string>(tokens[0])});
         return;
       }
 
       if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
           std::holds_alternative<pmr_string>(tokens[1])) {
-        // Pattern has the form '%hello'
+        // Pattern has the form '%hello'.
         functor(EndsWithPattern{std::get<pmr_string>(tokens[1])});
         return;
       }
 
       if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
           std::holds_alternative<pmr_string>(tokens[1]) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
-        // Pattern has the form '%hello%'
+        // Pattern has the form '%hello%'.
         functor(ContainsPattern{std::get<pmr_string>(tokens[1])});
         return;
       }
@@ -166,8 +166,8 @@ class LikeMatcher {
        */
 
       // Pick ContainsMultiple or regex.
-      auto pattern_is_contains_multiple = true;  // Set to false if tokens don't match %(, string, %)* pattern.
-      auto strings = std::vector<pmr_string>{};  // arguments used for ContainsMultiple, if it gets used.
+      auto pattern_is_contains_multiple = true;  // Set to false if tokens do not match %(, string, %)* pattern.
+      auto strings = std::vector<pmr_string>{};  // Arguments used for ContainsMultiple, if it gets used.
       auto expect_any_chars = true;              // If true, expect '%', if false, expect a string.
 
       // Check if the tokens match the layout expected for MultipleContainsPattern - or break and set

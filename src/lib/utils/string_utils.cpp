@@ -62,11 +62,13 @@ std::string replace_addresses(const std::string& input) {
 
 template <typename String>
 pmr_string string_to_lower(const String& input) {
-  auto copy = pmr_string{input};
-  std::transform(copy.begin(), copy.end(), copy.begin(), [](auto character) {
-    return std::tolower(character);
-  });
-  return copy;
+  auto lower_string = pmr_string{};
+  lower_string.reserve(input.size());
+
+  for (const auto character : input) {
+    lower_string.push_back(static_cast<char>(std::tolower(character)));
+  }
+  return lower_string;
 }
 
 template pmr_string string_to_lower(const pmr_string& input);

@@ -8,8 +8,7 @@ namespace hyrise {
 
 class LikeMatcherTest : public BaseTest {
  public:
-  bool match(const pmr_string& value, const pmr_string& pattern,
-             const PredicateCondition condition = PredicateCondition::Like) const {
+  bool match(const pmr_string& value, const pmr_string& pattern, const PredicateCondition condition) const {
     auto result = false;
 
     LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
