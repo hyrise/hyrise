@@ -123,10 +123,10 @@ popd
 # Prepare profiles for optimization. For BOLT, we have to merge the different profiles. For PGO, we have to change the
 # format of the profile. https://clang.llvm.org/docs/UsersManual.html#profiling-with-instrumentation
 time merge-fdata *.fdata > bolt.fdata
-time llvm-profdata merge -output all.profdata libhyrise.profraw
+time llvm-profdata merge -output libhyrise.profdata libhyrise.profraw
 
 # Build with PGO optimization
-cmake -DPGO_INSTRUMENT=OFF -DPGO_OPTIMIZE=all.profdata ..
+cmake -DPGO_INSTRUMENT=OFF -DPGO_OPTIMIZE=libhyrise.profdata ..
 ninja clean
 if [ "$ci" == "1" ]
 then
