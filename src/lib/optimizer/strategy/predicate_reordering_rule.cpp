@@ -9,10 +9,6 @@
 #include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
-#include "expression/abstract_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/lqp_subquery_expression.hpp"
-#include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -20,10 +16,8 @@
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace {
-
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Returns whether a certain node is a "predicate-style" node, i.e., a node that can be moved freely within a predicate
@@ -51,66 +45,6 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   }
 
   return false;
-}
-
-Cost weighted_predicate_cost(const std::shared_ptr<AbstractLQPNode>& node,
-                             const std::shared_ptr<const AbstractCostEstimator>& cost_estimator) {
-  // Estimate the cardinality and cost of the predicate without caching. As the predicate order is not yet determined,
-  // caching leads to wrong estimates in the cache.
-  constexpr auto DO_CACHE = false;
-  const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
-  const auto output_cardinality = cardinality_estimator->estimate_cardinality(node, DO_CACHE);
-  const auto estimated_cost = cost_estimator->estimate_node_cost(node, DO_CACHE) - output_cardinality;
-
-  auto penalty = Cost{0};
-  if (node->type == LQPNodeType::Join) {
-    DebugAssert(
-        is_semi_or_anti_join(static_cast<const JoinNode&>(*node).join_mode) && node->node_expressions.size() == 1,
-        "Expected single-predicate semi-/anti-join.");
-    penalty = PredicateReorderingRule::PREDICATE_PENALTY;
-  } else if (node->type == LQPNodeType::Predicate) {
-    DebugAssert(node->node_expressions.size() == 1, "PredicateNode should have exactly one predicate.");
-
-    auto column_count = Cost{0};
-    auto like_column_count = Cost{0};
-
-    const auto is_column_like_expression = [](const auto& expression) {
-      return expression->type == ExpressionType::LQPColumn ||
-             (expression->type == ExpressionType::LQPSubquery &&
-              static_cast<LQPSubqueryExpression&>(*expression).is_correlated());
-    };
-
-    visit_expression(node->node_expressions.front(), [&](const auto& expression) {
-      if (is_column_like_expression(expression)) {
-        ++column_count;
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      if (expression->type == ExpressionType::List) {
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      // Penalize if there is a LIKE predicate.
-      const auto binary_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(expression);
-      if (binary_predicate && (binary_predicate->predicate_condition == PredicateCondition::Like ||
-                               binary_predicate->predicate_condition == PredicateCondition::NotLike ||
-                               binary_predicate->predicate_condition == PredicateCondition::LikeInsensitive ||
-                               binary_predicate->predicate_condition == PredicateCondition::NotLikeInsensitive)) {
-        if (is_column_like_expression(binary_predicate->left_operand())) {
-          ++like_column_count;
-        }
-
-        if (is_column_like_expression(binary_predicate->right_operand())) {
-          ++like_column_count;
-        }
-      }
-      return ExpressionVisitation::VisitArguments;
-    });
-
-    penalty = (like_column_count / column_count) * PredicateReorderingRule::PREDICATE_PENALTY;
-  }
-
-  return estimated_cost * std::max(Cost{1}, penalty) + output_cardinality;
 }
 
 // Reorder subsequent predicates based on their estimated logical cost.
@@ -148,7 +82,14 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   nodes_and_costs.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
-    nodes_and_costs.emplace_back(predicate, weighted_predicate_cost(predicate, cost_estimator));
+    // Estimate the cardinality and cost of the predicate without caching. As the predicate order is not yet determined,
+    // caching leads to wrong estimates in the cache.
+    constexpr auto DO_CACHE = false;
+    const auto output_cardinality = cardinality_estimator->estimate_cardinality(predicate, DO_CACHE);
+    const auto estimated_cost = cost_estimator->estimate_node_cost(predicate, DO_CACHE) - output_cardinality;
+    const auto penalty = predicate->type == LQPNodeType::Join ? PredicateReorderingRule::JOIN_PENALTY : Cost{1};
+    const auto weighted_cost = (estimated_cost * penalty) + output_cardinality;
+    nodes_and_costs.emplace_back(predicate, weighted_cost);
   }
 
   // Untie predicates from LQP, so we can freely retie them.
