@@ -129,7 +129,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 }
 
 Table::Table(Table&& other) noexcept {
-  auto lock = other.acquire_append_mutex();
+  const auto lock = other.acquire_append_mutex();
   // NOLINTBEGIN(cppcoreguidelines-prefer-member-initializer)
   _column_definitions = std::move(other._column_definitions);
   _type = other._type;
@@ -154,7 +154,8 @@ Table& Table::operator=(Table&& other) noexcept {
     return *this;
   }
 
-  auto lock = other.acquire_append_mutex();
+  const auto lock = acquire_append_mutex();
+  const auto other_lock = other.acquire_append_mutex();
   _cached_row_count = other._cached_row_count;
   _table_indexes = std::move(other._table_indexes);
   _table_indexes_statistics = std::move(other._table_indexes_statistics);
