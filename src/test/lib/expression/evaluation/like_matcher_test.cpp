@@ -10,12 +10,8 @@ class LikeMatcherTest : public BaseTest {
  public:
   bool match(const pmr_string& value, const pmr_string& pattern, const PredicateCondition condition) const {
     auto result = false;
-
-    LikeMatcher::resolve_condition(condition, [&](const auto& predicate) {
-      using Predicate = std::decay_t<decltype(predicate)>;
-      LikeMatcher::resolve_pattern<Predicate>(pattern, [&](const auto& matcher) {
-        result = matcher(value);
-      });
+    LikeMatcher{pattern, condition}.resolve([&](const auto& matcher) {
+      result = matcher(value);
     });
     return result;
   }

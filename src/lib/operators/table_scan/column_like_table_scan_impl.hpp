@@ -52,7 +52,7 @@ class ColumnLikeTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
   template <typename D>
   std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const D& dictionary) const;
 
-  const pmr_string _pattern;
+  const LikeMatcher _matcher;
 };
 
 }  // namespace hyrise

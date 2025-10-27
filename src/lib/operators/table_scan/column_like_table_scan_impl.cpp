@@ -25,7 +25,8 @@ namespace hyrise {
 ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                                  const PredicateCondition init_predicate_condition,
                                                  const pmr_string& pattern)
-    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition}, _pattern{pattern} {}
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition},
+      _matcher{pattern, init_predicate_condition} {}
 
 std::string ColumnLikeTableScanImpl::description() const {
   return "ColumnLike";
@@ -55,20 +56,17 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
       using ColumnDataType = typename std::decay_t<decltype(iter)>::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        LikeMatcher::resolve_condition(predicate_condition, [&](const auto& predicate) {
-          using Predicate = std::decay_t<decltype(predicate)>;
-          LikeMatcher::resolve_pattern<Predicate>(_pattern, [&](const auto& matcher) {
-            const auto functor = [&](const auto& position) {
-              return matcher(position.value());
-            };
-            _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
-          });
+        _matcher.resolve([&](const auto& matcher) {
+          const auto functor = [&](const auto& position) {
+            return matcher(position.value());
+          };
+          _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
         });
       } else {
-        Fail("Can only handle strings");
+        Fail("Can only handle strings.");
       }
     } else {
-      Fail("ReferenceSegments have their own code paths and should be handled there");
+      Fail("ReferenceSegments have their own code paths and should be handled there.");
     }
   });
 }
@@ -128,16 +126,13 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   auto dictionary_matches = std::vector<bool>(dictionary_size);
   auto offset = ChunkOffset{0};
 
-  LikeMatcher::resolve_condition(predicate_condition, [&](const auto& predicate) {
-    using Predicate = std::decay_t<decltype(predicate)>;
-    LikeMatcher::resolve_pattern<Predicate>(_pattern, [&](const auto& matcher) {
-      for (const auto& value : dictionary) {
-        const auto matches = matcher(value);
-        match_count += static_cast<size_t>(matches);
-        dictionary_matches[offset] = matches;
-        ++offset;
-      }
-    });
+  _matcher.resolve([&](const auto& matcher) {
+    for (const auto& value : dictionary) {
+      const auto matches = matcher(value);
+      match_count += static_cast<size_t>(matches);
+      dictionary_matches[offset] = matches;
+      ++offset;
+    }
   });
 
   return {match_count, std::move(dictionary_matches)};
