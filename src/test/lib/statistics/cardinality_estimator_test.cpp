@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"

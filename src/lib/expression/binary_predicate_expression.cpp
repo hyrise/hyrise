@@ -30,10 +30,9 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition in
                                              PredicateCondition::NotLike,
                                              PredicateCondition::LikeInsensitive,
                                              PredicateCondition::NotLikeInsensitive};
-    const auto* const it =
-        std::find(valid_predicate_conditions.begin(), valid_predicate_conditions.end(), predicate_condition);
-    Assert(it != valid_predicate_conditions.end(),
-           "Specified PredicateCondition is not valid for a BinaryPredicateExpression");
+    const auto* const iter = std::ranges::find(valid_predicate_conditions, predicate_condition);
+    Assert(iter != valid_predicate_conditions.end(),
+           "Specified PredicateCondition is not valid for a BinaryPredicateExpression.");
   }
 }
 

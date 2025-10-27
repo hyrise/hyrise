@@ -73,10 +73,10 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
           auto right_iterable =
               ReferenceSegmentIterable<ColumnDataType, EraseReferencedSegmentType::No>{*right_typed_segment};
 
-          left_iterable.with_iterators([&](auto left_it, [[maybe_unused]] const auto left_end) {
-            right_iterable.with_iterators([&](auto right_it, [[maybe_unused]] const auto right_end) {
-              if constexpr (std::is_same_v<std::decay_t<decltype(left_it)>,
-                                           std::decay_t<decltype(right_it)>>) {  // NOLINT
+          left_iterable.with_iterators([&](auto left_it, [[maybe_unused]] const auto& left_end) {
+            // NOLINTNEXTLINE(performance-unnecessary-value-param)
+            right_iterable.with_iterators([&](auto right_it, [[maybe_unused]] const auto& right_end) {
+              if constexpr (std::is_same_v<std::decay_t<decltype(left_it)>, std::decay_t<decltype(right_it)>>) {
                 // Either both reference segments use the MultipleChunkIterator (which uses erased accessors anyway)
                 // or they are resolved to the underlying segment iterators (e.g., Dictionary and Dictionary)
                 result = _typed_scan_chunk_with_iterators<EraseTypes::OnlyInDebugBuild>(chunk_id, left_it, left_end,
@@ -85,7 +85,7 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
             });
           });
         } else {
-          // Same segment types - do not erase types in Release builds
+          // Same segment types - do not erase types in release builds.
           result = _typed_scan_chunk_with_iterables<EraseTypes::OnlyInDebugBuild>(
               chunk_id, create_iterable_from_segment<ColumnDataType>(left_typed_segment),
               create_iterable_from_segment<ColumnDataType>(*right_typed_segment));
@@ -133,7 +133,7 @@ std::shared_ptr<RowIDPosList> __attribute__((noinline)) ColumnVsColumnTableScanI
   auto matches_out = std::shared_ptr<RowIDPosList>{};
 
   left_iterable.with_iterators([&](auto left_it, const auto left_end) {
-    right_iterable.with_iterators([&](auto right_it, const auto right_end) {
+    right_iterable.with_iterators([&](auto right_it, const auto& right_end) {
       matches_out =
           _typed_scan_chunk_with_iterators<erase_comparator_type>(chunk_id, left_it, left_end, right_it, right_end);
     });

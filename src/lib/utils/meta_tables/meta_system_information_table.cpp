@@ -1,5 +1,8 @@
 #include "meta_system_information_table.hpp"
 
+// NOLINTBEGIN(misc-include-cleaner): disable for entire file as we need many headers (e.g., macOS's `mach.h` is an
+//     umbrella header) and differentiating between macOS and Linux is too cumbersome for this file.
+
 // clang-format off
 #ifdef __linux__
 #include <sys/sysinfo.h>
@@ -11,6 +14,7 @@
 #endif
 // clang-format on
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -86,7 +90,7 @@ size_t MetaSystemInformationTable::_cpu_count() {
 // Returns the physical memory size
 size_t MetaSystemInformationTable::_ram_size() {
 #ifdef __linux__
-  struct sysinfo memory_info{};  // NOLINT(misc-include-cleaner): sysinfo of sys/sysinfo.h is not recognized.
+  struct sysinfo memory_info{};
 
   const auto ret = sysinfo(&memory_info);
   Assert(ret == 0, "Failed to get sysinfo");
@@ -139,5 +143,7 @@ std::string MetaSystemInformationTable::_cpu_model() {
 
   Fail("Method not implemented for this platform");
 }
+
+// NOLINTEND(misc-include-cleaner)
 
 }  // namespace hyrise

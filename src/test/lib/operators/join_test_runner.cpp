@@ -541,12 +541,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        * encoding.
        */
       if (key.encoding_type != EncodingType::Unencoded) {
-        auto chunk_encoding_spec = ChunkEncodingSpec{data_table->column_count()};
-        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
+        auto chunk_encoding_spec = ChunkEncodingSpec{};
+        const auto column_count = data_table->column_count();
+        chunk_encoding_spec.reserve(column_count);
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (encoding_supports_data_type(key.encoding_type, data_table->column_data_type(column_id))) {
-            chunk_encoding_spec[column_id] = SegmentEncodingSpec{key.encoding_type};
+            chunk_encoding_spec.push_back(SegmentEncodingSpec{key.encoding_type});
           } else {
-            chunk_encoding_spec[column_id] = SegmentEncodingSpec{EncodingType::Unencoded};
+            chunk_encoding_spec.push_back(SegmentEncodingSpec{EncodingType::Unencoded});
           }
         }
         ChunkEncoder::encode_all_chunks(data_table, chunk_encoding_spec);
@@ -565,7 +567,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
           const auto input_chunk = data_table->get_chunk(chunk_id);
 
-          Segments reference_segments;
+          auto reference_segments = Segments{};
 
           if (input_table_type == InputTableType::SharedPosList) {
             const auto pos_list = std::make_shared<RowIDPosList>();

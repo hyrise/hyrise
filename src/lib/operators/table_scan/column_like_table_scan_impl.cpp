@@ -48,11 +48,11 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(
 void ColumnLikeTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](const auto& iter, [[maybe_unused]] const auto& end) {
     // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
     // via position_filter
-    if constexpr (!is_reference_segment_iterable_v<typename decltype(iter)::IterableType>) {
-      using ColumnDataType = typename decltype(iter)::ValueType;
+    if constexpr (!is_reference_segment_iterable_v<typename std::decay_t<decltype(iter)>::IterableType>) {
+      using ColumnDataType = typename std::decay_t<decltype(iter)>::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         LikeMatcher::resolve_condition(predicate_condition, [&](const auto& predicate) {
@@ -79,7 +79,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   // First, build a bitmap containing 1s/0s for matching/non-matching dictionary values. Second, iterate over the
   // attribute vector and check against the bitmap. If too many input rows have already been removed (are not part of
   // position_filter), this optimization is detrimental. See caller for that case.
-  std::pair<size_t, std::vector<bool>> result;
+  auto result = std::pair<size_t, std::vector<bool>>{};
 
   if (segment.encoding_type() == EncodingType::Dictionary) {
     const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
@@ -89,14 +89,14 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
   }
 
-  const auto& match_count = result.first;
+  const auto match_count = result.first;
   const auto& dictionary_matches = result.second;
 
   auto attribute_vector_iterable = create_iterable_from_attribute_vector(segment);
 
-  // LIKE matches all rows, but we still need to check for NULL
+  // LIKE matches all rows, but we still need to check for NULL.
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+    attribute_vector_iterable.with_iterators(position_filter, [&](const auto& iter, const auto& end) {
       static const auto always_true = [](const auto&) {
         return true;
       };
@@ -106,8 +106,8 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     return;
   }
 
-  // LIKE matches no rows
-  if (match_count == 0u) {
+  // LIKE matches no rows.
+  if (match_count == 0) {
     ++num_chunks_with_early_out;
     return;
   }
@@ -116,7 +116,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     return dictionary_matches[position.value()];
   };
 
-  attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+  attribute_vector_iterable.with_iterators(position_filter, [&](const auto& iter, const auto& end) {
     _scan_with_iterators<true>(dictionary_lookup, iter, end, chunk_id, matches);
   });
 }
@@ -124,28 +124,19 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 template <typename D>
 std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(const D& dictionary) const {
   auto count = size_t{0};
-  auto dictionary_matches = std::vector<bool>{};
-  dictionary_matches.reserve(dictionary.size());
+  const auto dictionary_size = dictionary.size();
+  auto dictionary_matches = std::vector<bool>(dictionary_size);
+  auto offset = ChunkOffset{0};
 
   LikeMatcher::resolve_condition(predicate_condition, [&](const auto& predicate) {
     using Predicate = std::decay_t<decltype(predicate)>;
     LikeMatcher::resolve_pattern<Predicate>(_pattern, [&](const auto& matcher) {
-#ifdef __clang__
-// For the loop through the dictionary, we want to use const auto& for DictionarySegments. However,
-// FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
-// error about a potential copy for the loop value.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wrange-loop-analysis"
-#endif
       for (const auto& value : dictionary) {
         const auto matches = matcher(value);
         count += static_cast<size_t>(matches);
-        dictionary_matches.push_back(matches);
+        dictionary_matches[offset] = matches;
+        ++offset;
       }
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
     });
   });
 
