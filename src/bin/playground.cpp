@@ -115,8 +115,11 @@ int main() {
   semi_join->execute();
   event_counter.stop();
 
-  std::cout << "Semi-join output has " << semi_join->get_output()->row_count() << " rows.\n";
+  std::cout << "Semi-join output: " << semi_join->get_output()->row_count() << " rows.\n";
+  std::cout << "Semi-join PerformanceData:\n";
+  semi_join->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
 
+  std::cout << "Semi-join perf_result:\n";
   auto perf_result = event_counter.result();
   for (const auto& [event_name, value] : perf_result) {
     std::cout << event_name << ": " << value << '\n';
@@ -127,17 +130,34 @@ int main() {
   auto build_reduce =
       std::make_shared<Reduce>(get_table_lineitem, table_scan1, join_predicate, ReduceMode::Build, UseMinMax::No);
 
+  event_counter.start();
+  build_reduce->execute();
+  event_counter.stop();
+
+  std::cout << "ReduceMode::Build PerformanceData:\n";
+  build_reduce->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
+
+  std::cout << "ReduceMode::Build perf_result:\n";
+  perf_result = event_counter.result();
+  for (const auto& [event_name, value] : perf_result) {
+    std::cout << event_name << ": " << value << '\n';
+  }
+  std::cout << '\n';
+
   // Probe phase: reduce lineitem table using the built structure
   auto probe_reduce =
       std::make_shared<Reduce>(get_table_lineitem, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::No);
 
   event_counter.start();
-  build_reduce->execute();
   probe_reduce->execute();
   event_counter.stop();
 
-  std::cout << "Reduce output has " << probe_reduce->get_output()->row_count() << " rows.\n";
+  std::cout << "ReduceMode::Probe output: " << probe_reduce->get_output()->row_count() << " rows.\n";
 
+  std::cout << "ReduceMode::Probe PerformanceData:\n";
+  probe_reduce->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
+
+  std::cout << "ReduceMode::Probe perf_result:\n";
   // Print the results.
   perf_result = event_counter.result();
   for (const auto& [event_name, value] : perf_result) {
