@@ -43,8 +43,7 @@ enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
 using Hash = size_t;
 
 // We have to access the value of DEFAULT_SIZE by .t here, because accessing it via operator T&()
-// is not constexpr. This file assumes this value to not be less than JOB_SPAWN_THRESHOLD whenever
-// if (elements_count - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) is evaluated.
+// is not constexpr.
 constexpr auto PROBE_SIZE_PER_CHUNK = Chunk::DEFAULT_SIZE.t * 4;
 
 /*
@@ -671,7 +670,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       pos_lists_build_side.emplace_back();
       pos_lists_probe_side.emplace_back();
       const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
-      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end, elements_count]() {
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end]() {
         const auto& null_values = partition.null_values;
 
         auto pos_list_build_side_local = RowIDPosList{};
@@ -827,7 +826,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       const auto output_idx = pos_lists.size();
       pos_lists.emplace_back();
       const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
-      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end, elements_count]() {
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end]() {
         // Get information from work queue
         const auto& null_values = partition.null_values;
 
