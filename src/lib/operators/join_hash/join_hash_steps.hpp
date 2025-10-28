@@ -670,9 +670,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       const auto output_idx = pos_lists_build_side.size();
       pos_lists_build_side.emplace_back();
       pos_lists_probe_side.emplace_back();
-      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, elements_count]() {
+      const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end, elements_count]() {
         const auto& null_values = partition.null_values;
-        const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
 
         auto pos_list_build_side_local = RowIDPosList{};
         auto pos_list_probe_side_local = RowIDPosList{};
@@ -792,7 +792,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
         pos_lists_probe_side[output_idx] = std::move(pos_list_probe_side_local);
       };
 
-      if (elements_count - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
+      if (partition_end - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
         probe_partition();
       } else {
         jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
@@ -826,10 +826,10 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += PROBE_SIZE_PER_CHUNK) {
       const auto output_idx = pos_lists.size();
       pos_lists.emplace_back();
-      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, elements_count]() {
+      const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end, elements_count]() {
         // Get information from work queue
         const auto& null_values = partition.null_values;
-        const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
 
         auto pos_list_local = RowIDPosList{};
 
@@ -914,7 +914,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         pos_lists[output_idx] = std::move(pos_list_local);
       };
 
-      if (elements_count - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
+      if (partition_end - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
         probe_partition();
       } else {
         jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
