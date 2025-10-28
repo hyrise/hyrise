@@ -137,8 +137,11 @@ if(NOT APPLE)
   # there is an issue with jemalloc's percpu_arena setting that does not work well with CPU affinities (e.g., when using
   # numactl). The workaround is to explicitely set `narenas` to the number of cores (which is also the default; see
   # https://github.com/jemalloc/jemalloc/issues/2054).
+  # We obtained the knob values by starting with values used by ClickHouse and Apache Doris and subsequently adapted them
+  # with a (small) set of benchmarks. The current values (especially the decay values) are optimized for performance, if
+  # memory consumption becomes an issue, lowering these values is a good option.
   execute_process(COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" OUTPUT_VARIABLE ARENA_COUNT OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:${ARENA_COUNT},percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000\"")
+  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:${ARENA_COUNT},percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000,lg_extent_max_active_fit:8\"")
 
   include(ExternalProject)
   set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\"")
