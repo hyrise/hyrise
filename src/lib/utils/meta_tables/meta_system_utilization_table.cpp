@@ -92,7 +92,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
   auto load_avg = std::array<double, 3>{};
   const int nelem = getloadavg(load_avg.data(), 3);
-  Assert(nelem == 3, "Failed to read load averages");
+  Assert(nelem == 3, "Failed to read load averages.");
   return {.load_1_min = static_cast<float>(load_avg[0]),
           .load_5_min = static_cast<float>(load_avg[1]),
           .load_15_min = static_cast<float>(load_avg[2])};
@@ -331,7 +331,7 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
   auto allocated_size = sizeof(allocated);
 
   const auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
-  Assert(!error_code, std::string{"mallctl failed with error code "} + std::to_string(error_code) + ".");
+  Assert(!error_code, std::string{"mallctl failed with error code '"} + std::to_string(error_code) + "'.");
 
   return allocated;
 #else
