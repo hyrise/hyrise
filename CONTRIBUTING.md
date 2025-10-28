@@ -50,6 +50,12 @@
 
 * Miscellaneous
   * Prefer `if (object)` over `if (object != nullptr)` or `if (object.has_value())`.
+  * Return values:
+    * Prefer `return {};` over `return std::vector<T>{};` for empty data structures.
+    * Prefer an explicit expression for empty results if it exists:
+      * `return std::nullopt;` for empty optionals
+      * `return nullptr;` for (smart) pointers
+      * `return NULL_VALUE;` over `return AllTypeVariant{};`
   * Don't write `this->` if you don't have to.
   * Be explicit with types: Use `[u]int(8|16|32|64)_t` instead of `int, long, uint` and prefer `uint32_t{0}` over `0u`.
   * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = int64_t{17};` or
@@ -65,11 +71,16 @@
          x();
        }
     ```
+  * In test cases, prefer `EXPECT` over `ASSERT`. Thus, the test case continues execution and can output multiple issues
+    in one pass. Only use `ASSERT` if it prevents segmentation faults in the following test code, e.g., by guaranteeing
+    the size of a vector if we later access its individual members.
+  * Use designated initializers when they help understanding how an object is initialized. For obvious cases or objects
+    with many members, adding constructors should be preferred.
 
 
 # Formatting and Naming
-* Much of our formatting and naming conventions is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while
-  clang-tidy is a great help, do not rely on it.
+* Much of our formatting and naming conventions is enforced by clang-tidy. However, clang-tidy does not yet cover hpp
+  files (see #1901). Also, while clang-tidy is a great help, do not rely on it.
 * Call `./scripts/format.sh` before committing your code.
 * Choose clear and concise names, and avoid, e.g., `i`, `j`, `ch_ptr`.
 * Formatting details: 2 spaces for indentation, 120 columns, comments above code.
@@ -100,7 +111,10 @@
     int32_t b;
   };
   ```
-  However, certain test classes have many member variables of the same type, e.g., `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Declarations with more than one variable can be used in such test classes if the number of variables is high (see below). Please use common sense to decide on which format you use.
+  However, certain test classes have many member variables of the same type, e.g.,
+  `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Declarations with more than one variable can be used in
+  such test classes if the number of variables is high (see below). Please use common sense to decide on which format
+  you use.
   ```c++
   class FooTest : public BaseTest {
     ...
@@ -116,8 +130,8 @@
 # Pull Requests
 ## Opening PRs
 * When you submit a non-trivial PR, include the results of benchmark_all.sh.
-  * These results help in understanding potential performance changes as well as document potential changes to the compilation
-    costs.
+  * These results help in understanding potential performance changes as well as document potential changes to the
+    compilation costs.
   * We do not do this automatically as the CI server is not sufficiently isolated and the performance results would
     vary. Similarly, your personal laptop is likely to produce unreliable results.
 * If your PR is related to an existing issue, reference it in the PR's description (e.g., `fixes #123` or `refs #123`).

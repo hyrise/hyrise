@@ -1,5 +1,9 @@
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
 
 namespace hyrise {
@@ -10,6 +14,7 @@ class SemiJoinReductionRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     {
+      StrategyBaseTest::SetUp();
       const auto histogram_column_a = GenericHistogram<int32_t>::with_single_bin(1, 50, 40, 40);
       const auto histogram_column_b = GenericHistogram<int32_t>::with_single_bin(10, 15, 40, 5);
       _node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 40,
@@ -34,7 +39,9 @@ class SemiJoinReductionRuleTest : public StrategyBaseTest {
     }
   }
 
-  std::shared_ptr<MockNode> _node_a, _node_b, _node_c;
+  std::shared_ptr<MockNode> _node_a;
+  std::shared_ptr<MockNode> _node_b;
+  std::shared_ptr<MockNode> _node_c;
   std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a;
   std::shared_ptr<SemiJoinReductionRule> _rule{std::make_shared<SemiJoinReductionRule>()};
 };
@@ -44,7 +51,7 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
   // selectivity, a semi join reduction should be created.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     _node_a,
     _node_b);
@@ -61,21 +68,23 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
   // clang-format on
   expected_reduction->mark_as_semi_reduction(expected_lqp);
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 
   // Check whether the added semi join was also marked as a semi reduction.
-  auto join_node = std::static_pointer_cast<JoinNode>(actual_lqp->left_input());
+  const auto join_node = std::static_pointer_cast<JoinNode>(_lqp->left_input());
   EXPECT_TRUE(join_node->is_semi_reduction());
   EXPECT_EQ(join_node->comment, _rule->name());
-  EXPECT_EQ(join_node->get_or_find_reduced_join_node(), std::static_pointer_cast<JoinNode>(actual_lqp));
+  EXPECT_EQ(join_node->get_or_find_reduced_join_node(), std::static_pointer_cast<JoinNode>(_lqp));
 }
 
 TEST_F(SemiJoinReductionRuleTest, CreateSimpleReductionRightSide) {
-  // Same as CreateSimpleReduction, but with reversed sides
+  // Same as CreateSimpleReduction, but with reversed sides.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     _node_b,
     _node_a);
@@ -92,8 +101,10 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReductionRightSide) {
   // clang-format on
   expected_reduction->mark_as_semi_reduction(expected_lqp);
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForOuter) {
@@ -101,16 +112,18 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForOuter) {
   // the left side.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::Left, less_than_(_a_a, _b_a),
     _node_a,
     _node_b);
   // clang-format on
 
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForNonEquals) {
@@ -120,26 +133,28 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForNonEquals) {
   // reduction here because of the selectivities.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, less_than_(_a_a, _b_a),
     _node_a,
     _node_b);
   // clang-format on
 
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
   // Similar to CreateSimpleReduction, but with one equals and one non-equals expression. Only the equals expression
   // should lead to a reduction being created.
 
-  auto predicates = expression_vector(less_than_(_a_a, _b_a), equals_(_b_a, _a_a));
+  const auto predicates = expression_vector(less_than_(_a_a, _b_a), equals_(_b_a, _a_a));
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, predicates,
     _node_a,
     _node_b);
@@ -156,8 +171,10 @@ TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
   // clang-format on
   expected_reduction->mark_as_semi_reduction(expected_lqp);
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForNonBeneficial) {
@@ -165,23 +182,25 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForNonBeneficial) {
   // beneficial.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_b, _b_a),
     _node_a,
     _node_b);
   // clang-format on
 
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
-  // On the right side of the semi join reduction, we should traverse below joins so that the cardinality is reduced
+  // On the right side of the semi join reduction, we should traverse below joins so that the cardinality is reduced.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     _node_a,
     JoinNode::make(JoinMode::Inner, equals_(_a_b, _c_a),
@@ -202,24 +221,28 @@ TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
   // clang-format on
   expected_reduction->mark_as_semi_reduction(expected_lqp);
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForAntiJoin) {
-  // Same as CreateSimpleReduction, but with an anti join that must not be touched
+  // Same as CreateSimpleReduction, but with an anti join that must not be touched.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_a_a, _b_a),
     _node_a,
     _node_b);
   // clang-format on
 
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

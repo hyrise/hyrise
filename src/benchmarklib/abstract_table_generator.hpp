@@ -8,8 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "encoding_config.hpp"
-#include "storage/chunk.hpp"
+#include "nlohmann/json.hpp"
+
+#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -65,8 +66,6 @@ class AbstractTableGenerator {
   virtual std::unordered_map<std::string, BenchmarkTableInfo> generate() = 0;
 
   TableGenerationMetrics metrics;
-
-  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(ChunkOffset chunk_size);
 
  protected:
   // Creates chunk indexes. Expects the table to have been added to the StorageManager and, if requested, encoded.

@@ -1,3 +1,4 @@
+#include <memory>
 #include <numeric>
 
 #include "expression/expression_functional.hpp"
@@ -14,6 +15,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/join_predicate_ordering_rule.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
 #include "utils/load_table.hpp"
 
@@ -22,6 +24,7 @@ namespace hyrise {
 class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     _rule = std::make_shared<JoinPredicateOrderingRule>();
 
     node_a = create_mock_node_with_statistics(
@@ -42,7 +45,8 @@ class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<JoinPredicateOrderingRule> _rule;
-  std::shared_ptr<MockNode> node_a, node_b;
+  std::shared_ptr<MockNode> node_a;
+  std::shared_ptr<MockNode> node_b;
   std::shared_ptr<LQPColumnExpression> a_x, a_y, a_z, b_x, b_y, b_z;
 };
 
@@ -59,23 +63,29 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
 
   {
     const auto input_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x));
-    const auto input_lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     const auto input_join_predicates = expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z));
-    const auto input_lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     const auto input_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z));
-    const auto input_lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
@@ -87,18 +97,20 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
 
   const auto non_equals_predicates = expression_vector(greater_than_(a_y, b_y), less_than_(a_z, b_z));
 
-  for (const auto& join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
+  for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
     // Might need to adjust this as soon as we can estimate cardinalities for non-equals join predicates.
     const auto expected_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
 
-    const auto input_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    _lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
-  for (const auto& join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
-    const auto input_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
-    EXPECT_THROW(StrategyBaseTest::apply_rule(_rule, input_lqp), std::logic_error);
+  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+    _lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
+    EXPECT_THROW(_apply_rule(_rule, _lqp), std::logic_error);
   }
 }
 
@@ -116,10 +128,12 @@ TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
 
   const auto input_join_predicates =
       expression_vector(greater_than_(a_x, b_x), equals_(a_y, b_y), greater_than_(a_z, b_z));
-  const auto input_lqp = JoinNode::make(JoinMode::Semi, input_join_predicates, node_a, node_b);
+  _lqp = JoinNode::make(JoinMode::Semi, input_join_predicates, node_a, node_b);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

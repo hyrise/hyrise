@@ -16,7 +16,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "storage/encoding_type.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
@@ -27,24 +26,17 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class TableWrapper;
 
-// Defining the base fixture class
+// Defining the base fixture class.
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
     auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 10.0f;
-    const auto default_encoding = EncodingType::Dictionary;
-
-    auto benchmark_config = BenchmarkConfig::get_default_config();
-    // TODO(anyone): setup benchmark_config with the given default_encoding
-    // benchmark_config.encoding_config = EncodingConfig{SegmentEncodingSpec{default_encoding}};
+    const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
     if (!sm.has_table("lineitem")) {
-      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
-                << " encoding:\n";
-      TPCHTableGenerator(scale_factor, ClusteringConfiguration::None,
-                         std::make_shared<BenchmarkConfig>(benchmark_config))
-          .generate_and_store();
+      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and automatic encoding:\n";
+      TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, benchmark_config).generate_and_store();
     }
 
     _table_wrapper_map = create_table_wrappers(sm);

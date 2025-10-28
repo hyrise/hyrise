@@ -12,6 +12,8 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/optimization_context.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 
@@ -85,8 +87,8 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
     constexpr auto DO_CACHE = false;
     const auto output_cardinality = cardinality_estimator->estimate_cardinality(predicate, DO_CACHE);
     const auto estimated_cost = cost_estimator->estimate_node_cost(predicate, DO_CACHE) - output_cardinality;
-    const auto penalty = predicate->type == LQPNodeType::Join ? PredicateReorderingRule::JOIN_PENALTY : 1.0f;
-    const auto weighted_cost = estimated_cost * penalty + output_cardinality;
+    const auto penalty = predicate->type == LQPNodeType::Join ? PredicateReorderingRule::JOIN_PENALTY : Cost{1};
+    const auto weighted_cost = (estimated_cost * penalty) + output_cardinality;
     nodes_and_costs.emplace_back(predicate, weighted_cost);
   }
 
@@ -96,7 +98,7 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   }
 
   // Sort in descending order. The "most beneficial" predicate (i.e., with the lowest cost) is at the end.
-  std::sort(nodes_and_costs.begin(), nodes_and_costs.end(), [&](auto& left, auto& right) {
+  std::ranges::sort(nodes_and_costs, [&](auto& left, auto& right) {
     return left.second > right.second;
   });
 
@@ -176,11 +178,11 @@ std::string PredicateReorderingRule::name() const {
   return name;
 }
 
-void PredicateReorderingRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void PredicateReorderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                OptimizationContext& optimization_context) const {
   // We reorder recursively from leaves to root. Thus, the CardinalityEstimator may cache already estimated statistics.
-  const auto caching_cost_estimator = cost_estimator->new_instance();
-  caching_cost_estimator->cardinality_estimator->guarantee_bottom_up_construction();
+  const auto caching_cost_estimator = optimization_context.cost_estimator->new_instance();
+  caching_cost_estimator->cardinality_estimator->guarantee_bottom_up_construction(lqp_root);
 
   // We keep track of visited nodes, so that this rule touches nodes once only.
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};

@@ -65,10 +65,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 
-# Build cpp-btree library
-add_library(cpp-btree INTERFACE)
-target_include_directories(cpp-btree INTERFACE cpp-btree/include/btree)
-
 # Build concurrentqueue
 add_library(concurrentqueue INTERFACE)
 target_include_directories(concurrentqueue INTERFACE concurrentqueue)

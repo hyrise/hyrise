@@ -13,7 +13,6 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
-#include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
@@ -57,7 +56,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
       }
     }
   } else {
-    segment_with_iterators<T>(*source_abstract_segment, [&](const auto source_begin, const auto /*source_end*/) {
+    segment_with_iterators<T>(*source_abstract_segment, [&](const auto& source_begin, const auto& /*source_end*/) {
       auto source_iter = source_begin + source_begin_offset;
       auto target_iter = target_values.begin() + target_begin_offset;
 
@@ -135,8 +134,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           std::min<size_t>(_target_table->target_chunk_size() - target_chunk->size(), remaining_rows);
 
       _target_chunk_ranges.emplace_back(
-          ChunkRange{target_chunk_id, target_chunk->size(),
-                     static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
+          ChunkRange{.chunk_id = target_chunk_id,
+                     .begin_chunk_offset = target_chunk->size(),
+                     .end_chunk_offset = static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
 
       // Mark new (but still empty) rows as being under modification by current transaction. Do so before resizing the
       // Segments, because the resize of `Chunk::_segments.front()` is what releases the new row count.
@@ -144,8 +144,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         const auto transaction_id = context->transaction_id();
         const auto end_offset = target_chunk->size() + num_rows_for_target_chunk;
         for (auto target_chunk_offset = target_chunk->size(); target_chunk_offset < end_offset; ++target_chunk_offset) {
-          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid begin CID.");
-          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid end CID.");
+          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MAX_COMMIT_ID, "Invalid begin CID.");
+          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MAX_COMMIT_ID, "Invalid end CID.");
           mvcc_data->set_tid(target_chunk_offset, transaction_id, std::memory_order_relaxed);
         }
       }
@@ -153,7 +153,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Make sure the MVCC data is written before the first segment (and, thus, the chunk) is resized.
       std::atomic_thread_fence(std::memory_order_seq_cst);
 
-      // Grow data Segments.
+      // "Grow" data segments: Segments are pre-allocated during construction. We resize() to make default-constructed
+      // cells visible so that they can be written in the next Insert step. Note that those cells are still invisible
+      // from an MVCC point of view until they are actually being written and committed.
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
       // resize that makes the new row count visible to the outside world.
       const auto old_size = target_chunk->size();
@@ -169,9 +171,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
               std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(target_chunk->get_segment(column_id));
           Assert(value_segment, "Cannot insert into non-ValueSegments.");
 
-          // Cannot guarantee resize without reallocation. The ValueSegment should have been allocated with the target
-          // table's target chunk size reserved.
-          Assert(value_segment->values().capacity() >= new_size, "ValueSegment too small.");
+          // Cannot guarantee resize without reallocation when growing. We thus check that the ValueSegment has been
+          // allocated with the target table's target chunk size reserved.
+          Assert(value_segment->values().capacity() >= new_size, "ValueSegment insufficiently pre-allocated.");
           value_segment->resize(new_size);
         });
 
@@ -244,7 +246,7 @@ void Insert::_on_commit_records(const CommitID cid) {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->set_begin_cid(chunk_offset, cid);
+      mvcc_data->set_begin_cid(chunk_offset, cid, std::memory_order_relaxed);
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
 
@@ -273,7 +275,7 @@ void Insert::_on_rollback_records() {
      * Set end_cids to 0 (effectively making the rows invisible for everyone) BEFORE setting the begin_cids to 0.
      *
      * Otherwise, another transaction/thread might observe a row with begin_cid == 0, end_cid == MAX_COMMIT_ID and a
-     * foreign tid - which is what a visible row that is being deleted by a different transaction looks like. Thus,
+     * foreign TID - which is what a visible row that is being deleted by a different transaction looks like. Thus,
      * the other transaction would consider the row (that is in the process of being rolled back and should have never
      * been visible) as visible.
      *
@@ -282,24 +284,14 @@ void Insert::_on_rollback_records() {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->set_end_cid(chunk_offset, CommitID{0});
-
+      // We use a strong sequential memory ordering here to be on the safe side. If rollbacks become a performance
+      // bottleneck, the memory order should be revisited.
+      mvcc_data->set_end_cid(chunk_offset, UNSET_COMMIT_ID, std::memory_order_seq_cst);
+      mvcc_data->set_begin_cid(chunk_offset, UNSET_COMMIT_ID, std::memory_order_seq_cst);
+      mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_seq_cst);
       // Update chunk statistics.
-      target_chunk->increase_invalid_row_count(ChunkOffset{1});
+      target_chunk->increase_invalid_row_count(ChunkOffset{1}, std::memory_order_seq_cst);
     }
-
-    // This fence guarantees that no other thread will ever observe `begin_cid = 0 && end_cid != 0` for rolled-back
-    // records.
-    std::atomic_thread_fence(std::memory_order_release);
-
-    for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
-         ++chunk_offset) {
-      mvcc_data->set_begin_cid(chunk_offset, CommitID{0});
-      mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
-    }
-
-    // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
-    std::atomic_thread_fence(std::memory_order_release);
 
     // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last rolling back Insert
     // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new

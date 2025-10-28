@@ -299,43 +299,43 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
 TYPED_TEST(RangeFilterTest, Sliced) {
   using Ranges = std::vector<std::pair<TypeParam, TypeParam>>;
 
-  auto new_filter = std::shared_ptr<RangeFilter<TypeParam>>{};
+  auto new_filter = std::shared_ptr<const RangeFilter<TypeParam>>{};
   const auto ranges = std::vector<std::pair<TypeParam, TypeParam>>{{5, 10}, {20, 25}, {35, 100}};
 
   const auto filter = std::make_shared<RangeFilter<TypeParam>>(ranges);
 
-  new_filter =
-      std::static_pointer_cast<RangeFilter<TypeParam>>(filter->sliced(PredicateCondition::NotEquals, TypeParam{7}));
+  new_filter = std::static_pointer_cast<const RangeFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::NotEquals, TypeParam{7}));
   EXPECT_EQ(new_filter->ranges, Ranges({{5, 10}, {20, 25}, {35, 100}}));
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const RangeFilter<TypeParam>>(
       filter->sliced(PredicateCondition::LessThanEquals, TypeParam{7}));
   EXPECT_EQ(new_filter->ranges, Ranges({{5, 7}}));
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const RangeFilter<TypeParam>>(
       filter->sliced(PredicateCondition::LessThanEquals, TypeParam{17}));
   EXPECT_EQ(new_filter->ranges, Ranges({{5, 10}}));
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const RangeFilter<TypeParam>>(
       filter->sliced(PredicateCondition::GreaterThanEquals, TypeParam{7}));
   EXPECT_EQ(new_filter->ranges, Ranges({{7, 10}, {20, 25}, {35, 100}}));
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const RangeFilter<TypeParam>>(
       filter->sliced(PredicateCondition::GreaterThanEquals, TypeParam{17}));
   EXPECT_EQ(new_filter->ranges, Ranges({{20, 25}, {35, 100}}));
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const RangeFilter<TypeParam>>(
       filter->sliced(PredicateCondition::BetweenInclusive, TypeParam{7}, TypeParam{17}));
   // New filter should start at 7 and end right before first gap (because 17 is in that gap).
   EXPECT_EQ(new_filter->ranges, Ranges({{7, 10}}));
 
-  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const RangeFilter<TypeParam>>(
       filter->sliced(PredicateCondition::BetweenInclusive, TypeParam{17}, TypeParam{27}));
   EXPECT_EQ(new_filter->ranges, Ranges({{20, 25}}));
 
   // Slice with equality predicate will return MinMaxFilter.
-  const auto min_max_filter =
-      std::dynamic_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, TypeParam{7}));
+  const auto min_max_filter = std::dynamic_pointer_cast<const MinMaxFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::Equals, TypeParam{7}));
   ASSERT_TRUE(min_max_filter);
   EXPECT_EQ(min_max_filter->min, 7);
   EXPECT_EQ(min_max_filter->max, 7);

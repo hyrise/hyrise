@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/container/pmr/memory_resource.hpp>
 #include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "all_type_variant.hpp"
@@ -53,7 +52,7 @@ class Chunk : private Noncopyable {
   static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
+        PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{}, Indexes indexes = {});
 
   // Returns whether new rows can be appended to this chunk. Chunks are set immutable during `set_immutable().
   bool is_mutable() const;
@@ -79,6 +78,7 @@ class Chunk : private Noncopyable {
    *       call `get_segment again`, be aware that the returned object might have changed.
    */
   std::shared_ptr<AbstractSegment> get_segment(ColumnID column_id) const;
+  const Segments& segments() const;
 
   bool has_mvcc_data() const;
 
@@ -116,7 +116,7 @@ class Chunk : private Noncopyable {
 
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
-  void migrate(boost::container::pmr::memory_resource* memory_source);
+  void migrate(MemoryResource& memory_resource);
 
   bool references_exactly_one_table() const;
 
@@ -136,16 +136,18 @@ class Chunk : private Noncopyable {
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
-   * If a chunk is sorted in any way, the sort mode (Ascending/Descending) and the ColumnIDs of the segments by which
-   * it is sorted will be returned.
+   * We use interesting sort orders in a few TableScan implementations (e.g., ColumnVsValue, ColumnIsNull,
+   * ColumnBetween) and AggregateSort. See #1519 for more details. We store the sort modes and the ColumnIDs of the
+   * segments by which the chunk is sorted on the top-level ordering (i.e., the left-most column in an ORDER BY
+   * statement). If the sort information contains two columns a, b, that does NOT mean the chunk is lexicographically
+   * ordered by them (as in ORDER BY a, b). Instead, the chunk is ordered by both columns individually. For instance,
+   * both join keys are sorted after a SortMergeJoin.
    *
-   * In a chunk, multiple segments may be sorted independently. For example, in a table storing orders, both the order
-   * ID and date of incoming orders might have incrementing values. In this case, sorted_by has two entries (assuming
-   * this knowledge is available to the database). However, for cases where the data is first orderered by one column,
-   * then by another (e.g. ORDER_BY last_name, first_name), only the primary order is stored.
+   * Currently, we set the sorting information when applying some operators (SortMergeJoin, Sort) or when clustering
+   * tables. Operators that maintain the sort order must forward this information on their own.
    *
-   * Sort orders are currently exploited in several scan implementations (e.g., ColumnVsValue, ColumnIsNull,
-   * ColumnBetweenScan) and selected other operators (e.g., AggregateSort). See #1519 for more details.
+   * Further order dependencies (e.g., sorting TPC-DS's date_dim table by d_date also orders d_year) are not captured,
+   * yet and are subject to future work.
    */
   const std::vector<SortColumnDefinition>& individually_sorted_by() const;
   void set_individually_sorted_by(const SortColumnDefinition& sorted_by);
@@ -164,7 +166,8 @@ class Chunk : private Noncopyable {
    * Atomically increases the counter of deleted/invalidated rows within this chunk. The function is marked as const,
    * as otherwise it could not be called by the Delete operator.
    */
-  void increase_invalid_row_count(ChunkOffset count) const;
+  void increase_invalid_row_count(const ChunkOffset count,
+                                  const std::memory_order memory_order = std::memory_order_seq_cst) const;
 
   /**
    * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
@@ -206,8 +209,8 @@ class Chunk : private Noncopyable {
   std::vector<SortColumnDefinition> _sorted_by;
   mutable std::atomic<ChunkOffset::base_type> _invalid_row_count{ChunkOffset::base_type{0}};
 
-  // Default value of zero means "not set".
-  std::atomic<CommitID> _cleanup_commit_id{CommitID{0}};
+  // Default value of zero (beginning of time) means "not set".
+  std::atomic<CommitID> _cleanup_commit_id{UNSET_COMMIT_ID};
 };
 
 }  // namespace hyrise

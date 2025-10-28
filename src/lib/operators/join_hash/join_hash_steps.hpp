@@ -4,12 +4,11 @@
 #include <cstddef>
 #include <limits>
 #include <memory>
+#include <memory_resource>
 #include <mutex>
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-#include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
@@ -31,7 +30,7 @@
 /*
   This file includes the functions that cover the main steps of our hash join implementation
   (e.g., build() and probe()). These free functions are put into this header file to separate
-  them from the process flow of the join hash and to make the better testable.
+  them from the process flow of the join hash and to make them better testable.
 */
 namespace hyrise {
 
@@ -220,10 +219,10 @@ class PosHashTable {
   // safe) by design. This way, we can quickly perform a high number of allocations without having to synchronize with
   // other threads for each allocation. Instead, we synchronize only when we refill the underlying
   // monotonic_buffer_resource. This works because each PosHashTable is used by exactly one thread.
-  std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
-      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();
-  std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
-      std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
+  std::unique_ptr<std::pmr::monotonic_buffer_resource> _monotonic_buffer =
+      std::make_unique<std::pmr::monotonic_buffer_resource>();
+  std::unique_ptr<std::pmr::unsynchronized_pool_resource> _memory_pool =
+      std::make_unique<std::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 
   JoinHashBuildMode _mode{};
   OffsetHashTable _offset_hash_table{};
@@ -288,11 +287,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   const auto pass = size_t{0};
   const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
-  Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
+  Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
   auto output_bloom_filter_mutex = std::mutex{};
 
-  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter");
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
   // Create histograms per chunk
   histograms.resize(chunk_count);
@@ -316,7 +315,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         used_output_bloom_filter = local_output_bloom_filter;
       }
 
-      // Skip chunks that were physically deleted
+      // Skip chunks that were physically deleted.
       if (!chunk_in) {
         return;
       }
@@ -348,7 +347,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           const auto inserted_rows = (end - iter) - num_rows;
           end -= inserted_rows;
         } else {
-          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed");
+          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed.");
         }
 
         while (iter != end) {

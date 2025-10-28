@@ -7,6 +7,7 @@
 
 #include <boost/variant/apply_visitor.hpp>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -73,7 +74,7 @@ bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<Abstrac
 
   auto first_less_than_second = false;
   boost::apply_visitor(
-      [&](const auto first_value) {
+      [&](const auto& first_value) {
         const auto second_value = boost::get<decltype(first_value)>(second_value_expression.value);
         first_less_than_second = first_value < second_value;
       },
@@ -92,7 +93,8 @@ std::string PredicateSplitUpRule::name() const {
   return name;
 }
 
-void PredicateSplitUpRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void PredicateSplitUpRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                             OptimizationContext& /*optimization_context*/) const {
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
 
   auto predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};

@@ -29,12 +29,12 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 bool contains_column(const std::vector<ColumnID>& column_ids, const ColumnID search_column_id) {
-  return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
+  return std::ranges::find(column_ids, search_column_id) != column_ids.cend();
 }
 
 template <typename ColumnIDs>
 bool contains_any_column(const std::vector<ColumnID>& column_ids, const ColumnIDs& search_column_ids) {
-  return std::any_of(search_column_ids.cbegin(), search_column_ids.cend(), [&](const auto column_id) {
+  return std::ranges::any_of(search_column_ids, [&](const auto column_id) {
     return contains_column(column_ids, column_id);
   });
 }
@@ -93,9 +93,8 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs.");
-  DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
+  DebugAssert(std::ranges::is_sorted(pruned_column_ids), "Expected sorted vector of ColumnIDs.");
+  DebugAssert(std::ranges::adjacent_find(pruned_column_ids) == pruned_column_ids.end(),
               "Expected vector of unique ColumnIDs.");
 
   _pruned_column_ids = pruned_column_ids;
@@ -133,7 +132,9 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids)) {
+
+    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids) ||
+        table_key_constraint.last_validation_result() == ValidationResultType::INVALID) {
       continue;
     }
 

@@ -32,8 +32,8 @@ class JoinGraphStatisticsCacheTest : public BaseTest {
     statistics_b_a = std::make_shared<AttributeStatistics<int32_t>>();
     statistics_b_b = std::make_shared<AttributeStatistics<int32_t>>();
 
-    auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{statistics_a_a, statistics_a_b,
-                                                                                   statistics_b_a, statistics_b_b};
+    auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{
+        statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b};
 
     table_statistics_a_b = std::make_shared<TableStatistics>(std::move(column_statistics), 5);
 

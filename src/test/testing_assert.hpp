@@ -106,24 +106,37 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   }                                                          \
   static_assert(true, "End call of macro with a semicolon")
 
-#define EXPECT_LQP_EQ(lhs, rhs)                                                                           \
-  {                                                                                                       \
-    Assert(lhs != rhs, "Comparing an LQP with itself is always true. Did you mean to take a deep copy?"); \
-    const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs);                                            \
-    if (mismatch) {                                                                                       \
-      std::cout << "Differing subtrees\n";                                                                \
-      std::cout << "-------------- Actual LQP --------------\n";                                          \
-      if (mismatch->first)                                                                                \
-        std::cout << *mismatch->first;                                                                    \
-      else                                                                                                \
-        std::cout << "NULL\n";                                                                            \
-      std::cout << "\n------------- Expected LQP -------------\n";                                        \
-      if (mismatch->second)                                                                               \
-        std::cout << *mismatch->second;                                                                   \
-      else                                                                                                \
-        std::cout << "NULL\n";                                                                            \
-      std::cout << "-------------..............-------------\n";                                          \
-      GTEST_FAIL();                                                                                       \
-    }                                                                                                     \
-  }                                                                                                       \
+#define EXPECT_LQP_EQ(lhs, rhs)                                                                              \
+  {                                                                                                          \
+    Assert(std::static_pointer_cast<AbstractLQPNode>(lhs) != std::static_pointer_cast<AbstractLQPNode>(rhs), \
+           "Comparing an LQP with itself is always true. Did you mean to take a deep copy?");                \
+    const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs);                                               \
+    if (mismatch) {                                                                                          \
+      std::cerr << "Differing subtrees\n";                                                                   \
+      std::cerr << "-------------- Actual LQP --------------\n";                                             \
+      if (mismatch->first) {                                                                                 \
+        std::cerr << *mismatch->first;                                                                       \
+      } else {                                                                                               \
+        std::cerr << "NULL\n";                                                                               \
+      }                                                                                                      \
+      std::cerr << "\n------------- Expected LQP -------------\n";                                           \
+      if (mismatch->second) {                                                                                \
+        std::cerr << *mismatch->second;                                                                      \
+      } else {                                                                                               \
+        std::cerr << "NULL\n";                                                                               \
+      }                                                                                                      \
+      std::cout << "-------------..............-------------\n";                                             \
+      GTEST_FAIL();                                                                                          \
+    }                                                                                                        \
+  }                                                                                                          \
+  static_assert(true, "End call of macro with a semicolon")
+
+#define EXPECT_TASKS_EQ(lhs, rhs)                                 \
+  {                                                               \
+    ASSERT_EQ(lhs.size(), rhs.size());                            \
+                                                                  \
+    for (auto index = size_t{0}; index < lhs.size(); ++index) {   \
+      EXPECT_EQ(lhs[index].get().shared_from_this(), rhs[index]); \
+    }                                                             \
+  }                                                               \
   static_assert(true, "End call of macro with a semicolon")

@@ -27,12 +27,12 @@ namespace hyrise {
  *
  * NOT thread safe because the underlying dsdgen is probably not (assuming it has the same issues as the tpch dbgen).
  * There is a tpcds_cleanup() function in third_party/tpcds-kit/r_params.c, but after calling tpcds_cleanup, TPC-DS 
- * data can no longer be generated. We decided that being able to generate tpcds data multiple times in for example a
+ * data can no longer be generated. We decided that being able to generate tpcds data multiple times in, for example, a
  * hyriseConsole session is more important than fixing these small memory leaks (<1MB for 1GB of generated data).
  */
 class TPCDSTableGenerator final : public AbstractTableGenerator {
  public:
-  // rng seed 19620718 is the same dsdgen uses as default
+  // rng seed 19620718 is the same dsdgen uses as default.
   explicit TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                int rng_seed = 19620718);
   TPCDSTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,

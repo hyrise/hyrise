@@ -235,6 +235,11 @@ std::shared_ptr<FunctionExpression> concat_(const Args... args) {
   return std::make_shared<FunctionExpression>(FunctionType::Concatenate, expression_vector(to_expression(args)...));
 }
 
+template <typename V>
+std::shared_ptr<FunctionExpression> abs_(const V& v) {
+  return std::make_shared<FunctionExpression>(FunctionType::Absolute, expression_vector(to_expression(v)));
+}
+
 template <typename... Args>
 std::shared_ptr<ListExpression> list_(Args&&... args) {
   return std::make_shared<ListExpression>(expression_vector(std::forward<Args>(args)...));

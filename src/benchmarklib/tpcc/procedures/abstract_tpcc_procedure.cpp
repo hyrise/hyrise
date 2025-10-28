@@ -1,13 +1,19 @@
 #include "abstract_tpcc_procedure.hpp"
 
+#include <random>
+
 #include "benchmark_sql_executor.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
+#include "tpcc/tpcc_random_generator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace hyrise {
+
+thread_local std::minstd_rand AbstractTPCCProcedure::_random_engine{42};
+thread_local TPCCRandomGenerator AbstractTPCCProcedure::_tpcc_random_generator{42};
 
 AbstractTPCCProcedure::AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor) : _sql_executor(sql_executor) {
   PerformanceWarning(

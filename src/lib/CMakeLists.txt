@@ -173,7 +173,8 @@ set(
     lossless_cast.cpp
     lossless_cast.hpp
     lossy_cast.hpp
-    memory/boost_default_memory_resource.cpp
+    memory/default_memory_resource.cpp
+    memory/default_memory_resource.hpp
     memory/zero_allocator.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
@@ -299,6 +300,7 @@ set(
     optimizer/join_ordering/join_graph_edge.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
+    optimizer/optimization_context.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/between_composition_rule.cpp
@@ -398,13 +400,10 @@ set(
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    statistics/abstract_cardinality_estimator.cpp
-    statistics/abstract_cardinality_estimator.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
     statistics/base_attribute_statistics.cpp
     statistics/base_attribute_statistics.hpp
-    statistics/cardinality_estimation_cache.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
     statistics/generate_pruning_statistics.cpp
@@ -431,6 +430,8 @@ set(
     statistics/statistics_objects/null_value_ratio_statistics.hpp
     statistics/statistics_objects/range_filter.cpp
     statistics/statistics_objects/range_filter.hpp
+    statistics/statistics_objects/scaled_histogram.cpp
+    statistics/statistics_objects/scaled_histogram.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     storage/abstract_encoded_segment.hpp
@@ -603,8 +604,6 @@ set(
     utils/format_duration.cpp
     utils/format_duration.hpp
     utils/invalid_input_exception.hpp
-    utils/list_directory.cpp
-    utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/log_manager.cpp
@@ -718,14 +717,6 @@ else()
     # Also, the sanitizer builds on Mac require static linkage.
     add_library(hyrise_impl STATIC ${SOURCES})
 endif()
-
-# Work around an stdlibc++ bug, see list_directory.hpp for details
-set_source_files_properties(
-    utils/list_directory.cpp
-    PROPERTIES
-    COMPILE_FLAGS -O0
-    SKIP_PRECOMPILE_HEADERS TRUE
-)
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)

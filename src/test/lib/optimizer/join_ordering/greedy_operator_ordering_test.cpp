@@ -7,6 +7,7 @@
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 
 namespace hyrise {
 
@@ -44,7 +45,7 @@ class GreedyOperatorOrderingTest : public BaseTest {
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
   std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, c_a, d_a;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
-  std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
+  std::shared_ptr<CardinalityEstimator> cardinality_estimator;
 };
 
 TEST_F(GreedyOperatorOrderingTest, NoEdges) {

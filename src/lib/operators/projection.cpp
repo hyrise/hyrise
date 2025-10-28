@@ -64,7 +64,7 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
-  Timer timer;
+  auto timer = Timer{};
 
   const auto& input_table = *left_input_table();
 
@@ -98,7 +98,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   //                          |VS |
   //                          +---+
 
-  const auto forwards_any_columns = std::any_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
+  const auto forwards_any_columns = std::ranges::any_of(expressions, [&](const auto& expression) {
     return expression->type == ExpressionType::PQPColumn;
   });
   const auto output_table_type = forwards_any_columns ? input_table.type() : TableType::Data;
@@ -215,8 +215,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                                                       std::nullopt, input_table.uses_mvcc());
   }
 
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count};
-  auto projection_result_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count};
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
+  auto projection_result_chunks = std::vector<std::shared_ptr<Chunk>>(chunk_count);
 
   // Create a mapping from output columns to input columns for future use. This is necessary as the order may have been
   // changed. The mapping only contains column IDs that are forwarded without modfications.
@@ -254,10 +254,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this
     // information so that following operators (currently, the Validate operator) can use it for optimizations.
+    // Incrementing atomic invalid row count in relaxed memory order as chunk is not yet visible.
     auto chunk = std::shared_ptr<Chunk>{};
     if (output_table_type == TableType::Data) {
       chunk = std::make_shared<Chunk>(std::move(output_segments_by_chunk[chunk_id]), input_chunk->mvcc_data());
-      chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
+      chunk->increase_invalid_row_count(input_chunk->invalid_row_count(), std::memory_order_relaxed);
       chunk->set_immutable();
 
       DebugAssert(projection_result_segments.empty(),
@@ -269,23 +270,24 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
       if (projection_result_table) {
         projection_result_table->append_chunk(projection_result_segments, input_chunk->mvcc_data());
-        projection_result_table->last_chunk()->increase_invalid_row_count(input_chunk->invalid_row_count());
+        projection_result_table->last_chunk()->increase_invalid_row_count(input_chunk->invalid_row_count(),
+                                                                          std::memory_order_relaxed);
       }
     }
 
     // Forward sorted_by flags, mapping column ids
     const auto& sorted_by = input_chunk->individually_sorted_by();
     if (!sorted_by.empty()) {
-      std::vector<SortColumnDefinition> transformed;
+      auto transformed = std::vector<SortColumnDefinition>{};
       transformed.reserve(sorted_by.size());
 
       // We need to iterate both sorted information and the output/input mapping as multiple output columns might
       // originate from the same sorted input column.
       for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
-        const auto iter =
-            std::find_if(sorted_by.begin(), sorted_by.end(), [input_column_id = input_column_id](const auto sort) {
-              return input_column_id == sort.column;
-            });
+        const auto iter = std::ranges::find_if(sorted_by, [input_column_id](const auto& sort) {
+          // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): False positive by clang tidy.
+          return input_column_id == sort.column;
+        });
         if (iter != sorted_by.end()) {
           transformed.emplace_back(output_column_id, iter->sort_mode);
         }

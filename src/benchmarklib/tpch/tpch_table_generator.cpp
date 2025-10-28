@@ -24,7 +24,6 @@ extern "C" {
 #include "storage/constraints/constraint_utils.hpp"
 #include "table_builder.hpp"
 #include "tpch/tpch_constants.hpp"
-#include "tpch_constants.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -86,7 +85,7 @@ DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Arg
 float convert_money(DSS_HUGE cents) {
   const auto dollars = cents / 100;
   cents %= 100;
-  return static_cast<float>(dollars) + (static_cast<float>(cents)) / 100.0f;
+  return static_cast<float>(dollars) + (static_cast<float>(cents) / 100.0f);
 }
 
 /**
@@ -105,14 +104,14 @@ void dbgen_cleanup() {
   }
 
   if (asc_date) {
+    // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
     for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
-      // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc)
-      // NOLINTBEGIN(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      // NOLINTBEGIN(cppcoreguidelines-pro-type-const-cast)
       std::free(const_cast<char*>(asc_date[idx]));
-      // NOLINTEND(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
-      // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc)
+      // NOLINTEND(cppcoreguidelines-pro-type-const-cast)
     }
-    std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(asc_date);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+    // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
   asc_date = nullptr;
 }
@@ -128,7 +127,7 @@ const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
+    : TPCHTableGenerator(scale_factor, clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
@@ -229,7 +228,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
           last_partkey = partsupp.partkey;
           suppkeys.clear();
         }
-        Assert(std::find(suppkeys.begin(), suppkeys.end(), partsupp.suppkey) == suppkeys.end(),
+        Assert(std::ranges::find(suppkeys, partsupp.suppkey) == suppkeys.end(),
                "Scale factor unsupported by tpch-dbgen. Consider choosing a \"round\" number.");
         suppkeys.emplace_back(partsupp.suppkey);
       }

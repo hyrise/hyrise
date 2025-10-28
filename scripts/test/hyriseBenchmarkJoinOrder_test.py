@@ -24,7 +24,7 @@ def main():
     arguments["--runs"] = "100"
     arguments["--output"] = "'json_output.txt'"
     arguments["--mode"] = "'Shuffled'"
-    arguments["--encoding"] = "'Unencoded'"
+    arguments["--encoding"] = "'FrameOfReference'"
     arguments["--clients"] = "1"
     arguments["--scheduler"] = "false"
 
@@ -40,7 +40,7 @@ def main():
     benchmark.expect_exact("Running in single-threaded mode")
     benchmark.expect_exact("1 simulated client is scheduling items")
     benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
-    benchmark.expect_exact("Encoding is 'Unencoded'")
+    benchmark.expect_exact("Encoding is 'FrameOfReference'")
     benchmark.expect_exact("Max runs per item is 100")
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("No warmup runs are performed")
@@ -50,6 +50,10 @@ def main():
     benchmark.expect_exact("Benchmarking queries from third_party/join-order-benchmark")
     benchmark.expect_exact("Running on tables from resources/test_data/imdb_sample/")
     benchmark.expect_exact("Running subset of queries: 21c,22b,23c,24a")
+    benchmark.expect_exact(
+        "Column 'movie_info.note' of type string cannot be encoded as FrameOfReference. "
+        + "Hence, its encoding is chosen automatically."
+    )
     benchmark.expect_exact("-> Executed")
 
     close_benchmark(benchmark)
@@ -86,7 +90,7 @@ def main():
         return_error,
     )
     return_error = check_json(
-        output["context"]["encoding"]["default"]["encoding"],
+        output["context"]["encoding"]["preferred"]["encoding"],
         arguments["--encoding"].replace("'", ""),
         "Encoding doesn't match with JSON:",
         return_error,
@@ -127,7 +131,7 @@ def main():
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("Warmup duration per item is 2 seconds")
     benchmark.expect_exact(
-        "Automatically verifying results with SQLite. This will make the performance numbers invalid."
+        "Automatically verifying results with SQLite. This will make the performance numbers invalid"
     )
     benchmark.expect_exact("Benchmarking queries from third_party/join-order-benchmark")
     benchmark.expect_exact("Running on tables from resources/test_data/imdb_sample/")

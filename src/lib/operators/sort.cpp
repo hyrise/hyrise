@@ -291,6 +291,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
            "Sort: Column ID is greater than table's column count");
+    Assert(column_sort_definition.sort_mode == SortMode::AscendingNullsFirst ||
+               column_sort_definition.sort_mode == SortMode::DescendingNullsFirst,
+           "Sort does not support NULLS LAST.");
   }
 
   if (input_table->row_count() == 0) {
@@ -301,7 +304,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     return input_table;
   }
 
-  std::shared_ptr<Table> sorted_table;
+  auto sorted_table = std::shared_ptr<Table>{};
 
   // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
   // been determined so far. This is not a completely proper PosList on the input table as it might point to
@@ -338,7 +341,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
   //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
   // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
-  Timer timer;
+  auto timer = Timer{};
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
@@ -399,7 +402,7 @@ class Sort::SortImpl {
   std::chrono::nanoseconds sort_time{};
 
   SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
-           const SortMode sort_mode = SortMode::Ascending)
+           const SortMode sort_mode = SortMode::AscendingNullsFirst)
       : _table_in(table_in), _column_id(column_id), _sort_mode(sort_mode) {
     const auto row_count = _table_in->row_count();
     _row_id_value_vector.reserve(row_count);
@@ -418,11 +421,11 @@ class Sort::SortImpl {
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
       std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) {
+                       [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
                          return comparator(lhs.second, rhs.second);
                        });
     };
-    if (_sort_mode == SortMode::Ascending) {
+    if (_sort_mode == SortMode::AscendingNullsFirst) {
       sort_with_comparator(std::less<>{});
     } else {
       sort_with_comparator(std::greater<>{});
@@ -442,7 +445,7 @@ class Sort::SortImpl {
     auto pos_list = RowIDPosList{};
     pos_list.reserve(_row_id_value_vector.size());
     for (const auto& [row_id, _] : _row_id_value_vector) {
-      pos_list.emplace_back(row_id);
+      pos_list.push_back(row_id);
     }
     temporary_result_writing_time = timer.lap();
     return pos_list;

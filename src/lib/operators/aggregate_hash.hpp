@@ -10,7 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container_hash/hash.hpp>
@@ -181,6 +180,11 @@ class AggregateHash : public AbstractAggregateOperator {
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                    const WindowFunction aggregate_function) const;
+
+  // Data structure used to gather intermediate results of grouping and aggregation. This data structure stores both
+  // the PosLists for group-by columns as well as the materialized aggregate results that are later returned as
+  // EntirePosList ReferenceSegments in the output table.
+  std::vector<Segments> _intermediate_result;
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;

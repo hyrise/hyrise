@@ -154,11 +154,10 @@ class Console : public Singleton<Console> {
   bool _verbose;
   bool _pagination_active;
   std::string _path;
+  bool _binary_caching{true};
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
-  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
-  std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 };
 
 }  // namespace hyrise

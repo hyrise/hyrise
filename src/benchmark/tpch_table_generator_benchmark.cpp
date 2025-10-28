@@ -7,11 +7,11 @@
 namespace hyrise {
 
 /**
- * This benchmark can only be use as a starting point for investigating TPCHTableGenerator performance, since secondary
+ * This benchmark can only be used as a starting point for investigating TPCHTableGenerator performance, since secondary
  * invocations of 'TPCHTableGenerator(scale_factor, 1000).generate();' will profit from cached data in tpch-dbgen
- * @param state
+ * @param state.
  */
-static void BM_TPCHTableGenerator(benchmark::State& state) {  // NOLINT
+static void BM_TPCHTableGenerator(benchmark::State& state) {
   for (auto _ : state) {
     TPCHTableGenerator(0.5f, ClusteringConfiguration::None, ChunkOffset{1000}).generate_and_store();
     Hyrise::reset();

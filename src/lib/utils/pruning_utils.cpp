@@ -216,8 +216,9 @@ std::set<ChunkID> compute_chunk_exclude_list(
         const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
         if (can_prune(*segment_statistics, condition, *value, value2)) {
           const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-          if (std::find(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), chunk_id) ==
-              already_pruned_chunk_ids.end()) {
+          DebugAssert(std::ranges::is_sorted(already_pruned_chunk_ids), "Expected pruned ChunkIDs to be sorted.");
+
+          if (!std::ranges::binary_search(already_pruned_chunk_ids, chunk_id)) {
             // Chunk was not yet marked as pruned - update statistics.
             num_rows_pruned += chunk->size();
           } else {
@@ -264,11 +265,11 @@ std::shared_ptr<TableStatistics> prune_table_statistics(const TableStatistics& o
   Assert(old_statistics.row_count >= 0, "Did not expect a negative row count.");
   const auto column_count = old_statistics.column_statistics.size();
 
-  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_count);
+  auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(column_count);
 
-  auto scale = 1.0f;
+  auto scale = 1.0;
   if (old_statistics.row_count > 0) {
-    scale = 1 - (static_cast<float>(num_rows_pruned) / old_statistics.row_count);
+    scale = 1 - (static_cast<Cardinality>(num_rows_pruned) / old_statistics.row_count);
   }
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     if (column_id == predicate.column_id) {
@@ -282,7 +283,8 @@ std::shared_ptr<TableStatistics> prune_table_statistics(const TableStatistics& o
   }
 
   return std::make_shared<TableStatistics>(
-      std::move(column_statistics), std::max(0.0f, old_statistics.row_count - static_cast<float>(num_rows_pruned)));
+      std::move(column_statistics),
+      std::max(0.0, old_statistics.row_count - static_cast<Cardinality>(num_rows_pruned)));
 }
 
 std::vector<ColumnID> pruned_column_id_mapping(const size_t original_table_column_count,
@@ -296,8 +298,7 @@ std::vector<ChunkID> pruned_chunk_id_mapping(const size_t original_table_chunk_c
 }
 
 ColumnID column_id_before_pruning(const ColumnID column_id, const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::ranges::is_sorted(pruned_column_ids), "Expected sorted vector of ColumnIDs.");
 
   auto original_column_id = column_id;
   for (const auto& pruned_column_id : pruned_column_ids) {

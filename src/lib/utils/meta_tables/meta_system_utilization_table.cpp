@@ -1,5 +1,8 @@
 #include "meta_system_utilization_table.hpp"
 
+// NOLINTBEGIN(misc-include-cleaner): disable for entire file as we need many headers (e.g., macOS's `mach.h` is an
+//     umbrella header) and differentiating between macOS and Linux is too cumbersome for this file.
+
 #include <stdlib.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For _SC_CLK_TCK and others.
 #include <time.h>    // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
 
@@ -26,7 +29,6 @@
 #include <memory>
 #include <optional>
 #include <ratio>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -91,7 +93,9 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   auto load_avg = std::array<double, 3>{};
   const int nelem = getloadavg(load_avg.data(), 3);
   Assert(nelem == 3, "Failed to read load averages.");
-  return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
+  return {.load_1_min = static_cast<float>(load_avg[0]),
+          .load_5_min = static_cast<float>(load_avg[1]),
+          .load_15_min = static_cast<float>(load_avg[2])};
 }
 
 /**
@@ -129,7 +133,6 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 
   // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
   // it to ns.
-  // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h.
   const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
 
   return active_ns;
@@ -162,12 +165,12 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
   // A clock that measures (user and system) CPU time consumed by (all of the threads in) the calling process.
 #ifdef __linux__
-  struct timespec time_spec {};
+  struct timespec time_spec{};
 
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);  // NOLINT(misc-include-cleaner)
   Assert(ret == 0, "Failed in clock_gettime.");
 
-  const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
+  const auto active_ns = (time_spec.tv_sec * std::nano::den) + time_spec.tv_nsec;
 
   return active_ns;
 #endif
@@ -266,13 +269,13 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #endif
 
 #ifdef __APPLE__
-  struct task_basic_info info {};
+  struct task_basic_info info{};
 
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get task_info.");
 
-  return {info.virtual_size, info.resident_size};
+  return {.virtual_memory = info.virtual_size, .physical_memory = info.resident_size};
 #endif
 
   Fail("Method not implemented for this platform.");
@@ -356,5 +359,7 @@ std::vector<int64_t> MetaSystemUtilizationTable::_parse_value_string(std::string
   return output_values;
 }
 #endif
+
+// NOLINTEND(misc-include-cleaner)
 
 }  // namespace hyrise

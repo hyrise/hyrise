@@ -1,20 +1,34 @@
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <future>
+#include <mutex>
 #include <numeric>
+#include <optional>
+#include <shared_mutex>
 #include <thread>
 
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/insert.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "scheduler/worker.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "ucc_discovery_plugin.hpp"
 #include "utils/atomic_max.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace hyrise {
 
@@ -25,9 +39,14 @@ class StressTest : public BaseTest {
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   }
 
+  void clear_soft_key_constraints(const std::shared_ptr<Table>& table) {
+    // We need to clear the soft key constraints before each test, otherwise they will be added multiple times.
+    table->_table_key_constraints.clear();
+  }
+
   static constexpr auto DEFAULT_LOAD_FACTOR = uint32_t{10};
 
-  const uint32_t CPU_COUNT = std::thread::hardware_concurrency();
+  const uint32_t CPU_COUNT = std::min(std::thread::hardware_concurrency(), uint32_t{32});
   const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
       {CPU_COUNT}, {CPU_COUNT, 0, 0}, {0, CPU_COUNT, 0}, {0, 0, CPU_COUNT}};
 
@@ -36,8 +55,8 @@ class StressTest : public BaseTest {
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
-  // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
-  // and many chunks being created
+  // Update a table with two entries and a chunk size of two. This will lead to a high number of transaction conflicts
+  // and many chunks being created.
   const auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", table_a);
   auto initial_sum = int64_t{0};
@@ -52,7 +71,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   auto conflicted_increments = std::atomic_uint32_t{0};
   const auto iterations_per_thread = uint32_t{20};
 
-  // Define the work package
+  // Define the work package.
   const auto run = [&]() {
     auto my_successful_increments = uint32_t{0};
     auto my_conflicted_increments = uint32_t{0};
@@ -91,7 +110,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     final_sum = *verification_table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  // Really pessimistic, but at least 2 statements should have made it
+  // Really pessimistic, but at least 2 statements should have made it.
   EXPECT_GT(successful_increments, 2);
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
@@ -100,9 +119,9 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
 TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   // An update-heavy load on a table with a ridiculously low target chunk size, creating many new chunks. This is
-  // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction
-  // conflicts occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
-  // no row being appended.
+  // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction conflicts
+  // occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to no row begin
+  // appended.
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -111,7 +130,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
 
   const auto iterations_per_thread = uint32_t{20};
 
-  // Define the work package - the job id is used so that each thread has its own logical row to work on
+  // Define the work package - the job id is used so that each thread has its own logical row to work on.
   auto job_id = std::atomic_uint32_t{0};
   const auto run = [&]() {
     const auto my_job_id = job_id++;
@@ -147,8 +166,8 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
 }
 
 TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
-  // As ValueSegments store their null flags in a vector<bool>, which is not safe to be modified concurrently,
-  // conflicts may (and have) occurred when that vector was written without any type of protection.
+  // As ValueSegments store their null flags in a vector<bool>, which is not safe to be modified concurrently, conflicts
+  // may (and have) occurred when that vector was written without any type of protection.
 
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
@@ -198,21 +217,21 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 }
 
-TEST_F(StressTest, NodeSchedulerStressTest) {
+TEST_F(StressTest, NodeQueueSchedulerStressTest) {
   if (std::thread::hardware_concurrency() < 2) {
     GTEST_SKIP();
   }
 
   // Create a large number of nodes in a fake topology (many workers will share the same thread).
-  const auto node_count =
-      std::thread::hardware_concurrency() * (HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR);
+  const auto node_count = std::thread::hardware_concurrency() *
+                          (HYRISE_WITH_ADDR_UB_LEAK_SAN || HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR);
 
   Hyrise::get().topology.use_fake_numa_topology(node_count, 1);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   // Just a sufficiently large number to trigger a non-empty queue.
-  const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
+  const auto job_counts = std::vector<size_t>{node_count << 3, node_count << 4, node_count << 3};
 
   auto num_finished_jobs = std::atomic_uint32_t{0};
   volatile auto start_jobs = std::atomic_bool{false};
@@ -308,7 +327,10 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
     }
     EXPECT_EQ(counter, 0);
 
-    Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    for (const auto& waiting_job : waiting_jobs) {
+      waiting_job->schedule();
+    }
+
     // Wait a bit for workers to pull jobs and decrement semaphore.
     while (active_task_count < CPU_COUNT) {
       std::this_thread::sleep_for(SLEEP_TIME);
@@ -378,7 +400,10 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
       EXPECT_EQ(queue->semaphore.availableApprox(), 0);
     }
 
-    Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    for (const auto& waiting_job : waiting_jobs) {
+      waiting_job->schedule();
+    }
+
     // Wait a bit for workers to pull jobs and decrement semaphore.
     while (active_task_count < CPU_COUNT) {
       std::this_thread::sleep_for(SLEEP_TIME);
@@ -414,10 +439,9 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 // NUMA-bound benchmarks on a server. To catch such issues, this test executes a comparatively complex TPC-H query for
 // different fake NUMA topologies.
 TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
-  const auto benchmark_config = BenchmarkConfig::get_default_config();
+  const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
-  TPCHTableGenerator(0.1f, ClusteringConfiguration::None, std::make_shared<BenchmarkConfig>(benchmark_config))
-      .generate_and_store();
+  TPCHTableGenerator(0.1f, ClusteringConfiguration::None, benchmark_config).generate_and_store();
 
   auto topologies = FAKE_SINGLE_NODE_NUMA_TOPOLOGIES;
   topologies.insert(topologies.end(), FAKE_SINGLE_NODE_NUMA_TOPOLOGIES.begin(), FAKE_SINGLE_NODE_NUMA_TOPOLOGIES.end());
@@ -437,6 +461,53 @@ TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
     const auto& [pipeline_status, _] = sql_pipeline.get_result_tables();
     EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   }
+}
+
+TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  const auto worker_count = node_queue_scheduler->workers().size();
+  if (worker_count < NodeQueueScheduler::NUM_GROUPS) {
+    // We would not see any impact of task grouping with too few workers.
+    GTEST_SKIP();
+  }
+
+  const auto multiplier = 1'000;
+  const auto task_count = multiplier * worker_count;
+
+  for (auto run = uint8_t{0}; run < 10; ++run) {
+    auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler::NUM_GROUPS, 0);
+    auto output_counter = std::atomic<size_t>{0};
+    auto concurrently_processed_tasks = std::atomic<int64_t>{0};
+
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+    for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+      tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
+        ++output_counter;
+        const auto active_groups = ++concurrently_processed_tasks;
+        ASSERT_LE(active_groups, NodeQueueScheduler::NUM_GROUPS);
+
+        const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
+        const auto prev_task_id = previous_task_id_per_group[group_id];
+        if (prev_task_id > 0) {
+          // Once the first task of each group has been executed, we check the previous TaskID of the group to verify
+          // that grouping execution happens in the expected round-robin order (see
+          // `void NodeQueueScheduler::_group_tasks()`).
+          EXPECT_EQ(prev_task_id + NodeQueueScheduler::NUM_GROUPS, task_id);
+        }
+        previous_task_id_per_group[group_id] = task_id;
+
+        --concurrently_processed_tasks;
+      }));
+    }
+
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    EXPECT_EQ(output_counter, task_count);
+  }
+
+  Hyrise::get().scheduler()->finish();
 }
 
 TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
@@ -478,7 +549,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
 
   // We observed long runtimes in Debug builds, especially with UBSan enabled. Thus, we reduce the load a bit in this
   // case.
-  const auto insert_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
+  const auto insert_count = 19 * (HYRISE_DEBUG && HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
   const auto thread_count = uint32_t{100};
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
@@ -525,8 +596,276 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     EXPECT_FALSE(chunk->is_mutable());
   }
 
-  EXPECT_EQ(table->last_chunk()->size(), 2);
+  EXPECT_EQ(table->last_chunk()->size(), 1);
   EXPECT_TRUE(table->last_chunk()->is_mutable());
+}
+
+// Consuming operators register at their inputs and deregister when they are executed. Thus, operators can clear
+// intermediate results. Consumer deregistration must work properly in concurrent scenarios.
+TEST_F(StressTest, OperatorRegistration) {
+  const auto repetition_count = uint32_t{100};
+  const auto consumer_count = uint32_t{50};
+  const auto sleep_time = std::chrono::milliseconds{5};
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+
+  for (auto repetition = uint32_t{0}; repetition < repetition_count; ++repetition) {
+    const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
+    table_wrapper->execute();
+    auto threads = std::vector<std::thread>{};
+    threads.reserve(consumer_count);
+    auto waiting_consumer_count = std::atomic_uint32_t{0};
+    auto start_execution = std::atomic_flag{};
+
+    // Generate consumers that try to deregister concurrently once they are executed.
+    for (auto consumer_id = uint32_t{0}; consumer_id < consumer_count; ++consumer_id) {
+      threads.emplace_back([&]() {
+        const auto union_all = std::make_shared<UnionAll>(table_wrapper, table_wrapper);
+
+        // Mark that the consumer is set up.
+        ++waiting_consumer_count;
+
+        // Wait for the signal to execute the operator.
+        start_execution.wait(false);
+
+        union_all->execute();
+      });
+    }
+
+    // Wait until the consumers are constructed.
+    while (waiting_consumer_count < consumer_count) {
+      std::this_thread::sleep_for(sleep_time);
+    }
+
+    // The UnionAll operators have the input on both sides.
+    EXPECT_EQ(table_wrapper->consumer_count(), consumer_count * 2);
+
+    start_execution.test_and_set();
+    start_execution.notify_all();
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+    EXPECT_EQ(table_wrapper->consumer_count(), 0);
+    EXPECT_EQ(table_wrapper->state(), OperatorState::ExecutedAndCleared);
+
+    // One additional deregistration (without prior registration) is not allowed.
+    EXPECT_THROW(table_wrapper->deregister_consumer(), std::logic_error);
+  }
+}
+
+/**
+ * Test to verify that rolling back Insert operations does not lead to multiple (outdated) rows being visible. This
+ * issue has occurred when using link-time optimization or when inlining MVCC functions (see #2649).
+ * We execute and immediately roll back insert operations in multiple threads. In parallel, threads are checking that no
+ * new rows are visible.
+ */
+TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
+  // StressTestMultipleRuns runs 10x. Limit max runtime for *SAN builds.
+  constexpr auto RUNTIME = std::chrono::seconds(5);
+  constexpr auto MAX_VALUE_AND_ROW_COUNT = uint32_t{17};
+  constexpr auto MAX_LOOP_COUNT = uint32_t{10'000};  // Experimentally determined, see #2651.
+
+  const auto table_name = std::string{"table_a"};
+
+  // The issues triggered in this test usually arise early (later, the scan is getting slower and slower on increasing
+  // table sizes). For that, we execute multiple short runs.
+  for (auto test_run = size_t{0}; test_run < 10; ++test_run) {
+    if (Hyrise::get().storage_manager.has_table(table_name)) {
+      Hyrise::get().storage_manager.drop_table(table_name);
+    }
+
+    Hyrise::get().storage_manager.add_table(
+        table_name, std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                            Chunk::DEFAULT_SIZE, UseMvcc::Yes));
+
+    const auto values_to_insert =
+        std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
+    values_to_insert->append({int32_t{123}});
+    values_to_insert->append({int32_t{456}});
+
+    for (auto init_insert_id = uint32_t{1}; init_insert_id <= MAX_VALUE_AND_ROW_COUNT; ++init_insert_id) {
+      SQLPipelineBuilder{"INSERT INTO " + table_name + " VALUES( " + std::to_string(init_insert_id) + ");"}
+          .create_pipeline()
+          .get_result_table();
+    }
+
+    const auto insert_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
+    const auto watch_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
+
+    auto insert_threads = std::vector<std::thread>{};
+    insert_threads.reserve(insert_thread_count);
+
+    const auto start = std::chrono::system_clock::now();
+    auto start_flag = std::atomic_flag{};
+    auto stop_flag = std::atomic_flag{};
+
+    for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
+      insert_threads.emplace_back([&]() {
+        start_flag.wait(false);
+        for (auto loop_id = uint32_t{0}; loop_id < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + RUNTIME;
+             ++loop_id) {
+          const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+          const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
+
+          const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+          insert->set_transaction_context(transaction_context);
+          table_wrapper->execute();
+          insert->execute();
+          ASSERT_FALSE(insert->execute_failed());
+          transaction_context->rollback(RollbackReason::User);
+        }
+      });
+    }
+
+    auto watch_threads = std::vector<std::thread>{};
+    watch_threads.reserve(watch_thread_count);
+
+    for (auto thread_id = uint32_t{0}; thread_id < watch_thread_count; ++thread_id) {
+      watch_threads.emplace_back([&]() {
+        while (!stop_flag.test()) {
+          {
+            const auto [status, result_table] =
+                SQLPipelineBuilder{"SELECT count(*) from " + table_name + ";"}.create_pipeline().get_result_table();
+            ASSERT_EQ(status, SQLPipelineStatus::Success);
+            const auto visible_row_count = result_table->get_value<int64_t>(ColumnID{0}, 0);
+            ASSERT_TRUE(visible_row_count);
+            ASSERT_EQ(*visible_row_count, MAX_VALUE_AND_ROW_COUNT);
+          }
+
+          {
+            const auto [status, result_table] =
+                SQLPipelineBuilder{"SELECT max(a) from " + table_name + ";"}.create_pipeline().get_result_table();
+            ASSERT_EQ(status, SQLPipelineStatus::Success);
+            const auto max_value = result_table->get_value<int32_t>(ColumnID{0}, 0);
+            ASSERT_TRUE(max_value);
+            ASSERT_EQ(*max_value, MAX_VALUE_AND_ROW_COUNT);
+          }
+        }
+      });
+    }
+
+    // Start inserting threads.
+    start_flag.test_and_set();
+    start_flag.notify_all();
+
+    for (auto& thread : insert_threads) {
+      thread.join();
+    }
+
+    // Notifying watch threads that insert rollbacks are done so we can stop watching.
+    stop_flag.test_and_set();
+
+    for (auto& thread : watch_threads) {
+      thread.join();
+    }
+  }
+}
+
+/**
+ * Test that adding and accessing the TableKeyConstraints of a table concurrently does not lead to 
+ * deadlocks or inconsistencies (e.g., duplicate constraints).
+ */
+TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
+  // Create a table with multiple TableKeyConstraints.
+  auto table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}},
+      TableType::Data, std::nullopt, UseMvcc::Yes);
+  primary_key_constraint(table, {"a"});
+
+  table->append({1, 1, 1});
+  table->append({2, 2, 2});
+  table->append({3, 3, 1});
+
+  Hyrise::get().storage_manager.add_table("dummy_table", table);
+  /** 
+   * This test runs insertions and reads concurrently. Specifically, it tests the following functions:
+   * - `UccDiscoveryPlugin::_validate_ucc_candidates`
+   * - `StoredTableNode::unique_column_combinations`
+   * In order to simulate insertions parallel to the reads, we have to clear the constraints in the table. As this is
+   * only needed for the test, we can use a mutex to ensure that this does not happen in parallel.
+   */
+
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+
+  auto deletion_mutex = std::shared_mutex{};
+
+  auto start_flag = std::atomic_flag{};
+  auto stop_flag = std::atomic_flag{};
+
+  // We need this flag to prevent the 'stored_table_node_constraint_access' threads from continuously reacquiring
+  // shared locks on the `deletion_mutex`, starving the `validate_constraint` thread. For more details, see
+  // https://stackoverflow.com/questions/32243245/can-thread-trying-to-stdlock-unique-an-stdshared-mutex-be-starved
+  auto writer_waiting_flag = std::atomic_flag{};
+
+  const auto VALIDATION_COUNT = uint32_t{100};
+  const auto SLEEP_TIME = std::chrono::milliseconds{1};
+
+  const auto validate_constraint = [&] {
+    start_flag.wait(false);
+    for (auto i = uint32_t{0}; i < VALIDATION_COUNT; ++i) {
+      // Populate the plan cache.
+      const auto sql = std::string{"SELECT b,c FROM dummy_table GROUP BY b,c;"};
+      auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+      pipeline.get_result_table();
+
+      Hyrise::get().plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
+
+      std::this_thread::sleep_for(SLEEP_TIME);
+      // Notify the reading threads that the writer is waiting.
+      writer_waiting_flag.test_and_set();
+      const auto lock = std::unique_lock{deletion_mutex};
+      // We need to clear the constraints to simulate concurrent insertions. Normally, a deletion of a constraint would
+      // not happen at all. Instead, we store that this constraint was invalidated for the specific commit ID. This
+      // prevents unnecessary revalidation of constraints that are known to be invalid.
+      clear_soft_key_constraints(table);
+      writer_waiting_flag.clear();
+      writer_waiting_flag.notify_all();
+    }
+  };
+
+  const auto stored_table_node_constraint_access = [&] {
+    start_flag.wait(false);
+    while (!stop_flag.test()) {
+      // Prevent this thread from starving the `validate_constraint` thread by continously acquiring `shared_locks`.
+      writer_waiting_flag.wait(true);
+      const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
+      // Access the unique column combinations. We need to lock here because `unique_column_combinations` uses a
+      // reference to iterate over the constraints. This reference is invalidated when the constraints are cleared.
+      const auto lock = std::shared_lock{deletion_mutex};
+      // Check that the set of TableKeyConstraints does not contain any duplicates.
+      ASSERT_LE(stored_table_node->unique_column_combinations().size(), 3);
+    }
+  };
+
+  // Start running the different modifications in parallel.
+  const auto thread_count = 100;
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
+
+  for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
+    threads.emplace_back(stored_table_node_constraint_access);
+  }
+
+  // The constraint validation is run in a single thread as it is not needed to be run in parallel.
+  auto validation_thread = std::thread(validate_constraint);
+
+  start_flag.test_and_set();
+  start_flag.notify_all();
+
+  validation_thread.join();
+
+  stop_flag.test_and_set();
+  stop_flag.notify_all();
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  // The constraints were cleared, so we expect no constraints to be present anymore.
+  ASSERT_LE(table->soft_key_constraints().size(), 0);
 }
 
 }  // namespace hyrise

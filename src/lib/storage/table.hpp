@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <boost/variant/get.hpp>
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "abstract_segment.hpp"
 #include "all_type_variant.hpp"
@@ -37,6 +38,8 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
   friend class StorageTableTest;
+  friend class UccDiscoveryPlugin;
+  friend class StressTest;
 
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
@@ -124,7 +127,7 @@ class Table : private Noncopyable {
    * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
   void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
-                    const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+                    const PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{});
 
   // Create and append a Chunk consisting of ValueSegments.
   void append_mutable_chunk();
@@ -144,9 +147,9 @@ class Table : private Noncopyable {
   // on a non-validated table, you may end up with a row you should not be able to see or an entirely different row.
   template <typename T>
   std::optional<T> get_value(const ColumnID column_id, const size_t row_number) const {
-    PerformanceWarning("get_value() used");
+    PerformanceWarning("get_value() used.");
 
-    Assert(column_id < column_count(), "column_id invalid");
+    Assert(column_id < column_count(), "column_id is invalid.");
 
     auto row_counter = size_t{0};
     const auto chunk_count = _chunks.size();
@@ -156,7 +159,7 @@ class Table : private Noncopyable {
         continue;
       }
 
-      auto current_size = chunk->size();
+      const auto current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
         const auto variant = (*chunk->get_segment(
@@ -208,11 +211,15 @@ class Table : private Noncopyable {
   void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");
 
   /**
-   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" constraints to draw attention to that.
+   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules. We call them "soft"
+   * constraints to draw attention to that. If `table_constraint` is already in the table constraints, we will fail.
    */
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
+  /**
+   * NOTE: All key constraints are currently stored. If a constraint is invalidated it is not deleted. To check if a 
+   * key constraint is guaranteed to be valid, use `key_constraint_is_confidently_valid`.
+   */
   const TableKeyConstraints& soft_key_constraints() const;
 
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
@@ -257,10 +264,10 @@ class Table : private Noncopyable {
 
   void _add_soft_order_constraint(const TableOrderConstraint& table_order_constraint);
 
-  const TableColumnDefinitions _column_definitions;
-  const TableType _type;
-  const UseMvcc _use_mvcc;
-  const ChunkOffset _target_chunk_size;
+  TableColumnDefinitions _column_definitions;
+  TableType _type;
+  UseMvcc _use_mvcc;
+  ChunkOffset _target_chunk_size;
 
   /**
    * To prevent data races for TableType::Data tables, we must access _chunks atomically.
@@ -286,7 +293,7 @@ class Table : private Noncopyable {
 
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
-  std::unique_ptr<std::mutex> _append_mutex;
+  std::mutex _append_mutex;
   std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
   std::vector<TableIndexStatistics> _table_indexes_statistics;
   pmr_vector<std::shared_ptr<PartialHashIndex>> _table_indexes;

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "scheduler/abstract_task.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace hyrise {
 
@@ -35,6 +36,10 @@ class ChunkCompressionTask : public AbstractTask {
  public:
   explicit ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id);
   explicit ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids);
+  explicit ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id,
+                                const ChunkEncodingSpec& chunk_encoding_spec);
+  explicit ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
+                                const ChunkEncodingSpec& chunk_encoding_spec);
 
  protected:
   void _on_execute() override;
@@ -50,5 +55,6 @@ class ChunkCompressionTask : public AbstractTask {
  private:
   const std::string _table_name;
   const std::vector<ChunkID> _chunk_ids;
+  std::optional<ChunkEncodingSpec> _chunk_encoding_spec;
 };
 }  // namespace hyrise

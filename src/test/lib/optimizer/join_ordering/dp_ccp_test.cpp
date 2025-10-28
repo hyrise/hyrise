@@ -9,11 +9,12 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/load_table.hpp"
 
 /**
- * The number of tests in here might seem few, but actually all main parts of DpCcp are covered: Join order, Join
+ * The number of tests in here might seem few, but actually all main parts of DPccp are covered: Join order, Join
  * predicate order, local predicate order, complex predicate treatment and cross join treatment.
  *
  * Note, also, that EnumerateCcp is tested separately.
@@ -23,7 +24,7 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-class DpCcpTest : public BaseTest {
+class DPccpTest : public BaseTest {
  public:
   void SetUp() override {
     cardinality_estimator = std::make_shared<CardinalityEstimator>();
@@ -45,12 +46,12 @@ class DpCcpTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
+  std::shared_ptr<CardinalityEstimator> cardinality_estimator;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
   std::shared_ptr<LQPColumnExpression> a_a, b_a, c_a, d_a;
 };
 
-TEST_F(DpCcpTest, JoinOrdering) {
+TEST_F(DPccpTest, JoinOrdering) {
   /**
    * Test that three vertices with three join predicates are turned into two join operations.
    *
@@ -67,7 +68,7 @@ TEST_F(DpCcpTest, JoinOrdering) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c, join_edge_b_c}));
 
-  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -82,7 +83,7 @@ TEST_F(DpCcpTest, JoinOrdering) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(DpCcpTest, CrossJoin) {
+TEST_F(DPccpTest, CrossJoin) {
   /**
    * Test that if there is a non-predicated edge, a cross join is created
    */
@@ -93,7 +94,7 @@ TEST_F(DpCcpTest, CrossJoin) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, cross_join_edge_a_c}));
 
-  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -107,7 +108,7 @@ TEST_F(DpCcpTest, CrossJoin) {
   EXPECT_LQP_EQ(expected_lqp, actual_lqp);
 }
 
-TEST_F(DpCcpTest, LocalPredicateOrdering) {
+TEST_F(DPccpTest, LocalPredicateOrdering) {
   /**
    * Test that local predicates are brought into an optimal order
    */
@@ -129,7 +130,7 @@ TEST_F(DpCcpTest, LocalPredicateOrdering) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, self_edge_a, self_edge_b}));
 
-  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -146,7 +147,7 @@ TEST_F(DpCcpTest, LocalPredicateOrdering) {
   EXPECT_LQP_EQ(expected_lqp, actual_lqp);
 }
 
-TEST_F(DpCcpTest, ComplexJoinPredicate) {
+TEST_F(DPccpTest, ComplexJoinPredicate) {
   /**
    * Test that complex predicates will not be considered for the join operation (since our join operators can't execute
    * them)
@@ -158,7 +159,7 @@ TEST_F(DpCcpTest, ComplexJoinPredicate) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b}));
 
-  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -171,7 +172,7 @@ TEST_F(DpCcpTest, ComplexJoinPredicate) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(DpCcpTest, HyperEdge) {
+TEST_F(DPccpTest, HyperEdge) {
   /**
    * Test that the predicates of hyper edges (i.e., those involving more than 2 base relations) are placed as soon as
    * all its relations are available in the LQP below
@@ -189,7 +190,7 @@ TEST_F(DpCcpTest, HyperEdge) {
       JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c, node_d}),
                 std::vector<JoinGraphEdge>({join_edge_a_b_c, join_edge_a_b, join_edge_b_c, cross_edge_b_d}));
 
-  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -206,7 +207,7 @@ TEST_F(DpCcpTest, HyperEdge) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(DpCcpTest, UncorrelatedPredicates) {
+TEST_F(DPccpTest, UncorrelatedPredicates) {
   /**
    * Test that predicates that do not reference any of the vertices in the join graph are placed in the resulting LQP
    * Such predicates might be things like "5 > 3", "5 IN (SELECT ...)" etc.
@@ -225,7 +226,7 @@ TEST_F(DpCcpTest, UncorrelatedPredicates) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_d}),
                                     std::vector<JoinGraphEdge>({join_edge_a_d, join_edge_uncorrelated}));
 
-  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
