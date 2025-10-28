@@ -3,13 +3,12 @@
 #include <functional>
 #include <optional>
 #include <ostream>
+#include <regex>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <boost/regex.hpp>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -118,7 +117,7 @@ class LikeMatcher {
    * pattern.
    */
   using AllPatternVariant =
-      std::variant<boost::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
+      std::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
 
   static AllPatternVariant pattern_string_to_pattern_variant(const pmr_string& pattern, const bool case_insensitive);
 
@@ -191,11 +190,11 @@ class LikeMatcher {
       return;
     }
 
-    if (std::holds_alternative<boost::regex>(_pattern_variant)) {
-      const auto& regex = std::get<boost::regex>(_pattern_variant);
+    if (std::holds_alternative<std::regex>(_pattern_variant)) {
+      const auto& regex = std::get<std::regex>(_pattern_variant);
       functor([&](const auto& string) -> bool {
         return resolve_case(string, [&](const auto& cased_string) -> bool {
-          return boost::regex_match(cased_string.cbegin(), cased_string.cend(), regex) ^ invert_results;
+          return std::regex_match(cased_string.cbegin(), cased_string.cend(), regex) ^ invert_results;
         });
       });
 
