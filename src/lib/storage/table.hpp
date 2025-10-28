@@ -55,12 +55,6 @@ class Table : private Noncopyable {
         const std::vector<std::shared_ptr<Chunk>>& chunks, const UseMvcc use_mvcc = UseMvcc::No,
         pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
-  ~Table() override = default;
-  Table(const Table&) = delete;
-  Table& operator=(const Table&) = delete;
-  Table(Table&& other) noexcept;
-  Table& operator=(Table&& other) noexcept;
-
   /**
    * @defgroup Getter and convenience functions for the column definitions
    * @{

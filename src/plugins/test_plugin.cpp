@@ -34,6 +34,10 @@ void TestPlugin::start() {
 
 void TestPlugin::stop() {
   Hyrise::get().storage_manager.drop_table("DummyTable");
+
+  for (auto index = size_t{0}; index < _added_tables_count; ++index) {
+    Hyrise::get().storage_manager.drop_table("TableOfTestPlugin_" + std::to_string(index));
+  }
 }
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::provided_user_executable_functions() {

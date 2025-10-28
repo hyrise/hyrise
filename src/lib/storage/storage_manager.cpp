@@ -49,10 +49,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   _tables[name] = std::move(table);
 }
 
-void StorageManager::add_table(const std::string& name, Table table) {
-  add_table(name, std::make_shared<Table>(std::move(table)));
-}
-
 void StorageManager::drop_table(const std::string& name) {
   const auto table_iter = _tables.find(name);
   Assert(table_iter != _tables.end() && table_iter->second, "Error deleting table. No such table named '" + name + "'");

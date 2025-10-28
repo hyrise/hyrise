@@ -19,7 +19,12 @@ std::string SecondTestPlugin::description() const {
 
 void SecondTestPlugin::start() {}
 
-void SecondTestPlugin::stop() {}
+void SecondTestPlugin::stop() {
+  const auto& sm = Hyrise::get().storage_manager;
+  if (sm.has_table("TableOfSecondTestPlugin")) {
+    sm.drop_table("TableOfSecondTestPlugin");
+  }
+}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 SecondTestPlugin::provided_user_executable_functions() {
