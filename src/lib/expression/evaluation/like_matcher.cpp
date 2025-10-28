@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <optional>
 #include <ostream>
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,7 +28,7 @@ bool contains_wildcard(const pmr_string& pattern) {
 
 std::string sql_like_to_regex(pmr_string sql_like) {
   // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
-  // backslashes introduced by the other substitutions
+  // backslashes introduced by the other substitutions.
   constexpr auto REPLACE_BY = std::array<std::pair<const char*, const char*>, 14>{{{"\\", "\\\\"},
                                                                                    {".", "\\."},
                                                                                    {"^", "\\^"},
@@ -43,8 +44,8 @@ std::string sql_like_to_regex(pmr_string sql_like) {
                                                                                    {"%", ".*"},
                                                                                    {"_", "."}}};
 
-  for (const auto& pair : REPLACE_BY) {
-    boost::replace_all(sql_like, pair.first, pair.second);
+  for (const auto& [original, replacement] : REPLACE_BY) {
+    boost::replace_all(sql_like, original, replacement);
   }
 
   return std::string{"^" + sql_like + "$"};
@@ -89,6 +90,31 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const pmr_strin
   return tokens;
 }
 
+std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::bounds(const pmr_string& pattern) {
+  if (!contains_wildcard(pattern)) {
+    const auto upper_bound = pmr_string(pattern) + '\0';
+    return std::pair<pmr_string, pmr_string>(pattern, upper_bound);
+  }
+  const auto wildcard_pos = get_index_of_next_wildcard(pattern, 0);
+  if (wildcard_pos == 0) {
+    return std::nullopt;
+  }
+  // Calculate lower bound of the search pattern.
+  const auto lower_bound = pattern.substr(0, wildcard_pos);
+  const auto last_character_of_lower_bound = lower_bound.back();
+
+  // Calculate upper bound of the search pattern according to ASCII-table.
+  constexpr int MAX_ASCII_VALUE = 127;
+  if (last_character_of_lower_bound >= MAX_ASCII_VALUE) {
+    // `current_character_value + 1` would overflow.
+    return std::nullopt;
+  }
+  const auto next_ascii_character = static_cast<char>(last_character_of_lower_bound + 1);
+  const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_ascii_character;
+
+  return std::pair<pmr_string, pmr_string>(lower_bound, upper_bound);
+}
+
 LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(const pmr_string& pattern,
                                                                               const bool case_insensitive) {
   const auto cased_pattern = case_insensitive ? string_to_lower(pattern) : pattern;
@@ -112,20 +138,15 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
     return ContainsPattern{std::get<pmr_string>(tokens[1])};
   }
 
-  /**
-       * Pattern is either MultipleContainsPattern, e.g., '%hello%world%how%are%you%' or we fall back to
-       * using a regex matcher.
-       *
-       * A MultipleContainsPattern begins and ends with '%' and  contains only strings and '%'.
-       */
-
-  // Pick ContainsMultiple or regex.
+  // Pattern is either MultipleContainsPattern, e.g., '%hello%world%how%are%you%' or we fall back to using a regex
+  // matcher, so we pick one of these. A MultipleContainsPattern begins and ends with '%' and contains only strings
+  // and '%'.
   auto pattern_is_contains_multiple = true;  // Set to false if tokens do not match %(, string, %)* pattern.
   auto strings = std::vector<pmr_string>{};  // Arguments used for ContainsMultiple, if it gets used.
   auto expect_any_chars = true;              // If true, expect '%', if false, expect a string.
 
   // Check if the tokens match the layout expected for MultipleContainsPattern - or break and set
-  // pattern_is_contains_multiple to false once they do not.
+  // `pattern_is_contains_multiple` to false once they do not.
   for (const auto& token : tokens) {
     if (expect_any_chars && token != PatternToken{Wildcard::AnyChars}) {
       pattern_is_contains_multiple = false;
@@ -147,31 +168,6 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
   }
 
   return std::regex{sql_like_to_regex(cased_pattern), std::regex::optimize};
-}
-
-std::optional<std::pair<pmr_string, pmr_string>> LikeMatcher::bounds(const pmr_string& pattern) {
-  if (!contains_wildcard(pattern)) {
-    const auto upper_bound = pmr_string(pattern) + '\0';
-    return std::pair<pmr_string, pmr_string>(pattern, upper_bound);
-  }
-  const auto wildcard_pos = get_index_of_next_wildcard(pattern, 0);
-  if (wildcard_pos == 0) {
-    return std::nullopt;
-  }
-  // Calculate lower bound of the search Pattern
-  const auto lower_bound = pattern.substr(0, wildcard_pos);
-  const auto last_character_of_lower_bound = lower_bound.back();
-
-  // Calculate upper bound of the search pattern according to ASCII-table
-  constexpr int MAX_ASCII_VALUE = 127;
-  if (last_character_of_lower_bound >= MAX_ASCII_VALUE) {
-    // current_character_value + 1 would overflow.
-    return std::nullopt;
-  }
-  const auto next_ascii_character = static_cast<char>(last_character_of_lower_bound + 1);
-  const auto upper_bound = lower_bound.substr(0, lower_bound.size() - 1) + next_ascii_character;
-
-  return std::pair<pmr_string, pmr_string>(lower_bound, upper_bound);
 }
 
 std::ostream& operator<<(std::ostream& stream, const LikeMatcher::Wildcard& wildcard) {
