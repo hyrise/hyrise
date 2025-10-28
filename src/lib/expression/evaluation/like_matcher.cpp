@@ -7,11 +7,13 @@
 #include <regex>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <boost/algorithm/string/replace.hpp>
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/string_utils.hpp"
 
 namespace {
