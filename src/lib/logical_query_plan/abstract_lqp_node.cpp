@@ -6,6 +6,7 @@
 #include <optional>
 #include <ostream>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
