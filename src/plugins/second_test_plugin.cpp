@@ -20,7 +20,7 @@ std::string SecondTestPlugin::description() const {
 void SecondTestPlugin::start() {}
 
 void SecondTestPlugin::stop() {
-  const auto& sm = Hyrise::get().storage_manager;
+  auto& sm = Hyrise::get().storage_manager;
   if (sm.has_table("TableOfSecondTestPlugin")) {
     sm.drop_table("TableOfSecondTestPlugin");
   }
