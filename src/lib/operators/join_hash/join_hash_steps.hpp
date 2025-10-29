@@ -296,9 +296,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
-  // Counter for bloom filter filtered rows
-  std::atomic<size_t> bloom_filter_filtered_count{0};
-
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -366,7 +363,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             if (!value.is_null() && !input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !keep_null_values) {
               // Value in not present in input bloom filter and can be skipped
               skip = true;
-              bloom_filter_filtered_count++;
             }
 
             if (!skip) {
@@ -429,8 +425,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
-  std::cout << "Bloom filter filtered out " << bloom_filter_filtered_count.load() << " rows" << std::endl;
 
   return radix_container;
 }
