@@ -9,6 +9,7 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, BooleanOptio
 from subprocess import run
 from shutil import copy, move
 from os import cpu_count, getcwd, remove
+from os.path import exists
 
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument("-t",  "--time", type=int, default=1800, help="The time to run each benchmark in seconds.")
@@ -23,47 +24,62 @@ benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkTPC
 ci_benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkTPCC", "hyriseBenchmarkStarSchema"]
 
 def run_root(cmd):
+  print(f"python@{build_folder}/..: {cmd}")
   run(cmd, cwd=f"{build_folder}/..", shell=True)
 
 def run_build(cmd):
+  print(f"python@{build_folder}: {cmd}")
   run(cmd, cwd=build_folder, shell=True)
 
-def build_for_profiling(benchmarks=benchmarks):
+def build(targets=benchmarks, bolt_instrument=False, pgo_instrument=False, bolt_optimize=False, pgo_optimize=False):
   run_build("ninja clean")
-  run_build("cmake -DCOMPILE_FOR_BOLT=ON -DPGO_INSTRUMENT=ON -UPGO_OPTIMIZE ..")
-  run_build(f"ninja {" ".join(benchmarks)} -j {args.num_cores}")
-  move("lib/libhyrise_impl.so", "lib/libhyrise_impl.so.old")
-  run_build("llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so")
+  run_build(f"cmake -DCOMPILE_FOR_BOLT={"On" if bolt_instrument else "Off"} -DPGO_INSTRUMENT={"On" if pgo_instrument else "off"} -{"DPGO_OPTIMIZE=libhyrise.profdata" if pgo_optimize else "-UPGO_OPTIMIZE"} ..")
+  run_build(f"ninja {" ".join(targets)} -j {args.num_cores}")
+  if bolt_instrument:
+    move("lib/libhyrise_impl.so", "lib/libhyrise_impl.so.old")
+    run_build("llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so")
+  if bolt_optimize:
+    move("lib/libhyrise_impl.so", "lib/libhyrise_impl.so.old")
+    run_build("llvm-bolt lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats")
+    run_build("strip -R .rela.text -R \".rela.text.*\" -R .rela.data -R \".rela.data.*\" lib/libhyrise_impl.so")
 
-def build_with_optimization(target=""):
-  run_build("ninja clean")
-  run_build("cmake -DCOMPILE_FOR_BOLT=ON -DPGO_INSTRUMENT=OFF -DPGO_OPTIMIZE=libhyrise.profdata ..")
-  run_build(f"ninja {target} -j {args.num_cores}")
-  move("lib/libhyrise_impl.so", "lib/libhyrise_impl.so.old")
-  run_build("llvm-bolt lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats")
-  run_build("strip -R .rela.text -R \".rela.text.*\" -R .rela.data -R \".rela.data.*\" lib/libhyrise_impl.so")
-
-def profile():
+def profile(bolt_instrumented=False, pgo_instrumented=False):
   for benchmark in benchmarks:
     run_root(f"{build_folder}/{benchmark} --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled")
-    move("/tmp/prof.fdata", f"{benchmark}.fdata")
-  run_root("mv *.profraw libhyrise.profraw")
+    if bolt_instrumented:
+      move("/tmp/prof.fdata", f"{benchmark}.fdata")
 
-def profile_in_ci():
+  if bolt_instrumented:
+    if exists("bolt.fdata"):
+      remove("bolt.fdata")
+    run_build("merge-fdata *.fdata > bolt.fdata")
+
+  if pgo_instrumented:
+    run_root(f"mv *.profraw {build_folder}/libhyrise.profraw")
+    run_build("llvm-profdata merge -output libhyrise.profdata libhyrise.profraw")
+
+def profile_in_ci(bolt_instrumented=False, pgo_instrumented=False):
   run_root(f"{build_folder}/hyriseBenchmarkTPCH --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled -s .01")
-  move("/tmp/prof.fdata", f"hyriseBenchmarkTPCH.fdata")
+  if bolt_instrumented:
+    move("/tmp/prof.fdata", f"hyriseBenchmarkTPCH.fdata")
   run_root(f"{build_folder}/hyriseBenchmarkStarSchema --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled -s .01")
-  move("/tmp/prof.fdata", f"hyriseBenchmarkStarSchema.fdata")
+  if bolt_instrumented:
+    move("/tmp/prof.fdata", f"hyriseBenchmarkStarSchema.fdata")
   run_root(f"{build_folder}/hyriseBenchmarkTPCDS --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled -s 1")
-  move("/tmp/prof.fdata", f"hyriseBenchmarkTPCDS.fdata")
+  if bolt_instrumented:
+    move("/tmp/prof.fdata", f"hyriseBenchmarkTPCDS.fdata")
   run_root(f"{build_folder}/hyriseBenchmarkTPCC --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled -s 1")
-  move("/tmp/prof.fdata", f"hyriseBenchmarkTPCC.fdata")
-  run_root("mv *.profraw libhyrise.profraw")
+  if bolt_instrumented:
+    move("/tmp/prof.fdata", f"hyriseBenchmarkTPCC.fdata")
 
-def process_profiles():
-  remove("bolt.fdata")
-  run_build("merge-fdata *.fdata > bolt.fdata")
-  run_build("llvm-profdata merge -output libhyrise.profdata libhyrise.profraw")
+  if bolt_instrumented:
+    if exists("bolt.fdata"):
+      remove("bolt.fdata")
+    run_build("merge-fdata *.fdata > bolt.fdata")
+
+  if pgo_instrumented:
+    run_root(f"mv *.profraw {build_folder}/libhyrise.profraw")
+    run_build("llvm-profdata merge -output libhyrise.profdata libhyrise.profraw")
 
 def reset_cmake():
   run_build("cmake -DCOMPILE_FOR_BOLT=OFF -DPGO_INSTRUMENT=OFF -UPGO_OPTIMIZE ..")
@@ -77,20 +93,18 @@ def import_profile():
   copy("../resources/libhyrise.profdata", "libhyrise.profdata")
 
 def ci_main():
-  build_for_profiling(ci_benchmarks)
+  build(ci_benchmarks, bolt_instrument=True, pgo_instrument=True)
   profile_in_ci()
-  process_profiles()
-  build_with_optimization("hyriseTest")
+  build("hyriseTest", bolt_optimize=True, pgo_optimize=True)
   reset_cmake()
 
 def main():
   if args.import_profile:
     import_profile()
   else:
-    build_for_profiling()
+    build(bolt_instrument=True, pgo_instrument=True)
     profile()
-    process_profiles()
-  build_with_optimization()
+  build(bolt_optimize=True, pgo_optimize=True)
   reset_cmake()
   if args.export_profile:
     export_profile()
