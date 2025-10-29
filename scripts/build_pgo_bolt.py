@@ -3,7 +3,7 @@
 # - Profile Guided Optimizations (https://clang.llvm.org/docs/UsersManual.html#profile-guided-optimization)
 # - Binary Optimization and Layouting Tool (https://github.com/llvm/llvm-project/tree/main/bolt)
 # To use it, first create a cmake build folder and configure cmake. Then run this script from the build folder.
-# You can run the script with -h to discover cli arguments.
+# You can run the script with -h for a detailed explanation of cli arguments.
 
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, BooleanOptionalAction
 from subprocess import run
@@ -14,7 +14,11 @@ from os.path import exists
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument("-t", "--time", type=int, default=1800, help="The time to run each benchmark in seconds.")
 parser.add_argument(
-    "-n", "--num-cores", type=int, default=cpu_count(), help="The number of cpu cores to use for compiling and running."
+    "-n",
+    "--num-cores",
+    type=int,
+    default=cpu_count(),
+    help="The number of cpu cores to use for compiling and benchmarking.",
 )
 parser.add_argument(
     "-c",
@@ -28,7 +32,7 @@ parser.add_argument(
     "--export-profile",
     action=BooleanOptionalAction,
     default=False,
-    help="Export the profile to the resources folder for further use with benchmark_all.sh or --import-profile.",
+    help="Export the profile to the resources folder for future use with benchmark_all.sh or --import-profile.",
 )
 parser.add_argument(
     "-i",
@@ -52,15 +56,15 @@ benchmarks_with_float_scaling = {"hyriseBenchmarkTPCH", "hyriseBenchmarkStarSche
 
 
 def run_root(*cmd):
-    str_cmd = " ".join(cmd)
-    print(f"python@{build_folder}/..: {str_cmd}")
-    run(str_cmd, cwd=f"{build_folder}/..", shell=True)
+    cmd = " ".join(cmd)
+    print(f"python@root: {cmd}")
+    run(cmd, cwd=f"{build_folder}/..", shell=True)
 
 
 def run_build(*cmd):
-    str_cmd = " ".join(cmd)
-    print(f"python@{build_folder}: {str_cmd}")
-    run(str_cmd, cwd=build_folder, shell=True)
+    cmd = " ".join(cmd)
+    print(f"python@build: {cmd}")
+    run(cmd, cwd=build_folder, shell=True)
 
 
 def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=False, pgo_optimize=False):
