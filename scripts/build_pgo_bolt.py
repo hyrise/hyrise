@@ -34,7 +34,7 @@ def run_build(cmd):
 
 def build(targets=benchmarks, bolt_instrument=False, pgo_instrument=False, bolt_optimize=False, pgo_optimize=False):
   run_build("ninja clean")
-  run_build(f"cmake -DCOMPILE_FOR_BOLT={"On" if bolt_instrument else "Off"} -DPGO_INSTRUMENT={"On" if pgo_instrument else "off"} -{"DPGO_OPTIMIZE=libhyrise.profdata" if pgo_optimize else "-UPGO_OPTIMIZE"} ..")
+  run_build(f"cmake -DCOMPILE_FOR_BOLT={"On" if bolt_instrument else "Off"} -DPGO_INSTRUMENT={"On" if pgo_instrument else "off"} {"-DPGO_OPTIMIZE=libhyrise.profdata" if pgo_optimize else "-UPGO_OPTIMIZE"} ..")
   run_build(f"ninja {" ".join(targets)} -j {args.num_cores}")
   if bolt_instrument:
     move("lib/libhyrise_impl.so", "lib/libhyrise_impl.so.old")
