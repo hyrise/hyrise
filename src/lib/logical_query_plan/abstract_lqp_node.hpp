@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -104,7 +105,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   std::vector<std::shared_ptr<AbstractLQPNode>> outputs() const;
 
   void remove_output(const std::shared_ptr<AbstractLQPNode>& output);
-  void clear_outputs();
 
   /**
    * @return {{outputs()[0], get_input_sides()[0]}, ..., {outputs()[n-1], get_input_sides()[n-1]}}
@@ -304,6 +304,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
+  std::mutex _output_mutex;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);

@@ -139,19 +139,19 @@ TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
   ASSERT_ANY_THROW(_projection_node->get_input_side(_mock_node_a));
 }
 
-TEST_F(LogicalQueryPlanTest, SimpleClearOutputs) {
+TEST_F(LogicalQueryPlanTest, SimpleRemoveOutput) {
   _predicate_node_a->set_left_input(_mock_node_a);
 
   ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
   ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
-  ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
+  ASSERT_FALSE(_predicate_node_a->right_input());
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
 
-  _mock_node_a->clear_outputs();
+  _mock_node_a->remove_output(_predicate_node_a);
 
   ASSERT_TRUE(_mock_node_a->outputs().empty());
-  ASSERT_EQ(_predicate_node_a->left_input(), nullptr);
-  ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
+  ASSERT_FALSE(_predicate_node_a->left_input());
+  ASSERT_FALSE(_predicate_node_a->right_input());
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
 }
 

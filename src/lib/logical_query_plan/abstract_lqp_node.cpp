@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <ostream>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -197,7 +199,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
 
   for (const auto& output_weak_ptr : _outputs) {
     const auto output = output_weak_ptr.lock();
-    DebugAssert(output, "Failed to lock output");
+    DebugAssert(output, "Failed to lock output.");
     outputs.emplace_back(output);
   }
 
@@ -210,15 +212,6 @@ void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& outp
   const auto input_side = get_input_side(output);
   // set_input() will untie the nodes
   output->set_input(input_side, nullptr);
-}
-
-void AbstractLQPNode::clear_outputs() {
-  // Don't use for-each loop here, as remove_output manipulates the _outputs vector
-  while (!_outputs.empty()) {
-    auto output = _outputs.front().lock();
-    DebugAssert(output, "Failed to lock output");
-    remove_output(output);
-  }
 }
 
 std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
@@ -445,33 +438,32 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
 }
 
 void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
+  // We need to lock here because two outputs can be deallocated at the same time, leading to a data race.
+  const auto lock = std::lock_guard{_output_mutex};
   const auto iter = std::ranges::find_if(_outputs, [&](const auto& other) {
     /**
      * HACK!
-     *  Normally we'd just check `&output == other.lock().get()` here.
-     *  BUT (this is the hacky part), we're checking for `other.expired()` here as well and accept an expired element as
-     *  a match. If nothing else breaks the only way we might get an expired element is if `other` is the
-     *  expired weak_ptr<> to `output` - and thus the element we're looking for - in the following scenario:
+     *  Normally, we would just check `&output == other.lock().get()` here.
+     *  BUT (this is the hacky part), we are checking for `other.expired()` here as well and accept an expired element
+     *  as a match. If nothing else breaks, the only way we might get an expired element is if `other` is the
+     *  expired weak_ptr<> to `output` - and, thus, the element we are looking for - in the following scenario:
      *
-     * auto node_a = Node::make()
-     * auto node_b = Node::make(..., node_a)
+     *    auto node_a = Node::make()
+     *    auto node_b = Node::make(..., node_a)
      *
-     * node_b.reset(); // node_b::~AbstractLQPNode() will call `node_a.remove_output_pointer(node_b)`
-     *                 // But we cannot lock node_b anymore, since its ref count is already 0.
+     *    node_b.reset(); // `node_b::~AbstractLQPNode()` will call `node_a._remove_output_pointer(node_b)`. However, we
+     *                    // cannot lock node_b anymore because its reference count is already 0.
      */
     return &output == other.lock().get() || other.expired();
   });
   DebugAssert(iter != _outputs.end(), "Specified output node is not actually a output node of this node.");
 
-  /**
-   * TODO(anybody) This is actually a O(n) operation, could be O(1) by just swapping the last element into the deleted
-   * element.
-   */
-  _outputs.erase(iter);
+  std::swap(*iter, _outputs.back());
+  _outputs.pop_back();
 }
 
 void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output) {
-  // Having the same output multiple times is allowed, e.g. for self joins
+  // Having the same output multiple times is allowed, e.g., for self joins.
   _outputs.emplace_back(output);
 }
 
