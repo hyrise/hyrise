@@ -22,6 +22,7 @@ args = parser.parse_args()
 build_folder = getcwd()
 benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkTPCC", "hyriseBenchmarkJoinOrder", "hyriseBenchmarkStarSchema"]
 ci_benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkTPCC", "hyriseBenchmarkStarSchema"]
+benchmarks_with_float_scaling = {"hyriseBenchmarkTPCH", "hyriseBenchmarkStarSchema"}
 
 def run_root(cmd):
   print(f"python@{build_folder}/..: {cmd}")
@@ -44,33 +45,11 @@ def build(targets=benchmarks, bolt_instrument=False, pgo_instrument=False, bolt_
     run_build("strip -R .rela.text -R \".rela.text.*\" -R .rela.data -R \".rela.data.*\" lib/libhyrise_impl.so")
 
 def profile(bolt_instrumented=False, pgo_instrumented=False):
-  for benchmark in benchmarks:
-    run_root(f"{build_folder}/{benchmark} --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled")
+  benchmarks_to_run = benchmarks if not args.ci else ci_benchmarks
+  for benchmark in benchmarks_to_run:
+    run_root(f"{build_folder}/{benchmark} --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled {"" if not args.ci else ("-s 0.01" if benchmark in benchmarks_with_float_scaling else "-s 1")}")
     if bolt_instrumented:
       move("/tmp/prof.fdata", f"{benchmark}.fdata")
-
-  if bolt_instrumented:
-    if exists("bolt.fdata"):
-      remove("bolt.fdata")
-    run_build("merge-fdata *.fdata > bolt.fdata")
-
-  if pgo_instrumented:
-    run_root(f"mv *.profraw {build_folder}/libhyrise.profraw")
-    run_build("llvm-profdata merge -output libhyrise.profdata libhyrise.profraw")
-
-def profile_in_ci(bolt_instrumented=False, pgo_instrumented=False):
-  run_root(f"{build_folder}/hyriseBenchmarkTPCH --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled -s .01")
-  if bolt_instrumented:
-    move("/tmp/prof.fdata", f"hyriseBenchmarkTPCH.fdata")
-  run_root(f"{build_folder}/hyriseBenchmarkStarSchema --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled -s .01")
-  if bolt_instrumented:
-    move("/tmp/prof.fdata", f"hyriseBenchmarkStarSchema.fdata")
-  run_root(f"{build_folder}/hyriseBenchmarkTPCDS --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled -s 1")
-  if bolt_instrumented:
-    move("/tmp/prof.fdata", f"hyriseBenchmarkTPCDS.fdata")
-  run_root(f"{build_folder}/hyriseBenchmarkTPCC --scheduler --clients {args.num_cores} --cores {args.num_cores} -t {args.time} -m Shuffled -s 1")
-  if bolt_instrumented:
-    move("/tmp/prof.fdata", f"hyriseBenchmarkTPCC.fdata")
 
   if bolt_instrumented:
     if exists("bolt.fdata"):
@@ -94,7 +73,7 @@ def import_profile():
 
 def ci_main():
   build(ci_benchmarks, bolt_instrument=True, pgo_instrument=True)
-  profile_in_ci()
+  profile(bolt_instrumented=True, pgo_instrumented=True)
   build("hyriseTest", bolt_optimize=True, pgo_optimize=True)
   reset_cmake()
 
