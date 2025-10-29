@@ -103,7 +103,7 @@ def main():
     import_profile()
   else:
     build(bolt_instrument=True, pgo_instrument=True)
-    profile()
+    profile(bolt_instrumented=True, pgo_instrumented=True)
   build(bolt_optimize=True, pgo_optimize=True)
   reset_cmake()
   if args.export_profile:
