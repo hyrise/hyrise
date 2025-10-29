@@ -71,7 +71,7 @@ def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=F
     run_build("ninja clean")
     run_build(
         "cmake",
-        f"-DCOMPILE_FOR_BOLT={"On" if bolt_instrument else "Off"}",
+        f"-DCOMPILE_FOR_BOLT={"On" if bolt_instrument or bolt_optimize else "Off"}",
         f"-DPGO_INSTRUMENT={"On" if pgo_instrument else "Off"}",
         "-DPGO_OPTIMIZE=libhyrise.profdata" if pgo_optimize else "-UPGO_OPTIMIZE",
         "..",
