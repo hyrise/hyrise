@@ -96,6 +96,7 @@ do
   git checkout "$commit"
   git submodule update --init --recursive
 
+  # If there is a bolt profile, we should compile in such a way that bolt can be used afterwards
   if [ -f ../resources/bolt.fdata ]
   then
     cmake -DCOMPILE_FOR_BOLT=On ..
@@ -103,6 +104,7 @@ do
     cmake -DCOMPILE_FOR_BOLT=Off ..
   fi
 
+  # If there is a PGO profile, use it while building
   if [ -f ../resources/pgo.profdata ]
   then
     cmake -DPGO_PROFILE=../resources/pgo.profdata ..
@@ -114,6 +116,7 @@ do
   $build_system clean
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
 
+  # If there is a build profile, optimize with bolt and strip all information that was added by COMPILE_FOR_BOLT afterwards
   if [ -f ../resources/bolt.fdata ]
   then
     mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old

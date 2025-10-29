@@ -14,7 +14,7 @@ parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument("-t",  "--time", type=int, default=1800, help="The time to run each benchmark in seconds.")
 parser.add_argument("-n", "--num-cores", type=int, default=cpu_count(), help="The number of cpu cores to use for compiling and running.")
 parser.add_argument("-c", "--ci", action=BooleanOptionalAction, default=False, help="Whether this script is run in the ci. Tries to safe time as much as possible at the expense of profile quality.")
-parser.add_argument("-e", "--export-profile", action=BooleanOptionalAction, default=False, help="Export the profile to the resources folder for further use with benchmark_all.sh.")
+parser.add_argument("-e", "--export-profile", action=BooleanOptionalAction, default=False, help="Export the profile to the resources folder for further use with benchmark_all.sh or --import-profile.")
 parser.add_argument("-i", "--import-profile", action=BooleanOptionalAction, default=False, help="Don't run benchmarks, just import the profile data from the resources folder.")
 args = parser.parse_args()
 
