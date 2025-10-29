@@ -448,8 +448,8 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
      *  as a match. If nothing else breaks, the only way we might get an expired element is if `other` is the
      *  expired weak_ptr<> to `output` - and, thus, the element we are looking for - in the following scenario:
      *
-     *    auto node_a = Node::make()
-     *    auto node_b = Node::make(..., node_a)
+     *    auto node_a = Node::make();
+     *    auto node_b = Node::make(..., node_a);
      *
      *    node_b.reset(); // `node_b::~AbstractLQPNode()` will call `node_a._remove_output_pointer(node_b)`. However, we
      *                    // cannot lock node_b anymore because its reference count is already 0.
