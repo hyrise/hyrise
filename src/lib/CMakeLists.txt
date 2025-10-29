@@ -29,7 +29,6 @@ set(PGO_OPTIMIZE "" CACHE PATH "Set to the path to a PGO profile to use PGO")
 if (PGO_OPTIMIZE)
     add_compile_options(-fprofile-use=${PGO_OPTIMIZE})
     add_link_options(-fprofile-use=${PGO_OPTIMIZE})
-    add_compile_options(-Wno-error=backend-plugin)
 endif()
 
 # Sources and libraries shared among the different builds of the lib
