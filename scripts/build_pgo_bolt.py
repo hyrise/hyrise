@@ -31,7 +31,7 @@ def run_build(cmd):
 def build_for_profiling(benchmarks=benchmarks):
   run_build("ninja clean")
   run_build("cmake -DCOMPILE_FOR_BOLT=ON -DPGO_INSTRUMENT=ON -UPGO_OPTIMIZE ..")
-  run_build(f"ninja {"".join(benchmarks)} -j {args.num_cores}")
+  run_build(f"ninja {" ".join(benchmarks)} -j {args.num_cores}")
   move("lib/libhyrise_impl.so", "lib/libhyrise_impl.so.old")
   run_build("llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so")
 
