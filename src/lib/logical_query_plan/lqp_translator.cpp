@@ -432,10 +432,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   auto secondary_join_predicates =
       std::vector<OperatorJoinPredicate>(join_predicates.cbegin() + 1, join_predicates.cend());
 
-  auto join_operator = std::shared_ptr<AbstractOperator>{};
-
   const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
   const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
+
+  if (join_node->join_mode == JoinMode::Semi && join_node->is_semi_reduction()) {
+    const auto build_reducer = std::make_shared<Reduce>(left_input_operator, right_input_operator,
+                                                        primary_join_predicate, ReduceMode::Build, UseMinMax::No);
+    return std::make_shared<Reduce>(left_input_operator, build_reducer, primary_join_predicate, ReduceMode::Probe,
+                                    UseMinMax::No);
+  }
+
+  auto join_operator = std::shared_ptr<AbstractOperator>{};
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
