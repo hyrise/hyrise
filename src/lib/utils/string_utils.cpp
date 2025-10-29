@@ -10,6 +10,8 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
 
+#include "types.hpp"
+
 namespace hyrise {
 
 std::vector<std::string> trim_and_split(const std::string& input) {
@@ -56,5 +58,20 @@ std::string trim_source_file_path(const std::string& path) {
 std::string replace_addresses(const std::string& input) {
   return std::regex_replace(input, std::regex{"0x[0-9A-Fa-f]{4,}"}, "0x00000000");
 }
+
+template <typename String>
+pmr_string string_to_lower(const String& input) {
+  auto lower_string = pmr_string{};
+  lower_string.reserve(input.size());
+
+  for (const auto character : input) {
+    lower_string.push_back(static_cast<char>(std::tolower(character)));
+  }
+  return lower_string;
+}
+
+template pmr_string string_to_lower(const pmr_string& input);
+template pmr_string string_to_lower(const std::string& input);
+template pmr_string string_to_lower(const std::string_view& input);
 
 }  // namespace hyrise
