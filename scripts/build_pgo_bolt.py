@@ -58,13 +58,13 @@ benchmarks_with_float_scaling = {"hyriseBenchmarkTPCH", "hyriseBenchmarkStarSche
 def run_root(*cmd):
     cmd = " ".join(cmd)
     print(f"python@root: {cmd}", flush=True)
-    run(cmd, cwd=f"{build_folder}/..", shell=True, flush=True)
+    run(cmd, cwd=f"{build_folder}/..", shell=True)
 
 
 def run_build(*cmd):
     cmd = " ".join(cmd)
     print(f"python@build: {cmd}", flush=True)
-    run(cmd, cwd=build_folder, shell=True, flush=True)
+    run(cmd, cwd=build_folder, shell=True)
 
 
 def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=False, pgo_optimize=False):
