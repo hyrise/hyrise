@@ -140,7 +140,6 @@ def ci_main():
     build(*ci_benchmarks, bolt_instrument=True, pgo_instrument=True)
     profile(bolt_instrumented=True, pgo_instrumented=True)
     build("hyriseTest", bolt_optimize=True, pgo_optimize=True)
-    reset_cmake()
 
 
 def main():
