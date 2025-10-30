@@ -451,8 +451,8 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
      *    auto node_a = Node::make();
      *    auto node_b = Node::make(..., node_a);
      *
-     *    node_b.reset(); // `node_b::~AbstractLQPNode()` will call `node_a._remove_output_pointer(node_b)`. However, we
-     *                    // cannot lock node_b anymore because its reference count is already 0.
+     *    node_b.reset(); // `node_b::~AbstractLQPNode()` will call `node_a._remove_output_pointer(*node_b)`. However,
+     *                    // we cannot lock node_b anymore: its reference count is already 0.
      */
     return &output == other.lock().get() || other.expired();
   });
