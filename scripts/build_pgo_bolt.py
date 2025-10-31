@@ -58,14 +58,17 @@ benchmarks_with_float_scaling = {"hyriseBenchmarkTPCH", "hyriseBenchmarkStarSche
 def run_root(*cmd):
     cmd = " ".join(cmd)
     print(f"python@root: {cmd}", flush=True)
-    run(cmd, cwd=f"{build_folder}/..", shell=True)
+    run(cmd, cwd=f"{build_folder}/..", shell=True, check=True)
 
 
 def run_build(*cmd):
     cmd = " ".join(cmd)
     print(f"python@build: {cmd}", flush=True)
-    run(cmd, cwd=build_folder, shell=True)
+    run(cmd, cwd=build_folder, shell=True, check=True)
 
+def remove_if_exists(file):
+    if exists(file):
+        remove(file)
 
 def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=False, pgo_optimize=False):
     run_build("ninja clean")
@@ -113,8 +116,7 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
             move("/tmp/prof.fdata", f"{benchmark}.fdata")
 
     if bolt_instrumented:
-        if exists("bolt.fdata"):
-            remove("bolt.fdata")
+        remove_if_exists("bolt.fdata")
         run_build("merge-fdata *.fdata > bolt.fdata")
 
     if pgo_instrumented:
@@ -122,9 +124,12 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
         run_build("llvm-profdata merge -output libhyrise.profdata libhyrise.profraw")
 
 
-def reset_cmake():
+def cleanup():
     run_build("cmake -DCOMPILE_FOR_BOLT=OFF -DPGO_INSTRUMENT=OFF -UPGO_OPTIMIZE ..")
-
+    for benchmark in benchmarks:
+        remove_if_exists(f"{benchmark}.fdata")
+    remove_if_exists("libhyrise.profraw")
+    run_root("rm *.profraw")
 
 def export_profile():
     copy("bolt.fdata", "../resources/bolt.fdata")
@@ -143,15 +148,17 @@ def ci_main():
 
 
 def main():
-    if args.import_profile:
-        import_profile()
-    else:
-        build(*benchmarks, bolt_instrument=True, pgo_instrument=True)
-        profile(bolt_instrumented=True, pgo_instrumented=True)
-    build(bolt_optimize=True, pgo_optimize=True)
-    reset_cmake()
-    if args.export_profile:
-        export_profile()
+    try:
+        if args.import_profile:
+            import_profile()
+        else:
+            build(*benchmarks, bolt_instrument=True, pgo_instrument=True)
+            profile(bolt_instrumented=True, pgo_instrumented=True)
+        build(bolt_optimize=True, pgo_optimize=True)
+        if args.export_profile:
+            export_profile()
+    finally:
+        cleanup()
 
 
 if args.ci:
