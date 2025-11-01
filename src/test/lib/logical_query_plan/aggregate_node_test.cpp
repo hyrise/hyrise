@@ -1,7 +1,17 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/window_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "logical_query_plan/mock_node.hpp"

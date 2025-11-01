@@ -1,3 +1,11 @@
+#include <gtest/gtest.h>
+
+#include <atomic>
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "hyrise.hpp"

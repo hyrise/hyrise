@@ -20,9 +20,6 @@
 namespace hyrise {
 
 template <typename T>
-AttributeStatistics<T>::AttributeStatistics() : BaseAttributeStatistics(data_type_from_type<T>()) {}
-
-template <typename T>
 void AttributeStatistics<T>::set_statistics_object(
     const std::shared_ptr<const AbstractStatisticsObject>& statistics_object) {
   // We allow call patterns like `c.set_statistics_object(o.scaled(0.1))` where `o.scaled()` might return nullptr
@@ -149,6 +146,11 @@ std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::pruned(
   }
 
   return statistics;
+}
+
+template <typename T>
+DataType AttributeStatistics<T>::data_type() const {
+  return data_type_from_type<T>();
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(AttributeStatistics);

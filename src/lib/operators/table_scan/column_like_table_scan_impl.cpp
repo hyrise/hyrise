@@ -10,8 +10,9 @@
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
@@ -105,7 +106,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   }
 
   // LIKE matches no rows
-  if (match_count == 0u) {
+  if (match_count == 0) {
     ++num_chunks_with_early_out;
     return;
   }
@@ -126,7 +127,7 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   auto& count = result.first;
   auto& dictionary_matches = result.second;
 
-  count = 0u;
+  count = 0;
   dictionary_matches.reserve(dictionary.size());
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {

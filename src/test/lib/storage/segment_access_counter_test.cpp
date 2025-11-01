@@ -1,17 +1,13 @@
-#include <atomic>
-#include <map>
+#include <gtest/gtest.h>
+
+#include <cstddef>
 #include <memory>
-#include <string>
 
 #include "magic_enum/magic_enum.hpp"
 
 #include "base_test.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_access_counter.hpp"
-#include "storage/table.hpp"
-#include "storage/table_column_definition.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/value_segment/value_segment_iterable.hpp"
 #include "types.hpp"
 
 namespace hyrise {

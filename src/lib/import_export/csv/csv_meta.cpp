@@ -56,7 +56,7 @@ void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
   } else if (json_string == "null_string_as_value") {
     null_handling = NullHandling::NullStringAsValue;
   } else {
-    Fail("Illegal value for null_handling: " + json_string.get<std::string>());
+    Fail(std::string{"Illegal value for null_handling: "} + json_string.get<std::string>());
   }
 }
 

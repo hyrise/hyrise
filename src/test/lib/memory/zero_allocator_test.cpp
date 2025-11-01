@@ -1,3 +1,6 @@
+#include <gtest/gtest.h>
+
+#include <cstddef>
 #include <memory>
 
 #include "base_test.hpp"

@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include "base_test.hpp"
 #include "storage/buffer/page_id.hpp"
 

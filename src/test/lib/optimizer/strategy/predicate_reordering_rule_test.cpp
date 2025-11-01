@@ -1,20 +1,25 @@
-#include <memory>
+#include <gtest/gtest.h>
 
-#include "expression/abstract_expression.hpp"
+#include <cstdint>
+#include <memory>
+#include <utility>
+
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "statistics/table_statistics.hpp"
 #include "strategy_base_test.hpp"
-#include "utils/assert.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

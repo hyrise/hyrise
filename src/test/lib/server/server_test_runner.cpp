@@ -1,6 +1,20 @@
-#include <fstream>
-#include <future>
+#include <gtest/gtest.h>
+
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <functional>
+#include <memory>
+#include <string>
 #include <thread>
+#include <vector>
+
+#include "server/server_types.hpp"
+#include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 // GCC in release mode finds potentially uninitialized memory in pqxx. Looking at param.hxx, this appears to be a false
 // positive.
@@ -16,7 +30,6 @@
 #include "operators/validate.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "server/server.hpp"
-#include "sql/sql_plan_cache.hpp"
 
 namespace hyrise {
 

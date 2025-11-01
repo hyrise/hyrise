@@ -18,7 +18,7 @@ class Table;
 class TransactionContext;
 class PQPSubqueryExpression;
 
-enum class OperatorType {
+enum class OperatorType : uint8_t {
   Aggregate,
   Alias,
   ChangeMetaTable,
@@ -54,7 +54,7 @@ enum class OperatorType {
 };
 
 // The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
-enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
+enum class OperatorState : uint8_t { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
 
 /**
  * AbstractOperator is the abstract super class for all operators. All operators have up to two input tables and one
@@ -112,14 +112,16 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  *
  * Find more information about operators in our Wiki: https://github.com/hyrise/hyrise/wiki/operator-concept
  */
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
-                   const std::shared_ptr<const AbstractOperator>& right = nullptr,
-                   std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
-                       std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
+  explicit AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                            const std::shared_ptr<const AbstractOperator>& right = nullptr,
+                            std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
+                                std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
-  virtual ~AbstractOperator();
+  ~AbstractOperator() override;
 
   OperatorType type() const;
 

@@ -1,7 +1,10 @@
+#include <bits/chrono.h>
+#include <gtest/gtest.h>
+
 #include "base_test.hpp"
 #include "utils/format_duration.hpp"
 
-using namespace std::chrono_literals;  // NOLINT
+using namespace std::chrono_literals;  // NOLINT(build/namespaces)
 
 namespace hyrise {
 

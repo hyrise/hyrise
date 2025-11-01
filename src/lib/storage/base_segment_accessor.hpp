@@ -14,8 +14,10 @@ class BaseSegmentAccessor {
   BaseSegmentAccessor() = default;
   BaseSegmentAccessor(const BaseSegmentAccessor&) = default;
   BaseSegmentAccessor(BaseSegmentAccessor&&) = default;
+  BaseSegmentAccessor& operator=(const BaseSegmentAccessor&) = default;
+  BaseSegmentAccessor& operator=(BaseSegmentAccessor&&) = default;
 
-  virtual ~BaseSegmentAccessor() {}
+  virtual ~BaseSegmentAccessor() = default;
 };
 
 /**
@@ -25,7 +27,7 @@ class BaseSegmentAccessor {
 template <typename T>
 class AbstractSegmentAccessor : public BaseSegmentAccessor {
  public:
-  virtual const std::optional<T> access(ChunkOffset offset) const = 0;
+  virtual std::optional<T> access(ChunkOffset offset) const = 0;
 };
 
 }  // namespace hyrise

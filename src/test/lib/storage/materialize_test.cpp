@@ -1,10 +1,21 @@
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "base_test.hpp"
 #include "encoding_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/materialize.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,6 +1,10 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+#include <stdexcept>
+
 #include "base_test.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 
 namespace hyrise {
 

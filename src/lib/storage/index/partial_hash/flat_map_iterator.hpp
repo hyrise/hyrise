@@ -68,6 +68,9 @@ class FlatMapIterator {
   using reference = const RowID&;
 
   FlatMapIterator() = default;
+  FlatMapIterator(FlatMapIterator&&) = default;
+  FlatMapIterator& operator=(FlatMapIterator&&) = default;
+  ~FlatMapIterator() = default;
   explicit FlatMapIterator(std::unique_ptr<BaseFlatMapIteratorImpl>&& index_iterator);
   FlatMapIterator(const FlatMapIterator& other);
   FlatMapIterator& operator=(const FlatMapIterator& other);

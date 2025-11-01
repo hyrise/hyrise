@@ -1,8 +1,6 @@
-#include <limits>
+#include <gtest/gtest.h>
+
 #include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
 #include "base_test.hpp"
 #include "concurrency/commit_context.hpp"

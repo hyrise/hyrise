@@ -1,4 +1,10 @@
+#include <gtest/gtest.h>
+
+#include <optional>
+#include <stdexcept>
+
 #include "base_test.hpp"
+#include "types.hpp"
 #include "utils/date_time_utils.hpp"
 
 namespace hyrise {

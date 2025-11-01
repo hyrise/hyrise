@@ -1,5 +1,8 @@
+#include <gtest/gtest.h>
+
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -8,7 +11,6 @@
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 

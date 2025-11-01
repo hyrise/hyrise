@@ -1,8 +1,15 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/prepared_plan.hpp"
+#include "types.hpp"
 #include "utils/string_utils.hpp"
 
 namespace hyrise {

@@ -14,7 +14,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp, std::vector<JoinGraph>& join_graphs,
                            std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {

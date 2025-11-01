@@ -13,17 +13,18 @@ namespace hyrise {
 
 class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
  public:
+  // NOLINTNEXTLINE(readability-identifier-naming)
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::RunLength>;
-  static constexpr auto _uses_vector_compression = false;
+  static constexpr auto USES_VECTOR_COMPRESSION = false;
 
   template <typename T>
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
-                                                     const PolymorphicAllocator<T>& allocator) {
+  std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<T>& segment_iterable,
+                                                    const PolymorphicAllocator<T>& allocator) {
     auto values = std::make_shared<pmr_vector<T>>(allocator);
     auto null_values = std::make_shared<pmr_vector<bool>>(allocator);
     auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(allocator);
 
-    segment_iterable.with_iterators([&](auto it, auto end) {
+    segment_iterable.with_iterators([&](auto it, const auto& end) {
       // Early out for empty segments, code below assumes it to be non-empty
       if (it == end) {
         return;

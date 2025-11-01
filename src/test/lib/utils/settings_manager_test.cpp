@@ -1,6 +1,13 @@
+#include <gtest/gtest.h>
+
+#include <exception>
+#include <memory>
+#include <string>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "mock_setting.hpp"
+#include "utils/settings/abstract_setting.hpp"
 
 namespace hyrise {
 

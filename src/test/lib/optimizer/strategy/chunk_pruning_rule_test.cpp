@@ -1,13 +1,17 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
 
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
-#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -16,12 +20,15 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/table.hpp"
+#include "storage/encoding_type.hpp"
 #include "strategy_base_test.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

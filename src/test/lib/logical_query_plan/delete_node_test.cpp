@@ -1,5 +1,9 @@
+#include <gtest/gtest.h>
+
+#include <memory>
+#include <stdexcept>
+
 #include "base_test.hpp"
-#include "expression/expression_utils.hpp"
 #include "logical_query_plan/delete_node.hpp"
 
 namespace hyrise {

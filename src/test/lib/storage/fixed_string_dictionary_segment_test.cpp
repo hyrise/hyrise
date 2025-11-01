@@ -1,13 +1,15 @@
-#include <memory>
-#include <string>
-#include <utility>
+#include <gtest/gtest.h>
 
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
-#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

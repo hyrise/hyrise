@@ -53,6 +53,8 @@ struct TableGenerationMetrics {
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);
 
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractTableGenerator {
  public:
   explicit AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config);

@@ -1,6 +1,12 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <type_traits>
+
 #include "base_test.hpp"
 #include "expression/evaluation/expression_result.hpp"
 #include "expression/evaluation/expression_result_views.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,10 +1,17 @@
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"

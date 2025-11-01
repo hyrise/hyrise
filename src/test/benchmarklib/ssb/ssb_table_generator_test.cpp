@@ -1,3 +1,11 @@
+#include <gtest/gtest.h>
+
+#include <cmath>
+#include <cstdint>
+#include <filesystem>
+#include <map>
+#include <string>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "ssb/ssb_table_generator.hpp"

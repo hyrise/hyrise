@@ -14,13 +14,15 @@ namespace detail {
  * a virtual interface.
  */
 template <typename T>
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AnySegmentIteratorWrapperBase {
  public:
   virtual ~AnySegmentIteratorWrapperBase() = default;
 
   virtual void increment() = 0;
   virtual void decrement() = 0;
-  virtual void advance(std::ptrdiff_t n) = 0;
+  virtual void advance(std::ptrdiff_t distance) = 0;
   virtual bool equal(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
   virtual std::ptrdiff_t distance_to(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
   virtual SegmentPosition<T> dereference() const = 0;
@@ -51,8 +53,8 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
     --_iterator;
   }
 
-  void advance(std::ptrdiff_t n) final {
-    _iterator += n;
+  void advance(std::ptrdiff_t distance) final {
+    _iterator += distance;
   }
 
   /**
@@ -124,7 +126,6 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
 
   /**@}*/
 
- public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
 
   AnySegmentIterator& operator=(const AnySegmentIterator& other) {
@@ -135,9 +136,14 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
     return *this;
   }
 
+  AnySegmentIterator(AnySegmentIterator&&) = default;
+  AnySegmentIterator& operator=(AnySegmentIterator&&) = default;
+  ~AnySegmentIterator() = default;
+
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
+  // NOLINTBEGIN(readability-identifier-naming)
   void increment() {
     _wrapper->increment();
   }
@@ -146,8 +152,8 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
     _wrapper->decrement();
   }
 
-  void advance(std::ptrdiff_t n) {
-    _wrapper->advance(n);
+  void advance(std::ptrdiff_t distance) {
+    _wrapper->advance(distance);
   }
 
   bool equal(const AnySegmentIterator<T>& other) const {
@@ -162,7 +168,8 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
     return _wrapper->dereference();
   }
 
- private:
+  // NOLINTEND(readability-identifier-naming)
+
   std::unique_ptr<hyrise::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
 

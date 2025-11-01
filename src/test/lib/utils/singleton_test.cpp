@@ -1,7 +1,10 @@
-#include "../plugins/test_plugin.hpp"
+#include <gtest/gtest.h>
+
+#include <unordered_map>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
-#include "plugin_test_utils.hpp"
+#include "utils/plugin_manager.hpp"
 #include "utils/singleton.hpp"
 
 namespace hyrise {

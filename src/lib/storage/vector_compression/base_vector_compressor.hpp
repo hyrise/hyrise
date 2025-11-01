@@ -15,6 +15,8 @@ class BaseCompressedVector;
  *
  * Sub-classes must be added in vector_compression.cpp
  */
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class BaseVectorCompressor {
  public:
   virtual ~BaseVectorCompressor() = default;

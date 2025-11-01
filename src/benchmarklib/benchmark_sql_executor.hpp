@@ -17,6 +17,10 @@ class TransactionContext;
 // executed using SQLite. Hyrise's and SQLite's results are then compared.
 class BenchmarkSQLExecutor {
  public:
+  BenchmarkSQLExecutor(const BenchmarkSQLExecutor&) = delete;
+  BenchmarkSQLExecutor(BenchmarkSQLExecutor&&) = default;
+  BenchmarkSQLExecutor& operator=(const BenchmarkSQLExecutor&) = delete;
+  BenchmarkSQLExecutor& operator=(BenchmarkSQLExecutor&&) = default;
   // @param visualize_prefix    Prefix for the filename of the generated query plans (e.g., "TPC-H_6-").
   //                            The suffix will be "LQP/PQP-<statement_idx>.<extension>"
   BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
@@ -52,7 +56,7 @@ class BenchmarkSQLExecutor {
   std::optional<SQLiteWrapper::Connection> _sqlite_connection;
   bool _sqlite_transaction_open{false};
 
-  const std::optional<std::string> _visualize_prefix;
+  std::optional<std::string> _visualize_prefix;
   uint64_t _num_visualized_plans{0};
 };
 

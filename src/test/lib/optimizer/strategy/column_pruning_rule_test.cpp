@@ -1,7 +1,17 @@
-#include <memory>
+#include <gtest/gtest.h>
 
-#include "expression/abstract_expression.hpp"
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "magic_enum/magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_expression.hpp"
+#include "import_export/file_type.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -18,6 +28,8 @@
 #include "logical_query_plan/window_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

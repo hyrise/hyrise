@@ -1,8 +1,14 @@
-#include <cstdlib>
-#include <string>
+#include <gtest/gtest-typed-test.h>
+#include <gtest/gtest.h>
+#include <gtest/internal/gtest-type-util.h>
+
+#include <cstdint>
+#include <limits>
+#include <vector>
 
 #include <boost/variant.hpp>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "types.hpp"
 

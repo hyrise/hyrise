@@ -1,3 +1,12 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <exception>
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
@@ -11,10 +20,13 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
-#include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

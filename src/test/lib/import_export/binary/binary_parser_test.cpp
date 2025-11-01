@@ -1,12 +1,19 @@
+#include <gtest/gtest-param-test.h>
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <exception>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

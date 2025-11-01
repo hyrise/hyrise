@@ -1,10 +1,12 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
 #include <memory>
-#include <optional>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -16,12 +18,9 @@
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 #include "strategy_base_test.hpp"
-#include "utils/assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

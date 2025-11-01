@@ -1,6 +1,10 @@
+#include <gtest/gtest.h>
+
 #include <optional>
 
 #include "base_test.hpp"
+#include "testing_assert.hpp"
+#include "utils/check_table_equal.hpp"
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 

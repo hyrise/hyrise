@@ -1,10 +1,20 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

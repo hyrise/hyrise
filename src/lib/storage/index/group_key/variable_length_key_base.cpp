@@ -26,18 +26,18 @@ std::pair<uintX_t, uintX_t> shift_left_with_borrow(uintX_t value, hyrise::Compos
 
 namespace hyrise {
 
-VariableLengthKeyBase::VariableLengthKeyBase(VariableLengthKeyWord* data, CompositeKeyLength size)
-    : _data(data), _size(size) {}
+VariableLengthKeyBase::VariableLengthKeyBase(VariableLengthKeyWord* init_data, CompositeKeyLength init_size)
+    : data(init_data), size(init_size) {}
 
 VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t other) {
   static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
   const auto* const raw_other = reinterpret_cast<VariableLengthKeyWord*>(&other);
-  auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(other)), _size);
+  auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(other)), size);
   for (auto index = CompositeKeyLength{0}; index < operation_width; ++index) {
     if constexpr (std::endian::native == std::endian::little) {
-      _data[index] |= raw_other[index];
+      data[index] |= raw_other[index];
     } else {
-      _data[_size - 1 - index] |= raw_other[8 - 1 - index];
+      data[size - 1 - index] |= raw_other[8 - 1 - index];
     }
   }
   return *this;
@@ -47,33 +47,33 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
   static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
   const auto byte_shift = shift / CHAR_BIT;
   const auto bit_shift = static_cast<CompositeKeyLength>(shift % CHAR_BIT);
-  if (static_cast<CompositeKeyLength>(byte_shift) >= _size) {
-    std::fill(_data, _data + _size, static_cast<VariableLengthKeyWord>(0u));
+  if (static_cast<CompositeKeyLength>(byte_shift) >= size) {
+    std::fill(data, data + size, static_cast<VariableLengthKeyWord>(0));
   } else {
     if constexpr (std::endian::native == std::endian::little) {
       // perform shifting
-      for (auto index = _size - 1; index > byte_shift - 1; --index) {
-        const auto [value, borrow] = shift_left_with_borrow(_data[index - byte_shift], bit_shift);
-        _data[index] = value;
-        if (index + 1 < _size) {
-          _data[index + 1] |= borrow;
+      for (auto index = size - 1; index > byte_shift - 1; --index) {
+        const auto [value, borrow] = shift_left_with_borrow(data[index - byte_shift], bit_shift);
+        data[index] = value;
+        if (index + 1 < size) {
+          data[index + 1] |= borrow;
         }
       }
 
       // fill now "empty" positions with zeros
-      std::fill(_data, _data + byte_shift, VariableLengthKeyWord{0});
+      std::fill(data, data + byte_shift, VariableLengthKeyWord{0});
     } else {
       // perform shifting
-      for (auto index = int16_t{0}; index < _size - static_cast<int16_t>(byte_shift); ++index) {
-        const auto [value, borrow] = shift_left_with_borrow(_data[index + byte_shift], bit_shift);
-        _data[index] = value;
+      for (auto index = int16_t{0}; index < size - static_cast<int16_t>(byte_shift); ++index) {
+        const auto [value, borrow] = shift_left_with_borrow(data[index + byte_shift], bit_shift);
+        data[index] = value;
         if (index > 0) {
-          _data[index - 1] |= borrow;
+          data[index - 1] |= borrow;
         }
       }
 
       // fill now "empty" positions with zeros
-      std::fill(_data + _size - byte_shift, _data + _size, VariableLengthKeyWord{0});
+      std::fill(data + size - byte_shift, data + size, VariableLengthKeyWord{0});
     }
   }
   return *this;
@@ -92,7 +92,7 @@ VariableLengthKeyBase& VariableLengthKeyBase::shift_and_set(uint64_t value, uint
 }
 
 bool operator==(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
-  return left._size == right._size && std::memcmp(left._data, right._data, left._size) == 0;
+  return left.size == right.size && std::memcmp(left.data, right.data, left.size) == 0;
 }
 
 bool operator!=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
@@ -101,22 +101,22 @@ bool operator!=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
 
 bool operator<(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
   static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
-  if (left._size != right._size) {
-    return left._size < right._size;
+  if (left.size != right.size) {
+    return left.size < right.size;
   }
 
   if constexpr (std::endian::native == std::endian::little) {
     // compare right to left since most significant byte is on the right
     // memcmp can not be used since it performs lexical comparison
-    // loop overflows after iteration with i == 0, so i becomes greater than left._size
-    for (CompositeKeyLength index = left._size - 1; index < left._size; --index) {
-      if (left._data[index] == right._data[index]) {
+    // loop overflows after iteration with i == 0, so i becomes greater than left.size
+    for (CompositeKeyLength index = left.size - 1; index < left.size; --index) {
+      if (left.data[index] == right.data[index]) {
         continue;
       }
-      return left._data[index] < right._data[index];
+      return left.data[index] < right.data[index];
     }
   } else {
-    return std::memcmp(left._data, right._data, left._size) < 0;
+    return std::memcmp(left.data, right.data, left.size) < 0;
   }
 
   return false;
@@ -136,19 +136,19 @@ bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
 
 std::ostream& operator<<(std::ostream& stream, const VariableLengthKeyBase& key) {
   stream << std::hex << std::setfill('0');
-  const auto* const raw_data = reinterpret_cast<uint8_t*>(key._data);
+  const auto* const rawdata = reinterpret_cast<uint8_t*>(key.data);
 
   if constexpr (std::endian::native == std::endian::little) {
-    for (auto key_id = CompositeKeyLength{1}; key_id <= key._size; ++key_id) {
-      stream << std::setw(2) << +raw_data[key._size - key_id];
-      if (key_id != key._size) {
+    for (auto key_id = CompositeKeyLength{1}; key_id <= key.size; ++key_id) {
+      stream << std::setw(2) << +rawdata[key.size - key_id];
+      if (key_id != key.size) {
         stream << ' ';
       }
     }
   } else {
-    for (auto key_id = CompositeKeyLength{0}; key_id < key._size; ++key_id) {
-      stream << std::setw(2) << +raw_data[key_id];
-      if (key_id != key._size - 1) {
+    for (auto key_id = CompositeKeyLength{0}; key_id < key.size; ++key_id) {
+      stream << std::setw(2) << +rawdata[key_id];
+      if (key_id != key.size - 1) {
         stream << ' ';
       }
     }

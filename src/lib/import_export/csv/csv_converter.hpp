@@ -23,6 +23,8 @@ namespace hyrise {
  * The base class BaseCsvConverter allows us to handle different types of columns uniformly.
  */
 
+// This class has to have a virtual destructor because it is virtual.
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class BaseCsvConverter {
  public:
   virtual ~BaseCsvConverter() = default;
@@ -50,7 +52,7 @@ class CsvConverter : public BaseCsvConverter {
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
   void insert(std::string& value, ChunkOffset position) override {
-    if (_is_nullable && value.length() == 0) {
+    if (_is_nullable && value.empty()) {
       _null_values[position] = true;
       return;
     }
@@ -71,7 +73,7 @@ class CsvConverter : public BaseCsvConverter {
     // clang-format off
     if constexpr(std::is_same_v<T, pmr_string>) {
       unescape(value, _config);
-    } else {  // NOLINT
+    } else {
       // clang-format on
       if (_config.reject_quoted_nonstrings) {
         Assert(value == unescape_copy(value, _config),
@@ -87,9 +89,8 @@ class CsvConverter : public BaseCsvConverter {
   std::unique_ptr<AbstractSegment> finish() override {
     if (_is_nullable) {
       return std::make_unique<ValueSegment<T>>(std::move(_parsed_values), std::move(_null_values));
-    } else {
-      return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
     }
+    return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
   }
 
  private:

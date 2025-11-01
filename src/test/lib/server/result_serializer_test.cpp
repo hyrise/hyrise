@@ -1,7 +1,16 @@
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <memory>
+#include <string>
+
 #include "base_test.hpp"
 #include "mock_socket.hpp"
+#include "operators/abstract_operator.hpp"
 #include "server/postgres_protocol_handler.hpp"
 #include "server/result_serializer.hpp"
+#include "storage/table.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

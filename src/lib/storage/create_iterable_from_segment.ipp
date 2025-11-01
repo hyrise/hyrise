@@ -9,22 +9,22 @@
 
 namespace hyrise {
 
-template <typename T, bool EraseSegmentType>
+template <typename T, bool erase_segment_type>
 auto create_iterable_from_segment(const ValueSegment<T>& segment) {
-  if constexpr (EraseSegmentType) {
+  if constexpr (erase_segment_type) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return ValueSegmentIterable<T>{segment};
   }
 }
 
-template <typename T, bool EraseSegmentType>
+template <typename T, bool erase_segment_type>
 auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
 #ifdef HYRISE_ERASE_DICTIONARY
   PerformanceWarning("DictionarySegmentIterable erased by compile-time setting");
   return AnySegmentIterable<T>(DictionarySegmentIterable<T, pmr_vector<T>>(segment));
 #else
-  if constexpr (EraseSegmentType) {
+  if constexpr (erase_segment_type) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return DictionarySegmentIterable<T, pmr_vector<T>>{segment};
@@ -32,13 +32,13 @@ auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
 #endif
 }
 
-template <typename T, bool EraseSegmentType>
+template <typename T, bool erase_segment_type>
 auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
 #ifdef HYRISE_ERASE_RUNLENGTH
   PerformanceWarning("RunLengthSegmentIterable erased by compile-time setting");
   return AnySegmentIterable<T>(RunLengthSegmentIterable<T>(segment));
 #else
-  if constexpr (EraseSegmentType) {
+  if constexpr (erase_segment_type) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return RunLengthSegmentIterable<T>{segment};
@@ -46,13 +46,13 @@ auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
 #endif
 }
 
-template <typename T, bool EraseSegmentType>
+template <typename T, bool erase_segment_type>
 auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment) {
 #ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
   PerformanceWarning("FixedStringDictionarySegmentIterable erased by compile-time setting");
   return AnySegmentIterable<T>(DictionarySegmentIterable<T, FixedStringVector>(segment));
 #else
-  if constexpr (EraseSegmentType) {
+  if constexpr (erase_segment_type) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return DictionarySegmentIterable<T, FixedStringVector>{segment};
@@ -60,13 +60,13 @@ auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment
 #endif
 }
 
-template <typename T, typename Enabled, bool EraseSegmentType>
+template <typename T, typename Enabled, bool erase_segment_type>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& segment) {
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
   PerformanceWarning("FrameOfReferenceSegmentIterable erased by compile-time setting");
   return AnySegmentIterable<T>(FrameOfReferenceSegmentIterable<T>(segment));
 #else
-  if constexpr (EraseSegmentType) {
+  if constexpr (erase_segment_type) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return FrameOfReferenceSegmentIterable<T>{segment};
@@ -74,7 +74,7 @@ auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& seg
 #endif
 }
 
-template <typename T, bool EraseSegmentType>
+template <typename T, bool erase_segment_type>
 auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
   // LZ4Segment always gets erased as its decoding is so slow, the virtual function calls won't make
   // a difference. If we'd allow it to not be erased we'd risk compile time increase creeping in for no benefit

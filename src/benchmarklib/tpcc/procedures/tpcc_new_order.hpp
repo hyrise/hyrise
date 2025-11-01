@@ -8,7 +8,7 @@ namespace hyrise {
 
 class TPCCNewOrder : public AbstractTPCCProcedure {
  public:
-  TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
+  TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& init_sql_executor);
 
   [[nodiscard]] bool _on_execute() override;
 
@@ -21,8 +21,9 @@ class TPCCNewOrder : public AbstractTPCCProcedure {
   int32_t d_id;  // District ID                   [1..10]
   int32_t c_id;  // Customer ID                   [1..3000]
 
-  int32_t ol_cnt;  // Number of items in the order  [5..15] - this is equal to _order_lines.size(), but we keep it
-                   // as it is referenced frequently in the TPC-C
+  // Number of items in the order  [5..15] - this is equal to _order_lines.size(), but we keep it
+  // as it is referenced frequently in the TPC-C
+  int32_t ol_cnt;
 
   struct OrderLine {
     int32_t ol_i_id;         // Item number             [1..100000] or 888888 for erroneous entries (only for last line)
