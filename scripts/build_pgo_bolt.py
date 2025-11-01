@@ -66,9 +66,11 @@ def run_build(*cmd):
     print(f"python@build: {cmd}", flush=True)
     run(cmd, cwd=build_folder, shell=True, check=True)
 
+
 def remove_if_exists(file):
     if exists(file):
         remove(file)
+
 
 def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=False, pgo_optimize=False):
     run_build("ninja clean")
@@ -130,6 +132,7 @@ def cleanup():
         remove_if_exists(f"{benchmark}.fdata")
     remove_if_exists("libhyrise.profraw")
     run_root("rm *.profraw")
+
 
 def export_profile():
     copy("bolt.fdata", "../resources/bolt.fdata")
