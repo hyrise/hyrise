@@ -6,6 +6,7 @@
 #include <optional>
 #include <ostream>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -17,6 +18,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "predicate_node.hpp"
 #include "types.hpp"
 #include "update_node.hpp"
@@ -288,17 +290,21 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
+std::pair<bool, bool> AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
   Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
   const auto& unique_column_combinations = this->unique_column_combinations();
   if (unique_column_combinations.empty()) {
-    return false;
+    return {false, false};
   }
 
-  return contains_matching_unique_column_combination(unique_column_combinations, expressions);
+  const auto existing_ucc = find_ucc(unique_column_combinations, expressions);
+  if (existing_ucc == unique_column_combinations.end()) {
+    return {false, false};
+  }
+  return {true, existing_ucc->is_genuine()};
 }
 
 bool AbstractLQPNode::has_matching_od(

@@ -18,6 +18,7 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
+#include "ucc_discovery_plugin.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
