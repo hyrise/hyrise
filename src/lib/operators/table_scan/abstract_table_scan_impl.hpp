@@ -55,9 +55,11 @@ class AbstractTableScanImpl {
   // This is a function that is critical for our performance. We want the compiler to try its best in optimizing it.
   // Also, we want all functions called inside to be inlined (flattened). GCC seems to like for this to not be inlined
   // itself.
-  static void __attribute__((hot, flatten, noinline)) _scan_with_iterators(
-      const BinaryFunctor& func, LeftIterator left_it, const LeftIterator& left_end, const ChunkID chunk_id,
-      RowIDPosList& matches_out, [[maybe_unused]] RightIterator right_it) {
+  static void
+      __attribute__((hot, flatten, noinline)) _scan_with_iterators(const BinaryFunctor& func, LeftIterator left_it,
+                                                                   const LeftIterator& left_end, const ChunkID chunk_id,
+                                                                   RowIDPosList& matches_out,
+                                                                   [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
     // For a description of the SIMD code, have a look at the comments in that method.
     // To reduce compile time, SIMD scanning is not used for for ColumnVsColumnScans. Also, string comparisons are more

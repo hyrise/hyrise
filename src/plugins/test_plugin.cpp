@@ -52,9 +52,9 @@ std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::pr
 
 void TestPlugin::a_user_executable_function() {
   const auto column_definitions = TableColumnDefinitions{{"col_A", DataType::Int, false}};
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  Hyrise::get().storage_manager.add_table("TableOfTestPlugin_" + std::to_string(_added_tables_count),
-                                          Table{column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes});
+  Hyrise::get().storage_manager.add_table("TableOfTestPlugin_" + std::to_string(_added_tables_count), table);
   ++_added_tables_count;
 }
 
