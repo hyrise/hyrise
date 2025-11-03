@@ -49,7 +49,7 @@ bool Chunk::is_mutable() const {
   return _is_mutable.load();
 }
 
-void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
+void Chunk::replace_segment(const ColumnID column_id, const std::shared_ptr<AbstractSegment>& segment) {
   Assert(column_id < _segments.size(), "ColumnID out of range.");
   std::atomic_store(&_segments[column_id], segment);
 }
@@ -311,16 +311,17 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  if (_cleanup_commit_id.load() == UNSET_COMMIT_ID) {
-    // Cleanup-Commit-ID is not yet set
+  const auto cleanup_commit_id = _cleanup_commit_id.load();
+  if (cleanup_commit_id == UNSET_COMMIT_ID) {
+    // Cleanup CommitID is not yet set.
     return std::nullopt;
   }
-  return std::optional<CommitID>{_cleanup_commit_id.load()};
+  return cleanup_commit_id;
 }
 
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
-  Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
-  _cleanup_commit_id.store(cleanup_commit_id);
+  const auto previous_cleanup_commit_id = _cleanup_commit_id.exchange(cleanup_commit_id);
+  Assert(previous_cleanup_commit_id == UNSET_COMMIT_ID, "Cleanup CommitID can only be set once.");
 }
 
 void Chunk::mark_as_full() {

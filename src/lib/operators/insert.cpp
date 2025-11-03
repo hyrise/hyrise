@@ -77,6 +77,20 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
   }
 }
 
+void deregister_insert(const std::shared_ptr<Table>& table, const ChunkID chunk_id, const std::shared_ptr<Chunk>& chunk,
+                       const std::shared_ptr<MvccData>& mvcc_data) {
+  // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last rolling back Insert
+  // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new
+  // chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
+  // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
+  const auto active_inserts = mvcc_data->deregister_insert();
+  if (active_inserts == 0 && chunk->try_set_immutable()) {
+    // We were the first ones to mark the chunk as immutable. Thus, we have to take care the chunk is encoded. We only
+    // spin off a background task, so the current transaction does not have to wait for the encoding to complete.
+    std::make_shared<ChunkCompressionTask>(table, chunk_id)->schedule();
+  }
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -257,17 +271,7 @@ void Insert::_on_commit_records(const CommitID cid) {
 
     // This fence ensures that changes to the TIDs (which are not sequentially consistent) are visible to other threads.
     std::atomic_thread_fence(std::memory_order_release);
-
-    // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last committing Insert
-    // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new
-    // chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
-    // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
-    const auto active_inserts = mvcc_data->deregister_insert();
-    if (active_inserts == 0 && target_chunk->try_set_immutable()) {
-      // We were the first ones to mark the chunk as immutable. Thus, we have to take care the chunk is encoded.
-      const auto compression_task = std::make_shared<ChunkCompressionTask>(_target_table, target_chunk_range.chunk_id);
-      compression_task->schedule();
-    }
+    deregister_insert(_target_table, target_chunk_range.chunk_id, target_chunk, mvcc_data);
   }
 }
 
@@ -285,17 +289,7 @@ void Insert::_on_rollback_records() {
 
     const auto record_count = target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
     target_chunk->increase_invalid_row_count(ChunkOffset{record_count}, std::memory_order_release);
-
-    // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last rolling back Insert
-    // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new
-    // chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
-    // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
-    const auto active_inserts = mvcc_data->deregister_insert();
-    if (active_inserts == 0 && target_chunk->try_set_immutable()) {
-      // We were the first ones to mark the chunk as immutable. Thus, we have to take care the chunk is encoded.
-      const auto compression_task = std::make_shared<ChunkCompressionTask>(_target_table, target_chunk_range.chunk_id);
-      compression_task->schedule();
-    }
+    deregister_insert(_target_table, target_chunk_range.chunk_id, target_chunk, mvcc_data);
   }
 }
 
