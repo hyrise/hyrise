@@ -126,13 +126,13 @@ class LikeMatcher {
   void _resolve_pattern_with_case(const Functor& functor, const Casing& resolve_case) const {
     if (std::holds_alternative<StartsWithPattern>(_pattern_variant)) {
       const auto& prefix = std::get<StartsWithPattern>(_pattern_variant).string;
-      functor([&](const auto& string) -> bool {
+      functor([&](const auto& string) {
         if (string.size() < prefix.size()) {
           return invert_results;
         }
 
-        return resolve_case(string, [&](const auto& cased_string) -> bool {
-          return (cased_string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
+        return resolve_case(string, [&](const auto& cased_string) {
+          return (cased_string.compare(0, prefix.size(), prefix) == 0) != invert_results;
         });
       });
       return;
@@ -140,12 +140,12 @@ class LikeMatcher {
 
     if (std::holds_alternative<EndsWithPattern>(_pattern_variant)) {
       const auto& suffix = std::get<EndsWithPattern>(_pattern_variant).string;
-      functor([&](const auto& string) -> bool {
+      functor([&](const auto& string) {
         if (string.size() < suffix.size()) {
           return invert_results;
         }
-        return resolve_case(string, [&](const auto& cased_string) -> bool {
-          return (cased_string.compare(cased_string.size() - suffix.size(), suffix.size(), suffix) == 0) ^
+        return resolve_case(string, [&](const auto& cased_string) {
+          return (cased_string.compare(cased_string.size() - suffix.size(), suffix.size(), suffix) == 0) !=
                  invert_results;
         });
       });
@@ -157,9 +157,9 @@ class LikeMatcher {
       // It's really hard to store the searcher in the pattern as it only holds iterators into the string that easily
       // get invalidated when the pattern is passed around.
       const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
-      functor([&](const auto& string) -> bool {
-        return resolve_case(string, [&](const auto& cased_string) -> bool {
-          return (std::search(cased_string.begin(), cased_string.end(), searcher) != cased_string.end()) ^
+      functor([&](const auto& string) {
+        return resolve_case(string, [&](const auto& cased_string) {
+          return (std::search(cased_string.begin(), cased_string.end(), searcher) != cased_string.end()) !=
                  invert_results;
         });
       });
@@ -174,8 +174,8 @@ class LikeMatcher {
         searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
       }
 
-      functor([&](const auto& string) -> bool {
-        return resolve_case(string, [&](const auto& cased_string) -> bool {
+      functor([&](const auto& string) {
+        return resolve_case(string, [&](const auto& cased_string) {
           auto current_position = cased_string.begin();
           for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
             current_position = std::search(current_position, cased_string.end(), searchers[searcher_idx]);
@@ -192,9 +192,9 @@ class LikeMatcher {
 
     if (std::holds_alternative<std::regex>(_pattern_variant)) {
       const auto& regex = std::get<std::regex>(_pattern_variant);
-      functor([&](const auto& string) -> bool {
-        return resolve_case(string, [&](const auto& cased_string) -> bool {
-          return std::regex_match(cased_string.cbegin(), cased_string.cend(), regex) ^ invert_results;
+      functor([&](const auto& string) {
+        return resolve_case(string, [&](const auto& cased_string) {
+          return std::regex_match(cased_string.cbegin(), cased_string.cend(), regex) != invert_results;
         });
       });
 
