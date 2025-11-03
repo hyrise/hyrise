@@ -106,11 +106,11 @@ class Reduce : public AbstractReadOnlyOperator {
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.resize(chunk_count);
 
-      auto new_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
+      auto new_bloom_filter = std::shared_ptr<BlockBloomFilter<20, 8, 2>>{};
       std::shared_ptr<MinMaxPredicate<DataType>> new_min_max_predicate;
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
-        new_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+        new_bloom_filter = std::make_shared<BlockBloomFilter<20, 8, 2>>();
 
         if constexpr (use_min_max == UseMinMax::Yes) {
           new_min_max_predicate = std::make_shared<MinMaxPredicate<DataType>>();
@@ -149,13 +149,13 @@ class Reduce : public AbstractReadOnlyOperator {
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
         const auto job = [&, chunk_index]() mutable {
-          auto partial_bloom_filter = std::shared_ptr<BloomFilter<20, 2>>{};
+          auto partial_bloom_filter = std::shared_ptr<BlockBloomFilter<20, 8, 2>>{};
 
           auto partial_minimum = std::numeric_limits<DataType>::max();
           auto partial_maximum = std::numeric_limits<DataType>::lowest();
 
           if constexpr (reduce_mode != ReduceMode::Probe) {
-            partial_bloom_filter = std::make_shared<BloomFilter<20, 2>>();
+            partial_bloom_filter = std::make_shared<BlockBloomFilter<20, 8, 2>>();
           }
 
           auto last_chunk_index = chunk_index + chunks_per_worker;
