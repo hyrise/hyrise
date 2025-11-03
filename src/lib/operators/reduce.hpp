@@ -37,7 +37,7 @@ class Reduce : public AbstractReadOnlyOperator {
     return name;
   }
 
-  std::shared_ptr<BloomFilter<20, 2>> get_bloom_filter() const {
+  std::shared_ptr<BaseBloomFilter> get_bloom_filter() const {
     return _bloom_filter;
   }
 
@@ -350,7 +350,7 @@ class Reduce : public AbstractReadOnlyOperator {
   }
 
   const OperatorJoinPredicate _predicate;
-  std::shared_ptr<BloomFilter<20, 2>> _bloom_filter;
+  std::shared_ptr<BaseBloomFilter> _bloom_filter;
   std::shared_ptr<BaseMinMaxPredicate> _min_max_predicate;
   const ReduceMode _reduce_mode;
   const UseMinMax _use_min_max;

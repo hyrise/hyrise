@@ -6,17 +6,28 @@
 
 namespace hyrise {
 
-template <uint8_t FilterSizeExponent, uint8_t K>
-class BloomFilter {
+class BaseBloomFilter {
  public:
-  void insert(uint64_t hash) {
+  virtual ~BaseBloomFilter() = default;
+
+  virtual void insert(uint64_t hash) = 0;
+  virtual bool probe(uint64_t hash) const = 0;
+  virtual void merge_from(const BaseBloomFilter& other) = 0;
+  virtual double saturation() const = 0;
+  virtual std::string bit_distribution() const = 0;
+};
+
+template <uint8_t FilterSizeExponent, uint8_t K>
+class BloomFilter : public BaseBloomFilter {
+ public:
+  void insert(uint64_t hash) override final {
     for (uint8_t i = 0; i < K; ++i) {
       const auto bit_index = _extract_bits(hash, i);
       _set_bit(bit_index);
     }
   }
 
-  bool probe(uint64_t hash) const {
+  bool probe(uint64_t hash) const override final {
     // if (1 == 1) return false;
     for (uint8_t i = 0; i < K; ++i) {
       uint32_t bit_index = _extract_bits(hash, i);
@@ -27,14 +38,19 @@ class BloomFilter {
     return true;
   }
 
-  void merge_from(const BloomFilter& other) {
+  void merge_from(const BaseBloomFilter& other) override final {
+    const auto* typed_other = dynamic_cast<const BloomFilter<FilterSizeExponent, K>*>(&other);
+    if (!typed_other) {
+      throw std::invalid_argument("Incompatible BloomFilter types for merge");
+    }
+    
     for (size_t i = 0; i < array_size; ++i) {
-      const uint64_t other_word = other._filter[i].load(std::memory_order_acquire);
+      const uint64_t other_word = typed_other->_filter[i].load(std::memory_order_acquire);
       _filter[i].fetch_or(other_word, std::memory_order_acq_rel);
     }
   }
 
-  double saturation() const {
+  double saturation() const override final {
     uint64_t set_bits = 0;
     for (const auto& word : _filter) {
       set_bits += __builtin_popcountll(word);
@@ -42,7 +58,7 @@ class BloomFilter {
     return static_cast<double>(set_bits) / (array_size * 64);
   }
 
-  std::string bit_distribution() const {
+  std::string bit_distribution() const override final {
     std::array<uint32_t, 100> distribution{};
     constexpr uint32_t bits_per_bucket = (array_size * 64) / 100;
 
