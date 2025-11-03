@@ -250,28 +250,6 @@ template class BloomFilter<19, 3>;
 template class BloomFilter<20, 3>;
 template class BloomFilter<21, 3>;
 
-// 256-bit blocks (BlockSizeExponent = 8)
-template class BlockBloomFilter<16, 8, 1>;
-template class BlockBloomFilter<17, 8, 1>;
-template class BlockBloomFilter<18, 8, 1>;
-template class BlockBloomFilter<19, 8, 1>;
-template class BlockBloomFilter<20, 8, 1>;
-template class BlockBloomFilter<21, 8, 1>;
-template class BlockBloomFilter<22, 8, 1>;
-template class BlockBloomFilter<16, 8, 2>;
-template class BlockBloomFilter<17, 8, 2>;
-template class BlockBloomFilter<18, 8, 2>;
-template class BlockBloomFilter<19, 8, 2>;
-template class BlockBloomFilter<20, 8, 2>;
-template class BlockBloomFilter<21, 8, 2>;
-template class BlockBloomFilter<22, 8, 2>;
-template class BlockBloomFilter<16, 8, 3>;
-template class BlockBloomFilter<17, 8, 3>;
-template class BlockBloomFilter<18, 8, 3>;
-template class BlockBloomFilter<19, 8, 3>;
-template class BlockBloomFilter<20, 8, 3>;
-template class BlockBloomFilter<21, 8, 3>;
-
 // 512-bit blocks (BlockSizeExponent = 9)
 template class BlockBloomFilter<16, 9, 1>;
 template class BlockBloomFilter<17, 9, 1>;

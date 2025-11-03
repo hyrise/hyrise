@@ -16,6 +16,102 @@
 
 namespace hyrise {
 
+// Helper factory that returns the appropriate BloomFilter/BlockBloomFilter instance.
+// Supported values:
+//   - filter_size_exponent: 19, 20, 21
+//   - block_size_exponent: 0 (use BloomFilter), 8, 9 (use BlockBloomFilter)
+//   - k: 1, 2
+inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_size_exponent,
+                                                          const uint8_t block_size_exponent,
+                                                          const uint8_t k) {
+  switch (block_size_exponent) {
+    case 0: {
+      switch (filter_size_exponent) {
+        case 19:
+          switch (k) {
+            case 1: return std::make_shared<BloomFilter<19, 1>>();
+            case 2: return std::make_shared<BloomFilter<19, 2>>();
+            default: break;
+          }
+          break;
+        case 20:
+          switch (k) {
+            case 1: return std::make_shared<BloomFilter<20, 1>>();
+            case 2: return std::make_shared<BloomFilter<20, 2>>();
+            default: break;
+          }
+          break;
+        case 21:
+          switch (k) {
+            case 1: return std::make_shared<BloomFilter<21, 1>>();
+            case 2: return std::make_shared<BloomFilter<21, 2>>();
+            default: break;
+          }
+          break;
+        default: break;
+      }
+      break;
+    }
+    case 8: {
+      switch (filter_size_exponent) {
+        case 19:
+          switch (k) {
+            case 1: return std::make_shared<BlockBloomFilter<19, 8, 1>>();
+            case 2: return std::make_shared<BlockBloomFilter<19, 8, 2>>();
+            default: break;
+          }
+          break;
+        case 20:
+          switch (k) {
+            case 1: return std::make_shared<BlockBloomFilter<20, 8, 1>>();
+            case 2: return std::make_shared<BlockBloomFilter<20, 8, 2>>();
+            default: break;
+          }
+          break;
+        case 21:
+          switch (k) {
+            case 1: return std::make_shared<BlockBloomFilter<21, 8, 1>>();
+            case 2: return std::make_shared<BlockBloomFilter<21, 8, 2>>();
+            default: break;
+          }
+          break;
+        default: break;
+      }
+      break;
+    }
+    case 9: {
+      switch (filter_size_exponent) {
+        case 19:
+          switch (k) {
+            case 1: return std::make_shared<BlockBloomFilter<19, 9, 1>>();
+            case 2: return std::make_shared<BlockBloomFilter<19, 9, 2>>();
+            default: break;
+          }
+          break;
+        case 20:
+          switch (k) {
+            case 1: return std::make_shared<BlockBloomFilter<20, 9, 1>>();
+            case 2: return std::make_shared<BlockBloomFilter<20, 9, 2>>();
+            default: break;
+          }
+          break;
+        case 21:
+          switch (k) {
+            case 1: return std::make_shared<BlockBloomFilter<21, 9, 1>>();
+            case 2: return std::make_shared<BlockBloomFilter<21, 9, 2>>();
+            default: break;
+          }
+          break;
+        default: break;
+      }
+      break;
+    }
+    default: break;
+  }
+
+  Fail("Unsupported bloom filter parameter combination.");
+}
+
 enum class ReduceMode : uint8_t { Build, Probe, ProbeAndBuild };
 
 enum class UseMinMax : bool { Yes = true, No = false };
@@ -26,11 +122,15 @@ class Reduce : public AbstractReadOnlyOperator {
  public:
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
                   const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate,
-                  const ReduceMode reduce_mode, const UseMinMax use_min_max)
+                  const ReduceMode reduce_mode, const UseMinMax use_min_max, uint8_t filter_size_exponent = 20,
+                  uint8_t block_size_exponent = 8, uint8_t k = 2)
       : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input, std::make_unique<PerformanceData>()},
         _predicate{predicate},
         _reduce_mode{reduce_mode},
-        _use_min_max{use_min_max} {}
+        _use_min_max{use_min_max},
+        _filter_size_exponent{filter_size_exponent},
+        _block_size_exponent{block_size_exponent},
+        _k{k} {}
 
   const std::string& name() const override {
     static const auto name = std::string{"Reduce"};
@@ -106,11 +206,11 @@ class Reduce : public AbstractReadOnlyOperator {
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.resize(chunk_count);
 
-      auto new_bloom_filter = std::shared_ptr<BlockBloomFilter<20, 8, 2>>{};
+      auto new_bloom_filter = std::shared_ptr<BaseBloomFilter>{};
       std::shared_ptr<MinMaxPredicate<DataType>> new_min_max_predicate;
 
       if constexpr (reduce_mode != ReduceMode::Probe) {
-        new_bloom_filter = std::make_shared<BlockBloomFilter<20, 8, 2>>();
+        new_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
 
         if constexpr (use_min_max == UseMinMax::Yes) {
           new_min_max_predicate = std::make_shared<MinMaxPredicate<DataType>>();
@@ -149,13 +249,13 @@ class Reduce : public AbstractReadOnlyOperator {
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
         const auto job = [&, chunk_index]() mutable {
-          auto partial_bloom_filter = std::shared_ptr<BlockBloomFilter<20, 8, 2>>{};
+          auto partial_bloom_filter = std::shared_ptr<BaseBloomFilter>{};
 
           auto partial_minimum = std::numeric_limits<DataType>::max();
           auto partial_maximum = std::numeric_limits<DataType>::lowest();
 
           if constexpr (reduce_mode != ReduceMode::Probe) {
-            partial_bloom_filter = std::make_shared<BlockBloomFilter<20, 8, 2>>();
+            partial_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
           }
 
           auto last_chunk_index = chunk_index + chunks_per_worker;
@@ -354,6 +454,9 @@ class Reduce : public AbstractReadOnlyOperator {
   std::shared_ptr<BaseMinMaxPredicate> _min_max_predicate;
   const ReduceMode _reduce_mode;
   const UseMinMax _use_min_max;
+  const uint8_t _filter_size_exponent;
+  const uint8_t _block_size_exponent;
+  const uint8_t _k;
 };
 
 }  // namespace hyrise

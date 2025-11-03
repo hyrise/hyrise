@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 
 // This playground only compiles on Linux as we require `perf`.
 #include "benchmark_config.hpp"
@@ -104,9 +105,48 @@ int main() {
   std::cout << "\n scale factor: " << scale_factor << "\n";
 
   // Specify hardware events to count.
-  event_counter.add({"seconds", "instructions", "cycles", "cache-misses", "dTLB-miss-ratio"});
+  event_counter.add({ "nanoseconds",
+                      "branch-miss-ratio",
+                      "cache-miss-ratio",
+                      "L1-data-miss-ratio",
+                      "dTLB-miss-ratio",
+                      "iTLB-miss-ratio",
+                      "instructions",
+                      "instructions-per-cycle",
+                      });
 
-  
+  // Prepare CSV output with stable column order.
+  const std::vector<std::string> event_names = {
+      "nanoseconds",
+      "branch-miss-ratio",
+      "cache-miss-ratio",
+      "L1-data-miss-ratio",
+      "dTLB-miss-ratio",
+      "iTLB-miss-ratio",
+      "instructions",
+      "instructions-per-cycle",
+  };
+  std::ofstream csv_out("perf_results.csv");
+  csv_out << "scenario,block_size_exponent,k";
+  for (const auto& name : event_names) csv_out << ',' << name;
+  csv_out << '\n';
+
+  auto write_csv_row = [&](const std::string& scenario, const std::string& bse, const std::string& k) {
+    const auto perf_result = event_counter.result();
+    csv_out << scenario << ',' << bse << ',' << k;
+    for (const auto& name : event_names) {
+      double value = 0.0;
+      for (const auto& [event_name, event_value] : perf_result) {
+        if (event_name == name) {
+          value = event_value;
+          break;
+        }
+      }
+      csv_out << ',' << value;
+    }
+    csv_out << '\n';
+  };
+
   // Semi-join reduction: p_partkey (column 0) = l_partkey (column 0)
   const auto join_predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals};
   auto semi_join = std::make_shared<JoinHash>(get_table_lineitem, table_scan1, JoinMode::Semi, join_predicate);
@@ -125,45 +165,47 @@ int main() {
     std::cout << event_name << ": " << value << '\n';
   }
   std::cout << '\n';
+  // Write CSV row for Semi-join (no BSE/k)
+  write_csv_row("SemiJoin", "NA", "NA");
 
-  // Build phase: build reduction structure from filtered part table
-  auto build_reduce =
-      std::make_shared<Reduce>(get_table_lineitem, table_scan1, join_predicate, ReduceMode::Build, UseMinMax::No);
+  // Measure Reduce (Build+Probe) for different configurations:
+  // - filter_size_exponent fixed at 20
+  // - block_size_exponent in {0, 9}
+  // - k in {1, 2}
+  for (const auto block_size_exponent : {uint8_t{0}, uint8_t{9}}) {
+    for (const auto k : {uint8_t{1}, uint8_t{2}}) {
+      auto build_reduce = std::make_shared<Reduce>(
+          get_table_lineitem, table_scan1, join_predicate, ReduceMode::Build, UseMinMax::No,
+          /*filter_size_exponent*/ 20, block_size_exponent, k);
 
-  event_counter.start();
-  build_reduce->execute();
-  event_counter.stop();
+      auto probe_reduce = std::make_shared<Reduce>(
+          get_table_lineitem, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::No,
+          /*filter_size_exponent*/ 20, block_size_exponent, k);
 
-  std::cout << "ReduceMode::Build PerformanceData:\n";
-  build_reduce->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
+      event_counter.start();
+      build_reduce->execute();
+      probe_reduce->execute();
+      event_counter.stop();
 
-  std::cout << "ReduceMode::Build perf_result:\n";
-  perf_result = event_counter.result();
-  for (const auto& [event_name, value] : perf_result) {
-    std::cout << event_name << ": " << value << '\n';
+      std::cout << "Reduce Build+Probe (BSE=" << int(block_size_exponent) << ", k=" << int(k)
+                << ") output: " << probe_reduce->get_output()->row_count() << " rows.\n";
+      std::cout << "Reduce Build+Probe PerformanceData (Build):\n";
+      build_reduce->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
+      std::cout << "Reduce Build+Probe PerformanceData (Probe):\n";
+      probe_reduce->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
+
+      std::cout << "Reduce Build+Probe perf_result:\n";
+      perf_result = event_counter.result();
+      for (const auto& [event_name, value] : perf_result) {
+        std::cout << event_name << ": " << value << '\n';
+      }
+      std::cout << '\n';
+
+      // CSV row for this configuration
+      write_csv_row("ReduceBuildProbe", std::to_string(block_size_exponent), std::to_string(k));
+    }
   }
-  std::cout << '\n';
 
-  // Probe phase: reduce lineitem table using the built structure
-  auto probe_reduce =
-      std::make_shared<Reduce>(get_table_lineitem, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::No);
-
-  event_counter.start();
-  probe_reduce->execute();
-  event_counter.stop();
-
-  std::cout << "ReduceMode::Probe output: " << probe_reduce->get_output()->row_count() << " rows.\n";
-
-  std::cout << "ReduceMode::Probe PerformanceData:\n";
-  probe_reduce->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
-
-  std::cout << "ReduceMode::Probe perf_result:\n";
-  // Print the results.
-  perf_result = event_counter.result();
-  for (const auto& [event_name, value] : perf_result) {
-    std::cout << event_name << ": " << value << '\n';
-  }
-  std::cout << '\n';
-
+  csv_out.close();
   return 0;
 }
