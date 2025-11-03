@@ -182,8 +182,8 @@ int main() {
           get_table_lineitem, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::No,
           /*filter_size_exponent*/ 20, block_size_exponent, k);
 
-      event_counter.start();
       build_reduce->execute();
+      event_counter.start();
       probe_reduce->execute();
       event_counter.stop();
 
