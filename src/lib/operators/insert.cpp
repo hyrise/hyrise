@@ -13,6 +13,7 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "tasks/chunk_compression_task.hpp"
