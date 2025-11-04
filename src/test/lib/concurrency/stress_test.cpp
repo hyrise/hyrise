@@ -868,4 +868,72 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   ASSERT_LE(table->soft_key_constraints().size(), 0);
 }
 
+TEST_F(StressTest, ConcurrentLQPNodeOutputDeregistration) {
+  const auto thread_count = 2;
+  const auto iteration_count = 1'000;
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+
+  for (auto iteration = 0; iteration < iteration_count; ++iteration) {
+    const auto node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    auto threads = std::vector<std::thread>{};
+    threads.reserve(thread_count);
+    auto start_flag = std::atomic_flag{};
+    // auto registered_outputs = std::atomic<uint32_t>{0};
+    // auto register_mutex = std::mutex{};
+
+
+    auto output_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>(thread_count);
+    for (auto thread_id = 0; thread_id < thread_count; ++thread_id) {
+      output_nodes[thread_id] = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, node, node);
+    }
+    
+    std::cout << "start " + std::to_string(iteration) + ": " + std::to_string(node->output_count()) + "\n";
+
+
+    for (auto thread_id = 0; thread_id < thread_count; ++thread_id) {
+      // output_nodes[thread_id] = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, node, node);
+      threads.emplace_back([&, thread_id](){
+        start_flag.wait(false);
+        // auto deleter = [&](auto* lqp_node) {
+        //   delete lqp_node;
+        //   --registered_outputs;
+        // };
+        // auto* mock_node = new MockNode{MockNode::ColumnDefinitions{{DataType::Int, "a"}}};
+        // auto output_node = std::shared_ptr<AbstractLQPNode>(mock_node, deleter);
+        // auto output_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+        // {
+
+        //   const auto lock = std::lock_guard{register_mutex};
+        //   output_node->set_left_input(node);
+        //   // output_node->set_right_input(node);
+        // }
+        // // std::cout << "wait for #" + std::to_string(thread_id) + "\n";
+        // // std::cout << "created #" + std::to_string(thread_id) + "\n";
+        // auto r = registered_outputs.fetch_add(1);
+        // while (r < thread_count) {
+        //   r = registered_outputs.load();
+        // }
+        // std::cout << "delete #" + std::to_string(thread_id) + "\n";
+        // if (thread_id % 2 == 0) {
+          // output_node.reset();
+        // }
+        // std::cout << "deleted #" + std::to_string(thread_id) + "\n";
+        output_nodes[thread_id].reset();
+
+      });
+    }
+
+    // std::cout << "join " + std::to_string(iteration) + "\n";
+    start_flag.test_and_set();
+    start_flag.notify_all();
+
+    //while (registered_outputs > 0) {}
+    for (auto& thread : threads) {
+      thread.join();
+    }
+    EXPECT_EQ(node->output_count(), 0);
+    std::cout << "finished " + std::to_string(iteration) + "\n";
+  }
+}
+
 }  // namespace hyrise
