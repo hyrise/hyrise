@@ -123,7 +123,7 @@ class Reduce : public AbstractReadOnlyOperator {
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
                   const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate,
                   const ReduceMode reduce_mode, const UseMinMax use_min_max, uint8_t filter_size_exponent = 20,
-                  uint8_t block_size_exponent = 8, uint8_t k = 2)
+                  uint8_t block_size_exponent = 0, uint8_t k = 2)
       : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input, std::make_unique<PerformanceData>()},
         _predicate{predicate},
         _reduce_mode{reduce_mode},
@@ -237,7 +237,8 @@ class Reduce : public AbstractReadOnlyOperator {
         maximum = casted_min_max_predicate->max_value();
       }
 
-      const auto worker_count = static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+      const auto worker_count = uint32_t{1};//static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+      std::cout << "Worker count: " << worker_count << "\n";
       const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -246,6 +247,9 @@ class Reduce : public AbstractReadOnlyOperator {
       std::atomic<size_t> total_iteration_time{0};
       std::atomic<size_t> total_output_time{0};
       std::atomic<size_t> total_merge_time{0};
+
+      resolve_bloom_filter_type(*_bloom_filter, [&](auto& resolved_bloom_filter) {
+            std::cout << "Resolved global bloom filter.\n";
 
       for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
         const auto job = [&, chunk_index]() mutable {
@@ -268,6 +272,10 @@ class Reduce : public AbstractReadOnlyOperator {
           auto local_output = std::chrono::nanoseconds{0};
           auto local_merge = std::chrono::nanoseconds{0};
 
+  
+          resolve_bloom_filter_type(*partial_bloom_filter, [&](auto& resolved_partial_bloom_filter) {
+            std::cout << "Resolved partial bloom filter.\n";
+      
           for (; chunk_index < last_chunk_index; ++chunk_index) {
             const auto& input_chunk = input_table->get_chunk(chunk_index);
             const auto& input_segment = input_chunk->get_segment(column_id);
@@ -284,14 +292,14 @@ class Reduce : public AbstractReadOnlyOperator {
                 // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
                 if constexpr (reduce_mode == ReduceMode::Build) {
-                  partial_bloom_filter->insert(static_cast<uint64_t>(hash));
+                  resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
 
                   if constexpr (use_min_max == UseMinMax::Yes) {
                     partial_minimum = std::min(partial_minimum, position.value());
                     partial_maximum = std::max(partial_maximum, position.value());
                   }
                 } else {
-                  auto found = _bloom_filter->probe(static_cast<uint64_t>(hash));
+                  auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
 
                   if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
                     using UnsignedDataType = std::make_unsigned_t<DataType>;
@@ -304,7 +312,7 @@ class Reduce : public AbstractReadOnlyOperator {
                     matches->emplace_back(chunk_index, position.chunk_offset());
 
                     if constexpr (reduce_mode == ReduceMode::ProbeAndBuild) {
-                      partial_bloom_filter->insert(static_cast<uint64_t>(hash));
+                      resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
 
                       if constexpr (use_min_max == UseMinMax::Yes) {
                         partial_minimum = std::min(partial_minimum, position.value());
@@ -393,6 +401,8 @@ class Reduce : public AbstractReadOnlyOperator {
             }
           }
 
+          });
+
           // Measure and store merge cost separately
           if constexpr (reduce_mode != ReduceMode::Probe) {
             new_bloom_filter->merge_from(*partial_bloom_filter);
@@ -410,6 +420,8 @@ class Reduce : public AbstractReadOnlyOperator {
 
         jobs.emplace_back(std::make_shared<JobTask>(job));
       }
+
+      });
 
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 

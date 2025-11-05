@@ -10,24 +10,39 @@ class BaseBloomFilter {
  public:
   virtual ~BaseBloomFilter() = default;
 
-  virtual void insert(uint64_t hash) = 0;
-  virtual bool probe(uint64_t hash) const = 0;
   virtual void merge_from(const BaseBloomFilter& other) = 0;
   virtual double saturation() const = 0;
   virtual std::string bit_distribution() const = 0;
+
+//   uint8_t filter_size_exponent() const {
+//     return _filter_size_exponent;
+//   }
+
+//   uint8_t block_size_exponent() const {
+//     return _block_size_exponent;
+//   }
+
+//   uint8_t k() const {
+//     return _k;
+//   }
+
+//  private:
+//   const uint8_t _filter_size_exponent;
+//   const uint8_t _block_size_exponent;
+//   const uint8_t _k;
 };
 
 template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter : public BaseBloomFilter {
  public:
-  void insert(uint64_t hash) override final {
+  void insert(uint64_t hash) {
     for (uint8_t i = 0; i < K; ++i) {
       const auto bit_index = _extract_bits(hash, i);
       _set_bit(bit_index);
     }
   }
 
-  bool probe(uint64_t hash) const override final {
+  bool probe(uint64_t hash) const {
     // if (1 == 1) return false;
     for (uint8_t i = 0; i < K; ++i) {
       uint32_t bit_index = _extract_bits(hash, i);
@@ -117,14 +132,14 @@ class BloomFilter : public BaseBloomFilter {
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 class BlockBloomFilter : public BaseBloomFilter {
  public:
-  void insert(uint64_t hash) override final {
+  void insert(uint64_t hash) {
     for (uint8_t i = 0; i < K; ++i) {
       const auto bit_index = _extract_bits(hash, i);
       _set_bit(bit_index);
     }
   }
 
-  bool probe(uint64_t hash) const override final {
+  bool probe(uint64_t hash) const {
     // if (1 == 1) return false;
     for (uint8_t i = 0; i < K; ++i) {
       uint32_t bit_index = _extract_bits(hash, i);
@@ -229,46 +244,71 @@ class BlockBloomFilter : public BaseBloomFilter {
 };
 
 
-template class BloomFilter<16, 1>;
-template class BloomFilter<17, 1>;
-template class BloomFilter<18, 1>;
-template class BloomFilter<19, 1>;
+// template class BloomFilter<16, 1>;
+// template class BloomFilter<17, 1>;
+// template class BloomFilter<18, 1>;
+// template class BloomFilter<19, 1>;
 template class BloomFilter<20, 1>;
-template class BloomFilter<21, 1>;
-template class BloomFilter<22, 1>;
-template class BloomFilter<16, 2>;
-template class BloomFilter<17, 2>;
-template class BloomFilter<18, 2>;
-template class BloomFilter<19, 2>;
+// template class BloomFilter<21, 1>;
+// template class BloomFilter<22, 1>;
+// template class BloomFilter<16, 2>;
+// template class BloomFilter<17, 2>;
+// template class BloomFilter<18, 2>;
+// template class BloomFilter<19, 2>;
 template class BloomFilter<20, 2>;
-template class BloomFilter<21, 2>;
-template class BloomFilter<22, 2>;
-template class BloomFilter<16, 3>;
-template class BloomFilter<17, 3>;
-template class BloomFilter<18, 3>;
-template class BloomFilter<19, 3>;
-template class BloomFilter<20, 3>;
-template class BloomFilter<21, 3>;
+// template class BloomFilter<21, 2>;
+// template class BloomFilter<22, 2>;
+// template class BloomFilter<16, 3>;
+// template class BloomFilter<17, 3>;
+// template class BloomFilter<18, 3>;
+// template class BloomFilter<19, 3>;
+// template class BloomFilter<20, 3>;
+// template class BloomFilter<21, 3>;
 
 // 512-bit blocks (BlockSizeExponent = 9)
-template class BlockBloomFilter<16, 9, 1>;
-template class BlockBloomFilter<17, 9, 1>;
-template class BlockBloomFilter<18, 9, 1>;
-template class BlockBloomFilter<19, 9, 1>;
+// template class BlockBloomFilter<16, 9, 1>;
+// template class BlockBloomFilter<17, 9, 1>;
+// template class BlockBloomFilter<18, 9, 1>;
+// template class BlockBloomFilter<19, 9, 1>;
 template class BlockBloomFilter<20, 9, 1>;
-template class BlockBloomFilter<21, 9, 1>;
-template class BlockBloomFilter<22, 9, 1>;
-template class BlockBloomFilter<16, 9, 2>;
-template class BlockBloomFilter<17, 9, 2>;
-template class BlockBloomFilter<18, 9, 2>;
-template class BlockBloomFilter<19, 9, 2>;
+// template class BlockBloomFilter<21, 9, 1>;
+// template class BlockBloomFilter<22, 9, 1>;
+// template class BlockBloomFilter<16, 9, 2>;
+// template class BlockBloomFilter<17, 9, 2>;
+// template class BlockBloomFilter<18, 9, 2>;
+// template class BlockBloomFilter<19, 9, 2>;
 template class BlockBloomFilter<20, 9, 2>;
-template class BlockBloomFilter<21, 9, 2>;
-template class BlockBloomFilter<22, 9, 2>;
-template class BlockBloomFilter<16, 9, 3>;
-template class BlockBloomFilter<17, 9, 3>;
-template class BlockBloomFilter<18, 9, 3>;
-template class BlockBloomFilter<19, 9, 3>;
-template class BlockBloomFilter<20, 9, 3>;
-template class BlockBloomFilter<21, 9, 3>;
+// template class BlockBloomFilter<21, 9, 2>;
+// template class BlockBloomFilter<22, 9, 2>;
+// template class BlockBloomFilter<16, 9, 3>;
+// template class BlockBloomFilter<17, 9, 3>;
+// template class BlockBloomFilter<18, 9, 3>;
+// template class BlockBloomFilter<19, 9, 3>;
+// template class BlockBloomFilter<20, 9, 3>;
+// template class BlockBloomFilter<21, 9, 3>;
+
+class Dummy {
+ public:
+  void insert(uint64_t) {}
+  bool probe(uint64_t) const {return false;}
+};
+
+static Dummy dummy{};
+
+template <typename Functor>
+void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor& functor) {
+  
+  if (const auto bloom_filter = dynamic_cast<BloomFilter<20, 1>*>(&base_bloom_filter)) {
+    functor(*bloom_filter);
+  } else if (const auto bloom_filter = dynamic_cast<BloomFilter<20, 2>*>(&base_bloom_filter)) {
+    functor(*bloom_filter);
+  } else if (const auto block_bloom_filter = dynamic_cast<BlockBloomFilter<20, 9, 2>*>(&base_bloom_filter)) {
+    functor(*block_bloom_filter);
+  } else if (const auto block_bloom_filter = dynamic_cast<BlockBloomFilter<20, 9, 1>*>(&base_bloom_filter)) {
+    functor(*block_bloom_filter);
+  } else {
+    functor(dummy);
+  }
+}
+
 }  // namespace hyrise
