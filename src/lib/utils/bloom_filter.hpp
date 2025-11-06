@@ -9,9 +9,7 @@ namespace hyrise {
 class BaseBloomFilter {
  public:
   BaseBloomFilter(const uint8_t filter_size_exponent, const uint8_t block_size_exponent, const uint8_t k)
-      : _filter_size_exponent(filter_size_exponent),
-        _block_size_exponent(block_size_exponent),
-        _k(k) {}
+      : _filter_size_exponent(filter_size_exponent), _block_size_exponent(block_size_exponent), _k(k) {}
 
   virtual ~BaseBloomFilter() = default;
 
@@ -69,7 +67,7 @@ class BloomFilter : public BaseBloomFilter {
     if (!typed_other) {
       throw std::invalid_argument("Incompatible BloomFilter types for merge");
     }
-    
+
     for (size_t i = 0; i < array_size; ++i) {
       const uint64_t other_word = typed_other->_filter[i].load(std::memory_order_acquire);
       _filter[i].fetch_or(other_word, std::memory_order_acq_rel);
@@ -168,7 +166,7 @@ class BlockBloomFilter : public BaseBloomFilter {
     if (!typed_other) {
       throw std::invalid_argument("Incompatible BlockBloomFilter types for merge");
     }
-    
+
     for (size_t i = 0; i < array_size; ++i) {
       const uint64_t other_word = typed_other->_filter[i].load(std::memory_order_acquire);
       _filter[i].fetch_or(other_word, std::memory_order_acq_rel);
@@ -227,8 +225,8 @@ class BlockBloomFilter : public BaseBloomFilter {
     // Blocked addressing via slicing:
     // - block index: top (FilterSizeExponent - BlockSizeExponent) bits
     // - per-function offset: successive BlockSizeExponent-wide slices from LSB
-    constexpr uint32_t block_bits  = 1u << BlockSizeExponent;
-    constexpr uint32_t block_mask  = block_bits - 1u;
+    constexpr uint32_t block_bits = 1u << BlockSizeExponent;
+    constexpr uint32_t block_mask = block_bits - 1u;
     const uint8_t block_index_bits = FilterSizeExponent - BlockSizeExponent;
 
     uint32_t block_index = 0u;
@@ -255,7 +253,6 @@ class BlockBloomFilter : public BaseBloomFilter {
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
   std::array<std::atomic<uint64_t>, array_size> _filter;
 };
-
 
 // template class BloomFilter<16, 1>;
 // template class BloomFilter<17, 1>;
@@ -291,6 +288,7 @@ template class BlockBloomFilter<20, 9, 1>;
 // template class BlockBloomFilter<18, 9, 2>;
 // template class BlockBloomFilter<19, 9, 2>;
 template class BlockBloomFilter<20, 9, 2>;
+
 // template class BlockBloomFilter<21, 9, 2>;
 // template class BlockBloomFilter<22, 9, 2>;
 // template class BlockBloomFilter<16, 9, 3>;
@@ -303,15 +301,18 @@ template class BlockBloomFilter<20, 9, 2>;
 class Dummy {
  public:
   void insert(uint64_t) {}
-  bool probe(uint64_t) const {return false;}
+
+  bool probe(uint64_t) const {
+    return false;
+  }
 };
 
 static Dummy dummy{};
+
 // static BaseBloomFilter dummy_bloom_filter{0, 0, 0};
 
 template <typename Functor>
 void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor& functor) {
-  
   if (const auto bloom_filter = dynamic_cast<BloomFilter<20, 1>*>(&base_bloom_filter)) {
     functor(*bloom_filter);
   } else if (const auto bloom_filter = dynamic_cast<BloomFilter<20, 2>*>(&base_bloom_filter)) {

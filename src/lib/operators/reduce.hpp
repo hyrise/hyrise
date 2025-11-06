@@ -22,33 +22,42 @@ namespace hyrise {
 //   - block_size_exponent: 0 (use BloomFilter), 8, 9 (use BlockBloomFilter)
 //   - k: 1, 2
 inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_size_exponent,
-                                                          const uint8_t block_size_exponent,
-                                                          const uint8_t k) {
+                                                          const uint8_t block_size_exponent, const uint8_t k) {
   switch (block_size_exponent) {
     case 0: {
       switch (filter_size_exponent) {
         case 19:
           switch (k) {
-            case 1: return std::make_shared<BloomFilter<19, 1>>();
-            case 2: return std::make_shared<BloomFilter<19, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BloomFilter<19, 1>>();
+            case 2:
+              return std::make_shared<BloomFilter<19, 2>>();
+            default:
+              break;
           }
           break;
         case 20:
           switch (k) {
-            case 1: return std::make_shared<BloomFilter<20, 1>>();
-            case 2: return std::make_shared<BloomFilter<20, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BloomFilter<20, 1>>();
+            case 2:
+              return std::make_shared<BloomFilter<20, 2>>();
+            default:
+              break;
           }
           break;
         case 21:
           switch (k) {
-            case 1: return std::make_shared<BloomFilter<21, 1>>();
-            case 2: return std::make_shared<BloomFilter<21, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BloomFilter<21, 1>>();
+            case 2:
+              return std::make_shared<BloomFilter<21, 2>>();
+            default:
+              break;
           }
           break;
-        default: break;
+        default:
+          break;
       }
       break;
     }
@@ -56,26 +65,36 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
       switch (filter_size_exponent) {
         case 19:
           switch (k) {
-            case 1: return std::make_shared<BlockBloomFilter<19, 8, 1>>();
-            case 2: return std::make_shared<BlockBloomFilter<19, 8, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BlockBloomFilter<19, 8, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<19, 8, 2>>();
+            default:
+              break;
           }
           break;
         case 20:
           switch (k) {
-            case 1: return std::make_shared<BlockBloomFilter<20, 8, 1>>();
-            case 2: return std::make_shared<BlockBloomFilter<20, 8, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BlockBloomFilter<20, 8, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<20, 8, 2>>();
+            default:
+              break;
           }
           break;
         case 21:
           switch (k) {
-            case 1: return std::make_shared<BlockBloomFilter<21, 8, 1>>();
-            case 2: return std::make_shared<BlockBloomFilter<21, 8, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BlockBloomFilter<21, 8, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<21, 8, 2>>();
+            default:
+              break;
           }
           break;
-        default: break;
+        default:
+          break;
       }
       break;
     }
@@ -83,30 +102,41 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
       switch (filter_size_exponent) {
         case 19:
           switch (k) {
-            case 1: return std::make_shared<BlockBloomFilter<19, 9, 1>>();
-            case 2: return std::make_shared<BlockBloomFilter<19, 9, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BlockBloomFilter<19, 9, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<19, 9, 2>>();
+            default:
+              break;
           }
           break;
         case 20:
           switch (k) {
-            case 1: return std::make_shared<BlockBloomFilter<20, 9, 1>>();
-            case 2: return std::make_shared<BlockBloomFilter<20, 9, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BlockBloomFilter<20, 9, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<20, 9, 2>>();
+            default:
+              break;
           }
           break;
         case 21:
           switch (k) {
-            case 1: return std::make_shared<BlockBloomFilter<21, 9, 1>>();
-            case 2: return std::make_shared<BlockBloomFilter<21, 9, 2>>();
-            default: break;
+            case 1:
+              return std::make_shared<BlockBloomFilter<21, 9, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<21, 9, 2>>();
+            default:
+              break;
           }
           break;
-        default: break;
+        default:
+          break;
       }
       break;
     }
-    default: break;
+    default:
+      break;
   }
 
   Fail("Unsupported bloom filter parameter combination.");
@@ -237,7 +267,7 @@ class Reduce : public AbstractReadOnlyOperator {
         maximum = casted_min_max_predicate->max_value();
       }
 
-      const auto worker_count = uint32_t{1};//static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+      const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
       std::cout << "Worker count: " << worker_count << "\n";
       const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
@@ -249,178 +279,175 @@ class Reduce : public AbstractReadOnlyOperator {
       std::atomic<size_t> total_merge_time{0};
 
       resolve_bloom_filter_type(*_bloom_filter, [&](auto& resolved_bloom_filter) {
-            std::cout << "Resolved global bloom filter.\n";
+        std::cout << "Resolved global bloom filter.\n";
 
-      for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
-        const auto job = [&, chunk_index]() mutable {
-          auto partial_bloom_filter = std::shared_ptr<BaseBloomFilter>{};
+        for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
+          const auto job = [&, chunk_index]() mutable {
+            auto partial_bloom_filter = std::shared_ptr<BaseBloomFilter>{};
 
-          auto partial_minimum = std::numeric_limits<DataType>::max();
-          auto partial_maximum = std::numeric_limits<DataType>::lowest();
+            auto partial_minimum = std::numeric_limits<DataType>::max();
+            auto partial_maximum = std::numeric_limits<DataType>::lowest();
 
-          if constexpr (reduce_mode != ReduceMode::Probe) {
-            partial_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
-          }
+            if constexpr (reduce_mode != ReduceMode::Probe) {
+              partial_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
+            }
 
-          auto last_chunk_index = chunk_index + chunks_per_worker;
-          if (last_chunk_index > chunk_count) {
-            last_chunk_index = chunk_count;
-          }
+            auto last_chunk_index = chunk_index + chunks_per_worker;
+            if (last_chunk_index > chunk_count) {
+              last_chunk_index = chunk_count;
+            }
 
-          auto timer = Timer{};
-          auto local_scan = std::chrono::nanoseconds{0};
-          auto local_output = std::chrono::nanoseconds{0};
-          auto local_merge = std::chrono::nanoseconds{0};
+            auto timer = Timer{};
+            auto local_scan = std::chrono::nanoseconds{0};
+            auto local_output = std::chrono::nanoseconds{0};
+            auto local_merge = std::chrono::nanoseconds{0};
 
-  
-          resolve_bloom_filter_type(*partial_bloom_filter, [&](auto& resolved_partial_bloom_filter) {
-            std::cout << "Resolved partial bloom filter.\n";
-      
-          for (; chunk_index < last_chunk_index; ++chunk_index) {
-            const auto& input_chunk = input_table->get_chunk(chunk_index);
-            const auto& input_segment = input_chunk->get_segment(column_id);
+            resolve_bloom_filter_type(*partial_bloom_filter, [&](auto& resolved_partial_bloom_filter) {
+              std::cout << "Resolved partial bloom filter.\n";
 
-            auto matches = std::make_shared<RowIDPosList>();
-            matches->reserve(input_chunk->size() / 2);
+              for (; chunk_index < last_chunk_index; ++chunk_index) {
+                const auto& input_chunk = input_table->get_chunk(chunk_index);
+                const auto& input_segment = input_chunk->get_segment(column_id);
 
-            timer.lap();
+                auto matches = std::make_shared<RowIDPosList>();
+                matches->reserve(input_chunk->size() / 2);
 
-            segment_iterate<DataType>(*input_segment, [&](const auto& position) {
-              if (!position.is_null()) {
-                auto hash = size_t{4615968};
-                boost::hash_combine(hash, position.value());
-                // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
+                timer.lap();
 
-                if constexpr (reduce_mode == ReduceMode::Build) {
-                  resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
+                segment_iterate<DataType>(*input_segment, [&](const auto& position) {
+                  if (!position.is_null()) {
+                    auto hash = size_t{4615968};
+                    boost::hash_combine(hash, position.value());
+                    // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
-                  if constexpr (use_min_max == UseMinMax::Yes) {
-                    partial_minimum = std::min(partial_minimum, position.value());
-                    partial_maximum = std::max(partial_maximum, position.value());
-                  }
-                } else {
-                  auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
-
-                  if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
-                    using UnsignedDataType = std::make_unsigned_t<DataType>;
-                    const auto value_difference = static_cast<UnsignedDataType>(maximum - minimum);
-                    const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
-                    found &= diff <= value_difference;
-                  }
-
-                  if (found) {
-                    matches->emplace_back(chunk_index, position.chunk_offset());
-
-                    if constexpr (reduce_mode == ReduceMode::ProbeAndBuild) {
+                    if constexpr (reduce_mode == ReduceMode::Build) {
                       resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
 
                       if constexpr (use_min_max == UseMinMax::Yes) {
                         partial_minimum = std::min(partial_minimum, position.value());
                         partial_maximum = std::max(partial_maximum, position.value());
                       }
+                    } else {
+                      auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+
+                      if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
+                        using UnsignedDataType = std::make_unsigned_t<DataType>;
+                        const auto value_difference = static_cast<UnsignedDataType>(maximum - minimum);
+                        const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
+                        found &= diff <= value_difference;
+                      }
+
+                      if (found) {
+                        matches->emplace_back(chunk_index, position.chunk_offset());
+
+                        if constexpr (reduce_mode == ReduceMode::ProbeAndBuild) {
+                          resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
+
+                          if constexpr (use_min_max == UseMinMax::Yes) {
+                            partial_minimum = std::min(partial_minimum, position.value());
+                            partial_maximum = std::max(partial_maximum, position.value());
+                          }
+                        }
+                      }
                     }
                   }
+                });
+
+                local_scan += timer.lap();
+
+                if constexpr (reduce_mode != ReduceMode::Build) {
+                  if (!matches->empty()) {
+                    const auto column_count = input_table->column_count();
+                    auto output_segments = Segments{};
+                    output_segments.reserve(column_count);
+
+                    if (input_table->type() == TableType::References) {
+                      if (matches->size() == input_chunk->size()) {
+                        for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
+                          output_segments.emplace_back(input_chunk->get_segment(column_index));
+                        }
+                      } else {
+                        auto filtered_pos_lists =
+                            std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+
+                        for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
+                          auto reference_segment =
+                              std::dynamic_pointer_cast<const ReferenceSegment>(input_chunk->get_segment(column_index));
+                          DebugAssert(reference_segment, "All segments should be of type ReferenceSegment.");
+
+                          const auto pos_list_in = reference_segment->pos_list();
+
+                          const auto referenced_table = reference_segment->referenced_table();
+                          const auto referenced_column_id = reference_segment->referenced_column_id();
+
+                          auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+
+                          if (!filtered_pos_list) {
+                            filtered_pos_list = std::make_shared<RowIDPosList>(matches->size());
+                            if (pos_list_in->references_single_chunk()) {
+                              filtered_pos_list->guarantee_single_chunk();
+                            }
+
+                            auto offset = size_t{0};
+                            for (const auto& match : *matches) {
+                              const auto row_id = (*pos_list_in)[match.chunk_offset];
+                              (*filtered_pos_list)[offset] = row_id;
+                              ++offset;
+                            }
+                          }
+
+                          const auto ref_segment_out = std::make_shared<ReferenceSegment>(
+                              referenced_table, referenced_column_id, filtered_pos_list);
+                          output_segments.push_back(ref_segment_out);
+                        }
+                      }
+                    } else {
+                      matches->guarantee_single_chunk();
+
+                      const auto output_pos_list =
+                          matches->size() == input_chunk->size()
+                              ? static_cast<std::shared_ptr<AbstractPosList>>(
+                                    std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
+                              : static_cast<std::shared_ptr<AbstractPosList>>(matches);
+
+                      for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
+                        const auto ref_segment_out =
+                            std::make_shared<ReferenceSegment>(input_table, column_index, output_pos_list);
+                        output_segments.push_back(ref_segment_out);
+                      }
+                    }
+
+                    const auto output_chunk =
+                        std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
+                    output_chunk->set_immutable();
+                    if (!input_chunk->individually_sorted_by().empty()) {
+                      output_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
+                    }
+                    output_chunks[chunk_index] = output_chunk;
+                  }
+
+                  local_output += timer.lap();
                 }
               }
             });
 
-            local_scan += timer.lap();
-
-            if constexpr (reduce_mode != ReduceMode::Build) {
-              if (!matches->empty()) {
-                const auto column_count = input_table->column_count();
-                auto output_segments = Segments{};
-                output_segments.reserve(column_count);
-
-                if (input_table->type() == TableType::References) {
-                  if (matches->size() == input_chunk->size()) {
-                    for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
-                      output_segments.emplace_back(input_chunk->get_segment(column_index));
-                    }
-                  } else {
-                    auto filtered_pos_lists =
-                        std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
-
-                    for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
-                      auto reference_segment =
-                          std::dynamic_pointer_cast<const ReferenceSegment>(input_chunk->get_segment(column_index));
-                      DebugAssert(reference_segment, "All segments should be of type ReferenceSegment.");
-
-                      const auto pos_list_in = reference_segment->pos_list();
-
-                      const auto referenced_table = reference_segment->referenced_table();
-                      const auto referenced_column_id = reference_segment->referenced_column_id();
-
-                      auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
-
-                      if (!filtered_pos_list) {
-                        filtered_pos_list = std::make_shared<RowIDPosList>(matches->size());
-                        if (pos_list_in->references_single_chunk()) {
-                          filtered_pos_list->guarantee_single_chunk();
-                        }
-
-                        auto offset = size_t{0};
-                        for (const auto& match : *matches) {
-                          const auto row_id = (*pos_list_in)[match.chunk_offset];
-                          (*filtered_pos_list)[offset] = row_id;
-                          ++offset;
-                        }
-                      }
-
-                      const auto ref_segment_out =
-                          std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, filtered_pos_list);
-                      output_segments.push_back(ref_segment_out);
-                    }
-                  }
-                } else {
-                  matches->guarantee_single_chunk();
-
-                  const auto output_pos_list =
-                      matches->size() == input_chunk->size()
-                          ? static_cast<std::shared_ptr<AbstractPosList>>(
-                                std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
-                          : static_cast<std::shared_ptr<AbstractPosList>>(matches);
-
-                  for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
-                    const auto ref_segment_out =
-                        std::make_shared<ReferenceSegment>(input_table, column_index, output_pos_list);
-                    output_segments.push_back(ref_segment_out);
-                  }
-                }
-
-                const auto output_chunk =
-                    std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
-                output_chunk->set_immutable();
-                if (!input_chunk->individually_sorted_by().empty()) {
-                  output_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
-                }
-                output_chunks[chunk_index] = output_chunk;
+            // Measure and store merge cost separately
+            if constexpr (reduce_mode != ReduceMode::Probe) {
+              new_bloom_filter->merge_from(*partial_bloom_filter);
+              if constexpr (use_min_max == UseMinMax::Yes) {
+                new_min_max_predicate->merge_from(partial_minimum, partial_maximum);
               }
 
-              local_output += timer.lap();
-            }
-          }
-
-          });
-
-          // Measure and store merge cost separately
-          if constexpr (reduce_mode != ReduceMode::Probe) {
-            new_bloom_filter->merge_from(*partial_bloom_filter);
-            if constexpr (use_min_max == UseMinMax::Yes) {
-              new_min_max_predicate->merge_from(partial_minimum, partial_maximum);
+              local_merge += timer.lap();
             }
 
-            local_merge += timer.lap();
-          }
+            total_iteration_time.fetch_add(local_scan.count(), std::memory_order_relaxed);
+            total_output_time.fetch_add(local_output.count(), std::memory_order_relaxed);
+            total_merge_time.fetch_add(local_merge.count(), std::memory_order_relaxed);
+          };
 
-          total_iteration_time.fetch_add(local_scan.count(), std::memory_order_relaxed);
-          total_output_time.fetch_add(local_output.count(), std::memory_order_relaxed);
-          total_merge_time.fetch_add(local_merge.count(), std::memory_order_relaxed);
-        };
-
-        jobs.emplace_back(std::make_shared<JobTask>(job));
-      }
-
+          jobs.emplace_back(std::make_shared<JobTask>(job));
+        }
       });
 
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);

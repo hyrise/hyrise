@@ -1,5 +1,5 @@
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 // This playground only compiles on Linux as we require `perf`.
 #include "benchmark_config.hpp"
@@ -105,18 +105,7 @@ int main() {
   std::cout << "\n scale factor: " << scale_factor << "\n";
 
   // Specify hardware events to count.
-  event_counter.add({ "nanoseconds",
-                      "branch-miss-ratio",
-                      "cache-miss-ratio",
-                      "L1-data-miss-ratio",
-                      "dTLB-miss-ratio",
-                      "iTLB-miss-ratio",
-                      "instructions",
-                      "instructions-per-cycle",
-                      });
-
-  // Prepare CSV output with stable column order.
-  const std::vector<std::string> event_names = {
+  event_counter.add({
       "nanoseconds",
       "branch-miss-ratio",
       "cache-miss-ratio",
@@ -125,10 +114,17 @@ int main() {
       "iTLB-miss-ratio",
       "instructions",
       "instructions-per-cycle",
+  });
+
+  // Prepare CSV output with stable column order.
+  const std::vector<std::string> event_names = {
+      "nanoseconds",     "branch-miss-ratio", "cache-miss-ratio", "L1-data-miss-ratio",
+      "dTLB-miss-ratio", "iTLB-miss-ratio",   "instructions",     "instructions-per-cycle",
   };
   std::ofstream csv_out("perf_results.csv");
   csv_out << "scenario,block_size_exponent,k";
-  for (const auto& name : event_names) csv_out << ',' << name;
+  for (const auto& name : event_names)
+    csv_out << ',' << name;
   csv_out << '\n';
 
   auto write_csv_row = [&](const std::string& scenario, const std::string& bse, const std::string& k) {
@@ -174,13 +170,13 @@ int main() {
   // - k in {1, 2}
   for (const auto block_size_exponent : {uint8_t{0}, uint8_t{9}}) {
     for (const auto k : {uint8_t{1}, uint8_t{2}}) {
-      auto build_reduce = std::make_shared<Reduce>(
-          get_table_lineitem, table_scan1, join_predicate, ReduceMode::Build, UseMinMax::No,
-          /*filter_size_exponent*/ 20, block_size_exponent, k);
+      auto build_reduce =
+          std::make_shared<Reduce>(get_table_lineitem, table_scan1, join_predicate, ReduceMode::Build, UseMinMax::No,
+                                   /*filter_size_exponent*/ 20, block_size_exponent, k);
 
-      auto probe_reduce = std::make_shared<Reduce>(
-          get_table_lineitem, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::No,
-          /*filter_size_exponent*/ 20, block_size_exponent, k);
+      auto probe_reduce =
+          std::make_shared<Reduce>(get_table_lineitem, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::No,
+                                   /*filter_size_exponent*/ 20, block_size_exponent, k);
 
       build_reduce->execute();
       event_counter.start();
