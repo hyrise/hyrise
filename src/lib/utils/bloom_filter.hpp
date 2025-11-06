@@ -8,33 +8,44 @@ namespace hyrise {
 
 class BaseBloomFilter {
  public:
+  BaseBloomFilter(const uint8_t filter_size_exponent, const uint8_t block_size_exponent, const uint8_t k)
+      : _filter_size_exponent(filter_size_exponent),
+        _block_size_exponent(block_size_exponent),
+        _k(k) {}
+
   virtual ~BaseBloomFilter() = default;
 
   virtual void merge_from(const BaseBloomFilter& other) = 0;
   virtual double saturation() const = 0;
   virtual std::string bit_distribution() const = 0;
 
-//   uint8_t filter_size_exponent() const {
-//     return _filter_size_exponent;
-//   }
+  uint8_t filter_size_exponent() const {
+    return _filter_size_exponent;
+  }
 
-//   uint8_t block_size_exponent() const {
-//     return _block_size_exponent;
-//   }
+  uint8_t block_size_exponent() const {
+    return _block_size_exponent;
+  }
 
-//   uint8_t k() const {
-//     return _k;
-//   }
+  uint8_t k() const {
+    return _k;
+  }
 
-//  private:
-//   const uint8_t _filter_size_exponent;
-//   const uint8_t _block_size_exponent;
-//   const uint8_t _k;
+  bool is_dummy() const {
+    return _k == 0;
+  }
+
+ private:
+  const uint8_t _filter_size_exponent;
+  const uint8_t _block_size_exponent;
+  const uint8_t _k;
 };
 
 template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter : public BaseBloomFilter {
  public:
+  BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K) {}
+
   void insert(uint64_t hash) {
     for (uint8_t i = 0; i < K; ++i) {
       const auto bit_index = _extract_bits(hash, i);
@@ -132,6 +143,8 @@ class BloomFilter : public BaseBloomFilter {
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 class BlockBloomFilter : public BaseBloomFilter {
  public:
+  BlockBloomFilter() : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K) {}
+
   void insert(uint64_t hash) {
     for (uint8_t i = 0; i < K; ++i) {
       const auto bit_index = _extract_bits(hash, i);
@@ -294,6 +307,7 @@ class Dummy {
 };
 
 static Dummy dummy{};
+// static BaseBloomFilter dummy_bloom_filter{0, 0, 0};
 
 template <typename Functor>
 void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor& functor) {
