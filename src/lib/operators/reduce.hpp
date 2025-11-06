@@ -203,9 +203,9 @@ class Reduce : public AbstractReadOnlyOperator {
       case ReduceMode::ProbeAndBuild:
         switch (_use_min_max) {
           case UseMinMax::Yes:
-            return _execute_probe_and_build<ReduceMode::ProbeAndBuild, UseMinMax::Yes>();
+            return _execute_probe_and_build<UseMinMax::Yes>();
           case UseMinMax::No:
-            return _execute_probe_and_build<ReduceMode::ProbeAndBuild, UseMinMax::No>();
+            return _execute_probe_and_build<UseMinMax::No>();
         }
         break;
     }
@@ -508,22 +508,11 @@ class Reduce : public AbstractReadOnlyOperator {
     return output_table;
   }
 
-  template <ReduceMode reduce_mode, UseMinMax use_min_max>
+  template <UseMinMax use_min_max>
   std::shared_ptr<const Table> _execute_probe_and_build() {
-    // std::cout << "Reducer called with mode: " << magic_enum::enum_name(reduce_mode)
-    //           << " use_min_max: " << magic_enum::enum_name(use_min_max) << "\n";
-    std::shared_ptr<const Table> input_table;
+    std::shared_ptr<const Table> input_table = left_input_table();
     std::shared_ptr<const Table> output_table;
-    auto column_id = ColumnID{};
-
-    if constexpr (reduce_mode == ReduceMode::Build) {
-      input_table = right_input_table();
-      output_table = input_table;
-      column_id = _predicate.column_ids.second;
-    } else {
-      input_table = left_input_table();
-      column_id = _predicate.column_ids.first;
-    }
+    auto column_id = _predicate.column_ids.first;
 
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
       using DataType = typename decltype(column_data_type)::type;
@@ -535,27 +524,23 @@ class Reduce : public AbstractReadOnlyOperator {
       auto new_bloom_filter = std::shared_ptr<BaseBloomFilter>{};
       std::shared_ptr<MinMaxPredicate<DataType>> new_min_max_predicate;
 
-      if constexpr (reduce_mode != ReduceMode::Probe) {
-        new_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
+      new_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
 
-        if constexpr (use_min_max == UseMinMax::Yes) {
-          new_min_max_predicate = std::make_shared<MinMaxPredicate<DataType>>();
-        }
+      if constexpr (use_min_max == UseMinMax::Yes) {
+        new_min_max_predicate = std::make_shared<MinMaxPredicate<DataType>>();
       }
 
-      if constexpr (reduce_mode != ReduceMode::Build) {
-        Assert(_right_input->executed(), "Build Reducer was not executed.");
-        const auto build_reduce = std::dynamic_pointer_cast<const Reduce>(_right_input);
-        Assert(build_reduce, "Failed to cast build reduce.");
+      Assert(_right_input->executed(), "Build Reducer was not executed.");
+      const auto build_reduce = std::dynamic_pointer_cast<const Reduce>(_right_input);
+      Assert(build_reduce, "Failed to cast build reduce.");
 
-        _bloom_filter = build_reduce->get_bloom_filter();
-        _min_max_predicate = build_reduce->get_min_max_predicate();
-      }
+      _bloom_filter = build_reduce->get_bloom_filter();
+      _min_max_predicate = build_reduce->get_min_max_predicate();
 
       auto minimum = DataType{};
       auto maximum = DataType{};
 
-      if constexpr (reduce_mode != ReduceMode::Build && use_min_max == UseMinMax::Yes) {
+      if constexpr (use_min_max == UseMinMax::Yes) {
         Assert(_min_max_predicate, "Min max filter is null.");
         auto casted_min_max_predicate = std::dynamic_pointer_cast<MinMaxPredicate<DataType>>(_min_max_predicate);
         Assert(casted_min_max_predicate, "Failed to cast min max filter.");
@@ -579,14 +564,10 @@ class Reduce : public AbstractReadOnlyOperator {
 
         for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
           const auto job = [&, chunk_index]() mutable {
-            auto partial_bloom_filter = std::shared_ptr<BaseBloomFilter>{};
+            auto partial_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
 
             auto partial_minimum = std::numeric_limits<DataType>::max();
             auto partial_maximum = std::numeric_limits<DataType>::lowest();
-
-            if constexpr (reduce_mode != ReduceMode::Probe) {
-              partial_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
-            }
 
             auto last_chunk_index = chunk_index + chunks_per_worker;
             if (last_chunk_index > chunk_count) {
@@ -616,34 +597,23 @@ class Reduce : public AbstractReadOnlyOperator {
                     boost::hash_combine(hash, position.value());
                     // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
-                    if constexpr (reduce_mode == ReduceMode::Build) {
+                    auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+
+                    if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
+                      using UnsignedDataType = std::make_unsigned_t<DataType>;
+                      const auto value_difference = static_cast<UnsignedDataType>(maximum - minimum);
+                      const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
+                      found &= diff <= value_difference;
+                    }
+
+                    if (found) {
+                      matches->emplace_back(chunk_index, position.chunk_offset());
+
                       resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
 
                       if constexpr (use_min_max == UseMinMax::Yes) {
                         partial_minimum = std::min(partial_minimum, position.value());
                         partial_maximum = std::max(partial_maximum, position.value());
-                      }
-                    } else {
-                      auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
-
-                      if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
-                        using UnsignedDataType = std::make_unsigned_t<DataType>;
-                        const auto value_difference = static_cast<UnsignedDataType>(maximum - minimum);
-                        const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
-                        found &= diff <= value_difference;
-                      }
-
-                      if (found) {
-                        matches->emplace_back(chunk_index, position.chunk_offset());
-
-                        if constexpr (reduce_mode == ReduceMode::ProbeAndBuild) {
-                          resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
-
-                          if constexpr (use_min_max == UseMinMax::Yes) {
-                            partial_minimum = std::min(partial_minimum, position.value());
-                            partial_maximum = std::max(partial_maximum, position.value());
-                          }
-                        }
                       }
                     }
                   }
@@ -651,7 +621,6 @@ class Reduce : public AbstractReadOnlyOperator {
 
                 local_scan += timer.lap();
 
-                if constexpr (reduce_mode != ReduceMode::Build) {
                   if (!matches->empty()) {
                     const auto column_count = input_table->column_count();
                     auto output_segments = Segments{};
@@ -723,19 +692,17 @@ class Reduce : public AbstractReadOnlyOperator {
                   }
 
                   local_output += timer.lap();
-                }
+                
               }
             });
 
-            // Measure and store merge cost separately
-            if constexpr (reduce_mode != ReduceMode::Probe) {
               new_bloom_filter->merge_from(*partial_bloom_filter);
               if constexpr (use_min_max == UseMinMax::Yes) {
                 new_min_max_predicate->merge_from(partial_minimum, partial_maximum);
               }
 
               local_merge += timer.lap();
-            }
+            
 
             total_iteration_time.fetch_add(local_scan.count(), std::memory_order_relaxed);
             total_output_time.fetch_add(local_output.count(), std::memory_order_relaxed);
@@ -748,18 +715,15 @@ class Reduce : public AbstractReadOnlyOperator {
 
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-      if constexpr (reduce_mode != ReduceMode::Build) {
         std::erase_if(output_chunks, [](const auto& ptr) {
           return ptr == nullptr;
         });
         output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
                                                      std::move(output_chunks));
-      }
+      
 
-      if constexpr (reduce_mode != ReduceMode::Probe) {
         _bloom_filter = new_bloom_filter;
         _min_max_predicate = new_min_max_predicate;
-      }
 
       auto& reduce_performance_data = static_cast<PerformanceData&>(*performance_data);
 
