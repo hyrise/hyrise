@@ -920,11 +920,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
       left_input_table_statistics->column_statistics.size() == right_input_table_statistics->column_statistics.size(),
       "Input TableStatistics need to have the same number of columns to perform a union");
 
-  auto column_statistics = left_input_table_statistics->column_statistics;
-
   const auto row_count = left_input_table_statistics->row_count + right_input_table_statistics->row_count;
+  auto column_statistics = left_input_table_statistics->row_count >= right_input_table_statistics->row_count
+                                     ? left_input_table_statistics->column_statistics
+                                     : right_input_table_statistics->column_statistics;
 
-  auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
+  auto output_table_statistics = std::make_shared<TableStatistics>(
+      std::move(column_statistics), row_count);
 
   return output_table_statistics;
 }
