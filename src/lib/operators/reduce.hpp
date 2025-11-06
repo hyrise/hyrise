@@ -185,35 +185,331 @@ class Reduce : public AbstractReadOnlyOperator {
       case ReduceMode::Build:
         switch (_use_min_max) {
           case UseMinMax::Yes:
-            return _on_execute_templated<ReduceMode::Build, UseMinMax::Yes>();
+            return _execute_build<UseMinMax::Yes>();
           case UseMinMax::No:
-            return _on_execute_templated<ReduceMode::Build, UseMinMax::No>();
+            return _execute_build<UseMinMax::No>();
         }
         break;
 
       case ReduceMode::Probe:
         switch (_use_min_max) {
           case UseMinMax::Yes:
-            return _on_execute_templated<ReduceMode::Probe, UseMinMax::Yes>();
+            return _execute_probe<UseMinMax::Yes>();
           case UseMinMax::No:
-            return _on_execute_templated<ReduceMode::Probe, UseMinMax::No>();
+            return _execute_probe<UseMinMax::No>();
         }
         break;
 
       case ReduceMode::ProbeAndBuild:
         switch (_use_min_max) {
           case UseMinMax::Yes:
-            return _on_execute_templated<ReduceMode::ProbeAndBuild, UseMinMax::Yes>();
+            return _execute_probe_and_build<ReduceMode::ProbeAndBuild, UseMinMax::Yes>();
           case UseMinMax::No:
-            return _on_execute_templated<ReduceMode::ProbeAndBuild, UseMinMax::No>();
+            return _execute_probe_and_build<ReduceMode::ProbeAndBuild, UseMinMax::No>();
         }
         break;
     }
     Fail("Invalid ReduceMode / UseMinMax combination");
   }
 
+  template <UseMinMax use_min_max>
+  std::shared_ptr<const Table> _execute_build() {
+    std::shared_ptr<const Table> input_table = right_input_table();
+    auto column_id = _predicate.column_ids.second;
+
+    resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
+      using DataType = typename decltype(column_data_type)::type;
+
+      auto new_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
+      std::shared_ptr<MinMaxPredicate<DataType>> new_min_max_predicate;
+
+      if constexpr (use_min_max == UseMinMax::Yes) {
+        new_min_max_predicate = std::make_shared<MinMaxPredicate<DataType>>();
+      }
+
+      const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+      std::cout << "Worker count: " << worker_count << "\n";
+      const auto chunk_count = input_table->chunk_count();
+      const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
+
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(worker_count);
+
+      std::atomic<size_t> total_iteration_time{0};
+      std::atomic<size_t> total_output_time{0};
+      std::atomic<size_t> total_merge_time{0};
+
+      for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
+        const auto job = [&, chunk_index]() mutable {
+          auto partial_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
+
+          auto partial_minimum = std::numeric_limits<DataType>::max();
+          auto partial_maximum = std::numeric_limits<DataType>::lowest();
+
+          auto last_chunk_index = chunk_index + chunks_per_worker;
+          if (last_chunk_index > chunk_count) {
+            last_chunk_index = chunk_count;
+          }
+
+          auto timer = Timer{};
+          auto local_scan = std::chrono::nanoseconds{0};
+          auto local_output = std::chrono::nanoseconds{0};
+          auto local_merge = std::chrono::nanoseconds{0};
+
+          resolve_bloom_filter_type(*partial_bloom_filter, [&](auto& resolved_partial_bloom_filter) {
+            std::cout << "Resolved partial bloom filter.\n";
+
+            for (; chunk_index < last_chunk_index; ++chunk_index) {
+              const auto& input_chunk = input_table->get_chunk(chunk_index);
+              const auto& input_segment = input_chunk->get_segment(column_id);
+
+              timer.lap();
+
+              segment_iterate<DataType>(*input_segment, [&](const auto& position) {
+                if (!position.is_null()) {
+                  auto hash = size_t{4615968};
+                  boost::hash_combine(hash, position.value());
+                  // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
+
+                  resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
+
+                  if constexpr (use_min_max == UseMinMax::Yes) {
+                    partial_minimum = std::min(partial_minimum, position.value());
+                    partial_maximum = std::max(partial_maximum, position.value());
+                  }
+                }
+              });
+
+              local_scan += timer.lap();
+            }
+          });
+
+          new_bloom_filter->merge_from(*partial_bloom_filter);
+          if constexpr (use_min_max == UseMinMax::Yes) {
+            new_min_max_predicate->merge_from(partial_minimum, partial_maximum);
+          }
+
+          local_merge += timer.lap();
+
+          total_iteration_time.fetch_add(local_scan.count(), std::memory_order_relaxed);
+          total_output_time.fetch_add(local_output.count(), std::memory_order_relaxed);
+          total_merge_time.fetch_add(local_merge.count(), std::memory_order_relaxed);
+        };
+
+        jobs.emplace_back(std::make_shared<JobTask>(job));
+      }
+
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+      _bloom_filter = new_bloom_filter;
+      _min_max_predicate = new_min_max_predicate;
+
+      auto& reduce_performance_data = static_cast<PerformanceData&>(*performance_data);
+
+      reduce_performance_data.set_step_runtime(OperatorSteps::Iteration,
+                                               std::chrono::nanoseconds{total_iteration_time.load()});
+      reduce_performance_data.set_step_runtime(OperatorSteps::OutputWriting,
+                                               std::chrono::nanoseconds{total_output_time.load()});
+      reduce_performance_data.set_step_runtime(OperatorSteps::FilterMerging,
+                                               std::chrono::nanoseconds{total_merge_time.load()});
+    });
+
+    return input_table;
+  }
+
+  template <UseMinMax use_min_max>
+  std::shared_ptr<const Table> _execute_probe() {
+    std::shared_ptr<const Table> input_table = left_input_table();
+    std::shared_ptr<const Table> output_table;
+    auto column_id = _predicate.column_ids.first;
+
+    resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
+      using DataType = typename decltype(column_data_type)::type;
+
+      const auto chunk_count = input_table->chunk_count();
+      auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
+      output_chunks.resize(chunk_count);
+
+      Assert(_right_input->executed(), "Build Reducer was not executed.");
+      const auto build_reduce = std::dynamic_pointer_cast<const Reduce>(_right_input);
+      Assert(build_reduce, "Failed to cast build reduce.");
+
+      _bloom_filter = build_reduce->get_bloom_filter();
+      _min_max_predicate = build_reduce->get_min_max_predicate();
+
+      auto minimum = DataType{};
+      auto maximum = DataType{};
+
+      if constexpr (use_min_max == UseMinMax::Yes) {
+        Assert(_min_max_predicate, "Min max filter is null.");
+        auto casted_min_max_predicate = std::dynamic_pointer_cast<MinMaxPredicate<DataType>>(_min_max_predicate);
+        Assert(casted_min_max_predicate, "Failed to cast min max filter.");
+        minimum = casted_min_max_predicate->min_value();
+        maximum = casted_min_max_predicate->max_value();
+      }
+
+      const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+      std::cout << "Worker count: " << worker_count << "\n";
+      const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
+
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(worker_count);
+
+      std::atomic<size_t> total_iteration_time{0};
+      std::atomic<size_t> total_output_time{0};
+      std::atomic<size_t> total_merge_time{0};
+
+      resolve_bloom_filter_type(*_bloom_filter, [&](auto& resolved_bloom_filter) {
+        std::cout << "Resolved global bloom filter.\n";
+
+        for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
+          const auto job = [&, chunk_index]() mutable {
+            auto last_chunk_index = chunk_index + chunks_per_worker;
+            if (last_chunk_index > chunk_count) {
+              last_chunk_index = chunk_count;
+            }
+
+            auto timer = Timer{};
+            auto local_scan = std::chrono::nanoseconds{0};
+            auto local_output = std::chrono::nanoseconds{0};
+            auto local_merge = std::chrono::nanoseconds{0};
+
+            for (; chunk_index < last_chunk_index; ++chunk_index) {
+              const auto& input_chunk = input_table->get_chunk(chunk_index);
+              const auto& input_segment = input_chunk->get_segment(column_id);
+
+              auto matches = std::make_shared<RowIDPosList>();
+              matches->reserve(input_chunk->size() / 2);
+
+              timer.lap();
+
+              segment_iterate<DataType>(*input_segment, [&](const auto& position) {
+                if (!position.is_null()) {
+                  auto hash = size_t{4615968};
+                  boost::hash_combine(hash, position.value());
+                  // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
+
+                  auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+
+                  if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
+                    using UnsignedDataType = std::make_unsigned_t<DataType>;
+                    const auto value_difference = static_cast<UnsignedDataType>(maximum - minimum);
+                    const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
+                    found &= diff <= value_difference;
+                  }
+
+                  if (found) {
+                    matches->emplace_back(chunk_index, position.chunk_offset());
+                  }
+                }
+              });
+
+              local_scan += timer.lap();
+
+              if (!matches->empty()) {
+                const auto column_count = input_table->column_count();
+                auto output_segments = Segments{};
+                output_segments.reserve(column_count);
+
+                if (input_table->type() == TableType::References) {
+                  if (matches->size() == input_chunk->size()) {
+                    for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
+                      output_segments.emplace_back(input_chunk->get_segment(column_index));
+                    }
+                  } else {
+                    auto filtered_pos_lists =
+                        std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
+
+                    for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
+                      auto reference_segment =
+                          std::dynamic_pointer_cast<const ReferenceSegment>(input_chunk->get_segment(column_index));
+                      DebugAssert(reference_segment, "All segments should be of type ReferenceSegment.");
+
+                      const auto pos_list_in = reference_segment->pos_list();
+
+                      const auto referenced_table = reference_segment->referenced_table();
+                      const auto referenced_column_id = reference_segment->referenced_column_id();
+
+                      auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
+
+                      if (!filtered_pos_list) {
+                        filtered_pos_list = std::make_shared<RowIDPosList>(matches->size());
+                        if (pos_list_in->references_single_chunk()) {
+                          filtered_pos_list->guarantee_single_chunk();
+                        }
+
+                        auto offset = size_t{0};
+                        for (const auto& match : *matches) {
+                          const auto row_id = (*pos_list_in)[match.chunk_offset];
+                          (*filtered_pos_list)[offset] = row_id;
+                          ++offset;
+                        }
+                      }
+
+                      const auto ref_segment_out =
+                          std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, filtered_pos_list);
+                      output_segments.push_back(ref_segment_out);
+                    }
+                  }
+                } else {
+                  matches->guarantee_single_chunk();
+
+                  const auto output_pos_list =
+                      matches->size() == input_chunk->size()
+                          ? static_cast<std::shared_ptr<AbstractPosList>>(
+                                std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
+                          : static_cast<std::shared_ptr<AbstractPosList>>(matches);
+
+                  for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
+                    const auto ref_segment_out =
+                        std::make_shared<ReferenceSegment>(input_table, column_index, output_pos_list);
+                    output_segments.push_back(ref_segment_out);
+                  }
+                }
+
+                const auto output_chunk =
+                    std::make_shared<Chunk>(output_segments, nullptr, input_chunk->get_allocator());
+                output_chunk->set_immutable();
+                if (!input_chunk->individually_sorted_by().empty()) {
+                  output_chunk->set_individually_sorted_by(input_chunk->individually_sorted_by());
+                }
+                output_chunks[chunk_index] = output_chunk;
+              }
+
+              local_output += timer.lap();
+            }
+
+            total_iteration_time.fetch_add(local_scan.count(), std::memory_order_relaxed);
+            total_output_time.fetch_add(local_output.count(), std::memory_order_relaxed);
+            total_merge_time.fetch_add(local_merge.count(), std::memory_order_relaxed);
+          };
+
+          jobs.emplace_back(std::make_shared<JobTask>(job));
+        }
+      });
+
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+      std::erase_if(output_chunks, [](const auto& ptr) {
+        return ptr == nullptr;
+      });
+      output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
+                                                   std::move(output_chunks));
+
+      auto& reduce_performance_data = static_cast<PerformanceData&>(*performance_data);
+      reduce_performance_data.set_step_runtime(OperatorSteps::Iteration,
+                                               std::chrono::nanoseconds{total_iteration_time.load()});
+      reduce_performance_data.set_step_runtime(OperatorSteps::OutputWriting,
+                                               std::chrono::nanoseconds{total_output_time.load()});
+      reduce_performance_data.set_step_runtime(OperatorSteps::FilterMerging,
+                                               std::chrono::nanoseconds{total_merge_time.load()});
+    });
+
+    return output_table;
+  }
+
   template <ReduceMode reduce_mode, UseMinMax use_min_max>
-  std::shared_ptr<const Table> _on_execute_templated() {
+  std::shared_ptr<const Table> _execute_probe_and_build() {
     // std::cout << "Reducer called with mode: " << magic_enum::enum_name(reduce_mode)
     //           << " use_min_max: " << magic_enum::enum_name(use_min_max) << "\n";
     std::shared_ptr<const Table> input_table;
