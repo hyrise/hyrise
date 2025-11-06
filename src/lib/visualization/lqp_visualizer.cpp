@@ -19,6 +19,7 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "visualization/abstract_visualizer.hpp"
@@ -106,23 +107,22 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   auto pen_width = 1.0;
   auto row_percentage = 100.0;
 
-  const auto estimated_cardinality = cardinality_estimator.estimate_cardinality(source_node);
-  if (estimated_cardinality > 0.0) {
-    row_count = estimated_cardinality;
-    pen_width = row_count;
-  }
-
+  row_count = cardinality_estimator.estimate_cardinality(source_node);
+  pen_width = row_count;
   if (source_node->left_input()) {
     auto input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());
 
-    // Include right side in cardinality estimation unless it is a semi/anti join
     const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);
-    if (source_node->right_input() &&
-        (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
-                        join_node->join_mode != JoinMode::AntiNullAsFalse))) {
+    const auto union_node = std::dynamic_pointer_cast<UnionNode>(source_node);
+    if (source_node->right_input() && union_node) {
+      input_count += cardinality_estimator.estimate_cardinality(source_node->right_input());
+    // Include right side in cardinality estimation unless it is a semi/anti join
+    } else if (source_node->right_input() && (!join_node || (join_node->join_mode != JoinMode::Semi &&
+                                                             join_node->join_mode != JoinMode::AntiNullAsTrue &&
+                                                             join_node->join_mode != JoinMode::AntiNullAsFalse))) {
       input_count *= cardinality_estimator.estimate_cardinality(source_node->right_input());
     }
-    row_percentage = 100 * row_count / input_count;
+    row_percentage = input_count == 0 ? 0 : 100 * row_count / input_count;
   }
 
   auto label_stream = std::ostringstream{};
