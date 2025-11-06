@@ -298,31 +298,53 @@ template class BlockBloomFilter<20, 9, 2>;
 // template class BlockBloomFilter<20, 9, 3>;
 // template class BlockBloomFilter<21, 9, 3>;
 
-class Dummy {
- public:
-  void insert(uint64_t) {}
-
-  bool probe(uint64_t) const {
-    return false;
-  }
-};
-
-static Dummy dummy{};
-
-// static BaseBloomFilter dummy_bloom_filter{0, 0, 0};
-
 template <typename Functor>
 void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor& functor) {
-  if (const auto bloom_filter = dynamic_cast<BloomFilter<20, 1>*>(&base_bloom_filter)) {
-    functor(*bloom_filter);
-  } else if (const auto bloom_filter = dynamic_cast<BloomFilter<20, 2>*>(&base_bloom_filter)) {
-    functor(*bloom_filter);
-  } else if (const auto block_bloom_filter = dynamic_cast<BlockBloomFilter<20, 9, 2>*>(&base_bloom_filter)) {
-    functor(*block_bloom_filter);
-  } else if (const auto block_bloom_filter = dynamic_cast<BlockBloomFilter<20, 9, 1>*>(&base_bloom_filter)) {
-    functor(*block_bloom_filter);
-  } else {
-    functor(dummy);
+  switch (base_bloom_filter.filter_size_exponent()) {
+    case 20: {
+      switch (base_bloom_filter.block_size_exponent()) {
+        case 0: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BloomFilter<20, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BloomFilter<20, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        case 8: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BlockBloomFilter<20, 8, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BlockBloomFilter<20, 8, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        case 9: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BlockBloomFilter<20, 9, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BlockBloomFilter<20, 9, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        default:
+          Fail("Unsupported bloom filter type.");
+      }
+    } break;
+    default:
+      Fail("Unsupported bloom filter type.");
   }
 }
 
