@@ -47,6 +47,18 @@ target_link_libraries(
     xxhash
 )
 
+add_executable(
+    hyriseTpchQ17Benchmarks
+
+    hyrise_tpch_q17_benchmarks.cpp
+)
+target_link_libraries(
+    hyriseTpchQ17Benchmarks
+    hyrise
+    hyriseBenchmarkLib
+    perf-cpp-wrapper
+)
+
 # Configure hyriseMinMaxFilterEvaluation
 # add_executable(
 #     hyriseMinMaxFilterEvaluation
