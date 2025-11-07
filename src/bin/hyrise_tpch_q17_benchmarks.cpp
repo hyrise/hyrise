@@ -29,12 +29,12 @@
 using namespace hyrise;                 // NOLINT(build/namespaces)
 // using namespace expression_functional;  // NOLINT(build/namespaces)
 
-const std::vector<uint8_t> filter_size_exponents = {20};
+const std::vector<uint8_t> filter_size_exponents = {0, 20};
 const std::vector<uint8_t> block_size_exponents = {0, 9};
 const std::vector<uint8_t> ks = {1, 2};
 
 const uint16_t min_runs = 10;
-const uint16_t max_runs = 2000;
+// const uint16_t max_runs = 50;
 const int64_t min_time_ns = 30'000'000'000;
 
 struct BenchmarkResult {
@@ -114,41 +114,41 @@ auto measure_duration(F&& f) {
 
 void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predicate, std::shared_ptr<AbstractOperator> left_input, std::shared_ptr<AbstractOperator> right_input, uint8_t filter_size_exponent,
                          uint8_t block_size_exponent, uint8_t k) {
-  auto operator_type = "";
-  auto op0 = std::shared_ptr<AbstractOperator>{};
-  auto op1 = std::shared_ptr<AbstractOperator>{};
-  if (filter_size_exponent == 0) {
-    operator_type = "SemiJoin";
-    op0 = std::make_shared<JoinHash>(left_input, right_input, JoinMode::Semi, join_predicate);
-  } else {
-    if (block_size_exponent == 0) {
-      operator_type = "Reduce";
-    } else {
-      operator_type = "BlockReduce";
-    }
-
-    auto op0 =
-        std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build, UseMinMax::No,
-                                  filter_size_exponent, block_size_exponent, k);
-
-    auto op1 =
-        std::make_shared<Reduce>(left_input, op0, join_predicate, ReduceMode::Probe, UseMinMax::No,
-                                   filter_size_exponent, block_size_exponent, k);
+  if (filter_size_exponent == 0 && (block_size_exponent != 0 || k != 1)) {
+    return;
   }
+
+  std::cout << "Measuring for filter_size_exponent=" << static_cast<int>(filter_size_exponent)
+            << ", block_size_exponent=" << static_cast<int>(block_size_exponent) << ", k=" << static_cast<int>(k) << "\n";
 
   auto run = uint16_t{0};
   auto total_time = int64_t{0};
+  auto duration_ns = int64_t{0};
 
-  while ((run < min_runs || total_time < min_time_ns) && run < max_runs) {
-    auto duration_ns = measure_duration([&]() {
-      op0->execute();
-      if (op1) {
-        op1->execute();
-      }
-    });
+  while ((run < min_runs || total_time < min_time_ns) /*&& run < max_runs*/) {
+    if (filter_size_exponent == 0) {
+      const auto semi_join = std::make_shared<JoinHash>(left_input, right_input, JoinMode::Semi, join_predicate);
+      duration_ns = measure_duration([&]() {
+        semi_join->execute();
+      });
+    } else {
+      const auto reduce_build =
+          std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build, UseMinMax::No,
+                                    filter_size_exponent, block_size_exponent, k);
+
+      const auto reduce_probe =
+          std::make_shared<Reduce>(left_input, reduce_build, join_predicate, ReduceMode::Probe, UseMinMax::No,
+                                     filter_size_exponent, block_size_exponent, k);
+
+      duration_ns = measure_duration([&]() {
+        reduce_build->execute();
+        reduce_probe->execute();
+      });
+    }
+
     total_time += duration_ns;
 
-    out << operator_type << ',' << static_cast<int>(filter_size_exponent) << ',' << static_cast<int>(block_size_exponent) << ','
+    out << static_cast<int>(filter_size_exponent) << ',' << static_cast<int>(block_size_exponent) << ','
         << static_cast<int>(k) << ',' << run++ << ',' << duration_ns << '\n';
   }
 }
@@ -161,9 +161,6 @@ int main(int argc, char* argv[]) {
 
   const auto scale_factor = std::stof(argv[1]);
   const std::string second_arg = argv[2];
-
-  setup_tpch(scale_factor);
-  const auto [left_input, right_input] = setup_q17();
 
   const auto join_predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals};
 
@@ -184,7 +181,11 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  out << "operator_type,filter_size_exponent,block_size_exponent,k,run,time_ns\n";
+  out << "filter_size_exponent,block_size_exponent,k,run,time_ns\n";
+  out.flush();
+
+  setup_tpch(scale_factor);
+  const auto [left_input, right_input] = setup_q17();
 
   for (const auto filter_size_exponent : filter_size_exponents) {
     for (const auto block_size_exponent : block_size_exponents) {

@@ -228,7 +228,7 @@ class Reduce : public AbstractReadOnlyOperator {
       }
 
       const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
-      std::cout << "Worker count: " << worker_count << "\n";
+      // std::cout << "Worker count: " << worker_count << "\n";
       const auto chunk_count = input_table->chunk_count();
       const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
@@ -257,7 +257,7 @@ class Reduce : public AbstractReadOnlyOperator {
           auto local_merge = std::chrono::nanoseconds{0};
 
           resolve_bloom_filter_type(*partial_bloom_filter, [&](auto& resolved_partial_bloom_filter) {
-            std::cout << "Resolved partial bloom filter.\n";
+            // std::cout << "Resolved partial bloom filter.\n";
 
             for (; chunk_index < last_chunk_index; ++chunk_index) {
               const auto& input_chunk = input_table->get_chunk(chunk_index);
@@ -349,7 +349,7 @@ class Reduce : public AbstractReadOnlyOperator {
       }
 
       const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
-      std::cout << "Worker count: " << worker_count << "\n";
+      // std::cout << "Worker count: " << worker_count << "\n";
       const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -360,7 +360,7 @@ class Reduce : public AbstractReadOnlyOperator {
       std::atomic<size_t> total_merge_time{0};
 
       resolve_bloom_filter_type(*_bloom_filter, [&](auto& resolved_bloom_filter) {
-        std::cout << "Resolved global bloom filter.\n";
+        // std::cout << "Resolved global bloom filter.\n";
 
         for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
           const auto job = [&, chunk_index]() mutable {
@@ -549,7 +549,7 @@ class Reduce : public AbstractReadOnlyOperator {
       }
 
       const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
-      std::cout << "Worker count: " << worker_count << "\n";
+      // std::cout << "Worker count: " << worker_count << "\n";
       const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -560,7 +560,7 @@ class Reduce : public AbstractReadOnlyOperator {
       std::atomic<size_t> total_merge_time{0};
 
       resolve_bloom_filter_type(*_bloom_filter, [&](auto& resolved_bloom_filter) {
-        std::cout << "Resolved global bloom filter.\n";
+        // std::cout << "Resolved global bloom filter.\n";
 
         for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
           const auto job = [&, chunk_index]() mutable {
@@ -580,7 +580,7 @@ class Reduce : public AbstractReadOnlyOperator {
             auto local_merge = std::chrono::nanoseconds{0};
 
             resolve_bloom_filter_type(*partial_bloom_filter, [&](auto& resolved_partial_bloom_filter) {
-              std::cout << "Resolved partial bloom filter.\n";
+              // std::cout << "Resolved partial bloom filter.\n";
 
               for (; chunk_index < last_chunk_index; ++chunk_index) {
                 const auto& input_chunk = input_table->get_chunk(chunk_index);
