@@ -32,7 +32,7 @@ parser.add_argument(
     "--export-profile",
     action=BooleanOptionalAction,
     default=False,
-    help="Export the profile to the resources folder for future use with benchmark_all.sh or --import-profile.",
+    help="Don't build an optimized binary, just export the profile to the resources folder.",
 )
 parser.add_argument(
     "-i",
@@ -157,9 +157,11 @@ def main():
         else:
             build(*benchmarks, bolt_instrument=True, pgo_instrument=True)
             profile(bolt_instrumented=True, pgo_instrumented=True)
-        build(bolt_optimize=True, pgo_optimize=True)
+
         if args.export_profile:
             export_profile()
+        else:
+            build(bolt_optimize=True, pgo_optimize=True)
     finally:
         cleanup()
 
