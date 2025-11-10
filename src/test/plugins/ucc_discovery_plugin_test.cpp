@@ -430,7 +430,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   const auto& constraints_A = _table_A->soft_key_constraints();
   EXPECT_EQ(constraints_A.size(), 0);  // No constraints known for the table yet.
 
-  // Add permanent UCC to table A.
+  // Add genuine UCC to table A.
   _table_A->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   delete_row(_table_A, 3);
 
@@ -441,18 +441,18 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   // Perform a transaction that does not affect table A but increments the global CommitID.
   delete_row(_table_B, 0);
 
-  EXPECT_EQ(constraints_A.size(), 2);  // One permanent UCC and one non-permanent UCC.
+  EXPECT_EQ(constraints_A.size(), 2);  // One genione UCC and one spurious UCC.
 
   const auto search_constraint_A = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto column_0_constraint = constraints_A.find(search_constraint_A);
   ASSERT_NE(column_0_constraint, constraints_A.end());
-  // The permanent UCC should remain permanent.
+  // The genuine UCC should remain genuine.
   EXPECT_EQ(column_0_constraint->last_validated_on(), MAX_COMMIT_ID);
 
   const auto search_constraint_B = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto column_1_constraint = constraints_A.find(search_constraint_B);
   ASSERT_NE(column_1_constraint, constraints_A.end());
-  // The non-permanent UCC should have been validated.
+  // The spurious UCC should have been validated.
   const auto first_validation_timestamp = column_1_constraint->last_validated_on();
   EXPECT_NE(first_validation_timestamp, MAX_COMMIT_ID);
 
