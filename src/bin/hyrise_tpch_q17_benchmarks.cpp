@@ -26,7 +26,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 
-using namespace hyrise;                 // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces)
 // using namespace expression_functional;  // NOLINT(build/namespaces)
 
 const std::vector<uint8_t> filter_size_exponents = {0, 20};
@@ -80,21 +80,22 @@ std::pair<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractOperator>> 
   get_table_part->execute();
   std::cout << "get_table_part rows: " << get_table_part->get_output()->row_count() << "\n";
 
-  const auto operand0 = expression_functional::pqp_column_(ColumnID{2}, get_table_part->get_output()->column_data_type(ColumnID{2}),
-                                    get_table_part->get_output()->column_is_nullable(ColumnID{2}),
-                                    get_table_part->get_output()->column_name(ColumnID{2}));
-  const auto predicate0 =
-      std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand0, expression_functional::value_("JUMBO CASE"));
+  const auto operand0 =
+      expression_functional::pqp_column_(ColumnID{2}, get_table_part->get_output()->column_data_type(ColumnID{2}),
+                                         get_table_part->get_output()->column_is_nullable(ColumnID{2}),
+                                         get_table_part->get_output()->column_name(ColumnID{2}));
+  const auto predicate0 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand0,
+                                                                      expression_functional::value_("JUMBO CASE"));
   const auto table_scan0 = std::make_shared<TableScan>(get_table_part, predicate0);
 
   table_scan0->execute();
   std::cout << "table_scan0 rows: " << table_scan0->get_output()->row_count() << "\n";
 
-  const auto operand1 = expression_functional::pqp_column_(ColumnID{1}, table_scan0->get_output()->column_data_type(ColumnID{1}),
-                              table_scan0->get_output()->column_is_nullable(ColumnID{1}),
-                              table_scan0->get_output()->column_name(ColumnID{1}));
-  const auto predicate1 =
-      std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand1, expression_functional::value_("Brand#11"));
+  const auto operand1 = expression_functional::pqp_column_(
+      ColumnID{1}, table_scan0->get_output()->column_data_type(ColumnID{1}),
+      table_scan0->get_output()->column_is_nullable(ColumnID{1}), table_scan0->get_output()->column_name(ColumnID{1}));
+  const auto predicate1 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand1,
+                                                                      expression_functional::value_("Brand#11"));
   const auto table_scan1 = std::make_shared<TableScan>(table_scan0, predicate1);
   table_scan1->never_clear_output();
 
@@ -112,14 +113,16 @@ auto measure_duration(F&& f) {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();  // in ns
 }
 
-void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predicate, std::shared_ptr<AbstractOperator> left_input, std::shared_ptr<AbstractOperator> right_input, uint8_t filter_size_exponent,
-                         uint8_t block_size_exponent, uint8_t k) {
+void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predicate,
+                          std::shared_ptr<AbstractOperator> left_input, std::shared_ptr<AbstractOperator> right_input,
+                          uint8_t filter_size_exponent, uint8_t block_size_exponent, uint8_t k) {
   if (filter_size_exponent == 0 && (block_size_exponent != 0 || k != 1)) {
     return;
   }
 
   std::cout << "Measuring for filter_size_exponent=" << static_cast<int>(filter_size_exponent)
-            << ", block_size_exponent=" << static_cast<int>(block_size_exponent) << ", k=" << static_cast<int>(k) << "\n";
+            << ", block_size_exponent=" << static_cast<int>(block_size_exponent) << ", k=" << static_cast<int>(k)
+            << "\n";
 
   auto run = uint16_t{0};
   auto total_time = int64_t{0};
@@ -132,13 +135,11 @@ void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predica
         semi_join->execute();
       });
     } else {
-      const auto reduce_build =
-          std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build, UseMinMax::No,
-                                    filter_size_exponent, block_size_exponent, k);
+      const auto reduce_build = std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build,
+                                                         UseMinMax::No, filter_size_exponent, block_size_exponent, k);
 
-      const auto reduce_probe =
-          std::make_shared<Reduce>(left_input, reduce_build, join_predicate, ReduceMode::Probe, UseMinMax::No,
-                                     filter_size_exponent, block_size_exponent, k);
+      const auto reduce_probe = std::make_shared<Reduce>(left_input, reduce_build, join_predicate, ReduceMode::Probe,
+                                                         UseMinMax::No, filter_size_exponent, block_size_exponent, k);
 
       duration_ns = measure_duration([&]() {
         reduce_build->execute();
@@ -153,8 +154,61 @@ void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predica
   }
 }
 
+void perform_perf(std::ofstream& out, const std::vector<std::string>& event_names, OperatorJoinPredicate join_predicate,
+                  std::shared_ptr<AbstractOperator> left_input, std::shared_ptr<AbstractOperator> right_input,
+                  uint8_t filter_size_exponent, uint8_t block_size_exponent, uint8_t k) {
+  if (filter_size_exponent == 0 && (block_size_exponent != 0 || k != 1)) {
+    return;
+  }
+  
+  auto counters = perf::CounterDefinition{};
+  auto event_counter = perf::EventCounter{counters};
+  event_counter.add(event_names);
+
+  auto write_csv_row = [&](const uint8_t filter_size_exponent, const uint8_t block_size_exponent, const uint8_t k) {
+    const auto perf_result = event_counter.result();
+    out << static_cast<int>(filter_size_exponent) << ',' << static_cast<int>(block_size_exponent) << ',' << static_cast<int>(k);
+    for (const auto& name : event_names) {
+      double value = -1.0;
+      for (const auto& [event_name, event_value] : perf_result) {
+        if (event_name == name) {
+          value = event_value;
+          break;
+        }
+      }
+      Assert(value >= 0.0, "Perf event " + name + " not found in result");
+      out << ',' << value;
+    }
+    out << '\n';
+  };
+
+  std::cout << "Executing perf for filter_size_exponent=" << static_cast<int>(filter_size_exponent)
+            << ", block_size_exponent=" << static_cast<int>(block_size_exponent) << ", k=" << static_cast<int>(k)
+            << "\n";
+
+  if (filter_size_exponent == 0) {
+    const auto semi_join = std::make_shared<JoinHash>(left_input, right_input, JoinMode::Semi, join_predicate);
+    event_counter.start();
+    semi_join->execute();
+    event_counter.stop();
+  } else {
+    const auto reduce_build = std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build,
+                                                       UseMinMax::No, filter_size_exponent, block_size_exponent, k);
+
+    const auto reduce_probe = std::make_shared<Reduce>(left_input, reduce_build, join_predicate, ReduceMode::Probe,
+                                                       UseMinMax::No, filter_size_exponent, block_size_exponent, k);
+
+    event_counter.start();
+    reduce_build->execute();
+    reduce_probe->execute();
+    event_counter.stop();
+  }
+
+  write_csv_row(filter_size_exponent, block_size_exponent, k);
+}
+
 int main(int argc, char* argv[]) {
-  if (argc != 3) {
+  if (argc != 3 && argc != 4) {
     std::cerr << "Usage: " << argv[0] << " <scale_factor> <perf|output_csv_file>\n";
     return 1;
   }
@@ -165,142 +219,73 @@ int main(int argc, char* argv[]) {
   const auto join_predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals};
 
   if (second_arg != "perf") {
+    if (std::filesystem::exists(second_arg)) {
+      std::cerr << "Error: File " << second_arg << " already exists.\n";
+      return 1;
+    }
 
-  
+    std::ofstream out(second_arg);
+    if (!out.is_open()) {
+      std::cerr << "Error: Failed to create CSV file.\n";
+      return 1;
+    }
 
-  // Handle CSV output
-  if (std::filesystem::exists(second_arg)) {
-    std::cerr << "Error: File " << second_arg << " already exists.\n";
-    return 1;
-  }
+    out << "filter_size_exponent,block_size_exponent,k,run,time_ns\n";
+    out.flush();
 
-  // Write CSV header
-  std::ofstream out(second_arg);
-  if (!out.is_open()) {
-    std::cerr << "Error: Failed to create CSV file.\n";
-    return 1;
-  }
+    setup_tpch(scale_factor);
+    const auto [left_input, right_input] = setup_q17();
 
-  out << "filter_size_exponent,block_size_exponent,k,run,time_ns\n";
-  out.flush();
-
-  setup_tpch(scale_factor);
-  const auto [left_input, right_input] = setup_q17();
-
-  for (const auto filter_size_exponent : filter_size_exponents) {
-    for (const auto block_size_exponent : block_size_exponents) {
-      for (const auto k : ks) {
-        perform_measurements(out, join_predicate, left_input, right_input, filter_size_exponent, block_size_exponent, k);
+    for (const auto filter_size_exponent : filter_size_exponents) {
+      for (const auto block_size_exponent : block_size_exponents) {
+        for (const auto k : ks) {
+          perform_measurements(out, join_predicate, left_input, right_input, filter_size_exponent, block_size_exponent,
+                               k);
+        }
       }
     }
-  }
 
-  out.close();
+    out.close();
 
   } else {
+    const auto perf_output_filename = std::string{argv[3]};
 
-  // auto counters = perf::CounterDefinition{};
-  // auto event_counter = perf::EventCounter{counters};
-  // (void)event_counter;
+    if (std::filesystem::exists(second_arg)) {
+      std::cerr << "Error: File " << second_arg << " already exists.\n";
+      return 1;
+    }
 
-  // event_counter.add({
-  //     "nanoseconds",
-  //     "branch-miss-ratio",
-  //     "cache-miss-ratio",
-  //     "L1-data-miss-ratio",
-  //     "dTLB-miss-ratio",
-  //     "iTLB-miss-ratio",
-  //     "instructions",
-  //     "instructions-per-cycle",
-  // });
+    std::ofstream out(second_arg);
+    if (!out.is_open()) {
+      std::cerr << "Error: Failed to create CSV file.\n";
+      return 1;
+    }
 
-  // Prepare CSV output with stable column order.
-  // const std::vector<std::string> event_names = {
-  //     "nanoseconds",     "branch-miss-ratio", "cache-miss-ratio", "L1-data-miss-ratio",
-  //     "dTLB-miss-ratio", "iTLB-miss-ratio",   "instructions",     "instructions-per-cycle",
-  // };
-  // std::ofstream csv_out("perf_results.csv");
-  // csv_out << "scenario,block_size_exponent,k";
-  // for (const auto& name : event_names)
-  //   csv_out << ',' << name;
-  // csv_out << '\n';
+    out << "filter_size_exponent,block_size_exponent,k";
+    out.flush();
 
-  // auto write_csv_row = [&](const std::string& scenario, const std::string& bse, const std::string& k) {
-  //   const auto perf_result = event_counter.result();
-  //   csv_out << scenario << ',' << bse << ',' << k;
-  //   for (const auto& name : event_names) {
-  //     double value = 0.0;
-  //     for (const auto& [event_name, event_value] : perf_result) {
-  //       if (event_name == name) {
-  //         value = event_value;
-  //         break;
-  //       }
-  //     }
-  //     csv_out << ',' << value;
-  //   }
-  //   csv_out << '\n';
-  // };
+    const std::vector<std::string> event_names = {
+        "branch-miss-ratio", "cache-miss-ratio", "L1-data-miss-ratio",     "dTLB-miss-ratio",
+        "iTLB-miss-ratio",   "instructions",     "instructions-per-cycle",
+    };
+    for (const auto& name : event_names) {
+      out << ',' << name;
+    }
+    out << '\n';
 
-  // Semi-join reduction: p_partkey (column 0) = l_partkey (column 0)
-  // auto semi_join = std::make_shared<JoinHash>(left_input, right_input, JoinMode::Semi, join_predicate);
+    setup_tpch(scale_factor);
+    const auto [left_input, right_input] = setup_q17();
 
-  // perform_measurement(out, 0, 0, 0, [&]() {
-  //   semi_join->execute();
-  // });
+    for (const auto filter_size_exponent : filter_size_exponents) {
+      for (const auto block_size_exponent : block_size_exponents) {
+        for (const auto k : ks) {
+          perform_perf(out, event_names, join_predicate, left_input, right_input, filter_size_exponent, block_size_exponent,
+                               k);
+        }
+      }
+    }
 
-  // event_counter.start();
-  // semi_join->execute();
-  // event_counter.stop();
-
-  // std::cout << "semi-join rows: " << semi_join->get_output()->row_count() << "\n";
-  // std::cout << "Semi-join PerformanceData:\n";
-  // semi_join->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
-
-  // std::cout << "Semi-join perf_result:\n";
-  // auto perf_result = event_counter.result();
-  // for (const auto& [event_name, value] : perf_result) {
-  //   std::cout << event_name << ": " << value << '\n';
-  // }
-  // std::cout << '\n';
-  // // Write CSV row for Semi-join (no BSE/k)
-  // write_csv_row("SemiJoin", "NA", "NA");
-
-  // Measure Reduce (Build+Probe) for different configurations:
-  // - filter_size_exponent fixed at 20
-  // - block_size_exponent in {0, 9}
-  // - k in {1, 2}
-      // auto build_reduce =
-      //     std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build, UseMinMax::No,
-      //                              /*filter_size_exponent*/ 20, 0, 2);
-
-      // auto probe_reduce =
-      //     std::make_shared<Reduce>(left_input, build_reduce, join_predicate, ReduceMode::Probe, UseMinMax::No,
-      //                              /*filter_size_exponent*/ 20, 0, 2);
-
-      // build_reduce->execute();
-      // // event_counter.start();
-      // probe_reduce->execute();
-      // event_counter.stop();
-
-      // std::cout << "Reduce Build+Probe (BSE=" << int(0) << ", k=" << int(2)
-      //           << ") output: " << probe_reduce->get_output()->row_count() << " rows.\n";
-      // std::cout << "Reduce Build+Probe PerformanceData (Build):\n";
-      // build_reduce->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
-      // std::cout << "Reduce Build+Probe PerformanceData (Probe):\n";
-      // probe_reduce->performance_data->output_to_stream(std::cout, DescriptionMode::MultiLine);
-
-      // std::cout << "Reduce Build+Probe perf_result:\n";
-      // perf_result = event_counter.result();
-      // for (const auto& [event_name, value] : perf_result) {
-      //   std::cout << event_name << ": " << value << '\n';
-      // }
-      // std::cout << '\n';
-
-      // CSV row for this configuration
-      // write_csv_row("ReduceBuildProbe", std::to_string(block_size_exponent), std::to_string(k));
-
-  // csv_out.close();
-    std::cout << "perf measurements not yet implemented.\n";
+    out.close();
   }
 
   return 0;
