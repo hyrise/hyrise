@@ -39,27 +39,6 @@ using ValueDistributionVector = std::vector<std::pair<T, size_t>>;
 // constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10'000};
 constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10'000'000};  // For testing.
 
-// template <typename T>
-// void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
-//                                        const HistogramDomain<T>& domain) {
-//   segment_iterate<T>(segment, [&](const auto& iterator_value) {
-//     if (iterator_value.is_null()) {
-//       return;
-//     }
-
-//     if constexpr (std::is_same_v<T, pmr_string>) {
-//       // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-//       if (domain.contains(iterator_value.value())) {
-//         ++value_distribution[iterator_value.value()];
-//       } else {
-//         ++value_distribution[domain.string_to_domain(iterator_value.value())];
-//       }
-//     } else {
-//       ++value_distribution[iterator_value.value()];
-//     }
-//   });
-// }
-
 template <typename T>
 void process_segment(AbstractSegment& segment, ValueDistributionVector<T>& value_distribution_vector, const HistogramDomain<T>& domain) {
   auto value_distribution_map = ValueDistributionMap<T>{};
@@ -82,7 +61,7 @@ void process_segment(AbstractSegment& segment, ValueDistributionVector<T>& value
 }
 
 template <typename T>
-ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_parallel_level, const size_t level,
+ValueDistributionVector<T> add_segment_to_value_distribution(const size_t max_parallel_level, const size_t level,
                                                               auto segment_iterator_begin, auto segment_iterator_end,
                                                               const HistogramDomain<T>& domain) {
   if (std::distance(segment_iterator_begin, segment_iterator_end) == 1) {
@@ -108,10 +87,10 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
   auto middle = segment_iterator_begin + (std::distance(segment_iterator_begin, segment_iterator_end) / 2);
 
   auto left_task = [&]() {
-    left = add_segment_to_value_distribution2(max_parallel_level, level + 1, segment_iterator_begin, middle, domain);
+    left = add_segment_to_value_distribution(max_parallel_level, level + 1, segment_iterator_begin, middle, domain);
   };
   auto right_task = [&]() {
-    right = add_segment_to_value_distribution2(max_parallel_level, level + 1, middle, segment_iterator_end, domain);
+    right = add_segment_to_value_distribution(max_parallel_level, level + 1, middle, segment_iterator_end, domain);
   };
 
   if (level < max_parallel_level) {
@@ -158,31 +137,6 @@ ValueDistributionVector<T> add_segment_to_value_distribution2(const size_t max_p
   return result;
 }
 
-// template <typename T>
-// std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
-//                                                                              const ColumnID column_id,
-//                                                                              const HistogramDomain<T>& domain) {
-//   auto value_distribution_map = ValueDistributionMap<T>{};
-//   const auto chunk_count = table.chunk_count();
-//   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-//     const auto chunk = table.get_chunk(chunk_id);
-//     if (!chunk) {
-//       continue;
-//     }
-
-//     add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
-//   }
-
-//   auto value_distribution =
-//       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-//   value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
-//   boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
-//     return lhs.first < rhs.first;
-//   });
-
-//   return value_distribution;
-// }
-
 template <typename T>
 ValueDistributionVector<T> value_distribution_from_column(const Table& table,
                                                           const ColumnID column_id,
@@ -216,7 +170,7 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table,
   auto result = ValueDistributionVector<T>{};
   if (chunk_count > 0) {
     const auto parallel_levels_cpus = static_cast<size_t>(std::ceil(std::log2(Hyrise::get().topology.num_cpus()))) + 1;
-    result = add_segment_to_value_distribution2<T>(parallel_levels_cpus, 0, segments_to_process.begin(), segments_to_process.end(), domain);
+    result = add_segment_to_value_distribution<T>(parallel_levels_cpus, 0, segments_to_process.begin(), segments_to_process.end(), domain);
   }
 
   return std::move(result);
@@ -308,11 +262,10 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
 template <typename T>
 uint16_t EqualDistinctCountHistogram<T>::determine_bin_count(size_t table_row_count) {
-  // Determine bin count, within mostly arbitrarily chosen bounds: 8 (for tables with <= 16000 rows) up to 100 bins (for
-  // tables with >= 256 000 rows) are created.
-  // If the table does not have a high number of distinct values, the EqualDistinctCountHistogram automatically uses
-  // fewer bins.
-  return static_cast<uint16_t>(std::min<size_t>(128, std::max<size_t>(8, table_row_count / 2'000)));
+  // Determine bin count, within mostly arbitrarily chosen bounds: 16 (for tables with <= 16 000 rows) up to 128 bins
+  // (for tables with >= 256 000 rows) are created. If the table does not have a high number of distinct values, the
+  // EqualDistinctCountHistogram automatically uses fewer bins.
+  return static_cast<uint16_t>(std::min<size_t>(128, std::max<size_t>(16, table_row_count / 2'000)));
 }
 
 template <typename T>

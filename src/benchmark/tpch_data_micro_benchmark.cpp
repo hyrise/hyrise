@@ -33,6 +33,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 10.0f;
     const auto benchmark_config = std::make_shared<BenchmarkConfig>();
+    benchmark_config->cache_binary_tables = true;
 
     if (!sm.has_table("lineitem")) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and automatic encoding:\n";
