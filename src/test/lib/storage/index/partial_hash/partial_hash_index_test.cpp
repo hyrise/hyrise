@@ -1,7 +1,3 @@
-#include <gtest/gtest.h>
-#include <tsl/sparse_map.h>
-#include <tsl/sparse_set.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -14,6 +10,9 @@
 #include <thread>
 #include <utility>
 #include <vector>
+
+#include "tsl/sparse_map.h"
+#include "tsl/sparse_set.h"
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"

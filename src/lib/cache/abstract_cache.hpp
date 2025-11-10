@@ -11,8 +11,6 @@ inline constexpr size_t DEFAULT_CACHE_CAPACITY = 1024;
 // Generic template for a cache implementation.
 // It guarantees the capacity to be thread-safe. Any other guarantees have to be fulfilled by the implementation.
 template <typename Key, typename Value>
-// This class has to have a virtual destructor because it is virtual.
-// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractCache {
  public:
   explicit AbstractCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : _capacity(capacity) {}

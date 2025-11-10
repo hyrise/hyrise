@@ -15,8 +15,6 @@ class CardinalityEstimator;
 /**
  * Base class of an algorithm that predicts Cost for operators and plans.
  */
-// This class has to have a virtual destructor because it is virtual.
-// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractCostEstimator {
  public:
   explicit AbstractCostEstimator(const std::shared_ptr<CardinalityEstimator>& init_cardinality_estimator);

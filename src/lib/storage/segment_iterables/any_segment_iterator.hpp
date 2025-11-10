@@ -14,8 +14,6 @@ namespace detail {
  * a virtual interface.
  */
 template <typename T>
-// This class has to have a virtual destructor because it is virtual.
-// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AnySegmentIteratorWrapperBase {
  public:
   virtual ~AnySegmentIteratorWrapperBase() = default;

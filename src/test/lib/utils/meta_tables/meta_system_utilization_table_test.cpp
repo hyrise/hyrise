@@ -1,18 +1,15 @@
-#include <bits/cpu-set.h>
-#include <gtest/gtest.h>
 #include <pthread.h>
+#ifdef __linux__
+#include <sched.h>
+#endif
 
 #include <cstdint>
 #include <cstring>
 #include <memory>
 
+#include "base_test.hpp"
 #include "storage/table.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
-#ifdef __linux__
-#include <sched.h>
-#endif
-
-#include "base_test.hpp"
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 
 namespace hyrise {

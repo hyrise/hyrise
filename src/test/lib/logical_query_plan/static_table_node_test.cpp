@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <memory>
 
 #include "all_type_variant.hpp"

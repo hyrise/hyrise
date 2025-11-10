@@ -1,7 +1,3 @@
-#include <gtest/gtest-assertion-result.h>
-#include <gtest/gtest-printers.h>
-#include <gtest/gtest.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>

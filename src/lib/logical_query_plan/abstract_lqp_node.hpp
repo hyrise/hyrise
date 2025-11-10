@@ -60,8 +60,6 @@ using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>
 
 class LQPColumnExpression;
 
-// This class has to have a virtual destructor because it is virtual.
-// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   explicit AbstractLQPNode(const LQPNodeType node_type,

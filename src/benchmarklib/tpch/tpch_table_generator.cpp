@@ -189,7 +189,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    */
 
   for (auto order_idx = size_t{0}; order_idx < order_count; ++order_idx) {
-    const auto order = call_dbgen_mk<order_t, int64_t, int64_t>(order_idx + 1, mk_order, TPCHTable::Orders, int64_t{0});
+    // NOLINTNEXTLINE(google-runtime-int,runtime/int) mk_order returns a long
+    const auto order = call_dbgen_mk<order_t, long, int64_t>(order_idx + 1, mk_order, TPCHTable::Orders, int64_t{0});
 
     order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
@@ -307,7 +308,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
     for (auto& [table_name, table_info] : table_info_by_name) {
-      std::stringstream stream;
+      auto stream = std::stringstream{};
       stream << cache_directory << "/" << table_name << ".bin";
       table_info.binary_file_path = stream.str();
     }

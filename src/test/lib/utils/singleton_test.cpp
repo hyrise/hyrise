@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <unordered_map>
 
 #include "base_test.hpp"

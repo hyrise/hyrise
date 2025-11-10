@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
@@ -20,7 +18,7 @@ class SSBTableGeneratorTest : public BaseTest {
 
 TEST_F(SSBTableGeneratorTest, GenerateAndStoreRowCounts) {
   /**
-   * Check whether all SSB tables are created by the SSBTableGenerator and added to the StorageManager. Then, check 
+   * Check whether all SSB tables are created by the SSBTableGenerator and added to the StorageManager. Then, check
    * whether the row count is correct for all tables.
    */
   const auto scale_factor = 1.0f;

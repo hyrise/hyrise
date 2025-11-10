@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include "base_test.hpp"
 #include "utils/log_manager.hpp"
 

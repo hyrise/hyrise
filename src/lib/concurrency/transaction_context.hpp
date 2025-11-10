@@ -62,7 +62,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   friend class TransactionManager;
 
  public:
-  // These four need not be deleted, but they are for the same reason that std::atomic has them deleted
+  // These four need not be deleted, but they are for the same reason that std::atomic has them deleted.
   // You can implement them, but you should think about the implications for this class.
   TransactionContext(const TransactionContext&) = delete;
   TransactionContext(TransactionContext&&) = delete;

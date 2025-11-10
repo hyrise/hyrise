@@ -1,7 +1,5 @@
 #include "base_test.hpp"
 
-#include <gtest/gtest.h>
-
 #include <cstddef>
 #include <fstream>
 #include <iterator>

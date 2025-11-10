@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <optional>
 #include <stdexcept>
 

@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <iterator>
 #include <memory>
 #include <set>

@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -777,7 +775,7 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
 }
 
 /**
- * Test that adding and accessing the TableKeyConstraints of a table concurrently does not lead to 
+ * Test that adding and accessing the TableKeyConstraints of a table concurrently does not lead to
  * deadlocks or inconsistencies (e.g., duplicate constraints).
  */
 TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
@@ -792,7 +790,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   table->append({3, 3, 1});
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
-  /** 
+  /**
    * This test runs insertions and reads concurrently. Specifically, it tests the following functions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`
    * - `StoredTableNode::unique_column_combinations`

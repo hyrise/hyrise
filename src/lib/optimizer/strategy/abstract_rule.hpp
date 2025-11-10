@@ -12,8 +12,6 @@ class LogicalPlanRootNode;
 class LQPSubqueryExpression;
 struct OptimizationContext;
 
-// This class has to have a virtual destructor because it is virtual.
-// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractRule {
  public:
   virtual ~AbstractRule() = default;

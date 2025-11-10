@@ -1,5 +1,3 @@
-#include <gtest/gtest-param-test.h>
-
 #include "sqlite_testrunner.hpp"
 #include "storage/encoding_type.hpp"
 

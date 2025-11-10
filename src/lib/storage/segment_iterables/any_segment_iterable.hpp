@@ -53,8 +53,6 @@ using AnySegmentIterableFunctorWrapper =
     std::function<void(AnySegmentIterator<ValueType>, AnySegmentIterator<ValueType>)>;
 
 template <typename ValueType>
-// This class has to have a virtual destructor because it is virtual.
-// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class BaseAnySegmentIterableWrapper {
  public:
   virtual ~BaseAnySegmentIterableWrapper() = default;

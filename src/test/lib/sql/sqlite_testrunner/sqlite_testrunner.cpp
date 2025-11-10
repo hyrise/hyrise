@@ -1,8 +1,5 @@
 #include "sqlite_testrunner.hpp"
 
-#include <gtest/gtest-param-test.h>
-#include <gtest/gtest.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <memory>

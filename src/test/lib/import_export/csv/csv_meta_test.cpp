@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <stdexcept>
 
 #include "nlohmann/json.hpp"

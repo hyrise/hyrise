@@ -110,7 +110,7 @@ class SyntheticTableGenerator {
       Assert(static_cast<double>(input) < std::pow(chars_base, VARIABLE_STRING_LENGTH),
              "Input too large. Cannot be represented in " + std::to_string(VARIABLE_STRING_LENGTH) + " chars.");
 
-      auto result = pmr_string(GENERATED_STRING_LENGTH, ' ');  // fill full length with spaces
+      auto result = pmr_string(GENERATED_STRING_LENGTH, ' ');  // Fill entire length with spaces
       if (input == 0) {
         return result;
       }

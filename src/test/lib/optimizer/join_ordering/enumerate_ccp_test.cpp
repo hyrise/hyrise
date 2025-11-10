@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <cstddef>
 #include <utility>
 #include <vector>

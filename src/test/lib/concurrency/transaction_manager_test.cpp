@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <algorithm>
 #include <optional>
 #include <unordered_set>

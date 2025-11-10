@@ -37,8 +37,6 @@ using PostBenchmarkHook = std::function<void(nlohmann::json& report)>;
 // test/utils/test_plugin.cpp. Usually plugins are implemented as singletons because there should not be multiple
 // instances of them as they would compete against each other.
 
-// This class has to have a virtual destructor because it is virtual.
-// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 class AbstractPlugin {
  public:
   virtual ~AbstractPlugin() = default;

@@ -1,5 +1,3 @@
-#include <gtest/gtest.h>
-
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -166,7 +164,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   /**
    * Expected behaviour:
    *  - UCC from key_constraint_b remains valid since _b is part of the group-by columns.
-   *  - UCC from key_constraint_b should remain not genuine. 
+   *  - UCC from key_constraint_b should remain not genuine.
    *  - UCC from key_constraint_c, however, should be discarded because _c gets aggregated.
    *  - Also, we should gain a new genuine UCC covering all group-by columns.
    */
@@ -257,7 +255,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
    * AggregateNode should try to create a new UCC from both group-by-columns _a and _b. However, MockNode already has a
    * UCC for _a, which is forwarded. It is shorter, and thus preferred over the UCC covering both _a and _b.
    *
-   * Expected behaviour: AggregateNode should only forward the input UCC. Additionally, it should create a new 
+   * Expected behaviour: AggregateNode should only forward the input UCC. Additionally, it should create a new
    * genuine UCC covering both _a and _b.
    */
 

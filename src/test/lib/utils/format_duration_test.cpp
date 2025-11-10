@@ -1,6 +1,3 @@
-#include <bits/chrono.h>
-#include <gtest/gtest.h>
-
 #include "base_test.hpp"
 #include "utils/format_duration.hpp"
 

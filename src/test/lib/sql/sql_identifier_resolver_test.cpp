@@ -1,6 +1,3 @@
-#include <bits/basic_string.h>
-#include <gtest/gtest.h>
-
 #include <memory>
 #include <vector>
 
