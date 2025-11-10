@@ -1,4 +1,4 @@
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -14,9 +14,11 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_predicate_rewrite_rule.hpp"
 #include "strategy_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -25,6 +27,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_b = MockNode::make(
@@ -56,7 +59,8 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   // The rule should only rewrite inner and semi joins.
   auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
-  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
+  // Add a non-genuine UCC.
+  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID);
   node_b->set_key_constraints(key_constraints);
 
   const auto join_node =
@@ -85,6 +89,9 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   }
   _apply_rule(rule, _lqp);
 
+  // The rule should only rewrite inner and semi joins. The UCC is not genuine. Therefore, the result should not
+  // be cacheable in this case.
+  EXPECT_FALSE((GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi) && _optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -104,9 +111,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -126,9 +135,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -147,9 +158,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -170,9 +183,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -196,9 +211,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, Union) {
   // clang-format on
 
   _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

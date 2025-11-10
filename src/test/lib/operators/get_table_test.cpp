@@ -12,6 +12,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 
@@ -28,7 +29,7 @@ class OperatorsGetTableTest : public BaseTest {
         "int_int_float_aliased", load_table("resources/test_data/tbl/int_int_float_aliased.tbl", ChunkOffset{2}));
 
     const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
-    ChunkEncoder::encode_all_chunks(table);
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
     table->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a");
     table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b1");
     table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b2");
@@ -317,10 +318,11 @@ TEST_F(OperatorsGetTableTest, Copy) {
 
 TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   auto table = Hyrise::get().storage_manager.get_table("int_int_float");
-  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   table->get_chunk(ChunkID{1})
-      ->set_individually_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
-                                    SortColumnDefinition(ColumnID{2}, SortMode::Descending)});
+      ->set_individually_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst),
+                                    SortColumnDefinition(ColumnID{2}, SortMode::DescendingNullsFirst)});
 
   // single column pruned
   {
@@ -331,9 +333,10 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     EXPECT_EQ(get_table_output->column_count(), 2);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().front().column, ColumnID{0});
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{1});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().front().sort_mode,
+              SortMode::AscendingNullsFirst);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode,
-              SortMode::Descending);
+              SortMode::DescendingNullsFirst);
     EXPECT_TRUE(get_table_output->get_chunk(ChunkID{2})->individually_sorted_by().empty());
   }
 
@@ -348,7 +351,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().empty());
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{0});
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode,
-              SortMode::Descending);
+              SortMode::DescendingNullsFirst);
   }
 
   // no columns pruned
@@ -359,9 +362,11 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 3);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().column, ColumnID{1});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().front().sort_mode,
+              SortMode::AscendingNullsFirst);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().back().column, ColumnID{2});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().back().sort_mode, SortMode::Descending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->individually_sorted_by().back().sort_mode,
+              SortMode::DescendingNullsFirst);
   }
 
   // pruning the columns on which chunks are sorted

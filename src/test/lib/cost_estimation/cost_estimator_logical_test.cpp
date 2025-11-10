@@ -7,6 +7,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 
 namespace hyrise {
 
@@ -48,21 +49,21 @@ TEST_F(CostEstimatorLogicalTest, StoredTableNode) {
   // Does not actually process data, so we pretend it's for free.
   Hyrise::get().storage_manager.add_table("table_a", load_table("resources/test_data/tbl/int_float.tbl"));
   const auto stored_table_node = StoredTableNode::make("table_a");
-  EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(stored_table_node), 0);
+  EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(stored_table_node), 0);
 }
 
 TEST_F(CostEstimatorLogicalTest, SortNode) {
   // Sorting is in n * log(n). Plus output writing.
-  const auto sort_node = SortNode::make(expression_vector(a_a), std::vector{SortMode::Ascending}, node_a);
+  const auto sort_node = SortNode::make(expression_vector(a_a), std::vector{SortMode::AscendingNullsFirst}, node_a);
 
-  const auto expected_cost = 100.0f * std::log(100.0f) + 100.0f;
-  EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(sort_node), expected_cost);
+  const auto expected_cost = 100.0 * std::log(100.0) + 100.0;
+  EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(sort_node), expected_cost);
 }
 
 TEST_F(CostEstimatorLogicalTest, UnionAll) {
   // Does not actually process data, so we pretend it's for free.
   const auto union_node = UnionNode::make(SetOperationMode::All, node_a, node_b);
-  EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(union_node), 0);
+  EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(union_node), 0);
 }
 
 TEST_F(CostEstimatorLogicalTest, UnionPositions) {
@@ -70,8 +71,8 @@ TEST_F(CostEstimatorLogicalTest, UnionPositions) {
   const auto union_node = UnionNode::make(SetOperationMode::Positions, node_a, node_b);
 
   const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(union_node);
-  const auto expected_cost = 100.0f * std::log(100.0f) + 50.0f * std::log(50.0f) + output_cardinality;
-  EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(union_node), expected_cost);
+  const auto expected_cost = 100.0 * std::log(100.0) + 50.0f * std::log(50.0) + output_cardinality;
+  EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(union_node), expected_cost);
 }
 
 TEST_F(CostEstimatorLogicalTest, UnionUnique) {
@@ -89,8 +90,8 @@ TEST_F(CostEstimatorLogicalTest, PredicatedJoins) {
       const auto join_node = JoinNode::make(join_mode, predicate, node_a, node_b);
 
       const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(join_node);
-      const auto expected_cost = 100.0f + 50.0f + output_cardinality;
-      EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(join_node), expected_cost);
+      const auto expected_cost = 100.0 + 50.0 + output_cardinality;
+      EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(join_node), expected_cost);
     }
   }
 }
@@ -100,8 +101,8 @@ TEST_F(CostEstimatorLogicalTest, CrossJoin) {
   const auto join_node = JoinNode::make(JoinMode::Cross, node_a, node_b);
 
   const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(join_node);
-  const auto expected_cost = 100.0f + 50.0f + output_cardinality;
-  EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(join_node), expected_cost);
+  const auto expected_cost = 100.0 + 50.0 + output_cardinality;
+  EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(join_node), expected_cost);
 }
 
 TEST_F(CostEstimatorLogicalTest, SingleColumnPredicate) {
@@ -111,8 +112,8 @@ TEST_F(CostEstimatorLogicalTest, SingleColumnPredicate) {
                          between_inclusive_(a_a, 20, 100), is_null_(a_a), equals_(a_a, lqp_subquery_(node_b)))) {
     const auto predicate_node = PredicateNode::make(predicate, node_a);
     const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
-    const auto expected_cost = 100.0f + output_cardinality;
-    EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
+    const auto expected_cost = 100.0 + output_cardinality;
+    EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
   }
 }
 
@@ -120,8 +121,8 @@ TEST_F(CostEstimatorLogicalTest, MultiColumnPredicate) {
   // For column vs. column predicates, we must read both columns of the input and write the output.
   const auto predicate_node = PredicateNode::make(less_than_(a_a, a_b), node_a);
   const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
-  const auto expected_cost = 2 * 100.0f + output_cardinality;
-  EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
+  const auto expected_cost = 2 * 100.0 + output_cardinality;
+  EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
 }
 
 TEST_F(CostEstimatorLogicalTest, ComplexPredicate) {
@@ -129,8 +130,8 @@ TEST_F(CostEstimatorLogicalTest, ComplexPredicate) {
   const auto predicate_node =
       PredicateNode::make(or_(equals_(a_a, 10), and_(less_than_(a_b, 55), greater_than_(a_a, 50))), node_a);
   const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
-  const auto expected_cost = 3 * 100.0f + output_cardinality;
-  EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
+  const auto expected_cost = 3 * 100.0 + output_cardinality;
+  EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
 }
 
 TEST_F(CostEstimatorLogicalTest, PredicateWithCorrelatedSubquery) {
@@ -140,27 +141,28 @@ TEST_F(CostEstimatorLogicalTest, PredicateWithCorrelatedSubquery) {
   const auto predicate_node =
       PredicateNode::make(less_than_(a_a, lqp_subquery_(node_b, std::make_pair(ParameterID{0}, a_b))), node_a);
   const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
-  const auto expected_cost = 3 * 100.0f + output_cardinality;
-  EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
+  const auto expected_cost = 3 * 100.0 + output_cardinality;
+  EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
 }
 
 TEST_F(CostEstimatorLogicalTest, CardinalityCaching) {
+  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+
   // Enable cardinality estimation caching.
   const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
-  cardinality_estimator->guarantee_bottom_up_construction();
+  cardinality_estimator->guarantee_bottom_up_construction(predicate_node_1);
   const auto& cardinality_cache = cardinality_estimator->cardinality_estimation_cache.statistics_by_lqp;
   ASSERT_TRUE(cardinality_cache);
   EXPECT_TRUE(cardinality_cache->empty());
 
-  // Estimate the cost of a node with cardinality caching enabled.
-  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+  // Estimate the cost of a node with cardinality caching.
   cost_estimator->estimate_node_cost(predicate_node_1);
   EXPECT_EQ(cardinality_cache->size(), 2);
   EXPECT_TRUE(cardinality_cache->contains(node_a));
   EXPECT_TRUE(cardinality_cache->contains(predicate_node_1));
 
-  // Estimate the cost of a node with cardinality caching disabled.
-  const auto predicate_node_2 = PredicateNode::make(less_than_(a_b, 55), node_a);
+  // Estimate the cost of a node without cardinality caching.
+  const auto predicate_node_2 = PredicateNode::make(less_than_(a_a, 55), node_a);
   cost_estimator->estimate_node_cost(predicate_node_2, false);
   EXPECT_EQ(cardinality_cache->size(), 2);
   EXPECT_FALSE(cardinality_cache->contains(predicate_node_2));

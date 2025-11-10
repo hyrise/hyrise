@@ -45,14 +45,15 @@ BitPackingIterator BitPackingVector::on_end() const {
   return BitPackingIterator(_data, _data.size());
 }
 
-std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto data_copy = pmr_compact_vector(_data.bits(), _data.size(), alloc);
+std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_memory_resource(
+    MemoryResource& memory_resource) const {
+  auto data_copy = pmr_compact_vector(_data.bits(), _data.size(), &memory_resource);
 
-  // zero initialize the compact_vector's memory, see bitpacking_compressor.cpp
+  // Zero-initialize the compact_vector's memory, see bitpacking_compressor.cpp.
   using InternalType = std::remove_reference_t<decltype(*data_copy.get())>;
   std::fill_n(data_copy.get(), data_copy.bytes() / sizeof(InternalType), InternalType{0});
 
+  // NOLINTNEXTLINE(modernize-use-ranges): iterator is not std::ranges-compliant.
   std::copy(_data.cbegin(), _data.cend(), data_copy.begin());
 
   return std::make_unique<BitPackingVector>(std::move(data_copy));

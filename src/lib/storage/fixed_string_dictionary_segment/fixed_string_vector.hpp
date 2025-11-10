@@ -22,8 +22,11 @@ class FixedStringVector {
   FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator = {});
 
   // Create a FixedStringVector of FixedStrings with existing data
-  FixedStringVector(pmr_vector<char> chars, const size_t string_length)
-      : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {}
+  FixedStringVector(pmr_vector<char> chars, const size_t string_length, const size_t size)
+      : _string_length(string_length), _chars{std::move(chars)}, _size(size) {
+    Assert(string_length * size == _chars.size(),
+           "Vector length does not match given number of strings in FixedStringVector.");
+  }
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <typename Iter>

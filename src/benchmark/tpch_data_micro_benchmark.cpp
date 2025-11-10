@@ -16,7 +16,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "storage/encoding_type.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
@@ -37,8 +36,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     benchmark_config->cache_binary_tables = true;
 
     if (!sm.has_table("lineitem")) {
-      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and "
-                << benchmark_config->encoding_config.default_encoding_spec << " encoding:\n";
+      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and automatic encoding:\n";
       TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, benchmark_config).generate_and_store();
     }
 

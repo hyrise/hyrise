@@ -141,7 +141,7 @@ std::shared_ptr<const Table> JoinVerification::_on_execute() {
 
     case JoinMode::Semi: {
       for (const auto& left_tuple : left_tuples) {
-        const auto has_match = std::any_of(right_tuples.begin(), right_tuples.end(), [&](const auto& right_tuple) {
+        const auto has_match = std::ranges::any_of(right_tuples, [&](const auto& right_tuple) {
           return _tuples_match(left_tuple, right_tuple);
         });
 
@@ -154,7 +154,7 @@ std::shared_ptr<const Table> JoinVerification::_on_execute() {
     case JoinMode::AntiNullAsTrue:
     case JoinMode::AntiNullAsFalse: {
       for (const auto& left_tuple : left_tuples) {
-        const auto has_no_match = std::none_of(right_tuples.begin(), right_tuples.end(), [&](const auto& right_tuple) {
+        const auto has_no_match = std::ranges::none_of(right_tuples, [&](const auto& right_tuple) {
           return _tuples_match(left_tuple, right_tuple);
         });
 
@@ -177,7 +177,7 @@ bool JoinVerification::_tuples_match(const Tuple& tuple_left, const Tuple& tuple
     return false;
   }
 
-  return std::all_of(_secondary_predicates.begin(), _secondary_predicates.end(), [&](const auto& secondary_predicate) {
+  return std::ranges::all_of(_secondary_predicates, [&](const auto& secondary_predicate) {
     return _evaluate_predicate(secondary_predicate, tuple_left, tuple_right);
   });
 }

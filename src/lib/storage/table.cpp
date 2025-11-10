@@ -48,21 +48,15 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 // vectors, so we use a simple but quadratic solution. For larger vectors, we could create sets and check set
 // containment.
 bool columns_intersect(const std::vector<ColumnID>& lhs, const std::vector<ColumnID>& rhs) {
-  for (const auto column_id : lhs) {
-    if (std::find(rhs.cbegin(), rhs.cend(), column_id) != rhs.cend()) {
-      return true;
-    }
-  }
-  return false;
+  return std::ranges::any_of(lhs, [&](const auto column_id) {
+    return std::ranges::find(rhs, column_id) != rhs.cend();
+  });
 }
 
 bool columns_intersect(const std::set<ColumnID>& lhs, const std::set<ColumnID>& rhs) {
-  for (const auto column_id : lhs) {
-    if (rhs.contains(column_id)) {
-      return true;
-    }
-  }
-  return false;
+  return std::ranges::any_of(lhs, [&](const auto column_id) {
+    return rhs.contains(column_id);
+  });
 }
 
 }  // namespace
@@ -192,10 +186,9 @@ std::vector<bool> Table::columns_are_nullable() const {
 }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
-  const auto iter =
-      std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
-        return column_definition.name == column_name;
-      });
+  const auto iter = std::ranges::find_if(_column_definitions, [&](const auto& column_definition) {
+    return column_definition.name == column_name;
+  });
   Assert(iter != _column_definitions.end(), "Could not find column '" + column_name + "'.");
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
@@ -227,7 +220,7 @@ void Table::append_mutable_chunk() {
 
   auto mvcc_data = std::shared_ptr<MvccData>{};
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
+    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MAX_COMMIT_ID);
   }
 
   append_chunk(segments, mvcc_data);
@@ -303,18 +296,19 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
-  DebugAssert(([this, chunk_id]() {  // NOLINT
-                const auto chunk = get_chunk(chunk_id);
-                return (chunk->invalid_row_count() == chunk->size());
-              }()),
-              "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
   Assert(_type == TableType::Data, "Removing chunks from other tables than data tables is not intended yet.");
-  std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
+  if constexpr (HYRISE_DEBUG) {
+    Assert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
+    const auto chunk = get_chunk(chunk_id);
+    Assert(chunk && chunk->invalid_row_count() == chunk->size(),
+           "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
+  }
+
+  std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>{});
 }
 
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
-                         const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
+                         PolymorphicAllocator<Chunk> alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables if MVCC is enabled.");
   AssertInput(static_cast<ColumnCount::base_type>(segments.size()) == column_count(),
@@ -429,7 +423,7 @@ std::vector<TableIndexStatistics> Table::table_indexes_statistics() const {
 
 template <typename Index>
 void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name) {
-  static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
+  static_assert(std::is_base_of_v<AbstractChunkIndex, Index>,
                 "'Index' template argument is not an AbstractChunkIndex.");
 
   const auto chunk_index_type = get_chunk_index_type_of<Index>();
@@ -487,8 +481,6 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     }
   }
 
-  const auto append_lock = acquire_append_mutex();
-
   for (const auto& existing_constraint : _table_key_constraints) {
     // Ensure that no other PRIMARY KEY is defined.
     Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
@@ -500,8 +492,8 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
     Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
-
-  _table_key_constraints.insert(table_key_constraint);
+  const auto inserted = _table_key_constraints.insert(table_key_constraint).second;
+  Assert(inserted, "TableKeyConstraint has already been set.");
 }
 
 void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
@@ -523,10 +515,8 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
     Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
 
-  const auto append_lock = acquire_append_mutex();
   const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
   Assert(inserted, "ForeignKeyConstraint has already been set.");
-  const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
@@ -542,7 +532,6 @@ void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_c
     Assert(column_id < column_count, "ColumnID out of range.");
   }
 
-  const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
     // Do not allow intersecting order constraints. Though they can be valid, we are pessimistic for now and notice if
     // we run into intricate cases.
@@ -584,7 +573,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
           for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
             const auto& chunk = get_chunk(chunk_id);
             const auto& segment = chunk->get_segment(column_id);
-            segment_iterate<ColumnDataType>(*segment, [&](const auto position) {
+            segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
               Assert(!position.is_null(), "Value clustering is not defined for columns storing NULLs.");
 
               const auto& [iter, inserted] = value_to_chunk_map.try_emplace(position.value(), chunk_id);
@@ -608,7 +597,7 @@ pmr_vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes() const {
 
 std::vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes(const ColumnID column_id) const {
   auto result = std::vector<std::shared_ptr<PartialHashIndex>>();
-  std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result), [&](const auto& index) {
+  std::ranges::copy_if(_table_indexes, std::back_inserter(result), [&](const auto& index) {
     return index->is_index_for(column_id);
   });
   return result;
@@ -657,7 +646,7 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
 
   _table_indexes.emplace_back(table_index);
 
-  _table_indexes_statistics.emplace_back(TableIndexStatistics{{column_id}, chunks_to_index});
+  _table_indexes_statistics.emplace_back(TableIndexStatistics{.column_ids = {column_id}, .chunk_ids = chunks_to_index});
 }
 
 template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,

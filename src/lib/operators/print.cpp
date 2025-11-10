@@ -23,7 +23,6 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
@@ -165,8 +164,8 @@ std::shared_ptr<const Table> Print::_on_execute() {
         auto end = mvcc_data->get_end_cid(chunk_offset);
         auto tid = mvcc_data->get_tid(chunk_offset);
 
-        auto begin_string = begin == MvccData::MAX_COMMIT_ID ? "" : std::to_string(begin);
-        auto end_string = end == MvccData::MAX_COMMIT_ID ? "" : std::to_string(end);
+        auto begin_string = begin == MAX_COMMIT_ID ? "" : std::to_string(begin);
+        auto end_string = end == MAX_COMMIT_ID ? "" : std::to_string(end);
         auto tid_string = tid == 0 ? "" : std::to_string(tid);
 
         _out << "|" << std::setw(6) << begin_string << std::setw(0);

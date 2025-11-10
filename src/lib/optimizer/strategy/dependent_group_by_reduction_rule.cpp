@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -14,6 +15,8 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "optimizer/optimization_context.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -32,10 +35,9 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list.
-  if (!std::all_of(fd.determinants.cbegin(), fd.determinants.cend(),
-                   [&group_by_columns](const std::shared_ptr<AbstractExpression>& expression) {
-                     return group_by_columns.contains(expression);
-                   })) {
+  if (!std::ranges::all_of(fd.determinants, [&group_by_columns](const std::shared_ptr<AbstractExpression>& expression) {
+        return group_by_columns.contains(expression);
+      })) {
     return false;
   }
 
@@ -46,18 +48,18 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
       // Remove column from group-by list.
       // Further, decrement the aggregate's index which denotes the end of group-by expressions.
       const auto begin_idx_before = aggregate_node.aggregate_expressions_begin_idx;
-      aggregate_node.node_expressions.erase(
-          std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
-                         [&](const auto node_expression) {
-                           if (*node_expression == *group_by_column) {
-                             // Adjust the number of group by expressions.
-                             --aggregate_node.aggregate_expressions_begin_idx;
-                             group_by_list_changed = true;
-                             return true;
-                           }
-                           return false;
-                         }),
-          aggregate_node.node_expressions.end());
+      const auto [erase_begin, erase_end] =
+          std::ranges::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
+                                 [&](const auto& node_expression) {
+                                   if (*node_expression == *group_by_column) {
+                                     // Adjust the number of group by expressions.
+                                     --aggregate_node.aggregate_expressions_begin_idx;
+                                     group_by_list_changed = true;
+                                     return true;
+                                   }
+                                   return false;
+                                 });
+      aggregate_node.node_expressions.erase(erase_begin, erase_end);
       Assert(aggregate_node.aggregate_expressions_begin_idx < begin_idx_before,
              "Failed to remove column from group-by list.");
       // Add the ANY() aggregate to the list of aggregate columns.
@@ -78,8 +80,8 @@ std::string DependentGroupByReductionRule::name() const {
   return name;
 }
 
-void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                                      OptimizationContext& optimization_context) const {
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
@@ -103,21 +105,27 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     // Example: SELECT DISTINCT n_nationkey FROM nation is reflected as [ Aggregate GROUP BY n_nationkey ]. The
     // AggregateNode does not have more node expressions than the single GROUP BY column and the input (StoredTableNode
     // in this case) has a UCC for { n_nationkey }.
-    if (group_by_columns.size() == node->node_expressions.size() &&
-        node->left_input()->has_matching_ucc(group_by_columns)) {
-      const auto& output_expressions = aggregate_node.output_expressions();
-      // Remove the AggregateNode if it does not limit or reorder the output expressions.
-      if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
-        lqp_remove_node(node);
+    if (group_by_columns.size() == node->node_expressions.size()) {
+      const auto [has_matching_ucc, ucc_cacheable] = node->left_input()->has_matching_ucc(group_by_columns);
+      if (has_matching_ucc) {
+        if (!ucc_cacheable) {
+          optimization_context.set_not_cacheable();
+        }
+
+        const auto output_expressions = aggregate_node.output_expressions();
+        // Remove the AggregateNode if it does not limit or reorder the output expressions.
+        if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
+          lqp_remove_node(node);
+          return LQPVisitation::VisitInputs;
+        }
+
+        // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
+        // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ]
+        // to [ Projection n_name, n_regionkey ].
+        const auto projection_node = ProjectionNode::make(output_expressions);
+        lqp_replace_node(node, projection_node);
         return LQPVisitation::VisitInputs;
       }
-
-      // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
-      // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ] to
-      // [ Projection n_name, n_regionkey ].
-      const auto projection_node = ProjectionNode::make(output_expressions);
-      lqp_replace_node(node, projection_node);
-      return LQPVisitation::VisitInputs;
     }
 
     // Early exit (ii): If there are no functional dependencies, we can skip this rule.
@@ -140,11 +148,13 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
         Assert(column_id, "Could not find column " + expression->as_column_name());
         column_ids.emplace_back(*column_id);
       }
-      std::sort(column_ids.begin(), column_ids.end());
+      std::ranges::sort(column_ids);
       return column_ids;
     };
 
-    // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause.
+    // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause. If
+    // two FDs have the same number of determinants, we prefer the genuine ones. Only when both FDs are
+    // genuine, we compare the ColumnIDs of the determinants to ensure a deterministic order.
     auto ordered_fds = std::vector<FunctionalDependency>{fds.cbegin(), fds.cend()};
     std::sort(ordered_fds.begin(), ordered_fds.end(), [&](const auto& fd_left, const auto& fd_right) {
       const auto left_determinant_size = fd_left.determinants.size();
@@ -153,11 +163,19 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
         return left_determinant_size < right_determinant_size;
       }
 
+      // Currently, we only encounter at most two FDs per determinant combination, one genuine and one
+      // non-genuine. We want to prefer the genuine FDs because they allow caching of the query plan.
+      // Therefore, we order FDs with genuine determinants before those without.
+      if (fd_left.is_genuine != fd_right.is_genuine) {
+        return fd_left.is_genuine;
+      }
+
       // The FDs are expected to be equally useful for the rewrite. However, we have to decide on semantics here to make
       // the order independent of the position of the FDs in the original set (which might differ due to standard
       // library implementation details). Thus, we compare the ColumnIDs of the determinants.
       const auto& left_column_ids = get_column_ids(fd_left.determinants);
       const auto& right_column_ids = get_column_ids(fd_right.determinants);
+
       return left_column_ids < right_column_ids;
     });
 
@@ -173,6 +191,10 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
       const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
+        if (!fd.is_genuine) {
+          optimization_context.set_not_cacheable();
+        }
+
         // Refresh data structures correspondingly.
         group_by_list_changed = true;
         group_by_columns = fetch_group_by_columns();

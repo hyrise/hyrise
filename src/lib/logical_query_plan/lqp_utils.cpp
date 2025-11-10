@@ -26,6 +26,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -103,7 +104,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
     }
 
     for (const auto& expression : sub_node->node_expressions) {
-      visit_expression(expression, [&](const auto sub_expression) {
+      visit_expression(expression, [&](const auto& sub_expression) {
         if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
           lqp_find_subplan_roots_impl(root_nodes, visited_nodes, subquery_expression->lqp);
         }
@@ -489,7 +490,7 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
     const auto& column_expression = static_cast<const LQPColumnExpression&>(*output_expression);
 
     const auto original_column_id = column_expression.original_column_id;
-    const auto it = std::find(column_ids.cbegin(), column_ids.cend(), original_column_id);
+    const auto it = std::ranges::find(column_ids, original_column_id);
     if (it != column_ids.end()) {
       DebugAssert(*column_expression.original_node.lock() == lqp_node,
                   "LQPColumnExpressions should reference the original node.");
@@ -508,23 +509,30 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
   return column_expressions;
 }
 
-bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
-                                                 const ExpressionUnorderedSet& expressions) {
+UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations& unique_column_combinations,
+                                                  const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
-  // Look for a unique column combination that is based on a subset of the given expressions.
-  for (const auto& ucc : unique_column_combinations) {
-    if (ucc.expressions.size() <= expressions.size() &&
-        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
+  // Look for a unique column combination that is based on a subset of the given expressions. We do not guarantee the
+  // UCC to be minimal, but we prefer genuine UCCs.
+  auto matching_ucc = unique_column_combinations.cend();
+  for (auto ucc = unique_column_combinations.cbegin(); ucc != unique_column_combinations.cend(); ++ucc) {
+    // If all of the expressions in the UCC are contained in the given expressions, we found a match.
+    if (ucc->expressions.size() <= expressions.size() &&
+        std::ranges::all_of(ucc->expressions, [&](const auto& ucc_expression) {
           return expressions.contains(ucc_expression);
         })) {
-      // Found a matching UCC.
-      return true;
+      // If this match is genuine, we can stop here.
+      if (ucc->is_genuine()) {
+        return ucc;
+      }
+
+      // We found a matching UCC, but continue looking for a genuine one.
+      matching_ucc = ucc;
     }
   }
-  // Did not find a UCC for the given expressions.
-  return false;
+  return matching_ucc;
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
@@ -546,7 +554,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
     auto determinants = ucc.expressions;
 
     // (1) Verify whether we can create an FD from the given UCC (non-nullable determinant expressions).
-    if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
+    if (!std::ranges::all_of(determinants, [&](const auto& determinant_expression) {
           return output_expressions_non_nullable.contains(determinant_expression);
         })) {
       continue;
@@ -565,12 +573,12 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
     if (dependents.empty()) {
       continue;
     }
-    DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
-                             [&determinants, &dependents](const auto& fd) {
-                               return (fd.determinants == determinants) && (fd.dependents == dependents);
-                             }) == fds.cend(),
+    DebugAssert(std::ranges::none_of(fds,
+                                     [&determinants, &dependents](const auto& fd) {
+                                       return (fd.determinants == determinants) && (fd.dependents == dependents);
+                                     }),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(std::move(determinants), std::move(dependents));
+    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_genuine());
   }
   return fds;
 }
@@ -594,7 +602,7 @@ FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const A
     auto determinants = ExpressionUnorderedSet{od.ordering_expressions.cbegin(), od.ordering_expressions.cend()};
 
     // (1) Verify whether we can create an FD from the given OD (non-nullable expressions).
-    if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
+    if (!std::ranges::all_of(determinants, [&](const auto& determinant_expression) {
           return output_expressions_non_nullable.contains(determinant_expression);
         })) {
       continue;

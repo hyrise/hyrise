@@ -11,8 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-
 #include "strong_typedef.hpp"
 
 /**
@@ -44,7 +42,7 @@ STRONG_TYPEDEF(uint32_t, ChunkOffset);
 // std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
 // since 2010 should work fine. For 64-bit atomics on ARM CPUs, the instruction set should be at least ARMv8.1-A.
 // Earlier instruction sets also work, but might yield less efficient code. More information can be found here:
-// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT
+// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT(whitespace/line_length)
 STRONG_TYPEDEF(uint32_t, CommitID);
 STRONG_TYPEDEF(uint32_t, TransactionID);
 
@@ -54,23 +52,24 @@ STRONG_TYPEDEF(uint16_t, ParameterID);
 
 namespace hyrise {
 
-// Float aliases used in cardinality estimations/statistics
-using Cardinality = float;
-using DistinctCount = float;
-using Selectivity = float;
+// Floating-point aliases used in cardinality estimations/statistics. Single-precision types (a.k.a, float) should be
+// used carefully because they soon reach a point where additions do not increment the value anymore (see #2676).
+using Cardinality = double;
+using DistinctCount = double;
+using Selectivity = double;
 
 // Cost that an AbstractCostModel assigns to an Operator/LQP node. The unit of the Cost is left to the Cost estimator
-// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common)
-using Cost = float;
+// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common).
+using Cost = double;
 
 // We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from
 // different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
 //
-// TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+using PolymorphicAllocator = std::pmr::polymorphic_allocator<T>;
+using MemoryResource = std::pmr::memory_resource;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
@@ -109,15 +108,7 @@ struct RowID {
     return chunk_offset == INVALID_CHUNK_OFFSET;
   }
 
-  // Joins need to use RowIDs as keys for maps.
-  bool operator<(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) < std::tie(other.chunk_id, other.chunk_offset);
-  }
-
-  // Useful when comparing a row ID to NULL_ROW_ID
-  bool operator==(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
-  }
+  auto operator<=>(const RowID&) const = default;
 
   friend std::ostream& operator<<(std::ostream& stream, const RowID& row_id) {
     stream << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
@@ -134,6 +125,16 @@ constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID::base_type>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
+
+// The commit id 0 is used for loading data into a table. It is also used as a start value for the `_cleanup_commit_id`
+// of a chunk. See `Chunk::get_cleanup_commit_id()` for details.
+constexpr CommitID UNSET_COMMIT_ID = CommitID{0};
+// As commit_id=0 for rows indicates that they have been there "from the beginning of time". The first commit id that
+// is used for a transaction is 1.
+constexpr CommitID INITIAL_COMMIT_ID = CommitID{1};
+// The last commit id is reserved for uncommitted changes. It is also used to indicate that a `TableKeyConstraint` is
+// genuine.
+constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
 
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
 // yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but deleted in
@@ -213,9 +214,7 @@ bool is_semi_or_anti_join(JoinMode join_mode);
 // see union_positions.hpp for details.
 enum class SetOperationMode { Unique, All, Positions };
 
-// According to the SQL standard, the position of NULLs is implementation-defined. In Hyrise, NULLs come before all
-// values, both for ascending and descending sorts. See sort.cpp for details.
-enum class SortMode { Ascending, Descending };
+enum class SortMode { AscendingNullsFirst, DescendingNullsFirst, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
 
@@ -242,7 +241,7 @@ enum class EraseTypes { OnlyInDebugBuild, Always };
 
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
-  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::Ascending)
+  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::AscendingNullsFirst)
       : column(init_column), sort_mode(init_sort_mode) {}
 
   ColumnID column;

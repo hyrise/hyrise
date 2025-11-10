@@ -21,16 +21,21 @@
 
 namespace hyrise {
 
+// Even though we ensure that we have less than 64 vertices, clang-tidy still complains the dynamic bitset of Boost
+// shifts too far when calling `to_ulong()` (see https://github.com/boostorg/dynamic_bitset/issues/88).
+// NOLINTBEGIN(clang-analyzer-core.BitwiseShift)
+
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges)
     : _num_vertices{num_vertices}, _edges{edges} {
-  // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons.
-  Assert(num_vertices < sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
+  // Our implementation of DPccp is limited to handle less than 64 vertices. The algorihtm should not be used for
+  // queries that many tables because of complexity reasons anyways.
+  Assert(_num_vertices < sizeof(unsigned long) * 8,  // NOLINT(runtime/int)
          "Too many vertices, EnumerateCcp relies on to_ulong().");
   Assert(num_vertices > 1, "Nothing to order if there are not multiple vertices.");
 
   if constexpr (HYRISE_DEBUG) {
-    // Test the input data for validity, i.e., whether all mentioned vertex indices in the edges are smaller than
-    // `_num_vertices`.
+    // Test the input data for validity. All edges must connect vertices that are part of the join graph, i.e., their
+    // vertex indices are smaller than `_num_vertices`.
     for (const auto& edge : _edges) {
       Assert(edge.first < _num_vertices && edge.second < _num_vertices, "Vertex index out of range.");
     }
@@ -160,7 +165,7 @@ JoinGraphVertexSet EnumerateCcp::_exclusion_set(const size_t vertex_idx) const {
    */
 
   auto exclusion_set = JoinGraphVertexSet(_num_vertices);
-  for (size_t exclusion_vertex_idx = 0; exclusion_vertex_idx < vertex_idx; ++exclusion_vertex_idx) {
+  for (auto exclusion_vertex_idx = size_t{0}; exclusion_vertex_idx < vertex_idx; ++exclusion_vertex_idx) {
     exclusion_set.set(exclusion_vertex_idx);
   }
   return exclusion_set;
@@ -234,5 +239,7 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
 
   return subsets;
 }
+
+// NOLINTEND(clang-analyzer-core.BitwiseShift)
 
 }  // namespace hyrise

@@ -14,11 +14,11 @@
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "utils/assert.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
 
@@ -35,19 +35,19 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
 
   /**
-   * 1. Explore the directory and identify tables to be loaded
+   * 1. Explore the directory and identify tables to be loaded.
    * Recursively walk through the specified directory and collect all tables found on the way. A tables name is
    * determined by its filename. Multiple file extensions per table are allowed, for example there could be a CSV and a
    * binary version of a table.
    */
-  for (const auto& directory_entry : list_directory(_path)) {
-    const auto extension = directory_entry.extension();
-
-    if (table_extensions.find(extension) == table_extensions.end()) {
+  for (const auto& directory_entry : std::filesystem::recursive_directory_iterator(_path)) {
+    const auto& file_path = directory_entry.path();
+    const auto extension = file_path.extension();
+    if (!directory_entry.is_regular_file() || !table_extensions.contains(extension)) {
       continue;
     }
 
-    auto table_name = directory_entry.filename();
+    auto table_name = file_path.filename();
     table_name.replace_extension("");
 
     auto table_info_by_name_iter = table_info_by_name.find(table_name);
@@ -61,11 +61,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     if (extension == ".bin") {
       Assert(!table_info.binary_file_path,
              std::string{"Multiple binary files found for table '"} + table_name.string() + "'");
-      table_info.binary_file_path = directory_entry;
+      table_info.binary_file_path = file_path;
     } else {
       Assert(!table_info.text_file_path,
              std::string{"Multiple text files found for table '"} + table_name.string() + "'");
-      table_info.text_file_path = directory_entry;
+      table_info.text_file_path = file_path;
     }
   }
 
@@ -109,7 +109,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
         if (extension == ".tbl") {
           table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
         } else if (extension == ".csv") {
-          table_info.table = CsvParser::parse(*table_info.text_file_path, _benchmark_config->chunk_size);
+          table_info.table = CsvParser::parse(
+              *table_info.text_file_path,
+              process_csv_meta_file(table_info.text_file_path->string() + CsvMeta::META_FILE_EXTENSION),
+              _benchmark_config->chunk_size);
         } else {
           Fail("Unknown textual file format. This should have been caught earlier.");
         }

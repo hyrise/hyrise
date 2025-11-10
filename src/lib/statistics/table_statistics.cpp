@@ -51,14 +51,13 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
           // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
           // property.
           const auto null_value_ratio =
-              table.row_count() == 0
-                  ? 0.0f
-                  : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
+              table.row_count() == 0 ? 0.0
+                                     : 1.0 - (histogram->total_count() / static_cast<Selectivity>(table.row_count()));
           output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
         } else {
           // Failure to generate a histogram currently only stems from all-null segments.
           // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-          output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
+          output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0));
         }
 
         column_statistics[column_id] = output_column_statistics;

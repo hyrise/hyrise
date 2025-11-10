@@ -226,7 +226,6 @@ set(
     lib/utils/fixed_size_heap_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
-    lib/utils/list_directory_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp
@@ -270,6 +269,7 @@ set (
     benchmarklib/tpch/tpch_table_generator_test.cpp
     gtest_main.cpp
     lib/concurrency/stress_test.cpp
+    lib/statistics/large_statistics_test.cpp
     lib/server/server_test_runner.cpp
     lib/sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
     lib/utils/plugin_test_utils.cpp

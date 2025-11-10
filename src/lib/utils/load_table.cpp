@@ -81,7 +81,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chun
     table->append(variant_values);
 
     const auto mvcc_data = table->last_chunk()->mvcc_data();
-    mvcc_data->set_begin_cid(ChunkOffset{table->last_chunk()->size() - 1}, CommitID{0});
+    mvcc_data->set_begin_cid(ChunkOffset{table->last_chunk()->size() - 1}, UNSET_COMMIT_ID);
   }
 
   // All other chunks have been marked as immutable by `Table::append()` when they reached their capacity.

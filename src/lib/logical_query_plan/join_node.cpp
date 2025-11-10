@@ -74,8 +74,8 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
   auto output_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   output_expressions.resize(left_expressions.size() + right_expressions.size());
 
-  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), output_expressions.begin());
-  std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
+  auto left_copy_result = std::ranges::copy(left_expressions, output_expressions.begin());
+  std::ranges::copy(right_expressions, left_copy_result.out);
 
   return output_expressions;
 }
@@ -122,12 +122,12 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
   }
 
   // Check uniqueness of join columns.
-  const auto left_operand_is_unique =
-      !left_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
-  const auto right_operand_is_unique =
-      !right_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
+  const auto left_operand_is_unique = !left_unique_column_combinations.empty() &&
+                                      find_ucc(left_unique_column_combinations, {join_predicate->left_operand()}) !=
+                                          left_unique_column_combinations.end();
+  const auto right_operand_is_unique = !right_unique_column_combinations.empty() &&
+                                       find_ucc(right_unique_column_combinations, {join_predicate->right_operand()}) !=
+                                           right_unique_column_combinations.end();
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the UCCs of both sides remain valid.
@@ -308,7 +308,7 @@ void JoinNode::mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_j
   DebugAssert(join_predicates().size() == 1,
               "Currently, semi join reductions are expected to have a single join predicate.");
   DebugAssert(std::any_of(reduced_join_node->join_predicates().cbegin(), reduced_join_node->join_predicates().cend(),
-                          [&](const auto predicate) {
+                          [&](const auto& predicate) {
                             return *predicate == *join_predicates()[0];
                           }),
               "Both semi join reduction node and the reduced join should have a common join predicate.");

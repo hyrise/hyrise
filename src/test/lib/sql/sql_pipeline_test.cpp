@@ -441,15 +441,15 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
 
   // No row should have been touched
   EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MAX_COMMIT_ID);
 
   EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{1}), TransactionID{17});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MAX_COMMIT_ID);
 
   auto second_chunk_mvcc_data = _table_a->get_chunk(ChunkID{1})->mvcc_data();
 
   EXPECT_EQ(second_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
-  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MAX_COMMIT_ID);
 }
 
 TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
@@ -476,13 +476,13 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
 
   // This row was being modified by a different transaction, so it should not have been touched
   EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{1}), TransactionID{17});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MAX_COMMIT_ID);
 
   // We had to abort before we got to the third statement
   auto second_chunk_mvcc_data = _table_a->get_chunk(ChunkID{1})->mvcc_data();
 
   EXPECT_EQ(second_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
-  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MAX_COMMIT_ID);
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {
@@ -663,7 +663,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
     (void)conflicting_sql_pipeline.get_result_table();
   }
 
-  // The UPDATE should have inserted a new version of that row
+  // The UPDATE should have inserted a new version of that row.
   EXPECT_EQ(_table_a->row_count(), 4);
 
   const auto sql = "INSERT INTO table_a (a, b) VALUES (1, 2.0); UPDATE table_a SET a = a + 1 WHERE b < 457";
@@ -672,7 +672,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
 
-  // The INSERT could not be committed, but still created a row that never became fully visible
+  // The INSERT could not be committed, but still created a row that never became fully visible.
   EXPECT_EQ(_table_a->row_count(), 5);
 
   const auto verify_table_contents = []() {
@@ -684,13 +684,13 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
   };
   verify_table_contents();
 
-  // Check that this doesn't crash. This should not modify the table a second time.
+  // Check that this does not crash. This should not modify the table a second time.
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
   EXPECT_EQ(table2, nullptr);
   verify_table_contents();
 
-  // The INSERT should not have been executed a second time
+  // The INSERT should not have been executed a second time.
   EXPECT_EQ(_table_a->row_count(), 5);
 }
 

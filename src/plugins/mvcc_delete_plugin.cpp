@@ -15,7 +15,6 @@
 #include "operators/get_table.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
@@ -54,7 +53,7 @@ void MvccDeletePlugin::stop() {
 void MvccDeletePlugin::_logical_delete_loop() {
   const auto tables = Hyrise::get().storage_manager.tables();
 
-  // Check all tables
+  // Check all tables.
   for (const auto& [table_name, table] : tables) {
     if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) {
       continue;
@@ -62,14 +61,14 @@ void MvccDeletePlugin::_logical_delete_loop() {
     auto saved_memory = size_t{0};
     auto num_chunks = size_t{0};
 
-    // Check all chunks, except for the last one, which is currently used for insertions
+    // Check all chunks, except for the last one, which is currently used for insertions.
     const auto max_chunk_id = static_cast<ChunkID>(table->chunk_count() - 1);
     for (auto chunk_id = ChunkID{0}; chunk_id < max_chunk_id; ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      if (chunk && !chunk->get_cleanup_commit_id()) {
+      if (chunk && !chunk->is_mutable() && !chunk->get_cleanup_commit_id()) {
         const auto chunk_memory = chunk->memory_usage(MemoryUsageCalculationMode::Sampled);
 
-        // Calculate metric 1 – Chunk invalidation level
+        // Calculate metric 1 – Chunk invalidation level.
         const auto invalidated_rows_ratio = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
         const auto criterion1 = (DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio);
 
@@ -77,15 +76,9 @@ void MvccDeletePlugin::_logical_delete_loop() {
           continue;
         }
 
-        // Calculate metric 2 – Chunk Hotness
-        auto highest_end_commit_id = CommitID{0};
-        const auto chunk_size = chunk->size();
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-          const auto commit_id = chunk->mvcc_data()->get_end_cid(chunk_offset);
-          if (commit_id != MvccData::MAX_COMMIT_ID && commit_id > highest_end_commit_id) {
-            highest_end_commit_id = commit_id;
-          }
-        }
+        // Calculate metric 2 – Chunk hotness.
+        const auto highest_end_commit_id = chunk->mvcc_data()->max_end_cid.load();
+        Assert(highest_end_commit_id != MAX_COMMIT_ID, "Chunk has deleted rows, but max_end_cid was not updated.");
 
         const auto criterion2 =
             highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= Hyrise::get().transaction_manager.last_commit_id();
@@ -101,7 +94,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
           DebugAssert(table->get_chunk(chunk_id)->get_cleanup_commit_id(),
                       "Chunk needs to be deleted logically before deleting it physically.");
 
-          const auto lock = std::lock_guard<std::mutex>{_physical_delete_queue_mutex};
+          const auto lock = std::lock_guard{_physical_delete_queue_mutex};
           _physical_delete_queue.emplace(table, chunk_id);
           saved_memory += chunk_memory;
           ++num_chunks;
@@ -110,8 +103,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
     }
     if (saved_memory > 0) {
       auto message = std::ostringstream{};
-      const auto saved_mb = static_cast<float>(saved_memory) / (1000.0f * 1000.0f);
-      message << "Consolidated " << num_chunks << " chunk(s) of " << table_name << ", saved approx. "
+      const auto saved_mb = static_cast<double>(saved_memory) / (1000.0 * 1000.0);
+      message << "Consolidated " << num_chunks << " chunk(s) of " << table_name << ", can save approx. "
               << std::setprecision(2) << saved_mb << " MB";
       Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str(), LogLevel::Info);
     }
@@ -119,10 +112,10 @@ void MvccDeletePlugin::_logical_delete_loop() {
 }
 
 /**
- * This function processes the physical-delete-queue until its empty.
+ * This function processes the physical-delete-queue until it is empty.
  */
 void MvccDeletePlugin::_physical_delete_loop() {
-  const auto lock = std::lock_guard<std::mutex>{_physical_delete_queue_mutex};
+  const auto lock = std::lock_guard{_physical_delete_queue_mutex};
 
   if (!_physical_delete_queue.empty()) {
     const auto& [table, chunk_id] = _physical_delete_queue.front();
@@ -156,8 +149,8 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   Assert(chunk_id < (table->chunk_count() - 1),
          "MVCC Logical Delete should not be applied on the last/current mutable chunk.");
 
-  // Create temporary referencing table that contains the given chunk only
-  //   Include all ChunksIDs of current table except chunk_id for pruning in GetTable
+  // Create temporary referencing table that contains the given chunk only. Include all ChunksIDs of current table
+  // except chunk_id for pruning in GetTable.
   auto excluded_chunk_ids = std::vector<ChunkID>(table->chunk_count() - 1);
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
@@ -166,18 +159,18 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   get_table->set_transaction_context(transaction_context);
   get_table->execute();
 
-  // Validate temporary table
+  // Validate temporary table.
   const auto validate = std::make_shared<Validate>(get_table);
   validate->set_transaction_context(transaction_context);
   validate->execute();
 
-  // Use Update operator to delete and re-insert valid records in chunk
-  // Pass validate into Update operator twice since data will not be changed.
+  // Use Update operator to delete and re-insert valid records in chunk. Pass validate into Update operator twice since
+  // data will not be changed.
   const auto update = std::make_shared<Update>(table_name, validate, validate);
   update->set_transaction_context(transaction_context);
   update->execute();
 
-  // Check for success
+  // Check for success.
   if (update->execute_failed()) {
     // Transaction conflict. Usually, the OperatorTask would call rollback, but as we executed Update directly, that is
     // our job.
@@ -186,7 +179,7 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   }
 
   transaction_context->commit();
-  // Mark chunk as logically deleted
+  // Mark chunk as logically deleted.
   chunk->set_cleanup_commit_id(transaction_context->commit_id());
   return true;
 }

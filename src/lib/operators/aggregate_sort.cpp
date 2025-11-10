@@ -37,11 +37,11 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<const Table>& table_to_sort,
                                                       const std::vector<ColumnID>& column_ids) {
-  // Create sort definition vector from group by list for sort operator
+  // Create sort definition vector from group by list for sort operator.
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   sort_definitions.reserve(column_ids.size());
   for (const auto& column_id : column_ids) {
-    sort_definitions.emplace_back(column_id, SortMode::Ascending);
+    sort_definitions.emplace_back(column_id, SortMode::AscendingNullsFirst);
   }
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
@@ -338,9 +338,9 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
     // values.
     const auto single_column_group_by = groupby_column_ids.size() == 1;
     const auto chunk_sorted_by_first_group_by_column =
-        std::find_if(chunk_sorted_by.cbegin(), chunk_sorted_by.cend(), [&](const auto& sort_definition) {
+        std::ranges::any_of(chunk_sorted_by, [&](const auto& sort_definition) {
           return groupby_column_ids[0] == sort_definition.column;
-        }) != chunk_sorted_by.cend();
+        });
 
     if (single_column_group_by && chunk_sorted_by_first_group_by_column) {
       if (input_table->type() == TableType::Data) {
@@ -486,8 +486,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
     if (!table_value_clustered_by.empty()) {
       for (const auto& value_clustered_by : table_value_clustered_by) {
-        if (std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), value_clustered_by) !=
-            _groupby_column_ids.end()) {
+        if (std::ranges::find(_groupby_column_ids, value_clustered_by) != _groupby_column_ids.end()) {
           is_value_clustered_by_groupby_column = true;
           break;
         }

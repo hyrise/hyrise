@@ -20,10 +20,13 @@ FixedStringVector::FixedStringVector(const FixedStringVector& other, const Polym
 
 void FixedStringVector::push_back(const pmr_string& string) {
   Assert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector");
-  const auto pos = _chars.size();
-  // Default value of inserted elements using resize is null terminator ('\0')
-  _chars.resize(_chars.size() + _string_length);
-  string.copy(&_chars[pos], string.size());
+
+  if (_string_length > 0) {
+    const auto pos = _chars.size();
+    // Default value of inserted elements using resize is null terminator ('\0').
+    _chars.resize(_chars.size() + _string_length);
+    string.copy(&_chars[pos], string.size());
+  }
 
   ++_size;
 }
@@ -95,7 +98,7 @@ void FixedStringVector::erase(const FixedStringIterator<false> start, const Fixe
   }
 
   auto iter = _chars.begin();
-  std::advance(iter, _chars.size() - count * _string_length);
+  std::advance(iter, _chars.size() - (count * _string_length));
   _chars.erase(iter, _chars.end());
   _size -= count;
 }
