@@ -562,7 +562,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   stream << "-------- Subqueries ---------\n";
 
   for (const auto& lqp : lqps) {
-    stream << lqp.get() << ": \n";
+    stream << lqp.get() << ":\n";
     output_lqp_to_stream(*lqp);
     stream << '\n';
   }
