@@ -25,12 +25,7 @@ namespace hyrise {
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   const auto column_count = table.column_count();
   auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{column_count};
-
-  /**
-   * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
-   * (for tables with >= 200m rows) are created.
-   */
-  const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
+  const auto bin_count = EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(lineitem_table->row_count());
 
   /**
    * We highly recommend setting up a multithreaded scheduler before the following procedure is executed to parallelly
@@ -49,7 +44,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
         const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
         const auto histogram =
-            EqualDistinctCountHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
+            EqualDistinctCountHistogram<ColumnDataType>::from_column(table, column_id, bin_count);
 
         if (histogram) {
           output_column_statistics->set_statistics_object(histogram);
