@@ -92,9 +92,10 @@ void MvccData::register_insert() {
   ++_pending_inserts;
 }
 
-void MvccData::deregister_insert() {
-  const auto remaining_inserts = _pending_inserts--;
+uint32_t MvccData::deregister_insert() {
+  auto remaining_inserts = _pending_inserts--;
   Assert(remaining_inserts > 0, "Cannot decrement active insert count when no active inserts are left.");
+  return --remaining_inserts;
 }
 
 uint32_t MvccData::pending_inserts() const {

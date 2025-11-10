@@ -665,7 +665,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
     (void)conflicting_sql_pipeline.get_result_table();
   }
 
-  // The UPDATE should have inserted a new version of that row
+  // The UPDATE should have inserted a new version of that row.
   EXPECT_EQ(_table_a->row_count(), 4);
 
   const auto sql = "INSERT INTO table_a (a, b) VALUES (1, 2.0); UPDATE table_a SET a = a + 1 WHERE b < 457";
@@ -674,7 +674,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
 
-  // The INSERT could not be committed, but still created a row that never became fully visible
+  // The INSERT could not be committed, but still created a row that never became fully visible.
   EXPECT_EQ(_table_a->row_count(), 5);
 
   const auto verify_table_contents = []() {
@@ -686,13 +686,13 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
   };
   verify_table_contents();
 
-  // Check that this doesn't crash. This should not modify the table a second time.
+  // Check that this does not crash. This should not modify the table a second time.
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
   EXPECT_EQ(table2, nullptr);
   verify_table_contents();
 
-  // The INSERT should not have been executed a second time
+  // The INSERT should not have been executed a second time.
   EXPECT_EQ(_table_a->row_count(), 5);
 }
 

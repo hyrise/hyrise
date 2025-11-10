@@ -198,7 +198,7 @@ TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
   const auto table = Hyrise::get().storage_manager.get_table("uncompressed");
   const auto chunk = table->get_chunk(ChunkID(0));
   EXPECT_TRUE(chunk->pruning_statistics());
-  chunk->set_pruning_statistics(std::nullopt);
+  chunk->set_pruning_statistics(nullptr);
   EXPECT_FALSE(chunk->pruning_statistics());
 
   const auto stored_table_node = StoredTableNode::make("uncompressed");
