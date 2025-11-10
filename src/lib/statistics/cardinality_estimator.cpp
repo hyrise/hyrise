@@ -914,21 +914,31 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
     const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
   // Since UnionNodes are not really used right now, implementing an involved algorithm to union two TableStatistics
-  // seems unjustified. For now, we just concatenate the two statistics objects
+  // seems unjustified. For now, we just scale the left input's statistics.
 
   DebugAssert(
       left_input_table_statistics->column_statistics.size() == right_input_table_statistics->column_statistics.size(),
       "Input TableStatistics need to have the same number of columns to perform a union");
 
-  const auto row_count = left_input_table_statistics->row_count + right_input_table_statistics->row_count;
-  auto column_statistics = left_input_table_statistics->row_count >= right_input_table_statistics->row_count
-                                     ? left_input_table_statistics->column_statistics
-                                     : right_input_table_statistics->column_statistics;
+  const auto left_row_count = left_input_table_statistics->row_count;
+  const auto right_row_count = right_input_table_statistics->row_count;
+  const auto row_count = left_row_count + right_row_count;
 
-  auto output_table_statistics = std::make_shared<TableStatistics>(
-      std::move(column_statistics), row_count);
+  if (left_row_count == 0) {
+    auto column_statistics = right_input_table_statistics->column_statistics;
+    return std::make_shared<TableStatistics>(std::move(column_statistics), right_row_count);
+  }
 
-  return output_table_statistics;
+  auto column_statistics = left_input_table_statistics->column_statistics;
+  
+  auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{column_statistics.size()};
+  auto selectivity = Selectivity{(row_count) / left_row_count};
+
+  for (auto column_id = ColumnID{0}; column_id < column_statistics.size(); ++column_id) {
+    output_column_statistics[column_id] = column_statistics[column_id]->scaled(selectivity);
+  }
+
+  return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
