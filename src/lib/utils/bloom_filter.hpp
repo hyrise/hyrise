@@ -55,14 +55,12 @@ class BloomFilter : public BaseBloomFilter {
   }
 
   bool probe(uint64_t hash) const {
-    // if (1 == 1) return false;
+    auto result = true;
     for (uint8_t i = 0; i < K; ++i) {
       uint32_t bit_index = _extract_bits(hash, i);
-      if (!_get_bit(bit_index)) {
-        return false;
-      }
+      result &= _get_bit(bit_index);
     }
-    return true;
+    return result;
   }
 
   void merge_from(const BaseBloomFilter& other) override final {
