@@ -120,6 +120,12 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
                                 std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
   ~AbstractOperator() override;
+  AbstractOperator(const AbstractOperator&) = delete;
+  AbstractOperator& operator=(const AbstractOperator&) = delete;
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted.
+  // You can implement them, but you should think about the implications for this class.
+  AbstractOperator(AbstractOperator&&) = delete;
+  AbstractOperator& operator=(AbstractOperator&&) = delete;
 
   OperatorType type() const;
 
