@@ -267,7 +267,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
               segment_iterate<DataType>(*input_segment, [&](const auto& position) {
                 if (!position.is_null()) {
-                  auto hash = size_t{4615968};
+                  auto hash = size_t{11400714819323198485ul};
                   boost::hash_combine(hash, position.value());
                   // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
@@ -340,15 +340,20 @@ class Reduce : public AbstractReadOnlyOperator {
       auto minimum = DataType{};
       auto maximum = DataType{};
 
-      if constexpr (use_min_max == UseMinMax::Yes) {
+      using UnsignedDataType = std::conditional_t<std::is_same_v<DataType, int32_t>, uint32_t, DataType>;
+      auto value_difference = UnsignedDataType{};
+      if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
         Assert(_min_max_predicate, "Min max filter is null.");
         auto casted_min_max_predicate = std::dynamic_pointer_cast<MinMaxPredicate<DataType>>(_min_max_predicate);
         Assert(casted_min_max_predicate, "Failed to cast min max filter.");
         minimum = casted_min_max_predicate->min_value();
         maximum = casted_min_max_predicate->max_value();
+        value_difference = static_cast<UnsignedDataType>(maximum - minimum);
+        // TODO: Assert that diff is not too large?
       }
 
-      const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+      const auto worker_count = uint32_t{1};
+      // const auto worker_count = static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
       std::cout << "Worker count: " << worker_count << "\n";
       const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
@@ -385,15 +390,13 @@ class Reduce : public AbstractReadOnlyOperator {
 
               segment_iterate<DataType>(*input_segment, [&](const auto& position) {
                 if (!position.is_null()) {
-                  auto hash = size_t{4615968};
+                  auto hash = size_t{11400714819323198485ul};
                   boost::hash_combine(hash, position.value());
                   // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
                   auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
 
                   if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
-                    using UnsignedDataType = std::make_unsigned_t<DataType>;
-                    const auto value_difference = static_cast<UnsignedDataType>(maximum - minimum);
                     const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
                     found &= diff <= value_difference;
                   }
@@ -593,7 +596,7 @@ class Reduce : public AbstractReadOnlyOperator {
 
                 segment_iterate<DataType>(*input_segment, [&](const auto& position) {
                   if (!position.is_null()) {
-                    auto hash = size_t{4615968};
+                    auto hash = size_t{11400714819323198485ul};
                     boost::hash_combine(hash, position.value());
                     // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 

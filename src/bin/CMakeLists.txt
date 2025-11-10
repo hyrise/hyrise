@@ -22,7 +22,7 @@ target_link_libraries(
 
     hyrise
     hyriseBenchmarkLib
-    perf-cpp-wrapper
+#    perf-cpp-wrapper
 )
 
 target_link_libraries(

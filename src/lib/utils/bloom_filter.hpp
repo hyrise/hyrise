@@ -2,6 +2,7 @@
 
 #include <array>
 #include <atomic>
+#include <bitset>
 #include <cstdint>
 
 namespace hyrise {
@@ -42,7 +43,9 @@ class BaseBloomFilter {
 template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter : public BaseBloomFilter {
  public:
-  BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K) {}
+  BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K) {
+    _readonly_filter = reinterpret_cast<uint64_t*>(_filter.data());
+  }
 
   void insert(uint64_t hash) {
     for (uint8_t i = 0; i < K; ++i) {
@@ -119,7 +122,7 @@ class BloomFilter : public BaseBloomFilter {
   bool _get_bit(uint32_t bit_index) const {
     uint32_t array_index = bit_index >> 6;   // bit_index / 64
     uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
-    return (_filter[array_index] >> bit_offset) & 1ULL;
+    return (_readonly_filter[array_index] >> bit_offset) & 1ULL;
   }
 
   uint32_t _extract_bits(uint64_t hash, uint8_t hash_function_index) const {
@@ -135,30 +138,52 @@ class BloomFilter : public BaseBloomFilter {
 
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
-  std::array<std::atomic<uint64_t>, array_size> _filter;
+  alignas(64) std::array<std::atomic<uint64_t>, array_size> _filter;
+  uint64_t* _readonly_filter;
 };
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 class BlockBloomFilter : public BaseBloomFilter {
  public:
-  BlockBloomFilter() : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K) {}
+  BlockBloomFilter() : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K) {
+    _readonly_filter = reinterpret_cast<uint64_t*>(_filter.data());
+  }
 
   void insert(uint64_t hash) {
+    auto ss = std::stringstream{};
+    const auto block_index = hash >> (64 - bits_required_for_block_offset);
+    // const auto& block = &_filter[block_index];
     for (uint8_t i = 0; i < K; ++i) {
-      const auto bit_index = _extract_bits(hash, i);
-      _set_bit(bit_index);
+      const auto bit_index_in_block = (hash >> i * 9) & 511;
+      const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
+      const auto bit_index_in_item = bit_index_in_block & 63;
+      _filter[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
+      // std::cout << "Hash: " << std::bitset<64>(hash) << ". Added item to block: " << block_index << ". For k " << size_t{i} << ", I want to access bit " << bit_index_in_block << ". That's block item " << block_item_index << " and bit in item: " << bit_index_in_item << "\n";
+      // std::cout << "uint64_t afterwards: " << std::bitset<64>(_filter[block_index + block_item_index]) << '\n';
+      // std::cout << "Test print : " << std::bitset<64>(size_t{1} << bit_index_in_item) << '\n';
     }
   }
 
   bool probe(uint64_t hash) const {
-    // if (1 == 1) return false;
+    // The upper bits give us the block.
+    const auto block_index = hash >> (64 - bits_required_for_block_offset);
+    // const auto& block = &_readonly_filter[block_index];
+    auto result = true;
     for (uint8_t i = 0; i < K; ++i) {
-      uint32_t bit_index = _extract_bits(hash, i);
-      if (!_get_bit(bit_index)) {
-        return false;
-      }
+      const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
+      const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
+      const auto bit_index_in_item = bit_index_in_block & 63;
+
+      // std::cout << "Loop result: " << std::boolalpha << result << '\n';
+      result &= static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
+      // if (static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item))) {
+      //   std::cout << "Loop result: " << std::boolalpha << static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item)) << '\n';
+      //   std::cout << "Hash: " << std::bitset<64>(hash) << ". Block: " << block_index << ". For k " << size_t{i} << ", I want to access bit " << bit_index_in_block << ". That's block item " << block_item_index << " and bit in item: " << bit_index_in_item << "\n";
+      //   std::cout << "Loop result: " << std::boolalpha << result << '\n';
+      // }
     }
-    return true;
+    // std::cout << "Result: " << std::boolalpha << result << '\n';
+    return result;
   }
 
   void merge_from(const BaseBloomFilter& other) override final {
@@ -218,7 +243,7 @@ class BlockBloomFilter : public BaseBloomFilter {
   bool _get_bit(uint32_t bit_index) const {
     uint32_t array_index = bit_index >> 6;   // bit_index / 64
     uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
-    return (_filter[array_index] >> bit_offset) & 1ULL;
+    return (_readonly_filter[array_index] >> bit_offset) & 1ULL;
   }
 
   uint32_t _extract_bits(uint64_t hash, uint8_t hash_function_index) const {
@@ -251,7 +276,9 @@ class BlockBloomFilter : public BaseBloomFilter {
 
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
-  std::array<std::atomic<uint64_t>, array_size> _filter;
+  static constexpr auto bits_required_for_block_offset = FilterSizeExponent - 6;
+  alignas(64) std::array<std::atomic<uint64_t>, array_size> _filter;
+  uint64_t* _readonly_filter;
 };
 
 // template class BloomFilter<16, 1>;
