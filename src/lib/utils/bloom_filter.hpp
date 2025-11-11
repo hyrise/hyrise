@@ -279,53 +279,66 @@ class BlockBloomFilter : public BaseBloomFilter {
   uint64_t* _readonly_filter;
 };
 
-// template class BloomFilter<16, 1>;
-// template class BloomFilter<17, 1>;
-// template class BloomFilter<18, 1>;
-// template class BloomFilter<19, 1>;
+template class BloomFilter<18, 1>;
+template class BloomFilter<18, 2>;
 template class BloomFilter<20, 1>;
-// template class BloomFilter<21, 1>;
-// template class BloomFilter<22, 1>;
-// template class BloomFilter<16, 2>;
-// template class BloomFilter<17, 2>;
-// template class BloomFilter<18, 2>;
-// template class BloomFilter<19, 2>;
 template class BloomFilter<20, 2>;
-// template class BloomFilter<21, 2>;
-// template class BloomFilter<22, 2>;
-// template class BloomFilter<16, 3>;
-// template class BloomFilter<17, 3>;
-// template class BloomFilter<18, 3>;
-// template class BloomFilter<19, 3>;
-// template class BloomFilter<20, 3>;
-// template class BloomFilter<21, 3>;
+template class BloomFilter<23, 1>;
+template class BloomFilter<23, 2>;
 
 // 512-bit blocks (BlockSizeExponent = 9)
-// template class BlockBloomFilter<16, 9, 1>;
-// template class BlockBloomFilter<17, 9, 1>;
-// template class BlockBloomFilter<18, 9, 1>;
-// template class BlockBloomFilter<19, 9, 1>;
+template class BlockBloomFilter<18, 9, 1>;
+template class BlockBloomFilter<18, 9, 2>;
 template class BlockBloomFilter<20, 9, 1>;
-// template class BlockBloomFilter<21, 9, 1>;
-// template class BlockBloomFilter<22, 9, 1>;
-// template class BlockBloomFilter<16, 9, 2>;
-// template class BlockBloomFilter<17, 9, 2>;
-// template class BlockBloomFilter<18, 9, 2>;
-// template class BlockBloomFilter<19, 9, 2>;
 template class BlockBloomFilter<20, 9, 2>;
-
-// template class BlockBloomFilter<21, 9, 2>;
-// template class BlockBloomFilter<22, 9, 2>;
-// template class BlockBloomFilter<16, 9, 3>;
-// template class BlockBloomFilter<17, 9, 3>;
-// template class BlockBloomFilter<18, 9, 3>;
-// template class BlockBloomFilter<19, 9, 3>;
-// template class BlockBloomFilter<20, 9, 3>;
-// template class BlockBloomFilter<21, 9, 3>;
+template class BlockBloomFilter<23, 9, 1>;
+template class BlockBloomFilter<23, 9, 2>;
 
 template <typename Functor>
 void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor& functor) {
   switch (base_bloom_filter.filter_size_exponent()) {
+    case 18: {
+      switch (base_bloom_filter.block_size_exponent()) {
+        case 0: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BloomFilter<18, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BloomFilter<18, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        case 8: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BlockBloomFilter<18, 8, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BlockBloomFilter<18, 8, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        case 9: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BlockBloomFilter<18, 9, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BlockBloomFilter<18, 9, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        default:
+          Fail("Unsupported bloom filter type.");
+      }
+    } break;
     case 20: {
       switch (base_bloom_filter.block_size_exponent()) {
         case 0: {
@@ -359,6 +372,48 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               break;
             case 2:
               functor(static_cast<BlockBloomFilter<20, 9, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        default:
+          Fail("Unsupported bloom filter type.");
+      }
+    } break;
+    case 23: {
+      switch (base_bloom_filter.block_size_exponent()) {
+        case 0: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BloomFilter<23, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BloomFilter<23, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        case 8: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BlockBloomFilter<23, 8, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BlockBloomFilter<23, 8, 2>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        case 9: {
+          switch (base_bloom_filter.k()) {
+            case 1:
+              functor(static_cast<BlockBloomFilter<23, 9, 1>&>(base_bloom_filter));
+              break;
+            case 2:
+              functor(static_cast<BlockBloomFilter<23, 9, 2>&>(base_bloom_filter));
               break;
             default:
               Fail("Unsupported bloom filter type.");

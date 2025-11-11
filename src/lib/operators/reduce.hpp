@@ -26,6 +26,16 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
   switch (block_size_exponent) {
     case 0: {
       switch (filter_size_exponent) {
+        case 18:
+          switch (k) {
+            case 1:
+              return std::make_shared<BloomFilter<18, 1>>();
+            case 2:
+              return std::make_shared<BloomFilter<18, 2>>();
+            default:
+              break;
+          }
+          break;
         case 19:
           switch (k) {
             case 1:
@@ -56,6 +66,16 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               break;
           }
           break;
+        case 23:
+          switch (k) {
+            case 1:
+              return std::make_shared<BloomFilter<23, 1>>();
+            case 2:
+              return std::make_shared<BloomFilter<23, 2>>();
+            default:
+              break;
+          }
+          break;
         default:
           break;
       }
@@ -63,6 +83,16 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
     }
     case 8: {
       switch (filter_size_exponent) {
+        case 18:
+          switch (k) {
+            case 1:
+              return std::make_shared<BlockBloomFilter<18, 8, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<18, 8, 2>>();
+            default:
+              break;
+          }
+          break;
         case 19:
           switch (k) {
             case 1:
@@ -93,6 +123,16 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               break;
           }
           break;
+        case 23:
+          switch (k) {
+            case 1:
+              return std::make_shared<BlockBloomFilter<23, 8, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<23, 8, 2>>();
+            default:
+              break;
+          }
+          break;
         default:
           break;
       }
@@ -100,6 +140,16 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
     }
     case 9: {
       switch (filter_size_exponent) {
+        case 18:
+          switch (k) {
+            case 1:
+              return std::make_shared<BlockBloomFilter<18, 9, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<18, 9, 2>>();
+            default:
+              break;
+          }
+          break;
         case 19:
           switch (k) {
             case 1:
@@ -130,6 +180,16 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               break;
           }
           break;
+        case 23:
+          switch (k) {
+            case 1:
+              return std::make_shared<BlockBloomFilter<23, 9, 1>>();
+            case 2:
+              return std::make_shared<BlockBloomFilter<23, 9, 2>>();
+            default:
+              break;
+          }
+          break;
         default:
           break;
       }
@@ -152,7 +212,7 @@ class Reduce : public AbstractReadOnlyOperator {
  public:
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
                   const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate,
-                  const ReduceMode reduce_mode, const UseMinMax use_min_max, uint8_t filter_size_exponent = 20,
+                  const ReduceMode reduce_mode, const UseMinMax use_min_max, uint8_t filter_size_exponent = 0,
                   uint8_t block_size_exponent = 0, uint8_t k = 2)
       : AbstractReadOnlyOperator{OperatorType::Reduce, left_input, right_input, std::make_unique<PerformanceData>()},
         _predicate{predicate},
@@ -216,6 +276,17 @@ class Reduce : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _execute_build() {
     std::shared_ptr<const Table> input_table = right_input_table();
     auto column_id = _predicate.column_ids.second;
+
+    if (_filter_size_exponent == 0) {
+      const auto input_row_count = input_table->row_count();
+      if (input_row_count <= 54699) {
+        std::cout << "Selected L1-sized Bloom filter.\n";
+        _filter_size_exponent = 18;
+      } else {
+        std::cout << "Selected L2-sized Bloom filter.\n";
+        _filter_size_exponent = 23;
+      }
+    }
 
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
       using DataType = typename decltype(column_data_type)::type;
@@ -756,9 +827,9 @@ class Reduce : public AbstractReadOnlyOperator {
   std::shared_ptr<BaseMinMaxPredicate> _min_max_predicate;
   const ReduceMode _reduce_mode;
   const UseMinMax _use_min_max;
-  const uint8_t _filter_size_exponent;
-  const uint8_t _block_size_exponent;
-  const uint8_t _k;
+  uint8_t _filter_size_exponent;
+  uint8_t _block_size_exponent;
+  uint8_t _k;
 };
 
 }  // namespace hyrise
