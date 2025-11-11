@@ -255,6 +255,7 @@ set(
     operators/projection.cpp
     operators/projection.hpp
     operators/reduce.hpp
+    operators/reduce.cpp
     operators/legacy_reduce.hpp
     operators/legacy_reduce.cpp
     operators/sort.cpp
