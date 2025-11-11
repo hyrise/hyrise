@@ -25,7 +25,6 @@ namespace hyrise {
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   const auto column_count = table.column_count();
   auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{column_count};
-  const auto bin_count = EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(table.row_count());
 
   /**
    * We highly recommend setting up a multithreaded scheduler before the following procedure is executed to parallelly
@@ -43,6 +42,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
 
         const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
+        const auto bin_count = EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(table.row_count());
         const auto histogram = EqualDistinctCountHistogram<ColumnDataType>::from_column(table, column_id, bin_count);
 
         if (histogram) {
