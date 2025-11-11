@@ -598,6 +598,7 @@ set(
     utils/assert.hpp
     utils/atomic_max.hpp
     utils/bloom_filter.hpp
+    utils/bloom_filter.cpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
     utils/copyable_atomic.hpp
