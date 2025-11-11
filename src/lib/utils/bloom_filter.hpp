@@ -5,6 +5,8 @@
 #include <bitset>
 #include <cstdint>
 
+#include <boost/align/aligned_allocator.hpp>
+
 namespace hyrise {
 
 class BaseBloomFilter {
@@ -43,8 +45,8 @@ class BaseBloomFilter {
 template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter : public BaseBloomFilter {
  public:
-  BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K) {
-    _readonly_filter = reinterpret_cast<uint64_t*>(_filter.data());
+  BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K), _filter(array_size) {
+    _readonly_filter = std::assume_aligned<64>(reinterpret_cast<uint64_t*>(_filter.data()));
   }
 
   void insert(uint64_t hash) {
@@ -86,7 +88,7 @@ class BloomFilter : public BaseBloomFilter {
   }
 
   std::string bit_distribution() const override final {
-    std::array<uint32_t, 100> distribution{};
+    auto distribution = std::vector<uint32_t>(100);
     constexpr uint32_t bits_per_bucket = (array_size * 64) / 100;
 
     for (uint32_t i = 0; i < array_size * 64; ++i) {
@@ -138,15 +140,16 @@ class BloomFilter : public BaseBloomFilter {
 
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
-  alignas(64) std::array<std::atomic<uint64_t>, array_size> _filter;
+  std::vector<std::atomic<uint64_t>, boost::alignment::aligned_allocator<std::atomic<uint64_t>, 64>> _filter;
   uint64_t* _readonly_filter;
 };
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 class BlockBloomFilter : public BaseBloomFilter {
  public:
-  BlockBloomFilter() : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K) {
-    _readonly_filter = reinterpret_cast<uint64_t*>(_filter.data());
+  BlockBloomFilter() : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K), _filter(array_size) {
+    _readonly_filter = std::assume_aligned<64>(reinterpret_cast<uint64_t*>(_filter.data()));
+
   }
 
   void insert(uint64_t hash) {
@@ -207,7 +210,7 @@ class BlockBloomFilter : public BaseBloomFilter {
   }
 
   std::string bit_distribution() const override final {
-    std::array<uint32_t, 100> distribution{};
+    auto distribution = std::vector<uint32_t>(100);
     constexpr uint32_t bits_per_bucket = (array_size * 64) / 100;
 
     for (uint32_t i = 0; i < array_size * 64; ++i) {
@@ -277,7 +280,7 @@ class BlockBloomFilter : public BaseBloomFilter {
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
   static constexpr auto bits_required_for_block_offset = FilterSizeExponent - 6;
-  alignas(64) std::array<std::atomic<uint64_t>, array_size> _filter;
+  std::vector<std::atomic<uint64_t>, boost::alignment::aligned_allocator<std::atomic<uint64_t>, 64>> _filter;
   uint64_t* _readonly_filter;
 };
 
