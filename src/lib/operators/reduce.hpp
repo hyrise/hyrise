@@ -16,6 +16,10 @@
 
 namespace hyrise {
 
+static inline uint64_t fib_hash(uint64_t x) {
+  return x * 11400714819323198485ull;
+}
+
 // Helper factory that returns the appropriate BloomFilter/BlockBloomFilter instance.
 // Supported values:
 //   - filter_size_exponent: 19, 20, 21
@@ -268,7 +272,11 @@ class Reduce : public AbstractReadOnlyOperator {
               segment_iterate<DataType>(*input_segment, [&](const auto& position) {
                 if (!position.is_null()) {
                   auto hash = size_t{11400714819323198485ul};
-                  boost::hash_combine(hash, position.value());
+                  if constexpr (std::is_same_v<DataType, int32_t>) {
+                    hash = fib_hash(static_cast<std::uint64_t>(position.value()));
+                  } else {
+                     boost::hash_combine(hash, position.value());
+                  }
                   // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
                   resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
@@ -391,7 +399,11 @@ class Reduce : public AbstractReadOnlyOperator {
               segment_iterate<DataType>(*input_segment, [&](const auto& position) {
                 if (!position.is_null()) {
                   auto hash = size_t{11400714819323198485ul};
-                  boost::hash_combine(hash, position.value());
+                  if constexpr (std::is_same_v<DataType, int32_t>) {
+                    hash = fib_hash(static_cast<std::uint64_t>(position.value()));
+                  } else {
+                     boost::hash_combine(hash, position.value());
+                  }
                   // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
                   auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
@@ -597,7 +609,11 @@ class Reduce : public AbstractReadOnlyOperator {
                 segment_iterate<DataType>(*input_segment, [&](const auto& position) {
                   if (!position.is_null()) {
                     auto hash = size_t{11400714819323198485ul};
-                    boost::hash_combine(hash, position.value());
+                    if constexpr (std::is_same_v<DataType, int32_t>) {
+                      hash = fib_hash(static_cast<std::uint64_t>(position.value()));
+                    } else {
+                       boost::hash_combine(hash, position.value());
+                    }
                     // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
                     auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));

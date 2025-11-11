@@ -46,6 +46,7 @@ template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter : public BaseBloomFilter {
  public:
   BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K), _filter(array_size) {
+    Assert(reinterpret_cast<uintptr_t>(_filter.data()) % 64 == 0, "BloomFilter is not properly aligned.");
     _readonly_filter = std::assume_aligned<64>(reinterpret_cast<uint64_t*>(_filter.data()));
   }
 
@@ -148,8 +149,8 @@ template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 class BlockBloomFilter : public BaseBloomFilter {
  public:
   BlockBloomFilter() : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K), _filter(array_size) {
+    Assert(reinterpret_cast<uintptr_t>(_filter.data()) % 64 == 0, "BloomFilter is not properly aligned.");
     _readonly_filter = std::assume_aligned<64>(reinterpret_cast<uint64_t*>(_filter.data()));
-
   }
 
   void insert(uint64_t hash) {
