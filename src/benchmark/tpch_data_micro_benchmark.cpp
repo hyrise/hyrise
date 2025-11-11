@@ -311,15 +311,13 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
-
   const auto& sm = Hyrise::get().storage_manager;
   const auto& lineitem_table = sm.get_table("lineitem");
-
-  const auto bin_count = EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(lineitem_table->row_count());
   const auto column_data_type = lineitem_table->column_data_type(column_id);
 
   resolve_data_type(column_data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
+    const auto bin_count = EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(lineitem_table->row_count());
     for (auto _ : state) {
       EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, bin_count);
     }
