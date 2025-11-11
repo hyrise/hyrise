@@ -148,7 +148,7 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
   segments_to_process.reserve(std::min(chunk_count, MIN_CHUNK_COUNT_TO_INCLUDE));
 
   // In average, we sample every 2.5th segment. Previous analyses of Hyrise histograms showed that the accuracy of
-  // sample histograms quickly deteriogates with sampling rates below 33 %. We thus choose a safer rate of ~40%.
+  // sample histograms quickly deteriorates with sampling rates below 33 %. We thus choose a safer rate of ~40%.
   auto random_engine = std::ranlux24_base{17};  // Fast random engine. Sufficient for our case.
   auto skip_lengths = std::uniform_int_distribution<>{0, 4};
 
