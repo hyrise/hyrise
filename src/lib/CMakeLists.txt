@@ -649,6 +649,7 @@ set(
     utils/meta_tables/segment_meta_data.cpp
     utils/meta_tables/segment_meta_data.hpp
     utils/min_max_predicate.hpp
+    utils/min_max_predicate.cpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
