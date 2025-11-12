@@ -194,6 +194,19 @@ PluginManager::~PluginManager() {
   _clean_up();
 }
 
+PluginManager& PluginManager::operator=(PluginManager&& other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+  _clean_up();
+  _plugins = std::move(other._plugins);
+  _user_executable_functions = std::move(other._user_executable_functions);
+  _pre_benchmark_hooks = std::move(other._pre_benchmark_hooks);
+  _post_benchmark_hooks = std::move(other._post_benchmark_hooks);
+
+  return *this;
+}
+
 size_t PluginNameFunctionNameHash::operator()(
     const std::pair<PluginName, PluginFunctionName>& exec_function_identifier) const {
   auto hash = size_t{0};

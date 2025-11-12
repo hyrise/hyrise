@@ -1,4 +1,9 @@
+#include <algorithm>
+#include <memory>
+#include <vector>
+
 #include "base_test.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/task_utils.hpp"
 
 namespace hyrise {

@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <memory>
 
 #include "base_test.hpp"

@@ -17,7 +17,7 @@
 
 namespace hyrise {
 
-enum class LQPNodeType {
+enum class LQPNodeType : uint8_t {
   Aggregate,
   Alias,
   ChangeMetaTable,
@@ -48,7 +48,7 @@ enum class LQPNodeType {
   Mock
 };
 
-enum class LQPInputSide { Left, Right };
+enum class LQPInputSide : uint8_t { Left, Right };
 
 // Describes the output of a Node and which of the output's inputs this Node is
 struct LQPOutputRelation {
@@ -62,14 +62,20 @@ class LQPColumnExpression;
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
-  AbstractLQPNode(const LQPNodeType node_type,
-                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
+  explicit AbstractLQPNode(const LQPNodeType node_type,
+                           const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
   virtual ~AbstractLQPNode();
+  // There is no specific reason why these are not implemented. There's (currently) no good reason to implement them.
+  // When implementing the assignment operators, please remember do to the same things as in the destructor.
+  AbstractLQPNode(const AbstractLQPNode&) = delete;
+  AbstractLQPNode(AbstractLQPNode&&) = delete;
+  AbstractLQPNode& operator=(const AbstractLQPNode&) = delete;
+  AbstractLQPNode& operator=(AbstractLQPNode&&) noexcept = delete;
 
   /**
    * @return a string describing this node, but nothing about its inputs.
    */
-  enum class DescriptionMode { Short, Detailed };
+  enum class DescriptionMode : uint8_t { Short, Detailed };
   virtual std::string description(const DescriptionMode mode = DescriptionMode::Short) const = 0;
 
   /**
@@ -158,7 +164,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   bool has_output_expressions(const ExpressionUnorderedSet& expressions) const;
 
-  enum class ExpressionIteration { Continue, Break };
+  enum class ExpressionIteration : uint8_t { Continue, Break };
 
   /**
    * Calls the passed @param visitor on each of the output expressions.
@@ -262,7 +268,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * the optimizer explaining that a node was added as a semi-join reduction node (see SubqueryToJoinRule). It is not
    * automatically added to the description.
    */
-  std::string comment{};
+  std::string comment;
 
  protected:
   /**
@@ -321,7 +327,7 @@ struct LQPNodeSharedPtrHash final {
 // std::shared_ptr<AbstractLQPNode>
 struct LQPNodeSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs) const {
-    return lhs == rhs || *lhs == *rhs;
+    return static_cast<size_t>(lhs == rhs || *lhs == *rhs);
   }
 };
 

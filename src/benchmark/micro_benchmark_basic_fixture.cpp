@@ -1,11 +1,14 @@
 #include "micro_benchmark_basic_fixture.hpp"
 
+#include <cstddef>
 #include <memory>
 
 #include "benchmark/benchmark.h"
 
 #include "hyrise.hpp"
+#include "micro_benchmark_utils.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/encoding_type.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 
@@ -17,10 +20,10 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
 
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
-  _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->generate_table(2ul, row_count, chunk_size));
-  _table_wrapper_b = std::make_shared<TableWrapper>(table_generator->generate_table(2ul, row_count, chunk_size));
+  _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->generate_table(2, row_count, chunk_size));
+  _table_wrapper_b = std::make_shared<TableWrapper>(table_generator->generate_table(2, row_count, chunk_size));
   _table_dict_wrapper = std::make_shared<TableWrapper>(
-      table_generator->generate_table(2ul, row_count, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary}));
+      table_generator->generate_table(2, row_count, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary}));
 
   _table_wrapper_a->never_clear_output();
   _table_wrapper_b->never_clear_output();

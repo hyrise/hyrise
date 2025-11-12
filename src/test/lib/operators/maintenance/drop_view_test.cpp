@@ -1,4 +1,6 @@
 #include <memory>
+#include <string>
+#include <unordered_map>
 
 #include "base_test.hpp"
 #include "hyrise.hpp"
@@ -6,7 +8,7 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
-#include "utils/assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

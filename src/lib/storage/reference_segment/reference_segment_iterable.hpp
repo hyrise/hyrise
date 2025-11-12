@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/create_iterable_from_non_reference_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
@@ -17,7 +17,7 @@
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 
 namespace hyrise {
-
+// NOLINTBEGIN(readability-identifier-naming)
 template <typename T, EraseReferencedSegmentType erase_reference_segment_type>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, erase_reference_segment_type>> {
  public:
@@ -36,7 +36,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     // optimizations. For example, we can use a filtered iterator instead of having to create segments accessors
     // and using virtual method calls.
 
-    if (position_filter->references_single_chunk() && position_filter->size() > 0) {
+    if (position_filter->references_single_chunk() && !position_filter->empty()) {
       // If a single chunk is referenced, we use the PosList as a filter for the referenced segment iterable.
       // This assumes that the PosList itself does not contain any NULL values. As NULL-producing operators
       // (Join, Aggregate, Projection) do not emit a PosList with references_single_chunk, we can assume that the
@@ -139,7 +139,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
  private:
   const ReferenceSegment& _segment;
 
- private:
   // The iterator for cases where we potentially iterate over multiple referenced chunks
   template <typename PosListIteratorType>
   class MultipleChunkIterator
@@ -148,7 +147,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
 
-   public:
     explicit MultipleChunkIterator(
         const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
         const std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>>& accessors,
@@ -170,8 +168,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       --_pos_list_it;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _pos_list_it += n;
+    void advance(std::ptrdiff_t distance) {
+      _pos_list_it += distance;
     }
 
     bool equal(const MultipleChunkIterator& other) const {
@@ -210,7 +208,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       (*_accessors)[chunk_id] = create_segment_accessor<T>(segment);
     }
 
-   private:
     std::shared_ptr<const Table> _referenced_table;
     ColumnID _referenced_column_id;
 
@@ -236,5 +233,5 @@ struct is_reference_segment_iterable<Iterable<T, erase_reference_segment_type>> 
 
 template <typename T>
 inline constexpr bool is_reference_segment_iterable_v = is_reference_segment_iterable<T>::value;
-
+// NOLINTEND(readability-identifier-naming)
 }  // namespace hyrise

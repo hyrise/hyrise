@@ -4,6 +4,7 @@
 #include <string>
 
 #include "abstract_rule.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -38,7 +39,7 @@ class InExpressionRewriteRule : public AbstractRule {
 
   // Instead of using the automatic behavior described above, the three strategies may be chosen explicitly, too. This
   // is helpful for testing and benchmarks. Note that it does not circumvent the restrictions on the element type.
-  enum class Strategy { Auto, ExpressionEvaluator, Join, Disjunction };
+  enum class Strategy : uint8_t { Auto, ExpressionEvaluator, Join, Disjunction };
   Strategy strategy{Strategy::Auto};
 
  protected:

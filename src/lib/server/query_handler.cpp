@@ -40,29 +40,34 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
   DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
               "Auto-commit transaction contexts should not be passed around this far.");
 
-  auto execution_info = ExecutionInformation();
   auto sql_pipeline = SQLPipelineBuilder{query}.with_transaction_context(transaction_context).create_pipeline();
 
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
 
-  if (pipeline_status == SQLPipelineStatus::Success) {
-    execution_info.result_table = result_table;
-    execution_info.root_operator_type = sql_pipeline.get_physical_plans().back()->type();
-
-    _handle_transaction_statement_message(execution_info, sql_pipeline);
-
-    if (send_execution_info == SendExecutionInfo::Yes) {
-      auto stream = std::stringstream{};
-      stream << sql_pipeline.metrics();
-      execution_info.pipeline_metrics = stream.str();
-    }
-  } else if (pipeline_status == SQLPipelineStatus::Failure) {
+  if (pipeline_status == SQLPipelineStatus::Failure) {
     const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
+    auto execution_info = ExecutionInformation(OperatorType::Mock);
     execution_info.error_messages = {{PostgresMessageType::HumanReadableError,
                                       "Transaction conflict, transaction was rolled back. Following statements might "
                                       "have still been sent and executed. Failed statement: " +
                                           failed_statement},
                                      {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
+    return {execution_info, sql_pipeline.transaction_context()};
+  }
+
+  if (pipeline_status != SQLPipelineStatus::Success) {
+    return {ExecutionInformation(OperatorType::Mock), sql_pipeline.transaction_context()};
+  }
+
+  auto execution_info = ExecutionInformation(sql_pipeline.get_physical_plans().back()->type());
+  execution_info.result_table = result_table;
+
+  _handle_transaction_statement_message(execution_info, sql_pipeline);
+
+  if (send_execution_info == SendExecutionInfo::Yes) {
+    auto stream = std::stringstream{};
+    stream << sql_pipeline.metrics();
+    execution_info.pipeline_metrics = stream.str();
   }
   return {execution_info, sql_pipeline.transaction_context()};
 }

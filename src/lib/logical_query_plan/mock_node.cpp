@@ -55,7 +55,7 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
     }
   }
 
-  Fail("Could not find column named '" + column_name + "' in MockNode.");
+  Fail(std::string{"Could not find column named '"} + column_name + "' in MockNode.");
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {

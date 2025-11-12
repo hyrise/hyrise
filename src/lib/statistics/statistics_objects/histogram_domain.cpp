@@ -121,11 +121,11 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
   uint64_t result = 1;
 
   for (;;) {
-    if ((exp & 1u) != 0) {
+    if ((exp & uint64_t{1}) != 0) {
       result *= base;
     }
 
-    exp >>= 1u;
+    exp >>= uint8_t{1};
 
     if (exp == 0) {
       break;

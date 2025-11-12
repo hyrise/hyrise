@@ -1,20 +1,24 @@
+#include <algorithm>
 #include <memory>
 #include <string>
-#include <utility>
+#include <unordered_map>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "operators/abstract_read_only_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/table.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/value_segment.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

@@ -13,11 +13,16 @@
 
 namespace hyrise {
 struct AbstractOperatorPerformanceData : public Noncopyable {
-  enum class NoSteps {
+  enum class NoSteps : uint8_t {
     Invalid  // Needed by magic_enum for enum_count
   };
 
-  virtual ~AbstractOperatorPerformanceData() = default;
+  AbstractOperatorPerformanceData() = default;
+  ~AbstractOperatorPerformanceData() override = default;
+  AbstractOperatorPerformanceData(const AbstractOperatorPerformanceData&) = delete;
+  AbstractOperatorPerformanceData(AbstractOperatorPerformanceData&&) = default;
+  AbstractOperatorPerformanceData& operator=(const AbstractOperatorPerformanceData&) = delete;
+  AbstractOperatorPerformanceData& operator=(AbstractOperatorPerformanceData&&) = default;
 
   virtual void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const = 0;
 

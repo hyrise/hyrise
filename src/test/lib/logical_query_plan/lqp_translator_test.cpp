@@ -1,14 +1,22 @@
+#include <cstdint>
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "expression/window_expression.hpp"
-#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -30,6 +38,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "logical_query_plan/window_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/export.hpp"
@@ -49,11 +58,12 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
-#include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -694,12 +704,14 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
    * Build LQP and translate to PQP.
    */
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),  // NOLINT
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),
     ProjectionNode::make(expression_vector(int_float_b, int_float_a, add_(int_float_b, int_float_a)),
       int_float_node));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
   const auto op = LQPTranslator{}.translate_node(lqp);
 
   /**

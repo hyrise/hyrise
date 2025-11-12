@@ -1,6 +1,8 @@
+#include <cstdint>
+#include <memory>
+
 #include "base_test.hpp"
 #include "statistics/attribute_statistics.hpp"
-#include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/load_table.hpp"

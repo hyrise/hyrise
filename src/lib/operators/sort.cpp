@@ -31,12 +31,12 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Ceiling of integer division
 size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
   DebugAssert(rhs > 0, "Divisor must be larger than 0.");
-  return (lhs + rhs - 1u) / rhs;
+  return (lhs + rhs - 1) / rhs;
 }
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,

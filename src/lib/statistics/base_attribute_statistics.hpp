@@ -8,7 +8,7 @@
 namespace hyrise {
 
 class AbstractStatisticsObject;
-enum class PredicateCondition;
+enum class PredicateCondition : uint8_t;
 
 /**
  * Statistically represents
@@ -19,9 +19,7 @@ enum class PredicateCondition;
  */
 class BaseAttributeStatistics {
  public:
-  explicit BaseAttributeStatistics(const DataType init_data_type);
   virtual ~BaseAttributeStatistics() = default;
-
   /**
    * Utility to assign a statistics object to this slice. Spares the caller from having to deduce the type of
    * `statistics_object` and picking the right member to assign it to.
@@ -55,9 +53,9 @@ class BaseAttributeStatistics {
    */
   virtual std::shared_ptr<const BaseAttributeStatistics> pruned(
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
-  const DataType data_type;
+  virtual DataType data_type() const = 0;
 };
 
 }  // namespace hyrise

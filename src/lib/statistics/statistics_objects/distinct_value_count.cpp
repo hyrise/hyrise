@@ -11,8 +11,11 @@
 
 namespace hyrise {
 
-DistinctValueCount::DistinctValueCount(const size_t init_count)
-    : AbstractStatisticsObject(DataType::Long), count{init_count} {}
+DistinctValueCount::DistinctValueCount(const size_t init_count) : count{init_count} {}
+
+constexpr DataType DistinctValueCount::data_type() const {
+  return DataType::Long;
+}
 
 std::shared_ptr<const AbstractStatisticsObject> DistinctValueCount::sliced(
     const PredicateCondition /* predicate_condition */, const AllTypeVariant& /* variant_value */,
@@ -23,6 +26,12 @@ std::shared_ptr<const AbstractStatisticsObject> DistinctValueCount::sliced(
 
 std::shared_ptr<const AbstractStatisticsObject> DistinctValueCount::scaled(const Selectivity /* selectivity */) const {
   return shared_from_this();
+}
+
+std::shared_ptr<const AbstractStatisticsObject> DistinctValueCount::pruned(
+    const size_t /* num_values_pruned */, const PredicateCondition /* predicate_condition */,
+    const AllTypeVariant& /* variant_value */, const std::optional<AllTypeVariant>& /* variant_value2 */) const {
+  Fail("Pruning has not yet been implemented for the given statistics object");
 }
 
 }  // namespace hyrise

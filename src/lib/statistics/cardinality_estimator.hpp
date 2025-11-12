@@ -86,6 +86,16 @@ class CardinalityEstimator {
     std::shared_ptr<const BaseAttributeStatistics> sliced(
         const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
         const std::optional<AllTypeVariant>& /*variant_value2*/ = std::nullopt) const override;
+
+    std::shared_ptr<const BaseAttributeStatistics> pruned(
+        const size_t num_values_pruned, const PredicateCondition predicate_condition,
+        const AllTypeVariant& variant_value,
+        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
+    DataType data_type() const override;
+
+   private:
+    DataType _data_type;
   };
 
   // Helper to ensure no statistics for required LQPColumnExpressions were pruned. Should be adapted if we estimate
@@ -285,7 +295,7 @@ class CardinalityEstimator {
 
   void _populate_required_column_expressions() const;
 
-  mutable CardinalityEstimationCache cardinality_estimation_cache;
+  mutable CardinalityEstimationCache _cardinality_estimation_cache;
 };
 
 std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);

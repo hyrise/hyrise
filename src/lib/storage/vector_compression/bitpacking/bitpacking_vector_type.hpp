@@ -15,6 +15,6 @@ namespace hyrise {
  * Allocator: the allocator should allocate the same value type (IDX) as W
  */
 
-using pmr_compact_vector = compact::vector<uint32_t, 0u, uint64_t, PolymorphicAllocator<uint64_t>>;
+using pmr_compact_vector = compact::vector<uint32_t, 0, uint64_t, PolymorphicAllocator<uint64_t>>;
 
 }  // namespace hyrise

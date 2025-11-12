@@ -60,7 +60,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
 
   // retrieve memory consumption by each concatenated key
   auto bytes_per_key =
-      std::accumulate(_indexed_segments.begin(), _indexed_segments.end(), CompositeKeyLength{0u},
+      std::accumulate(_indexed_segments.begin(), _indexed_segments.end(), CompositeKeyLength{0},
                       [](auto key_length, const auto& segment) {
                         return key_length + byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type());
                       });

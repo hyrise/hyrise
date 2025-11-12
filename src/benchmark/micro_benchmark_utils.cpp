@@ -1,6 +1,7 @@
 #include "micro_benchmark_utils.hpp"
 
-#include <stddef.h>
+#include <cstddef>
+#include <vector>
 
 namespace hyrise {
 

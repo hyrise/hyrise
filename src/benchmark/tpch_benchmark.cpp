@@ -1,26 +1,35 @@
-#include <chrono>
+#include <algorithm>
+#include <cstddef>
+#include <filesystem>
 #include <iostream>
+#include <iterator>
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "cxxopts.hpp"
 #include "magic_enum/magic_enum.hpp"
-#include "SQLParserResult.h"
 
+#include "abstract_benchmark_item_runner.hpp"
+#include "abstract_table_generator.hpp"
+#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "hyrise.hpp"
 #include "jcch/jcch_benchmark_item_runner.hpp"
 #include "jcch/jcch_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
@@ -40,19 +49,21 @@ using namespace hyrise;  // NOLINT
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (10.0 ~ 10 GB)", cxxopts::value<float>()->default_value("10"))
-    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
-    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>())
+    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false"))
     ("j,jcch", "Use JCC-H data and query generators instead of TPC-H. If this parameter is used, table data always "
                "contains skew. With --jcch=skewed, queries are generated to be affected by this skew. With "
-               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value("")) // NOLINT
+               "--jcch=normal, query parameters access the unskewed part of the tables ", cxxopts::value<std::string>()->default_value(""))
     ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
                    "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
                    "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
-                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")); // NOLINT
+                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None"));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   auto config = std::shared_ptr<BenchmarkConfig>{};
   auto comma_separated_queries = std::string{};
@@ -68,7 +79,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  if (cli_parse_result.count("queries")) {
+  if (cli_parse_result.count("queries") > size_t{0}) {
     comma_separated_queries = cli_parse_result["queries"].as<std::string>();
   }
 
@@ -77,12 +88,12 @@ int main(int argc, char* argv[]) {
   config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
   use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
-  jcch = cli_parse_result.count("jcch");
+  jcch = (cli_parse_result.count("jcch") != size_t{0});
   if (jcch) {
     const auto jcch_mode = cli_parse_result["jcch"].as<std::string>();
     if (jcch_mode == "skewed") {
       jcch_skewed = true;
-    } else if (jcch_mode == "normal") {  // NOLINT
+    } else if (jcch_mode == "normal") {
       jcch_skewed = false;
     } else {
       Fail("Invalid JCC-H mode, use skewed or normal.");
@@ -90,12 +101,12 @@ int main(int argc, char* argv[]) {
   }
 
   auto clustering_configuration = ClusteringConfiguration::None;
-  if (cli_parse_result.count("clustering")) {
+  if (cli_parse_result.count("clustering") != size_t{0}) {
     auto clustering_configuration_parameter = cli_parse_result["clustering"].as<std::string>();
     if (clustering_configuration_parameter == "Pruning") {
       clustering_configuration = ClusteringConfiguration::Pruning;
     } else if (clustering_configuration_parameter != "None") {
-      Fail("Invalid clustering config: '" + clustering_configuration_parameter + "'.");
+      Fail(std::string{"Invalid clustering config: '"} + clustering_configuration_parameter + "'.");
     }
 
     std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration) << "' configuration\n";
@@ -105,7 +116,7 @@ int main(int argc, char* argv[]) {
 
   // Build list of query ids to be benchmarked and display it
   if (comma_separated_queries.empty()) {
-    std::transform(tpch_queries.begin(), tpch_queries.end(), std::back_inserter(item_ids), [](auto& pair) {
+    std::ranges::transform(tpch_queries, std::back_inserter(item_ids), [](auto& pair) {
       return BenchmarkItemID{pair.first - 1};
     });
   } else {
@@ -113,7 +124,7 @@ int main(int argc, char* argv[]) {
     auto item_ids_str = std::vector<std::string>();
     boost::trim_if(comma_separated_queries, boost::is_any_of(","));
     boost::split(item_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
-    std::transform(item_ids_str.begin(), item_ids_str.end(), std::back_inserter(item_ids), [](const auto& item_id_str) {
+    std::ranges::transform(item_ids_str, std::back_inserter(item_ids), [](const auto& item_id_str) {
       const auto item_id =
           BenchmarkItemID{boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
       DebugAssert(item_id < 22, "There are only 22 queries.");
@@ -122,9 +133,9 @@ int main(int argc, char* argv[]) {
   }
 
   std::cout << "- Benchmarking Queries: [ ";
-  auto printable_item_ids = std::vector<std::string>();
-  std::for_each(item_ids.begin(), item_ids.end(), [&printable_item_ids](auto& id) {
-    printable_item_ids.push_back(std::to_string(id + 1));
+  auto printable_item_ids = std::vector<std::string>(item_ids.size());
+  std::ranges::transform(item_ids, printable_item_ids.begin(), [&](auto& item_id) {
+    return std::to_string(item_id + 1);
   });
   std::cout << boost::algorithm::join(printable_item_ids, ", ") << " ]\n";
 
@@ -134,13 +145,13 @@ int main(int argc, char* argv[]) {
 
   if (config->verify) {
     // Hack: We cannot verify Q15, thus we remove it from the list of queries
-    auto it = std::remove(item_ids.begin(), item_ids.end(), 15 - 1);
-    if (it != item_ids.end()) {
+    auto [remove_begin, remove_end] = std::ranges::remove(item_ids, 15 - 1);
+    if (remove_begin != item_ids.end()) {
       // The problem is that the last part of the query, "DROP VIEW", does not return a table. Since we also have
       // the TPC-H test against a known-to-be-good table, we do not want the additional complexity for handling this
       // in the BenchmarkRunner.
       std::cout << "- Skipping Query 15 because it cannot easily be verified\n";
-      item_ids.erase(it, item_ids.end());
+      item_ids.erase(remove_begin, remove_end);
     }
   }
 
@@ -152,7 +163,7 @@ int main(int argc, char* argv[]) {
   context.emplace("clustering", magic_enum::enum_name(clustering_configuration));
   context.emplace("use_prepared_statements", use_prepared_statements);
 
-  auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
+  auto table_generator = std::unique_ptr<TPCHTableGenerator>{};
   auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
 
   if (jcch) {

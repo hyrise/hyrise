@@ -9,7 +9,7 @@
 
 namespace hyrise {
 
-class FileBasedTableGenerator : virtual public AbstractTableGenerator {
+class FileBasedTableGenerator : public AbstractTableGenerator {
  public:
   FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config, const std::string& path);
 
@@ -22,10 +22,14 @@ class FileBasedTableGenerator : virtual public AbstractTableGenerator {
   void set_add_constraints_callback(
       const std::function<void(std::unordered_map<std::string, BenchmarkTableInfo>&)>& add_constraints_callback);
 
+  const std::string& path();
+
  protected:
-  const std::string _path;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
   std::function<void(std::unordered_map<std::string, BenchmarkTableInfo>&)> _add_constraints_callback;
+
+ private:
+  std::string _path;
 };
 
 }  // namespace hyrise

@@ -1,26 +1,37 @@
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
-#include <future>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <memory>
 #include <mutex>
 #include <numeric>
 #include <optional>
 #include <shared_mutex>
+#include <stdexcept>
+#include <string>
 #include <thread>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/insert.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
-#include "scheduler/worker.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/constraints/constraint_utils.hpp"
@@ -28,8 +39,9 @@
 #include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
-#include "ucc_discovery_plugin.hpp"
+#include "types.hpp"
 #include "utils/atomic_max.hpp"
+#include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
 namespace hyrise {

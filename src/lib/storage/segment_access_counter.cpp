@@ -84,17 +84,19 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
   // There are five possible inputs
   enum class Input : uint8_t { Zero, One, Positive, NegativeOne, Negative };
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS{{
-    //                         Input:   Zero                                    One                                     Positive,                               NegativeOne                             Negative                                  // NOLINT
-    /* FROM Point */                   {AccessPattern::Point,                   AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},  // NOLINT
-    /* FROM SequentiallyIncreasing */  {AccessPattern::SequentiallyIncreasing,  AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},                   // NOLINT
-    /* FROM MonotonicallyIncreasing */ {AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},                   // NOLINT
-    /* FROM SequentiallyDecreasing */  {AccessPattern::SequentiallyDecreasing,  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},  // NOLINT
-    /* FROM MonotonicallyDecreasing */ {AccessPattern::MonotonicallyDecreasing, AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::MonotonicallyDecreasing, AccessPattern::MonotonicallyDecreasing},  // NOLINT
-    /* FROM Random */                  {AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random}                    // NOLINT
+    //                         Input:   Zero                                    One                                     Positive,                               NegativeOne                             Negative
+    /* FROM Point */                   {AccessPattern::Point,                   AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},
+    /* FROM SequentiallyIncreasing */  {AccessPattern::SequentiallyIncreasing,  AccessPattern::SequentiallyIncreasing,  AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},
+    /* FROM MonotonicallyIncreasing */ {AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::MonotonicallyIncreasing, AccessPattern::Random,                  AccessPattern::Random},
+    /* FROM SequentiallyDecreasing */  {AccessPattern::SequentiallyDecreasing,  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::SequentiallyDecreasing,  AccessPattern::MonotonicallyDecreasing},
+    /* FROM MonotonicallyDecreasing */ {AccessPattern::MonotonicallyDecreasing, AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::MonotonicallyDecreasing, AccessPattern::MonotonicallyDecreasing},
+    /* FROM Random */                  {AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random,                  AccessPattern::Random}
   }};
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   const auto max_items_to_compare = std::min(positions.size(), size_t{100});
 

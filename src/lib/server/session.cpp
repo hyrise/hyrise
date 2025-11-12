@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 
 #include "client_disconnect_exception.hpp"
 #include "hyrise.hpp"
@@ -119,10 +120,9 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  ExecutionInformation execution_information;
-
-  std::tie(execution_information, _transaction_context) =
+  auto [execution_information, init_transaction_context] =
       QueryHandler::execute_pipeline(query, _send_execution_info, _transaction_context);
+  _transaction_context = std::move(init_transaction_context);
 
   if (!execution_information.error_messages.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error_messages);

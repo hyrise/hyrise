@@ -26,7 +26,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::vector<std::vector<AllTypeVariant>> materialize_values(const std::shared_ptr<const Table>& values) {
   auto performance_warning_disabler = PerformanceWarningDisabler{};

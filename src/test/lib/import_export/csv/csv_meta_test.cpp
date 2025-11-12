@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include "nlohmann/json.hpp"
 
 #include "base_test.hpp"

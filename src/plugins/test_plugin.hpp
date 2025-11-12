@@ -11,8 +11,6 @@ namespace hyrise {
 
 class TestPlugin : public AbstractPlugin {
  public:
-  TestPlugin() : storage_manager(Hyrise::get().storage_manager) {}
-
   std::string description() const final;
 
   void start() final;
@@ -28,8 +26,6 @@ class TestPlugin : public AbstractPlugin {
   std::optional<PreBenchmarkHook> pre_benchmark_hook() final;
 
   std::optional<PostBenchmarkHook> post_benchmark_hook() final;
-
-  StorageManager& storage_manager;
 
  private:
   size_t _added_tables_count{0};

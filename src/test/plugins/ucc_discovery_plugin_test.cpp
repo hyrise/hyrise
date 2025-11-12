@@ -1,9 +1,10 @@
-#include <functional>
-#include <limits>
+#include <cstddef>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
 #include "../../plugins/ucc_discovery_plugin.hpp"
@@ -11,9 +12,7 @@
 #include "base_test.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "lib/storage/encoding_test.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -23,22 +22,22 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/delete.hpp"
-#include "operators/get_table.hpp"
 #include "operators/insert.hpp"
-#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
-#include "operators/validate.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
-#include "utils/template_type.hpp"
 
 namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)

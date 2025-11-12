@@ -23,15 +23,16 @@ namespace hyrise {
  * The algorithm first creates an attribute vector of standard size (uint32_t) and then compresses it
  * using fixed-width integer encoding.
  */
-template <auto Encoding>
-class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
+template <auto encoding>
+class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<encoding>> {
  public:
-  static constexpr auto _encoding_type = enum_c<EncodingType, Encoding>;
-  static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  static constexpr auto _encoding_type = enum_c<EncodingType, encoding>;
+  static constexpr auto USES_VECTOR_COMPRESSION = true;  // see base_segment_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
-                                                     const PolymorphicAllocator<T>& allocator) {
+  std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<T>& segment_iterable,
+                                                    const PolymorphicAllocator<T>& allocator) {
     // Vectors to gather the input segment's data. This data is used in a later step to
     // construct the actual dictionary and attribute vector.
     std::vector<T> dense_values;    // contains the actual values (no NULLs)
@@ -39,7 +40,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     auto max_string_length = size_t{0};
 
-    segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
+    segment_iterable.with_iterators([&](auto segment_it, const auto& segment_end) {
       const auto segment_size = std::distance(segment_it, segment_end);
       dense_values.reserve(segment_size);  // potentially overallocate for segments with NULLs
       null_values.resize(segment_size);    // resized to size of segment
@@ -47,10 +48,10 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {
         const auto segment_item = *segment_it;
         if (!segment_item.is_null()) {
-          const auto segment_value = segment_item.value();
+          const auto& segment_value = segment_item.value();
           dense_values.push_back(segment_value);
 
-          if constexpr (Encoding == EncodingType::FixedStringDictionary) {
+          if constexpr (encoding == EncodingType::FixedStringDictionary) {
             if (segment_value.size() > max_string_length) {
               max_string_length = segment_value.size();
             }
@@ -87,10 +88,10 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     const auto max_value_id = null_value_id;
 
     const auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(compress_vector(
-        uncompressed_attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
+        uncompressed_attribute_vector, SegmentEncoder<DictionaryEncoder<encoding>>::_get_vector_compression_type(),
         allocator, {max_value_id}));
 
-    if constexpr (Encoding == EncodingType::FixedStringDictionary) {
+    if constexpr (encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       auto fixed_string_dictionary =
           std::make_shared<FixedStringVector>(dictionary->cbegin(), dictionary->cend(), max_string_length, allocator);

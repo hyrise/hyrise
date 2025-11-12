@@ -1,5 +1,8 @@
+#include <cstdint>
+
 #include "base_test.hpp"
 #include "storage/index/group_key/variable_length_key.hpp"
+#include "storage/index/group_key/variable_length_key_base.hpp"
 
 namespace hyrise {
 

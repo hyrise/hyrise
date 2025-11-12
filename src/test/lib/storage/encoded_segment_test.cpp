@@ -1,20 +1,31 @@
-#include <cctype>
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "lib/storage/encoding_test.hpp"
-#include "operators/get_table.hpp"
-#include "operators/print.hpp"
-#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/create_iterable_from_segment.ipp"
 #include "storage/encoding_type.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/run_length_segment.hpp"
 #include "storage/segment_access_counter.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -40,7 +51,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     switch (encoding_type) {
       case EncodingType::FrameOfReference:
         // fill three blocks and a bit more
-        return static_cast<size_t>(FrameOfReferenceSegment<int32_t>::block_size * (3.3));
+        return static_cast<size_t>(FrameOfReferenceSegment<int32_t>::BLOCK_SIZE * (3.3));
       default:
         return default_row_count;
     }

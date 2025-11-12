@@ -1,8 +1,15 @@
+#include <pthread.h>
 #ifdef __linux__
 #include <sched.h>
 #endif
 
+#include <cstdint>
+#include <cstring>
+#include <memory>
+
 #include "base_test.hpp"
+#include "storage/table.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 
 namespace hyrise {
