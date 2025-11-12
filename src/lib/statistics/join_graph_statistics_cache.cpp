@@ -31,7 +31,8 @@ JoinGraphStatisticsCache JoinGraphStatisticsCache::from_join_graph(const JoinGra
   auto predicate_idx = size_t{0};
   for (const auto& edge : join_graph.edges) {
     for (const auto& predicate : edge.predicates) {
-      predicate_indices.emplace(predicate, predicate_idx++);
+      predicate_indices.emplace(predicate, predicate_idx);
+      ++predicate_idx;
     }
   }
 
