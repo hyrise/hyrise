@@ -65,6 +65,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   explicit AbstractLQPNode(const LQPNodeType node_type,
                            const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
   virtual ~AbstractLQPNode();
+  // There is no specific reason why these are not implemented. There's (currently) no good reason to implement them.
+  // When implementing the assignment operators, please remember do to the same things as in the destructor.
+  AbstractLQPNode(const AbstractLQPNode&) = delete;
+  AbstractLQPNode(AbstractLQPNode&&) = delete;
+  AbstractLQPNode& operator=(const AbstractLQPNode&) = delete;
+  AbstractLQPNode& operator=(AbstractLQPNode&&) noexcept = delete;
 
   /**
    * @return a string describing this node, but nothing about its inputs.
