@@ -211,6 +211,13 @@ set(BOOST_MIN_VERSION "1.81.0")
 find_package(Boost ${BOOST_MIN_VERSION} REQUIRED COMPONENTS container date_time NO_MODULE)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
+execute_process(
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/get_l2_cache_size.sh
+    OUTPUT_VARIABLE L2_CACHE_SIZE 
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "Detected L2 cache size: ${L2_CACHE_SIZE}")
+add_definitions(-DSYSTEM_L2_CACHE_SIZE=${L2_CACHE_SIZE})
 set(BOOST_LIBS Boost::container Boost::date_time)
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
