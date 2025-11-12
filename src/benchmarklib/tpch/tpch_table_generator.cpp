@@ -189,8 +189,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    */
 
   for (auto order_idx = size_t{0}; order_idx < order_count; ++order_idx) {
-    // NOLINTNEXTLINE(google-runtime-int,runtime/int) mk_order returns a long
-    const auto order = call_dbgen_mk<order_t, long>(order_idx + 1, mk_order, TPCHTable::Orders, int64_t{0});
+    // NOLINTNEXTLINE(google-runtime-int,runtime/int) mk_order uses longs
+    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, long{0});
 
     order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
