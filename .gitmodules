@@ -7,6 +7,9 @@
 [submodule "third_party/compact_vector"]
 	path = third_party/compact_vector
 	url = https://github.com/gmarcais/compact_vector.git
+[submodule "third_party/concurrentqueue"]
+	path = third_party/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git
 [submodule "third_party/cpplint"]
 	path = third_party/cpplint
 	url = https://github.com/cpplint/cpplint.git
@@ -53,9 +56,6 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
-[submodule "third_party/concurrentqueue"]
-	path = third_party/concurrentqueue
-	url = https://github.com/cameron314/concurrentqueue.git
 [submodule "third_party/perf-cpp"]
 	path = third_party/perf-cpp
 	url = https://github.com/jmuehlig/perf-cpp.git

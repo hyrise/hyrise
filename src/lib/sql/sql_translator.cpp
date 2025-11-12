@@ -109,6 +109,7 @@ const auto hsql_predicate_condition = std::unordered_map<hsql::OperatorType, Pre
     {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
     {hsql::kOpLike, PredicateCondition::Like},
     {hsql::kOpNotLike, PredicateCondition::NotLike},
+    {hsql::kOpILike, PredicateCondition::LikeInsensitive},
     {hsql::kOpIsNull, PredicateCondition::IsNull}};
 
 const auto hsql_datetime_field = std::unordered_map<hsql::DatetimeField, DatetimeComponent>{
