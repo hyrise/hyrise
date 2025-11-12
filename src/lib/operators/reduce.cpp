@@ -2,6 +2,11 @@
 
 #include <memory>
 
+#include "hyrise.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/segment_iterate.hpp"
+#include "utils/timer.hpp"
+
 namespace hyrise {
 
 inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_size_exponent,
