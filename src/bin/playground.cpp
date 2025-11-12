@@ -173,7 +173,7 @@ int main() {
     // - block_size_exponent in {0, 9}
     // - k in {1, 2}
     for (const auto block_size_exponent : {uint8_t{0}, uint8_t{9}}) {
-      for (const auto k : {uint8_t{1}, uint8_t{2}}) {
+      for (const auto k : {uint8_t{1}, uint8_t{2}, uint8_t{3}}) {
         auto build_reduce =
             std::make_shared<Reduce>(get_table_lineitem, table_scan1, join_predicate, ReduceMode::Build, UseMinMax::No,
                                      /*filter_size_exponent*/ 20, block_size_exponent, k);

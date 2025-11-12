@@ -46,6 +46,8 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               return std::make_shared<BloomFilter<20, 1>>();
             case 2:
               return std::make_shared<BloomFilter<20, 2>>();
+            case 3:
+              return std::make_shared<BloomFilter<20, 3>>();
             default:
               break;
           }
@@ -120,6 +122,8 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               return std::make_shared<BlockBloomFilter<20, 9, 1>>();
             case 2:
               return std::make_shared<BlockBloomFilter<20, 9, 2>>();
+            case 3:
+              return std::make_shared<BlockBloomFilter<20, 9, 3>>();
             default:
               break;
           }
