@@ -209,6 +209,9 @@ void perform_perf(std::ofstream& out, const std::vector<std::string>& event_name
 }
 
 int main(int argc, char* argv[]) {
+  uint32_t ssss = SYSTEM_L2_CACHE_SIZE;
+  std::cout << "L2 cache size: " << ssss << " bytes\n";
+
   if (argc != 3 && argc != 4) {
     std::cerr << "Usage: " << argv[0] << " <scale_factor> <perf|output_csv_file>\n";
     return 1;
