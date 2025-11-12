@@ -146,6 +146,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       ++queue_check_runs;
     }
+    std::cout << "Scheduler: Did " << queue_check_runs << " queue runs\n";
   }
 }
 
