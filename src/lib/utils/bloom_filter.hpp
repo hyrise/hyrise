@@ -174,19 +174,16 @@ class BlockBloomFilter : public BaseBloomFilter {
     // const auto& block = &_readonly_filter[block_index];
     auto result = true;
     for (uint8_t i = 0; i < K; ++i) {
-      const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
-      const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
-      const auto bit_index_in_item = bit_index_in_block & 63;
+      // const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
+      // const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
+      // const auto bit_index_in_item = bit_index_in_block & 63;
+      // result &= static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
 
-      // std::cout << "Loop result: " << std::boolalpha << result << '\n';
-      result &= static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
-      // if (static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item))) {
-      //   std::cout << "Loop result: " << std::boolalpha << static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item)) << '\n';
-      //   std::cout << "Hash: " << std::bitset<64>(hash) << ". Block: " << block_index << ". For k " << size_t{i} << ", I want to access bit " << bit_index_in_block << ". That's block item " << block_item_index << " and bit in item: " << bit_index_in_item << "\n";
-      //   std::cout << "Loop result: " << std::boolalpha << result << '\n';
-      // }
+      // result &= static_cast<bool>(_readonly_filter[block_index + (((hash >> i * 9) & size_t{511}) >> 6)] & (size_t{1} << (((hash >> i * 9) & size_t{511}) & 63)));
+
+      const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
+      result &= static_cast<bool>(_readonly_filter[block_index + (bit_index_in_block >> 6)] & (size_t{1} << (bit_index_in_block & 63)));
     }
-    // std::cout << "Result: " << std::boolalpha << result << '\n';
     return result;
   }
 
