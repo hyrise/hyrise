@@ -160,14 +160,15 @@ void perform_perf(std::ofstream& out, const std::vector<std::string>& event_name
   if (filter_size_exponent == 0 && (block_size_exponent != 0 || k != 1)) {
     return;
   }
-  
+
   auto counters = perf::CounterDefinition{};
   auto event_counter = perf::EventCounter{counters};
   event_counter.add(event_names);
 
   auto write_csv_row = [&](const uint8_t filter_size_exponent, const uint8_t block_size_exponent, const uint8_t k) {
     const auto perf_result = event_counter.result();
-    out << static_cast<int>(filter_size_exponent) << ',' << static_cast<int>(block_size_exponent) << ',' << static_cast<int>(k);
+    out << static_cast<int>(filter_size_exponent) << ',' << static_cast<int>(block_size_exponent) << ','
+        << static_cast<int>(k);
     for (const auto& name : event_names) {
       double value = -1.0;
       for (const auto& [event_name, event_value] : perf_result) {
@@ -279,8 +280,8 @@ int main(int argc, char* argv[]) {
     for (const auto filter_size_exponent : filter_size_exponents) {
       for (const auto block_size_exponent : block_size_exponents) {
         for (const auto k : ks) {
-          perform_perf(out, event_names, join_predicate, left_input, right_input, filter_size_exponent, block_size_exponent,
-                               k);
+          perform_perf(out, event_names, join_predicate, left_input, right_input, filter_size_exponent,
+                       block_size_exponent, k);
         }
       }
     }

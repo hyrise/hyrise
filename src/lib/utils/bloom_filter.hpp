@@ -100,7 +100,6 @@ class BlockBloomFilter : public BaseBloomFilter {
   uint64_t* _readonly_filter;
 };
 
-
 template <typename Functor>
 void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor& functor) {
   switch (base_bloom_filter.filter_size_exponent()) {
