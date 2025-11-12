@@ -212,6 +212,13 @@ find_package(Boost ${BOOST_MIN_VERSION} REQUIRED COMPONENTS container date_time 
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
 execute_process(
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/get_l1_cache_size.sh
+    OUTPUT_VARIABLE L1_CACHE_SIZE 
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "Detected L1 cache size: ${L1_CACHE_SIZE}")
+add_definitions(-DSYSTEM_L1_CACHE_SIZE=${L1_CACHE_SIZE})
+execute_process(
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/get_l2_cache_size.sh
     OUTPUT_VARIABLE L2_CACHE_SIZE 
     OUTPUT_STRIP_TRAILING_WHITESPACE
