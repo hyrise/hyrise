@@ -4,6 +4,7 @@
 #include <string>
 
 #include "abstract_rule.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

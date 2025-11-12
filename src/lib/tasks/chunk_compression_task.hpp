@@ -5,12 +5,12 @@
 
 #include "scheduler/abstract_task.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
 class Chunk;
-class Table;
 
 /**
  * @brief Compresses a chunk of a table using the default encoding

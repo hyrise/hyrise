@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_statistics_object.hpp"
+#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {

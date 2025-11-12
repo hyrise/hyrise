@@ -12,7 +12,7 @@
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "operators/table_scan/sorted_segment_search.hpp"
-#include "storage/create_iterable_from_segment.ipp"
+#include "storage/create_iterable_from_non_reference_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
