@@ -24,9 +24,13 @@ enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, Right
  *  by each segment of the respective chunk. For larger join graphs, there can be many more referenced tables. The
  *  mapping is later used to recognize when an existing PosList can be reused. The function `setup_pos_list_mapping` is
  *  responsible to create such a mapping.
+ *
+ *  write_output_segments can be called multiple times, if there are multiple pos_lists (e.g. left and right).
+ *  output_segments should just be an empty vector, and the first call to write_output_segments will take care of
+ *  allocating the storage.
  */
 
 template <bool allow_partition_merge>
-size_t write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::shared_ptr<const Table>& input_table,
-                             bool create_pos_lists_by_column, std::vector<Segments>& output_segments);
+void write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::shared_ptr<const Table>& input_table,
+                           bool create_pos_lists_by_column, std::vector<Segments>& output_segments);
 }  // namespace hyrise

@@ -94,7 +94,7 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
  */
 void write_output_segments_task(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                                 const PosListsByColumn& input_pos_lists_by_column,
-                                std::shared_ptr<RowIDPosList> pos_list) {
+                                const std::shared_ptr<RowIDPosList>& pos_list) {
   auto output_pos_list_cache = std::unordered_map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>>{};
 
   auto dummy_table = std::shared_ptr<Table>{};
@@ -204,8 +204,8 @@ void write_output_segments_task(Segments& output_segments, const std::shared_ptr
 namespace hyrise {
 
 template <bool allow_partition_merge>
-size_t write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::shared_ptr<const Table>& input_table,
-                             bool create_pos_lists_by_column, std::vector<Segments>& output_segments) {
+void write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::shared_ptr<const Table>& input_table,
+                           bool create_pos_lists_by_column, std::vector<Segments>& output_segments) {
   /**
    * Two caches to avoid redundant reference materialization for Reference input tables. As there might be hundreds of
    * partitions, hundreds of input chunks, and dozens of columns, this speeds up this function a lot.
@@ -215,6 +215,12 @@ size_t write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::sh
    *          PosLists chunk by chunk (see setup_pos_list_mapping() for more details)
    *      - avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
    */
+
+  if (output_segments.size() == 0) {
+    output_segments.resize(std::ranges::count_if(pos_lists, [&](const auto& pos_list) {
+      return !pos_list.empty();
+    }));
+  }
 
   auto pos_lists_by_column = PosListsByColumn{};
 
@@ -228,7 +234,7 @@ size_t write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::sh
 
   auto output_position = size_t{0};
   for (auto partition_id = size_t{0}; partition_id < pos_lists_size; ++partition_id) {
-    // Moving the values into a shared PosList saves us some work in write_output_segments. We know that
+    // Moving the values into a shared PosList saves us some work in write_output_segments_task. We know that
     // the pos_lists will not be used again.
     auto pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists[partition_id]));
 
@@ -257,16 +263,17 @@ size_t write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::sh
       }
     }
 
-    auto write_output_segments_task_params = [&, output_position, pos_list]() {
+    auto write_output_segments_task_with_params = [&, output_position, pos_list = std::move(pos_list)]() {
       write_output_segments_task(output_segments[output_position], input_table, pos_lists_by_column, pos_list);
     };
 
-    write_output_segments_tasks.emplace_back(std::make_shared<JobTask>(write_output_segments_task_params));
+    write_output_segments_tasks.emplace_back(std::make_shared<JobTask>(write_output_segments_task_with_params));
     ++output_position;
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(write_output_segments_tasks);
-  return output_position;
+
+  output_segments.resize(output_position);
 }
 
 template size_t write_output_segments<true>(std::vector<RowIDPosList>& pos_lists,

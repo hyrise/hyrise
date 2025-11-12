@@ -42,8 +42,8 @@ enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
 
 using Hash = size_t;
 
-// We have to access the value of DEFAULT_SIZE by .t here, because accessing it via operator T&()
-// is not constexpr.
+// We have to access the value of DEFAULT_SIZE by .t here, because accessing it via operator T&() is not constexpr.
+// A smaller value implies more threads and smaller output chunks, which affects downstream processing.
 constexpr auto PROBE_SIZE_PER_CHUNK = Chunk::DEFAULT_SIZE.t * 4;
 
 /*
@@ -670,7 +670,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       pos_lists_build_side.emplace_back();
       pos_lists_probe_side.emplace_back();
       const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
-      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end]() {
+      const auto partition_elements_count = partition_end - partition_begin;
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end,
+                                    partition_elements_count]() {
         const auto& null_values = partition.null_values;
 
         auto pos_list_build_side_local = RowIDPosList{};
@@ -694,7 +696,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
           // Simple heuristic to estimate result size: half of the partition's rows will match a more conservative
           // pre-allocation would be the size of the build cluster.
-          const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
+          const auto expected_output_size = std::max(size_t{10}, partition_elements_count / 2);
           pos_list_build_side_local.reserve(expected_output_size);
           pos_list_probe_side_local.reserve(expected_output_size);
 
@@ -777,12 +779,12 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             // relation.
             // Since we did not find a hash table, we know that there is no match in the build column for this
             // partition. Hence we are going to write NULL values for each row.
-            pos_list_build_side_local.reserve(partition_end - partition_begin);
-            pos_list_probe_side_local.reserve(partition_end - partition_begin);
+            pos_list_build_side_local.resize(partition_elements_count);
+            pos_list_probe_side_local.resize(partition_elements_count);
             for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
               const auto& element = elements[partition_offset];
-              pos_list_build_side_local.emplace_back(NULL_ROW_ID);
-              pos_list_probe_side_local.emplace_back(element.row_id);
+              pos_list_build_side_local[partition_offset - partition_begin] = NULL_ROW_ID;
+              pos_list_probe_side_local[partition_offset - partition_begin] = element.row_id;
             }
           }
         }
@@ -791,7 +793,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
         pos_lists_probe_side[output_idx] = std::move(pos_list_probe_side_local);
       };
 
-      if (partition_end - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
+      if (partition_elements_count < JoinHash::JOB_SPAWN_THRESHOLD) {
         probe_partition();
       } else {
         jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
@@ -826,7 +828,9 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       const auto output_idx = pos_lists.size();
       pos_lists.emplace_back();
       const auto partition_end = std::min(partition_begin + PROBE_SIZE_PER_CHUNK, elements_count);
-      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end]() {
+      const auto partition_elements_count = partition_end - partition_begin;
+      const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end,
+                                    partition_elements_count]() {
         // Get information from work queue
         const auto& null_values = partition.null_values;
 
@@ -843,7 +847,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
           }
 
-          const auto expected_output_size = std::max(size_t{10}, (partition_end - partition_begin) / 2);
+          const auto expected_output_size = std::max(size_t{10}, partition_elements_count / 2);
           pos_list_local.reserve(expected_output_size);
 
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -913,7 +917,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         pos_lists[output_idx] = std::move(pos_list_local);
       };
 
-      if (partition_end - partition_begin < JoinHash::JOB_SPAWN_THRESHOLD) {
+      if (partition_elements_count < JoinHash::JOB_SPAWN_THRESHOLD) {
         probe_partition();
       } else {
         jobs.emplace_back(std::make_shared<JobTask>(probe_partition));

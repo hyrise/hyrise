@@ -561,26 +561,23 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     // A hash join's input can be heavily pre-filtered or the join results in very few matches. To counteract this the
     // partitions can be merged (#2202).
     constexpr auto ALLOW_PARTITION_MERGE = true;
-    const auto expected_partition_count = std::ranges::count_if(probe_side_pos_lists, [&](auto& list) {
-      return !list.empty();
-    });
-    auto output_segments = std::vector<Segments>(expected_partition_count);
+    auto output_segments = std::vector<Segments>{};
     switch (_output_column_order) {
       case OutputColumnOrder::LeftFirstRightSecond:
-        output_segments.resize(write_output_segments<ALLOW_PARTITION_MERGE>(
-            build_side_pos_lists, _build_input_table, create_left_side_pos_lists_by_segment, output_segments));
+        write_output_segments<ALLOW_PARTITION_MERGE>(build_side_pos_lists, _build_input_table,
+                                                     create_left_side_pos_lists_by_segment, output_segments);
         write_output_segments<ALLOW_PARTITION_MERGE>(probe_side_pos_lists, _probe_input_table,
                                                      create_right_side_pos_lists_by_segment, output_segments);
         break;
       case OutputColumnOrder::RightFirstLeftSecond:
-        output_segments.resize(write_output_segments<ALLOW_PARTITION_MERGE>(
-            probe_side_pos_lists, _probe_input_table, create_right_side_pos_lists_by_segment, output_segments));
+        write_output_segments<ALLOW_PARTITION_MERGE>(probe_side_pos_lists, _probe_input_table,
+                                                     create_right_side_pos_lists_by_segment, output_segments);
         write_output_segments<ALLOW_PARTITION_MERGE>(build_side_pos_lists, _build_input_table,
                                                      create_left_side_pos_lists_by_segment, output_segments);
         break;
       case OutputColumnOrder::RightOnly:
-        output_segments.resize(write_output_segments<ALLOW_PARTITION_MERGE>(
-            probe_side_pos_lists, _probe_input_table, create_right_side_pos_lists_by_segment, output_segments));
+        write_output_segments<ALLOW_PARTITION_MERGE>(probe_side_pos_lists, _probe_input_table,
+                                                     create_right_side_pos_lists_by_segment, output_segments);
         break;
     }
     auto output_chunks = std::vector<std::shared_ptr<Chunk>>(output_segments.size());

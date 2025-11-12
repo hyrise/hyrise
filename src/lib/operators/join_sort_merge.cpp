@@ -930,12 +930,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // the hash join, we do not (for now) merge small partitions to keep the sorted chunk guarantees, which could be
     // exploited by subsequent operators.
     constexpr auto ALLOW_PARTITION_MERGE = false;
-    const auto expected_partition_count = std::ranges::count_if(_output_pos_lists_left, [&](auto& list) {
-      return !list.empty();
-    });
-    auto output_segments = std::vector<Segments>(expected_partition_count);
-    output_segments.resize(write_output_segments<ALLOW_PARTITION_MERGE>(
-        _output_pos_lists_left, _left_input_table, create_left_side_pos_lists_by_segment, output_segments));
+    auto output_segments = std::vector<Segments>{};
+    write_output_segments<ALLOW_PARTITION_MERGE>(_output_pos_lists_left, _left_input_table,
+                                                 create_left_side_pos_lists_by_segment, output_segments);
     write_output_segments<ALLOW_PARTITION_MERGE>(_output_pos_lists_right, _right_input_table,
                                                  create_right_side_pos_lists_by_segment, output_segments);
     auto output_chunks = std::vector<std::shared_ptr<Chunk>>(output_segments.size());
