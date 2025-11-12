@@ -19,7 +19,6 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "visualization/abstract_visualizer.hpp"
@@ -113,10 +112,9 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
     auto input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());
 
     const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);
-    const auto union_node = std::dynamic_pointer_cast<UnionNode>(source_node);
-    if (source_node->right_input() && union_node) {
+    // Include right side in cardinality estimation for unions and joins (unless it is a semi-/anti-join).
+    if (source_node->right_input() && source_node->type == LQPNodeType::Union) {
       input_count += cardinality_estimator.estimate_cardinality(source_node->right_input());
-    // Include right side in cardinality estimation unless it is a semi/anti join
     } else if (source_node->right_input() && (!join_node || (join_node->join_mode != JoinMode::Semi &&
                                                              join_node->join_mode != JoinMode::AntiNullAsTrue &&
                                                              join_node->join_mode != JoinMode::AntiNullAsFalse))) {
