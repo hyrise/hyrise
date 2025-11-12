@@ -930,15 +930,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // the hash join, we do not (for now) merge small partitions to keep the sorted chunk guarantees, which could be
     // exploited by subsequent operators.
     constexpr auto ALLOW_PARTITION_MERGE = false;
-    auto output_segments = std::vector<Segments>{};
-    write_output_segments<ALLOW_PARTITION_MERGE>(_output_pos_lists_left, _left_input_table,
-                                                 create_left_side_pos_lists_by_segment, output_segments);
-    write_output_segments<ALLOW_PARTITION_MERGE>(_output_pos_lists_right, _right_input_table,
-                                                 create_right_side_pos_lists_by_segment, output_segments);
-    auto output_chunks = std::vector<std::shared_ptr<Chunk>>(output_segments.size());
-    std::ranges::transform(output_segments, output_chunks.begin(), [&](auto& segments) {
-      return std::make_shared<Chunk>(std::move(segments));
-    });
+    auto output_chunks =
+        write_output_chunks(_output_pos_lists_left, _output_pos_lists_right, _left_input_table, _right_input_table,
+                            create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
+                            OutputColumnOrder::LeftFirstRightSecond, ALLOW_PARTITION_MERGE);
 
     const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
     const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.left_input_table()->column_count() +
