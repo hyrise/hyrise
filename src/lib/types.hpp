@@ -172,6 +172,8 @@ enum class PredicateCondition : uint8_t {
   NotIn,
   Like,
   NotLike,
+  LikeInsensitive,
+  NotLikeInsensitive,
   IsNull,
   IsNotNull
 };

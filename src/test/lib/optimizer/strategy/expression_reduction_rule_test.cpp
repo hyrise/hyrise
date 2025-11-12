@@ -167,6 +167,15 @@ TEST_F(ExpressionReductionRuleTest, RewriteLikePrefixWildcard) {
   auto expression_m = std::shared_ptr<AbstractExpression>(or_(a, like_(s, "RED")));
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_m);
   EXPECT_EQ(*expression_m, *or_(a2, equals_(s, "RED")));
+
+  // Case-insensitive patterns should not be rewritten.
+  auto expression_n = std::shared_ptr<AbstractExpression>(ilike_(s, "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_n);
+  EXPECT_EQ(*expression_n, *ilike_(s, "RED%"));
+
+  auto expression_o = std::shared_ptr<AbstractExpression>(not_ilike_(s, "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_n);
+  EXPECT_EQ(*expression_o, *not_ilike_(s, "RED%"));
 }
 
 TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {

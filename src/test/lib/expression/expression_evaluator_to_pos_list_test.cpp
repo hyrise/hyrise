@@ -91,8 +91,10 @@ TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithoutNulls) {
 
   EXPECT_TRUE(
       test_expression(table_a, ChunkID{0}, *like_(s1, "%a%"), {ChunkOffset{0}, ChunkOffset{2}, ChunkOffset{3}}));
-
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *not_like_(s1, "%a%"), {ChunkOffset{1}}));
+  EXPECT_TRUE(
+      test_expression(table_a, ChunkID{0}, *ilike_(s1, "%A%"), {ChunkOffset{0}, ChunkOffset{2}, ChunkOffset{3}}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *not_ilike_(s1, "%A%"), {ChunkOffset{1}}));
 }
 
 TEST_F(ExpressionEvaluatorToPosListTest, PredicatesWithOnlyLiterals) {

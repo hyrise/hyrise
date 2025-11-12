@@ -169,6 +169,8 @@ inline const detail::binary<ArithmeticOperator::Subtraction, ArithmeticExpressio
 inline const detail::binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod_;
 inline const detail::binary<PredicateCondition::Like, BinaryPredicateExpression> like_;
 inline const detail::binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like_;
+inline const detail::binary<PredicateCondition::LikeInsensitive, BinaryPredicateExpression> ilike_;
+inline const detail::binary<PredicateCondition::NotLikeInsensitive, BinaryPredicateExpression> not_ilike_;
 inline const detail::binary<PredicateCondition::Equals, BinaryPredicateExpression> equals_;
 inline const detail::binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals_;
 inline const detail::binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than_;

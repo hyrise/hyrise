@@ -860,6 +860,12 @@ TEST_F(CardinalityEstimatorTest, PredicateString) {
 
   const auto input_lqp_f = PredicateNode::make(not_like_(g_a, "a%"), node_g);
   EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp_f), 90.0);
+
+  const auto input_lqp_g = PredicateNode::make(ilike_(g_a, "a%"), node_g);
+  EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp_g), 50.0);
+
+  const auto input_lqp_h = PredicateNode::make(not_ilike_(g_a, "a%"), node_g);
+  EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp_h), 50.0);
 }
 
 TEST_F(CardinalityEstimatorTest, Projection) {
