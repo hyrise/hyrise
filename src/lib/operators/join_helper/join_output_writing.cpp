@@ -276,10 +276,10 @@ void write_output_segments(std::vector<RowIDPosList>& pos_lists, const std::shar
   output_segments.resize(output_position);
 }
 
-template size_t write_output_segments<true>(std::vector<RowIDPosList>& pos_lists,
+template void write_output_segments<true>(std::vector<RowIDPosList>& pos_lists,
                                             const std::shared_ptr<const Table>& input_table,
                                             bool create_pos_lists_by_column, std::vector<Segments>& output_segments);
-template size_t write_output_segments<false>(std::vector<RowIDPosList>& pos_lists,
+template void write_output_segments<false>(std::vector<RowIDPosList>& pos_lists,
                                              const std::shared_ptr<const Table>& input_table,
                                              bool create_pos_lists_by_column, std::vector<Segments>& output_segments);
 }  // namespace hyrise
