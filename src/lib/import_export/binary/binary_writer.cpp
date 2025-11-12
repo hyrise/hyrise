@@ -353,10 +353,10 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool /*colum
 template <typename T>
 CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(
     const AbstractEncodedSegment& abstract_encoded_segment) {
-  uint8_t compressed_vector_type_id = 0u;
+  auto compressed_vector_type_id = uint8_t{0};
   resolve_encoded_segment_type<T>(abstract_encoded_segment, [&compressed_vector_type_id](auto& typed_segment) {
     const auto compressed_vector_type = typed_segment.compressed_vector_type();
-    Assert(compressed_vector_type, "Expected Segment to use vector compression");
+    Assert(compressed_vector_type, "Expected Segment to use vector compression.");
     switch (*compressed_vector_type) {
       case CompressedVectorType::FixedWidthInteger4Byte:
       case CompressedVectorType::FixedWidthInteger2Byte:
@@ -364,8 +364,6 @@ CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(
       case CompressedVectorType::BitPacking:
         compressed_vector_type_id = static_cast<uint8_t>(*compressed_vector_type);
         break;
-      default:
-        Fail("Export of specified CompressedVectorType is not yet supported");
     }
   });
   return compressed_vector_type_id;
@@ -386,8 +384,6 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
     case CompressedVectorType::BitPacking:
       export_compact_vector(ofstream, dynamic_cast<const BitPackingVector&>(compressed_vector).data());
       return;
-    default:
-      Fail("Any other type should have been caught before.");
   }
 }
 
