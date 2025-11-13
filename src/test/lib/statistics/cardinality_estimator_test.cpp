@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -6,6 +7,7 @@
 
 #include "magic_enum/magic_enum.hpp"
 
+#include "./statistics_objects/scaled_histogram_test_utils.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -19,6 +21,7 @@
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -136,11 +139,19 @@ class CardinalityEstimatorTest : public BaseTest {
                                               {GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 40)});
 
     g_a = node_g->get_column("a");
+
+    /**
+     * node_h
+     * Has no rows
+     */
+    node_h = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 0,
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 100, 0, 0),
+                                               GenericHistogram<int32_t>::with_single_bin(10, 129, 0, 0)});
   }
 
   CardinalityEstimator estimator{};
   std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b, c_x, c_y, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
-  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g;
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h;
 };
 
 TEST_F(CardinalityEstimatorTest, Aggregate) {
@@ -931,11 +942,47 @@ TEST_F(CardinalityEstimatorTest, Union) {
     node_b);
   // clang-format on
 
-  EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp), 132.0);
+  const auto left_rowcount = node_a->table_statistics()->row_count;
+  const auto right_rowcount = node_b->table_statistics()->row_count;
+  const auto expected_selectivity = (left_rowcount + right_rowcount) / (left_rowcount);
 
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
   ASSERT_EQ(result_statistics->column_statistics.size(), 2);
+  EXPECT_DOUBLE_EQ(result_statistics->row_count,
+                   node_a->table_statistics()->row_count + node_b->table_statistics()->row_count);
+
+  for (auto column_id = ColumnID{0}; column_id < result_statistics->column_statistics.size(); ++column_id) {
+    const auto attribute_statistics_a_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+        node_a->table_statistics()->column_statistics.at(column_id));
+
+    const auto res_column = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+        result_statistics->column_statistics.at(column_id));
+
+    const auto scaled_histogram = dynamic_cast<const ScaledHistogram<int32_t>*>(res_column->histogram.get());
+
+    EXPECT_EQ(expected_selectivity, expected_selectivity);
+    EXPECT_EQ(ScaledHistogramTestUtils::selectivity(*scaled_histogram), expected_selectivity);
+    EXPECT_EQ(ScaledHistogramTestUtils::referenced_histogram(*scaled_histogram), attribute_statistics_a_a->histogram);
+  }
+}
+
+TEST_F(CardinalityEstimatorTest, UnionWithEmptyInput) {
+  // Test that UnionNode return the table statistics of the non-empty input when the other input is empty
+
+  // clang-format off
+  const auto input_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    node_h,
+    node_a);
+  // clang-format on
+  
+  auto left_rowcount = node_a->table_statistics()->row_count;
+  auto right_rowcount = node_h->table_statistics()->row_count;
+  const auto result_statistics = estimator.estimate_statistics(input_lqp);
+  ASSERT_EQ(result_statistics->column_statistics.size(), 2);
+
+  EXPECT_DOUBLE_EQ(result_statistics->row_count, left_rowcount + right_rowcount);
   ASSERT_EQ(result_statistics->column_statistics.at(0), node_a->table_statistics()->column_statistics.at(0));
   ASSERT_EQ(result_statistics->column_statistics.at(1), node_a->table_statistics()->column_statistics.at(1));
 }

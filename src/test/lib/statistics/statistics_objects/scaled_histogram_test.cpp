@@ -3,6 +3,7 @@
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "scaled_histogram_test_utils.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
@@ -22,16 +23,6 @@ class ScaledHistogramTest : public BaseTestWithParam<DataType> {
     auto bin_distinct_counts = std::vector<HistogramCountType>{3, 4, 5};
     _referenced_histogram = std::make_shared<GenericHistogram<int32_t>>(
         std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), std::move(bin_distinct_counts));
-  }
-
-  template <typename T>
-  static std::shared_ptr<const AbstractHistogram<T>> referenced_histogram(const ScaledHistogram<T>& scaled_histogram) {
-    return scaled_histogram._referenced_histogram;
-  }
-
-  template <typename T>
-  static Selectivity selectivity(const ScaledHistogram<T>& scaled_histogram) {
-    return scaled_histogram._selectivity;
   }
 
  protected:
@@ -81,8 +72,8 @@ TEST_F(ScaledHistogramTest, FromScaling) {
   const auto scaled_histogram =
       std::dynamic_pointer_cast<const ScaledHistogram<int32_t>>(_referenced_histogram->scaled(0.5));
   ASSERT_TRUE(scaled_histogram);
-  EXPECT_EQ(referenced_histogram(*scaled_histogram), _referenced_histogram);
-  EXPECT_DOUBLE_EQ(selectivity(*scaled_histogram), 0.5);
+  EXPECT_EQ(ScaledHistogramTestUtils::referenced_histogram(*scaled_histogram), _referenced_histogram);
+  EXPECT_DOUBLE_EQ(ScaledHistogramTestUtils::selectivity(*scaled_histogram), 0.5);
 }
 
 TEST_F(ScaledHistogramTest, SingleIndirection) {
@@ -90,8 +81,8 @@ TEST_F(ScaledHistogramTest, SingleIndirection) {
       std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(_referenced_histogram->scaled(0.4));
   const auto scaled_histogram_b = ScaledHistogram<int32_t>::from_referenced_histogram(*scaled_histogram_a, 0.25);
 
-  EXPECT_EQ(referenced_histogram(*scaled_histogram_b), _referenced_histogram);
-  EXPECT_DOUBLE_EQ(selectivity(*scaled_histogram_b), 0.1);
+  EXPECT_EQ(ScaledHistogramTestUtils::referenced_histogram(*scaled_histogram_b), _referenced_histogram);
+  EXPECT_DOUBLE_EQ(ScaledHistogramTestUtils::selectivity(*scaled_histogram_b), 0.1);
 }
 
 TEST_F(ScaledHistogramTest, CopiesDomain) {
@@ -134,8 +125,8 @@ TEST_P(ScaledHistogramTest, ReferencesGenericHistogram) {
     const auto generic_histogram = GenericHistogram<HistogramDataType>::with_single_bin(min, max, 10, 5);
 
     const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*generic_histogram, 0.5};
-    EXPECT_EQ(referenced_histogram(scaled_histogram), generic_histogram);
-    EXPECT_EQ(selectivity(scaled_histogram), 0.5);
+    EXPECT_EQ(ScaledHistogramTestUtils::referenced_histogram(scaled_histogram), generic_histogram);
+    EXPECT_EQ(ScaledHistogramTestUtils::selectivity(scaled_histogram), 0.5);
   });
 }
 
@@ -150,8 +141,8 @@ TEST_P(ScaledHistogramTest, ReferencesEqualDistinctCountHistogram) {
         std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), 5, BinID{0});
 
     const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*equal_distinct_count_histogram, 0.5};
-    EXPECT_EQ(referenced_histogram(scaled_histogram), equal_distinct_count_histogram);
-    EXPECT_EQ(selectivity(scaled_histogram), 0.5);
+    EXPECT_EQ(ScaledHistogramTestUtils::referenced_histogram(scaled_histogram), equal_distinct_count_histogram);
+    EXPECT_EQ(ScaledHistogramTestUtils::selectivity(scaled_histogram), 0.5);
   });
 }
 
