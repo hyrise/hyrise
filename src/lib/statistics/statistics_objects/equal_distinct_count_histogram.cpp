@@ -147,7 +147,7 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
   auto segments_to_process = std::vector<std::pair<ChunkID, std::shared_ptr<AbstractSegment>>>{};
   segments_to_process.reserve(std::min(chunk_count, MIN_CHUNK_COUNT_TO_INCLUDE));
 
-  // In average, we sample every 2.5th segment. Previous analyses of Hyrise histograms showed that the accuracy of
+  // On average, we sample every 2.5th segment. Previous analyses of Hyrise histograms showed that the accuracy of
   // sample histograms quickly deteriorates with sampling rates below 33 %. We thus choose a safer rate of ~40%.
   auto random_engine = std::ranlux24_base{17};  // Fast random engine. Sufficient for our case.
   auto skip_lengths = std::uniform_int_distribution<>{0, 4};
@@ -173,8 +173,8 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
   auto result = ValueDistributionVector<T>{};
   if (chunk_count > 0) {
     // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to 2x the
-    // number workers to fully utilize a system with a bid of straggler mitigation (thus 2x) while not overloading the
-    // scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create thens of
+    // number workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading the
+    // scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of
     // thousands of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on
     // its own sequentially.
     const auto max_parallel_levels = std::bit_width(Hyrise::get().topology.num_cpus()) + 1;
