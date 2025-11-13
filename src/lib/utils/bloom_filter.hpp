@@ -311,6 +311,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
             case 2:
               functor(static_cast<BlockBloomFilter<23, 9, 2>&>(base_bloom_filter));
               break;
+            case 3:
+              functor(static_cast<BlockBloomFilter<23, 9, 3>&>(base_bloom_filter));
+              break;
             default:
               std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
                         << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
