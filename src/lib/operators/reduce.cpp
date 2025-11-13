@@ -302,12 +302,14 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
     const auto l1_size = uint32_t{SYSTEM_L1_CACHE_SIZE};
     const auto l2_size = uint32_t{SYSTEM_L2_CACHE_SIZE};
+    const auto l1_size_bits = l1_size * 8;
+    const auto l2_size_bits = l2_size * 8;
     Assert(l1_size > 0 && l2_size > 0, "Something went wrong during cache calculation.");
 
-    const auto l1_exponent = static_cast<uint8_t>(std::bit_width(l1_size) - 1);
-    const auto l2_exponent = static_cast<uint8_t>(std::bit_width(l2_size) - 1);
-    std::cout << "System L1 size: " << l1_size <<", exponent: " << static_cast<int>(l1_exponent) << std::endl;
-    std::cout << "System L2 size: " << l2_size <<", exponent: " << static_cast<int>(l2_exponent) << std::endl;
+    const auto l1_exponent = static_cast<uint8_t>(std::bit_width(l1_size_bits) - 1);
+    const auto l2_exponent = static_cast<uint8_t>(std::bit_width(l2_size_bits) - 1);
+    std::cout << "System L1 size: " << l1_size << ", bits: " << l1_size_bits << ", exponent: " << static_cast<int>(l1_exponent) << std::endl;
+    std::cout << "System L2 size: " << l2_size << ", bits: " << l2_size_bits << ", exponent: " << static_cast<int>(l2_exponent) << std::endl;
 
     _filter_size_exponent = l1_exponent;
 
