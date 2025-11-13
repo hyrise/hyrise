@@ -19,6 +19,7 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "visualization/abstract_visualizer.hpp"
@@ -103,11 +104,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
                                     const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side,
                                     const CardinalityEstimator& cardinality_estimator) {
   Cardinality row_count = NAN;
-  auto pen_width = 1.0;
   auto row_percentage = 100.0;
 
   row_count = cardinality_estimator.estimate_cardinality(source_node);
-  pen_width = row_count;
+  // pen widths are normalized later during graph construction so assigning 0 or NAN is acceptable.
+  auto pen_width = row_count;
   if (source_node->left_input()) {
     auto input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());
 
