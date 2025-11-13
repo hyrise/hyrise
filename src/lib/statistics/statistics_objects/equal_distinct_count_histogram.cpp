@@ -173,11 +173,15 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
   auto result = ValueDistributionVector<T>{};
   if (chunk_count > 0) {
     // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to 2x the
-    // number workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading the
+    // number of workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading the
     // scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of
     // thousands of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on
     // its own sequentially.
-    const auto max_parallel_levels = std::bit_width(Hyrise::get().topology.num_cpus()) + 1;
+    auto worker_count = size_t{1};
+    if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
+      worker_count = node_queue_scheduler.workers().size();
+    }
+    const auto max_parallel_levels = std::bit_width(worker_count) + 1;
     result = add_segment_to_value_distribution<T>(max_parallel_levels, 0, segments_to_process.begin(),
                                                   segments_to_process.end(), domain);
   }
