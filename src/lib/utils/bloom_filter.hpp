@@ -114,7 +114,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BloomFilter<18, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
@@ -127,7 +129,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BlockBloomFilter<18, 8, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
@@ -143,12 +147,16 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BlockBloomFilter<18, 9, 3>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
         default:
-          std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+          std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                    << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                    << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
           Fail("Unsupported bloom filter type.");
       }
     } break;
@@ -163,7 +171,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BloomFilter<20, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
@@ -176,7 +186,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BlockBloomFilter<20, 8, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
@@ -189,12 +201,16 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BlockBloomFilter<20, 9, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
         default:
-          std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+          std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                    << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                    << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
           Fail("Unsupported bloom filter type.");
       }
     } break;
@@ -209,7 +225,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BloomFilter<21, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
@@ -222,7 +240,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BlockBloomFilter<21, 8, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
@@ -238,12 +258,16 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BlockBloomFilter<21, 9, 3>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
         default:
-          std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+          std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                    << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                    << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
           Fail("Unsupported bloom filter type.");
       }
     } break;
@@ -258,7 +282,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BloomFilter<23, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
@@ -271,7 +297,9 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BlockBloomFilter<23, 8, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
@@ -284,17 +312,23 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
               functor(static_cast<BlockBloomFilter<23, 9, 2>&>(base_bloom_filter));
               break;
             default:
-              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+              std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                        << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                        << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
               Fail("Unsupported bloom filter type.");
           }
         } break;
         default:
-          std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+          std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                    << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                    << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
           Fail("Unsupported bloom filter type.");
       }
     } break;
     default:
-      std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent()) << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent()) << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
+      std::cout << "Failed exponent: " << static_cast<int>(base_bloom_filter.filter_size_exponent())
+                << ", block exponent: " << static_cast<int>(base_bloom_filter.block_size_exponent())
+                << ", k: " << static_cast<int>(base_bloom_filter.k()) << std::endl;
       Fail("Unsupported bloom filter type.");
   }
 }
