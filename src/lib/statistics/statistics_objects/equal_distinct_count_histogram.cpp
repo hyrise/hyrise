@@ -16,6 +16,7 @@
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
 #include "storage/abstract_segment.hpp"
@@ -173,8 +174,8 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
   auto result = ValueDistributionVector<T>{};
   if (chunk_count > 0) {
     // We determine the recursion steps (i.e., merge levels) that we want to parallelize. We try to create up to 2x the
-    // number of workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading the
-    // scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of
+    // number of workers to fully utilize a system with a bit of straggler mitigation (thus 2x) while not overloading
+    // the scheduler. As the leaves of the created merge tree are single chunks, we would otherwise create tens of
     // thousands of nested jobs for SF 100 TPC-H data. When the limit is reached, each worker executes the recursion on
     // its own sequentially.
     auto worker_count = size_t{1};
