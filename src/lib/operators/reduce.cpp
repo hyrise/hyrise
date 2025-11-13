@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include <boost/math/distributions/poisson.hpp>
+
 #include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/segment_iterate.hpp"
@@ -134,6 +136,8 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               return std::make_shared<BlockBloomFilter<18, 9, 1>>();
             case 2:
               return std::make_shared<BlockBloomFilter<18, 9, 2>>();
+            case 3:
+              return std::make_shared<BlockBloomFilter<18, 9, 3>>();
             default:
               break;
           }
@@ -144,6 +148,8 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               return std::make_shared<BlockBloomFilter<19, 9, 1>>();
             case 2:
               return std::make_shared<BlockBloomFilter<19, 9, 2>>();
+            case 3:
+              return std::make_shared<BlockBloomFilter<19, 9, 3>>();
             default:
               break;
           }
@@ -154,6 +160,8 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               return std::make_shared<BlockBloomFilter<20, 9, 1>>();
             case 2:
               return std::make_shared<BlockBloomFilter<20, 9, 2>>();
+            case 3:
+              return std::make_shared<BlockBloomFilter<20, 9, 3>>();
             default:
               break;
           }
@@ -164,6 +172,8 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               return std::make_shared<BlockBloomFilter<21, 9, 1>>();
             case 2:
               return std::make_shared<BlockBloomFilter<21, 9, 2>>();
+            case 3:
+              return std::make_shared<BlockBloomFilter<21, 9, 3>>();
             default:
               break;
           }
@@ -174,6 +184,8 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               return std::make_shared<BlockBloomFilter<23, 9, 1>>();
             case 2:
               return std::make_shared<BlockBloomFilter<23, 9, 2>>();
+            case 3:
+              return std::make_shared<BlockBloomFilter<23, 9, 3>>();
             default:
               break;
           }
@@ -188,6 +200,35 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
   }
 
   Fail("Unsupported bloom filter parameter combination.");
+}
+
+static double false_positive_rate(double m,
+    double n,
+    double k) {
+  return std::pow(1.0 - std::pow(1.0 - (1.0 / m), k * n), k);
+}
+
+double false_positive_rate_blocked(double filter_size_bits,
+            double n,
+            double k,
+            double B = 512, /* block size in bits */
+            double epsilon = 0.000001) {
+  double f = 0;
+  double c = filter_size_bits / n;
+  double lambda = B / c;
+  boost::math::poisson_distribution<> poisson(lambda);
+
+  double k_act = k;
+
+  double d_sum = 0.0;
+  double i = 0;
+  while ((d_sum + epsilon) < 1.0) {
+    auto d = boost::math::pdf(poisson, i);
+    d_sum += d;
+    f += d * false_positive_rate(B, i, k_act);
+    i++;
+  }
+  return f;
 }
 
 Reduce::Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
@@ -254,13 +295,45 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
   if (_filter_size_exponent == 0) {
     const auto input_row_count = input_table->row_count();
-    if (input_row_count <= 54699) {
-      std::cout << "Selected L1-sized Bloom filter.\n";
-      _filter_size_exponent = 18;
-    } else {
-      std::cout << "Selected L2-sized Bloom filter.\n";
-      _filter_size_exponent = 23;
+    std::cout << "Reduce input row count: " << input_row_count << std::endl;
+
+    const auto max_k = uint8_t{3};
+    const auto max_false_positive_rate = double{0.05};
+
+    const auto l1_size = uint32_t{SYSTEM_L1_CACHE_SIZE};
+    const auto l2_size = uint32_t{SYSTEM_L2_CACHE_SIZE};
+    Assert(l1_size > 0 && l2_size > 0, "Something went wrong during cache calculation.");
+
+    const auto l1_exponent = static_cast<uint8_t>(std::bit_width(l1_size) - 1);
+    const auto l2_exponent = static_cast<uint8_t>(std::bit_width(l2_size) - 1);
+    std::cout << "System L1 size: " << l1_size <<", exponent: " << static_cast<int>(l1_exponent) << std::endl;
+    std::cout << "System L2 size: " << l2_size <<", exponent: " << static_cast<int>(l2_exponent) << std::endl;
+
+    _filter_size_exponent = l1_exponent;
+
+
+    auto false_positive_rates = std::vector<std::pair<uint8_t, double>>{};
+
+    for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
+      false_positive_rates.emplace_back(k_index, false_positive_rate_blocked(l1_size, static_cast<double>(input_row_count), k_index));
+      std::cout << "filter_size_exponent: " << static_cast<int>(l1_exponent) << ", k: " << static_cast<int>(k_index) << ", fpr: " << false_positive_rates.back().second  << std::endl;
     }
+
+    auto [min_k, min_false_positive_rate] = *std::min_element(false_positive_rates.begin(), false_positive_rates.end(), [](auto& a, auto& b) {return a.second < b.second;});
+
+    if (min_false_positive_rate > max_false_positive_rate) {
+      false_positive_rates.clear();
+
+      for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
+        false_positive_rates.emplace_back(k_index, false_positive_rate_blocked(l2_size, static_cast<double>(input_row_count), k_index));
+        std::cout << "filter_size_exponent: " << static_cast<int>(l2_exponent) << ", k: " << static_cast<int>(k_index) << ", fpr: " << false_positive_rates.back().second  << std::endl;
+      }
+
+      std::tie(min_k, min_false_positive_rate) = *std::min_element(false_positive_rates.begin(), false_positive_rates.end(), [](auto& a, auto& b) {return a.second < b.second;});
+    }
+
+    _k = min_k;
+    std::cout << "Selected exponent: " << static_cast<int>(_filter_size_exponent) << ", k: " << static_cast<int>(_k) << std::endl;
   }
 
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
