@@ -317,7 +317,7 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
     for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
       false_positive_rates.emplace_back(
-          k_index, false_positive_rate_blocked(l1_size, static_cast<double>(input_row_count), k_index));
+          k_index, false_positive_rate_blocked(l1_size_bits, static_cast<double>(input_row_count), k_index));
       std::cout << "filter_size_exponent: " << static_cast<int>(l1_exponent) << ", k: " << static_cast<int>(k_index)
                 << ", fpr: " << false_positive_rates.back().second << std::endl;
     }
@@ -332,7 +332,7 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
       for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
         false_positive_rates.emplace_back(
-            k_index, false_positive_rate_blocked(l2_size, static_cast<double>(input_row_count), k_index));
+            k_index, false_positive_rate_blocked(l2_size_bits, static_cast<double>(input_row_count), k_index));
         std::cout << "filter_size_exponent: " << static_cast<int>(l2_exponent) << ", k: " << static_cast<int>(k_index)
                   << ", fpr: " << false_positive_rates.back().second << std::endl;
       }
