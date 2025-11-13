@@ -328,6 +328,7 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
         });
 
     if (min_false_positive_rate > max_false_positive_rate) {
+      _filter_size_exponent = l2_exponent;
       false_positive_rates.clear();
 
       for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
