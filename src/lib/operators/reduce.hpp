@@ -23,7 +23,7 @@ class Reduce : public AbstractReadOnlyOperator {
   explicit Reduce(const std::shared_ptr<const AbstractOperator>& left_input,
                   const std::shared_ptr<const AbstractOperator>& right_input, const OperatorJoinPredicate predicate,
                   const ReduceMode reduce_mode, const UseMinMax use_min_max, uint8_t filter_size_exponent = 0,
-                  uint8_t block_size_exponent = 0, uint8_t k = 2);
+                  uint8_t block_size_exponent = 9, uint8_t k = 2);
 
   const std::string& name() const override;
 

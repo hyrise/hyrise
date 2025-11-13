@@ -199,6 +199,7 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
       break;
   }
 
+  std::cout << "Failed exponent: " << static_cast<int>(filter_size_exponent) << ", block exponent: " << static_cast<int>(block_size_exponent) << ", k: " << static_cast<int>(k) << std::endl;
   Fail("Unsupported bloom filter parameter combination.");
 }
 
