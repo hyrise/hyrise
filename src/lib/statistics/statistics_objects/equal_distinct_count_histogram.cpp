@@ -180,7 +180,7 @@ ValueDistributionVector<T> value_distribution_from_column(const Table& table, co
     // its own sequentially.
     auto worker_count = size_t{1};
     if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
-      worker_count = node_queue_scheduler.workers().size();
+      worker_count = node_queue_scheduler->workers().size();
     }
     const auto max_parallel_levels = std::bit_width(worker_count) + 1;
     result = add_segment_to_value_distribution<T>(max_parallel_levels, 0, segments_to_process.begin(),
