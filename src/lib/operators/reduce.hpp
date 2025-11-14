@@ -8,7 +8,10 @@
 #include "abstract_read_only_operator.hpp"
 #include "operator_join_predicate.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/frame_of_reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/bloom_filter.hpp"
 #include "utils/min_max_predicate.hpp"
@@ -16,124 +19,96 @@
 
 namespace hyrise {
 
+constexpr auto INT_SHORTCUT = true;
+
+// template <typename SegmentType>
+// using EraseSegmentType = std::conditional_t<std::is_same_v<SegmentType, DictionarySegment<int32_t>> ||
+//                                             std::is_same_v<SegmentType, LZ4Segment<int32_t>> ||
+//                                             std::is_same_v<SegmentType, FrameOfReferenceSegment<int32_t>>,
+//                                             EraseTypes::OnlyInDebugBuild,
+//                                             EraseTypes::Always>
+
 static inline uint64_t fib_hash(uint64_t x) {
   return x * 11400714819323198485ull;
 }
 
 // Helper factory that returns the appropriate BloomFilter/BlockBloomFilter instance.
 // Supported values:
-//   - filter_size_exponent: 19, 20, 21
+//   - filter_size_exponent: 19, 23, 21
 //   - block_size_exponent: 0 (use BloomFilter), 8, 9 (use BlockBloomFilter)
 //   - k: 1, 2
 inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_size_exponent,
                                                           const uint8_t block_size_exponent, const uint8_t k) {
   switch (block_size_exponent) {
-    case 0: {
-      switch (filter_size_exponent) {
-        case 19:
-          switch (k) {
-            case 1:
-              return std::make_shared<BloomFilter<19, 1>>();
-            case 2:
-              return std::make_shared<BloomFilter<19, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 20:
-          switch (k) {
-            case 1:
-              return std::make_shared<BloomFilter<20, 1>>();
-            case 2:
-              return std::make_shared<BloomFilter<20, 2>>();
-            case 3:
-              return std::make_shared<BloomFilter<20, 3>>();
-            default:
-              break;
-          }
-          break;
-        case 21:
-          switch (k) {
-            case 1:
-              return std::make_shared<BloomFilter<21, 1>>();
-            case 2:
-              return std::make_shared<BloomFilter<21, 2>>();
-            default:
-              break;
-          }
-          break;
-        default:
-          break;
-      }
-      break;
-    }
-    case 8: {
-      switch (filter_size_exponent) {
-        case 19:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<19, 8, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<19, 8, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 20:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<20, 8, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<20, 8, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 21:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<21, 8, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<21, 8, 2>>();
-            default:
-              break;
-          }
-          break;
-        default:
-          break;
-      }
-      break;
-    }
+    // case 0: {
+    //   switch (filter_size_exponent) {
+    //     case 18:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BloomFilter<18, 1>>();
+    //         case 2:
+    //           return std::make_shared<BloomFilter<18, 2>>();
+    //         case 3:
+    //           return std::make_shared<BloomFilter<18, 3>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 23:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BloomFilter<23, 1>>();
+    //         case 2:
+    //           return std::make_shared<BloomFilter<23, 2>>();
+    //         case 3:
+    //           return std::make_shared<BloomFilter<23, 3>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 21:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BloomFilter<21, 1>>();
+    //         case 2:
+    //           return std::make_shared<BloomFilter<21, 2>>();
+    //         case 3:
+    //           return std::make_shared<BloomFilter<21, 3>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    //   break;
+    // }
     case 9: {
       switch (filter_size_exponent) {
-        case 19:
+        case 18:
           switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<19, 9, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<19, 9, 2>>();
+            // case 1:
+            //   return std::make_shared<BlockBloomFilter<18, 9, 1>>();
+            // case 2:
+            //   return std::make_shared<BlockBloomFilter<18, 9, 2>>();
+            // case 3:
+            //   return std::make_shared<BlockBloomFilter<18, 9, 3>>();
+            case 4:
+              return std::make_shared<BlockBloomFilter<18, 9, 4>>();
             default:
               break;
           }
           break;
-        case 20:
+        case 23:
           switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<20, 9, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<20, 9, 2>>();
-            case 3:
-              return std::make_shared<BlockBloomFilter<20, 9, 3>>();
-            default:
-              break;
-          }
-          break;
-        case 21:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<21, 9, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<21, 9, 2>>();
+            // case 1:
+            //   return std::make_shared<BlockBloomFilter<23, 9, 1>>();
+            // case 2:
+            //   return std::make_shared<BlockBloomFilter<23, 9, 2>>();
+            // case 3:
+            //   return std::make_shared<BlockBloomFilter<23, 9, 3>>();
+            case 4:
+              return std::make_shared<BlockBloomFilter<23, 9, 4>>();
             default:
               break;
           }
@@ -227,6 +202,10 @@ class Reduce : public AbstractReadOnlyOperator {
 
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
       using DataType = typename decltype(column_data_type)::type;
+
+      if constexpr (INT_SHORTCUT && !std::is_same_v<DataType, int32_t>) {
+        return;
+      }
 
       auto new_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
       std::shared_ptr<MinMaxPredicate<DataType>> new_min_max_predicate;
@@ -338,6 +317,10 @@ class Reduce : public AbstractReadOnlyOperator {
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
       using DataType = typename decltype(column_data_type)::type;
 
+      if constexpr (INT_SHORTCUT && !std::is_same_v<DataType, int32_t>) {
+        return;
+      }
+
       const auto chunk_count = input_table->chunk_count();
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.resize(chunk_count);
@@ -400,27 +383,66 @@ class Reduce : public AbstractReadOnlyOperator {
 
               timer.lap();
 
-              segment_iterate<DataType>(*input_segment, [&](const auto& position) {
-                if (!position.is_null()) {
-                  auto hash = size_t{11400714819323198485ul};
-                  if constexpr (std::is_same_v<DataType, int32_t>) {
-                    hash = fib_hash(static_cast<std::uint64_t>(position.value()));
-                  } else {
-                     boost::hash_combine(hash, position.value());
-                  }
-                  // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
+              resolve_segment_type<DataType>(*input_segment, [&](auto& typed_segment) {
+                using SegmentType = std::decay_t<decltype(typed_segment)>;
 
-                  auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+                // constexpr auto erase_segment_type = (std::is_same_v<SegmentType, DictionarySegment<int32_t>> ||
+                //                                      std::is_same_v<SegmentType, ValueSegment<int32_t>> ||
+                //                                      std::is_same_v<SegmentType, FrameOfReferenceSegment<int32_t>>) ?
+                //                                      EraseTypes::Always :
+                //                                      EraseTypes::OnlyInDebugBuild;
+                constexpr auto erase_segment_type = (std::is_same_v<SegmentType, DictionarySegment<int32_t>> ||
+                                                     std::is_same_v<SegmentType, ValueSegment<int32_t>> ||
+                                                     std::is_same_v<SegmentType, FrameOfReferenceSegment<int32_t>>) ?
+                                                     false :
+                                                     true;
 
-                  if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
-                    const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
-                    found &= diff <= value_difference;
-                  }
+                auto iterable = create_iterable_from_segment<DataType, erase_segment_type>(typed_segment);
+                iterable.for_each([&](const auto& position) {
+                  if (!position.is_null()) {
+                    auto hash = size_t{11400714819323198485ul};
+                    if constexpr (std::is_same_v<DataType, int32_t>) {
+                      hash = fib_hash(static_cast<std::uint64_t>(position.value()));
+                    } else {
+                       boost::hash_combine(hash, position.value());
+                    }
+                    // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
-                  if (found) {
-                    matches->emplace_back(chunk_index, position.chunk_offset());
+                    auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+
+                    if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
+                      const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
+                      found &= diff <= value_difference;
+                    }
+
+                    if (found) {
+                      matches->emplace_back(chunk_index, position.chunk_offset());
+                    }
                   }
-                }
+                });
+
+                // segment_iterate<DataType, EraseSegmentType>(*input_segment, [&](const auto& position) {
+                //   if (!position.is_null()) {
+                //     auto hash = size_t{11400714819323198485ul};
+                //     if constexpr (std::is_same_v<DataType, int32_t>) {
+                //       hash = fib_hash(static_cast<std::uint64_t>(position.value()));
+                //     } else {
+                //        boost::hash_combine(hash, position.value());
+                //     }
+                //     // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
+
+                //     auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+
+                //     if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
+                //       const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
+                //       found &= diff <= value_difference;
+                //     }
+
+                //     if (found) {
+                //       matches->emplace_back(chunk_index, position.chunk_offset());
+                //     }
+                //   }
+                // });
               });
 
               local_scan += timer.lap();
@@ -512,6 +534,7 @@ class Reduce : public AbstractReadOnlyOperator {
       std::erase_if(output_chunks, [](const auto& ptr) {
         return ptr == nullptr;
       });
+
       output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
                                                    std::move(output_chunks));
 
@@ -535,6 +558,10 @@ class Reduce : public AbstractReadOnlyOperator {
 
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
       using DataType = typename decltype(column_data_type)::type;
+
+      if constexpr (INT_SHORTCUT && !std::is_same_v<DataType, int32_t>) {
+        return;
+      }
 
       const auto chunk_count = input_table->chunk_count();
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};

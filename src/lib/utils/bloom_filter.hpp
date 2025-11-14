@@ -4,8 +4,12 @@
 #include <atomic>
 #include <bitset>
 #include <cstdint>
+#include <string>
+#include <vector>
 
 #include <boost/align/aligned_allocator.hpp>
+
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -45,9 +49,8 @@ class BaseBloomFilter {
 template <uint8_t FilterSizeExponent, uint8_t K>
 class BloomFilter : public BaseBloomFilter {
  public:
-  BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K), _filter(array_size) {
+  BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K), _filter(array_size), _readonly_filter(std::assume_aligned<64>(reinterpret_cast<uint64_t*>(_filter.data()))) {
     Assert(reinterpret_cast<uintptr_t>(_filter.data()) % 64 == 0, "BloomFilter is not properly aligned.");
-    _readonly_filter = std::assume_aligned<64>(reinterpret_cast<uint64_t*>(_filter.data()));
   }
 
   void insert(uint64_t hash) {
@@ -136,8 +139,8 @@ class BloomFilter : public BaseBloomFilter {
   // Compile-time validation
   static_assert(FilterSizeExponent >= 6, "FilterSizeExponent must be at least 6 (minimum 64 bits)");
   static_assert(K > 0, "K must be greater than 0");
-  static_assert(K * FilterSizeExponent <= 64,
-                "Not enough bits in 64-bit hash for K hash functions with this filter size");
+  // static_assert(K * FilterSizeExponent <= 64,
+  //               "Not enough bits in 64-bit hash for K hash functions with this filter size");
 
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
@@ -146,21 +149,21 @@ class BloomFilter : public BaseBloomFilter {
 };
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
-class BlockBloomFilter : public BaseBloomFilter {
+class BlockBloomFilter : public BaseBloomFilter,  public Noncopyable {
  public:
-  BlockBloomFilter() : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K), _filter(array_size) {
+  BlockBloomFilter() : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K), _filter(array_size), _readonly_filter(std::assume_aligned<64>(reinterpret_cast<uint64_t*>(_filter.data()))) {
     Assert(reinterpret_cast<uintptr_t>(_filter.data()) % 64 == 0, "BloomFilter is not properly aligned.");
-    _readonly_filter = std::assume_aligned<64>(reinterpret_cast<uint64_t*>(_filter.data()));
   }
 
   void insert(uint64_t hash) {
-    auto ss = std::stringstream{};
+    // auto ss = std::stringstream{};
+    // std::cout << "array size is " << array_size << " ... bits bits_required_for_block_offset is " << bits_required_for_block_offset << "\n";
     const auto block_index = hash >> (64 - bits_required_for_block_offset);
     // const auto& block = &_filter[block_index];
     for (uint8_t i = 0; i < K; ++i) {
-      const auto bit_index_in_block = (hash >> i * 9) & 511;
-      const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
-      const auto bit_index_in_item = bit_index_in_block & 63;
+      const auto bit_index_in_block = (hash >> i * size_t{9}) & size_t{511};
+      const auto block_item_index = bit_index_in_block >> size_t{6};  // Index of uint64_t in block
+      const auto bit_index_in_item = bit_index_in_block & size_t{63};
       _filter[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
       // std::cout << "Hash: " << std::bitset<64>(hash) << ". Added item to block: " << block_index << ". For k " << size_t{i} << ", I want to access bit " << bit_index_in_block << ". That's block item " << block_item_index << " and bit in item: " << bit_index_in_item << "\n";
       // std::cout << "uint64_t afterwards: " << std::bitset<64>(_filter[block_index + block_item_index]) << '\n';
@@ -170,19 +173,19 @@ class BlockBloomFilter : public BaseBloomFilter {
 
   bool probe(uint64_t hash) const {
     // The upper bits give us the block.
-    const auto block_index = hash >> (64 - bits_required_for_block_offset);
+    const auto block_index = hash >> (size_t{64} - bits_required_for_block_offset);
     // const auto& block = &_readonly_filter[block_index];
     auto result = true;
     for (uint8_t i = 0; i < K; ++i) {
-      // const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
+      // const auto bit_index_in_block = (hash >> i * size_t{9}) & size_t{511};
       // const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
       // const auto bit_index_in_item = bit_index_in_block & 63;
       // result &= static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
 
-      // result &= static_cast<bool>(_readonly_filter[block_index + (((hash >> i * 9) & size_t{511}) >> 6)] & (size_t{1} << (((hash >> i * 9) & size_t{511}) & 63)));
+      // result &= static_cast<bool>(_readonly_filter[block_index + (((hash >> i * size_t{9}) & size_t{511}) >> 6)] & (size_t{1} << (((hash >> i * size_t{9}) & size_t{511}) & 63)));
 
-      const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
-      result &= static_cast<bool>(_readonly_filter[block_index + (bit_index_in_block >> 6)] & (size_t{1} << (bit_index_in_block & 63)));
+      const auto bit_index_in_block = (hash >> i * size_t{9}) & size_t{511};
+      result &= static_cast<bool>(_readonly_filter[block_index + (bit_index_in_block >> size_t{6})] & (size_t{1} << (bit_index_in_block & size_t{63})));
     }
     return result;
   }
@@ -276,8 +279,8 @@ class BlockBloomFilter : public BaseBloomFilter {
                 "Not enough bits for block index plus K offsets of size BlockSizeExponent");
 
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
-  static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
-  static constexpr auto bits_required_for_block_offset = FilterSizeExponent - 6;
+  static constexpr auto bits_required_for_block_offset = size_t{FilterSizeExponent - 6};
+  static constexpr auto array_size = size_t{1} << bits_required_for_block_offset;
   std::vector<std::atomic<uint64_t>, boost::alignment::aligned_allocator<std::atomic<uint64_t>, 64>> _filter;
   uint64_t* _readonly_filter;
 };
@@ -286,76 +289,138 @@ class BlockBloomFilter : public BaseBloomFilter {
 // template class BloomFilter<17, 1>;
 // template class BloomFilter<18, 1>;
 // template class BloomFilter<19, 1>;
-template class BloomFilter<20, 1>;
+// template class BloomFilter<20, 1>;
 // template class BloomFilter<21, 1>;
 // template class BloomFilter<22, 1>;
+// template class BloomFilter<23, 1>;
+
 // template class BloomFilter<16, 2>;
 // template class BloomFilter<17, 2>;
 // template class BloomFilter<18, 2>;
 // template class BloomFilter<19, 2>;
-template class BloomFilter<20, 2>;
+// template class BloomFilter<20, 2>;
 // template class BloomFilter<21, 2>;
 // template class BloomFilter<22, 2>;
+// template class BloomFilter<23, 2>;
+
 // template class BloomFilter<16, 3>;
 // template class BloomFilter<17, 3>;
 // template class BloomFilter<18, 3>;
 // template class BloomFilter<19, 3>;
-template class BloomFilter<20, 3>;
+// template class BloomFilter<20, 3>;
 // template class BloomFilter<21, 3>;
+// template class BloomFilter<22, 3>;
+// template class BloomFilter<23, 3>;
 
 // 512-bit blocks (BlockSizeExponent = 9)
 // template class BlockBloomFilter<16, 9, 1>;
 // template class BlockBloomFilter<17, 9, 1>;
 // template class BlockBloomFilter<18, 9, 1>;
 // template class BlockBloomFilter<19, 9, 1>;
-template class BlockBloomFilter<20, 9, 1>;
+// template class BlockBloomFilter<20, 9, 1>;
 // template class BlockBloomFilter<21, 9, 1>;
 // template class BlockBloomFilter<22, 9, 1>;
+// template class BlockBloomFilter<23, 9, 1>;
+
 // template class BlockBloomFilter<16, 9, 2>;
 // template class BlockBloomFilter<17, 9, 2>;
 // template class BlockBloomFilter<18, 9, 2>;
 // template class BlockBloomFilter<19, 9, 2>;
-template class BlockBloomFilter<20, 9, 2>;
-
+// template class BlockBloomFilter<20, 9, 2>;
 // template class BlockBloomFilter<21, 9, 2>;
 // template class BlockBloomFilter<22, 9, 2>;
+// template class BlockBloomFilter<23, 9, 2>;
+
 // template class BlockBloomFilter<16, 9, 3>;
 // template class BlockBloomFilter<17, 9, 3>;
 // template class BlockBloomFilter<18, 9, 3>;
 // template class BlockBloomFilter<19, 9, 3>;
-template class BlockBloomFilter<20, 9, 3>;
+// template class BlockBloomFilter<20, 9, 3>;
 // template class BlockBloomFilter<21, 9, 3>;
+// template class BlockBloomFilter<22, 9, 3>;
+// template class BlockBloomFilter<23, 9, 3>;
+
+// template class BlockBloomFilter<16, 9, 4>;
+// template class BlockBloomFilter<17, 9, 4>;
+// template class BlockBloomFilter<18, 9, 4>;
+// template class BlockBloomFilter<19, 9, 4>;
+// template class BlockBloomFilter<20, 9, 4>;
+// template class BlockBloomFilter<21, 9, 4>;
+// template class BlockBloomFilter<22, 9, 4>;
+// template class BlockBloomFilter<23, 9, 4>;
 
 template <typename Functor>
 void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor& functor) {
   switch (base_bloom_filter.filter_size_exponent()) {
-    case 20: {
+    case 18: {
       switch (base_bloom_filter.block_size_exponent()) {
-        case 0: {
+        // case 0: {
+        //   switch (base_bloom_filter.k()) {
+        //     case 1:
+        //       functor(static_cast<BloomFilter<18, 1>&>(base_bloom_filter));
+        //       break;
+        //     case 2:
+        //       functor(static_cast<BloomFilter<18, 2>&>(base_bloom_filter));
+        //       break;
+        //     case 3:
+        //       functor(static_cast<BloomFilter<18, 3>&>(base_bloom_filter));
+        //       break;
+        //     default:
+        //       Fail("Unsupported bloom filter type.");
+        //   }
+        // } break;
+        case 9: {
           switch (base_bloom_filter.k()) {
-            case 1:
-              functor(static_cast<BloomFilter<20, 1>&>(base_bloom_filter));
-              break;
-            case 2:
-              functor(static_cast<BloomFilter<20, 2>&>(base_bloom_filter));
-              break;
-            case 3:
-              functor(static_cast<BloomFilter<20, 3>&>(base_bloom_filter));
+            // case 1:
+            //   functor(static_cast<BlockBloomFilter<18, 9, 1>&>(base_bloom_filter));
+            //   break;
+            // case 2:
+            //   functor(static_cast<BlockBloomFilter<18, 9, 2>&>(base_bloom_filter));
+            //   break;
+            // case 3:
+            //   functor(static_cast<BlockBloomFilter<18, 9, 3>&>(base_bloom_filter));
+            //   break;
+            case 4:
+              functor(static_cast<BlockBloomFilter<18, 9, 4>&>(base_bloom_filter));
               break;
             default:
               Fail("Unsupported bloom filter type.");
           }
         } break;
+        default:
+          Fail("Unsupported bloom filter type.");
+      }
+    } break;
+    case 23: {
+      switch (base_bloom_filter.block_size_exponent()) {
+        // case 0: {
+        //   switch (base_bloom_filter.k()) {
+        //     case 1:
+        //       functor(static_cast<BloomFilter<23, 1>&>(base_bloom_filter));
+        //       break;
+        //     case 2:
+        //       functor(static_cast<BloomFilter<23, 2>&>(base_bloom_filter));
+        //       break;
+        //     case 3:
+        //       functor(static_cast<BloomFilter<23, 3>&>(base_bloom_filter));
+        //       break;
+        //     default:
+        //       Fail("Unsupported bloom filter type.");
+        //   }
+        // } break;
         case 9: {
           switch (base_bloom_filter.k()) {
-            case 1:
-              functor(static_cast<BlockBloomFilter<20, 9, 1>&>(base_bloom_filter));
-              break;
-            case 2:
-              functor(static_cast<BlockBloomFilter<20, 9, 2>&>(base_bloom_filter));
-              break;
-            case 3:
-              functor(static_cast<BlockBloomFilter<20, 9, 3>&>(base_bloom_filter));
+            // case 1:
+            //   functor(static_cast<BlockBloomFilter<23, 9, 1>&>(base_bloom_filter));
+            //   break;
+            // case 2:
+            //   functor(static_cast<BlockBloomFilter<23, 9, 2>&>(base_bloom_filter));
+            //   break;
+            // case 3:
+            //   functor(static_cast<BlockBloomFilter<23, 9, 3>&>(base_bloom_filter));
+            //   break;
+            case 4:
+              functor(static_cast<BlockBloomFilter<23, 9, 4>&>(base_bloom_filter));
               break;
             default:
               Fail("Unsupported bloom filter type.");
