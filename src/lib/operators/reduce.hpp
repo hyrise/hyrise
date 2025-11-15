@@ -398,7 +398,7 @@ class Reduce : public AbstractReadOnlyOperator {
                                                      false :
                                                      true;
 
-                auto row_processed = ChunkOffset{0};
+                auto match_count = ChunkOffset{0};
                 auto iterable = create_iterable_from_segment<DataType, erase_segment_type>(typed_segment);
                 iterable.for_each([&](const auto& position) {
                   if (!position.is_null()) {
@@ -417,14 +417,12 @@ class Reduce : public AbstractReadOnlyOperator {
                       found &= diff <= value_difference;
                     }
 
-                    if (found) {
-                      matches_ref[row_processed] = RowID{chunk_index, position.chunk_offset()};
-                      ++row_processed;
-                    }
+                    matches_ref[match_count] = RowID{chunk_index, position.chunk_offset()};
+                    match_count += static_cast<uint32_t>(found);
                   }
                 });
 
-                matches_ref.resize(row_processed);
+                matches_ref.resize(match_count);
 
                 // segment_iterate<DataType, EraseSegmentType>(*input_segment, [&](const auto& position) {
                 //   if (!position.is_null()) {
