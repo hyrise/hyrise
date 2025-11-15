@@ -99,6 +99,14 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
               break;
           }
           break;
+        case 22:
+          switch (k) {
+            case 4:
+              return std::make_shared<BlockBloomFilter<22, 9, 4>>();
+            default:
+              break;
+          }
+          break;
         case 23:
           switch (k) {
             // case 1:

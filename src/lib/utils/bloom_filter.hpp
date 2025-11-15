@@ -391,6 +391,21 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
           Fail("Unsupported bloom filter type.");
       }
     } break;
+    case 22: {
+      switch (base_bloom_filter.block_size_exponent()) {
+        case 9: {
+          switch (base_bloom_filter.k()) {
+            case 4:
+              functor(static_cast<BlockBloomFilter<22, 9, 4>&>(base_bloom_filter));
+              break;
+            default:
+              Fail("Unsupported bloom filter type.");
+          }
+        } break;
+        default:
+          Fail("Unsupported bloom filter type.");
+      }
+    } break;
     case 23: {
       switch (base_bloom_filter.block_size_exponent()) {
         // case 0: {

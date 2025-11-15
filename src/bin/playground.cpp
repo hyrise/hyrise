@@ -173,7 +173,7 @@ int main() {
     // - filter_size_exponent fixed at 20
     // - block_size_exponent in {0, 9}
     // - k in {1, 2}
-    for (const auto filter_size_exponent : {size_t{18}, size_t{23}}) {
+    for (const auto filter_size_exponent : {size_t{18}, size_t{22}, size_t{23}}) {
       for (const auto block_size_exponent : {/* size_t{0}, */ size_t{9}}) {
         for (const auto k : {/* size_t{1}, size_t{2}, size_t{3} */ size_t{4}}) {
           std::cout << "\n\nReducer with k=" << k << " a size exponent of " << filter_size_exponent << " and a block_size_exponent of " << block_size_exponent << '\n';
