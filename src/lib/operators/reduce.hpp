@@ -28,8 +28,15 @@ constexpr auto INT_SHORTCUT = true;
 //                                             EraseTypes::OnlyInDebugBuild,
 //                                             EraseTypes::Always>
 
-static inline uint64_t fib_hash(uint64_t x) {
-  return x * 11400714819323198485ull;
+template <typename T>
+static inline uint64_t hyrise_hash(T value) {
+  if constexpr (std::is_same_v<T, int32_t>) {
+    return value * 11400714819323198485ull;
+  } else {
+    auto hash = size_t{11400714819323198485ul};
+    boost::hash_combine(hash, value);
+    return hash;
+  }
 }
 
 // Helper factory that returns the appropriate BloomFilter/BlockBloomFilter instance.
@@ -262,15 +269,10 @@ class Reduce : public AbstractReadOnlyOperator {
 
               segment_iterate<DataType>(*input_segment, [&](const auto& position) {
                 if (!position.is_null()) {
-                  auto hash = size_t{11400714819323198485ul};
-                  if constexpr (std::is_same_v<DataType, int32_t>) {
-                    hash = fib_hash(static_cast<std::uint64_t>(position.value()));
-                  } else {
-                     boost::hash_combine(hash, position.value());
-                  }
+                  const auto hash = hyrise_hash(position.value());
                   // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
-                  resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
+                  resolved_partial_bloom_filter.insert(hash);
 
                   if constexpr (use_min_max == UseMinMax::Yes) {
                     partial_minimum = std::min(partial_minimum, position.value());
@@ -386,74 +388,35 @@ class Reduce : public AbstractReadOnlyOperator {
               const auto& input_chunk = input_table->get_chunk(chunk_index);
               const auto& input_segment = input_chunk->get_segment(column_id);
 
-              auto matches = std::make_shared<RowIDPosList>(input_chunk->size());
-              auto& matches_ref = *matches;
-              // matches->reserve(input_chunk->size() / 2);
-
               timer.lap();
+
+              auto matches = std::make_shared<RowIDPosList>();
+              matches->reserve(input_chunk->size() / 2);
 
               resolve_segment_type<DataType>(*input_segment, [&](auto& typed_segment) {
                 using SegmentType = std::decay_t<decltype(typed_segment)>;
-
-                // constexpr auto erase_segment_type = (std::is_same_v<SegmentType, DictionarySegment<int32_t>> ||
-                //                                      std::is_same_v<SegmentType, ValueSegment<int32_t>> ||
-                //                                      std::is_same_v<SegmentType, FrameOfReferenceSegment<int32_t>>) ?
-                //                                      EraseTypes::Always :
-                //                                      EraseTypes::OnlyInDebugBuild;
                 constexpr auto erase_segment_type = (std::is_same_v<SegmentType, DictionarySegment<int32_t>> ||
                                                      std::is_same_v<SegmentType, ValueSegment<int32_t>> ||
                                                      std::is_same_v<SegmentType, FrameOfReferenceSegment<int32_t>>) ?
                                                      false :
                                                      true;
 
-                auto match_count = ChunkOffset{0};
                 auto iterable = create_iterable_from_segment<DataType, erase_segment_type>(typed_segment);
                 iterable.for_each([&](const auto& position) {
                   if (!position.is_null()) {
-                    auto hash = size_t{11400714819323198485ul};
-                    if constexpr (std::is_same_v<DataType, int32_t>) {
-                      hash = fib_hash(static_cast<std::uint64_t>(position.value()));
-                    } else {
-                       boost::hash_combine(hash, position.value());
-                    }
-                    // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
-
-                    auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+                    const auto hash = hyrise_hash(position.value());
+                    auto found = resolved_bloom_filter.probe(hash);
 
                     if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
                       const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
                       found &= diff <= value_difference;
                     }
 
-                    matches_ref[match_count] = RowID{chunk_index, position.chunk_offset()};
-                    match_count += static_cast<uint32_t>(found);
+                    if (found) {
+                      matches->emplace_back(chunk_index, position.chunk_offset());
+                    }
                   }
                 });
-
-                matches_ref.resize(match_count);
-
-                // segment_iterate<DataType, EraseSegmentType>(*input_segment, [&](const auto& position) {
-                //   if (!position.is_null()) {
-                //     auto hash = size_t{11400714819323198485ul};
-                //     if constexpr (std::is_same_v<DataType, int32_t>) {
-                //       hash = fib_hash(static_cast<std::uint64_t>(position.value()));
-                //     } else {
-                //        boost::hash_combine(hash, position.value());
-                //     }
-                //     // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
-
-                //     auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
-
-                //     if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
-                //       const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
-                //       found &= diff <= value_difference;
-                //     }
-
-                //     if (found) {
-                //       matches->emplace_back(chunk_index, position.chunk_offset());
-                //     }
-                //   }
-                // });
               });
 
               local_scan += timer.lap();
@@ -650,15 +613,10 @@ class Reduce : public AbstractReadOnlyOperator {
 
                 segment_iterate<DataType>(*input_segment, [&](const auto& position) {
                   if (!position.is_null()) {
-                    auto hash = size_t{11400714819323198485ul};
-                    if constexpr (std::is_same_v<DataType, int32_t>) {
-                      hash = fib_hash(static_cast<std::uint64_t>(position.value()));
-                    } else {
-                       boost::hash_combine(hash, position.value());
-                    }
+                    const auto hash = hyrise_hash(position.value());
                     // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
 
-                    auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+                    auto found = resolved_bloom_filter.probe(hash);
 
                     if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
                       using UnsignedDataType = std::make_unsigned_t<DataType>;
