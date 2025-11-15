@@ -378,8 +378,9 @@ class Reduce : public AbstractReadOnlyOperator {
               const auto& input_chunk = input_table->get_chunk(chunk_index);
               const auto& input_segment = input_chunk->get_segment(column_id);
 
-              auto matches = std::make_shared<RowIDPosList>();
-              matches->reserve(input_chunk->size() / 2);
+              auto matches = std::make_shared<RowIDPosList>(input_chunk->size());
+              auto& matches_ref = *matches;
+              // matches->reserve(input_chunk->size() / 2);
 
               timer.lap();
 
@@ -397,6 +398,7 @@ class Reduce : public AbstractReadOnlyOperator {
                                                      false :
                                                      true;
 
+                auto row_processed = ChunkOffset{0};
                 auto iterable = create_iterable_from_segment<DataType, erase_segment_type>(typed_segment);
                 iterable.for_each([&](const auto& position) {
                   if (!position.is_null()) {
@@ -416,10 +418,13 @@ class Reduce : public AbstractReadOnlyOperator {
                     }
 
                     if (found) {
-                      matches->emplace_back(chunk_index, position.chunk_offset());
+                      matches_ref[row_processed] = RowID{chunk_index, position.chunk_offset()};
+                      ++row_processed;
                     }
                   }
                 });
+
+                matches_ref.resize(row_processed);
 
                 // segment_iterate<DataType, EraseSegmentType>(*input_segment, [&](const auto& position) {
                 //   if (!position.is_null()) {
