@@ -171,6 +171,7 @@ class BlockBloomFilter : public BaseBloomFilter,  public Noncopyable {
     }
   }
 
+  __attribute__((always_inline))
   bool probe(uint64_t hash) const {
     // The upper bits give us the block.
     const auto block_index = hash >> (size_t{64} - bits_required_for_block_offset);

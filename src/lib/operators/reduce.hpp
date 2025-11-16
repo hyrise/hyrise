@@ -369,7 +369,7 @@ class Reduce : public AbstractReadOnlyOperator {
       std::atomic<size_t> total_output_time{0};
       std::atomic<size_t> total_merge_time{0};
 
-      resolve_bloom_filter_type(*_bloom_filter, [&](auto& resolved_bloom_filter) {
+      resolve_bloom_filter_type(*_bloom_filter, [&](const auto& resolved_bloom_filter) {
         std::cout << "Resolved global bloom filter.\n";
 
         for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; chunk_index += chunks_per_worker) {
@@ -393,30 +393,44 @@ class Reduce : public AbstractReadOnlyOperator {
               auto matches = std::make_shared<RowIDPosList>();
               matches->reserve(input_chunk->size() / 2);
 
-              resolve_segment_type<DataType>(*input_segment, [&](auto& typed_segment) {
-                using SegmentType = std::decay_t<decltype(typed_segment)>;
-                constexpr auto erase_segment_type = (std::is_same_v<SegmentType, DictionarySegment<int32_t>> ||
-                                                     std::is_same_v<SegmentType, ValueSegment<int32_t>> ||
-                                                     std::is_same_v<SegmentType, FrameOfReferenceSegment<int32_t>>) ?
-                                                     false :
-                                                     true;
+              // auto matches = std::make_shared<RowIDPosList>(input_chunk->size());
+              // auto match_count = ChunkOffset{0};
+              // auto* __restrict__ matches_ptr = matches->data();
 
-                auto iterable = create_iterable_from_segment<DataType, erase_segment_type>(typed_segment);
-                iterable.for_each([&](const auto& position) {
-                  if (!position.is_null()) {
-                    const auto hash = hyrise_hash(position.value());
-                    auto found = resolved_bloom_filter.probe(hash);
+              resolve_segment_type<DataType>(*input_segment, [&, chunk_index](auto& typed_segment) {
+                // using SegmentType = std::decay_t<decltype(typed_segment)>;
+                // constexpr auto erase_segment_type = (std::is_same_v<SegmentType, DictionarySegment<int32_t>> ||
+                //                                      std::is_same_v<SegmentType, ValueSegment<int32_t>> ||
+                //                                      std::is_same_v<SegmentType, FrameOfReferenceSegment<int32_t>>) ?
+                //                                      false :
+                //                                      true;
 
-                    if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
-                      const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
-                      found &= diff <= value_difference;
-                    }
+                auto iterable = create_iterable_from_segment<DataType/*, erase_segment_type*/>(typed_segment);
+                iterable.with_iterators([&, chunk_index](auto iter, const auto& end) {
+                  for (; iter != end; ++iter) {
+                    const auto& position = *iter;
+                    if (!position.is_null()) {
+                      const auto hash = hyrise_hash(position.value());
+                      auto found = resolved_bloom_filter.probe(hash);
 
-                    if (found) {
-                      matches->emplace_back(chunk_index, position.chunk_offset());
+                      if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
+                        const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
+                        found &= diff <= value_difference;
+                      }
+
+                      if (found) {
+                      //   matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
+                      //   ++match_count;
+                        matches->emplace_back(chunk_index, position.chunk_offset());
+                      }
+
+                      // matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
+                      // match_count += static_cast<ChunkOffset::base_type>(found);
                     }
                   }
                 });
+
+                // matches->resize(match_count);
               });
 
               local_scan += timer.lap();
