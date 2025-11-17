@@ -42,7 +42,8 @@ void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std
 /**
 * Check if MVCC data tells us that the existing UCC is guaranteed to be still valid. To do this, we can simply check
 * if the table chunks have seen any inserts/deletions since the last validation of the UCC. This information is
-* contained in the MVCC data of the chunks.
+* contained in the MVCC data of the chunks. Note that we use `max_begin_cid` here. This can lead to overly pessimistic
+* results, but as of right now we don't have a better way to determine the last valid per chunk here.
 */
 bool key_constraint_is_confidently_valid(const std::shared_ptr<Table>& table,
                                          const TableKeyConstraint& table_key_constraint);

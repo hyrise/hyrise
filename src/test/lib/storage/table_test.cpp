@@ -10,6 +10,7 @@
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/table.hpp"
+#include "ucc_discovery_plugin.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
