@@ -31,7 +31,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 const std::vector<uint8_t> filter_size_exponents = {0, 20};
 const std::vector<uint8_t> block_size_exponents = {0, 9};
-const std::vector<uint8_t> ks = {1, 2, 3, 4};
+const std::vector<uint8_t> ks = {1, 2};
 
 const uint16_t min_runs = 10;
 // const uint16_t max_runs = 50;
@@ -157,7 +157,7 @@ void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predica
 void perform_perf(std::ofstream& out, const std::vector<std::string>& event_names, OperatorJoinPredicate join_predicate,
                   std::shared_ptr<AbstractOperator> left_input, std::shared_ptr<AbstractOperator> right_input,
                   uint8_t filter_size_exponent, uint8_t block_size_exponent, uint8_t k) {
-  if (filter_size_exponent == 0 && (block_size_exponent != 0 || k != 1)) {
+  if (filter_size_exponent == 0 && (block_size_exponent != 9 || k != 1)) {
     return;
   }
 
