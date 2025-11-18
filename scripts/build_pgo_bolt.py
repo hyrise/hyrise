@@ -55,16 +55,16 @@ ci_benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmark
 benchmarks_with_float_scaling = {"hyriseBenchmarkTPCH", "hyriseBenchmarkStarSchema"}
 
 
-def run_root(*cmd):
+def run_root(*cmd, check=True):
     cmd = " ".join(cmd)
     print(f"python@root: {cmd}", flush=True)
-    run(cmd, cwd=f"{build_folder}/..", shell=True, check=True)
+    run(cmd, cwd=f"{build_folder}/..", shell=True, check=check)
 
 
-def run_build(*cmd):
+def run_build(*cmd, check=True):
     cmd = " ".join(cmd)
     print(f"python@build: {cmd}", flush=True)
-    run(cmd, cwd=build_folder, shell=True, check=True)
+    run(cmd, cwd=build_folder, shell=True, check=check)
 
 
 def remove_if_exists(file):
@@ -128,10 +128,13 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
 
 def cleanup():
     run_build("cmake -DCOMPILE_FOR_BOLT=OFF -DPGO_INSTRUMENT=OFF -UPGO_OPTIMIZE ..")
+
     for benchmark in benchmarks:
         remove_if_exists(f"{benchmark}.fdata")
-    remove_if_exists("libhyrise.profraw")
-    run_root("rm *.profraw")
+    remove_if_exists("bolt.fdata")
+
+    run_root("rm *.profraw", check=False)
+    run_build("rm *.profraw", check=False)
 
 
 def export_profile():
