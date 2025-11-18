@@ -35,6 +35,9 @@ TEST_F(InclusionDependencyTest, InvalidDependencies) {
   EXPECT_THROW(InclusionDependency({_a}, {}, _table_a), std::logic_error);
   EXPECT_THROW(InclusionDependency({_a}, {ColumnID{0}, ColumnID{1}}, _table_a), std::logic_error);
   EXPECT_THROW(InclusionDependency({_a, _b}, {ColumnID{0}}, _table_a), std::logic_error);
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(InclusionDependency({_a, _b}, {ColumnID{1}, ColumnID{0}}, _table_b), std::logic_error);
+  }
   EXPECT_THROW(InclusionDependency({_a}, {ColumnID{0}}, nullptr), std::logic_error);
   EXPECT_NO_THROW(InclusionDependency({_a}, {ColumnID{0}}, _table_a));
 }
@@ -52,7 +55,6 @@ TEST_F(InclusionDependencyTest, Equals) {
   EXPECT_NE(ind_a_0, InclusionDependency({_b}, {ColumnID{0}}, _table_a));
   EXPECT_NE(ind_a_0, InclusionDependency({_a}, {ColumnID{0}}, _table_b));
   EXPECT_NE(ind_a_0, ind_a_b_0_1);
-  EXPECT_NE(ind_a_b_0_1, InclusionDependency({_a, _b}, {ColumnID{1}, ColumnID{0}}, _table_a));
   EXPECT_NE(ind_a_b_0_1, InclusionDependency({_b, _a}, {ColumnID{0}, ColumnID{1}}, _table_a));
   EXPECT_NE(ind_a_b_0_1, InclusionDependency({_b, _a}, {ColumnID{0}, ColumnID{1}}, _table_b));
 }
@@ -72,8 +74,6 @@ TEST_F(InclusionDependencyTest, Container) {
   const auto ind_b_0 = InclusionDependency{{_b}, {ColumnID{0}}, _table_a};
   const auto ind_a_b_0_1 = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, _table_a};
   const auto ind_b_a_0_1 = InclusionDependency{{_b, _a}, {ColumnID{0}, ColumnID{1}}, _table_a};
-  const auto ind_a_b_1_0 = InclusionDependency{{_a, _b}, {ColumnID{1}, ColumnID{0}}, _table_a};
-  const auto ind_b_a_1_0 = InclusionDependency{{_b, _a}, {ColumnID{1}, ColumnID{0}}, _table_a};
   const auto ind_a_b_0_1_b = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, _table_b};
 
   auto inclusion_dependencies = InclusionDependencies{};
@@ -106,16 +106,8 @@ TEST_F(InclusionDependencyTest, Container) {
   EXPECT_EQ(inclusion_dependencies.size(), 6);
   EXPECT_TRUE(inclusion_dependencies.contains(ind_b_a_0_1));
 
-  inclusion_dependencies.emplace(ind_a_b_1_0);
-  EXPECT_EQ(inclusion_dependencies.size(), 7);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b_1_0));
-
-  inclusion_dependencies.emplace(ind_b_a_1_0);
-  EXPECT_EQ(inclusion_dependencies.size(), 8);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_b_a_1_0));
-
   inclusion_dependencies.emplace(ind_a_b_0_1_b);
-  EXPECT_EQ(inclusion_dependencies.size(), 9);
+  EXPECT_EQ(inclusion_dependencies.size(), 7);
   EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b_0_1_b));
 }
 
