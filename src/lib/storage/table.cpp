@@ -25,6 +25,7 @@
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
+#include "storage/constraints/functional_dependency_constraint.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"  // IWYU pragma: keep
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"  // IWYU pragma: keep
@@ -449,6 +450,9 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
     case TableConstraintType::Order:
       _add_soft_order_constraint(static_cast<const TableOrderConstraint&>(table_constraint));
       return;
+    case TableConstraintType::FunctionalDependency: 
+      _add_soft_functional_dependency_constraint(static_cast<const TableFunctionalDependencyConstraint&>(table_constraint)); 
+      return;
   }
 }
 
@@ -544,6 +548,18 @@ void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_c
            "TableOrderConstraint for affected columns has already been set.");
   }
   _table_order_constraints.insert(table_order_constraint);
+}
+
+void Table::_add_soft_functional_dependency_constraint(const TableFunctionalDependencyConstraint& functional_dependency_constraint) {
+  // Check validity of columns.
+  const auto column_count = this->column_count();
+  for (const auto& column_id : functional_dependency_constraint.determinant_columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
+  }
+  for (const auto& column_id : functional_dependency_constraint.dependent_columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
+  }
+  _functional_dependency_constraints.insert(functional_dependency_constraint);
 }
 
 const std::vector<ColumnID>& Table::value_clustered_by() const {

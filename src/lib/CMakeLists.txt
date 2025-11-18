@@ -460,6 +460,8 @@ set(
     storage/constraints/table_key_constraint.hpp
     storage/constraints/table_order_constraint.cpp
     storage/constraints/table_order_constraint.hpp
+    storage/constraints/functional_dependency_constraint.cpp
+    storage/constraints/functional_dependency_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp

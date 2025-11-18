@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "storage/constraints/foreign_key_constraint.hpp"
+#include "storage/constraints/functional_dependency_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
 #include "storage/table.hpp"
@@ -48,6 +49,7 @@ void key_constraint(const std::shared_ptr<Table>& table, const std::set<std::str
   table->add_soft_constraint(TableKeyConstraint{std::move(column_ids), type});
 }
 
+
 }  // namespace
 
 namespace hyrise {
@@ -60,6 +62,7 @@ void unique_constraint(const std::shared_ptr<Table>& table, const std::set<std::
   key_constraint(table, columns, KeyConstraintType::UNIQUE);
 }
 
+
 void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
                             const std::vector<std::string>& foreign_key_columns,
                             const std::shared_ptr<Table>& primary_key_table,
@@ -69,6 +72,14 @@ void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
 
   foreign_key_table->add_soft_constraint(ForeignKeyConstraint{std::move(foreign_key_column_ids), foreign_key_table,
                                                               std::move(primary_key_column_ids), primary_key_table});
+}
+
+void functional_dependency(const std::shared_ptr<Table>& table, std::vector<std::string>& lhs,
+                                      std::vector<std::string>& rhs) {
+  auto dependent_column_ids = column_ids_by_name(table, lhs);
+  auto determined_column_ids = column_ids_by_name(table, rhs);
+  table->add_soft_constraint(
+      TableFunctionalDependencyConstraint{std::move(dependent_column_ids), std::move(determined_column_ids)});
 }
 
 void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std::string>& ordering_columns,

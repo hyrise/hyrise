@@ -36,6 +36,9 @@ void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
                             const std::shared_ptr<Table>& primary_key_table,
                             const std::vector<std::string>& primary_key_columns);
 
+void functional_dependency(const std::shared_ptr<Table>& table, const std::vector<std::string>& lhs,
+                                      const std::vector<std::string>& rhs);
+
 void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std::string>& ordering_columns,
                       const std::vector<std::string>& ordered_columns);
 

@@ -4,7 +4,7 @@
 
 namespace hyrise {
 
-enum class TableConstraintType { Key, ForeignKey, Order };
+enum class TableConstraintType { Key, ForeignKey, Order, FunctionalDependency };
 
 /**
  * Abstract container class for the definition of table constraints. Subclasses should leverage the OOP structure to add

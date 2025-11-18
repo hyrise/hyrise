@@ -20,6 +20,7 @@
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
+#include "storage/constraints/functional_dependency_constraint.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/table_index_statistics.hpp"
@@ -264,6 +265,8 @@ class Table : private Noncopyable {
 
   void _add_soft_order_constraint(const TableOrderConstraint& table_order_constraint);
 
+  void _add_soft_functional_dependency_constraint(const TableFunctionalDependencyConstraint& functional_dependency_constraint); 
+
   TableColumnDefinitions _column_definitions;
   TableType _type;
   UseMvcc _use_mvcc;
@@ -283,6 +286,7 @@ class Table : private Noncopyable {
   TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _table_order_constraints;
   ForeignKeyConstraints _foreign_key_constraints;
+  TableFunctionalDependencyConstraints _functional_dependency_constraints;
 
   /**
    * Stores the ForeignKeyCostraints of another table that reference this table. Since we translate foreign key
