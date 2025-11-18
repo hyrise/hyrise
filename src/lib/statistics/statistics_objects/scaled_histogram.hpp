@@ -52,7 +52,7 @@ class ScaledHistogram : public AbstractHistogram<T> {
   BinID next_bin_for_value(const T& value) const override;
 
  private:
-  // template <typename U> 
+  // template <typename U>
   // friend const std::shared_ptr<const AbstractHistogram<U>>& referenced_histogram(const ScaledHistogram<U>&);
   // template <typename U>
   // friend Selectivity selectivity(const ScaledHistogram<U>&);

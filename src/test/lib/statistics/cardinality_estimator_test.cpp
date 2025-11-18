@@ -976,7 +976,7 @@ TEST_F(CardinalityEstimatorTest, UnionWithEmptyInput) {
     node_h,
     node_a);
   // clang-format on
-  
+
   auto left_rowcount = node_a->table_statistics()->row_count;
   auto right_rowcount = node_h->table_statistics()->row_count;
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
