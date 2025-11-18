@@ -5,8 +5,8 @@
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "storage/table.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 

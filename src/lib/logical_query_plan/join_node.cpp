@@ -265,9 +265,15 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
   for (const auto& expression : join_predicates) {
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(expression);
     if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
-      return join_mode == JoinMode::Left    ? left_inclusion_dependencies
-             : join_mode == JoinMode::Right ? right_inclusion_dependencies
-                                            : InclusionDependencies{};
+      if (join_mode == JoinMode::Left) {
+        return left_inclusion_dependencies;
+      }
+
+      if (join_mode == JoinMode::Right) {
+        return right_inclusion_dependencies;
+      }
+
+      return InclusionDependencies{};
     }
 
     if (find_expression_idx(*predicate->left_operand(), left_expressions)) {
