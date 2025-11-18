@@ -390,12 +390,12 @@ class Reduce : public AbstractReadOnlyOperator {
 
               timer.lap();
 
-              auto matches = std::make_shared<RowIDPosList>();
-              matches->reserve(input_chunk->size() / 2);
+              // auto matches = std::make_shared<RowIDPosList>();
+              // matches->reserve(input_chunk->size() / 2);
 
-              // auto matches = std::make_shared<RowIDPosList>(input_chunk->size());
-              // auto match_count = ChunkOffset{0};
-              // auto* __restrict__ matches_ptr = matches->data();
+              auto matches = std::make_shared<RowIDPosList>(input_chunk->size());
+              auto match_count = size_t{0};
+              auto* __restrict__ matches_ptr = matches->data();
 
               resolve_segment_type<DataType>(*input_segment, [&, chunk_index](auto& typed_segment) {
                 // using SegmentType = std::decay_t<decltype(typed_segment)>;
@@ -418,19 +418,23 @@ class Reduce : public AbstractReadOnlyOperator {
                         found &= diff <= value_difference;
                       }
 
-                      if (found) {
-                      //   matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
-                      //   ++match_count;
-                        matches->emplace_back(chunk_index, position.chunk_offset());
-                      }
+                      // if (found) {
+                        // >> == 70-100ms  != 130-220ms
+                        // matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
+                        // ++match_count;
 
-                      // matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
-                      // match_count += static_cast<ChunkOffset::base_type>(found);
+                        // ....>> == 90ms  != 200-300ms (schwankt stark)
+                        // matches->emplace_back(chunk_index, position.chunk_offset());
+                      // }
+
+                      // >> == 130-180ms  != 130-180ms
+                      matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
+                      match_count += static_cast<ChunkOffset::base_type>(found);
                     }
                   }
                 });
 
-                // matches->resize(match_count);
+                matches->resize(match_count);
               });
 
               local_scan += timer.lap();

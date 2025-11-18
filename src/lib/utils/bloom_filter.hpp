@@ -156,25 +156,22 @@ class BlockBloomFilter : public BaseBloomFilter,  public Noncopyable {
   }
 
   void insert(uint64_t hash) {
-    // auto ss = std::stringstream{};
-    // std::cout << "array size is " << array_size << " ... bits bits_required_for_block_offset is " << bits_required_for_block_offset << "\n";
-    const auto block_index = hash >> (64 - bits_required_for_block_offset);
-    // const auto& block = &_filter[block_index];
+    const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
+    // std::cout << "first we get the offset: " << (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << " then the caheline item: " << ((hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3) << "\n";
     for (uint8_t i = 0; i < K; ++i) {
       const auto bit_index_in_block = (hash >> i * size_t{9}) & size_t{511};
       const auto block_item_index = bit_index_in_block >> size_t{6};  // Index of uint64_t in block
       const auto bit_index_in_item = bit_index_in_block & size_t{63};
+      // std::cout << "block index is: " << block_index + block_item_index << " for size filter: " << _filter.size() << "\n";
+      // Assert((block_index + block_item_index) < _filter.size(), "Too large");
       _filter[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
-      // std::cout << "Hash: " << std::bitset<64>(hash) << ". Added item to block: " << block_index << ". For k " << size_t{i} << ", I want to access bit " << bit_index_in_block << ". That's block item " << block_item_index << " and bit in item: " << bit_index_in_item << "\n";
-      // std::cout << "uint64_t afterwards: " << std::bitset<64>(_filter[block_index + block_item_index]) << '\n';
-      // std::cout << "Test print : " << std::bitset<64>(size_t{1} << bit_index_in_item) << '\n';
     }
   }
 
   __attribute__((always_inline))
   bool probe(uint64_t hash) const {
     // The upper bits give us the block.
-    const auto block_index = hash >> (size_t{64} - bits_required_for_block_offset);
+    const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
     // const auto& block = &_readonly_filter[block_index];
     auto result = true;
     for (uint8_t i = 0; i < K; ++i) {
@@ -186,6 +183,7 @@ class BlockBloomFilter : public BaseBloomFilter,  public Noncopyable {
       // result &= static_cast<bool>(_readonly_filter[block_index + (((hash >> i * size_t{9}) & size_t{511}) >> 6)] & (size_t{1} << (((hash >> i * size_t{9}) & size_t{511}) & 63)));
 
       const auto bit_index_in_block = (hash >> i * size_t{9}) & size_t{511};
+      // Assert((block_index + (bit_index_in_block >> size_t{6})) < _filter.size(), "Too large");
       result &= static_cast<bool>(_readonly_filter[block_index + (bit_index_in_block >> size_t{6})] & (size_t{1} << (bit_index_in_block & size_t{63})));
     }
     return result;
@@ -280,7 +278,8 @@ class BlockBloomFilter : public BaseBloomFilter,  public Noncopyable {
                 "Not enough bits for block index plus K offsets of size BlockSizeExponent");
 
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
-  static constexpr auto bits_required_for_block_offset = size_t{FilterSizeExponent - 6};
+  static constexpr auto bits_required_for_block_offset = size_t{FilterSizeExponent - 6};  // -9 to address int64 (-6)
+  static constexpr auto bits_required_for_cacheline_offset = bits_required_for_block_offset - 3;  //  cache line (8*64bit ... -3)
   static constexpr auto array_size = size_t{1} << bits_required_for_block_offset;
   std::vector<std::atomic<uint64_t>, boost::alignment::aligned_allocator<std::atomic<uint64_t>, 64>> _filter;
   uint64_t* _readonly_filter;

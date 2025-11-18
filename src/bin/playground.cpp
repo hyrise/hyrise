@@ -72,7 +72,7 @@ int main() {
 
   std::cout << "get_table_part has " << get_table_part->get_output()->row_count() << " rows.\n";
 
-  for (const auto& predicate_condition : {PredicateCondition::NotEquals, PredicateCondition::Equals}) {
+  for (const auto& predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
     std::cout << "\n\n#########\n#########\n#########\n######### " << predicate_condition << "\n#########\n#########\n#########\n#########\n\n";
 
     const auto operand0 = pqp_column_(ColumnID{2}, get_table_part->get_output()->column_data_type(ColumnID{2}),
