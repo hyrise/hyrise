@@ -7,9 +7,7 @@
 
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, BooleanOptionalAction
 from subprocess import run
-from shutil import copy, move
-from os import cpu_count, getcwd, remove
-from os.path import exists
+from os import cpu_count, getcwd
 
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument("-t", "--time", type=int, default=1800, help="The time to run each benchmark in seconds.")
@@ -67,11 +65,6 @@ def run_build(*cmd, check=True):
     run(cmd, cwd=build_folder, shell=True, check=check)
 
 
-def remove_if_exists(file):
-    if exists(file):
-        remove(file)
-
-
 def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=False, pgo_optimize=False):
     run_build("ninja clean")
     run_build(
@@ -83,10 +76,10 @@ def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=F
     )
     run_build(f"ninja {" ".join(targets)} -j {args.num_cores}")
     if bolt_instrument:
-        move("lib/libhyrise_impl.so", "lib/libhyrise_impl.so.old")
+        run_build("mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old")
         run_build("llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so")
     if bolt_optimize:
-        move("lib/libhyrise_impl.so", "lib/libhyrise_impl.so.old")
+        run_build("mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old")
         run_build(
             "llvm-bolt",
             "lib/libhyrise_impl.so.old",
@@ -115,10 +108,9 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
             "" if not args.ci else ("-s 0.01" if benchmark in benchmarks_with_float_scaling else "-s 1"),
         )
         if bolt_instrumented:
-            move("/tmp/prof.fdata", f"{benchmark}.fdata")
+            run_build(f"mv /tmp/prof.fdata {benchmark}.fdata")
 
     if bolt_instrumented:
-        remove_if_exists("bolt.fdata")
         run_build("merge-fdata *.fdata > bolt.fdata")
 
     if pgo_instrumented:
@@ -128,23 +120,19 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
 
 def cleanup():
     run_build("cmake -DCOMPILE_FOR_BOLT=OFF -DPGO_INSTRUMENT=OFF -UPGO_OPTIMIZE ..")
-
-    for benchmark in benchmarks:
-        remove_if_exists(f"{benchmark}.fdata")
-    remove_if_exists("bolt.fdata")
-
-    run_root("rm *.profraw", check=False)
+    run_build("rm *.fdata", check=False)
     run_build("rm *.profraw", check=False)
+    run_root("rm *.profraw", check=False)
 
 
 def export_profile():
-    copy("bolt.fdata", "../resources/bolt.fdata")
-    copy("libhyrise.profdata", "../resources/libhyrise.profdata")
+    run_build("cp bolt.fdata ../resources/bolt.fdata")
+    run_build("cp libhyrise.profdata ../resources/libhyrise.profdata")
 
 
 def import_profile():
-    copy("../resources/bolt.fdata", "bolt.fdata")
-    copy("../resources/libhyrise.profdata", "libhyrise.profdata")
+    run_build("cp ../resources/bolt.fdata bolt.fdata")
+    run_build("cp ../resources/libhyrise.profdata libhyrise.profdata")
 
 
 def ci_main():
