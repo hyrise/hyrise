@@ -31,7 +31,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 const std::vector<uint8_t> filter_size_exponents = {0, 20};
 const std::vector<uint8_t> block_size_exponents = {0, 9};
-const std::vector<uint8_t> ks = {1, 2};
+const std::vector<uint8_t> ks = {1, 2, 3, 4};
 
 const uint16_t min_runs = 10;
 // const uint16_t max_runs = 50;
@@ -129,12 +129,12 @@ void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predica
   auto duration_ns = int64_t{0};
 
   while ((run < min_runs || total_time < min_time_ns) /*&& run < max_runs*/) {
-    if (filter_size_exponent == 0) {
-      const auto semi_join = std::make_shared<JoinHash>(left_input, right_input, JoinMode::Semi, join_predicate);
-      duration_ns = measure_duration([&]() {
-        semi_join->execute();
-      });
-    } else {
+    // if (filter_size_exponent == 0) {
+    //   const auto semi_join = std::make_shared<JoinHash>(left_input, right_input, JoinMode::Semi, join_predicate);
+    //   duration_ns = measure_duration([&]() {
+    //     semi_join->execute();
+    //   });
+    // } else {
       const auto reduce_build = std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build,
                                                          UseMinMax::No, filter_size_exponent, block_size_exponent, k);
 
@@ -145,7 +145,7 @@ void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predica
         reduce_build->execute();
         reduce_probe->execute();
       });
-    }
+    // }
 
     total_time += duration_ns;
 
@@ -187,12 +187,12 @@ void perform_perf(std::ofstream& out, const std::vector<std::string>& event_name
             << ", block_size_exponent=" << static_cast<int>(block_size_exponent) << ", k=" << static_cast<int>(k)
             << "\n";
 
-  if (filter_size_exponent == 0) {
-    const auto semi_join = std::make_shared<JoinHash>(left_input, right_input, JoinMode::Semi, join_predicate);
-    event_counter.start();
-    semi_join->execute();
-    event_counter.stop();
-  } else {
+  // if (filter_size_exponent == 0) {
+  //   const auto semi_join = std::make_shared<JoinHash>(left_input, right_input, JoinMode::Semi, join_predicate);
+  //   event_counter.start();
+  //   semi_join->execute();
+  //   event_counter.stop();
+  // } else {
     const auto reduce_build = std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build,
                                                        UseMinMax::No, filter_size_exponent, block_size_exponent, k);
 
@@ -203,7 +203,7 @@ void perform_perf(std::ofstream& out, const std::vector<std::string>& event_name
     reduce_build->execute();
     reduce_probe->execute();
     event_counter.stop();
-  }
+  // }
 
   write_csv_row(filter_size_exponent, block_size_exponent, k);
 }

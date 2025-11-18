@@ -306,10 +306,10 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
     const auto l1_exponent = static_cast<uint8_t>(std::bit_width(l1_size_bits) - 1);
     const auto l2_exponent = static_cast<uint8_t>(std::bit_width(l2_size_bits) - 1);
-    std::cout << "System L1 size: " << l1_size << ", bits: " << l1_size_bits
-              << ", exponent: " << static_cast<int>(l1_exponent) << std::endl;
-    std::cout << "System L2 size: " << l2_size << ", bits: " << l2_size_bits
-              << ", exponent: " << static_cast<int>(l2_exponent) << std::endl;
+    // std::cout << "System L1 size: " << l1_size << ", bits: " << l1_size_bits
+    //           << ", exponent: " << static_cast<int>(l1_exponent) << std::endl;
+    // std::cout << "System L2 size: " << l2_size << ", bits: " << l2_size_bits
+    //           << ", exponent: " << static_cast<int>(l2_exponent) << std::endl;
 
     _filter_size_exponent = l1_exponent;
 
@@ -318,8 +318,8 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
     for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
       false_positive_rates.emplace_back(
           k_index, false_positive_rate_blocked(l1_size_bits, static_cast<double>(input_row_count), k_index));
-      std::cout << "filter_size_exponent: " << static_cast<int>(l1_exponent) << ", k: " << static_cast<int>(k_index)
-                << ", fpr: " << false_positive_rates.back().second << std::endl;
+      // std::cout << "filter_size_exponent: " << static_cast<int>(l1_exponent) << ", k: " << static_cast<int>(k_index)
+      //           << ", fpr: " << false_positive_rates.back().second << std::endl;
     }
 
     auto [min_k, min_false_positive_rate] =
@@ -334,8 +334,8 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
       for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
         false_positive_rates.emplace_back(
             k_index, false_positive_rate_blocked(l2_size_bits, static_cast<double>(input_row_count), k_index));
-        std::cout << "filter_size_exponent: " << static_cast<int>(l2_exponent) << ", k: " << static_cast<int>(k_index)
-                  << ", fpr: " << false_positive_rates.back().second << std::endl;
+        // std::cout << "filter_size_exponent: " << static_cast<int>(l2_exponent) << ", k: " << static_cast<int>(k_index)
+        //           << ", fpr: " << false_positive_rates.back().second << std::endl;
       }
 
       std::tie(min_k, min_false_positive_rate) =
@@ -345,12 +345,17 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
     }
 
     _k = min_k;
-    std::cout << "Selected exponent: " << static_cast<int>(_filter_size_exponent) << ", k: " << static_cast<int>(_k)
-              << std::endl;
+    // std::cout << "Selected exponent: " << static_cast<int>(_filter_size_exponent) << ", k: " << static_cast<int>(_k)
+    //           << std::endl;
   }
 
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
     using DataType = typename decltype(column_data_type)::type;
+
+    if constexpr (!std::is_same_v<DataType, int32_t>) {
+      Fail("Reduce only suppoerts int32_t currently.");
+      return input_table;
+    }
 
     auto new_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
     std::shared_ptr<MinMaxPredicate<DataType>> new_min_max_predicate;
@@ -457,6 +462,11 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
 
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
     using DataType = typename decltype(column_data_type)::type;
+
+    if constexpr (!std::is_same_v<DataType, int32_t>) {
+      Fail("Reduce only suppoerts int32_t currently.");
+      return input_table;
+    }
 
     const auto chunk_count = input_table->chunk_count();
     auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
@@ -650,6 +660,11 @@ std::shared_ptr<const Table> Reduce::_execute_probe_and_build() {
 
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
     using DataType = typename decltype(column_data_type)::type;
+
+    if constexpr (!std::is_same_v<DataType, int32_t>) {
+      Fail("Reduce only suppoerts int32_t currently.");
+      return input_table;
+    }
 
     const auto chunk_count = input_table->chunk_count();
     auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};

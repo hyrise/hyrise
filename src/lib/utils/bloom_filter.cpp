@@ -123,30 +123,28 @@ BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::BlockBloomFilter()
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 void BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::insert(uint64_t hash) {
-  auto ss = std::stringstream{};
-  const auto block_index = hash >> (64 - bits_required_for_block_offset);
+  const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
   // const auto& block = &_filter[block_index];
   for (uint8_t i = 0; i < K; ++i) {
     const auto bit_index_in_block = (hash >> i * 9) & 511;
     const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
     const auto bit_index_in_item = bit_index_in_block & 63;
+    DebugAssert(block_index + block_item_index < _filter.size(), "Calculated index out of range.");
     _filter[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
-    // std::cout << "Hash: " << std::bitset<64>(hash) << ". Added item to block: " << block_index << ". For k " << size_t{i} << ", I want to access bit " << bit_index_in_block << ". That's block item " << block_item_index << " and bit in item: " << bit_index_in_item << "\n";
-    // std::cout << "uint64_t afterwards: " << std::bitset<64>(_filter[block_index + block_item_index]) << '\n';
-    // std::cout << "Test print : " << std::bitset<64>(size_t{1} << bit_index_in_item) << '\n';
   }
 }
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::probe(uint64_t hash) const {
   // The upper bits give us the block.
-  const auto block_index = hash >> (64 - bits_required_for_block_offset);
+  const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
   // const auto& block = &_readonly_filter[block_index];
   auto result = true;
   for (uint8_t i = 0; i < K; ++i) {
     const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
     const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
     const auto bit_index_in_item = bit_index_in_block & 63;
+    DebugAssert(block_index + block_item_index < _filter.size(), "Calculated index out of range.");
 
     // std::cout << "Loop result: " << std::boolalpha << result << '\n';
     result &= static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item));

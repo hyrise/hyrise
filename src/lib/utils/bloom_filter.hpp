@@ -96,6 +96,7 @@ class BlockBloomFilter : public BaseBloomFilter {
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
   static constexpr auto bits_required_for_block_offset = FilterSizeExponent - 6;
+  static constexpr auto bits_required_for_cacheline_offset = bits_required_for_block_offset - 3;
   alignas(64) std::array<std::atomic<uint64_t>, array_size> _filter;
   uint64_t* _readonly_filter;
 };
