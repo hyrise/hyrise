@@ -370,8 +370,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
       }
     }
 
-    const auto is_like_predicate =
-        predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
+    const auto is_like_predicate = predicate_condition == PredicateCondition::Like ||
+                                   predicate_condition == PredicateCondition::NotLike ||
+                                   predicate_condition == PredicateCondition::LikeInsensitive ||
+                                   predicate_condition == PredicateCondition::NotLikeInsensitive;
 
     // Predicate pattern: <column of type string> LIKE <value of type string>
     if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&
