@@ -293,7 +293,7 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
   if (_filter_size_exponent == 0) {
     const auto input_row_count = input_table->row_count();
-    std::cout << "Reduce input row count: " << input_row_count << std::endl;
+    // std::cout << "Reduce input row count: " << input_row_count << std::endl;
 
     const auto max_k = uint8_t{3};
     const auto max_false_positive_rate = double{0.05};

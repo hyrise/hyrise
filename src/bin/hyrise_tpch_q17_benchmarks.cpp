@@ -116,7 +116,7 @@ auto measure_duration(F&& f) {
 void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predicate,
                           std::shared_ptr<AbstractOperator> left_input, std::shared_ptr<AbstractOperator> right_input,
                           uint8_t filter_size_exponent, uint8_t block_size_exponent, uint8_t k) {
-  if (filter_size_exponent == 0 && (block_size_exponent != 0 || k != 1)) {
+  if (filter_size_exponent == 0 && (block_size_exponent != 9 || k != 1)) {
     return;
   }
 
