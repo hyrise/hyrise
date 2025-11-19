@@ -687,7 +687,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           }
 
           // Variant A: Just regular copy
-          std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
+          // std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
 
           // Variant B: Copy with OpenMP Pragma
 //           const auto copy_from = tmp.data[radix].elements.data();
