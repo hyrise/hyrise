@@ -26,14 +26,19 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
-
- protected:
-  bool _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
-
+  int invalid_queries{0};
+  
   struct Query {
     std::string name;
     std::string sql;
   };
+
+  std::vector<Query> queries() const;
+
+ protected:
+  bool _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
+
+
 
   // Get all queries from a given file
   void _parse_query_file(const std::filesystem::path& query_file_path,

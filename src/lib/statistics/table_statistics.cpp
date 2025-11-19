@@ -14,6 +14,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/max_diff_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "storage/table.hpp"
@@ -22,7 +23,7 @@
 
 namespace hyrise {
 
-std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
+std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table, std::string histogram_type) {
   const auto column_count = table.column_count();
   auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{column_count};
 
@@ -47,9 +48,13 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
         using ColumnDataType = typename decltype(type)::type;
 
         const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+        std::shared_ptr<AbstractHistogram<ColumnDataType>> histogram = nullptr;
 
-        const auto histogram = MaxDiffHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
-
+        if (histogram_type == "maxdiff") {
+          histogram = MaxDiffHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
+        } else {
+          histogram = EqualDistinctCountHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
+        }
         if (histogram) {
           output_column_statistics->set_statistics_object(histogram);
 

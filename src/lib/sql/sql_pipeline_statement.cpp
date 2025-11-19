@@ -13,11 +13,15 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
@@ -25,12 +29,16 @@
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/pqp_utils.hpp"
+#include "operators/table_scan.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -39,12 +47,14 @@ namespace hyrise {
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
-                                           const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
+                                           const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache,
+                                           const std::shared_ptr<Optimizer>& data_dependency_optimizer)
     : pqp_cache(init_pqp_cache),
       lqp_cache(init_lqp_cache),
       _sql_string(sql),
       _use_mvcc(use_mvcc),
       _optimizer(optimizer),
+      _data_dependency_optimizer(data_dependency_optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
@@ -151,9 +161,28 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
 
+  std::cout << "first optimization done" << std::endl;
+
+  visit_lqp(_optimized_logical_plan, [&](const std::shared_ptr<const AbstractLQPNode>& lqp) {
+      _optimizer->estimate_cardinality(const_cast<std::shared_ptr<const AbstractLQPNode>&>(lqp)); 
+      return LQPVisitation::VisitInputs;
+    });
+  std::cout << "estimated with same cardinality estimator" << std::endl;
   const auto done = std::chrono::steady_clock::now();
   _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
+
+  auto data_dependency_cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
+  auto default_cardinality_estimator = CardinalityEstimator::new_instance();
+
+  // _metrics->data_dependencies_estimated_cardinality = data_dependency_cardinality_estimator->estimate_cardinality(
+  //     _optimized_logical_plan);
+  // _metrics->estimated_cardinality = default_cardinality_estimator->estimate_cardinality(
+  //     _optimized_logical_plan);
+
+  // std::cout << "Estimated cardinality: " << _metrics->estimated_cardinality << std::endl;
+  // std::cout << "Data dependencies estimated cardinality: " << _metrics->data_dependencies_estimated_cardinality
+  //           << std::endl;
 
   // Cache newly created plan for the according sql statement
   if (lqp_cache && _translation_info.cacheable) {
@@ -194,7 +223,6 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   if (!_physical_plan) {
     // "Normal" path in which the query plan is created instead of begin retrieved from cache
     const auto& lqp = get_optimized_logical_plan();
-
     // Reset time to exclude previous pipeline steps
     started = std::chrono::steady_clock::now();
     _physical_plan = LQPTranslator{}.translate_node(lqp);
@@ -260,6 +288,10 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
 }
 
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
+  auto data_dependency_cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
+  // auto default_cardinality_estimator = CardinalityEstimator::new_instance();
+  auto *default_cardinality_estimator = &_optimizer->cardinality_estimator();
+
   // Returns true if a transaction was set and that transaction was rolled back.
   const auto has_failed = [&]() {
     if (_transaction_context) {
@@ -322,6 +354,116 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
       }
     }
     _result_table = _root_operator_task->get_operator()->get_output();
+
+    default_cardinality_estimator->estimate_cardinality(_root_operator_task->get_operator()->lqp_node);
+
+    visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
+      if(pqp->type() == OperatorType::Validate){
+        _metrics->operator_cardinality_metrics.push_back(
+            {
+             .operator_type = pqp->type(),
+             .operator_hash = pqp->lqp_node->hash(),
+             .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
+             .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0});
+      }
+      if (pqp->performance_data->has_output && pqp->type() != OperatorType::Validate) {
+        auto true_cardinality = static_cast<double>(pqp->performance_data->output_row_count);
+        auto data_dependency_estimation = data_dependency_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
+        auto default_estimation =
+            default_cardinality_estimator->estimate_statistics(pqp->lqp_node)->row_count;
+        // auto test = default_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
+
+
+        // estimate_cardinality(pqp->lqp_node);
+
+        _metrics->operator_cardinality_metrics.push_back(
+            {.true_cardinality = true_cardinality,
+             .estimated_cardinality = default_estimation,
+             .data_dependencies_estimated_cardinality = data_dependency_estimation,
+             .operator_type = pqp->type(),
+             .operator_hash = pqp->lqp_node->hash(),
+             .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
+             .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0});
+      }
+      return PQPVisitation::VisitInputs;
+    });
+
+    std::map<DataType, size_t> predicate_column_datatypes_count;
+    std::map<DataType, size_t> join_column_datatype_count;
+
+    visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
+      if (pqp->performance_data->has_output && pqp->type() != OperatorType::Validate) {
+        if (pqp->lqp_node->type == LQPNodeType::Predicate) {
+          const auto& predicate_node = static_cast<const PredicateNode&>(*pqp->lqp_node);
+          const auto predicate = predicate_node.predicate();
+          const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
+          if(!operator_scan_predicates.has_value()){
+            return PQPVisitation::VisitInputs;
+          }
+
+          auto columnid = operator_scan_predicates->front().column_id;
+
+
+          
+          // auto table_statistics = default_cardinality_estimator->estimate_statistics(pqp->lqp_node);
+          auto left_table_statistics = default_cardinality_estimator->estimate_statistics(pqp->lqp_node->left_input());
+
+          if(columnid > left_table_statistics->column_statistics.size()){
+            std::cout << "ColumnId: " << columnid << " is out of bounds for table statistics with size: " << left_table_statistics->column_statistics.size()  << std::endl;
+            return PQPVisitation::VisitInputs;
+          }
+
+          // std::cout << "ColumnId: " << columnid << " Table statistics size: " << table_statistics->column_statistics.size()  << std::endl;
+
+          // std::cout << "Node Statistics " << *table_statistics << std::endl; 
+
+          // std::cout << "Left Node Statistics " << *left_table_statistics << std::endl;
+
+          auto predicate_datatype = left_table_statistics->column_data_type(columnid);
+          predicate_column_datatypes_count[predicate_datatype]++;
+        }
+
+        if (pqp->lqp_node->type == LQPNodeType::Join) {
+          const auto& join_node = static_cast<const JoinNode&>(*pqp->lqp_node);
+
+          const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
+              *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
+
+          if(!primary_operator_join_predicate.has_value()){
+            return PQPVisitation::VisitInputs;
+          }
+          auto left_columnid = primary_operator_join_predicate->column_ids.first;
+
+          // auto join_datatype = pqp->left_input_table()->table_statistics()->column_data_type(left_columnid);
+          auto join_datatype = default_cardinality_estimator->estimate_statistics(join_node.left_input());
+
+         
+          if(left_columnid > join_datatype->column_statistics.size()){
+            std::cout << "Join ColumnId: " << left_columnid << " is out of bounds for table statistics with size: " << join_datatype->column_statistics.size()  << std::endl;
+            auto right_columnid = primary_operator_join_predicate->column_ids.second;
+            auto right_join_datatype = default_cardinality_estimator->estimate_statistics(join_node.right_input());
+            if(right_columnid > right_join_datatype->column_statistics.size()){
+              std::cout << "Right Join ColumnId: " << right_columnid << " is out of bounds for table statistics with size: " << right_join_datatype->column_statistics.size();
+            } else {
+              auto right_join_column_datatype = right_join_datatype->column_data_type(right_columnid);
+              join_column_datatype_count[right_join_column_datatype]++;
+            }
+            return PQPVisitation::VisitInputs;
+          } 
+          auto datatype = join_datatype->column_data_type(left_columnid);
+          join_column_datatype_count[datatype]++;
+        }
+      }
+      return PQPVisitation::VisitInputs;
+    });
+
+    _metrics->join_column_datatype = join_column_datatype_count;
+    _metrics->predicate_column_datatype = predicate_column_datatypes_count;
+
+    // std::cout << _metrics->operator_cardinality_metrics.size() << " operator cardinality metrics collected."
+    //             << std::endl;
+
+    // std::cout << "Cardinality: " << _metrics->true_cardinality << std::endl;
     _root_operator_task->get_operator()->clear_output();
   }
 

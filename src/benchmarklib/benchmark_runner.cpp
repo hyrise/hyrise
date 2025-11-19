@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <nlohmann/json_fwd.hpp>
 #include <random>
 #include <ratio>
 #include <sstream>
@@ -38,6 +39,7 @@
 #include "benchmark_state.hpp"
 #include "hyrise.hpp"
 #include "null_value.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -471,8 +473,40 @@ nlohmann::json BenchmarkRunner::_create_report() const {
                                {"optimizer_rule_durations", rule_metrics_json},
                                {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
                                {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
-                               {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
+                               {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit},
+                              //  {"true_cardinality", sql_statement_metrics->true_cardinality},
+                              //  {"estimated_cardinality", sql_statement_metrics->estimated_cardinality},
+                              //  {"data_dependencies_estimated_cardinality",
+                              //   sql_statement_metrics->data_dependencies_estimated_cardinality},
+                                {"join_column_datatypes", nlohmann::json::array()},
+                                {"predicate_column_datatypes", nlohmann::json::array()},
+                               {"operator_cardinality_metrics", nlohmann::json::array()}};
+            
+            for (const auto& operator_cardinality_metrics : sql_statement_metrics->operator_cardinality_metrics) {
+              sql_statement_metrics_json["operator_cardinality_metrics"].push_back(
+                  nlohmann::json{{"true_cardinality", operator_cardinality_metrics.true_cardinality},
+                                 {"estimated_cardinality", operator_cardinality_metrics.estimated_cardinality},
+                                 {"data_dependencies_estimated_cardinality",
+                                  operator_cardinality_metrics.data_dependencies_estimated_cardinality},
+                                 {"operator_type",
+                                  magic_enum::enum_name(operator_cardinality_metrics.operator_type)},
+                                  {"operator_hash", operator_cardinality_metrics.operator_hash},
+                                  {"left_input_hash", operator_cardinality_metrics.left_input_hash},
+                                  {"right_input_hash", operator_cardinality_metrics.right_input_hash}
+                                });
+            }
+            
+            std::cout << "Join column datasizes: " << sql_statement_metrics->join_column_datatype.size() << std::endl;
+            std::cout << "Predicate column datasizes: " << sql_statement_metrics->predicate_column_datatype.size() << std::endl;
 
+            for(const auto [datatype,count] : sql_statement_metrics->join_column_datatype){
+              sql_statement_metrics_json["join_column_datatypes"].push_back(nlohmann::json{{"datatype", data_type_to_string.left.at(datatype)}, {"count", count}});
+            }
+
+
+            for(const auto [datatype, count] : sql_statement_metrics->predicate_column_datatype){
+              sql_statement_metrics_json["predicate_column_datatypes"].push_back(nlohmann::json{{"datatype",  data_type_to_string.left.at(datatype)}, {"count", count}});
+            }
             pipeline_metrics_json["statements"].push_back(sql_statement_metrics_json);
           }
 

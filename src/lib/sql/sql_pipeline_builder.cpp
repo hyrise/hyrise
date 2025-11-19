@@ -24,6 +24,12 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_optimizer(const std::shared_ptr<Opt
   return *this;
 }
 
+SQLPipelineBuilder& SQLPipelineBuilder::with_data_dependency_optimizer(
+    const std::shared_ptr<Optimizer>& data_dependency_optimizer) {
+  _data_dependency_optimizer = data_dependency_optimizer;
+  return *this;
+}
+
 SQLPipelineBuilder& SQLPipelineBuilder::with_transaction_context(
     const std::shared_ptr<TransactionContext>& transaction_context) {
   _transaction_context = transaction_context;
@@ -48,7 +54,13 @@ SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() {
 
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
-  auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, _pqp_cache, _lqp_cache);
+
+  auto data_dependency_optimizer =
+      _data_dependency_optimizer
+          ? _data_dependency_optimizer
+          : Optimizer::create_default_optimizer_with_cardinality_estimator();
+  std::cout << "initialized sql pipeline with two optimizers" << std::endl;
+  auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, _pqp_cache, _lqp_cache, data_dependency_optimizer);
   return pipeline;
 }
 

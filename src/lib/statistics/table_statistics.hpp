@@ -24,7 +24,7 @@ class TableStatistics {
    * Creates statistics objects for cardinality estimation for all Columns in @param table. See implementation for
    * which statistics objects are created.
    */
-  static std::shared_ptr<TableStatistics> from_table(const Table& table);
+  static std::shared_ptr<TableStatistics> from_table(const Table& table, std::string histogram_type = "equaldistinctcount");
 
   TableStatistics(std::vector<std::shared_ptr<const BaseAttributeStatistics>>&& init_column_statistics,
                   const Cardinality init_row_count);

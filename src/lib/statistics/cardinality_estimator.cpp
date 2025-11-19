@@ -112,6 +112,12 @@ std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() {
   return std::make_shared<CardinalityEstimator>();
 }
 
+std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance_with_optimizations() {
+  auto estimator = std::make_shared<CardinalityEstimator>();
+  estimator->with_optimizations = true;
+  return estimator;
+}
+
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
@@ -249,18 +255,25 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp);
 
       const auto& stored_table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
+      // !!!!!! IMPORTANT !!!!!
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
 
       auto table_statistics = std::shared_ptr<TableStatistics>{};
       if (stored_table_node.table_statistics) {
         // TableStatistics have changed from the original table's statistics
+      
         Assert(stored_table_node.table_statistics->column_statistics.size() ==
                    static_cast<size_t>(stored_table->column_count()),
                "Statistics in StoredTableNode should have same number of columns as original table");
         Assert(stored_table_node.table_statistics->row_count >= 0, "Tables can't have negative row counts");
         table_statistics = stored_table_node.table_statistics;
       } else {
-        table_statistics = stored_table->table_statistics();
+        if(with_optimizations){
+          // std::cout << "Using second statistics for table: " << stored_table_node.table_name << std::endl;
+          table_statistics = stored_table->second_table_statistics();
+        } else {
+          table_statistics = stored_table->table_statistics();
+        }
       }
       output_table_statistics = prune_column_statistics(table_statistics, stored_table_node.pruned_column_ids());
     } break;
@@ -698,16 +711,19 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
   // Scale the input statistics consequently for each predicate, assuming there are no correlations between them.
   auto output_table_statistics = input_table_statistics;
+  std::cout << "output_table_statistics row count before predicates: " << output_table_statistics->row_count << std::endl;
+  std::cout << "Number of operator scan predicates: " << operator_scan_predicates->size() << std::endl;
   for (const auto& operator_scan_predicate : *operator_scan_predicates) {
+    operator_scan_predicate.output_to_stream(std::cout);
     output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
   }
-
+  std::cout << "output_table_statistics row count after predicates: " << output_table_statistics->row_count << std::endl;
   return output_table_statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-    const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
+    const std::shared_ptr<TableStatistics>& right_input_table_statistics) const {
   // For inner-equi JoinNodes, a principle-of-inclusion algorithm is used.
   // The same algorithm is used for outer-equi JoinNodes, lacking a better alternative at the moment.
   // All other join modes and predicate conditions are treated as cross joins for now.
@@ -720,7 +736,47 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
   const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
       *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
+  const auto combine_statistics = [&](const auto& unchanged_statistics, const auto& scaled_statistics,
+                                      const auto flip) {
+    const auto column_count =
+        unchanged_statistics->column_statistics.size() + scaled_statistics->column_statistics.size();
+    auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
+    output_column_statistics.reserve(column_count);
+    const auto scaling_factor = unchanged_statistics->row_count / scaled_statistics->row_count;
+
+    const auto append_statistics = [&](const auto& input_statistics, const auto scale) {
+      for (const auto& attribute_statistics : input_statistics) {
+        if (scale) {
+          output_column_statistics.push_back(attribute_statistics->scaled(scaling_factor));
+        } else {
+          output_column_statistics.push_back(attribute_statistics);
+        }
+      }
+    };
+
+    if (flip) {
+      append_statistics(scaled_statistics->column_statistics, true);
+      append_statistics(unchanged_statistics->column_statistics, false);
+    } else {
+      append_statistics(unchanged_statistics->column_statistics, false);
+      append_statistics(scaled_statistics->column_statistics, true);
+    }
+
+    return std::make_shared<TableStatistics>(std::move(output_column_statistics), unchanged_statistics->row_count);
+  };
+
   if (primary_operator_join_predicate) {
+    const auto left_input_column_id = primary_operator_join_predicate->column_ids.first;
+    const auto left_input_join_key = join_node.left_input()->output_expressions()[left_input_column_id];
+
+    const auto right_input_column_id = primary_operator_join_predicate->column_ids.second;
+    const auto right_input_join_key = join_node.right_input()->output_expressions()[right_input_column_id];
+
+    join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key});
+
+    // std::string with_cardinality_estimation_optimization = std::getenv("CARD_EST_OPT");
+    // std::string with_inner = std::getenv("CARD_EST_INNER");
+
     switch (join_node.join_mode) {
       // For now, handle outer joins just as inner joins.
       // TODO(anybody): Handle them more accurately, i.e., estimate how many tuples do not find matches, see #1830.
@@ -730,6 +786,36 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
       case JoinMode::Inner:
         switch (primary_operator_join_predicate->predicate_condition) {
           case PredicateCondition::Equals:
+            // if (with_inner == "YES") {
+            if (with_optimizations) {
+              if (join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key})) {
+                // std::cout << "hit inner ind left: " << left_input_join_key->description()
+                //           << " right: " << right_input_join_key->description() << std::endl;
+
+                if (join_node.right_input()->has_matching_ucc({right_input_join_key})) {
+                  // std::cout << "has matching ucc (right_input_join_key): " << right_input_join_key->description()
+                  //           << std::endl;
+                  return combine_statistics(left_input_table_statistics, right_input_table_statistics, false);
+                }
+                // else {
+                //   std::cout << "UCC did not match" << std::endl;
+                // }
+              }
+
+              if (join_node.left_input()->has_matching_ind({right_input_join_key}, {left_input_join_key})) {
+                // std::cout << "hit innter ind left: " << left_input_join_key->description()
+                //           << " right: " << right_input_join_key->description() << std::endl;
+                if (join_node.left_input()->has_matching_ucc({left_input_join_key})) {
+                  // std::cout << "has matching ucc (left_input_join_key): " << right_input_join_key->description()
+                  //           << std::endl;
+                  return combine_statistics(right_input_table_statistics, left_input_table_statistics, true);
+                }
+                // else {
+                //   std::cout << "UCC did not match" << std::endl;
+                // }
+              }
+              // }
+            }
             return estimate_inner_equi_join(primary_operator_join_predicate->column_ids.first,
                                             primary_operator_join_predicate->column_ids.second,
                                             *left_input_table_statistics, *right_input_table_statistics);
@@ -761,6 +847,23 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
         Fail("Cross join is not a predicated join");
 
       case JoinMode::Semi:
+        // if (with_cardinality_estimation_optimization == "YES") {
+        if (with_optimizations) {
+          if (primary_operator_join_predicate->predicate_condition == PredicateCondition::Equals &&
+              join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key})) {
+            // std::cout << "hit semi ind left: " << left_input_join_key->description()
+            //           << " right: " << right_input_join_key->description() << std::endl;
+            if (join_node.right_input()->has_matching_ucc({right_input_join_key})) {
+              // std::cout << "has matching ucc (right_input_join_key): " << right_input_join_key->description()
+              //           << std::endl;
+              return left_input_table_statistics;
+            }
+            // else {
+            //   std::cout << "UCC did not match" << std::endl;
+            // }
+          }
+        }
+        // }
         return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
                                   primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
                                   *right_input_table_statistics);

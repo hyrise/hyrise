@@ -30,6 +30,8 @@ class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
 
+  static std::shared_ptr<Optimizer> create_default_optimizer_with_cardinality_estimator();
+
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
                          std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>()));
 
@@ -47,6 +49,10 @@ class Optimizer final {
       const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
 
   static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
+
+  Cardinality estimate_cardinality(std::shared_ptr<const AbstractLQPNode>& lqp);
+
+  CardinalityEstimator& cardinality_estimator();
 
  private:
   std::vector<std::unique_ptr<AbstractRule>> _rules;

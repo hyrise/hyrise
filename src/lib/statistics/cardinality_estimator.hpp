@@ -56,6 +56,11 @@ class CardinalityEstimator {
    */
   static std::shared_ptr<CardinalityEstimator> new_instance();
 
+  static std::shared_ptr<CardinalityEstimator> new_instance_with_optimizations();
+
+
+  bool with_optimizations = false;
+
   /**
    * @return The estimated output row count of @param lqp.
    */
@@ -166,9 +171,9 @@ class CardinalityEstimator {
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
       const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
-  static std::shared_ptr<TableStatistics> estimate_join_node(
+  std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-      const std::shared_ptr<TableStatistics>& right_input_table_statistics);
+      const std::shared_ptr<TableStatistics>& right_input_table_statistics) const;
 
   static std::shared_ptr<TableStatistics> estimate_union_node(
       const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,

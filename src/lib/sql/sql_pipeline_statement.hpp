@@ -7,6 +7,7 @@
 
 #include "SQLParserResult.h"
 
+#include "all_type_variant.hpp"
 #include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -21,6 +22,16 @@
 namespace hyrise {
 
 // Holds relevant information about the execution of an SQLPipelineStatement.
+struct OperatorCardinalityMetrics {
+  hyrise::Cardinality true_cardinality{0.0};
+  hyrise::Cardinality estimated_cardinality{0.0};
+  hyrise::Cardinality data_dependencies_estimated_cardinality{0.0};
+  hyrise::OperatorType operator_type{};
+  size_t operator_hash{0};
+  size_t left_input_hash{0};
+  size_t right_input_hash{0};
+};
+
 struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds sql_translation_duration{};
   std::chrono::nanoseconds optimization_duration{};
@@ -28,6 +39,12 @@ struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds lqp_translation_duration{};
   std::chrono::nanoseconds plan_execution_duration{};
 
+  std::chrono::nanoseconds optimization_duration_data_dependencies{};
+   
+  std::vector<OperatorCardinalityMetrics> operator_cardinality_metrics{};
+
+  std::map<DataType, size_t> join_column_datatype; 
+  std::map<DataType, size_t> predicate_column_datatype; 
   bool query_plan_cache_hit = false;
 };
 
@@ -60,7 +77,8 @@ class SQLPipelineStatement : public Noncopyable {
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
                        const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
-                       const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache);
+                       const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache,
+                       const std::shared_ptr<Optimizer>& data_dependency_optimizer  = nullptr);
 
   // Set the transaction context if this SQLPipelineStatement should not auto-commit.
   void set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
@@ -121,6 +139,8 @@ class SQLPipelineStatement : public Noncopyable {
   const UseMvcc _use_mvcc;
 
   const std::shared_ptr<Optimizer> _optimizer;
+
+  const std::shared_ptr<Optimizer> _data_dependency_optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;

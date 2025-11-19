@@ -419,6 +419,15 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
   _table_statistics = table_statistics;
 }
 
+std::shared_ptr<TableStatistics> Table::second_table_statistics() const {
+  return _second_table_statistics;
+}
+
+void Table::set_second_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
+  _second_table_statistics = table_statistics;
+}
+
+
 std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
   return _chunk_indexes_statistics;
 }
