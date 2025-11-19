@@ -19,9 +19,9 @@
 
 #include "uninitialized_vector.hpp"
 
+#include "hwy/highway.h"
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_hash/copy_nontemporal.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -37,7 +37,10 @@
   (e.g., build() and probe()). These free functions are put into this header file to separate
   them from the process flow of the join hash and to make them better testable.
 */
+HWY_BEFORE_NAMESPACE();
+
 namespace hyrise {
+using namespace hwy::HWY_NAMESPACE;
 
 // For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
@@ -695,9 +698,13 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 //           }
 
           // Variant C: Google Highway streaming copy
-          // highway::copy_nontemporal(reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data()),
-          //                           TMP::bucket::BYTES_PER_STORE,
-          //                           reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx));
+          const auto copy_from = reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data());
+          const auto copy_to = reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx));
+          const auto tag = ScalableTag<uint8_t>{};
+          for (auto i = size_t{0}; i <= TMP::bucket::BYTES_PER_STORE; i += Lanes(tag)) {
+            const auto vec = Load(tag, in_ptr + i);
+            Stream(vec, tag, out_ptr + i);
+          }
 
           // Variant D: Memcpy has SIMD!
           // const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
@@ -1076,3 +1083,5 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 }
 
 }  // namespace hyrise
+
+HWY_AFTER_NAMESPACE();

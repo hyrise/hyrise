@@ -216,7 +216,6 @@ set(
     operators/join_hash.hpp
     operators/join_hash/join_hash_steps.hpp
     operators/join_hash/join_hash_traits.hpp
-    operators/join_hash/copy_nontemporal.cpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_nested_loop.cpp
