@@ -206,7 +206,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   auto info = _default_edge;
   info.label = label_stream.str();
   info.label_tooltip = tooltip_stream.str();
-  // pen widths are normalized later during graph construction so assigning 0 or NAN is acceptable.
+  // `pen_width` is normalized later during graph construction, so assigning 0 or NAN is acceptable.
   info.pen_width = row_count;
   if (target_node->input_count() == 2) {
     info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
