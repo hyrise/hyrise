@@ -12,6 +12,7 @@
 
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
@@ -90,6 +91,26 @@ OrderDependencies StaticTableNode::order_dependencies() const {
 
 InclusionDependencies StaticTableNode::inclusion_dependencies() const {
   return InclusionDependencies{};
+}
+
+FunctionalDependencies StaticTableNode::non_trivial_functional_dependencies() const {
+  auto functional_dependencies = FunctionalDependencies{};
+  auto discovered_functional_dependencies = table->soft_functional_dependency_constraints();
+
+  for (const auto& discovered_fd : discovered_functional_dependencies) {
+    auto lhs = get_expressions_for_column_ids(*this, discovered_fd.dependent_columns());
+    auto rhs = get_expressions_for_column_ids(*this, discovered_fd.determinant_columns());
+
+    DebugAssert(lhs.size() == discovered_fd.dependent_columns().size(), "Unexpected count of column expressions.");
+    DebugAssert(rhs.size() == discovered_fd.determinant_columns().size(), "Unexpected count of column expressions.");
+    // if (key_constraint_is_confidently_valid(table, table_key_constraint)) {
+    // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
+    // otherwise these optimizations could produce invalid query results.
+    auto functional_dependency = FunctionalDependency(std::move(lhs), std::move(rhs));
+    functional_dependencies.emplace(std::move(lhs), std::move(rhs));
+    // }
+  }
+  return functional_dependencies;
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {

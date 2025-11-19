@@ -14,8 +14,8 @@
 
 namespace hyrise {
 
-TableFunctionalDependencyConstraint::TableFunctionalDependencyConstraint(std::vector<ColumnID>&& determinant_columns,
-                                                                         std::vector<ColumnID>&& dependent_columns)
+TableFunctionalDependencyConstraint::TableFunctionalDependencyConstraint(std::set<ColumnID>&& determinant_columns,
+                                                                         std::set<ColumnID>&& dependent_columns)
     : AbstractTableConstraint{TableConstraintType::FunctionalDependency},
       _determinant_columns{std::move(determinant_columns)},
       _dependent_columns{std::move(dependent_columns)} {
@@ -29,11 +29,11 @@ TableFunctionalDependencyConstraint::TableFunctionalDependencyConstraint(std::ve
   }
 }
 
-const std::vector<ColumnID>& TableFunctionalDependencyConstraint::dependent_columns() const {
+const std::set<ColumnID>& TableFunctionalDependencyConstraint::dependent_columns() const {
   return _dependent_columns;
 }
 
-const std::vector<ColumnID>& TableFunctionalDependencyConstraint::determinant_columns() const {
+const std::set<ColumnID>& TableFunctionalDependencyConstraint::determinant_columns() const {
   return _determinant_columns;
 }
 

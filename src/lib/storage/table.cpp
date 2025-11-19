@@ -23,9 +23,9 @@
 #include "storage/chunk.hpp"
 #include "storage/constraints/abstract_table_constraint.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
+#include "storage/constraints/functional_dependency_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
-#include "storage/constraints/functional_dependency_constraint.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"  // IWYU pragma: keep
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"  // IWYU pragma: keep
@@ -450,8 +450,9 @@ void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint)
     case TableConstraintType::Order:
       _add_soft_order_constraint(static_cast<const TableOrderConstraint&>(table_constraint));
       return;
-    case TableConstraintType::FunctionalDependency: 
-      _add_soft_functional_dependency_constraint(static_cast<const TableFunctionalDependencyConstraint&>(table_constraint)); 
+    case TableConstraintType::FunctionalDependency:
+      _add_soft_functional_dependency_constraint(
+          static_cast<const TableFunctionalDependencyConstraint&>(table_constraint));
       return;
   }
 }
@@ -470,6 +471,10 @@ const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
 
 const TableOrderConstraints& Table::soft_order_constraints() const {
   return _table_order_constraints;
+}
+
+const TableFunctionalDependencyConstraints& Table::soft_functional_dependency_constraints() const {
+  return _functional_dependency_constraints;
 }
 
 void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
@@ -550,7 +555,8 @@ void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_c
   _table_order_constraints.insert(table_order_constraint);
 }
 
-void Table::_add_soft_functional_dependency_constraint(const TableFunctionalDependencyConstraint& functional_dependency_constraint) {
+void Table::_add_soft_functional_dependency_constraint(
+    const TableFunctionalDependencyConstraint& functional_dependency_constraint) {
   // Check validity of columns.
   const auto column_count = this->column_count();
   for (const auto& column_id : functional_dependency_constraint.determinant_columns()) {

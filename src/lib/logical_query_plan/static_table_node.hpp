@@ -6,6 +6,7 @@
 
 #include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {
@@ -32,6 +33,7 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   // empty sets.
   OrderDependencies order_dependencies() const override;
   InclusionDependencies inclusion_dependencies() const override;
+  FunctionalDependencies non_trivial_functional_dependencies() const override;
 
   const std::shared_ptr<Table> table;
 

@@ -18,9 +18,9 @@
 #include "memory/zero_allocator.hpp"
 #include "storage/constraints/abstract_table_constraint.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
+#include "storage/constraints/functional_dependency_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
-#include "storage/constraints/functional_dependency_constraint.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/table_index_statistics.hpp"
@@ -228,6 +228,8 @@ class Table : private Noncopyable {
 
   const TableOrderConstraints& soft_order_constraints() const;
 
+  const TableFunctionalDependencyConstraints& soft_functional_dependency_constraints() const;
+
   /**
    * Returns all table indexes created for this table.
    */
@@ -265,7 +267,8 @@ class Table : private Noncopyable {
 
   void _add_soft_order_constraint(const TableOrderConstraint& table_order_constraint);
 
-  void _add_soft_functional_dependency_constraint(const TableFunctionalDependencyConstraint& functional_dependency_constraint); 
+  void _add_soft_functional_dependency_constraint(
+      const TableFunctionalDependencyConstraint& functional_dependency_constraint);
 
   TableColumnDefinitions _column_definitions;
   TableType _type;

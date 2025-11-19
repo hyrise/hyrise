@@ -49,7 +49,6 @@ void key_constraint(const std::shared_ptr<Table>& table, const std::set<std::str
   table->add_soft_constraint(TableKeyConstraint{std::move(column_ids), type});
 }
 
-
 }  // namespace
 
 namespace hyrise {
@@ -62,7 +61,6 @@ void unique_constraint(const std::shared_ptr<Table>& table, const std::set<std::
   key_constraint(table, columns, KeyConstraintType::UNIQUE);
 }
 
-
 void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
                             const std::vector<std::string>& foreign_key_columns,
                             const std::shared_ptr<Table>& primary_key_table,
@@ -74,8 +72,8 @@ void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
                                                               std::move(primary_key_column_ids), primary_key_table});
 }
 
-void functional_dependency(const std::shared_ptr<Table>& table, std::vector<std::string>& lhs,
-                                      std::vector<std::string>& rhs) {
+void functional_dependency(const std::shared_ptr<Table>& table, std::set<std::string>& lhs,
+                           std::set<std::string>& rhs) {
   auto dependent_column_ids = column_ids_by_name(table, lhs);
   auto determined_column_ids = column_ids_by_name(table, rhs);
   table->add_soft_constraint(
