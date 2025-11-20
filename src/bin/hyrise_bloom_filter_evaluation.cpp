@@ -111,7 +111,7 @@ void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec, const st
   }
 
   while ((run < min_runs || total_time < min_time_ns) && run < max_runs) {
-    auto bloom_filter = BloomFilter<FilterSize, K>{};
+    auto bloom_filter = BlockBloomFilter<FilterSize, 9, K>{};
 
     auto build_time = int64_t{0};
     if (hash_function == 0) {
@@ -243,24 +243,24 @@ int main(int argc, char* argv[]) {
         const auto [build_vec, probe_vec] = generate_data(vector_size, distinctiveness, overlap);
 
         for (uint8_t hash_function = 0; hash_function < hash_functions; ++hash_function) {
-          RUN_EVALUATION(16, 1)
-          RUN_EVALUATION(17, 1)
-          RUN_EVALUATION(18, 1)
-          RUN_EVALUATION(19, 1)
-          RUN_EVALUATION(20, 1)
-          RUN_EVALUATION(21, 1)
-          RUN_EVALUATION(16, 2)
-          RUN_EVALUATION(17, 2)
-          RUN_EVALUATION(18, 2)
-          RUN_EVALUATION(19, 2)
-          RUN_EVALUATION(20, 2)
-          RUN_EVALUATION(21, 2)
-          RUN_EVALUATION(16, 3)
-          RUN_EVALUATION(17, 3)
-          RUN_EVALUATION(18, 3)
-          RUN_EVALUATION(19, 3)
-          RUN_EVALUATION(20, 3)
-          RUN_EVALUATION(21, 3)
+          // RUN_EVALUATION(16, 1)
+          // RUN_EVALUATION(17, 1)
+          RUN_EVALUATION(18, 4)
+          // RUN_EVALUATION(19, 1)
+          // RUN_EVALUATION(20, 1)
+          RUN_EVALUATION(21, 4)
+          RUN_EVALUATION(23, 4)
+          // RUN_EVALUATION(17, 2)
+          // RUN_EVALUATION(18, 2)
+          // RUN_EVALUATION(19, 2)
+          // RUN_EVALUATION(20, 2)
+          // RUN_EVALUATION(21, 2)
+          // RUN_EVALUATION(16, 3)
+          // RUN_EVALUATION(17, 3)
+          // RUN_EVALUATION(18, 3)
+          // RUN_EVALUATION(19, 3)
+          // RUN_EVALUATION(20, 3)
+          // RUN_EVALUATION(21, 3)
         }
       }
     }
