@@ -291,6 +291,8 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
   std::shared_ptr<const Table> input_table = right_input_table();
   auto column_id = _predicate.column_ids.second;
 
+  Assert(_filter_size_exponent == 0, "Selector not used.");
+
   if (_filter_size_exponent == 0) {
     const auto input_row_count = input_table->row_count();
     // std::cout << "Reduce input row count: " << input_row_count << std::endl;
@@ -306,10 +308,10 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
     const auto l1_exponent = static_cast<uint8_t>(std::bit_width(l1_size_bits) - 1);
     const auto l2_exponent = static_cast<uint8_t>(std::bit_width(l2_size_bits) - 1);
-    // std::cout << "System L1 size: " << l1_size << ", bits: " << l1_size_bits
-    //           << ", exponent: " << static_cast<int>(l1_exponent) << std::endl;
-    // std::cout << "System L2 size: " << l2_size << ", bits: " << l2_size_bits
-    //           << ", exponent: " << static_cast<int>(l2_exponent) << std::endl;
+    std::cout << "System L1 size: " << l1_size << ", bits: " << l1_size_bits
+              << ", exponent: " << static_cast<int>(l1_exponent) << std::endl;
+    std::cout << "System L2 size: " << l2_size << ", bits: " << l2_size_bits
+              << ", exponent: " << static_cast<int>(l2_exponent) << std::endl;
 
     _filter_size_exponent = l1_exponent;
 
