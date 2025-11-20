@@ -1,19 +1,37 @@
+#include <chrono>
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/validate.hpp"
-#include "scheduler/job_task.hpp"
+#include "optimizer/optimization_context.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/operator_task.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
+#include "utils/meta_table_manager.hpp"
 
 namespace {
 // This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinOrderingRule and

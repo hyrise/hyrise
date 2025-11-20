@@ -2,12 +2,15 @@
 #include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

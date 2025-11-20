@@ -1,8 +1,17 @@
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "base_test.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {

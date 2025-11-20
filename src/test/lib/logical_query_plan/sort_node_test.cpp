@@ -1,8 +1,14 @@
+#include <memory>
+#include <vector>
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

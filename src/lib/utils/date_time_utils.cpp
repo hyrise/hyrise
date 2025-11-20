@@ -54,7 +54,7 @@ boost::gregorian::date date_interval(const boost::gregorian::date& start_date, i
       return *(++boost::gregorian::day_iterator{start_date, static_cast<int>(offset)});
     }
     default:
-      Fail("Invalid time unit for date interval: " + std::string{magic_enum::enum_name(unit)});
+      Fail(std::string{"Invalid time unit for date interval: "} + std::string{magic_enum::enum_name(unit)});
   }
 
   Fail("Invalid enum value.");

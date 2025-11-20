@@ -31,23 +31,23 @@ class PerformanceWarningDisabler;
 class PerformanceWarningClass {
  public:
   explicit PerformanceWarningClass(const std::string& text) {
-    if (_disabled) {
+    if (disabled) {
       return;
     }
     std::cerr << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n";
   }
 
  protected:
-  static bool _disabled;
+  static bool disabled;
 
-  static bool disable() {
-    bool previous = _disabled;
-    _disabled = true;
+  static bool _disable() {
+    const bool previous = disabled;
+    disabled = true;
     return previous;
   }
 
-  static void enable() {
-    _disabled = false;
+  static void _enable() {
+    disabled = false;
   }
 
   friend class PerformanceWarningDisabler;
@@ -57,15 +57,23 @@ class PerformanceWarningDisabler {
   bool _previously_disabled;
 
  public:
-  PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::disable()) {}
+  PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::_disable()) {}
+
+  // This class is not really ment for usage, so these are not implemented.
+  // You can probably implement them without much issue.
+  PerformanceWarningDisabler(const PerformanceWarningDisabler&) = delete;
+  PerformanceWarningDisabler(PerformanceWarningDisabler&&) = delete;
+  PerformanceWarningDisabler& operator=(const PerformanceWarningDisabler&) = delete;
+  PerformanceWarningDisabler& operator=(PerformanceWarningDisabler&&) = delete;
 
   ~PerformanceWarningDisabler() {
     if (!_previously_disabled) {
-      PerformanceWarningClass::enable();
+      PerformanceWarningClass::_enable();
     }
   }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define PerformanceWarning(text)                                                                             \
   {                                                                                                          \
     static const PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \

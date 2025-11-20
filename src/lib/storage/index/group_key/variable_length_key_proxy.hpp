@@ -18,6 +18,8 @@ class VariableLengthKeyConstProxy {
  public:
   VariableLengthKeyConstProxy() = default;
 
+  VariableLengthKeyConstProxy(VariableLengthKeyConstProxy&&) = default;
+  VariableLengthKeyConstProxy& operator=(VariableLengthKeyConstProxy&&) = delete;
   VariableLengthKeyConstProxy(const VariableLengthKeyConstProxy& other) = default;
   VariableLengthKeyConstProxy& operator=(const VariableLengthKeyConstProxy& other) = delete;
 
@@ -26,7 +28,8 @@ class VariableLengthKeyConstProxy {
   /**
    * Implicitly convert proxy into VariableLengthKey in order to allow easy usage of VariableLengthKeyStore.
    */
-  operator VariableLengthKey() const;  // NOLINT(runtime/explicit)
+  // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+  operator VariableLengthKey() const;
 
   CompositeKeyLength bytes_per_key() const;
 
@@ -42,8 +45,7 @@ class VariableLengthKeyConstProxy {
  protected:
   explicit VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key);
 
- protected:
-  VariableLengthKeyBase _impl;
+  VariableLengthKeyBase _impl{};
 };
 
 /**
@@ -63,7 +65,10 @@ class VariableLengthKeyProxy : public VariableLengthKeyConstProxy {
   VariableLengthKeyProxy() = default;
 
   VariableLengthKeyProxy(const VariableLengthKeyProxy& other) = default;
+  VariableLengthKeyProxy(VariableLengthKeyProxy&& other) = default;
+  ~VariableLengthKeyProxy() override = default;
   VariableLengthKeyProxy& operator=(const VariableLengthKeyProxy& other);
+  VariableLengthKeyProxy& operator=(VariableLengthKeyProxy&& other) noexcept;
   VariableLengthKeyProxy& operator=(const VariableLengthKeyConstProxy& other);
 
   VariableLengthKeyProxy& operator=(const VariableLengthKey& other);

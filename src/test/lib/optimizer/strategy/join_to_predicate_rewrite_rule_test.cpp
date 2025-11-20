@@ -1,23 +1,25 @@
+#include <memory>
+#include <set>
+
 #include "magic_enum/magic_enum.hpp"
 
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/change_meta_table_node.hpp"
-#include "logical_query_plan/delete_node.hpp"
-#include "logical_query_plan/export_node.hpp"
-#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_predicate_rewrite_rule.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
 
 namespace hyrise {

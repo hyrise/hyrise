@@ -137,11 +137,7 @@ std::vector<std::string> tokenize(std::string input) {
 namespace hyrise {
 
 Console::Console()
-    : _prompt("> "),
-      _out(std::cout.rdbuf()),
-      _log("console.log", std::ios_base::app | std::ios_base::out),
-      _verbose(false),
-      _pagination_active(false) {
+    : _prompt("> "), _out(std::cout.rdbuf()), _log("console.log", std::ios_base::app | std::ios_base::out) {
   // Init readline basics, tells readline to use our custom command completion function.
   rl_attempted_completion_function = &Console::_command_completion;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
@@ -436,7 +432,8 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 int Console::_exit(const std::string& /*args*/) {
   return ReturnCode::Quit;
 }
@@ -945,7 +942,7 @@ int Console::_exec_script(const std::string& script_file) {
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
   auto return_code = magic_enum::enum_underlying(ReturnCode::Ok);
   while (std::getline(script, command)) {
-    return_code = _eval(command);
+    return_code = static_cast<int8_t>(_eval(command));
     if (return_code == ReturnCode::Error || return_code == ReturnCode::Quit) {
       break;
     }
@@ -1172,7 +1169,7 @@ int main(int argc, char** argv) {
 
   // Execute .sql script if specified.
   if (argc == 2) {
-    return_code = console.execute_script(std::string(argv[1]));
+    return_code = static_cast<int8_t>(console.execute_script(std::string(argv[1])));
     // Terminate Console if an error occured during script execution
     if (return_code == Return::Error) {
       return_code = Return::Quit;
@@ -1198,7 +1195,7 @@ int main(int argc, char** argv) {
 
   // Main REPL loop.
   while (return_code != Return::Quit) {
-    return_code = console.read();
+    return_code = static_cast<int8_t>(console.read());
     if (return_code == Return::Ok) {
       console.set_prompt("> ");
     } else if (return_code == Return::Multiline) {

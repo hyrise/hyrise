@@ -26,14 +26,14 @@ namespace hyrise {
 struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds sql_translation_duration{};
   std::chrono::nanoseconds optimization_duration{};
-  std::vector<OptimizerRuleMetrics> optimizer_rule_durations{};
+  std::vector<OptimizerRuleMetrics> optimizer_rule_durations;
   std::chrono::nanoseconds lqp_translation_duration{};
   std::chrono::nanoseconds plan_execution_duration{};
 
   bool query_plan_cache_hit = false;
 };
 
-enum class SQLPipelineStatus {
+enum class SQLPipelineStatus : uint8_t {
   NotExecuted,  // The pipeline or the pipeline statement has not been executed yet.
   Success,      // The pipeline or the pipeline statement has been executed successfully. This includes user-initiated
                 //     rollbacks, conforming to PostgreSQL's behavior. If use_mvcc is set but no transaction_context

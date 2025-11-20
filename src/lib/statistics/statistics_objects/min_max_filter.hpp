@@ -6,6 +6,7 @@
 
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -29,6 +30,10 @@ class MinMaxFilter : public AbstractStatisticsObject, public std::enable_shared_
  public:
   explicit MinMaxFilter(T init_min, T init_max);
 
+  constexpr DataType data_type() const override {
+    return data_type_from_type<T>();
+  }
+
   Cardinality estimate_cardinality(const PredicateCondition /*predicate_condition*/,
                                    const AllTypeVariant& /*variant_value*/,
                                    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
@@ -38,6 +43,10 @@ class MinMaxFilter : public AbstractStatisticsObject, public std::enable_shared_
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<const AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
+
+  std::shared_ptr<const AbstractStatisticsObject> pruned(
+      const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2) const override;
 
   bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;

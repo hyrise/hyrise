@@ -1,5 +1,8 @@
-#include <memory>
+#include <exception>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "storage/fixed_string_dictionary_segment/fixed_string.hpp"

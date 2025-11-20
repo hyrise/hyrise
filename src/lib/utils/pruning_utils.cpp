@@ -40,7 +40,7 @@ bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const Pre
                const AllTypeVariant& variant_value, const std::optional<AllTypeVariant>& variant_value2) {
   auto can_prune = false;
 
-  resolve_data_type(base_segment_statistics.data_type, [&](const auto data_type_t) {
+  resolve_data_type(base_segment_statistics.data_type(), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);

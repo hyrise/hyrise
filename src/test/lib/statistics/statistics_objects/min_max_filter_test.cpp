@@ -1,13 +1,12 @@
 #include <algorithm>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

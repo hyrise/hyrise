@@ -1,24 +1,18 @@
-#include <optional>
+#include <memory>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "expression/arithmetic_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/evaluation/expression_result.hpp"
-#include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/extract_expression.hpp"
-#include "expression/function_expression.hpp"
-#include "expression/in_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_subquery_expression.hpp"
-#include "expression/value_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {

@@ -1,5 +1,11 @@
+#include <memory>
+#include <optional>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/check_table_equal.hpp"
 
 namespace hyrise {
 

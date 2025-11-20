@@ -1,15 +1,21 @@
-#include <limits>
+#include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "memory/zero_allocator.hpp"
-#include "resolve_type.hpp"
+#include "null_value.hpp"
+#include "oneapi/tbb/concurrent_vector.h"
+#include "storage/chunk.hpp"
 #include "storage/constraints/constraint_utils.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "ucc_discovery_plugin.hpp"
 #include "utils/load_table.hpp"
 
@@ -288,7 +294,9 @@ TEST_F(StorageTableTest, StableChunks) {
   // The vector should have been resized / expanded by now
 
   EXPECT_EQ(first_chunk, &chunks_vector[0]);
-  EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant{100});
+  EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0})) [ChunkOffset{0}], AllTypeVariant {
+    100
+  });
 }
 
 TEST_F(StorageTableTest, LastChunkOfReferenceTable) {

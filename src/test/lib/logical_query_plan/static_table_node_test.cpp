@@ -1,5 +1,9 @@
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "logical_query_plan/static_table_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "utils/data_dependency_test_utils.hpp"

@@ -1,6 +1,11 @@
+#include <iterator>
+#include <memory>
+#include <set>
 #include <stdexcept>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "storage/constraints/abstract_table_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

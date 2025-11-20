@@ -1,3 +1,9 @@
+#include <array>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -10,6 +16,8 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/string_utils.hpp"
 
@@ -381,11 +389,11 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
             R"([0] [Predicate] 0x00000000.a > SUBQUERY (LQP, 0x00000000) @ 0x00000000
  \_[1] [StoredTable] Name: 'int_int' pruned: 0/1 chunk(s), 0/2 column(s) @ 0x00000000
 -------- Subqueries ---------
-0x00000000: 
+0x00000000:
 [0] [Predicate] 0x00000000.a = 5 @ 0x00000000
  \_[1] [StoredTable] Name: 'int_int_int' pruned: 0/1 chunk(s), 0/3 column(s) @ 0x00000000
 
-0x00000000: 
+0x00000000:
 [0] [Predicate] 0x00000000.a = SUBQUERY (LQP, 0x00000000) @ 0x00000000
  \_[1] [StoredTable] Name: 'int_int_int' pruned: 0/1 chunk(s), 0/3 column(s) @ 0x00000000
 
