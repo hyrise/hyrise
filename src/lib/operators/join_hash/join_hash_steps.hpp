@@ -2,13 +2,16 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
 #include <limits>
 #include <memory>
 #include <memory_resource>
 #include <mutex>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
+#include <boost/align/aligned_allocator.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
@@ -16,6 +19,7 @@
 
 #include "uninitialized_vector.hpp"
 
+#include "hwy/highway.h"
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -26,13 +30,17 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
   (e.g., build() and probe()). These free functions are put into this header file to separate
   them from the process flow of the join hash and to make them better testable.
 */
+HWY_BEFORE_NAMESPACE();
+
 namespace hyrise {
+using namespace hwy::HWY_NAMESPACE;
 
 // For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
@@ -516,6 +524,61 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   return hash_tables;
 }
 
+// This is the cacheline size on our most commonly benchmarked hardware. Other systems will also run fine with this value.
+constexpr auto BYTES_PER_CACHELINE = size_t{64};
+// This is a tunable parameter
+constexpr auto MIN_CACHELINES_PER_STORE = size_t{1};
+
+template <typename T>
+  requires std::is_trivially_destructible_v<T>
+union TemporaryRadixBucket {
+  static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
+  // We want the BYTES_PER_ELEMENT to be a divisor of the size of this container.
+  // If it is not a power of two, we have to extract the part that is
+  // not a power of 2 an use it as a factor. For all types in hyrise, this is either 1 or 3.
+  static constexpr auto CACHELINES_PER_STORE_FACTOR = BYTES_PER_ELEMENT >>
+                                                      static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
+  static constexpr auto CACHELINES_PER_STORE =
+      ((MIN_CACHELINES_PER_STORE + CACHELINES_PER_STORE_FACTOR - 1) / CACHELINES_PER_STORE_FACTOR) *
+      CACHELINES_PER_STORE_FACTOR;
+  static constexpr auto BYTES_PER_STORE = BYTES_PER_CACHELINE * CACHELINES_PER_STORE;
+  static constexpr auto ELEMENTS_PER_STORE = BYTES_PER_STORE / BYTES_PER_ELEMENT;
+
+  std::array<PartitionedElement<T>, ELEMENTS_PER_STORE> elements;
+
+  struct {
+    std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1> elements;
+    // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers
+    uint32_t count;
+    uint64_t output_idx;
+  } with_indices;
+};
+
+template <typename T, bool keep_null_values>
+struct TemporaryRadixContainer {
+  using bucket = TemporaryRadixBucket<T>;
+  using allocator = boost::alignment::aligned_allocator<bucket, BYTES_PER_CACHELINE>;
+  static constexpr auto ELEMENTS_PER_STORE = bucket::ELEMENTS_PER_STORE;
+  uninitialized_vector<bucket, allocator> data;
+  uninitialized_vector<std::array<char, ELEMENTS_PER_STORE>> null_values;
+
+  explicit TemporaryRadixContainer(size_t output_partition_count) : data(output_partition_count) {
+    if constexpr (keep_null_values) {
+      null_values.resize(output_partition_count);
+    }
+  }
+
+  void prefetch(size_t partition_id) {
+    const auto* const ptr = reinterpret_cast<char*>(data.data() + partition_id);
+    for (auto cacheline_idx = size_t{0}; cacheline_idx < bucket::CACHELINES_PER_STORE; ++cacheline_idx) {
+      __builtin_prefetch(ptr + (cacheline_idx * BYTES_PER_CACHELINE), 1 /* = write */, 3 /* = highest priority */);
+    }
+    if constexpr (keep_null_values) {
+      __builtin_prefetch(null_values.data() + partition_id, 1, 3);
+    }
+  }
+};
+
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
@@ -552,7 +615,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
   auto output_offsets_by_input_partition =
-      std::vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count));
+      std::vector(input_partition_count, std::vector<size_t>(output_partition_count));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -561,7 +624,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
 
     output[output_partition_idx].elements.resize(this_output_partition_size);
-    if (keep_null_values) {
+    if constexpr (keep_null_values) {
       output[output_partition_idx].null_values.resize(this_output_partition_size);
       null_values_as_char[output_partition_idx].resize(this_output_partition_size);
     }
@@ -575,38 +638,143 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     const auto& elements = input_partition.elements;
     const auto elements_count = elements.size();
 
-    const auto perform_partition = [&, input_partition_idx, elements_count]() {
-      for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
-        const auto& element = elements[input_idx];
-
-        if constexpr (!keep_null_values) {
-          DebugAssert(!(element.row_id == NULL_ROW_ID), "NULL_ROW_ID should not have made it this far");
+    if constexpr (std::is_trivially_destructible_v<T>) {
+      const auto perform_partition = [&, input_partition_idx, elements_count]() {
+        using TMP = TemporaryRadixContainer<T, keep_null_values>;
+        auto tmp = TMP(output_partition_count);
+        for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
+             ++output_partition_idx) {
+          tmp.prefetch(output_partition_idx);
+          tmp.data[output_partition_idx].with_indices.output_idx =
+              output_offsets_by_input_partition[input_partition_idx][output_partition_idx];
+          tmp.data[output_partition_idx].with_indices.count = 0;
         }
 
-        const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
+        for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
+          const auto& element = elements[input_idx];
 
-        auto& output_idx = output_offsets_by_input_partition[input_partition_idx][radix];
-        DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
-        if (input_partition_idx < input_partition_count - 1) {
-          DebugAssert(output_idx < output_offsets_by_input_partition[input_partition_idx + 1][radix],
-                      "output_idx goes into next range");
+          if constexpr (!keep_null_values) {
+            DebugAssert(!(element.row_id == NULL_ROW_ID), "NULL_ROW_ID should not have made it this far");
+          }
+
+          const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
+          tmp.prefetch(radix);
+
+          const auto output_idx = tmp.data[radix].with_indices.output_idx;
+          if (std::bit_cast<uint64_t>(output[radix].elements.data() + output_idx) & (BYTES_PER_CACHELINE - 1)) {
+            // We are not properly aligned with a cacheline yet, just write the element manually.
+            DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
+
+            if constexpr (keep_null_values) {
+              null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+            }
+
+            output[radix].elements[output_idx] = element;
+            tmp.data[radix].with_indices.output_idx = output_idx + 1;
+            continue;
+          }
+
+          const auto tmp_idx = tmp.data[radix].with_indices.count;
+          tmp.data[radix].elements[tmp_idx] = element;
+          if constexpr (keep_null_values) {
+            tmp.null_values[radix][tmp_idx] = input_partition.null_values[input_idx];
+          }
+
+          if (tmp_idx + 1 < TMP::ELEMENTS_PER_STORE) {
+            // We have not fully written this cache line, just continue with the next element.
+            tmp.data[radix].with_indices.count = tmp_idx + 1;
+            continue;
+          }
+
+          // Variant A: Just regular copy
+          // std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
+
+          // Variant B: Copy with OpenMP Pragma
+//           const auto copy_from = tmp.data[radix].elements.data();
+//           const auto copy_to = output[radix].elements.data() + output_idx;
+// #pragma omp simd nontemporal(copy_to), aligned(copy_to, copy_from : BYTES_PER_CACHELINE)
+//           for (auto index = size_t{0}; index < TMP::ELEMENTS_PER_STORE; ++index) {
+//             copy_to[index] = copy_from[index];
+//           }
+
+          // Variant C: Google Highway streaming copy
+          const auto copy_from = reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data());
+          const auto copy_to = reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx));
+          const auto tag = ScalableTag<uint8_t>{};
+          for (auto i = size_t{0}; i <= TMP::bucket::BYTES_PER_STORE; i += Lanes(tag)) {
+            const auto vec = Load(tag, in_ptr + i);
+            Stream(vec, tag, out_ptr + i);
+          }
+
+          // Variant D: Memcpy has SIMD!
+          // const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
+          // const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data());
+          // std::memcpy(copy_to, copy_from, TMP::bucket::BYTES_PER_STORE);
+
+          if constexpr (keep_null_values) {
+            std::ranges::copy(tmp.null_values[radix], null_values_as_char[radix].begin() + output_idx);
+          }
+
+          tmp.data[radix].with_indices.count = 0;
+          tmp.data[radix].with_indices.output_idx = output_idx + TMP::ELEMENTS_PER_STORE;
         }
 
-        // In case NULL values have been materialized in materialize_input(), we need to keep them during the radix
-        // clustering phase.
-        if constexpr (keep_null_values) {
-          null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+        for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
+             ++output_partition_idx) {
+          const auto& bucket = tmp.data[output_partition_idx];
+          if (bucket.with_indices.count != 0) {
+            std::ranges::copy(std::span(bucket.elements.begin(), bucket.with_indices.count),
+                              output[output_partition_idx].elements.begin() + bucket.with_indices.output_idx);
+            if constexpr (keep_null_values) {
+              std::ranges::copy(std::span(tmp.null_values[output_partition_idx].begin(), bucket.with_indices.count),
+                                null_values_as_char[output_partition_idx].begin() + bucket.with_indices.output_idx);
+            }
+          }
+
+          if (input_partition_idx + 1 != input_partition_count) {
+            DebugAssert(bucket.with_indices.output_idx + bucket.with_indices.count ==
+                            output_offsets_by_input_partition[input_partition_idx + 1][output_partition_idx],
+                        "The radix boundaries of different input partitions don't match up.");
+          }
         }
-
-        output[radix].elements[output_idx] = element;
-
-        ++output_idx;
+      };
+      if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
+        perform_partition();
+      } else {
+        jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
       }
-    };
-    if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
-      perform_partition();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
+      // T is not trivially destructable, just do the partitioning manually.
+      const auto perform_partition = [&, input_partition_idx, elements_count]() {
+        for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
+          const auto& element = elements[input_idx];
+
+          if constexpr (!keep_null_values) {
+            DebugAssert(!(element.row_id == NULL_ROW_ID), "NULL_ROW_ID should not have made it this far");
+          }
+
+          const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
+          auto& output_idx = output_offsets_by_input_partition[input_partition_idx][radix];
+
+          DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
+          if (input_partition_idx < input_partition_count - 1) {
+            DebugAssert(output_idx < output_offsets_by_input_partition[input_partition_idx + 1][radix],
+                        "output_idx goes into next range");
+          }
+
+          if constexpr (keep_null_values) {
+            null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+          }
+
+          output[radix].elements[output_idx] = element;
+          ++output_idx;
+        }
+      };
+      if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
+        perform_partition();
+      } else {
+        jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
+      }
     }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
@@ -915,3 +1083,5 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 }
 
 }  // namespace hyrise
+
+HWY_AFTER_NAMESPACE();
