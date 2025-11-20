@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "statistics/statistics_objects/scaled_histogram.hpp"
 
 namespace hyrise {
