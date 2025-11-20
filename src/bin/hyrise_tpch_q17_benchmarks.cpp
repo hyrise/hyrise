@@ -29,9 +29,9 @@
 using namespace hyrise;  // NOLINT(build/namespaces)
 // using namespace expression_functional;  // NOLINT(build/namespaces)
 
-const std::vector<uint8_t> filter_size_exponents = {0, 20};
-const std::vector<uint8_t> block_size_exponents = {0, 9};
-const std::vector<uint8_t> ks = {1, 2};
+const std::vector<uint8_t> filter_size_exponents = {0, 18, 23};
+const std::vector<uint8_t> block_size_exponents = {9};
+const std::vector<uint8_t> ks = {4};
 
 const uint16_t min_runs = 10;
 // const uint16_t max_runs = 50;
