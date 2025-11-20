@@ -8,6 +8,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
@@ -43,10 +44,8 @@ UniqueColumnCombinations ProjectionNode::unique_column_combinations() const {
 
   // Forward unique column combinations, if applicable.
   const auto input_unique_column_combinations = left_input()->unique_column_combinations();
-  const auto output_expressions = this->output_expressions();
-
   for (const auto& input_ucc : input_unique_column_combinations) {
-    if (!contains_all_expressions(input_ucc.expressions, output_expressions)) {
+    if (!contains_all_expressions(input_ucc.expressions, node_expressions)) {
       continue;
       /**
        * Future Work:
@@ -68,18 +67,32 @@ OrderDependencies ProjectionNode::order_dependencies() const {
 
   // Forward order dependencies, if applicable.
   const auto input_order_dependencies = left_input()->order_dependencies();
-  const auto output_expressions = this->output_expressions();
-
   for (const auto& input_order_dependency : input_order_dependencies) {
     // As is the case for UCCs, we have opportunities for creating ODs from different projections in the future.
-    if (!(contains_all_expressions(input_order_dependency.ordering_expressions, output_expressions) &&
-          contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
+    if (!(contains_all_expressions(input_order_dependency.ordering_expressions, node_expressions) &&
+          contains_all_expressions(input_order_dependency.ordered_expressions, node_expressions))) {
       continue;
     }
     order_dependencies.emplace(input_order_dependency);
   }
 
   return order_dependencies;
+}
+
+InclusionDependencies ProjectionNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
+  inclusion_dependencies.reserve(node_expressions.size());
+
+  // Forward inclusion dependencies, if applicable.
+  const auto input_inclusion_dependencies = left_input()->inclusion_dependencies();
+  for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
+    if (!contains_all_expressions(input_inclusion_dependency.referenced_expressions, node_expressions)) {
+      continue;
+    }
+    inclusion_dependencies.emplace(input_inclusion_dependency);
+  }
+
+  return inclusion_dependencies;
 }
 
 FunctionalDependencies ProjectionNode::non_trivial_functional_dependencies() const {

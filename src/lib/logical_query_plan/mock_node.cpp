@@ -16,9 +16,11 @@
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
 #include "types.hpp"
@@ -169,6 +171,28 @@ OrderDependencies MockNode::order_dependencies() const {
                                get_expressions_for_column_ids(*this, ordered_columns));
   }
   return order_dependencies;
+}
+
+void MockNode::set_foreign_key_constraints(const ForeignKeyConstraints& foreign_key_constraints) {
+  _foreign_key_constraints = foreign_key_constraints;
+}
+
+InclusionDependencies MockNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
+  for (const auto& foreign_key_constraint : _foreign_key_constraints) {
+    const auto& table = foreign_key_constraint.foreign_key_table();
+    const auto& columns = foreign_key_constraint.primary_key_columns();
+    // As we only use this node in tests, we ignore that INDs with pruned columns could be adjusted. Fir instance,
+    // [a, b] in [x, y] could be transformed to [a] in [x] if y is pruned.
+    if (contains_any_column(_pruned_column_ids, columns)) {
+      continue;
+    }
+
+    auto foreign_key_columns = foreign_key_constraint.foreign_key_columns();
+    inclusion_dependencies.emplace(get_expressions_for_column_ids(*this, columns), std::move(foreign_key_columns),
+                                   table);
+  }
+  return inclusion_dependencies;
 }
 
 const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {

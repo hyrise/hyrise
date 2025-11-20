@@ -7,6 +7,7 @@
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

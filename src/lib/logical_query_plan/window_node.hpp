@@ -25,6 +25,8 @@ class WindowNode : public EnableMakeForLQPNode<WindowNode>, public AbstractLQPNo
 
   OrderDependencies order_dependencies() const override;
 
+  InclusionDependencies inclusion_dependencies() const override;
+
  protected:
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

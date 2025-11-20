@@ -15,8 +15,9 @@ namespace hyrise {
  * sortedness. It just expresses that if we sort a table by the `ordering_expressions` columns, also the
  * `ordered_expression` columns are sorted.
  *
- * NOTE: Order dependencies (ODs) are only valid for LQP nodes that contain no invalidated rows (i.e., where there has
- *       been a ValidateNode before or where MVCC is disabled).
+ * NOTE: Because order dependencies (ODs) are derived from soft constraints, which are not verified to be valid
+ *       (especially for data changes), we cannot really safely assume that ODs are valid. Handling that is future
+ *       work.
  */
 struct OrderDependency final {
   explicit OrderDependency(std::vector<std::shared_ptr<AbstractExpression>>&& init_ordering_expressions,

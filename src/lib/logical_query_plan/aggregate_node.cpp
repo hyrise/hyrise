@@ -14,6 +14,7 @@
 #include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
@@ -190,6 +191,23 @@ OrderDependencies AggregateNode::order_dependencies() const {
   }
 
   return order_dependencies;
+}
+
+InclusionDependencies AggregateNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
+
+  // Similarly to UCCs and ODs, forward INDs if all expressions are part of the GROUP-BY expressions. ANY() aggregates
+  // are already translated back to regular LQPColumnExpressions by `output_expressions`.
+  const auto input_inclusion_dependencies = left_input()->inclusion_dependencies();
+  const auto output_expressions = this->output_expressions();
+
+  for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
+    if (contains_all_expressions(input_inclusion_dependency.referenced_expressions, output_expressions)) {
+      inclusion_dependencies.emplace(input_inclusion_dependency);
+    }
+  }
+
+  return inclusion_dependencies;
 }
 
 FunctionalDependencies AggregateNode::non_trivial_functional_dependencies() const {

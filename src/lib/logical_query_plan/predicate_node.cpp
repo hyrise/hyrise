@@ -7,10 +7,13 @@
 #include <string>
 
 #include "expression/expression_utils.hpp"
+#include "expression/is_null_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -31,6 +34,31 @@ UniqueColumnCombinations PredicateNode::unique_column_combinations() const {
 
 OrderDependencies PredicateNode::order_dependencies() const {
   return _forward_left_order_dependencies();
+}
+
+InclusionDependencies PredicateNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
+  const auto& is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate());
+
+  // Only forward IND if the predicate is IS NOT NULL on a single-column IND's expression.
+  if (is_null_expression && is_null_expression->predicate_condition == PredicateCondition::IsNotNull) {
+    const auto input_inclusion_dependencies = left_input()->inclusion_dependencies();
+    const auto& operand = is_null_expression->operand();
+
+    for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
+      if (input_inclusion_dependency.referenced_expressions.size() > 1) {
+        continue;
+      }
+
+      if (*operand != *input_inclusion_dependency.referenced_expressions.front()) {
+        continue;
+      }
+
+      inclusion_dependencies.emplace(input_inclusion_dependency);
+    }
+  }
+
+  return inclusion_dependencies;
 }
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {

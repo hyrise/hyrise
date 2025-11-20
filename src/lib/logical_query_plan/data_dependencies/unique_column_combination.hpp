@@ -12,13 +12,14 @@ namespace hyrise {
  * constraint, rows containing NULL values in any of the expressions are always considered to be distinct. For
  * PRIMARY KEY semantics, check if the expressions are nullable, cf. AbstractLQPNode::is_column_nullable.
  *
- * NOTE: Unique column combinations (UCCs) are only valid for LQP nodes that contain no invalidated rows (i.e., where
- *       there has been a ValidateNode before or where MVCC is disabled).
- *
- * If a UCC may become invalid in the future (because it is not based on a schema constraint, but on the data
- * incidentally being unique at the moment), the UCC is marked as being not genuine.
- * This information is important because query plans that were optimized using a non-genuine UCC are not safely
- * cacheable.
+ * NOTE: Because unique column combinations (UCCs) are derived from soft constraints, which are not verified to be valid
+ *       (especially for data changes), we cannot really safely assume that UCCs are valid. Handling that is future
+ *       work.
+ *       For UCCs derived from discovered constraints, i.e., not defined by the DDL, we currently have means to
+ *       guarantee correct query plans even for changing data: If a UCC may become invalid in the future (because it is
+ *       not based on a schema constraint, but on the data incidentally being unique at the moment), the UCC is marked
+ *       as being not genuine. This information is important because query plans that were optimized using a non-genuine
+ *       UCC are not safely cacheable.
  */
 struct UniqueColumnCombination final {
   explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_genuine = true);
