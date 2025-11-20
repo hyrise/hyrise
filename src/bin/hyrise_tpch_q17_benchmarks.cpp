@@ -135,16 +135,16 @@ void perform_measurements(std::ofstream& out, OperatorJoinPredicate join_predica
     //     semi_join->execute();
     //   });
     // } else {
-      const auto reduce_build = std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build,
-                                                         UseMinMax::No, filter_size_exponent, block_size_exponent, k);
+    const auto reduce_build = std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build,
+                                                       UseMinMax::No, filter_size_exponent, block_size_exponent, k);
 
-      const auto reduce_probe = std::make_shared<Reduce>(left_input, reduce_build, join_predicate, ReduceMode::Probe,
-                                                         UseMinMax::No, filter_size_exponent, block_size_exponent, k);
+    const auto reduce_probe = std::make_shared<Reduce>(left_input, reduce_build, join_predicate, ReduceMode::Probe,
+                                                       UseMinMax::No, filter_size_exponent, block_size_exponent, k);
 
-      duration_ns = measure_duration([&]() {
-        reduce_build->execute();
-        reduce_probe->execute();
-      });
+    duration_ns = measure_duration([&]() {
+      reduce_build->execute();
+      reduce_probe->execute();
+    });
     // }
 
     total_time += duration_ns;
@@ -193,16 +193,16 @@ void perform_perf(std::ofstream& out, const std::vector<std::string>& event_name
   //   semi_join->execute();
   //   event_counter.stop();
   // } else {
-    const auto reduce_build = std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build,
-                                                       UseMinMax::No, filter_size_exponent, block_size_exponent, k);
+  const auto reduce_build = std::make_shared<Reduce>(left_input, right_input, join_predicate, ReduceMode::Build,
+                                                     UseMinMax::No, filter_size_exponent, block_size_exponent, k);
 
-    const auto reduce_probe = std::make_shared<Reduce>(left_input, reduce_build, join_predicate, ReduceMode::Probe,
-                                                       UseMinMax::No, filter_size_exponent, block_size_exponent, k);
+  const auto reduce_probe = std::make_shared<Reduce>(left_input, reduce_build, join_predicate, ReduceMode::Probe,
+                                                     UseMinMax::No, filter_size_exponent, block_size_exponent, k);
 
-    event_counter.start();
-    reduce_build->execute();
-    reduce_probe->execute();
-    event_counter.stop();
+  event_counter.start();
+  reduce_build->execute();
+  reduce_probe->execute();
+  event_counter.stop();
   // }
 
   write_csv_row(filter_size_exponent, block_size_exponent, k);
