@@ -14,178 +14,184 @@ namespace hyrise {
 inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_size_exponent,
                                                           const uint8_t block_size_exponent, const uint8_t k) {
   switch (block_size_exponent) {
-    case 0: {
-      switch (filter_size_exponent) {
-        case 18:
-          switch (k) {
-            case 1:
-              return std::make_shared<BloomFilter<18, 1>>();
-            case 2:
-              return std::make_shared<BloomFilter<18, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 19:
-          switch (k) {
-            case 1:
-              return std::make_shared<BloomFilter<19, 1>>();
-            case 2:
-              return std::make_shared<BloomFilter<19, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 20:
-          switch (k) {
-            case 1:
-              return std::make_shared<BloomFilter<20, 1>>();
-            case 2:
-              return std::make_shared<BloomFilter<20, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 21:
-          switch (k) {
-            case 1:
-              return std::make_shared<BloomFilter<21, 1>>();
-            case 2:
-              return std::make_shared<BloomFilter<21, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 23:
-          switch (k) {
-            case 1:
-              return std::make_shared<BloomFilter<23, 1>>();
-            case 2:
-              return std::make_shared<BloomFilter<23, 2>>();
-            default:
-              break;
-          }
-          break;
-        default:
-          break;
-      }
-      break;
-    }
-    case 8: {
-      switch (filter_size_exponent) {
-        case 18:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<18, 8, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<18, 8, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 19:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<19, 8, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<19, 8, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 20:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<20, 8, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<20, 8, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 21:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<21, 8, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<21, 8, 2>>();
-            default:
-              break;
-          }
-          break;
-        case 23:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<23, 8, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<23, 8, 2>>();
-            default:
-              break;
-          }
-          break;
-        default:
-          break;
-      }
-      break;
-    }
+    // case 0: {
+    //   switch (filter_size_exponent) {
+    //     case 18:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BloomFilter<18, 1>>();
+    //         case 2:
+    //           return std::make_shared<BloomFilter<18, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 19:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BloomFilter<19, 1>>();
+    //         case 2:
+    //           return std::make_shared<BloomFilter<19, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 20:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BloomFilter<20, 1>>();
+    //         case 2:
+    //           return std::make_shared<BloomFilter<20, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 21:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BloomFilter<21, 1>>();
+    //         case 2:
+    //           return std::make_shared<BloomFilter<21, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 23:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BloomFilter<23, 1>>();
+    //         case 2:
+    //           return std::make_shared<BloomFilter<23, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    //   break;
+    // }
+    // case 8: {
+    //   switch (filter_size_exponent) {
+    //     case 18:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BlockBloomFilter<18, 8, 1>>();
+    //         case 2:
+    //           return std::make_shared<BlockBloomFilter<18, 8, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 19:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BlockBloomFilter<19, 8, 1>>();
+    //         case 2:
+    //           return std::make_shared<BlockBloomFilter<19, 8, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 20:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BlockBloomFilter<20, 8, 1>>();
+    //         case 2:
+    //           return std::make_shared<BlockBloomFilter<20, 8, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 21:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BlockBloomFilter<21, 8, 1>>();
+    //         case 2:
+    //           return std::make_shared<BlockBloomFilter<21, 8, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     case 23:
+    //       switch (k) {
+    //         case 1:
+    //           return std::make_shared<BlockBloomFilter<23, 8, 1>>();
+    //         case 2:
+    //           return std::make_shared<BlockBloomFilter<23, 8, 2>>();
+    //         default:
+    //           break;
+    //       }
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    //   break;
+    // }
     case 9: {
       switch (filter_size_exponent) {
         case 18:
           switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<18, 9, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<18, 9, 2>>();
-            case 3:
-              return std::make_shared<BlockBloomFilter<18, 9, 3>>();
+            // case 1:
+            //   return std::make_shared<BlockBloomFilter<18, 9, 1>>();
+            // case 2:
+            //   return std::make_shared<BlockBloomFilter<18, 9, 2>>();
+            // case 3:
+            //   return std::make_shared<BlockBloomFilter<18, 9, 3>>();
+            case 4:
+              return std::make_shared<BlockBloomFilter<18, 9, 4>>();
             default:
               break;
           }
           break;
-        case 19:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<19, 9, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<19, 9, 2>>();
-            case 3:
-              return std::make_shared<BlockBloomFilter<19, 9, 3>>();
-            default:
-              break;
-          }
-          break;
-        case 20:
-          switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<20, 9, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<20, 9, 2>>();
-            case 3:
-              return std::make_shared<BlockBloomFilter<20, 9, 3>>();
-            default:
-              break;
-          }
-          break;
+        // case 19:
+        //   switch (k) {
+        //     case 1:
+        //       return std::make_shared<BlockBloomFilter<19, 9, 1>>();
+        //     case 2:
+        //       return std::make_shared<BlockBloomFilter<19, 9, 2>>();
+        //     case 3:
+        //       return std::make_shared<BlockBloomFilter<19, 9, 3>>();
+        //     default:
+        //       break;
+        //   }
+        //   break;
+        // case 20:
+        //   switch (k) {
+        //     case 1:
+        //       return std::make_shared<BlockBloomFilter<20, 9, 1>>();
+        //     case 2:
+        //       return std::make_shared<BlockBloomFilter<20, 9, 2>>();
+        //     case 3:
+        //       return std::make_shared<BlockBloomFilter<20, 9, 3>>();
+        //     default:
+        //       break;
+        //   }
+        //   break;
         case 21:
           switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<21, 9, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<21, 9, 2>>();
-            case 3:
-              return std::make_shared<BlockBloomFilter<21, 9, 3>>();
+            // case 1:
+            //   return std::make_shared<BlockBloomFilter<21, 9, 1>>();
+            // case 2:
+            //   return std::make_shared<BlockBloomFilter<21, 9, 2>>();
+            // case 3:
+            //   return std::make_shared<BlockBloomFilter<21, 9, 3>>();
+            case 4:
+              return std::make_shared<BlockBloomFilter<21, 9, 4>>();
             default:
               break;
           }
           break;
         case 23:
           switch (k) {
-            case 1:
-              return std::make_shared<BlockBloomFilter<23, 9, 1>>();
-            case 2:
-              return std::make_shared<BlockBloomFilter<23, 9, 2>>();
-            case 3:
-              return std::make_shared<BlockBloomFilter<23, 9, 3>>();
+            // case 1:
+            //   return std::make_shared<BlockBloomFilter<23, 9, 1>>();
+            // case 2:
+            //   return std::make_shared<BlockBloomFilter<23, 9, 2>>();
+            // case 3:
+            //   return std::make_shared<BlockBloomFilter<23, 9, 3>>();
+            case 4:
+              return std::make_shared<BlockBloomFilter<23, 9, 4>>();
             default:
               break;
           }
@@ -291,13 +297,11 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
   std::shared_ptr<const Table> input_table = right_input_table();
   auto column_id = _predicate.column_ids.second;
 
-  Assert(_filter_size_exponent == 0, "Selector not used.");
-
   if (_filter_size_exponent == 0) {
     const auto input_row_count = input_table->row_count();
     // std::cout << "Reduce input row count: " << input_row_count << std::endl;
 
-    const auto max_k = uint8_t{3};
+    // const auto max_k = uint8_t{3};
     const auto max_false_positive_rate = double{0.05};
 
     const auto l1_size = uint32_t{SYSTEM_L1_CACHE_SIZE};
@@ -308,47 +312,22 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
     const auto l1_exponent = static_cast<uint8_t>(std::bit_width(l1_size_bits) - 1);
     const auto l2_exponent = static_cast<uint8_t>(std::bit_width(l2_size_bits) - 1);
-    std::cout << "System L1 size: " << l1_size << ", bits: " << l1_size_bits
-              << ", exponent: " << static_cast<int>(l1_exponent) << std::endl;
-    std::cout << "System L2 size: " << l2_size << ", bits: " << l2_size_bits
-              << ", exponent: " << static_cast<int>(l2_exponent) << std::endl;
+
+    // std::cout << "System L1 size: " << l1_size << ", bits: " << l1_size_bits
+    //           << ", exponent: " << static_cast<int>(l1_exponent) << std::endl;
+    // std::cout << "System L2 size: " << l2_size << ", bits: " << l2_size_bits
+    //           << ", exponent: " << static_cast<int>(l2_exponent) << std::endl;
 
     _filter_size_exponent = l1_exponent;
-
-    auto false_positive_rates = std::vector<std::pair<uint8_t, double>>{};
-
-    for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
-      false_positive_rates.emplace_back(
-          k_index, false_positive_rate_blocked(l1_size_bits, static_cast<double>(input_row_count), k_index));
-      // std::cout << "filter_size_exponent: " << static_cast<int>(l1_exponent) << ", k: " << static_cast<int>(k_index)
-      //           << ", fpr: " << false_positive_rates.back().second << std::endl;
-    }
-
-    auto [min_k, min_false_positive_rate] =
-        *std::min_element(false_positive_rates.begin(), false_positive_rates.end(), [](auto& a, auto& b) {
-          return a.second < b.second;
-        });
-
-    if (min_false_positive_rate > max_false_positive_rate) {
+    if (false_positive_rate_blocked(l1_size_bits, static_cast<double>(input_row_count), _k) > max_false_positive_rate) {
       _filter_size_exponent = l2_exponent;
-      false_positive_rates.clear();
-
-      for (auto k_index = uint8_t{1}; k_index <= max_k; ++k_index) {
-        false_positive_rates.emplace_back(
-            k_index, false_positive_rate_blocked(l2_size_bits, static_cast<double>(input_row_count), k_index));
-        // std::cout << "filter_size_exponent: " << static_cast<int>(l2_exponent) << ", k: " << static_cast<int>(k_index)
-        //           << ", fpr: " << false_positive_rates.back().second << std::endl;
-      }
-
-      std::tie(min_k, min_false_positive_rate) =
-          *std::min_element(false_positive_rates.begin(), false_positive_rates.end(), [](auto& a, auto& b) {
-            return a.second < b.second;
-          });
     }
+    Assert(false_positive_rate_blocked(l2_size_bits, static_cast<double>(input_row_count), _k) <= max_false_positive_rate, "Reducers FPR too high.");
 
-    _k = min_k;
     // std::cout << "Selected exponent: " << static_cast<int>(_filter_size_exponent) << ", k: " << static_cast<int>(_k)
     //           << std::endl;
+  } else {
+    Fail("Selector not used");
   }
 
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
