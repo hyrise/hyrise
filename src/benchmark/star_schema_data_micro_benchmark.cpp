@@ -380,11 +380,11 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, WorstCaseReduce)(benchmark::State& state
 
   const auto predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{3}), PredicateCondition::Equals};
   const auto build_reduce_dryrun =
-      std::make_shared<Reduce>(_right_input, _left_input, predicate, ReduceMode::Build, UseMinMax::Yes);
-  // const auto probe_reduce_dryrun =
-  //     std::make_shared<Reduce>(_left_input, build_reduce_dryrun, predicate, ReduceMode::Probe, UseMinMax::Yes);
+      std::make_shared<Reduce>(_left_input, _right_input, predicate, ReduceMode::Build, UseMinMax::Yes);
+  const auto probe_reduce_dryrun =
+      std::make_shared<Reduce>(_left_input, build_reduce_dryrun, predicate, ReduceMode::Probe, UseMinMax::Yes);
   build_reduce_dryrun->execute();
-  // probe_reduce_dryrun->execute();
+  probe_reduce_dryrun->execute();
 
   state.counters["input_count"] = static_cast<double>(build_reduce_dryrun->right_input()->get_output()->row_count());
   // state.counters["output_count"] = static_cast<double>(probe_reduce_dryrun->get_output()->row_count());
@@ -392,10 +392,10 @@ BENCHMARK_DEFINE_F(ReductionBenchmarks, WorstCaseReduce)(benchmark::State& state
   for (auto _ : state) {
     const auto build_reduce =
         std::make_shared<Reduce>(_right_input, _left_input, predicate, ReduceMode::Build, UseMinMax::Yes);
-    // const auto probe_reduce =
-    //     std::make_shared<Reduce<ReduceMode::Probe, UseMinMax::Yes>>(_left_input, build_reduce, predicate);
+    const auto probe_reduce =
+        std::make_shared<Reduce>(_left_input, build_reduce, predicate, ReduceMode::Probe, UseMinMax::Yes);
     build_reduce->execute();
-    // probe_reduce->execute();
+    probe_reduce->execute();
   }
 }
 
@@ -534,17 +534,17 @@ BENCHMARK_REGISTER_F(ReductionBenchmarks, WorstCaseReduce)
                     15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
                    {20}});
 
-// BENCHMARK_REGISTER_F(ReductionBenchmarks, BestCaseReduce)
-//     ->ArgsProduct({// {1, 2, 3, 4, 5, 7, 14, 28},
-//                    {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
-//                     15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
-//                   //  {1, 5, 10, 20, 100}});
-//                    {20}});
+BENCHMARK_REGISTER_F(ReductionBenchmarks, BestCaseReduce)
+    ->ArgsProduct({// {1, 2, 3, 4, 5, 7, 14, 28},
+                   {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
+                    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
+                  //  {1, 5, 10, 20, 100}});
+                   {20}});
 
-// BENCHMARK_REGISTER_F(ReductionBenchmarks, BadCaseReduce)
-//     ->ArgsProduct({// {1, 2, 3, 4, 5, 7, 14, 28},
-//                    {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
-//                     15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
-//                    {1, 5, 10, 20, 100}});
+BENCHMARK_REGISTER_F(ReductionBenchmarks, BadCaseReduce)
+    ->ArgsProduct({// {1, 2, 3, 4, 5, 7, 14, 28},
+                   {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
+                    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
+                   {20}});
 
 }  // namespace hyrise
