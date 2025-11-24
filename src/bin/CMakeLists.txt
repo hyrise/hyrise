@@ -38,7 +38,7 @@ add_executable(
     hyrise_bloom_filter_evaluation.cpp
 )
 
-add_library(xxhash STATIC xxhash.c)
+add_library(xxhash STATIC xxhash.cpp)
 target_compile_options(xxhash PRIVATE -w)
 target_link_libraries(
     hyriseBloomFilterEvaluation

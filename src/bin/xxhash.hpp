@@ -119,7 +119,7 @@
  *
  * @code{.c}
  *   #include <string.h>
- *   #include "xxhash.h"
+ *   #include "xxhash.hpp"
  *
  *   // Example for a function which hashes a null terminated string with XXH32().
  *   XXH32_hash_t hash_string(const char* string, XXH32_hash_t seed)
@@ -142,7 +142,7 @@
  * @code{.c}
  *   #include <stdio.h>
  *   #include <assert.h>
- *   #include "xxhash.h"
+ *   #include "xxhash.hpp"
  *   // Example for a function which hashes a FILE incrementally with XXH3_64bits().
  *   XXH64_hash_t hashFile(FILE* f)
  *   {
@@ -214,7 +214,7 @@
  *
  * @code{.c}
  *   #include <stdio.h>
- *   #include "xxhash.h"
+ *   #include "xxhash.hpp"
  *
  *   // Example for a function which prints XXH32_hash_t in human readable format
  *   void printXxh32(XXH32_hash_t hash)
@@ -237,7 +237,7 @@
  * @endcode
  *
  *
- * @file xxhash.h
+ * @file xxhash.hpp
  * xxHash prototypes and implementation
  */
 
@@ -262,7 +262,7 @@ extern "C" {
  * Usage:
  * @code{.c}
  *     #define XXH_STATIC_LINKING_ONLY
- *     #include "xxhash.h"
+ *     #include "xxhash.hpp"
  * @endcode
  */
 #  define XXH_STATIC_LINKING_ONLY
@@ -275,7 +275,7 @@ extern "C" {
  * @code{.c}
  *     #define XXH_STATIC_LINKING_ONLY
  *     #define XXH_IMPLEMENTATION
- *     #include "xxhash.h"
+ *     #include "xxhash.hpp"
  * @endcode
  */
 #  define XXH_IMPLEMENTATION
@@ -295,7 +295,7 @@ extern "C" {
  * Usage:
  * @code{.c}
  *     #define XXH_INLINE_ALL
- *     #include "xxhash.h"
+ *     #include "xxhash.hpp"
  * @endcode
  * Do not compile and link xxhash.o as a separate object, as it is not useful.
  */
@@ -316,7 +316,7 @@ extern "C" {
  * (therefore, avoid empty or numeric values).
  *
  * Note that no change is required within the calling program as long as it
- * includes `xxhash.h`: Regular symbol names will be automatically translated
+ * includes `xxhash.hpp`: Regular symbol names will be automatically translated
  * by this header.
  */
 #  define XXH_NAMESPACE /* YOUR NAME HERE */
@@ -345,7 +345,7 @@ extern "C" {
 
    /*
     * This part deals with the special case where a unit wants to inline xxHash,
-    * but "xxhash.h" has previously been included without XXH_INLINE_ALL,
+    * but "xxhash.hpp" has previously been included without XXH_INLINE_ALL,
     * such as part of some previously included *.h header file.
     * Without further action, the new include would just be ignored,
     * and functions would effectively _not_ be inlined (silent failure).
@@ -1885,7 +1885,7 @@ XXH_PUBLIC_API XXH_PUREF XXH128_hash_t XXH128(XXH_NOESCAPE const void* data, siz
  *    #include <stdlib.h>
  *    #include <string.h>
  *    #define XXH_STATIC_LINKING_ONLY // expose unstable API
- *    #include "xxhash.h"
+ *    #include "xxhash.hpp"
  *    // Hashes argv[2] using the entropy from argv[1].
  *    int main(int argc, char* argv[])
  *    {
@@ -1915,7 +1915,7 @@ XXH_PUBLIC_API XXH_errorcode XXH3_generateSecret(XXH_NOESCAPE void* secretBuffer
  * @code{.cpp}
  *    #include <string>
  *    #define XXH_STATIC_LINKING_ONLY // expose unstable API
- *    #include "xxhash.h"
+ *    #include "xxhash.hpp"
  *    // Slow, seeds each time
  *    class HashSlow {
  *        XXH64_hash_t seed;
@@ -2078,12 +2078,12 @@ XXH3_128bits_reset_withSecretandSeed(XXH_NOESCAPE XXH3_state_t* statePtr,
  * This construction created issues with a few build and install systems,
  * as it required xxhash.c to be stored in /include directory.
  *
- * xxHash implementation is now directly integrated within xxhash.h.
+ * xxHash implementation is now directly integrated within xxhash.hpp.
  * As a consequence, xxhash.c is no longer needed in /include.
  *
  * xxhash.c is still available and is still useful.
  * In a "normal" setup, when xxhash is not inlined,
- * xxhash.h only exposes the prototypes and public symbols,
+ * xxhash.hpp only exposes the prototypes and public symbols,
  * while xxhash.c can be built into an object file xxhash.o
  * which can then be linked into the final binary.
  ************************************************************************/
@@ -2365,7 +2365,7 @@ XXH3_128bits_reset_withSecretandSeed(XXH_NOESCAPE XXH3_state_t* statePtr,
  * In practice, it means that functions like `XXH*_createState()`
  * will always fail, and return NULL.
  * This flag is useful in situations where
- * xxhash.h is integrated into some kernel, embedded or limited environment
+ * xxhash.hpp is integrated into some kernel, embedded or limited environment
  * without access to dynamic allocation.
  */
 

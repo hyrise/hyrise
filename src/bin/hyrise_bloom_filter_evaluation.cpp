@@ -13,7 +13,7 @@
 
 #include "utils/assert.hpp"
 #include "utils/bloom_filter.hpp"
-#include "xxhash.h"
+#include "xxhash.hpp"
 
 inline uint64_t MurmurHash64(int32_t input) {
   auto x = static_cast<uint64_t>(input);
