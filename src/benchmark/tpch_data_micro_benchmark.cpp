@@ -15,7 +15,7 @@
 #include "operators/table_wrapper.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
-#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/max_diff_histogram.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -323,7 +323,7 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
   resolve_data_type(column_data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     for (auto _ : state) {
-      EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, histogram_bin_count);
+      MaxDiffHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, histogram_bin_count);
     }
   });
 }

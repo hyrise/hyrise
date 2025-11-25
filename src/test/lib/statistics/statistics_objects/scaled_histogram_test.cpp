@@ -1,3 +1,4 @@
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -5,9 +6,9 @@
 #include "base_test.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
-#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
+#include "statistics/statistics_objects/max_diff_histogram.hpp"
 #include "statistics/statistics_objects/scaled_histogram.hpp"
 #include "types.hpp"
 
@@ -146,11 +147,12 @@ TEST_P(ScaledHistogramTest, ReferencesEqualDistinctCountHistogram) {
     auto bin_minima = std::vector{HistogramDataType{70}};
     auto bin_maxima = std::vector{HistogramDataType{80}};
     auto bin_heights = std::vector{HistogramCountType{5}};
-    const auto equal_distinct_count_histogram = std::make_shared<EqualDistinctCountHistogram<HistogramDataType>>(
-        std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), 5, BinID{0});
+    auto bin_distinct_counts = std::vector{HistogramCountType{5}};
+    const auto max_diff_histogram = std::make_shared<MaxDiffHistogram<HistogramDataType>>(
+        std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), std::move(bin_distinct_counts));
 
-    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*equal_distinct_count_histogram, 0.5};
-    EXPECT_EQ(referenced_histogram(scaled_histogram), equal_distinct_count_histogram);
+    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*max_diff_histogram, 0.5};
+    EXPECT_EQ(referenced_histogram(scaled_histogram), max_diff_histogram);
     EXPECT_EQ(selectivity(scaled_histogram), 0.5);
   });
 }

@@ -33,8 +33,9 @@
 #include "logical_query_plan/window_node.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/max_diff_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table_column_definition.hpp"
@@ -78,8 +79,9 @@ class CardinalityEstimatorTest : public BaseTest {
     /**
      * node_c
      */
-    const auto histogram_c_x = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
-        std::vector<int32_t>{0, 8}, std::vector<int32_t>{7, 15}, std::vector<HistogramCountType>{32, 32}, 8, 0);
+    const auto histogram_c_x = std::make_shared<MaxDiffHistogram<int32_t>>(
+        std::vector<int32_t>{0, 8}, std::vector<int32_t>{7, 15}, std::vector<HistogramCountType>{32, 32},
+        std::vector<HistogramCountType>{8, 8});
 
     const auto histogram_c_y = std::make_shared<GenericHistogram<int32_t>>(
         std::vector<int32_t>{0}, std::vector<int32_t>{9}, std::vector<HistogramCountType>{64},
