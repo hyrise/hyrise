@@ -81,8 +81,8 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
 void deregister_insert(const std::shared_ptr<Table>& table, const ChunkID chunk_id, const std::shared_ptr<Chunk>& chunk,
                        const std::shared_ptr<MvccData>& mvcc_data) {
   // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last committing/rolling back
-  // Insert operator inserting into a chunk that reached its target size and. In this case, the Insert operator that
-  // added a new chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
+  // Insert operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a
+  // new chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
   // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
   const auto active_inserts = mvcc_data->deregister_insert();
   if (active_inserts == 0 && chunk->try_set_immutable()) {

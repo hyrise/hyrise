@@ -12,6 +12,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
@@ -51,6 +52,12 @@ OrderDependencies IntersectNode::order_dependencies() const {
   DebugAssert(left_input()->order_dependencies() == right_input()->order_dependencies(),
               "Order dependencies differ. Merging is not implemented.");
   return _forward_left_order_dependencies();
+}
+
+InclusionDependencies IntersectNode::inclusion_dependencies() const {
+  // INTERSECT filters the left input table, so it does not guarantee that all values referenced by a foreign key are
+  // still present.
+  return InclusionDependencies{};
 }
 
 FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() const {

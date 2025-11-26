@@ -33,6 +33,8 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
 
   OrderDependencies order_dependencies() const override;
 
+  InclusionDependencies inclusion_dependencies() const override;
+
   // Returns non-trivial FDs from the left input node that remain valid.
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 

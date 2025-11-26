@@ -16,6 +16,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
@@ -185,6 +186,58 @@ OrderDependencies StoredTableNode::order_dependencies() const {
   build_transitive_od_closure(order_dependencies);
 
   return order_dependencies;
+}
+
+InclusionDependencies StoredTableNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
+
+  // We create inclusion dependencies from foreign key constraints.
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& foreign_key_constraints = table->referenced_foreign_key_constraints();
+
+  for (const auto& foreign_key_constraint : foreign_key_constraints) {
+    const auto referenced_table = foreign_key_constraint.foreign_key_table();
+    if (!referenced_table) {
+      // Referenced table was deleted, IND is useless.
+      continue;
+    }
+
+    // Remove pruned columns from the IND.
+    auto pruned_columns_it = _pruned_column_ids.cbegin();
+    auto pk_column_ids = std::vector<ColumnID>{};
+    auto fk_column_ids = std::vector<ColumnID>{};
+    for (auto pk_columns_it = foreign_key_constraint.primary_key_columns().cbegin(),
+              fk_columns_it = foreign_key_constraint.foreign_key_columns().cbegin();
+         pk_columns_it != foreign_key_constraint.primary_key_columns().cend(); ++pk_columns_it, ++fk_columns_it) {
+      // Skip pruned columns that are not part of the PK columns.
+      while (pruned_columns_it != _pruned_column_ids.cend() && *pk_columns_it > *pruned_columns_it) {
+        ++pruned_columns_it;
+      }
+
+      // Add columns if they are not pruned.
+      if (pruned_columns_it == _pruned_column_ids.cend() || *pk_columns_it < *pruned_columns_it) {
+        pk_column_ids.emplace_back(*pk_columns_it);
+        fk_column_ids.emplace_back(*fk_columns_it);
+        continue;
+      }
+
+      // Look at the next pruned column.
+      ++pruned_columns_it;
+    }
+
+    DebugAssert(pk_column_ids.size() == fk_column_ids.size(), "IND's ColumnIDs were pruned incorrectly.");
+    if (pk_column_ids.empty()) {
+      continue;
+    }
+
+    // Search for expressions representing the inclusion constraint's ColumnIDs.
+    auto column_expressions = get_expressions_for_column_ids(*this, pk_column_ids);
+
+    // Create InclusionDependency.
+    inclusion_dependencies.emplace(std::move(column_expressions), std::move(fk_column_ids), referenced_table);
+  }
+
+  return inclusion_dependencies;
 }
 
 std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {

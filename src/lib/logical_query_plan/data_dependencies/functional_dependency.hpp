@@ -29,10 +29,14 @@ namespace hyrise {
  * Currently, the determinant expressions are required to be non-nullable to be involved in FDs. Combining null values
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
  *
- * If the FD may become invalid in the future (because it is not based on a schema constraint, but on the data
- * incidentally fulfilling the constraint at the moment), the FD is marked as being not genuine.
- * This information is important because query plans that were optimized using a non-genuine FD are not safely
- * cacheable.
+ * NOTE: Because functional dependencies can be derived from soft key constraints, which are not verified to be valid
+ *       (especially for data changes), we cannot really safely assume that all FDs are valid. Handling that is future
+ *       work.
+ *       For FDs derived from discovered unique constraints, i.e., not defined by the DDL, we currently have means to
+ *       guarantee correct query plans even for changing data: If the FD may become invalid in the future (because it is
+ *       not based on a schema constraint, but on the data incidentally fulfilling the constraint at the moment), the FD
+ *       is marked as being not genuine. This information is important because query plans that were optimized using a
+ *       non-genuine FD are not safely cacheable.
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents,
@@ -72,7 +76,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds);
  *
  *                             {a} => {b}
  *                             {a} => {c}         -->   {a} => {b, c, d}
- *                             {a} => {d} 
+ *                             {a} => {d}
  *          (not genuine) {a} => {e}         -->   {a} => {b, c, d, e} (not genuine)
  *         Note that if we have two FDs with the same determinant expressions, but one of them is not genuine,
  *         this not genuine FD is ignored in the deflation process as it is 'shadowed' by the genuine one.

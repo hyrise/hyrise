@@ -11,6 +11,7 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
@@ -234,6 +235,22 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool has_matching_od(const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
                        const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const;
 
+  virtual InclusionDependencies inclusion_dependencies() const = 0;
+
+  /**
+   * @return True if there is an inclusion dependency (IND) matching the given lists of expressions. That means this
+   *         node provides the referenced expressions, no tuples were removed in this (sub-)plan, and there exists a
+   *         foreign key relationship on a table level where the passed referenced expressions are on the FK side and
+   *         the included expressions are on the PK side.
+   *
+   * Example: - Assume two StoredTableNodes nation and region, "n_regionkey" is a foreign key to "r_regionkey".
+   *          - `region->has_matching_ind({nation->get_column("n_regionkey")}, {region->get_column("r_regionkey")})`
+   *            returns true.
+   *          - A PredicateNode with `r_name = ASIA` on top of the region node returns false for the same IND.
+   */
+  bool has_matching_ind(const std::vector<std::shared_ptr<AbstractExpression>>& included_expressions,
+                        const std::vector<std::shared_ptr<AbstractExpression>>& referenced_expressions) const;
+
   /**
    * Perform a deep equality check
    */
@@ -275,16 +292,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
   /**
-   * This is a helper method for node types that do not have an effect on the UCCs from input nodes.
-   * @return All unique column combinations from the left input node.
+   * These are helper methods for node types that do not have an effect on the input nodes' data dependencies.
+   * @return All data dependencies of a specific type from the left input node.
    */
   UniqueColumnCombinations _forward_left_unique_column_combinations() const;
-
-  /**
-   * This is a helper method for node types that do not have an effect on the ODs from input nodes.
-   * @return All order dependencies from the left input node.
-   */
   OrderDependencies _forward_left_order_dependencies() const;
+  InclusionDependencies _forward_left_inclusion_dependencies() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

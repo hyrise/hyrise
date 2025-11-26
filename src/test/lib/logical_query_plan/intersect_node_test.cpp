@@ -62,7 +62,7 @@ TEST_F(IntersectNodeTest, Copy) {
 }
 
 TEST_F(IntersectNodeTest, NodeExpressions) {
-  ASSERT_EQ(_intersect_node->node_expressions.size(), 0u);
+  ASSERT_EQ(_intersect_node->node_expressions.size(), 0);
 }
 
 TEST_F(IntersectNodeTest, ForwardUniqueColumnCombinations) {
@@ -103,6 +103,18 @@ TEST_F(IntersectNodeTest, ForwardOrderDependencies) {
     _intersect_node->set_right_input(_mock_node2);
     EXPECT_THROW(_intersect_node->order_dependencies(), std::logic_error);
   }
+}
+
+TEST_F(IntersectNodeTest, NoInclusionDependencies) {
+  EXPECT_TRUE(_mock_node1->inclusion_dependencies().empty());
+  EXPECT_TRUE(_intersect_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
+  _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
+  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
+
+  EXPECT_TRUE(_intersect_node->inclusion_dependencies().empty());
 }
 
 }  // namespace hyrise

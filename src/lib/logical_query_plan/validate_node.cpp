@@ -4,6 +4,7 @@
 #include <string>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 
@@ -21,6 +22,10 @@ UniqueColumnCombinations ValidateNode::unique_column_combinations() const {
 
 OrderDependencies ValidateNode::order_dependencies() const {
   return _forward_left_order_dependencies();
+}
+
+InclusionDependencies ValidateNode::inclusion_dependencies() const {
+  return _forward_left_inclusion_dependencies();
 }
 
 std::shared_ptr<AbstractLQPNode> ValidateNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
