@@ -10,8 +10,9 @@
 namespace hyrise {
 
 // This class spawns a thread that executes a procedure, defined by @param loop_func, in a loop. Between each iteration
-// there is a user-definable sleep period. The loop can be paused, resumed and finished. The loop starts in paused
-// state. Whenever the @param loop_func is called, an execution counter is passed to it.
+// there is a user-definable sleep period. The loop can be paused, resumed, and finished. The loop starts executing
+// immediately upon construction.
+// Whenever the @param loop_func is called, an execution counter is passed to it.
 struct PausableLoopThread {
  public:
   PausableLoopThread(std::chrono::milliseconds loop_sleep_time, const std::function<void(size_t)>& loop_func);
@@ -28,6 +29,6 @@ struct PausableLoopThread {
   std::mutex _mutex;
   std::condition_variable _cv;
   std::thread _loop_thread;
-  std::chrono::milliseconds _loop_sleep_time;
+  std::atomic<std::size_t> _loop_sleep_time_ms;
 };
 }  // namespace hyrise
