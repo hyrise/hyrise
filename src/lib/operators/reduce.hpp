@@ -387,15 +387,19 @@ class Reduce : public AbstractReadOnlyOperator {
             for (; chunk_index < last_chunk_index; ++chunk_index) {
               const auto& input_chunk = input_table->get_chunk(chunk_index);
               const auto& input_segment = input_chunk->get_segment(column_id);
+              const auto input_chunk_size = input_chunk->size();
 
               timer.lap();
 
               // auto matches = std::make_shared<RowIDPosList>();
-              // matches->reserve(input_chunk->size() / 2);
+              // matches->reserve(input_chunk_size / 2);
 
-              auto matches = std::make_shared<RowIDPosList>(input_chunk->size());
-              auto match_count = size_t{0};
+              auto matches = std::make_shared<RowIDPosList>(input_chunk_size);
+              // auto match_count = size_t{0};
               auto* __restrict__ matches_ptr = matches->data();
+
+              // To allow adding ...
+              auto* __restrict__ hacked_matches_ptr = reinterpret_cast<uint64_t*>(matches->data());
 
               resolve_segment_type<DataType>(*input_segment, [&, chunk_index](auto& typed_segment) {
                 // using SegmentType = std::decay_t<decltype(typed_segment)>;
@@ -406,7 +410,75 @@ class Reduce : public AbstractReadOnlyOperator {
                 //                                      true;
 
                 auto iterable = create_iterable_from_segment<DataType/*, erase_segment_type*/>(typed_segment);
-                iterable.with_iterators([&, chunk_index](auto iter, const auto& end) {
+                iterable.with_iterators([&](auto iter, const auto& end) {
+                  // for (; iter != end; ++iter) {
+                  //   const auto& position = *iter;
+                  //   if (!position.is_null()) {
+                  //     const auto hash = hyrise_hash(position.value());
+                  //     auto found = resolved_bloom_filter.probe(hash);
+
+                  //     if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
+                  //       const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
+                  //       found &= diff <= value_difference;
+                  //     }
+
+                  //     // if (found) {
+                  //       // >> == 70-100ms  != 130-220ms
+                  //       // matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
+                  //       // ++match_count;
+
+                  //       // ....>> == 90ms  != 200-300ms (schwankt stark)
+                  //       // matches->emplace_back(chunk_index, position.chunk_offset());
+                  //     // }
+
+                  //     // >> == 130-180ms  != 130-180ms
+                  //     matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
+                  //     match_count += static_cast<ChunkOffset::base_type>(found);
+                  //   }
+                  // }
+
+                  constexpr auto VECTOR_SIZE = 64 / sizeof(DataType);  // 16 for int32_t
+
+                  auto write_offset = size_t{0};
+                  auto read_offset = size_t{0};
+                  while ((read_offset + VECTOR_SIZE) < input_chunk_size) {
+                    auto found_match = false;
+                    auto prefix_sum = size_t{0};
+                    auto offset_array = std::array<uint32_t, VECTOR_SIZE>{};
+                    auto prefix_sums = std::array<uint32_t, VECTOR_SIZE>{};
+
+                    # pragma clang loop vectorize(enable)
+                    for (auto index = size_t{0}; index < VECTOR_SIZE; ++index, ++iter) {
+                      const auto& position = *iter;
+                      if (!position.is_null()) {
+                        const auto hash = hyrise_hash(position.value());
+                        auto found = resolved_bloom_filter.probe(hash);
+
+                        if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
+                          const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
+                          found &= diff <= value_difference;
+                        }
+
+                        found_match |= found;
+                        offset_array[index] = position.chunk_offset();
+                        prefix_sums[index] = prefix_sum;
+                        prefix_sum += static_cast<size_t>(found);
+                      }
+                    }
+
+                    if (found_match) {
+                      # pragma clang loop vectorize(enable)
+                      for (auto index = size_t{0}; index < VECTOR_SIZE; ++index) {
+                        // Assert(write_offset + prefix_sums[index] < matches->size(), std::to_string(write_offset) + ":" + std::to_string(prefix_sums[index]) + " @ " + std::to_string(matches->size()) + " is doof.");
+                        hacked_matches_ptr[write_offset + prefix_sums[index]] += offset_array[index];
+                      }
+                    }
+
+                    write_offset += prefix_sum;
+                    read_offset += VECTOR_SIZE;
+                  }
+
+                  // Epilogue.
                   for (; iter != end; ++iter) {
                     const auto& position = *iter;
                     if (!position.is_null()) {
@@ -418,23 +490,16 @@ class Reduce : public AbstractReadOnlyOperator {
                         found &= diff <= value_difference;
                       }
 
-                      // if (found) {
-                        // >> == 70-100ms  != 130-220ms
-                        // matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
-                        // ++match_count;
-
-                        // ....>> == 90ms  != 200-300ms (schwankt stark)
-                        // matches->emplace_back(chunk_index, position.chunk_offset());
-                      // }
-
-                      // >> == 130-180ms  != 130-180ms
-                      matches_ptr[match_count] = RowID{chunk_index, position.chunk_offset()};
-                      match_count += static_cast<ChunkOffset::base_type>(found);
+                      if (found) {
+                        matches_ptr[write_offset] = RowID{chunk_index, position.chunk_offset()};
+                        ++write_offset;
+                      }
                     }
                   }
-                });
 
-                matches->resize(match_count);
+                  // matches->resize(match_count);
+                  matches->resize(write_offset);
+                });
               });
 
               local_scan += timer.lap();
@@ -445,7 +510,7 @@ class Reduce : public AbstractReadOnlyOperator {
                 output_segments.reserve(column_count);
 
                 if (input_table->type() == TableType::References) {
-                  if (matches->size() == input_chunk->size()) {
+                  if (matches->size() == input_chunk_size) {
                     for (auto column_index = ColumnID{0}; column_index < column_count; ++column_index) {
                       output_segments.emplace_back(input_chunk->get_segment(column_index));
                     }
@@ -488,7 +553,7 @@ class Reduce : public AbstractReadOnlyOperator {
                   matches->guarantee_single_chunk();
 
                   const auto output_pos_list =
-                      matches->size() == input_chunk->size()
+                      matches->size() == input_chunk_size
                           ? static_cast<std::shared_ptr<AbstractPosList>>(
                                 std::make_shared<EntireChunkPosList>(chunk_index, input_chunk->size()))
                           : static_cast<std::shared_ptr<AbstractPosList>>(matches);
