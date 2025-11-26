@@ -324,7 +324,7 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
     }
     const auto expected_false_positive_rate = false_positive_rate_blocked(l2_size_bits, static_cast<double>(input_row_count), _k);
     if (expected_false_positive_rate > max_false_positive_rate) {
-      std::cout << "Expected FPR: " << expected_false_positive_rate;
+      std::cout << "Expected FPR: " << expected_false_positive_rate << std::endl;
     }
 
     // std::cout << "Selected exponent: " << static_cast<int>(_filter_size_exponent) << ", k: " << static_cast<int>(_k)
@@ -348,8 +348,11 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
       new_min_max_predicate = std::make_shared<MinMaxPredicate<DataType>>();
     }
 
-    const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
-    // std::cout << "Worker count: " << worker_count << "\n";
+    auto worker_count = uint32_t{1};
+    if (Hyrise::get().is_multi_threaded()) {
+      worker_count = static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+    }
+
     const auto chunk_count = input_table->chunk_count();
     const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
@@ -478,9 +481,10 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
       // TODO: Assert that diff is not too large?
     }
 
-    const auto worker_count = uint32_t{1};
-    // const auto worker_count = static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
-    // std::cout << "Worker count: " << worker_count << "\n";
+    auto worker_count = uint32_t{1};
+    if (Hyrise::get().is_multi_threaded()) {
+      worker_count = static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+    }
     const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -683,9 +687,10 @@ std::shared_ptr<const Table> Reduce::_execute_probe_and_build() {
       maximum = casted_min_max_predicate->max_value();
     }
 
-    const auto worker_count = uint32_t{1};  //static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
-    // const auto worker_count = static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
-    // std::cout << "Worker count: " << worker_count << "\n";
+    auto worker_count = uint32_t{1};
+    if (Hyrise::get().is_multi_threaded()) {
+      worker_count = static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+    }
     const auto chunks_per_worker = ChunkID{(static_cast<uint32_t>(chunk_count) + worker_count - 1) / worker_count};
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
