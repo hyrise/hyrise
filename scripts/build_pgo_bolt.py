@@ -154,7 +154,7 @@ def main():
         else:
             build(bolt_optimize=True, pgo_optimize=True)
     finally:
-        # cleanup()
+        cleanup()
         pass
 
 

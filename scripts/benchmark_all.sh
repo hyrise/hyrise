@@ -105,7 +105,7 @@ do
   fi
 
   # If there is a PGO profile, use it while building
-  if [ -f ../resources/pgo.profdata ]
+  if [ -f ../resources/libhyrise.profdata ]
   then
     cmake -DPGO_PROFILE=../resources/libhyrise.profdata ..
   else
