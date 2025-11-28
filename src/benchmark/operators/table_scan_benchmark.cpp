@@ -16,11 +16,10 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
-namespace hyrise {
-
+namespace {
+using namespace hyrise;                 // NOLINT(build/namespaces)
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-namespace {
 void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
                               ColumnID left_column_id, const PredicateCondition predicate_condition,
                               const AllParameterVariant& right_parameter) {
@@ -48,6 +47,8 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
 }
 
 }  // namespace
+
+namespace hyrise {
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
   _clear_cache();

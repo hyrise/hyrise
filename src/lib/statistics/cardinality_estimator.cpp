@@ -55,11 +55,8 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
-
 namespace {
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
@@ -67,23 +64,6 @@ constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1;
 constexpr auto PLACEHOLDER_SELECTIVITY_MEDIUM = 0.5;
 constexpr auto PLACEHOLDER_SELECTIVITY_HIGH = 0.9;
 constexpr auto PLACEHOLDER_SELECTIVITY_ALL = 1.0;
-
-template <typename T>
-std::optional<Selectivity> estimate_null_value_ratio_of_column(const TableStatistics& table_statistics,
-                                                               const AttributeStatistics<T>& column_statistics) {
-  // If the column has an explicit null value ratio associated with it, we can just use that
-  if (column_statistics.null_value_ratio) {
-    return column_statistics.null_value_ratio->ratio;
-  }
-
-  // Otherwise derive the null value ratio from the total count of a histogram (which excludes NULLs) and the
-  // TableStatistics row count (which includes NULLs)
-  if (column_statistics.histogram && table_statistics.row_count != 0.0) {
-    return 1.0 - (column_statistics.histogram->total_count() / table_statistics.row_count);
-  }
-
-  return std::nullopt;
-}
 
 std::shared_ptr<TableStatistics> prune_column_statistics(
     const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids,
@@ -122,6 +102,10 @@ std::shared_ptr<TableStatistics> prune_column_statistics(
 }
 
 }  // namespace
+
+namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_type) : _data_type(init_data_type) {}
 

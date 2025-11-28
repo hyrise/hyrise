@@ -11,11 +11,9 @@
 // This header is needed for TableWrapper
 #include "operators/table_wrapper.hpp"  // IWYU pragma: keep
 
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
-
 namespace {
+using namespace hyrise;  // NOLINT(build/namespaces)
+
 void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
                                const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   auto warm_up = std::make_shared<Projection>(input, expressions);
@@ -28,6 +26,10 @@ void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<co
 }
 
 }  // namespace
+
+namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& state) {
   _clear_cache();

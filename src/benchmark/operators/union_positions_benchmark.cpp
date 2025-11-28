@@ -47,11 +47,7 @@ std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_c
 
   return pos_list;
 }
-}  // namespace
 
-namespace hyrise {
-
-namespace {
 std::shared_ptr<Table> create_reference_table(const std::shared_ptr<Table>& referenced_table, size_t num_rows,
                                               size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
@@ -117,12 +113,6 @@ void bm_union_positions(::benchmark::State& state) {
   }
 }
 
-}  // namespace
-
-BENCHMARK(bm_union_positions);
-
-namespace {
-
 /**
  * Measure what sorting and merging two pos lists would cost - that's the core of the UnionPositions implementation and sets
  * a performance base line for what UnionPositions could achieve in an overhead-free implementation.
@@ -149,6 +139,10 @@ void bm_union_positions_base_line(::benchmark::State& state) {
 }
 
 }  // namespace
+
+namespace hyrise {
+
+BENCHMARK(bm_union_positions);
 
 BENCHMARK(bm_union_positions_base_line);
 }  // namespace hyrise

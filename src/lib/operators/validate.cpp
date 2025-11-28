@@ -26,9 +26,9 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace hyrise {
-
 namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
                     const MvccData& mvcc_data) {
@@ -39,6 +39,8 @@ bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOff
 }
 
 }  // namespace
+
+namespace hyrise {
 
 bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
                               const CommitID begin_cid, const CommitID end_cid) {

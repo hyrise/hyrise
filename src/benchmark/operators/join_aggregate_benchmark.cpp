@@ -31,13 +31,6 @@ constexpr auto NUMBER_OF_CHUNKS_JOIN_AGGREGATE = size_t{1};
 // values are equal in the join columns
 constexpr auto SELECTIVITY = 0.2;
 
-}  // namespace
-
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
-
-namespace {
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
@@ -189,6 +182,10 @@ void bm_join_aggregate(benchmark::State& state) {
 }
 
 }  // namespace
+
+namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinSortMerge);
 BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinHash);

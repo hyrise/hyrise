@@ -20,9 +20,9 @@
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 
-namespace hyrise {
-
 namespace {
+using namespace hyrise;  // NOLINT(build/namespaces)
+
 std::shared_ptr<Table> generate_custom_table(const size_t row_count, const DataType data_type = DataType::Int,
                                              const float null_ratio = 0.0) {
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
@@ -103,6 +103,8 @@ void bm_sort_with_strings(benchmark::State& state) {
 }
 
 }  // namespace
+
+namespace hyrise {
 
 BENCHMARK(bm_sort)->RangeMultiplier(100)->Range(100, 1'000'000);
 BENCHMARK(bm_sort_two_columns)->RangeMultiplier(100)->Range(100, 1'000'000);

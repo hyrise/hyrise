@@ -14,9 +14,8 @@
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-using namespace hyrise;  // NOLINT(build/namespaces)
-
 namespace {
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::shared_ptr<Table> load_csv(const std::string& file_name) {
   return CsvParser::parse(

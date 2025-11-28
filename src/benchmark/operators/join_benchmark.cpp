@@ -34,10 +34,7 @@ void clear_cache() {
   }
   clear.resize(0);
 }
-}  // namespace
 
-namespace hyrise {
-namespace {
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
@@ -107,6 +104,8 @@ void bm_join_medium_and_medium(benchmark::State& state) {  // 100,000 x 100,000
 }
 
 }  // namespace
+
+namespace hyrise {
 
 BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinNestedLoop);
 

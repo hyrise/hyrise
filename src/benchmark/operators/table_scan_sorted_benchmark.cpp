@@ -31,11 +31,9 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
-
 namespace {
+using namespace hyrise;                 // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 constexpr auto ROWS = 1'000'000;
 constexpr auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
@@ -216,10 +214,6 @@ void bm_table_scan_sorted(
   }
 }
 
-}  // namespace
-
-namespace {
-
 void register_table_scan_sorted_benchmarks() {
   using EncodingAndSupportedDataTypes = std::pair<EncodingType, std::vector<std::string>>;
   const std::map<std::string, EncodingAndSupportedDataTypes> encoding_types{
@@ -285,5 +279,3 @@ class StartUp {
 const auto startup = StartUp{};
 
 }  // namespace
-
-}  // namespace hyrise
