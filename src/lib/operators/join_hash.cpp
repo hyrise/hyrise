@@ -500,17 +500,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     auto build_side_pos_lists = std::vector<RowIDPosList>{};
     auto probe_side_pos_lists = std::vector<RowIDPosList>{};
-    const size_t partition_count = radix_probe_column.size();
-    build_side_pos_lists.resize(partition_count);
-    probe_side_pos_lists.resize(partition_count);
-
-    // simple heuristic: half of the rows of the probe side will match
-    const size_t result_rows_per_partition =
-        _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
-    for (auto partition_index = size_t{0}; partition_index < partition_count; ++partition_index) {
-      build_side_pos_lists[partition_index].reserve(result_rows_per_partition);
-      probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
-    }
 
     auto timer_probing = Timer{};
     switch (_mode) {
@@ -531,18 +520,21 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
                                                                      probe_side_pos_lists, *_build_input_table,
                                                                      *_probe_input_table, _secondary_predicates);
+        build_side_pos_lists.resize(probe_side_pos_lists.size());
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates);
+        build_side_pos_lists.resize(probe_side_pos_lists.size());
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates);
+        build_side_pos_lists.resize(probe_side_pos_lists.size());
         break;
 
       default:
@@ -572,10 +564,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     // A hash join's input can be heavily pre-filtered or the join results in very few matches. To counteract this the
     // partitions can be merged (#2202).
     constexpr auto ALLOW_PARTITION_MERGE = true;
-    auto output_chunks =
-        write_output_chunks(build_side_pos_lists, probe_side_pos_lists, _build_input_table, _probe_input_table,
-                            create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
-                            _output_column_order, ALLOW_PARTITION_MERGE);
+    auto output_chunks = write_output_chunks<ALLOW_PARTITION_MERGE>(
+        build_side_pos_lists, probe_side_pos_lists, _build_input_table, _probe_input_table,
+        create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment, _output_column_order);
 
     _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
