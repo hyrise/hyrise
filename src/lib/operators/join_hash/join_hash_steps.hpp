@@ -698,21 +698,21 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 //           }
 
           // Variant C: Google Highway streaming copy
-          auto* const copy_from = reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data());
-          auto* const copy_to = reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx);
-          const auto tag = ScalableTag<uint8_t>{};
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wused-but-marked-unused"
-          for (auto i = size_t{0}; i <= TMP::bucket::BYTES_PER_STORE; i += Lanes(tag)) {
-            const auto vec = Load(tag, copy_from + i);
-            Stream(vec, tag, copy_to + i);
-          }
-#pragma clang diagnostic pop
+//           auto* const copy_from = reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data());
+//           auto* const copy_to = reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx);
+//           const auto tag = ScalableTag<uint8_t>{};
+// #pragma clang diagnostic push
+// #pragma clang diagnostic ignored "-Wused-but-marked-unused"
+//           for (auto i = size_t{0}; i <= TMP::bucket::BYTES_PER_STORE; i += Lanes(tag)) {
+//             const auto vec = Load(tag, copy_from + i);
+//             Stream(vec, tag, copy_to + i);
+//           }
+// #pragma clang diagnostic pop
 
           // Variant D: Memcpy has SIMD!
-          // const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
-          // const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data());
-          // std::memcpy(copy_to, copy_from, TMP::bucket::BYTES_PER_STORE);
+          const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
+          const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx);
+          std::memcpy(copy_to, copy_from, TMP::bucket::BYTES_PER_STORE);
 
           if constexpr (keep_null_values) {
             std::ranges::copy(tmp.null_values[radix], null_values_as_char[radix].begin() + output_idx);
