@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <iterator>
-#include <string>  // IWYU pragma: keep
 #include <vector>
 
 #include "fixed_string.hpp"
