@@ -16,6 +16,7 @@
 #include "types.hpp"
 
 namespace {
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 constexpr auto REFERENCED_TABLE_CHUNK_COUNT = hyrise::ChunkID{10};
 

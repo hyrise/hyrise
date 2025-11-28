@@ -22,6 +22,8 @@
 #include "types.hpp"
 
 namespace {
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 constexpr auto SEED = size_t{17};
 constexpr auto TABLE_SIZE = size_t{1'000};
