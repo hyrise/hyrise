@@ -58,6 +58,8 @@
  */
 
 // NOLINTBEGIN(readability-identifier-naming)
+// Most names end with an underscore, which is not the correct naming scheme. However, without the underscore, the
+// `and_` and `or_` functions overlap with keywords, so we are going to keep the names for now.
 namespace hyrise {
 
 class AbstractOperator;
