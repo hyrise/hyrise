@@ -708,7 +708,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   for (const auto* update_clause : *update.updates) {
     const auto column_name = std::string{update_clause->column};
-    const auto column_expression = translation_state.sql_identifier_resolver->resolve_identifier_relaxed(column_name);
+    const auto column_expression =
+        translation_state.sql_identifier_resolver->resolve_identifier_relaxed(SQLIdentifier(column_name));
     const auto column_id = selection_lqp->get_column_id(*column_expression);
 
     update_expressions[column_id] =
@@ -1091,8 +1092,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
     const auto* left_table_name = resolve_table_name(*join.left);
     const auto* right_table_name = resolve_table_name(*join.right);
 
-    AssertInput(left_expression, "Could not resolve '" + named_column + "' on '" + left_table_name + "'.");
-    AssertInput(right_expression, "Could not resolve '" + named_column + "' on '" + right_table_name + "'.");
+    AssertInput(left_expression, std::string{"Could not resolve '"} + named_column + "' on '" + left_table_name + "'.");
+    AssertInput(right_expression,
+                std::string{"Could not resolve '"} + named_column + "' on '" + right_table_name + "'.");
 
     // Left and right can resolve the named column. Set the join predicate.
     join_predicates[named_column_idx] = std::shared_ptr<AbstractExpression>(equals_(left_expression, right_expression));
@@ -1150,7 +1152,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
       const auto right_identifier = right_identifiers.back();
 
       const auto left_expression =
-          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
+          left_sql_identifier_resolver->resolve_identifier_relaxed(SQLIdentifier{right_identifier.column_name});
 
       if (left_expression) {
         // Two columns match, let's join on them.
@@ -1758,7 +1760,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
               column_definition.nullable = false;
               AssertInput(
                   !create_statement.columns->at(column_id)->column_constraints->contains(hsql::ConstraintType::Null),
-                  "PRIMARY KEY column " + constraint_column_name + " must not be nullable.");
+                  std::string{"PRIMARY KEY column "} + constraint_column_name + " must not be nullable.");
             }
             break;
           }
@@ -1782,7 +1784,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
@@ -1834,7 +1837,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   return prepared_plan->instantiate(parameters);
 }
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
   // Querying tables that are freshly loaded is not easy as we need meta information, such as column names and data
   // types, to resolve queries and build the query plans. For instance, we need an origin node for column expressions
@@ -1853,7 +1857,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
                           import_type_to_file_type(import_statement.type), encoding);
 }
 
-// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
+// While this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};

@@ -1,10 +1,16 @@
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_function_expression.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
@@ -16,6 +22,8 @@
 #include "types.hpp"
 
 namespace {
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 constexpr auto SEED = size_t{17};
 constexpr auto TABLE_SIZE = size_t{1'000};
@@ -24,12 +32,6 @@ constexpr auto NUMBER_OF_CHUNKS_JOIN_AGGREGATE = size_t{1};
 // The lower the selectivity, the higher the collision rate is and the more
 // values are equal in the join columns
 constexpr auto SELECTIVITY = 0.2;
-
-}  // namespace
-
-namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
 
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
@@ -44,7 +46,7 @@ pmr_vector<int32_t> generate_ids(const size_t table_size) {
     values[row_index] = dist(random_engine);
   }
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   return values;
 }
@@ -85,7 +87,7 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
     values[row_index] = dist(random_engine);
   }
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   return values;
 }
@@ -101,7 +103,7 @@ std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<in
 
   auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
 
-  for (auto chunk_index = size_t{0}; chunk_index < NUMBER_OF_CHUNKS_JOIN_AGGREGATE; ++chunk_index) {
+  for (auto chunk_index = ptrdiff_t{0}; std::cmp_less(chunk_index, NUMBER_OF_CHUNKS_JOIN_AGGREGATE); ++chunk_index) {
     const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
         ids_vector.begin() + (chunk_index * chunk_size), ids_vector.begin() + ((chunk_index + 1) * chunk_size)));
     const auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
@@ -148,7 +150,7 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
 }
 
 template <typename AggregateType, typename JoinType>
-void BM_Join_Aggregate(benchmark::State& state) {
+void bm_join_aggregate(benchmark::State& state) {
   auto table_wrapper_left = create_ages_table(TABLE_SIZE);
   table_wrapper_left->never_clear_output();
   table_wrapper_left->execute();
@@ -171,6 +173,7 @@ void BM_Join_Aggregate(benchmark::State& state) {
   auto warmup_aggregate = std::make_shared<AggregateType>(warmup_join, aggregates, groupby);
   warmup_aggregate->execute();
 
+  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto join =
         std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);
@@ -180,9 +183,15 @@ void BM_Join_Aggregate(benchmark::State& state) {
   }
 }
 
-BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinHash);
-BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinHash);
+}  // namespace
+
+namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
+
+BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateHash, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateHash, JoinHash);
 
 }  // namespace hyrise

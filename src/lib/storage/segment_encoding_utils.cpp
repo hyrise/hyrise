@@ -20,9 +20,9 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace hyrise {
-
 namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * @brief Mapping of encoding types to encoders
@@ -37,6 +37,8 @@ const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegment
     {EncodingType::LZ4, std::make_shared<LZ4Encoder>()}};
 
 }  // namespace
+
+namespace hyrise {
 
 std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   Assert(encoding_type != EncodingType::Unencoded, "Encoding type must not be Unencoded`.");

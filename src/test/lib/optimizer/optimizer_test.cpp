@@ -1,19 +1,28 @@
+#include <cstddef>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_set>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -236,7 +245,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    * This one is important. An LQP can contain the same Subquery multiple times (see the LQP constructed below).
    * We need make sure that each LQP is only optimized once and that all SubqueryExpressions point to the same LQP after
    * optimization.
-   * 
+   *
    * This is not just "nice to have". If we do not do this properly and multiple SubqueryExpressions point to the same LQP
    * then we would potentially break all the other SubqueryExpressions while moving nodes around when optimizing a single
    * one of them.
@@ -394,7 +403,7 @@ TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {
   }
 
   // Unempty `join_graph_statistics_cache`.
-  auto& estimation_cache = cardinality_estimator->cardinality_estimation_cache;
+  auto& estimation_cache = cardinality_estimator->_cardinality_estimation_cache;
   auto vertex_indices = JoinGraphStatisticsCache::VertexIndexMap{};
   auto predicate_indices = JoinGraphStatisticsCache::PredicateIndexMap{};
   estimation_cache.join_graph_statistics_cache.emplace(std::move(vertex_indices), std::move(predicate_indices));

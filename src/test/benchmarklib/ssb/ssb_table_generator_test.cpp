@@ -1,3 +1,9 @@
+#include <cmath>
+#include <cstdint>
+#include <filesystem>
+#include <map>
+#include <string>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "ssb/ssb_table_generator.hpp"
@@ -12,7 +18,7 @@ class SSBTableGeneratorTest : public BaseTest {
 
 TEST_F(SSBTableGeneratorTest, GenerateAndStoreRowCounts) {
   /**
-   * Check whether all SSB tables are created by the SSBTableGenerator and added to the StorageManager. Then, check 
+   * Check whether all SSB tables are created by the SSBTableGenerator and added to the StorageManager. Then, check
    * whether the row count is correct for all tables.
    */
   const auto scale_factor = 1.0f;

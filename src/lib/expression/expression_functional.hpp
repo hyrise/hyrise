@@ -57,6 +57,9 @@
  * ...and I think that's beautiful.
  */
 
+// NOLINTBEGIN(readability-identifier-naming)
+// Most names end with an underscore, which is not the correct naming scheme. However, without the underscore, the
+// `and_` and `or_` functions overlap with keywords, so we are going to keep the names for now.
 namespace hyrise {
 
 class AbstractOperator;
@@ -186,6 +189,7 @@ inline const detail::ternary<PredicateCondition::BetweenExclusive, BetweenExpres
 
 template <typename... Args>
 std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                     // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
                                                      Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
@@ -203,6 +207,7 @@ std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<Abstr
 template <typename... Args>
 std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<AbstractOperator>& pqp,
                                                      const DataType data_type, const bool nullable,
+                                                     // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
                                                      Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
@@ -217,13 +222,14 @@ std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<Abstr
 }
 
 template <typename... Args>
+// NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
 std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... args) {
   return std::vector<std::shared_ptr<AbstractExpression>>({to_expression(args)...});
 }
 
 template <typename A, typename B, typename C>
-std::shared_ptr<CaseExpression> case_(const A& a, const B& b, const C& c) {
-  return std::make_shared<CaseExpression>(to_expression(a), to_expression(b), to_expression(c));
+std::shared_ptr<CaseExpression> case_(const A& when, const B& then, const C& otherwise) {
+  return std::make_shared<CaseExpression>(to_expression(when), to_expression(then), to_expression(otherwise));
 }
 
 template <typename String, typename Start, typename Length>
@@ -233,13 +239,13 @@ std::shared_ptr<FunctionExpression> substr_(const String& string, const Start& s
 }
 
 template <typename... Args>
-std::shared_ptr<FunctionExpression> concat_(const Args... args) {
+std::shared_ptr<FunctionExpression> concat_(const Args&... args) {
   return std::make_shared<FunctionExpression>(FunctionType::Concatenate, expression_vector(to_expression(args)...));
 }
 
 template <typename V>
-std::shared_ptr<FunctionExpression> abs_(const V& v) {
-  return std::make_shared<FunctionExpression>(FunctionType::Absolute, expression_vector(to_expression(v)));
+std::shared_ptr<FunctionExpression> abs_(const V& value) {
+  return std::make_shared<FunctionExpression>(FunctionType::Absolute, expression_vector(to_expression(value)));
 }
 
 template <typename... Args>
@@ -248,13 +254,13 @@ std::shared_ptr<ListExpression> list_(Args&&... args) {
 }
 
 template <typename V, typename S>
-std::shared_ptr<InExpression> in_(const V& v, const S& s) {
-  return std::make_shared<InExpression>(PredicateCondition::In, to_expression(v), to_expression(s));
+std::shared_ptr<InExpression> in_(const V& value, const S& set) {
+  return std::make_shared<InExpression>(PredicateCondition::In, to_expression(value), to_expression(set));
 }
 
 template <typename V, typename S>
-std::shared_ptr<InExpression> not_in_(const V& v, const S& s) {
-  return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(v), to_expression(s));
+std::shared_ptr<InExpression> not_in_(const V& value, const S& set) {
+  return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(value), to_expression(set));
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& subquery_expression);
@@ -298,3 +304,5 @@ std::shared_ptr<WindowExpression> window_(std::vector<std::shared_ptr<AbstractEx
 }  // namespace expression_functional
 
 }  // namespace hyrise
+
+// NOLINTEND(readability-identifier-naming)

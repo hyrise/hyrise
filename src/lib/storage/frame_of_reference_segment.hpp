@@ -25,7 +25,7 @@ class BaseCompressedVector;
  *
  * FOR encoding on its own without vector compression does not add any benefit.
  *
- * Null values are stored in a separate vector. Note, for correct offset handling, the minimum of each frame is stored 
+ * Null values are stored in a separate vector. Note, for correct offset handling, the minimum of each frame is stored
  * in the offset_values vector at each position that is NULL.
  *
  * std::enable_if_t must be used here and cannot be replaced by a static_assert in order to prevent instantiation of
@@ -46,7 +46,7 @@ class FrameOfReferenceSegment : public AbstractEncodedSegment {
    * data’s properties. Determining the optimal size
    * is however not trivial.
    */
-  static constexpr auto block_size = 2048u;
+  static constexpr auto BLOCK_SIZE = size_t{2048};
 
   explicit FrameOfReferenceSegment(pmr_vector<T> block_minima, std::optional<pmr_vector<bool>> null_values,
                                    std::unique_ptr<const BaseCompressedVector> offset_values);
@@ -67,7 +67,7 @@ class FrameOfReferenceSegment : public AbstractEncodedSegment {
     if (_null_values && (*_null_values)[chunk_offset]) {
       return std::nullopt;
     }
-    const auto minimum = _block_minima[chunk_offset / block_size];
+    const auto minimum = _block_minima[chunk_offset / BLOCK_SIZE];
     const auto value = static_cast<T>(_decompressor->get(chunk_offset)) + minimum;
     return value;
   }

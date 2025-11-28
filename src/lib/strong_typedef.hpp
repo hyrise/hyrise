@@ -17,7 +17,7 @@
  *  - constexpr constructor
  *  - std::hash specialization
  */
-
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,bugprone-macro-parentheses)
 #define STRONG_TYPEDEF(T, D)                                                                              \
   namespace hyrise {                                                                                      \
   struct D : boost::totally_ordered1<D> {                                                                 \
@@ -77,3 +77,4 @@
   }                                                                                                       \
   } /* NOLINT */                                                                                          \
   static_assert(true, "End call of macro with a semicolon")
+// NOLINTEND(cppcoreguidelines-macro-usage,bugprone-macro-parentheses)

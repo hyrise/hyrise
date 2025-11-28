@@ -18,7 +18,7 @@ namespace hyrise {
 class Chunk;
 class Table;
 
-enum class TPCHTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
+enum class TPCHTable : uint8_t { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
 
 extern const std::unordered_map<TPCHTable, std::string> tpch_table_names;
 
@@ -28,7 +28,7 @@ extern const std::unordered_map<TPCHTable, std::string> tpch_table_names;
  *
  * NOT thread safe because the underlying tpch-dbgen is not (since it has global data and malloc races).
  */
-class TPCHTableGenerator : virtual public AbstractTableGenerator {
+class TPCHTableGenerator : public AbstractTableGenerator {
  public:
   // Convenience constructor for creating a TPCHTableGenerator without a benchmarking context
   explicit TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,

@@ -114,7 +114,7 @@ void segment_iterate_filtered(const AbstractSegment& abstract_segment,
 template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
           typename Functor>
 void segment_iterate(const AbstractSegment& abstract_segment, const Functor& functor) {
-  segment_with_iterators<T, erase_iterator_types>(abstract_segment, [&](auto it, const auto end) {
+  segment_with_iterators<T, erase_iterator_types>(abstract_segment, [&](auto it, const auto& end) {
     while (it != end) {
       functor(*it);
       ++it;

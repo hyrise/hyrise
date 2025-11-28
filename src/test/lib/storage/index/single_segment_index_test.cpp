@@ -1,16 +1,21 @@
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <set>
-#include <string>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/chunk_index_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 // In this domain input modeling is explicitly used.

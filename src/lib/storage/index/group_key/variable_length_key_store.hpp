@@ -100,11 +100,10 @@ class VariableLengthKeyStore {
   const_iterator cend() const;
 
  private:
-  CompositeKeyLength _bytes_per_key;
-  CompositeKeyLength _key_alignment;
+  CompositeKeyLength _bytes_per_key{};
+  CompositeKeyLength _key_alignment{};
   std::vector<VariableLengthKeyWord> _data;
 
- private:
   /**
    * Implementation for iterator and const_iterator using boost::iterator_facade. The template is used in order to
    * reduce
@@ -124,7 +123,8 @@ class VariableLengthKeyStore {
      * This is required since a mutable constructor can be used every time when a const iterator is expected.
      */
     template <typename OtherProxy, typename = std::enable_if_t<std::is_convertible_v<OtherProxy, Proxy>>>
-    IteratorBase(const IteratorBase<OtherProxy>& other)  // NOLINT(runtime/explicit)
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    IteratorBase(const IteratorBase<OtherProxy>& other)
         : _bytes_per_key(other._bytes_per_key), _key_alignment(other._key_alignment), _data(other._data) {}
 
    private:
@@ -135,6 +135,7 @@ class VariableLengthKeyStore {
                           VariableLengthKeyWord* data)
         : _bytes_per_key(bytes_per_key), _key_alignment(key_alignment), _data(data) {}
 
+    // NOLINTBEGIN(readability-identifier-naming)
     void increment() {
       _data += _key_alignment;
     }
@@ -143,8 +144,8 @@ class VariableLengthKeyStore {
       _data -= _key_alignment;
     }
 
-    void advance(size_t n) {
-      _data += n * _key_alignment;
+    void advance(size_t distance) {
+      _data += distance * _key_alignment;
     }
 
     Proxy dereference() const {
@@ -167,10 +168,11 @@ class VariableLengthKeyStore {
       return (other._data - _data) / _key_alignment;
     }
 
-   private:
-    CompositeKeyLength _bytes_per_key;
-    CompositeKeyLength _key_alignment;
-    VariableLengthKeyWord* _data;
+    // NOLINTEND(readability-identifier-naming)
+
+    CompositeKeyLength _bytes_per_key{};
+    CompositeKeyLength _key_alignment{};
+    VariableLengthKeyWord* _data{};
   };
 };
 

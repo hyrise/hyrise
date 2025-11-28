@@ -4,11 +4,15 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
+#include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "types.hpp"
 
 namespace hyrise {
+
+template <typename Derived, typename Value, typename PosListIteratorType>
+class AbstractPointAccessSegmentIterator;
 
 /**
  * @brief base class of all iterators used by iterables
@@ -41,7 +45,12 @@ namespace hyrise {
  */
 template <typename Derived, typename Value>
 class AbstractSegmentIterator
-    : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {};
+    : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {
+  AbstractSegmentIterator() = default;
+  friend Derived;
+  template <typename D, typename V, typename I>
+  friend class AbstractPointAccessSegmentIterator;
+};
 
 /**
  * Mapping between chunk offset into a reference segment and
@@ -70,7 +79,7 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
-  const ChunkOffsetMapping chunk_offsets() const {
+  ChunkOffsetMapping _chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
     return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin), _position_filter_it->chunk_offset};
@@ -79,6 +88,7 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
+  // NOLINTBEGIN(readability-identifier-naming)
   void increment() {
     ++_position_filter_it;
   }
@@ -87,8 +97,8 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
     --_position_filter_it;
   }
 
-  void advance(std::ptrdiff_t n) {
-    _position_filter_it += n;
+  void advance(std::ptrdiff_t distance) {
+    _position_filter_it += distance;
   }
 
   bool equal(const AbstractPointAccessSegmentIterator& other) const {
@@ -99,7 +109,8 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
     return other._position_filter_it - _position_filter_it;
   }
 
- private:
+  // NOLINTEND(readability-identifier-naming)
+
   PosListIteratorType _position_filter_begin;
   PosListIteratorType _position_filter_it;
 };

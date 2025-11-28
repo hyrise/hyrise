@@ -8,7 +8,7 @@
 
 namespace hyrise {
 
-enum class ExistsExpressionType { Exists, NotExists };
+enum class ExistsExpressionType : uint8_t { Exists, NotExists };
 
 /**
  * SQL's EXISTS()

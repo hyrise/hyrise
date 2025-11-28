@@ -1,21 +1,28 @@
+#include <cstdint>
+#include <initializer_list>
 #include <memory>
+#include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "base_test.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
-#include "operators/abstract_read_only_operator.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
-#include "operators/print.hpp"
-#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

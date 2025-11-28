@@ -95,12 +95,12 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
-  Assert(
-      supports({_mode, _primary_predicate.predicate_condition,
-                left_input_table()->column_data_type(_primary_predicate.column_ids.first),
-                right_input_table()->column_data_type(_primary_predicate.column_ids.second),
-                !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type(), _index_side}),
-      "JoinIndex does not support these parameters.");
+  Assert(supports(JoinConfiguration(_mode, _primary_predicate.predicate_condition,
+                                    left_input_table()->column_data_type(_primary_predicate.column_ids.first),
+                                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
+                                    !_secondary_predicates.empty(), left_input_table()->type(),
+                                    right_input_table()->type(), _index_side)),
+         "JoinIndex does not support these parameters.");
 
   if (_index_side == IndexSide::Left) {
     _probe_input_table = right_input_table();
@@ -304,17 +304,10 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-    const auto params =
-        JoinNestedLoop::JoinParams{.pos_list_left = *_probe_pos_list,
-                                   .pos_list_right = *_index_pos_list,
-                                   .left_matches = _probe_matches[probe_chunk_id],
-                                   .right_matches = _index_matches[index_chunk_id],
-                                   .track_left_matches = track_probe_matches,
-                                   .track_right_matches = track_index_matches,
-                                   .mode = _mode,
-                                   .predicate_condition = _adjusted_primary_predicate.predicate_condition,
-                                   .secondary_predicate_evaluator = secondary_predicate_evaluator,
-                                   .write_pos_lists = !is_semi_or_anti_join};
+    const auto params = JoinNestedLoop::JoinParams(
+        *_probe_pos_list, *_index_pos_list, _probe_matches[probe_chunk_id], _index_matches[index_chunk_id],
+        track_probe_matches, track_index_matches, _mode, _adjusted_primary_predicate.predicate_condition,
+        secondary_predicate_evaluator, !is_semi_or_anti_join);
     JoinNestedLoop::_join_two_untyped_segments(*probe_segment, *index_segment, probe_chunk_id, index_chunk_id, params);
   }
   const auto& index_pos_list_size_post_fallback = _index_pos_list->size();
@@ -326,7 +319,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
 // join loop that joins two segments of two columns using an iterator for the probe side,
 // and an index for the index side
 template <typename ProbeIterator>
-void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
+void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, const ProbeIterator& probe_end,
                                                     const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
                                                     const std::shared_ptr<AbstractChunkIndex>& index) {
   for (; probe_iter != probe_end; ++probe_iter) {
@@ -340,8 +333,8 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
 
 template <typename ProbeIterator>
 void JoinIndex::_reference_join_two_segments_using_index(
-    ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-    const std::shared_ptr<AbstractChunkIndex>& index,
+    ProbeIterator probe_iter, const ProbeIterator& probe_end, const ChunkID probe_chunk_id,
+    const ChunkID index_chunk_id, const std::shared_ptr<AbstractChunkIndex>& index,
     const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
     auto index_scan_pos_list = RowIDPosList{};
@@ -368,7 +361,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
 }
 
 template <typename SegmentPosition>
-std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
+std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition& probe_side_position,
                                                            const std::shared_ptr<AbstractChunkIndex>& index) const {
   auto index_ranges = std::vector<IndexRange>{};
   index_ranges.reserve(2);

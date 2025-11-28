@@ -1,4 +1,7 @@
+#include <optional>
+
 #include "base_test.hpp"
+#include "cache/gdfs_cache.hpp"
 
 namespace hyrise {
 

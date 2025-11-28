@@ -11,6 +11,9 @@
 
 namespace hyrise {
 
+template <typename Derived>
+class PointAccessibleSegmentIterable;
+
 /**
  * @brief base class of all segment iterables
  *
@@ -132,6 +135,10 @@ class SegmentIterable {
   const Derived& _self() const {
     return static_cast<const Derived&>(*this);
   }
+
+  SegmentIterable() = default;
+  friend Derived;
+  friend PointAccessibleSegmentIterable<Derived>;
 };
 
 /**
@@ -196,9 +203,13 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   const Derived& _self() const {
     return static_cast<const Derived&>(*this);
   }
+
+  PointAccessibleSegmentIterable() = default;
+  friend Derived;
 };
 
 template <typename T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 constexpr auto is_point_accessible_segment_iterable_v =
     std::is_base_of_v<PointAccessibleSegmentIterable<std::decay_t<T>>, T>;
 

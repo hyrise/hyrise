@@ -208,7 +208,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
 
 // clang-tidy wants this to be const. Technically, it could be, but as this node will be modified via set_input, it is
 // syntactically incorrect.
-void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {  // NOLINT
+// NOLINTNEXTLINE(readability-make-member-function-const)
+void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {
   const auto input_side = get_input_side(output);
   // set_input() will untie the nodes
   output->set_input(input_side, nullptr);
@@ -561,7 +562,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   stream << "-------- Subqueries ---------\n";
 
   for (const auto& lqp : lqps) {
-    stream << lqp.get() << ": \n";
+    stream << lqp.get() << ":\n";
     output_lqp_to_stream(*lqp);
     stream << '\n';
   }

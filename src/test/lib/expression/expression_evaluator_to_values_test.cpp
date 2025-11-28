@@ -1,27 +1,30 @@
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/expression_result.hpp"
-#include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/extract_expression.hpp"
-#include "expression/function_expression.hpp"
-#include "expression/in_expression.hpp"
-#include "expression/list_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_subquery_expression.hpp"
-#include "expression/value_expression.hpp"
-#include "operators/get_table.hpp"
+#include "null_value.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -182,11 +185,13 @@ TEST_F(ExpressionEvaluatorToValuesTest, TernaryOrLiterals) {
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, TernaryOrSeries) {
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   EXPECT_TRUE(test_expression<int32_t>(table_bools, *or_(bool_a, bool_b), {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_bools, *or_(bool_a, bool_c), {0, 1, std::nullopt, 0, 1, std::nullopt, 1, 1, 1, 1, 1, 1}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_bools, *or_(bool_a, bool_c), {0, 1, std::nullopt, 0, 1, std::nullopt, 1, 1, 1, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *or_(less_than_(1, empty_a), less_than_(1, empty_a)), {}));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, TernaryAndLiterals) {
@@ -202,11 +207,13 @@ TEST_F(ExpressionEvaluatorToValuesTest, TernaryAndLiterals) {
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, TernaryAndSeries) {
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   EXPECT_TRUE(test_expression<int32_t>(table_bools, *and_(bool_a, bool_b), {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_bools, *and_(bool_a, bool_c), {0, 0, 0, 0, 0, 0, 0, 1, std::nullopt, 0, 1, std::nullopt}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_bools, *and_(bool_a, bool_c), {0, 0, 0, 0, 0, 0, 0, 1, std::nullopt, 0, 1, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *and_(less_than_(1, empty_a), less_than_(1, empty_a)), {}));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ValueLiterals) {
@@ -235,15 +242,17 @@ TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsLiterals) {
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsSeries) {
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mul_(a, b), {2, 6, 12, 20}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mod_(b, a), {0, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mod_(a, c), {1, std::nullopt, 3, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(a, add_(b, c)), {36, std::nullopt, 41, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(a, NullValue{}), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(a, add_(b, NullValue{})), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(a, NullValue{}), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(a, add_(b, NullValue{})), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *add_(empty_a, empty_b), {}));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExpressionReuse) {
@@ -336,6 +345,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, PredicatesSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *less_than_equals_(b, mul_(a, 2)), {1, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *less_than_equals_(c, f), {1, std::nullopt, 0, std::nullopt}));
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_inclusive_(b, a, c), {1, std::nullopt, 1, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_inclusive_(e, a, f), {1, 0, 0, 0}));
@@ -344,8 +354,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, PredicatesSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_inclusive_(b, d, c), {1, 0, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_inclusive_(b, a, d), {1, 1, 1, 1}));
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *between_lower_exclusive_(b, a, c), {1, std::nullopt, 1, std::nullopt}));  // NOLINT
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *between_lower_exclusive_(b, add_(a, 1), c), {0, 0, 0, 0}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *between_lower_exclusive_(b, a, c), {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *between_lower_exclusive_(b, add_(a, 1), c), {0, 0, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_lower_exclusive_(a, a, b), {0, 0, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_lower_exclusive_(a, sub_(a, 1), b), {1, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_lower_exclusive_(2, a, b), {1, 0, 0, 0}));
@@ -359,6 +369,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, PredicatesSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_exclusive_(a, a, b), {0, 0, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *between_exclusive_(add_(a, 0.5f), a, b), {1, 1, 1, 1}));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, CaseLiterals) {
@@ -374,15 +385,17 @@ TEST_F(ExpressionEvaluatorToValuesTest, CaseLiterals) {
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, CaseSeries) {
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(greater_than_(c, a), b, 1337), {2, 1337, 4, 1337}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(greater_than_(c, 0), NullValue{}, c), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(1, c, a), {33, std::nullopt, 34, std::nullopt}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(greater_than_(c, 0), NullValue{}, c), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(1, c, a), {33, std::nullopt, 34, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(greater_than_(empty_a, 3), 1, 2), {}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(1, empty_a, empty_a), {}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(greater_than_(empty_a, 3), empty_a, empty_a), {}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(equals_(add_(NullValue{}, 1), 0), 1, 2), {2}));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, IsNullLiteral) {

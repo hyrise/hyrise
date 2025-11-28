@@ -1,9 +1,18 @@
+#include <algorithm>
+#include <cctype>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "meta_tables/meta_mock_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
