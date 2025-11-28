@@ -698,13 +698,16 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 //           }
 
           // Variant C: Google Highway streaming copy
-          const auto copy_from = reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data());
-          const auto copy_to = reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx));
+          auto* const copy_from = reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data());
+          auto* const copy_to = reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx);
           const auto tag = ScalableTag<uint8_t>{};
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wused-but-marked-unused"
           for (auto i = size_t{0}; i <= TMP::bucket::BYTES_PER_STORE; i += Lanes(tag)) {
-            const auto vec = Load(tag, in_ptr + i);
-            Stream(vec, tag, out_ptr + i);
+            const auto vec = Load(tag, copy_from + i);
+            Stream(vec, tag, copy_to + i);
           }
+#pragma clang diagnostic pop
 
           // Variant D: Memcpy has SIMD!
           // const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
