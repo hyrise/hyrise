@@ -19,7 +19,6 @@
 
 #include "uninitialized_vector.hpp"
 
-#include "hwy/highway.h"
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -37,10 +36,7 @@
   (e.g., build() and probe()). These free functions are put into this header file to separate
   them from the process flow of the join hash and to make them better testable.
 */
-HWY_BEFORE_NAMESPACE();
-
 namespace hyrise {
-using namespace hwy::HWY_NAMESPACE;
 
 // For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
@@ -1092,5 +1088,3 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 }
 
 }  // namespace hyrise
-
-HWY_AFTER_NAMESPACE();

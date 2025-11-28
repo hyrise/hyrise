@@ -14,7 +14,6 @@ set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building i
 add_subdirectory(benchmark)
 add_subdirectory(googletest)
 set(HWY_ENABLE_TESTS OFF CACHE BOOL "" FORCE) # There are some issues with having a separate gtest subdir and some issues with google benchmark.
-add_subdirectory(highway)
 add_subdirectory(libpqxx)
 add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
