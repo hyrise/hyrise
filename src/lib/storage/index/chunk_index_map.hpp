@@ -1,3 +1,5 @@
+#pragma once
+
 #include <utility>
 
 #include <boost/hana/at_key.hpp>

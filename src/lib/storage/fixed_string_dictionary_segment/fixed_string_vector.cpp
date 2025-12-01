@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <iterator>
 #include <vector>
+// Is not marked as required when we use pmr_string
+#include <string>  // IWYU pragma: keep
 
 #include "fixed_string.hpp"
 #include "fixed_string_vector_iterator.hpp"

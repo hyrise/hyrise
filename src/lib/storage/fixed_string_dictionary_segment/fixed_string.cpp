@@ -9,6 +9,8 @@
 #include <iterator>
 #include <string>
 #include <string_view>
+// cpplint wants utility when we overwrite std::swap
+#include <utility>  // IWYU pragma: keep
 
 #include "utils/assert.hpp"
 
