@@ -9,6 +9,7 @@
 #include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
 #include "testing_assert.hpp"
+// This header is needed, as porting.h requires a type HUGE_TYPE, which it does not include itself.
 #include "tpcds-kit/tools/config.h"  // IWYU pragma: keep
 #include "tpcds-kit/tools/porting.h"
 #include "tpcds/tpcds_table_generator.hpp"

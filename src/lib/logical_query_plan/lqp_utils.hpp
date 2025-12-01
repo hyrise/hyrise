@@ -4,11 +4,11 @@
 #include <queue>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
@@ -16,7 +16,6 @@
 namespace hyrise {
 
 class AbstractExpression;
-class LQPSubqueryExpression;
 
 enum class LQPInputSide : uint8_t;
 
@@ -249,7 +248,7 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
 /**
  * @return A `const_iterator` that points to the UCC in the given set of @param unique_column_combinations matching
  *         the given set of @param expressions. A unique column combination matches if it covers a subset of @param
- *         expressions. If no such UCC exists, the end iterator is returned. We prefer genuine UCCs over 
+ *         expressions. If no such UCC exists, the end iterator is returned. We prefer genuine UCCs over
  *         non-genuine UCCs, and we do not guarantee to find a minimal UCC. This means that if a genuine UCC exists, it
  *         will be returned even if another (genuine or non-genuine) UCC exists that consists of fewer expressions.
  */

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <memory>
 
-#include "expression/lqp_subquery_expression.hpp"  // IWYU pragma: keep
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 

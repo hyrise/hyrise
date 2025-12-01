@@ -14,7 +14,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
-#include "storage/index/chunk_index_type.hpp"
+#include "storage/index/chunk_index_map.hpp"
 #include "storage/index/group_key/variable_length_key_base.hpp"
 #include "storage/index/group_key/variable_length_key_store.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
