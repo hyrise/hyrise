@@ -520,20 +520,21 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   return hash_tables;
 }
 
-// This is the cacheline size on our most commonly benchmarked hardware. Other systems will also run fine with this value.
+// This is the cacheline size on our commonly benchmarked hardware. Other systems will also run fine with this value.
 constexpr auto BYTES_PER_CACHELINE = size_t{64};
-// This is a tunable parameter
+// This is a tunable parameter. Increasing it causes more cache usage during radix partioning, but less TLB pressure.
 constexpr auto MIN_CACHELINES_PER_STORE = size_t{1};
 
 template <typename T>
   requires std::is_trivially_destructible_v<T>
 union TemporaryRadixBucket {
   static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
-  // We want the BYTES_PER_ELEMENT to be a divisor of the size of this container.
-  // If it is not a power of two, we have to extract the part that is
-  // not a power of 2 an use it as a factor. For all types in hyrise, this is either 1 or 3.
+  // We want the BYTES_PER_ELEMENT to be a divisor of the size of this container. If BYTES_PER_ELEMENT is not a power
+  // of two, we have to extract the part that is not a power of 2 an use it as a factor. For all types in hyrise, this
+  // is either 1 or 3.
   static constexpr auto CACHELINES_PER_STORE_FACTOR = BYTES_PER_ELEMENT >>
                                                       static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
+  // This is the next multiple of CACHELINES_PER_STORE_FACTOR that is at least MIN_CACHELINES_PER_STORE
   static constexpr auto CACHELINES_PER_STORE =
       ((MIN_CACHELINES_PER_STORE + CACHELINES_PER_STORE_FACTOR - 1) / CACHELINES_PER_STORE_FACTOR) *
       CACHELINES_PER_STORE_FACTOR;
@@ -554,9 +555,8 @@ template <typename T, bool keep_null_values>
 struct TemporaryRadixContainer {
   using bucket = TemporaryRadixBucket<T>;
   using allocator = boost::alignment::aligned_allocator<bucket, BYTES_PER_CACHELINE>;
-  static constexpr auto ELEMENTS_PER_STORE = bucket::ELEMENTS_PER_STORE;
   uninitialized_vector<bucket, allocator> data;
-  uninitialized_vector<std::array<char, ELEMENTS_PER_STORE>> null_values;
+  uninitialized_vector<std::array<char, bucket::ELEMENTS_PER_STORE>> null_values;
 
   explicit TemporaryRadixContainer(size_t output_partition_count) : data(output_partition_count) {
     if constexpr (keep_null_values) {
@@ -676,7 +676,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
             tmp.null_values[radix][tmp_idx] = input_partition.null_values[input_idx];
           }
 
-          if (tmp_idx + 1 < TMP::ELEMENTS_PER_STORE) {
+          if (tmp_idx + 1 < TMP::bucket::ELEMENTS_PER_STORE) {
             // We have not fully written this cache line, just continue with the next element.
             tmp.data[radix].with_indices.count = tmp_idx + 1;
             continue;
@@ -689,7 +689,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 //           const auto copy_from = tmp.data[radix].elements.data();
 //           const auto copy_to = output[radix].elements.data() + output_idx;
 // #pragma omp simd nontemporal(copy_to), aligned(copy_to, copy_from : BYTES_PER_CACHELINE)
-//           for (auto index = size_t{0}; index < TMP::ELEMENTS_PER_STORE; ++index) {
+//           for (auto index = size_t{0}; index < TMP::bucket::ELEMENTS_PER_STORE; ++index) {
 //             copy_to[index] = copy_from[index];
 //           }
 
@@ -721,7 +721,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           }
 
           tmp.data[radix].with_indices.count = 0;
-          tmp.data[radix].with_indices.output_idx = output_idx + TMP::ELEMENTS_PER_STORE;
+          tmp.data[radix].with_indices.output_idx = output_idx + TMP::bucket::ELEMENTS_PER_STORE;
         }
 
         for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
@@ -749,7 +749,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
       }
     } else {
-      // T is not trivially destructable, just do the partitioning manually.
+      // T is not trivially destructable, just do the partitioning without cache tricks.
       const auto perform_partition = [&, input_partition_idx, elements_count]() {
         for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
           const auto& element = elements[input_idx];
