@@ -706,15 +706,15 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 // #pragma clang diagnostic pop
 
           // Variant D: Memcpy has SIMD!
-          // const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
-          // const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx);
-          // std::memcpy(copy_to, copy_from, TMP::bucket::BYTES_PER_STORE);
+          const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
+          const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx);
+          std::memcpy(copy_to, copy_from, TMP::bucket::BYTES_PER_STORE);
 
           // Variant E: Clang vector types
-          using vec_t = uint8_t __attribute__((vector_size(TMP::bucket::BYTES_PER_STORE)));
-          auto* const copy_from = reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data()));
-          auto* const copy_to = reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data()) + output_idx);
-          __builtin_nontemporal_store(*copy_from, copy_to);
+          // using vec_t = uint8_t __attribute__((vector_size(TMP::bucket::BYTES_PER_STORE)));
+          // auto* const copy_from = reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data()));
+          // auto* const copy_to = reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data()) + output_idx);
+          // __builtin_nontemporal_store(*copy_from, copy_to);
 
           if constexpr (keep_null_values) {
             std::ranges::copy(tmp.null_values[radix], null_values_as_char[radix].begin() + output_idx);
