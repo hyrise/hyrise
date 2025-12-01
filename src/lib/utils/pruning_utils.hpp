@@ -8,8 +8,8 @@
 
 #include <boost/container_hash/hash.hpp>
 
-#include "types.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

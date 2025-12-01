@@ -6,4 +6,4 @@ namespace hyrise {
 
 enum class ChunkIndexType : uint8_t { GroupKey, CompositeGroupKey, AdaptiveRadixTree };
 
-} // namespace hyrise
+}  // namespace hyrise

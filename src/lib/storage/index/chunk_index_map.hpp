@@ -1,8 +1,7 @@
-#include <boost/hana/at_key.hpp>
-#include <boost/hana/map.hpp>
-
 #include <utility>
 
+#include <boost/hana/at_key.hpp>
+#include <boost/hana/map.hpp>
 
 #include "all_type_variant.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
