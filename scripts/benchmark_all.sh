@@ -107,9 +107,9 @@ do
   # If there is a PGO profile, use it while building
   if [ -f ../resources/libhyrise.profdata ]
   then
-    cmake -DPGO_PROFILE=../resources/libhyrise.profdata ..
+    cmake -DPGO_OPTIMIZE=../resources/libhyrise.profdata ..
   else
-    cmake -UPGO_PROFILE ..
+    cmake -UPGO_OPTIMIZE ..
   fi
 
   echo "Building $commit..."
