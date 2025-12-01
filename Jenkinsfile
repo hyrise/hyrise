@@ -138,27 +138,31 @@ try {
           parallel clangDebug: {
             stage("clang-debug") {
               // We build clang-debug using make to test make once (and clang-debug is the fastest build).
-              sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
           }, clang19Debug: {
             stage("clang-19-debug") {
-              sh "cd clang-19-debug && ninja all -j \$(( \$(nproc) / 4))"
+              sh "cd clang-19-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "./clang-19-debug/hyriseTest clang-19-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {
-              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-debug && ./hyriseTest"
             }
           }, gcc13Debug: {
             stage("gcc-13-debug") {
-              sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-13-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-13-debug && ./hyriseTest"
             }
           }, lint: {
             stage("Linting") {
               sh "scripts/lint.sh"
+            }
+          }, clangDebugTidy: {
+            stage("clang-debug:tidy") {
+              sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 3))"
             }
           }
 
@@ -224,15 +228,6 @@ try {
                 sh "cd clang-debug-unity-odr && ninja all -j 2"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugUnityODR")
-              }
-            }
-          }, clangDebugTidy: {
-            stage("clang-debug:tidy") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 5))"
-              } else {
-                Utils.markStageSkippedForConditional("clangDebugTidy")
               }
             }
           }, clangDebugDisablePrecompileHeaders: {
