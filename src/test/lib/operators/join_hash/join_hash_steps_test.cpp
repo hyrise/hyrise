@@ -45,6 +45,11 @@ class JoinHashStepsTest : public BaseTest {
         load_table("resources/test_data/tbl/int_equal_distribution.tbl", ChunkOffset{200}));
     _table_with_many_values->never_clear_output();
     _table_with_many_values->execute();
+
+    _table_with_many_values_and_null = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/int_with_nulls_large.tbl", ChunkOffset{200}));
+    _table_with_many_values_and_null->never_clear_output();
+    _table_with_many_values_and_null->execute();
   }
 
   void SetUp() override {}
@@ -63,7 +68,7 @@ class JoinHashStepsTest : public BaseTest {
   inline static auto _chunk_size_zero_one = ChunkOffset{10};
   inline static std::shared_ptr<Table> _table_zero_one;
   inline static std::shared_ptr<TableWrapper> _table_int_with_nulls, _table_with_nulls_and_zeros,
-      _table_with_many_values;
+      _table_with_many_values, _table_with_many_values_and_null;
   inline static std::shared_ptr<TableScan> _table_with_nulls_and_zeros_scanned;
 };
 
@@ -357,6 +362,46 @@ TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
     } else {
       EXPECT_EQ(radix_cluster_result[partition_id].elements.size(), 0);
     }
+  }
+}
+
+TEST_F(JoinHashStepsTest, PartitionLargerDatasetWithNullsCorrectly) {
+  const size_t radix_bit_count = 3;
+  std::vector<std::vector<size_t>> histograms;
+  BloomFilter bloom_filter;  // Ignored in this test
+
+  const auto materialized = materialize_input<int, int, true>(_table_with_many_values_and_null->get_output(),
+                                                              ColumnID{0}, histograms, radix_bit_count, bloom_filter);
+
+  const auto radix_cluster_result = partition_by_radix<int, int, true>(materialized, histograms, radix_bit_count);
+
+  // map[(radix_bits, value)] = count
+  auto expected_counts = std::map<std::pair<size_t, int>, size_t>{
+      {{1, 1}, 18}, {{1, 17}, 1}, {{2, 2}, 87}, {{3, 3}, 12}, {{4, 4}, 14},
+      {{4, 12}, 9}, {{5, 5}, 18}, {{5, 13}, 9}, {{6, 6}, 4},  {{7, 7}, 1},
+  };
+  auto null_count = size_t{27};
+
+  for (auto partition_id = size_t{0}; partition_id < radix_cluster_result.size(); ++partition_id) {
+    EXPECT_EQ(radix_cluster_result[partition_id].elements.size(),
+              radix_cluster_result[partition_id].null_values.size());
+    for (auto element_idx = size_t{0}; element_idx < radix_cluster_result[partition_id].elements.size();
+         ++element_idx) {
+      if (radix_cluster_result[partition_id].null_values[element_idx]) {
+        null_count--;
+        continue;
+      }
+
+      const auto value = radix_cluster_result[partition_id].elements[element_idx].value;
+      const auto key = std::make_pair(partition_id, value);
+      EXPECT_TRUE(expected_counts.contains(key));
+      expected_counts[key]--;
+    }
+  }
+
+  EXPECT_EQ(null_count, 0);
+  for (auto& [_, cnt] : expected_counts) {
+    EXPECT_EQ(cnt, 0);
   }
 }
 
