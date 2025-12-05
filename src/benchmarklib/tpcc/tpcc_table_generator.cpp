@@ -760,6 +760,65 @@ void TPCCTableGenerator::_add_constraints(
   primary_key_constraint(stock_table, {"S_W_ID", "S_I_ID"});
   foreign_key_constraint(stock_table, {"S_W_ID"}, warehouse_table, {"W_ID"});
   foreign_key_constraint(stock_table, {"S_I_ID"}, item_table, {"I_ID"});
+
+      
+  unique_constraint(history_table, {"H_DATA"});
+  unique_constraint(history_table, {"H_C_ID","H_C_D_ID"});
+  unique_constraint(history_table, {"H_C_ID","H_D_ID"});
+  unique_constraint(district_table, {"D_ID"});
+  unique_constraint(district_table, {"D_NAME"});
+  unique_constraint(district_table, {"D_STREET_1"});
+  unique_constraint(district_table, {"D_STREET_2"});
+  unique_constraint(district_table, {"D_CITY"});
+  unique_constraint(district_table, {"D_STATE"});
+  unique_constraint(district_table, {"D_ZIP"});
+  unique_constraint(district_table, {"D_TAX"});
+  unique_constraint(order_line_table, {"OL_DIST_INFO"});
+  unique_constraint(order_line_table, {"OL_O_ID","OL_D_ID","OL_NUMBER"});
+  unique_constraint(warehouse_table, {"W_ID"});
+  unique_constraint(warehouse_table, {"W_NAME"});
+  unique_constraint(warehouse_table, {"W_STREET_1"});
+  unique_constraint(warehouse_table, {"W_STREET_2"});
+  unique_constraint(warehouse_table, {"W_CITY"});
+  unique_constraint(warehouse_table, {"W_STATE"});
+  unique_constraint(warehouse_table, {"W_ZIP"});
+  unique_constraint(warehouse_table, {"W_TAX"});
+  unique_constraint(warehouse_table, {"W_YTD"});
+  unique_constraint(order_table, {"O_ID","O_D_ID"});
+  unique_constraint(order_table, {"O_D_ID","O_C_ID"});
+  unique_constraint(item_table, {"I_ID"});
+  unique_constraint(item_table, {"I_NAME"});
+  unique_constraint(item_table, {"I_DATA"});
+  unique_constraint(stock_table, {"S_I_ID"});
+  unique_constraint(stock_table, {"S_DIST_01"});
+  unique_constraint(stock_table, {"S_DIST_02"});
+  unique_constraint(stock_table, {"S_DIST_03"});
+  unique_constraint(stock_table, {"S_DIST_04"});
+  unique_constraint(stock_table, {"S_DIST_05"});
+  unique_constraint(stock_table, {"S_DIST_06"});
+  unique_constraint(stock_table, {"S_DIST_07"});
+  unique_constraint(stock_table, {"S_DIST_08"});
+  unique_constraint(stock_table, {"S_DIST_09"});
+  unique_constraint(stock_table, {"S_DIST_10"});
+  unique_constraint(stock_table, {"S_DATA"});
+  unique_constraint(new_order_table, {"NO_O_ID","NO_D_ID"});
+  unique_constraint(customer_table, {"C_FIRST"});
+  unique_constraint(customer_table, {"C_STREET_1"});
+  unique_constraint(customer_table, {"C_STREET_2"});
+  unique_constraint(customer_table, {"C_CITY"});
+  unique_constraint(customer_table, {"C_PHONE"});
+  unique_constraint(customer_table, {"C_DATA"});
+  unique_constraint(customer_table, {"C_ID","C_ZIP","C_DISCOUNT"});
+  unique_constraint(customer_table, {"C_ZIP","C_DISCOUNT","C_LAST"});
+  unique_constraint(customer_table, {"C_STATE","C_ZIP","C_DISCOUNT"});
+  unique_constraint(customer_table, {"C_ZIP","C_DISCOUNT","C_D_ID"});
+  unique_constraint(customer_table, {"C_ID","C_STATE","C_ZIP"});
+  unique_constraint(customer_table, {"C_STATE","C_ZIP","C_LAST"});
+  unique_constraint(customer_table, {"C_ID","C_STATE","C_DISCOUNT"});
+  unique_constraint(customer_table, {"C_ID","C_D_ID"});
+
+
+
 }
 
 thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT

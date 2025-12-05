@@ -146,7 +146,27 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
   // title - 1 PK, 1 FK.
   primary_key_constraint(title_table, {"id"});
   foreign_key_constraint(title_table, {"kind_id"}, kind_type_table, {"id"});
+
+  unique_constraint(link_type_table, {"link"});
+  unique_constraint(role_type_table, {"role"});
+  unique_constraint(name_table, {"md5sum"});
+  unique_constraint(name_table, {"name","imdb_index"});
+  unique_constraint(info_type_table, {"info"});
+  unique_constraint(keyword_table, {"keyword"});
+  unique_constraint(kind_type_table, {"kind"});
+  unique_constraint(company_type_table, {"kind"});
+  unique_constraint(company_name_table, {"md5sum"});
+  unique_constraint(company_name_table, {"name","country_code"});
+  unique_constraint(complete_cast_table, {"movie_id","subject_id"});
+  unique_constraint(movie_link_table, {"movie_id","linked_movie_id","link_type_id"});
+  unique_constraint(comp_cast_type_table, {"kind"});
+  unique_constraint(title_table, {"md5sum"});
+  unique_constraint(movie_info_idx_table, {"movie_id","info"});
+  unique_constraint(movie_info_idx_table, {"movie_id","info_type_id"});
+  unique_constraint(char_name_table, {"md5sum"});
 }
+
+
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Join Order Benchmark");
