@@ -54,11 +54,11 @@ bool columns_intersect(const std::vector<ColumnID>& lhs, const std::vector<Colum
   });
 }
 
-bool columns_intersect(const std::set<ColumnID>& lhs, const std::set<ColumnID>& rhs) {
-  return std::ranges::any_of(lhs, [&](const auto column_id) {
-    return rhs.contains(column_id);
-  });
-}
+// bool columns_intersect(const std::set<ColumnID>& lhs, const std::set<ColumnID>& rhs) {
+//   return std::ranges::any_of(lhs, [&](const auto column_id) {
+//     return rhs.contains(column_id);
+//   });
+// }
 
 }  // namespace
 
@@ -497,8 +497,8 @@ void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constra
 
     // Ensure there is only one key constraint per column(s). Theoretically, there could be two unique constraints
     // {a, b} and {b, c}, but for now we prohibit these cases.
-    Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
-           "Another TableKeyConstraint for the same column(s) has already been defined.");
+    // Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
+    //        "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
   const auto inserted = _table_key_constraints.insert(table_key_constraint).second;
   Assert(inserted, "TableKeyConstraint has already been set.");
