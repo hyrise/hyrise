@@ -570,7 +570,10 @@ struct TemporaryRadixContainer {
       __builtin_prefetch(ptr + (cacheline_idx * BYTES_PER_CACHELINE), 1 /* = write */, 3 /* = highest priority */);
     }
     if constexpr (keep_null_values) {
-      __builtin_prefetch(null_values.data() + partition_id, 1, 3);
+      const auto* const ptr = reinterpret_cast<char*>(null_values.data() + partition_id);
+      for (auto cacheline_idx = size_t{0}; cacheline_idx < (bucket::ELEMENTS_PER_STORE + 63) / 64; ++cacheline_idx) {
+        __builtin_prefetch(ptr + (cacheline_idx * BYTES_PER_CACHELINE), 1, 3);
+      }
     }
   }
 };
