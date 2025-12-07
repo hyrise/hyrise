@@ -578,7 +578,7 @@ struct TemporaryRadixContainer {
   }
 };
 
-template <typename T, typename HashedType, bool keep_null_values>
+template <typename T, typename HashedType, bool keep_null_values, char variant = 'D'>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
@@ -685,39 +685,33 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
             continue;
           }
 
-          // Variant A: Just regular copy
-          // std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
-
-          // Variant B: Copy with OpenMP Pragma
-//           const auto copy_from = tmp.data[radix].elements.data();
-//           const auto copy_to = output[radix].elements.data() + output_idx;
-// #pragma omp simd nontemporal(copy_to), aligned(copy_to, copy_from : BYTES_PER_CACHELINE)
-//           for (auto index = size_t{0}; index < TMP::bucket::ELEMENTS_PER_STORE; ++index) {
-//             copy_to[index] = copy_from[index];
-//           }
-
-          // Variant C: Google Highway streaming copy
-//           auto* const copy_from = reinterpret_cast<uint8_t*>(tmp.data[radix].elements.data());
-//           auto* const copy_to = reinterpret_cast<uint8_t*>(output[radix].elements.data() + output_idx);
-//           const auto tag = ScalableTag<uint8_t>{};
-// #pragma clang diagnostic push
-// #pragma clang diagnostic ignored "-Wused-but-marked-unused"
-//           for (auto i = size_t{0}; i <= TMP::bucket::BYTES_PER_STORE; i += Lanes(tag)) {
-//             const auto vec = Load(tag, copy_from + i);
-//             Stream(vec, tag, copy_to + i);
-//           }
-// #pragma clang diagnostic pop
-
-          // Variant D: Memcpy has SIMD!
-          const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
-          const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx);
-          std::memcpy(copy_to, copy_from, TMP::bucket::BYTES_PER_STORE);
-
-          // Variant E: Clang vector types
-          // using vec_t = uint8_t __attribute__((vector_size(TMP::bucket::BYTES_PER_STORE)));
-          // auto* const copy_from = reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data()));
-          // auto* const copy_to = reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data()) + output_idx);
-          // __builtin_nontemporal_store(*copy_from, copy_to);
+          if constexpr (variant == 'A') {
+            // Variant A: Just regular copy
+            std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
+          } else if constexpr (variant == 'B') {
+            // Variant B: Copy with OpenMP Pragma
+            const auto copy_from = tmp.data[radix].elements.data();
+            const auto copy_to = output[radix].elements.data() + output_idx;
+#pragma omp simd nontemporal(copy_to), aligned(copy_to, copy_from : BYTES_PER_CACHELINE)
+            for (auto index = size_t{0}; index < TMP::bucket::ELEMENTS_PER_STORE; ++index) {
+              copy_to[index] = copy_from[index];
+            }
+          } else if constexpr (variant == 'D') {
+            // Variant D: Memcpy has SIMD!
+            const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
+            const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx);
+            std::memcpy(copy_to, copy_from, TMP::bucket::BYTES_PER_STORE);
+          } else if constexpr (variant == 'E') {
+            // Variant E: Clang vector types
+            using vec_t = uint8_t __attribute__((vector_size(TMP::bucket::BYTES_PER_STORE)));
+            auto* const copy_from =
+                reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data()));
+            auto* const copy_to = reinterpret_cast<vec_t*>(
+                std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx));
+            __builtin_nontemporal_store(*copy_from, copy_to);
+          } else {
+            Fail("Unknown variant");
+          }
 
           if constexpr (keep_null_values) {
             std::ranges::copy(tmp.null_values[radix], null_values_as_char[radix].begin() + output_idx);
