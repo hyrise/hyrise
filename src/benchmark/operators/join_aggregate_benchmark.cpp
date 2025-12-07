@@ -11,7 +11,6 @@
 #include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
-#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"

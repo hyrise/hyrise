@@ -8,8 +8,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "operators/projection.hpp"
-// This header is needed for TableWrapper
-#include "operators/table_wrapper.hpp"  // IWYU pragma: keep
+#include "operators/table_wrapper.hpp"
 
 namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)

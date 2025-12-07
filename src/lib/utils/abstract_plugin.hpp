@@ -10,10 +10,9 @@
 
 #include "types.hpp"
 #include "utils/singleton.hpp"
+#include "abstract_benchmark_item_runner.hpp"
 
 namespace hyrise {
-
-class AbstractBenchmarkItemRunner;
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage,bugprone-macro-parentheses)
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid ugly mangled names. Use

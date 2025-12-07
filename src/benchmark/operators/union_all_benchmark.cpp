@@ -3,8 +3,7 @@
 #include "benchmark/benchmark.h"
 
 #include "micro_benchmark_basic_fixture.hpp"
-// This header is needed for the conversion from TableWrapper to AbstractOperator
-#include "operators/table_wrapper.hpp"  // IWYU pragma: keep
+#include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 
 namespace hyrise {

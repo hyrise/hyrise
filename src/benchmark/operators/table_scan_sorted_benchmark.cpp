@@ -18,7 +18,6 @@
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "micro_benchmark_basic_fixture.hpp"
 #include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"

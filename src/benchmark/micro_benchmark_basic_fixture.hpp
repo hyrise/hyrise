@@ -5,11 +5,10 @@
 #include "benchmark/benchmark.h"
 
 #include "micro_benchmark_utils.hpp"
+#include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
 namespace hyrise {
-
-class TableWrapper;
 
 // Defining the base fixture class
 class MicroBenchmarkBasicFixture : public benchmark::Fixture {

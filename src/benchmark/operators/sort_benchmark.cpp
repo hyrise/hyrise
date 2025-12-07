@@ -10,7 +10,6 @@
 #include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
-#include "micro_benchmark_basic_fixture.hpp"
 #include "micro_benchmark_utils.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"

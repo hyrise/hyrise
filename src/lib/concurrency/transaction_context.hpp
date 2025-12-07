@@ -5,12 +5,11 @@
 #include <memory>
 #include <vector>
 
+#include "concurrency/commit_context.hpp"
+#include "operators/abstract_read_write_operator.hpp"
 #include "types.hpp"
 
 namespace hyrise {
-
-class AbstractReadWriteOperator;
-class CommitContext;
 
 /**
  * @brief Overview of the different transaction phases
