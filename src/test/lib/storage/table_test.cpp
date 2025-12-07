@@ -289,7 +289,7 @@ TEST_F(StorageTableTest, StableChunks) {
 
   EXPECT_EQ(first_chunk, &chunks_vector[0]);
   // clang-format off
-  EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant {100});
+  EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant{100});
   // clang-format on
 }
 
