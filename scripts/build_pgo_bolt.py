@@ -39,12 +39,6 @@ parser.add_argument(
     default=False,
     help="Don't run benchmarks, just import the profile data from the resources folder.",
 )
-parser.add_argument(
-    "--first-pgo-then-bolt",
-    action=BooleanOptionalAction,
-    default=False,
-    help="First profile and build with pgo, then profile and build with bolt. Don't do both in one step.",
-)
 args = parser.parse_args()
 
 build_folder = getcwd()
@@ -152,14 +146,10 @@ def main():
         if args.import_profile:
             import_profile()
         else:
-            if args.first_pgo_then_bolt:
-                build(*benchmarks, pgo_instrument=True)
-                profile(pgo_instrumented=True)
-                build(*benchmarks, pgo_optimize=True, bolt_instrument=True)
-                profile(bolt_instrumented=True)
-            else:
-                build(*benchmarks, bolt_instrument=True, pgo_instrument=True)
-                profile(bolt_instrumented=True, pgo_instrumented=True)
+            build(*benchmarks, pgo_instrument=True)
+            profile(pgo_instrumented=True)
+            build(*benchmarks, pgo_optimize=True, bolt_instrument=True)
+            profile(bolt_instrumented=True)
 
         if args.export_profile:
             export_profile()
