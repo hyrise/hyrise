@@ -319,9 +319,9 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       if (bin_distinct_count == 0) {
         return {Cardinality{0}, DistinctCount{0}};
       }
-
-      const auto cardinality = Cardinality{bin_height(bin_id) / bin_distinct_count};
-      return {cardinality, std::min(bin_distinct_count, DistinctCount{1})};
+      const auto bin_height = this->bin_height(bin_id);
+      const auto cardinality = Cardinality{bin_height / bin_distinct_count};
+      return {std::min(bin_height, cardinality), std::min(bin_distinct_count, DistinctCount{1})};
     }
 
     case PredicateCondition::NotEquals:
@@ -531,6 +531,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         const auto new_height = bin_height(value_bin_id) - estimate.first;
         const auto new_distinct_count = distinct_count - estimate.second;
 
+        DebugAssert(new_height > 0, "New height after slicing must be greater than 0.");
         builder.add_bin(minimum, maximum, new_height, new_distinct_count);
       }
 
