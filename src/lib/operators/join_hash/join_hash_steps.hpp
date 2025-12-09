@@ -44,7 +44,7 @@ using Hash = size_t;
 
 // We have to access the value of DEFAULT_SIZE by .t here, because accessing it via operator T&() is not constexpr.
 // A smaller value implies more threads and smaller output chunks, which affects downstream processing.
-constexpr auto PROBE_SIZE_PER_CHUNK = Chunk::DEFAULT_SIZE.t * 4;
+constexpr auto PROBE_SIZE_PER_CHUNK = Chunk::DEFAULT_SIZE.t * 2;
 
 /*
 This is how elements of the input relations are saved after materialization.
