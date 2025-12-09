@@ -580,7 +580,7 @@ struct TemporaryRadixContainer {
 
 template <typename T, typename HashedType, bool keep_null_values, char variant = 'D'>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
-                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                     const std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   if (radix_container.empty()) {
     return radix_container;

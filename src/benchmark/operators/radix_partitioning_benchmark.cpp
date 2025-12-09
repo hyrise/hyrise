@@ -38,14 +38,13 @@ std::vector<std::vector<size_t>> compute_histogram(const RadixContainer<T>& cont
 
 template <char variant>
 void BM_Radix_Partitioning(benchmark::State& state) {
-  micro_benchmark_clear_cache();
   const auto num_elements = state.range(0);
   const auto radix_bits = state.range(1);
   const auto input = generate_container<uint32_t>(num_elements);
-  auto histogram = compute_histogram<uint32_t>(input, radix_bits);
-  const auto output = partition_by_radix<uint32_t, size_t, false, variant>(input, histogram, radix_bits);
-  benchmark::DoNotOptimize(output.data());
-  benchmark::ClobberMemory();
+  const auto histogram = compute_histogram<uint32_t>(input, radix_bits);
+  for (auto _ : state) {
+    partition_by_radix<uint32_t, size_t, false, variant>(input, histogram, radix_bits);
+  }
 }
 
 }  // namespace
