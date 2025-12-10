@@ -41,6 +41,7 @@
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -1850,7 +1851,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   }
 
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                          import_type_to_file_type(import_statement.type), encoding);
+                          import_type_to_file_type(import_statement.type), encoding,
+                          process_sql_csv_options(import_statement.csv_options));
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.
@@ -1874,7 +1876,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
     }
   }
 
-  return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type), lqp);
+  return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type),
+                          process_sql_csv_options(export_statement.csv_options), lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

@@ -12,6 +12,7 @@
 
 #include "all_type_variant.hpp"
 #include "import_export/binary/binary_writer.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_writer.hpp"
 #include "import_export/file_type.hpp"
 #include "operators/abstract_operator.hpp"
@@ -23,8 +24,11 @@
 namespace hyrise {
 
 Export::Export(const std::shared_ptr<const AbstractOperator>& input_operator, const std::string& filename,
-               const FileType& file_type)
-    : AbstractReadOnlyOperator(OperatorType::Export, input_operator), _filename(filename), _file_type(file_type) {
+               const FileType& file_type, const std::optional<ParseConfig>& csv_parse_config)
+    : AbstractReadOnlyOperator(OperatorType::Export, input_operator),
+      _filename(filename),
+      _file_type(file_type),
+      _csv_parse_config(csv_parse_config) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
   }
@@ -51,7 +55,11 @@ std::shared_ptr<const Table> Export::_on_execute() {
 
   switch (_file_type) {
     case FileType::Csv:
-      CsvWriter::write(*left_input_table(), _filename);
+      if (!_csv_parse_config) {
+        CsvWriter::write(*left_input_table(), _filename);
+        break;
+      }
+      CsvWriter::write(*left_input_table(), _filename, *_csv_parse_config);
       break;
     case FileType::Binary:
       BinaryWriter::write(*left_input_table(), _filename);

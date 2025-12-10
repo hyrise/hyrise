@@ -5,6 +5,8 @@
 #include <tuple>
 #include <vector>
 
+#include <boost/algorithm/string/case_conv.hpp>
+
 #include "nlohmann/json.hpp"
 
 #include "utils/assert.hpp"
@@ -68,6 +70,30 @@ CsvMeta process_csv_meta_file(const std::string& filename) {
   auto meta_json = nlohmann::json{};
   metafile >> meta_json;
   return static_cast<CsvMeta>(meta_json);
+}
+
+std::optional<ParseConfig> process_sql_csv_options(hsql::CsvOptions* csv_options) {
+  if (!csv_options) {
+    return std::nullopt;
+  }
+  auto csv_parse_config = ParseConfig{};
+  if (csv_options->delimiter) {
+    AssertInput(strnlen(csv_options->delimiter, 2) == 1, "CSV delimiter should be exactly one char.");
+    csv_parse_config.delimiter = csv_options->delimiter[0];
+  }
+  if (csv_options->quote) {
+    AssertInput(strnlen(csv_options->quote, 2) == 1, "CSV quote should be exactly one char.");
+    csv_parse_config.quote = csv_options->quote[0];
+  }
+  if (csv_options->null) {
+    auto len = strnlen(csv_options->null, 100);
+    AssertInput(csv_options->null[len] == '\0', "CSV null string cannot be larger than 100 characters.");
+    csv_parse_config.null_string = std::string(csv_options->null, len);
+    boost::to_lower(csv_parse_config.null_string);
+
+    csv_parse_config.null_handling = NullHandling::NullStringAsNull;
+  }
+  return csv_parse_config;
 }
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {

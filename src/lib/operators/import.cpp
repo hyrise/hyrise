@@ -29,12 +29,14 @@
 namespace hyrise {
 
 Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
-               const FileType file_type, const std::optional<EncodingType> target_encoding)
+               const FileType file_type, const std::optional<EncodingType> target_encoding,
+               const std::optional<ParseConfig>& csv_parser_config)
     : AbstractReadOnlyOperator(OperatorType::Import),
       filename(init_filename),
       _tablename(tablename),
       _chunk_size(chunk_size),
       _file_type(file_type),
+      _csv_parse_config(csv_parser_config),
       _target_encoding(target_encoding) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
@@ -74,8 +76,18 @@ std::shared_ptr<const Table> Import::_on_execute() {
           csv_meta.columns[column_id].type = data_type_to_string.left.at(column_definitions[column_id].data_type);
           csv_meta.columns[column_id].nullable = column_definitions[column_id].nullable;
         }
+
+        if (_csv_parse_config) {
+          csv_meta.config = *_csv_parse_config;
+        }
       } else if (meta_file_exists) {
         csv_meta = process_csv_meta_file(meta_filename);
+
+        if (_csv_parse_config) {
+          std::cerr << "Warning: Ignoring CSV parsing options in " << meta_filename
+                    << " because CSV parsing options were explicitly specified in the SQL command.\n";
+          csv_meta.config = *_csv_parse_config;
+        }
       } else {
         Fail("Cannot load table from csv. No table definition source found.");
       }

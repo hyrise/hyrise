@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "nlohmann/json_fwd.hpp"
+#include "sql/ImportExportOptions.h"
 
 #include "storage/chunk.hpp"
 
@@ -38,7 +39,7 @@ struct ParseConfig {
   // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
   bool rfc_mode = true;
 
-  static constexpr const char* NULL_STRING = "null";
+  std::string null_string = "null";
 };
 
 /*
@@ -59,6 +60,7 @@ struct CsvMeta {
  * It takes all default values from the CsvMeta struct, and then overrides the ones that are provided in the JSON.
  */
 CsvMeta process_csv_meta_file(const std::string& filename);
+std::optional<ParseConfig> process_sql_csv_options(hsql::CsvOptions* csv_options);
 
 /*
  * Functions used internally when converting CsvMeta to nlohmann::json and the other way round:
