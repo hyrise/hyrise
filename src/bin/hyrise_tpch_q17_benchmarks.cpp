@@ -223,11 +223,6 @@ int main(int argc, char* argv[]) {
   const auto join_predicate = OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals};
 
   if (second_arg != "perf") {
-    if (std::filesystem::exists(second_arg)) {
-      std::cerr << "Error: File " << second_arg << " already exists.\n";
-      return 1;
-    }
-
     std::ofstream out(second_arg);
     if (!out.is_open()) {
       std::cerr << "Error: Failed to create CSV file.\n";

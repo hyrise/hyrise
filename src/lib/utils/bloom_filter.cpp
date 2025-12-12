@@ -117,7 +117,7 @@ uint32_t BloomFilter<FilterSizeExponent, K>::_extract_bits(uint64_t hash, uint8_
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::BlockBloomFilter()
-    : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K) {
+    : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K), _filter(array_size) {
   _readonly_filter = reinterpret_cast<uint64_t*>(_filter.data());
 }
 
@@ -132,30 +132,6 @@ void BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::insert(uint64_t
     DebugAssert(block_index + block_item_index < _filter.size(), "Calculated index out of range.");
     _filter[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
   }
-}
-
-template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
-bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::probe(uint64_t hash) const {
-  // The upper bits give us the block.
-  const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
-  // const auto& block = &_readonly_filter[block_index];
-  auto result = true;
-  for (uint8_t i = 0; i < K; ++i) {
-    const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
-    const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
-    const auto bit_index_in_item = bit_index_in_block & 63;
-    DebugAssert(block_index + block_item_index < _filter.size(), "Calculated index out of range.");
-
-    // std::cout << "Loop result: " << std::boolalpha << result << '\n';
-    result &= static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
-    // if (static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item))) {
-    //   std::cout << "Loop result: " << std::boolalpha << static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item)) << '\n';
-    //   std::cout << "Hash: " << std::bitset<64>(hash) << ". Block: " << block_index << ". For k " << size_t{i} << ", I want to access bit " << bit_index_in_block << ". That's block item " << block_item_index << " and bit in item: " << bit_index_in_item << "\n";
-    //   std::cout << "Loop result: " << std::boolalpha << result << '\n';
-    // }
-  }
-  // std::cout << "Result: " << std::boolalpha << result << '\n';
-  return result;
 }
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
