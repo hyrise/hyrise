@@ -578,7 +578,7 @@ struct TemporaryRadixContainer {
   }
 };
 
-template <typename T, typename HashedType, bool keep_null_values, char variant = 'D'>
+template <typename T, typename HashedType, bool keep_null_values, char variant = 'D', bool reduce_tlb_pressure = true>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      const std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
@@ -637,7 +637,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     const auto& elements = input_partition.elements;
     const auto elements_count = elements.size();
 
-    if constexpr (std::is_trivially_destructible_v<T>) {
+    if constexpr (std::is_trivially_destructible_v<T> && reduce_tlb_pressure) {
       const auto perform_partition = [&, input_partition_idx, elements_count]() {
         using TMP = TemporaryRadixContainer<T, keep_null_values>;
         auto tmp = TMP(output_partition_count);
