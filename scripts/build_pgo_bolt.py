@@ -39,6 +39,20 @@ parser.add_argument(
     default=False,
     help="Don't run benchmarks, just import the profile data from the resources folder.",
 )
+parser.add_argument(
+    "-p",
+    "--pgo",
+    action=BooleanOptionalAction,
+    default=True,
+    help="Use PGO for profiling / optimization"
+)
+parser.add_argument(
+    "-b",
+    "--bolt",
+    action=BooleanOptionalAction,
+    default=True,
+    help="Use BOLT for profiling / optimization"
+)
 args = parser.parse_args()
 
 build_folder = getcwd()
@@ -126,13 +140,17 @@ def cleanup():
 
 
 def export_profile():
-    run_build("cp bolt.fdata ../resources/bolt.fdata")
-    run_build("cp libhyrise.profdata ../resources/libhyrise.profdata")
+    if args.bolt:
+        run_build("cp bolt.fdata ../resources/bolt.fdata")
+    if args.pgo:
+        run_build("cp libhyrise.profdata ../resources/libhyrise.profdata")
 
 
 def import_profile():
-    run_build("cp ../resources/bolt.fdata bolt.fdata")
-    run_build("cp ../resources/libhyrise.profdata libhyrise.profdata")
+    if args.bolt:
+        run_build("cp ../resources/bolt.fdata bolt.fdata")
+    if args.pgo:
+        run_build("cp ../resources/libhyrise.profdata libhyrise.profdata")
 
 
 def ci_main():
@@ -146,15 +164,17 @@ def main():
         if args.import_profile:
             import_profile()
         else:
-            build(*benchmarks, pgo_instrument=True)
-            profile(pgo_instrumented=True)
-            build(*benchmarks, pgo_optimize=True, bolt_instrument=True)
-            profile(bolt_instrumented=True)
+            if args.pgo:
+                build(*benchmarks, pgo_instrument=True)
+                profile(pgo_instrumented=True)
+            if args.bolt:
+                build(*benchmarks, pgo_optimize=args.pgo, bolt_instrument=True)
+                profile(bolt_instrumented=True)
 
         if args.export_profile:
             export_profile()
         else:
-            build(bolt_optimize=True, pgo_optimize=True)
+            build(bolt_optimize=args.bolt, pgo_optimize=args.pgo)
     finally:
         cleanup()
 
