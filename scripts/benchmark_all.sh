@@ -97,33 +97,17 @@ do
   git submodule update --init --recursive
 
   # If there is a bolt profile, we should compile in such a way that bolt can be used afterwards
-  if [ -f ../resources/bolt.fdata ]
+  if [ -f ../resources/bolt.fdata ] || [ -f ../resources/libhyrise.profdata ]
   then
-    echo "Detected bolt.fdata file, compiling for BOLT"
-    cmake -DCOMPILE_FOR_BOLT=On ..
+    echo "Detected bolt.fdata or libhyrise.profdata file, building optimized binary"
+    args="--num-cores $(nproc) --import-profile"
+    [ ! -f ../resources/bolt.fdata ] && args="$args --no-bolt"
+    [ ! -f ../resources/libhyrise.profdata ] && args="$args --no-pgo"
+    /usr/bin/time -p sh -c "( python ../scripts/build_pgo_bolt.py $args 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
   else
-    cmake -DCOMPILE_FOR_BOLT=Off ..
-  fi
-
-  # If there is a PGO profile, use it while building
-  if [ -f ../resources/libhyrise.profdata ]
-  then
-    echo "Detected libhyrise.profdata file, compiling with PGO"
-    cmake -DPGO_OPTIMIZE=../resources/libhyrise.profdata ..
-  else
-    cmake -UPGO_OPTIMIZE ..
-  fi
-
-  echo "Building $commit..."
-  $build_system clean
-  /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
-
-  # If there is a build profile, optimize with bolt and strip all information that was added by COMPILE_FOR_BOLT afterwards
-  if [ -f ../resources/bolt.fdata ]
-  then
-    mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old
-    llvm-bolt lib/libhyrise_impl.so.old -o lib/libhyrise_impl.so -data ../resources/bolt.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
-    strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so
+    echo "Building $commit..."
+    $build_system clean
+    /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
   fi
 
   # Run the benchmarks.
