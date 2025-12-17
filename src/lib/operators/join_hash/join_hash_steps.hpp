@@ -44,7 +44,7 @@ using Hash = size_t;
 
 // We have to access the value of DEFAULT_SIZE by .t here, because accessing it via operator T&() is not constexpr.
 // A smaller value implies more threads and smaller output chunks, which affects downstream processing.
-constexpr auto PROBE_SIZE_PER_CHUNK = Chunk::DEFAULT_SIZE.t * 2;
+constexpr auto PROBE_SIZE_PER_CHUNK = Chunk::DEFAULT_SIZE * 2;
 
 /*
 This is how elements of the input relations are saved after materialization.
@@ -680,7 +680,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
         if constexpr (keep_null_values) {
           Assert(elements.size() == null_values.size(),
-                 "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
+                 "Hash join probe called with NULL consideration but inputs do not store any NULL value information.");
         }
 
         const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
@@ -694,7 +694,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
           }
 
-          // Simple heuristic to estimate result size: half of the partition's rows will match a more conservative
+          // Simple heuristic to estimate result size: half of the partition's rows will match. A more conservative
           // pre-allocation would be the size of the build cluster.
           const auto expected_output_size = std::max(size_t{10}, partition_elements_count / 2);
           pos_list_build_side_local.reserve(expected_output_size);
@@ -713,19 +713,18 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
                 hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
             if (primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end) {
-              // Key exists, thus we have at least one hit for the primary predicate
+              // Key exists, thus we have at least one hit for the primary predicate.
 
-              // Since we cannot store NULL values directly in off-the-shelf containers,
-              // we need to the check the NULL bit vector here because a NULL value (represented
-              // as a zero) yields the same rows as an actual zero value.
-              // For inner joins, we skip NULL values and output them for outer joins.
-              // Note: If the materialization/radix partitioning phase did not explicitly consider
-              // NULL values, they will not be handed to the probe function.
+              // Since we cannot store NULL values directly in off-the-shelf containers, we need to the check the NULL
+              // bit vector here because a NULL value (represented as a zero) yields the same rows as an actual zero
+              // value. For inner joins, we skip NULL values and output them for outer joins. Note: If the
+              // materialization / radix partitioning phase did not explicitly consider NULL values, they will not be
+              // handed to the probe function.
               if constexpr (keep_null_values) {
                 if (null_values[partition_offset]) {
                   pos_list_build_side_local.emplace_back(NULL_ROW_ID);
                   pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
-                  // ignore found matches and continue with next probe item
+                  // Ignore found matches and continue with next probe item
                   continue;
                 }
               }
@@ -763,7 +762,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             } else {
               // We have not found matching items for the first predicate. Only continue for non-equi join modes.
               // We use constexpr to prune this conditional for the equi-join implementation.
-              // Note, the outer relation (i.e., left relation for LEFT OUTER JOINs) is the probing
+              // Note that the outer relation (i.e., left relation for LEFT OUTER JOINs) is the probing
               // relation since the relations are swapped upfront.
               if constexpr (keep_null_values) {
                 pos_list_build_side_local.emplace_back(NULL_ROW_ID);
