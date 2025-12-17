@@ -100,7 +100,7 @@ def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=F
             "-o lib/libhyrise_impl.so",
             "-data bolt.fdata",
             "-reorder-blocks=ext-tsp",
-            "-reorder-functions=hfsort",
+            "-reorder-functions=cdsort",
             "-split-functions",
             "-split-all-cold",
             "-split-eh",
