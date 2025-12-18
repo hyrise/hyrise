@@ -665,6 +665,10 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     const auto& elements = partition.elements;
     const auto elements_count = elements.size();
 
+    // We split the partition in `PROBE_SIZE_PER_CHUNK` sized segments and start a thread per segment. Each thread
+    // iterates over its assigned items and generates its own output chunk. This way, large input partitions are split
+    // into multiple output chunks, which increases parallelism downstream. However, multiple threads have to share the
+    // hash table of their partition.
     for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += PROBE_SIZE_PER_CHUNK) {
       const auto output_idx = pos_lists_build_side.size();
       pos_lists_build_side.emplace_back();
@@ -684,7 +688,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
         }
 
         const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
-        if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
+        if (hash_tables.at(hash_table_idx)) {
           const auto& hash_table = *hash_tables[hash_table_idx];
 
           // The MultiPredicateJoinEvaluator use accessors internally. Those are not thread-safe, so we create one
@@ -703,9 +707,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             const auto& probe_column_element = elements[partition_offset];
 
-            if (mode == JoinMode::Inner && probe_column_element.row_id == NULL_ROW_ID) {
-              // From previous joins, we could potentially have NULL values that do not refer to
-              // an actual probe_column_element but to the NULL_ROW_ID. Hence, we can only skip for inner joins.
+            if (mode == JoinMode::Inner && probe_column_element.row_id.is_null()) {
+              // From previous joins, we could potentially have NULL values that do not refer to an actual
+              // `probe_column_element` but to the `NULL_ROW_ID`. Hence, we can only skip for inner joins.
               continue;
             }
 
@@ -823,6 +827,10 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     const auto& elements = partition.elements;
     const auto elements_count = elements.size();
 
+    // We split the partition in `PROBE_SIZE_PER_CHUNK` sized segments and start a thread per segment. Each thread
+    // iterates over its assigned items and generates its own output chunk. This way, large input partitions are split
+    // into multiple output chunks, which increases parallelism downstream. However, multiple threads have to share the
+    // hash table of their partition.
     for (auto partition_begin = size_t{0}; partition_begin < elements_count; partition_begin += PROBE_SIZE_PER_CHUNK) {
       const auto output_idx = pos_lists.size();
       pos_lists.emplace_back();
@@ -830,17 +838,17 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       const auto partition_elements_count = partition_end - partition_begin;
       const auto probe_partition = [&, partition_idx, output_idx, partition_begin, partition_end,
                                     partition_elements_count]() {
-        // Get information from work queue
+        // Get information from work queue.
         const auto& null_values = partition.null_values;
 
         auto pos_list_local = RowIDPosList{};
 
         const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
-        if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
-          // Valid hash table found, so there is at least one match in this partition
+        if (hash_tables.at(hash_table_idx)) {
+          // Valid hash table found, so there is at least one match in this partition.
           const auto& hash_table = *hash_tables[hash_table_idx];
 
-          // Accessors are not thread-safe, so we create one evaluator per job
+          // Accessors are not thread-safe, so we create one evaluator per job.
           auto multi_predicate_join_evaluator = std::optional<MultiPredicateJoinEvaluator>{};
           if (!secondary_join_predicates.empty()) {
             multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
@@ -853,14 +861,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             const auto& probe_column_element = elements[partition_offset];
 
             if constexpr (mode == JoinMode::Semi) {
-              // NULLs on the probe side are never emitted
-              if (probe_column_element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
-                // Could be either skipped or NULL
+              // NULLs on the probe side are never emitted.
+              if (probe_column_element.row_id.is_null()) {
+                // Could be either skipped or NULL.
                 continue;
               }
             } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
               // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
-              // of secondary predicates (`NULL("as false") AND <anything>` is always false)
+              // of secondary predicates (`NULL("as false") AND <anything>` is always false).
               if (null_values[partition_offset]) {
                 pos_list_local.emplace_back(probe_column_element.row_id);
                 continue;
@@ -868,7 +876,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
               if (null_values[partition_offset]) {
                 // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
-                // This means that the probe value never gets emitted
+                // This means that the probe value never gets emitted.
                 continue;
               }
             }
@@ -904,7 +912,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             auto& probe_column_element = elements[partition_offset];
             // A NULL on the probe side never gets emitted, except when the build table is empty.
-            // This is because `NULL NOT IN <empty list>` is actually true
+            // This is because `NULL NOT IN <empty list>` is actually true.
             if (null_values[partition_offset] && !build_table_is_empty) {
               continue;
             }
