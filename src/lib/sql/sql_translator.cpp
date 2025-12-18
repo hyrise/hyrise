@@ -1529,6 +1529,8 @@ void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDe
     sort_modes.resize(order_list_size);
     for (auto expression_idx = size_t{0}; expression_idx < order_list_size; ++expression_idx) {
       const auto& order_description = hsql_order_expressions[expression_idx];
+      AssertInput(order_description->null_ordering != hsql::NullOrdering::Last,
+                  "Hyrise currently does not implement NULLS LAST");
       expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
       sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
     }
@@ -2019,6 +2021,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           order_by_expressions.reserve(expression_count);
           sort_modes.reserve(expression_count);
           for (const auto* order_description : order_list) {
+            AssertInput(order_description->null_ordering != hsql::NullOrdering::Last,
+                        "Hyrise currently does not implement NULLS LAST");
             order_by_expressions.emplace_back(_translate_hsql_expr(*order_description->expr, sql_identifier_resolver));
             sort_modes.emplace_back(order_type_to_sort_mode.at(order_description->type));
           }
