@@ -103,7 +103,7 @@ do
     args="--num-cores $(nproc) --import-profile"
     [ ! -f ../resources/bolt.fdata ] && args="$args --no-bolt"
     [ ! -f ../resources/libhyrise.profdata ] && args="$args --no-pgo"
-    /usr/bin/time -p sh -c "( python ../scripts/build_pgo_bolt.py $args 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
+    /usr/bin/time -p sh -c "( python3 ../scripts/build_pgo_bolt.py $args 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
   else
     echo "Building $commit..."
     $build_system clean
