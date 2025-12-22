@@ -688,7 +688,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
         }
 
         const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
-        if (hash_tables.at(hash_table_idx)) {
+        if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
           const auto& hash_table = *hash_tables[hash_table_idx];
 
           // The MultiPredicateJoinEvaluator use accessors internally. Those are not thread-safe, so we create one
@@ -844,7 +844,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         auto pos_list_local = RowIDPosList{};
 
         const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
-        if (hash_tables.at(hash_table_idx)) {
+        if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
           // Valid hash table found, so there is at least one match in this partition.
           const auto& hash_table = *hash_tables[hash_table_idx];
 
