@@ -106,7 +106,6 @@ def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=F
             "--split-eh",
             "--dyno-stats",
             "--plt=hot",
-            "--indirect-call-promotion=all"
         )
         run_build('strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so')
 
