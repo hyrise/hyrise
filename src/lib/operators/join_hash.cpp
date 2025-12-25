@@ -402,11 +402,21 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table
         if (keep_nulls_build_column) {
-          radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
-              materialized_build_column, histograms_build_column, _radix_bits);
+          if (_radix_bits >= 7) {
+            radix_build_column = partition_by_radix<BuildColumnType, HashedType, true, true>(
+                materialized_build_column, histograms_build_column, _radix_bits);
+          } else {
+            radix_build_column = partition_by_radix<BuildColumnType, HashedType, true, false>(
+                materialized_build_column, histograms_build_column, _radix_bits);
+          }
         } else {
-          radix_build_column = partition_by_radix<BuildColumnType, HashedType, false>(
-              materialized_build_column, histograms_build_column, _radix_bits);
+          if (_radix_bits >= 7) {
+            radix_build_column = partition_by_radix<BuildColumnType, HashedType, false, true>(
+                materialized_build_column, histograms_build_column, _radix_bits);
+          } else {
+            radix_build_column = partition_by_radix<BuildColumnType, HashedType, false, false>(
+                materialized_build_column, histograms_build_column, _radix_bits);
+          }
         }
 
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.

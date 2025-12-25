@@ -523,6 +523,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 // This is the cacheline size on our commonly benchmarked hardware. Other systems will also run fine with this value.
 constexpr auto BYTES_PER_CACHELINE = size_t{64};
 // This is a tunable parameter. Increasing it causes more cache usage during radix partioning, but less TLB pressure.
+// Tuning it too high might invalidate the gains from `reduce_tlb_pressure`.
 constexpr auto MIN_CACHELINES_PER_STORE = size_t{1};
 
 template <typename T>
@@ -558,6 +559,9 @@ struct TemporaryRadixContainer {
   uninitialized_vector<bucket, allocator> data;
   uninitialized_vector<std::array<char, bucket::ELEMENTS_PER_STORE>> null_values;
 
+  static constexpr auto BYTES_PER_STORE = bucket::BYTES_PER_STORE;
+  static constexpr auto ELEMENTS_PER_STORE = bucket::ELEMENTS_PER_STORE;
+
   explicit TemporaryRadixContainer(size_t output_partition_count) : data(output_partition_count) {
     if constexpr (keep_null_values) {
       null_values.resize(output_partition_count);
@@ -578,7 +582,11 @@ struct TemporaryRadixContainer {
   }
 };
 
-template <typename T, typename HashedType, bool keep_null_values, char variant = 'D', bool reduce_tlb_pressure = true>
+// `reduce_tlb_pressure` enables a special procedure in partition_by_radix, where partitions are written in chunks of
+// elements. You should consider enabling it if the number of radix buckets is larger than the size of your TLB. A good
+// rule of thumb seems to be starting at about 7 radix bits. This setting will be ignored if T is not trivially
+// copy assignable, as we have to copy the elements bitwise when doing chunked copy.
+template <typename T, typename HashedType, bool keep_null_values, bool reduce_tlb_pressure = false>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      const std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
@@ -636,8 +644,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     const auto& input_partition = radix_container[input_partition_idx];
     const auto& elements = input_partition.elements;
     const auto elements_count = elements.size();
-
-    if constexpr (std::is_trivially_destructible_v<T> && reduce_tlb_pressure) {
+    if constexpr (std::is_trivially_copy_assignable_v<T> && reduce_tlb_pressure) {
       const auto perform_partition = [&, input_partition_idx, elements_count]() {
         using TMP = TemporaryRadixContainer<T, keep_null_values>;
         auto tmp = TMP(output_partition_count);
@@ -679,46 +686,34 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
             tmp.null_values[radix][tmp_idx] = input_partition.null_values[input_idx];
           }
 
-          if (tmp_idx + 1 < TMP::bucket::ELEMENTS_PER_STORE) {
+          if (tmp_idx + 1 < TMP::ELEMENTS_PER_STORE) {
             // We have not fully written this cache line, just continue with the next element.
             tmp.data[radix].with_indices.count = tmp_idx + 1;
             continue;
           }
 
-          if constexpr (variant == 'A') {
-            // Variant A: Just regular copy
-            std::ranges::copy(tmp.data[radix].elements, output[radix].elements.begin() + output_idx);
-          } else if constexpr (variant == 'B') {
-            // Variant B: Copy with OpenMP Pragma
-            const auto copy_from = tmp.data[radix].elements.data();
-            const auto copy_to = output[radix].elements.data() + output_idx;
-#pragma omp simd nontemporal(copy_to), aligned(copy_to, copy_from : BYTES_PER_CACHELINE)
-            for (auto index = size_t{0}; index < TMP::bucket::ELEMENTS_PER_STORE; ++index) {
-              copy_to[index] = copy_from[index];
-            }
-          } else if constexpr (variant == 'D') {
-            // Variant D: Memcpy has SIMD!
-            const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
-            const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx);
-            std::memcpy(copy_to, copy_from, TMP::bucket::BYTES_PER_STORE);
-          } else if constexpr (variant == 'E') {
-            // Variant E: Clang vector types
-            using vec_t = uint8_t __attribute__((vector_size(TMP::bucket::BYTES_PER_STORE)));
-            auto* const copy_from =
-                reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data()));
-            auto* const copy_to = reinterpret_cast<vec_t*>(
-                std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx));
-            __builtin_nontemporal_store(*copy_from, copy_to);
-          } else {
-            Fail("Unknown variant");
-          }
+          // These two options both use SIMD to copy the temporary data to the actual location. The if block uses
+          // nontemporal stores, whereas the other doesn't. We did not find a solution for gcc that used nontemporal
+          // SIMD and produced correct results (our take at google highway produced wrong results on AVX512).
+#if defined(__clang__)
+          using vec_t = uint8_t __attribute__((vector_size(TMP::BYTES_PER_STORE)));
+          auto* const copy_from =
+              reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data()));
+          auto* const copy_to = reinterpret_cast<vec_t*>(
+              std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx));
+          __builtin_nontemporal_store(*copy_from, copy_to);
+#else
+          const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
+          const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx);
+          std::memcpy(copy_to, copy_from, TMP::BYTES_PER_STORE);
+#endif
 
           if constexpr (keep_null_values) {
             std::ranges::copy(tmp.null_values[radix], null_values_as_char[radix].begin() + output_idx);
           }
 
           tmp.data[radix].with_indices.count = 0;
-          tmp.data[radix].with_indices.output_idx = output_idx + TMP::bucket::ELEMENTS_PER_STORE;
+          tmp.data[radix].with_indices.output_idx = output_idx + TMP::ELEMENTS_PER_STORE;
         }
 
         for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
@@ -746,7 +741,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
       }
     } else {
-      // T is not trivially destructable, just do the partitioning without cache tricks.
+      // Just do the partitioning without cache tricks.
       const auto perform_partition = [&, input_partition_idx, elements_count]() {
         for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
           const auto& element = elements[input_idx];
