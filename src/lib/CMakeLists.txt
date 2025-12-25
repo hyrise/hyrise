@@ -16,7 +16,7 @@ if (${COMPILE_FOR_BOLT})
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         add_compile_options(-fno-reorder-blocks-and-partition)
     endif()
-    add_link_options(-Wl,--emit-relocs -Wl,-znow)
+    add_link_options(-Wl,--emit-relocs)
 endif()
 
 option(PGO_INSTRUMENT "Set to TRUE to build an instrumented hyrise binary that will generate pgo profile data when run. Default: FALSE" FALSE)
