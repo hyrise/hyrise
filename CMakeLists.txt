@@ -231,5 +231,6 @@ foreach(no_lto_target gtest gtest_main gmock gmock_main)
 endforeach(no_lto_target)
 add_subdirectory(src)
 
+
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort

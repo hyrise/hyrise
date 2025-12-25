@@ -165,7 +165,7 @@ try {
               sh "mkdir cmake-build-bolt"
               sh "cd cmake-build-bolt && cmake ${release} ${clang} ${unity} ${ninja} .."
               sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -t 120 -n \$(( \$(nproc) / 4)) --ci"
-              sh "cd cmake-build-bolt && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1 ./hyriseTest"
+              sh "cd cmake-build-bolt && ./hyriseTest"
             }
           }
 
