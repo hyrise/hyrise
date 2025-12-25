@@ -53,7 +53,7 @@
   namespace std {                                                                                         \
   template <>                                                                                             \
   struct hash<::hyrise::D> {                                                                              \
-    constexpr size_t operator()(const ::hyrise::D& value) const {                                         \
+    size_t operator()(const ::hyrise::D& value) const {                                                   \
       return hash<T>{}(value);                                                                            \
     }                                                                                                     \
   };                                                                                                      \
@@ -72,7 +72,7 @@
   };                                                                                                      \
   } /* NOLINT */                                                                                          \
   namespace hyrise {                                                                                      \
-  constexpr std::size_t hash_value(const D& value) {                                                      \
+  std::size_t hash_value(const D& value) {                                                                \
     return std::hash<D>()(value);                                                                         \
   }                                                                                                       \
   } /* NOLINT */                                                                                          \
