@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -2844,6 +2845,90 @@ void TPCDSTableGenerator::_add_constraints(
   unique_constraint(promotion_table, {"p_channel_press","p_channel_details"});
   unique_constraint(promotion_table, {"p_channel_details","p_purpose"});
   unique_constraint(promotion_table, {"p_start_date_sk","p_end_date_sk","p_promo_name"});
+  
+  std::string with_order_contraint = std::getenv("WITH_ODS");
+  if (with_order_contraint != "1") {
+    std::cout << "Skipping order constraints as WITH_ODS is not set to 1." << "\n";
+    return;
+  }
+  std::cout << "Adding order constraints as WITH_ODS is set to 1." << "\n";
+  order_constraint(date_dim_table, {"d_date"}, {"d_quarter_seq"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_fy_week_seq"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_date"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_fy_week_seq"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_quarter_seq"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_same_day_lq"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_year"});
+  // order_constraint(date_dim_table, {"d_date_sk"}, {"d_year"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_same_day_lq"});
+  order_constraint(date_dim_table, {"d_week_seq"}, {"d_fy_week_seq"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_first_dom"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_first_dom"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_week_seq"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_week_seq"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_same_day_ly"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_same_day_ly"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_quarter_name"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_quarter_name"});
+  order_constraint(date_dim_table, {"d_dow"}, {"d_weekend"});
+  order_constraint(date_dim_table, {"d_quarter_seq"}, {"d_fy_quarter_seq"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_fy_quarter_seq"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_fy_quarter_seq"});
+  order_constraint(date_dim_table, {"d_month_seq"}, {"d_first_dom"});
+  order_constraint(date_dim_table, {"d_month_seq"}, {"d_fy_quarter_seq"});
+  order_constraint(date_dim_table, {"d_month_seq"}, {"d_fy_year"});
+  order_constraint(date_dim_table, {"d_month_seq"}, {"d_year"});
+  order_constraint(date_dim_table, {"d_month_seq"}, {"d_quarter_seq"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_month_seq"});
+  order_constraint(date_dim_table, {"d_year"}, {"d_fy_year"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_month_seq"});
+  order_constraint(date_dim_table, {"d_date"}, {"d_fy_year"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_fy_year"});
+
+  // call center
+  order_constraint(call_center_table, {"cc_open_date_sk"}, {"cc_name"});
+  order_constraint(call_center_table, {"cc_call_center_sk"}, {"cc_suite_number"});
+  order_constraint(call_center_table, {"cc_call_center_sk"}, {"cc_call_center_id"});
+  order_constraint(call_center_table, {"cc_call_center_id"}, {"cc_suite_number"});
+  order_constraint(call_center_table, {"cc_open_date_sk"}, {"cc_street_number"});
+  order_constraint(call_center_table, {"cc_name"}, {"cc_street_number"});
+  order_constraint(call_center_table, {"cc_rec_end_date"}, {"cc_hours"});
+  order_constraint(call_center_table, {"cc_call_center_id"}, {"cc_street_name"});
+  order_constraint(call_center_table, {"cc_street_name"}, {"cc_suite_number"});
+  order_constraint(call_center_table, {"cc_call_center_sk"}, {"cc_street_name"});
+  order_constraint(call_center_table, {"cc_company"}, {"cc_street_type"});
+
+  order_constraint(warehouse_table, {"w_warehouse_sk"}, {"w_street_number"});
+  order_constraint(warehouse_table, {"w_warehouse_sk"}, {"w_warehouse_id"});
+  order_constraint(warehouse_table, {"w_warehouse_id"}, {"w_street_number"});
+  order_constraint(warehouse_table, {"w_warehouse_sq_ft"}, {"w_street_type"});
+  order_constraint(warehouse_table, {"w_warehouse_id"}, {"w_gmt_offset"});
+  order_constraint(warehouse_table, {"w_street_number"}, {"w_gmt_offset"});
+  order_constraint(warehouse_table, {"w_street_type"}, {"w_gmt_offset"});
+  order_constraint(warehouse_table, {"w_suite_number"}, {"w_gmt_offset"});
+  order_constraint(warehouse_table, {"w_warehouse_name"}, {"w_gmt_offset"});
+  order_constraint(warehouse_table, {"w_warehouse_sk"}, {"w_gmt_offset"});
+  order_constraint(warehouse_table, {"w_street_name"}, {"w_gmt_offset"});
+  order_constraint(warehouse_table, {"w_warehouse_sq_ft"}, {"w_gmt_offset"});
+
+  order_constraint(time_dim_table, {"t_hour"}, {"t_am_pm"});
+  order_constraint(time_dim_table, {"t_time_sk"}, {"t_am_pm"});
+  order_constraint(time_dim_table, {"t_time_sk"}, {"t_time"});
+  order_constraint(time_dim_table, {"t_time"}, {"t_hour"});
+  order_constraint(time_dim_table, {"t_time_sk"}, {"t_hour"});
+  order_constraint(time_dim_table, {"t_time"}, {"t_am_pm"});
+
+  order_constraint(store_sales_table, {"ss_ext_discount_amt"}, {"ss_coupon_amt"});
+
+  order_constraint(store_table, {"s_store_sk"}, {"s_store_id"});
+  order_constraint(store_table, {"s_store_sk"}, {"s_hours"});
+  order_constraint(store_table, {"s_floor_space"}, {"s_hours"});
+
+  order_constraint(income_band_table, {"ib_income_band_sk"}, {"ib_upper_bound"});
+  order_constraint(income_band_table, {"ib_lower_bound"}, {"ib_upper_bound"});
+  order_constraint(income_band_table, {"ib_income_band_sk"}, {"ib_lower_bound"});
+
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_year", "d_moy"});
 
 }
 

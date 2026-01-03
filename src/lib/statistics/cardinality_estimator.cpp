@@ -46,8 +46,10 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "storage/table.hpp"
@@ -222,11 +224,11 @@ std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() {
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
-  return estimate_statistics(lqp, cacheable, statistics_cache)->row_count;
+  return estimate_statistics(lqp, cacheable, statistics_cache).table_statistics->row_count;
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
-    const std::shared_ptr<const AbstractLQPNode>& lqp, const bool cacheable) const {
+EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                                    const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
   return estimate_statistics(lqp, cacheable, statistics_cache);
 }
@@ -245,8 +247,9 @@ void CardinalityEstimator::guarantee_bottom_up_construction(const std::shared_pt
   cardinality_estimation_cache.lqp = lqp;
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
-    const std::shared_ptr<const AbstractLQPNode>& lqp, const bool cacheable, StatisticsByLQP& statistics_cache) const {
+EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                                    const bool cacheable,
+                                                                    StatisticsByLQP& statistics_cache) const {
   /**
    * 1. Try a cache lookup for requested LQP.
    *
@@ -278,7 +281,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       auto cached_statistics =
           cardinality_estimation_cache.join_graph_statistics_cache->get(*join_graph_bitmask, lqp->output_expressions());
       if (cached_statistics) {
-        return cached_statistics;
+        return {.table_statistics = cached_statistics, .equivalence_classes = ExpressionUnorderedSet{}};
       }
     } else {
       // The LQP is not (a subgraph of) a JoinGraph and therefore we cannot use the JoinGraphStatisticsCache.
@@ -289,11 +292,24 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * 2. Cache lookup failed - perform an actual cardinality estimation.
    */
   auto output_table_statistics = std::shared_ptr<TableStatistics>{};
+  auto output_equivalence_classes = ExpressionUnorderedSet{};
+
   auto& required_columns = cardinality_estimation_cache.required_column_expressions;
-  const auto left_input_table_statistics =
-      lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable, statistics_cache) : nullptr;
-  const auto right_input_table_statistics =
-      lqp->right_input() ? estimate_statistics(lqp->right_input(), cacheable, statistics_cache) : nullptr;
+
+  auto left_state = lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable, statistics_cache)
+                                      : EstimationStatisticsState{.table_statistics = nullptr,
+                                                                  .equivalence_classes = ExpressionUnorderedSet{}};
+
+  const auto left_input_table_statistics = left_state.table_statistics;
+
+  auto left_equivalence_classes = left_state.equivalence_classes;
+  // std::cout << left_equivalence_classes.size() << ": " << "leftequivalence classes size" << "\n";
+
+  auto right_state = lqp->right_input() ? estimate_statistics(lqp->right_input(), cacheable, statistics_cache)
+                                        : EstimationStatisticsState{.table_statistics = nullptr,
+                                                                    .equivalence_classes = ExpressionUnorderedSet{}};
+  const auto right_input_table_statistics = right_state.table_statistics;
+  auto right_equivalence_classes = right_state.equivalence_classes;
 
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
@@ -327,8 +343,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::Predicate: {
       const auto& predicate_node = static_cast<const PredicateNode&>(*lqp);
-      output_table_statistics =
-          estimate_predicate_node(predicate_node, left_input_table_statistics, cacheable, statistics_cache);
+
+      auto estimation_state = estimate_predicate_node(
+          predicate_node,
+          {.table_statistics = left_input_table_statistics, .equivalence_classes = left_equivalence_classes}, cacheable,
+          statistics_cache);
+      output_table_statistics = estimation_state.table_statistics;
+      output_equivalence_classes = estimation_state.equivalence_classes;
     } break;
 
     case LQPNodeType::Projection: {
@@ -438,13 +459,17 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   }
 
   if (cardinality_estimation_cache.statistics_by_lqp && cacheable) {
-    cardinality_estimation_cache.statistics_by_lqp->emplace(lqp, output_table_statistics);
+    cardinality_estimation_cache.statistics_by_lqp->emplace(
+        lqp, EstimationStatisticsState{.table_statistics = output_table_statistics,
+                                       .equivalence_classes = left_equivalence_classes});
   }
 
   // We can always cache statistics during a single invocation, which is useful for diamonds in the plan.
+  auto statistics = EstimationStatisticsState{.table_statistics = output_table_statistics,
+                                              .equivalence_classes = output_equivalence_classes};
   statistics_cache.emplace(lqp, output_table_statistics);
 
-  return output_table_statistics;
+  return statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
@@ -543,13 +568,17 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
   return input_table_statistics;
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
-    const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
+EstimationStatisticsState CardinalityEstimator::estimate_predicate_node(
+    const PredicateNode& predicate_node, const EstimationStatisticsState& input_estimation_statistics,
     const bool cacheable, StatisticsByLQP& statistics_cache) const {
   // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns' statistics are
   // scaled with the estimated selectivity of the predicate.
 
+  auto input_table_statistics = input_estimation_statistics.table_statistics;
   const auto predicate = predicate_node.predicate();
+
+  // std::cout << "Predicate: " << predicate->description() << "\n";
+  // std::cout << "Input TableStatistics:" << *input_table_statistics << "\n";
 
   if (const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate)) {
     if (logical_expression->logical_operator == LogicalOperator::Or) {
@@ -558,15 +587,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       const auto left_predicate_node =
           PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
       const auto left_statistics =
-          estimate_predicate_node(*left_predicate_node, input_table_statistics, cacheable, statistics_cache);
+          estimate_predicate_node(*left_predicate_node, input_estimation_statistics, cacheable, statistics_cache);
 
       const auto right_predicate_node =
           PredicateNode::make(logical_expression->right_operand(), predicate_node.left_input());
       const auto right_statistics =
-          estimate_predicate_node(*right_predicate_node, input_table_statistics, cacheable, statistics_cache);
+          estimate_predicate_node(*right_predicate_node, input_estimation_statistics, cacheable, statistics_cache);
 
       const auto row_count = Cardinality{
-          std::min(left_statistics->row_count + right_statistics->row_count, input_table_statistics->row_count)};
+          std::min(left_statistics.table_statistics->row_count + right_statistics.table_statistics->row_count,
+                   input_table_statistics->row_count)};
 
       auto selectivity = Selectivity{1};
       if (input_table_statistics->row_count > 0) {
@@ -582,16 +612,17 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
       auto output_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 
-      return output_table_statistics;
+      return EstimationStatisticsState{.table_statistics = output_table_statistics,
+                                       .equivalence_classes = ExpressionUnorderedSet{}};
     }
 
     if (logical_expression->logical_operator == LogicalOperator::And) {
       // Estimate AND by splitting it up into two consecutive PredicateNodes
-
+      // std::cout << "Estimate AND by splitting it up into two consecutive PredicateNodes" << "\n";
       const auto first_predicate_node =
           PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
       const auto first_predicate_statistics =
-          estimate_predicate_node(*first_predicate_node, input_table_statistics, cacheable, statistics_cache);
+          estimate_predicate_node(*first_predicate_node, input_estimation_statistics, cacheable, statistics_cache);
 
       const auto second_predicate_node = PredicateNode::make(logical_expression->right_operand(), first_predicate_node);
       auto second_predicate_statistics =
@@ -619,14 +650,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     }
 
     const auto row_count = Cardinality{input_table_statistics->row_count * PLACEHOLDER_SELECTIVITY_HIGH};
-    return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+    return {.table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count),
+            .equivalence_classes = ExpressionUnorderedSet{}};
   }
 
   if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(predicate)) {
     // Estimate `x IN (1, 2, 3)` by treating it as `x = 1 OR x = 2 ...`
     if (in_expression->set()->type != ExpressionType::List) {
       // Cannot handle subqueries
-      return input_table_statistics;
+      return input_estimation_statistics;
     }
 
     const auto& list_expression = static_cast<const ListExpression&>(*in_expression->set());
@@ -638,7 +670,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
     const auto disjunction = inflate_logical_expressions(expressions, LogicalOperator::Or);
     const auto new_predicate_node = PredicateNode::make(disjunction, predicate_node.left_input());
-    return estimate_predicate_node(*new_predicate_node, input_table_statistics, cacheable, statistics_cache);
+    return estimate_predicate_node(*new_predicate_node, input_estimation_statistics, cacheable, statistics_cache);
   }
 
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
@@ -692,7 +724,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     //
     const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
     if (!predicate_expression) {
-      return input_table_statistics;
+      return input_estimation_statistics;
     }
 
     const auto& arguments = predicate_expression->arguments;
@@ -721,10 +753,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       // Break if the predicate has no subquery as argument or the subquery is correlated. For instance, a predicate
       // only with value expressions (e.g., 1 = 2).
       if (!subquery_expression || subquery_expression->is_correlated()) {
-        return input_table_statistics;
+        return input_estimation_statistics;
       }
 
-      subquery_statistics = estimate_statistics(subquery_expression->lqp, cacheable, statistics_cache);
+      subquery_statistics = estimate_statistics(subquery_expression->lqp, cacheable, statistics_cache).table_statistics;
     }
 
     // Case (ii): Between predicate with column BETWEEN min(<subquery) AND max(<subquery>). Equivalent to a semi-join
@@ -740,7 +772,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       const auto& upper_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[2]);
       if (!lower_bound_subquery || !upper_bound_subquery || lower_bound_subquery->is_correlated() ||
           upper_bound_subquery->is_correlated()) {
-        return input_table_statistics;
+        return input_estimation_statistics;
       }
 
       // Check that input nodes provide only a single WindowFunctionExpression.
@@ -749,14 +781,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       const auto& lower_bound_node_expressions = lower_bound_lqp.node_expressions;
       const auto& upper_bound_node_expressions = upper_bound_lqp.node_expressions;
       if (lower_bound_node_expressions.size() != 1 || upper_bound_node_expressions.size() != 1) {
-        return input_table_statistics;
+        return input_estimation_statistics;
       }
       const auto& lower_bound_aggregate_expression =
           std::dynamic_pointer_cast<WindowFunctionExpression>(lower_bound_node_expressions.front());
       const auto& upper_bound_aggregate_expression =
           std::dynamic_pointer_cast<WindowFunctionExpression>(upper_bound_node_expressions.front());
       if (!lower_bound_aggregate_expression || !upper_bound_aggregate_expression) {
-        return input_table_statistics;
+        return input_estimation_statistics;
       }
 
       // Check that the WindowFunctions are as expected and are performed on the same column, and the nodes have the
@@ -772,7 +804,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
           upper_bound_aggregate_expression->window_function != WindowFunction::Max ||
           *lower_bound_aggregate_expression->argument() != *upper_bound_aggregate_expression->argument() ||
           *subquery_origin_node != *upper_bound_lqp.left_input()) {
-        return input_table_statistics;
+        return input_estimation_statistics;
       }
 
       // The lower/upper bound nodes might not be AggregateNodes themselves, but projections on a common AggregateNode.
@@ -783,7 +815,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       if ((lower_bound_type != LQPNodeType::Aggregate || upper_bound_type != LQPNodeType::Aggregate) &&
           (lower_bound_type != LQPNodeType::Projection || upper_bound_type != LQPNodeType::Projection ||
            subquery_origin_node->type != LQPNodeType::Aggregate)) {
-        return input_table_statistics;
+        return input_estimation_statistics;
       }
 
       // If the aggregation of the join key is performed by a single AggregateNode, it must only aggregate the min
@@ -796,28 +828,30 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         // GROUP BY column.
         if (node_expressions.size() != 2 || !find_expression_idx(*lower_bound_aggregate_expression, node_expressions) ||
             !find_expression_idx(*upper_bound_aggregate_expression, node_expressions)) {
-          return input_table_statistics;
+          return input_estimation_statistics;
         }
 
         subquery_origin_node = subquery_origin_node->left_input();
       }
 
-      subquery_statistics = estimate_statistics(subquery_origin_node, cacheable, statistics_cache);
+      subquery_statistics = estimate_statistics(subquery_origin_node, cacheable, statistics_cache).table_statistics;
       subquery_column_id = subquery_origin_node->get_column_id(*lower_bound_aggregate_expression->argument());
     }
 
     if (!subquery_statistics) {
-      return input_table_statistics;
+      return input_estimation_statistics;
     }
 
     // We do not have to further check if the subqueries return at most one row. This will be ensured during execution
     // by the TableScan operator.
     const auto column_id = predicate_node.left_input()->get_column_id(*column_expression);
-    return estimate_semi_join(column_id, subquery_column_id, *input_table_statistics, *subquery_statistics);
+    return {.table_statistics =
+                estimate_semi_join(column_id, subquery_column_id, *input_table_statistics, *subquery_statistics),
+            .equivalence_classes = ExpressionUnorderedSet{}};
   }
 
   // Scale the input statistics consequently for each predicate, assuming there are no correlations between them.
-  auto output_table_statistics = input_table_statistics;
+  auto output_table_statistics = input_estimation_statistics;
   for (const auto& operator_scan_predicate : *operator_scan_predicates) {
     if constexpr (HYRISE_DEBUG) {
       assert_required_statistics(operator_scan_predicate.column_id, predicate_node.left_input(),
@@ -827,9 +861,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         assert_required_statistics(column_id, predicate_node.left_input(), input_table_statistics);
       }
     }
-    output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
+    output_table_statistics =
+        estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate, predicate_node);
   }
-
+  // std::cout << "output_table_statistics: " << output_table_statistics.equivalence_classes.size() << "\n";
+  // std::cout << "Predicate: " << predicate->description() << "\n";
+  // std::cout << "Output TableStatistics after estimate_operator_scan_predicate: "
+  //           << *output_table_statistics.table_statistics << "\n";
   return output_table_statistics;
 }
 
@@ -915,20 +953,31 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
     const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
-  // Since UnionNodes are not really used right now, implementing an involved algorithm to union two TableStatistics
-  // seems unjustified. For now, we just concatenate the two statistics objects
-
   DebugAssert(
       left_input_table_statistics->column_statistics.size() == right_input_table_statistics->column_statistics.size(),
       "Input TableStatistics need to have the same number of columns to perform a union");
 
-  auto column_statistics = left_input_table_statistics->column_statistics;
+  auto scale_table_statistics = [&](const std::shared_ptr<TableStatistics>& left,
+                                    const std::shared_ptr<TableStatistics>& right) -> std::shared_ptr<TableStatistics> {
+    if (right->row_count == 0) {
+      auto column_statistics = left->column_statistics;
+      return std::make_shared<TableStatistics>(std::move(column_statistics), left->row_count);
+    }
 
-  const auto row_count = left_input_table_statistics->row_count + right_input_table_statistics->row_count;
+    auto selectivity = Selectivity{(left->row_count + right->row_count) / left->row_count};
+    auto output_column_statistics =
+        std::vector<std::shared_ptr<const BaseAttributeStatistics>>{left->column_statistics.size()};
+    for (auto column_id = ColumnID{0}; column_id < left->column_statistics.size(); ++column_id) {
+      output_column_statistics[column_id] = left->column_statistics[column_id]->scaled(selectivity);
+    }
+    return std::make_shared<TableStatistics>(std::move(output_column_statistics), left->row_count + right->row_count);
+  };
 
-  auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
-
-  return output_table_statistics;
+  // We assume same distribution of values in both inputs and scale the larger input's statistics.
+  if (left_input_table_statistics->row_count >= right_input_table_statistics->row_count) {
+    return scale_table_statistics(left_input_table_statistics, right_input_table_statistics);
+  }
+  return scale_table_statistics(right_input_table_statistics, left_input_table_statistics);
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
@@ -961,16 +1010,22 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
   return input_table_statistics;
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_predicate(
-    const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorScanPredicate& predicate) {
+EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate(
+    EstimationStatisticsState& estimation_statistics_state, const OperatorScanPredicate& predicate,
+    const PredicateNode& lqp_node) {
   /**
    * This function analyses the `predicate` and dispatches an appropriate selectivity-estimating algorithm.
    */
 
+  auto input_table_statistics = estimation_statistics_state.table_statistics;
+
   auto selectivity = Selectivity{1};
+  auto lower = HistogramCountType{-1};
+  auto upper = HistogramCountType{-1};
 
   const auto left_column_id = predicate.column_id;
   auto right_column_id = std::optional<ColumnID>{};
+  auto filtered_column = lqp_node.left_input()->output_expressions().at(left_column_id);
 
   const auto left_input_base_column_statistics = input_table_statistics->column_statistics[left_column_id];
   const auto left_data_type = input_table_statistics->column_data_type(left_column_id);
@@ -1164,6 +1219,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           if (predicate.value2->type() != typeid(AllTypeVariant)) {
             // Lacking better options, assume a "magic" selectivity for `BETWEEN ... AND ?`. Any number would be equally
             // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
+            std::cout << "Value2 is not AllTypeVariant" << "\n";
             selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
             return;
           }
@@ -1171,21 +1227,126 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           value2_variant = boost::get<AllTypeVariant>(*predicate.value2);
         }
 
-        const auto sliced_statistics_object =
-            scan_statistics_object->sliced(predicate.predicate_condition, value_variant, value2_variant);
-        if (!sliced_statistics_object) {
-          selectivity = 0.0;
-          return;
+        // Determine lower and upper bounds for possible optimizations on other columns
+        const auto optional_value = lossy_variant_cast<ColumnDataType>(value_variant);
+
+        if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
+        } else {
+          if (!optional_value) {
+            std::cout << "No value. Wtf" << "\n";
+          } else {
+            const auto value = optional_value.value();
+            auto value_bin_idx = scan_statistics_object->bin_for_value(value);
+
+            if (value_bin_idx == INVALID_BIN_ID) {
+              std::cout << "Invalid bin ID hit" << "\n";
+            } else {
+              for (auto bin_idx = BinID{0}; bin_idx < value_bin_idx; bin_idx++) {
+                lower += scan_statistics_object->bin_height(bin_idx);
+              }
+              auto value_bin = scan_statistics_object->bin(value_bin_idx);
+              const auto values_per_tuple = value_bin.height / value_bin.distinct_count;
+              auto distinct_values_before =
+                  scan_statistics_object->bin_ratio_less_than(value_bin_idx, value) * value_bin.distinct_count;
+              // std::cout << "Histogram to analyze: " << scan_statistics_object << "\n";
+              switch (predicate.predicate_condition) {
+                case PredicateCondition::Equals:
+                  lower += distinct_values_before * values_per_tuple;
+                  upper = lower + values_per_tuple;
+                  break;
+                case PredicateCondition::LessThan:
+                  upper = lower;
+                  lower = 0;
+                  break;
+                case PredicateCondition::LessThanEquals:
+                  lower += (distinct_values_before + 1) * values_per_tuple;
+                  upper = lower;
+                  lower = 0;
+                  break;
+                case PredicateCondition::GreaterThan:
+                  lower += (distinct_values_before + 1) * values_per_tuple;
+                  upper = scan_statistics_object->total_count();
+                  break;
+                case PredicateCondition::GreaterThanEquals:
+                  lower += distinct_values_before * values_per_tuple;
+                  upper = scan_statistics_object->total_count();
+                  break;
+                case PredicateCondition::BetweenInclusive: {
+                  lower += distinct_values_before * values_per_tuple;
+                  if (!value2_variant) {
+                    std::cout << "No value2 for between inclusive" << "\n";
+                  } else {
+                    const auto optional_value2 = lossy_variant_cast<ColumnDataType>(*value2_variant);
+                    if (!optional_value2) {
+                      std::cout << "No value2 after lossy cast" << "\n";
+                    } else {
+                      const auto value2 = *optional_value2;
+                      auto value2_bin_idx = scan_statistics_object->bin_for_value(value2);
+                      if (value2_bin_idx == INVALID_BIN_ID) {
+                        std::cout << "Invalid bin ID hit for value2" << "\n";
+                      } else {
+                        for (auto bin_idx = BinID{0}; bin_idx < value2_bin_idx; bin_idx++) {
+                          upper += scan_statistics_object->bin_height(bin_idx);
+                        }
+                        auto value2_bin = scan_statistics_object->bin(value2_bin_idx);
+                        const auto values_per_tuple2 = value2_bin.height / value2_bin.distinct_count;
+                        auto distinct_values_before2 =
+                            scan_statistics_object->bin_ratio_less_than(value2_bin_idx, value2) *
+                            value2_bin.distinct_count;
+                        upper += distinct_values_before2 * values_per_tuple2;
+                        upper += values_per_tuple2;
+                      }
+                    }
+                  }
+                } break;
+                case PredicateCondition::BetweenExclusive:
+                case PredicateCondition::BetweenLowerExclusive:
+                case PredicateCondition::BetweenUpperExclusive:
+                  std::cout << "Between exclusive not handled yet" << "\n";
+                  lower = -1;
+                  upper = -1;
+                  break;
+                default:
+                  std::cout << "predicate condition not handled: " << static_cast<int>(predicate.predicate_condition)
+                            << "\n";
+                  lower = -1;
+                  upper = -1;
+                  break;
+              }
+            }
+          }
         }
 
-        // TODO(anyone): Simplify this block if AbstractStatisticsObject ever supports `total_count()`.
-        const auto sliced_histogram =
-            std::dynamic_pointer_cast<const AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
-        DebugAssert(sliced_histogram, "Expected slicing of a Histogram to return either nullptr or a Histogram");
-        if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0) {
-          selectivity = 0.0;
+        // auto filtered_column = std::make_shared<LQPColumnExpression>(lqp_node.left_input(), predicate.column_id);
+        if (predicate.predicate_condition == PredicateCondition::Equals) {
+          estimation_statistics_state.equivalence_classes.insert(filtered_column);
+          // std::cout << estimation_statistics_state.equivalence_classes.size() << "\n";
+          if (estimation_statistics_state.equivalence_classes.size() > 1) {
+            // std::cout << "equivalence classes size: " << estimation_statistics_state.equivalence_classes.size() << "\n";
+          }
+        }
+        if (estimation_statistics_state.equivalence_classes.size() > 0 &&
+            lqp_node.left_input()->has_matching_ucc(estimation_statistics_state.equivalence_classes).first) {
+          selectivity = 1 / input_table_statistics->row_count;
+          // std::cout << "Has matching ucc: " << estimation_statistics_state.equivalence_classes.size() << '\n';
+          // std::cout << lqp_node.description() << "\n";
         } else {
-          selectivity = sliced_histogram->total_count() / input_table_statistics->row_count;
+          const auto sliced_statistics_object =
+              scan_statistics_object->sliced(predicate.predicate_condition, value_variant, value2_variant);
+
+          if (!sliced_statistics_object) {
+            selectivity = 0.0;
+            return;
+          }
+          const auto sliced_histogram =
+              std::dynamic_pointer_cast<const AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
+          DebugAssert(sliced_histogram, "Expected slicing of a Histogram to return either nullptr or a Histogram");
+          // std::cout << "Sliced histogram total count: " << sliced_histogram->total_count() << "\n";
+          if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0) {
+            selectivity = 0.0;
+          } else {
+            selectivity = sliced_histogram->total_count() / input_table_statistics->row_count;
+          }
         }
         const auto column_statistics =
             left_input_column_statistics->sliced(predicate.predicate_condition, value_variant, value2_variant);
@@ -1196,18 +1357,209 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
 
   // Entire chunk matches: simply return the input.
   if (selectivity == Selectivity{1}) {
-    return input_table_statistics;
+    return estimation_statistics_state;
   }
+
+  // std::cout << "Before loop Input-Columnstatistics: " << "\n";
+  // for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
+  //   std::cout << "column_id: " << column_id << " : " << input_table_statistics->column_statistics[column_id] << "\n";
+  // }
 
   // Scale the other columns' AttributeStatistics (those that we didn't write to above) with the selectivity
   for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
     if (!output_column_statistics[column_id]) {
-      output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+      if (lower != -1 && upper != -1) {
+        // std::cout << "trying ordered " << "\n";
+        const auto ordered_column = lqp_node.left_input()->output_expressions().at(column_id);
+
+        auto fixed_columns =
+            std::vector<std::shared_ptr<AbstractExpression>>{estimation_statistics_state.equivalence_classes.begin(),
+                                                             estimation_statistics_state.equivalence_classes.end()};
+        std::ranges::reverse(fixed_columns);
+
+        if (fixed_columns.size() > 1) {
+          // std::cout << "fixed columns size: " << fixed_columns.size() << " Check OD: ";
+          // for (const auto& col : fixed_columns) {
+          //   // std::cout << col->as_column_name() << ", ";
+          // }
+          // std::cout << "\n";
+        }
+        if (lqp_node.has_matching_od({ordered_column}, {filtered_column})) {
+          std::cout << "hitting ordered" << "\n";
+          // std::cout << "scaling column id with bounds: " << column_id << "\n";
+          // std::cout << "scaling : " << ordered_column << " based on " << filtered_column << "\n";
+          output_column_statistics[column_id] =
+              scale_statistics_with_bounds(input_table_statistics, column_id, lower, upper, selectivity);
+          // std::cout << "input afterwards: " << input_table_statistics->column_statistics[column_id] << "\n";
+          // std::cout << "output afterwards: " << output_column_statistics[column_id] << "\n";
+
+        } else if (fixed_columns.size() > 0 && lqp_node.has_matching_od({ordered_column}, fixed_columns)) {
+          // std::cout << "hitting ordered with fixed columns: " << fixed_columns.size() << "\n";
+          output_column_statistics[column_id] =
+              scale_statistics_with_bounds(input_table_statistics, column_id, lower, upper, selectivity);
+        } else {
+          output_column_statistics[column_id] =
+              input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+        }
+      } else {
+        DebugAssert(input_table_statistics->column_statistics.size() > column_id,
+                    "Trying to access out-of-bounds column");
+        // if (column_id == 22) {
+        //   std::cout << input_table_statistics->column_statistics[column_id] << "\n";
+        // }
+        output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+      }
     }
   }
+  // std::cout << "After loop Output-Columnstatistics: " << "\n";
+  // for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
+  //   std::cout << "column_id: " << column_id << " : " << output_column_statistics[column_id] << "\n";
+  // }
 
+  // std::cout << "After loop Input-Tablestatistics: " << "\n";
+  // for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
+  //   std::cout << "column_id: " << column_id << " : " << input_table_statistics->column_statistics[column_id] << "\n";
+  // }
+  // std::cout << " estimation_statistics_state.equivalence_classes.size() :"
+  //           << estimation_statistics_state.equivalence_classes.size() << "\n";
   const auto row_count = Cardinality{input_table_statistics->row_count * selectivity};
-  return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+  return {.table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count),
+          .equivalence_classes = estimation_statistics_state.equivalence_classes};
+}
+
+std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::scale_statistics_with_bounds(
+    std::shared_ptr<TableStatistics>& input_table_statistics, const ColumnID& column_id,
+    const HistogramCountType& lower, const HistogramCountType& upper, const Selectivity& selectivity) {
+  // std::cout << "Total count scale_statistics_with_bounds: " << upper - lower << "\n";
+  // std::cout << "upper: " << upper << " lower: " << lower << "\n";
+  if (lower == -1 || upper == -1) {
+    // std::cout << "no proper bounds" << "\n";
+    return input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+  }
+  std::shared_ptr<const BaseAttributeStatistics> result;
+
+  DataType datatype = input_table_statistics->column_data_type(column_id);
+
+  // here
+  // const auto left_input_base_column_statistics = input_table_statistics->column_statistics[left_column_id];
+  // const auto left_data_type = input_table_statistics->column_data_type(left_column_id);
+
+  // auto output_column_statistics =
+  //     std::vector<std::shared_ptr<const BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};
+
+  // resolve_data_type(left_data_type, [&](const auto data_type_t) {
+  //   using ColumnDataType = typename decltype(data_type_t)::type;
+
+  //   const auto left_input_column_statistics =
+  //       std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(left_input_base_column_statistics);
+  // until here
+
+  resolve_data_type((datatype), [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+
+    //const auto input_stats = std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(
+    // input_table_statistics->column_statistics[column_id]);
+    const auto input_base_column_statistics = input_table_statistics->column_statistics[column_id];
+    const auto input_column_stastistics =
+        std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(input_base_column_statistics);
+    if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
+      // TODO(anyone): Cannot scale string statistics with bounds, yet.
+      result = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+      return result;
+    } else {
+      const auto histogram = input_column_stastistics ? input_column_stastistics->histogram : nullptr;
+      if (!histogram) {
+        result = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+        return result;
+      }
+
+      // Create new statistics object
+      auto output_stats = std::make_shared<AttributeStatistics<ColumnDataType>>();
+
+      auto histogram_builder = GenericHistogramBuilder<ColumnDataType>{0, histogram->domain()};
+
+      auto accumulated_height = HistogramCountType{0.0};
+      // std::cout << "total count" << histogram->total_count();
+      for (auto bin_idx = BinID{0}; bin_idx < histogram->bin_count(); ++bin_idx) {
+        const auto bin = histogram->bin(bin_idx);
+
+        const auto bin_lower = accumulated_height;
+        const auto bin_upper = accumulated_height + bin.height;
+
+        // Bin is completely before the lower bound
+        if (bin_upper <= lower) {
+          accumulated_height += bin.height;
+          continue;
+        }
+
+        // Bin is completely after the upper bound
+        if (bin_lower >= upper) {
+          break;
+        }
+
+        // Bin is completely within the bounds
+        if (bin_lower >= lower && bin_upper <= upper) {
+          // std::cout << "case 1 " << "\n";
+          histogram_builder.add_bin(bin.min, bin.max, bin.height, bin.distinct_count);
+          accumulated_height += bin.height;
+          continue;
+        }
+
+        // Bin contains all values
+        if (bin_lower < lower && bin_upper > upper) {
+          // std::cout << "case x " << "\n";
+          const auto fraction = (upper - lower) / bin.height;
+          histogram_builder.add_bin(bin.min, bin.max, bin.height * fraction, bin.distinct_count * fraction);
+          accumulated_height += bin.height;
+          continue;
+        }
+
+        // Bin overlaps with lower bound
+        if (bin_lower < lower && bin_upper > lower) {
+          // std::cout << "case 2 " << "\n";
+
+          const auto height_within_bounds = bin_upper - lower;
+          const auto fraction_within_bounds = height_within_bounds / bin.height;
+          const auto distinct_count_within_bounds =
+              std::max(HistogramCountType{1.0},
+                       static_cast<HistogramCountType>(std::ceil(bin.distinct_count * fraction_within_bounds)));
+          // adjust bin.min to be only 'fraction' as well...
+          const auto new_bin_min =
+              bin.max - static_cast<ColumnDataType>(static_cast<double>(bin.max - bin.min) * fraction_within_bounds);
+          histogram_builder.add_bin(new_bin_min, bin.max, height_within_bounds, distinct_count_within_bounds);
+          accumulated_height += bin.height;
+          continue;
+        }
+
+        // Bin overlaps with upper bound
+        if (bin_lower < upper && bin_upper > upper) {
+          // std::cout << "case 3 " << "\n";
+
+          const auto height_within_bounds = upper - bin_lower;
+          const auto fraction_within_bounds = height_within_bounds / bin.height;
+          const auto distinct_count_within_bounds =
+              std::max(HistogramCountType{1.0},
+                       static_cast<HistogramCountType>(std::ceil(bin.distinct_count * fraction_within_bounds)));
+          // adjust bin.max in the same way as we should do above.
+          const auto new_bin_max =
+              bin.min + static_cast<ColumnDataType>(static_cast<double>(bin.max - bin.min) * fraction_within_bounds);
+          histogram_builder.add_bin(bin.min, new_bin_max, height_within_bounds, distinct_count_within_bounds);
+          accumulated_height += bin.height;
+          continue;
+        }
+      }
+      // output_stats->histogram = histogram_builder.build();
+      output_stats->histogram = histogram_builder.build();
+      // std::cout << "Created Histogram " << *output_stats << "\n";
+      // std::cout << "Total count output_stats: " << output_stats->histogram->total_count() << "\n";
+
+      result = output_stats;
+      // std::cout << "Result: " << result << "\n";
+      return result;
+    }
+  });
+  // std::cout << "Result outside: " << result << "\n";
+  return result;
 }
 
 template <typename T>
@@ -1401,6 +1753,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     auto left_histogram = left_input_column_statistics ? left_input_column_statistics->histogram : nullptr;
     auto right_histogram = right_input_column_statistics ? right_input_column_statistics->histogram : nullptr;
 
+    // std::cout << "Left histogram: " << (left_histogram ? left_histogram->description() : "nullptr") << "\n";
+    // std::cout << "Right histogram: " << (right_histogram ? right_histogram->description() : "nullptr") << "\n";
+
     if (left_histogram && right_histogram) {
       // Adapt the right histogram so that it only covers distinct values (i.e., replacing the bins' height with their
       // number of distinct counts)
@@ -1414,6 +1769,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
       }
 
       const auto distinct_right_histogram = distinct_right_histogram_builder.build();
+
+      // std::cout << "Distinct right histogram: " << distinct_right_histogram->description() << "\n";
       // If we have histograms, we use the principle of inclusion to determine the number of matches between two bins.
       join_column_histogram = estimate_inner_equi_join_with_histograms(*left_histogram, *distinct_right_histogram);
       cardinality = join_column_histogram->total_count();
@@ -1448,6 +1805,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
   });
 
+  // more elements than expected, lollllll 
+  // whole table only 365, but 2222 in id column...
+  // std::cout << "Semi join estimated row count: " << output_table_statistics->row_count << "\n";
+  // std::cout << "Left input row count: " << left_input_table_statistics.row_count << "\n";
   Assert(output_table_statistics->row_count <= left_input_table_statistics.row_count * 1.01,
          "Semi join should not increase cardinality");
 
@@ -1498,6 +1859,9 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_j
 
   auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
   auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
+
+  // std::cout << "unified_left_histogram:" << unified_left_histogram->description() << "\n";
+  // std::cout << "unified_right_histogram" << unified_right_histogram->description() << "\n";
 
   auto left_idx = BinID{0};
   auto right_idx = BinID{0};

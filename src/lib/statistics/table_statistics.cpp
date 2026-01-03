@@ -61,6 +61,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
                                      : 1.0 - (histogram->total_count() / static_cast<Selectivity>(table.row_count()));
           output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
         } else {
+          std::cout << "Failed to generate histogram for column " << column_id << "\n";
           // Failure to generate a histogram currently only stems from all-null segments.
           // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
           output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0));

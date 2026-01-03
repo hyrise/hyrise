@@ -150,10 +150,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _unoptimized_logical_plan = nullptr;
 
   auto optimizer_rule_durations = std::make_shared<std::vector<OptimizerRuleMetrics>>();
-
+  std::cout << "starting optimization" << "\n";
   std::tie(_optimized_logical_plan, _optimization_context) =
       _optimizer->optimize_with_context(std::move(unoptimized_lqp), optimizer_rule_durations);
-
+  std::cout << "finished optimization" << "\n";
   const auto done = std::chrono::steady_clock::now();
   _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
@@ -162,7 +162,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   if (lqp_cache && _translation_info.cacheable && _optimization_context->is_cacheable()) {
     lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
-
+  std::cout << "optimized_logical_plan" << "\n";
   return _optimized_logical_plan;
 }
 

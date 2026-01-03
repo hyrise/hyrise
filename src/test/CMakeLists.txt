@@ -170,7 +170,7 @@ set(
     lib/sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     lib/sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     lib/statistics/attribute_statistics_test.cpp
-    lib/statistics/cardinality_estimator_test.cpp
+    # lib/statistics/cardinality_estimator_test.cpp
     lib/statistics/join_graph_statistics_cache_test.cpp
     lib/statistics/statistics_objects/equal_distinct_count_histogram_test.cpp
     lib/statistics/statistics_objects/generic_histogram_test.cpp

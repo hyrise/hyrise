@@ -15,11 +15,11 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "visualization/abstract_visualizer.hpp"
@@ -106,6 +106,9 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   Cardinality row_count = NAN;
   auto row_percentage = 100.0;
 
+  if (cardinality_estimator.estimate_cardinality(source_node, false) < 0) {
+    row_count = cardinality_estimator.estimate_cardinality(source_node, false);
+  }
   row_count = cardinality_estimator.estimate_cardinality(source_node);
   if (source_node->left_input()) {
     auto input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());

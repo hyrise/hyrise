@@ -4,11 +4,15 @@
 #include <memory>
 #include <ostream>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include <boost/dynamic_bitset.hpp>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
@@ -33,6 +37,11 @@ class UnionNode;
 class ValidateNode;
 class WindowNode;
 
+struct EstimationStatisticsState {
+  std::shared_ptr<TableStatistics> table_statistics;
+  ExpressionUnorderedSet equivalence_classes;
+};
+
 /**
  * Hyrise's statistics-based cardinality estimator. It mostly relies on histograms that are taken from the base tables
  * and adapted (sliced, scaled) according to join and scan predicates along the query plan. The estimation process
@@ -50,7 +59,7 @@ class WindowNode;
  */
 class CardinalityEstimator {
  public:
-  using StatisticsByLQP = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<TableStatistics>>;
+  using StatisticsByLQP = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, EstimationStatisticsState>;
 
   /**
    * @return A new instance of this estimator with empty caches. Used so that caching guarantees can be enabled on the
@@ -64,11 +73,11 @@ class CardinalityEstimator {
   Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                    const bool cacheable = true) const;
 
-  std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                                       const bool cacheable = true) const;
+  EstimationStatisticsState estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                const bool cacheable = true) const;
 
-  std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                                       const bool cacheable, StatisticsByLQP& statistics_cache) const;
+  EstimationStatisticsState estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp, const bool cacheable,
+                                                StatisticsByLQP& statistics_cache) const;
 
   /**
    * We use dummy objects for pruned statistics and cases where we do not estimate statistics (e.g., for aggregations).
@@ -197,9 +206,9 @@ class CardinalityEstimator {
   static std::shared_ptr<TableStatistics> estimate_validate_node(
       const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_predicate_node(
-      const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
-      const bool cacheable, StatisticsByLQP& statistics_cache) const;
+  EstimationStatisticsState estimate_predicate_node(const PredicateNode& predicate_node,
+                                                    const EstimationStatisticsState& input_estimation_statistics,
+                                                    const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
   static std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
@@ -222,8 +231,9 @@ class CardinalityEstimator {
    * Estimate a simple scanning predicate. This function analyses the given predicate and dispatches the actual
    * estimation algorithm.
    */
-  static std::shared_ptr<TableStatistics> estimate_operator_scan_predicate(
-      const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorScanPredicate& predicate);
+  static EstimationStatisticsState estimate_operator_scan_predicate(
+      EstimationStatisticsState& estimation_statistics_state, const OperatorScanPredicate& predicate,
+      const PredicateNode& lqp_node);
 
   /**
    * Estimation of an equi scan between two histograms. Estimating equi scans without correlation information is
@@ -234,6 +244,10 @@ class CardinalityEstimator {
       const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram);
 
   /** @} */
+
+  static std::shared_ptr<const BaseAttributeStatistics> scale_statistics_with_bounds(
+      std::shared_ptr<TableStatistics>& input_table_statistics, const ColumnID& column_id,
+      const HistogramCountType& lower, const HistogramCountType& upper, const Selectivity& selectivity);
 
   /**
    * Join estimations

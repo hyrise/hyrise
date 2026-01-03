@@ -153,13 +153,14 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
   const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
-  EXPECT_EQ(result_table_statistics->row_count, 100);
-  ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
-  EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(
-      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(1)));
-  EXPECT_TRUE(
-      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
+  EXPECT_EQ(result_table_statistics.table_statistics->row_count, 100);
+  ASSERT_EQ(result_table_statistics.table_statistics->column_statistics.size(), 3);
+  EXPECT_EQ(result_table_statistics.table_statistics->column_statistics.at(0),
+            input_table_statistics->column_statistics.at(1));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*result_table_statistics.table_statistics->column_statistics.at(1)));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*result_table_statistics.table_statistics->column_statistics.at(2)));
 }
 
 TEST_F(CardinalityEstimatorTest, AggregateWithoutGroupBy) {
@@ -167,10 +168,10 @@ TEST_F(CardinalityEstimatorTest, AggregateWithoutGroupBy) {
 
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
-  EXPECT_EQ(result_table_statistics->row_count, 1);
-  ASSERT_EQ(result_table_statistics->column_statistics.size(), 1);
-  EXPECT_TRUE(
-      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(0)));
+  EXPECT_EQ(result_table_statistics.table_statistics->row_count, 1);
+  ASSERT_EQ(result_table_statistics.table_statistics->column_statistics.size(), 1);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*result_table_statistics.table_statistics->column_statistics.at(0)));
 }
 
 TEST_F(CardinalityEstimatorTest, Alias) {
@@ -183,10 +184,12 @@ TEST_F(CardinalityEstimatorTest, Alias) {
   const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
-  EXPECT_EQ(result_table_statistics->row_count, 100);
-  ASSERT_EQ(result_table_statistics->column_statistics.size(), 2);
-  EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(1));
-  EXPECT_EQ(result_table_statistics->column_statistics.at(1), input_table_statistics->column_statistics.at(0));
+  EXPECT_EQ(result_table_statistics.table_statistics->row_count, 100);
+  ASSERT_EQ(result_table_statistics.table_statistics->column_statistics.size(), 2);
+  EXPECT_EQ(result_table_statistics.table_statistics->column_statistics.at(0),
+            input_table_statistics->column_statistics.at(1));
+  EXPECT_EQ(result_table_statistics.table_statistics->column_statistics.at(1),
+            input_table_statistics->column_statistics.at(0));
 }
 
 TEST_F(CardinalityEstimatorTest, JoinNumericEquiInner) {
@@ -199,26 +202,26 @@ TEST_F(CardinalityEstimatorTest, JoinNumericEquiInner) {
 
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(result_statistics->column_statistics.size(), 4);
-  ASSERT_EQ(result_statistics->row_count, 128);
+  ASSERT_EQ(result_statistics.table_statistics->column_statistics.size(), 4);
+  ASSERT_EQ(result_statistics.table_statistics->row_count, 128);
 
-  const auto column_statistics_b_a =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(0));
+  const auto column_statistics_b_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      result_statistics.table_statistics->column_statistics.at(0));
   const auto join_histogram_b_a = column_statistics_b_a->histogram;
   EXPECT_EQ(join_histogram_b_a->bin_count(), 4);
 
-  const auto column_statistics_b_b =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(result_statistics->column_statistics[1]);
+  const auto column_statistics_b_b = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      result_statistics.table_statistics->column_statistics[1]);
   const auto scaled_histogram_b_b = column_statistics_b_b->histogram;
   EXPECT_EQ(scaled_histogram_b_b->total_count(), 32 * 4);
 
-  const auto column_statistics_c_x =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(result_statistics->column_statistics[2]);
+  const auto column_statistics_c_x = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      result_statistics.table_statistics->column_statistics[2]);
   const auto join_histogram_c_x = column_statistics_c_x->histogram;
   EXPECT_EQ(join_histogram_c_x->bin_count(), 4);
 
-  const auto column_statistics_c_y =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(result_statistics->column_statistics[3]);
+  const auto column_statistics_c_y = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      result_statistics.table_statistics->column_statistics[3]);
   const auto scaled_histogram_c_y = column_statistics_c_y->histogram;
   EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
 }
@@ -235,8 +238,8 @@ TEST_F(CardinalityEstimatorTest, JoinNumericEquiInnerMultiPredicates) {
 
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(result_statistics->column_statistics.size(), 4);
-  ASSERT_EQ(result_statistics->row_count, 128);
+  ASSERT_EQ(result_statistics.table_statistics->column_statistics.size(), 4);
+  ASSERT_EQ(result_statistics.table_statistics->row_count, 128);
 }
 
 TEST_F(CardinalityEstimatorTest, JoinNumericNonEquiInner) {
@@ -248,16 +251,16 @@ TEST_F(CardinalityEstimatorTest, JoinNumericNonEquiInner) {
   const auto input_lqp_d = JoinNode::make(JoinMode::Inner, less_than_(b_a, c_x), node_b, node_c);
   const auto input_lqp_e = JoinNode::make(JoinMode::Inner, less_than_equals_(b_a, c_x), node_b, node_c);
 
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_a)->row_count, 32 * 64);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_a)->column_statistics.size(), 4);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_b)->row_count, 32 * 64);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_b)->column_statistics.size(), 4);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_c)->row_count, 32 * 64);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_c)->column_statistics.size(), 4);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_d)->row_count, 32 * 64);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_d)->column_statistics.size(), 4);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_e)->row_count, 32 * 64);
-  EXPECT_EQ(estimator.estimate_statistics(input_lqp_e)->column_statistics.size(), 4);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_a).table_statistics->row_count, 32 * 64);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_a).table_statistics->column_statistics.size(), 4);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_b).table_statistics->row_count, 32 * 64);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_b).table_statistics->column_statistics.size(), 4);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_c).table_statistics->row_count, 32 * 64);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_c).table_statistics->column_statistics.size(), 4);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_d).table_statistics->row_count, 32 * 64);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_d).table_statistics->column_statistics.size(), 4);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_e).table_statistics->row_count, 32 * 64);
+  EXPECT_EQ(estimator.estimate_statistics(input_lqp_e).table_statistics->column_statistics.size(), 4);
 }
 
 TEST_F(CardinalityEstimatorTest, JoinEquiInnerDifferentDataTypes) {
@@ -272,8 +275,8 @@ TEST_F(CardinalityEstimatorTest, JoinEquiInnerDifferentDataTypes) {
 
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(result_statistics->row_count, 32 * 200);
-  ASSERT_EQ(result_statistics->column_statistics.size(), 4);
+  ASSERT_EQ(result_statistics.table_statistics->row_count, 32 * 200);
+  ASSERT_EQ(result_statistics.table_statistics->column_statistics.size(), 4);
 }
 
 TEST_F(CardinalityEstimatorTest, JoinCross) {
@@ -286,24 +289,24 @@ TEST_F(CardinalityEstimatorTest, JoinCross) {
 
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(result_statistics->row_count, 32 * 64);
+  ASSERT_EQ(result_statistics.table_statistics->row_count, 32 * 64);
 
-  ASSERT_EQ(result_statistics->column_statistics.size(), 4);
+  ASSERT_EQ(result_statistics.table_statistics->column_statistics.size(), 4);
 
-  const auto column_statistics_b_a =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(0));
+  const auto column_statistics_b_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      result_statistics.table_statistics->column_statistics.at(0));
   EXPECT_EQ(column_statistics_b_a->histogram->total_count(), 32 * 64);
 
-  const auto column_statistics_b_b =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(1));
+  const auto column_statistics_b_b = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      result_statistics.table_statistics->column_statistics.at(1));
   EXPECT_EQ(column_statistics_b_b->histogram->total_count(), 32 * 64);
 
-  const auto column_statistics_c_x =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(2));
+  const auto column_statistics_c_x = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      result_statistics.table_statistics->column_statistics.at(2));
   EXPECT_EQ(column_statistics_c_x->histogram->total_count(), 32 * 64);
 
-  const auto column_statistics_c_y =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(3));
+  const auto column_statistics_c_y = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      result_statistics.table_statistics->column_statistics.at(3));
   EXPECT_EQ(column_statistics_c_y->histogram->total_count(), 32 * 64);
 }
 
@@ -451,10 +454,10 @@ TEST_F(CardinalityEstimatorTest, JoinAnti) {
   // Test that anti joins are estimated return the left input statistics (for now)
 
   const auto anti_null_as_false_join_lqp = JoinNode::make(JoinMode::AntiNullAsFalse, equals_(a_a, b_a), node_a, node_b);
-  EXPECT_EQ(estimator.estimate_statistics(anti_null_as_false_join_lqp), node_a->table_statistics());
+  EXPECT_EQ(estimator.estimate_statistics(anti_null_as_false_join_lqp).table_statistics, node_a->table_statistics());
 
   const auto anti_null_as_true_join_lqp = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(a_a, b_a), node_a, node_b);
-  EXPECT_EQ(estimator.estimate_statistics(anti_null_as_true_join_lqp), node_a->table_statistics());
+  EXPECT_EQ(estimator.estimate_statistics(anti_null_as_true_join_lqp).table_statistics, node_a->table_statistics());
 }
 
 TEST_F(CardinalityEstimatorTest, JoinWithDummyStatistics) {
@@ -492,12 +495,14 @@ TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {
 
   const auto limit_statistics = estimator.estimate_statistics(limit_lqp);
 
-  EXPECT_EQ(limit_statistics->row_count, 1);
-  ASSERT_EQ(limit_statistics->column_statistics.size(), 2);
+  EXPECT_EQ(limit_statistics.table_statistics->row_count, 1);
+  ASSERT_EQ(limit_statistics.table_statistics->column_statistics.size(), 2);
 
   // Limit does not write out StatisticsObjects.
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*limit_statistics->column_statistics.at(0)));
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*limit_statistics->column_statistics.at(1)));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*limit_statistics.table_statistics->column_statistics.at(0)));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*limit_statistics.table_statistics->column_statistics.at(1)));
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithValueExpressionExeedingInputRowCount) {
@@ -506,7 +511,7 @@ TEST_F(CardinalityEstimatorTest, LimitWithValueExpressionExeedingInputRowCount) 
 
   const auto limit_statistics_a = estimator.estimate_statistics(limit_lqp_a);
 
-  EXPECT_EQ(limit_statistics_a->row_count, 100);
+  EXPECT_EQ(limit_statistics_a.table_statistics->row_count, 100);
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithComplexExpression) {
@@ -531,13 +536,13 @@ TEST_F(CardinalityEstimatorTest, PredicateWithOneSimplePredicate) {
   EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp), 50.0);
 
   const auto plan_output_statistics = estimator.estimate_statistics(input_lqp);
-  EXPECT_DOUBLE_EQ(plan_output_statistics->row_count, 50.0);  // Same as above
-  ASSERT_EQ(plan_output_statistics->column_statistics.size(), 2);
+  EXPECT_DOUBLE_EQ(plan_output_statistics.table_statistics->row_count, 50.0);  // Same as above
+  ASSERT_EQ(plan_output_statistics.table_statistics->column_statistics.size(), 2);
 
-  const auto plan_output_statistics_a =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(plan_output_statistics->column_statistics.at(0));
-  const auto plan_output_statistics_b =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(plan_output_statistics->column_statistics.at(1));
+  const auto plan_output_statistics_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      plan_output_statistics.table_statistics->column_statistics.at(0));
+  const auto plan_output_statistics_b = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      plan_output_statistics.table_statistics->column_statistics.at(1));
   ASSERT_TRUE(plan_output_statistics_a);
   ASSERT_TRUE(plan_output_statistics_b);
 
@@ -571,13 +576,13 @@ TEST_F(CardinalityEstimatorTest, PredicateWithOneBetweenPredicate) {
     EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp), 80.0);
 
     const auto plan_output_statistics = estimator.estimate_statistics(input_lqp);
-    EXPECT_DOUBLE_EQ(plan_output_statistics->row_count, 80.0);  // Same as above
-    ASSERT_EQ(plan_output_statistics->column_statistics.size(), 2);
+    EXPECT_DOUBLE_EQ(plan_output_statistics.table_statistics->row_count, 80.0);  // Same as above
+    ASSERT_EQ(plan_output_statistics.table_statistics->column_statistics.size(), 2);
 
-    const auto plan_output_statistics_a =
-        std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(plan_output_statistics->column_statistics.at(0));
-    const auto plan_output_statistics_b =
-        std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(plan_output_statistics->column_statistics.at(1));
+    const auto plan_output_statistics_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+        plan_output_statistics.table_statistics->column_statistics.at(0));
+    const auto plan_output_statistics_b = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+        plan_output_statistics.table_statistics->column_statistics.at(1));
     ASSERT_TRUE(plan_output_statistics_a);
     ASSERT_TRUE(plan_output_statistics_b);
 
@@ -781,10 +786,10 @@ TEST_F(CardinalityEstimatorTest, PredicateColumnVsColumnDifferentDataTypes) {
 
   const auto estimated_statistics = estimator.estimate_statistics(input_lqp);
 
-  const auto estimated_column_statistics_a =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(estimated_statistics->column_statistics.at(0));
-  const auto estimated_column_statistics_b =
-      std::dynamic_pointer_cast<const AttributeStatistics<float>>(estimated_statistics->column_statistics.at(1));
+  const auto estimated_column_statistics_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      estimated_statistics.table_statistics->column_statistics.at(0));
+  const auto estimated_column_statistics_b = std::dynamic_pointer_cast<const AttributeStatistics<float>>(
+      estimated_statistics.table_statistics->column_statistics.at(1));
 
   ASSERT_TRUE(estimated_column_statistics_a);
   ASSERT_TRUE(estimated_column_statistics_b);
@@ -813,14 +818,14 @@ TEST_F(CardinalityEstimatorTest, PredicateWithMissingStatistics) {
   const auto estimated_statistics_a = estimator.estimate_statistics(input_lqp_a);
   const auto estimated_statistics_b = estimator.estimate_statistics(input_lqp_a);
 
-  const auto estimated_column_statistics_a_a =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(estimated_statistics_a->column_statistics.at(0));
-  const auto estimated_column_statistics_a_b =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(estimated_statistics_a->column_statistics.at(1));
-  const auto estimated_column_statistics_b_a =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(estimated_statistics_b->column_statistics.at(0));
-  const auto estimated_column_statistics_b_b =
-      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(estimated_statistics_b->column_statistics.at(1));
+  const auto estimated_column_statistics_a_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      estimated_statistics_a.table_statistics->column_statistics.at(0));
+  const auto estimated_column_statistics_a_b = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      estimated_statistics_a.table_statistics->column_statistics.at(1));
+  const auto estimated_column_statistics_b_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      estimated_statistics_b.table_statistics->column_statistics.at(0));
+  const auto estimated_column_statistics_b_b = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
+      estimated_statistics_b.table_statistics->column_statistics.at(1));
 
   ASSERT_TRUE(estimated_column_statistics_a_a);
   ASSERT_TRUE(estimated_column_statistics_a_b);
@@ -869,12 +874,14 @@ TEST_F(CardinalityEstimatorTest, Projection) {
   const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
-  EXPECT_EQ(result_table_statistics->row_count, 100);
-  ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
-  EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(
-      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(1)));
-  EXPECT_EQ(result_table_statistics->column_statistics.at(2), input_table_statistics->column_statistics.at(0));
+  EXPECT_EQ(result_table_statistics.table_statistics->row_count, 100);
+  ASSERT_EQ(result_table_statistics.table_statistics->column_statistics.size(), 3);
+  EXPECT_EQ(result_table_statistics.table_statistics->column_statistics.at(0),
+            input_table_statistics->column_statistics.at(1));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*result_table_statistics.table_statistics->column_statistics.at(1)));
+  EXPECT_EQ(result_table_statistics.table_statistics->column_statistics.at(2),
+            input_table_statistics->column_statistics.at(0));
 }
 
 TEST_F(CardinalityEstimatorTest, Sort) {
@@ -885,7 +892,7 @@ TEST_F(CardinalityEstimatorTest, Sort) {
   // clang-format on
 
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
-  EXPECT_EQ(result_table_statistics, node_a->table_statistics());
+  EXPECT_EQ(result_table_statistics.table_statistics, node_a->table_statistics());
 }
 
 TEST_F(CardinalityEstimatorTest, StoredTable) {
@@ -899,10 +906,11 @@ TEST_F(CardinalityEstimatorTest, StaticTable) {
 
   // Case (i): No statistics available, create dummy statistics.
   const auto dummy_statistics = estimator.estimate_statistics(static_table_node);
-  EXPECT_DOUBLE_EQ(dummy_statistics->row_count, 3.0);
-  ASSERT_EQ(dummy_statistics->column_statistics.size(), 1);
-  ASSERT_EQ(dummy_statistics->column_statistics[0]->data_type, DataType::Int);
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*dummy_statistics->column_statistics[0]));
+  EXPECT_DOUBLE_EQ(dummy_statistics.table_statistics->row_count, 3.0);
+  ASSERT_EQ(dummy_statistics.table_statistics->column_statistics.size(), 1);
+  ASSERT_EQ(dummy_statistics.table_statistics->column_statistics[0]->data_type, DataType::Int);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*dummy_statistics.table_statistics->column_statistics[0]));
 
   // Case (ii): Statistics available, simply forward them.
   table->set_table_statistics(TableStatistics::from_table(*table));
@@ -923,8 +931,8 @@ TEST_F(CardinalityEstimatorTest, Validate) {
   const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(input_lqp);
 
-  EXPECT_EQ(result_table_statistics->row_count, 100);
-  ASSERT_EQ(result_table_statistics->column_statistics.size(), 2);
+  EXPECT_EQ(result_table_statistics.table_statistics->row_count, 100);
+  ASSERT_EQ(result_table_statistics.table_statistics->column_statistics.size(), 2);
 }
 
 TEST_F(CardinalityEstimatorTest, Union) {
@@ -941,9 +949,11 @@ TEST_F(CardinalityEstimatorTest, Union) {
 
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(result_statistics->column_statistics.size(), 2);
-  ASSERT_EQ(result_statistics->column_statistics.at(0), node_a->table_statistics()->column_statistics.at(0));
-  ASSERT_EQ(result_statistics->column_statistics.at(1), node_a->table_statistics()->column_statistics.at(1));
+  ASSERT_EQ(result_statistics.table_statistics->column_statistics.size(), 2);
+  ASSERT_EQ(result_statistics.table_statistics->column_statistics.at(0),
+            node_a->table_statistics()->column_statistics.at(0));
+  ASSERT_EQ(result_statistics.table_statistics->column_statistics.at(1),
+            node_a->table_statistics()->column_statistics.at(1));
 }
 
 TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
@@ -1142,12 +1152,14 @@ TEST_F(CardinalityEstimatorTest, WindowNode) {
   const auto input_table_statistics = node_a->table_statistics();
   const auto result_table_statistics = estimator.estimate_statistics(lqp);
 
-  EXPECT_EQ(result_table_statistics->row_count, 100);
-  ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
-  EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(0));
-  EXPECT_EQ(result_table_statistics->column_statistics.at(1), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(
-      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
+  EXPECT_EQ(result_table_statistics.table_statistics->row_count, 100);
+  ASSERT_EQ(result_table_statistics.table_statistics->column_statistics.size(), 3);
+  EXPECT_EQ(result_table_statistics.table_statistics->column_statistics.at(0),
+            input_table_statistics->column_statistics.at(0));
+  EXPECT_EQ(result_table_statistics.table_statistics->column_statistics.at(1),
+            input_table_statistics->column_statistics.at(1));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*result_table_statistics.table_statistics->column_statistics.at(2)));
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
@@ -1219,16 +1231,18 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
 
   // Estimate with caching.
   auto statistics = estimator.estimate_statistics(lqp);
-  ASSERT_EQ(statistics->column_statistics.size(), 5);
+  ASSERT_EQ(statistics.table_statistics->column_statistics.size(), 5);
   // The first column is a computed projection `add_(a_a, 1)` that does not have statistics. It is also not required
   // by any predicate further up in the LQP.
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[0]));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics.table_statistics->column_statistics[0]));
   // Columns a_a, a_b, and b_b were required to estimate the PredicateNode and the JoinNode.
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[1]));
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[2]));
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[3]));
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics.table_statistics->column_statistics[1]));
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics.table_statistics->column_statistics[2]));
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics.table_statistics->column_statistics[3]));
   // Column b_b was not required by any predicate and, thus, was pruned.
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[4]));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics.table_statistics->column_statistics[4]));
 
   // After invocation, the required columns should be populated.
   EXPECT_EQ(estimator.cardinality_estimation_cache.required_column_expressions->size(), 3);
@@ -1255,7 +1269,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
 
   // Round one: node_u does not have base table statistics. All statistics are dummy statistics.
   const auto lqp_u_dummy_statistics = estimator.estimate_statistics(lqp_u);
-  for (const auto& statistics : lqp_u_dummy_statistics->column_statistics) {
+  for (const auto& statistics : lqp_u_dummy_statistics.table_statistics->column_statistics) {
     EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics));
   }
 
@@ -1268,18 +1282,25 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   // For node_u, no columns are pruned. However, only columns 2, 6, and 8 are used.
   estimator.guarantee_bottom_up_construction(lqp_u);
   const auto lqp_u_statistics = estimator.estimate_statistics(lqp_u);
-  ASSERT_EQ(lqp_u_statistics->column_statistics.size(), 10);
+  ASSERT_EQ(lqp_u_statistics.table_statistics->column_statistics.size(), 10);
   const auto& table_u_statistics = table_u->table_statistics()->column_statistics;
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[0]));
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[1]));
-  EXPECT_EQ(lqp_u_statistics->column_statistics[2], table_u_statistics[2]);
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[3]));
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[4]));
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[5]));
-  EXPECT_EQ(lqp_u_statistics->column_statistics[6], table_u_statistics[6]);
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[7]));
-  EXPECT_EQ(lqp_u_statistics->column_statistics[8], table_u_statistics[8]);
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[9]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_u_statistics.table_statistics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_u_statistics.table_statistics->column_statistics[1]));
+  EXPECT_EQ(lqp_u_statistics.table_statistics->column_statistics[2], table_u_statistics[2]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_u_statistics.table_statistics->column_statistics[3]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_u_statistics.table_statistics->column_statistics[4]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_u_statistics.table_statistics->column_statistics[5]));
+  EXPECT_EQ(lqp_u_statistics.table_statistics->column_statistics[6], table_u_statistics[6]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_u_statistics.table_statistics->column_statistics[7]));
+  EXPECT_EQ(lqp_u_statistics.table_statistics->column_statistics[8], table_u_statistics[8]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_u_statistics.table_statistics->column_statistics[9]));
 
   // Create the same query as for the StaticTableNode, but with pruned columns.
   const auto node_v = StoredTableNode::make("table_u");
@@ -1298,12 +1319,14 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   // 8 are used.
   estimator.guarantee_bottom_up_construction(lqp_v);
   const auto lqp_v_statistics = estimator.estimate_statistics(lqp_v);
-  ASSERT_EQ(lqp_v_statistics->column_statistics.size(), 5);
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[0]));
-  EXPECT_EQ(lqp_v_statistics->column_statistics[1], table_u_statistics[2]);
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[2]));
-  EXPECT_EQ(lqp_v_statistics->column_statistics[3], table_u_statistics[6]);
-  EXPECT_EQ(lqp_v_statistics->column_statistics[4], table_u_statistics[8]);
+  ASSERT_EQ(lqp_v_statistics.table_statistics->column_statistics.size(), 5);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_v_statistics.table_statistics->column_statistics[0]));
+  EXPECT_EQ(lqp_v_statistics.table_statistics->column_statistics[1], table_u_statistics[2]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_v_statistics.table_statistics->column_statistics[2]));
+  EXPECT_EQ(lqp_v_statistics.table_statistics->column_statistics[3], table_u_statistics[6]);
+  EXPECT_EQ(lqp_v_statistics.table_statistics->column_statistics[4], table_u_statistics[8]);
 
   // clang-format off
   const auto lqp_d =
@@ -1316,9 +1339,10 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   estimator.guarantee_bottom_up_construction(lqp_d);
   const auto lqp_d_statistics = estimator.estimate_statistics(lqp_d);
   const auto node_d_statistics = node_d->table_statistics();
-  ASSERT_EQ(lqp_d_statistics->column_statistics.size(), 2);
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_d_statistics->column_statistics[0]));
-  EXPECT_EQ(lqp_d_statistics->column_statistics[1], node_d_statistics->column_statistics[2]);
+  ASSERT_EQ(lqp_d_statistics.table_statistics->column_statistics.size(), 2);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(
+      &*lqp_d_statistics.table_statistics->column_statistics[0]));
+  EXPECT_EQ(lqp_d_statistics.table_statistics->column_statistics[1], node_d_statistics->column_statistics[2]);
 }
 
 TEST_F(CardinalityEstimatorTest, AssertRequiredStatistics) {

@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <limits>
 #include <memory>
 #include <string>
@@ -5,7 +7,9 @@
 #include <vector>
 
 #include "base_test.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/scaled_histogram.hpp"
 #include "utils/load_table.hpp"
 
 /**
@@ -91,6 +95,17 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
   EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'234), 0.0);
   EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 123'456), 2.5);
   EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'000'000), 0.0);
+}
+
+TEST_F(GenericHistogramTest, EstimateCardinalityWithScaledAndSlicedHistogram) {
+  const auto histogram = GenericHistogram<int32_t>::with_single_bin(std::numeric_limits<int32_t>::min(),
+                                                                    std::numeric_limits<int32_t>::max(), 1, 1);
+
+  const auto scaled_histogram = std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(histogram->scaled(0.5));
+
+  const auto sliced_histogram = std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(
+      scaled_histogram->sliced(PredicateCondition::NotEquals, 0));
+  EXPECT_TRUE(sliced_histogram->bin_height(0) >= 0);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
@@ -618,6 +633,13 @@ TEST_F(GenericHistogramTest, SlicedInt) {
     std::vector<HistogramCountType> {});
   // clang-format on
 
+  // scaled_histogram
+  const auto histogram_e = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>            { 1, 31, 60, 80},
+    std::vector<int32_t>            {25, 50, 60, 99},
+    std::vector<HistogramCountType> {0.5, 0.5, 0.5,  0.5},
+    std::vector<HistogramCountType> {0.5, 0.5, 0.5,  0.5});
+
   std::vector<Predicate> predicates{
       Predicate{PredicateCondition::Equals, -50, std::nullopt},
       Predicate{PredicateCondition::Equals, 5, std::nullopt},
@@ -664,7 +686,7 @@ TEST_F(GenericHistogramTest, SlicedInt) {
   };
 
   std::vector<std::shared_ptr<AbstractHistogram<int32_t>>> histograms{histogram_a, histogram_b, histogram_c,
-                                                                      histogram_d};
+                                                                            histogram_d,   std::static_pointer_cast<AbstractHistogram<int32_t>>(histogram_e)};
 
   test_sliced_with_predicates(histograms, predicates);
 }

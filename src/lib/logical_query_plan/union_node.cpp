@@ -134,6 +134,17 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
        * Therefore, we can pass the FDs of either the left or the right input node.
        */
       const auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
+      if(non_trivial_fds != right_input()->non_trivial_functional_dependencies()) {
+        std::cout << "Left FDs: " << "\n";
+        for (const auto& fd : left_input()->non_trivial_functional_dependencies()) {
+          std::cout << fd << "\n";
+        }
+        std::cout << "Right FDs: " << "\n";
+        for (const auto& fd : right_input()->non_trivial_functional_dependencies()) {
+          std::cout << fd << "\n";  
+        }
+      }
+
       DebugAssert(non_trivial_fds == right_input()->non_trivial_functional_dependencies(),
                   "Expected both input nodes to pass the same non-trivial FDs.");
       return non_trivial_fds;
