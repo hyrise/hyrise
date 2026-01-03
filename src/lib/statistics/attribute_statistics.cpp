@@ -60,7 +60,7 @@ std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::scaled(co
     return this->shared_from_this();
   }
 
-  std::cout << "Scaling with selectivity: " << selectivity << "\n";
+  // std::cout << "Scaling with selectivity: " << selectivity << "\n";
 
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
