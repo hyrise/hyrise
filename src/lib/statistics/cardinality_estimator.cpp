@@ -221,6 +221,12 @@ std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() {
   return std::make_shared<CardinalityEstimator>();
 }
 
+std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance_with_optimizations() {
+  auto estimator = std::make_shared<CardinalityEstimator>();
+  estimator->with_optimizations = true;
+  return estimator;
+}
+
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
@@ -388,18 +394,25 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
       const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp);
 
       const auto& stored_table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
+      // !!!!!! IMPORTANT !!!!!
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
 
       auto table_statistics = std::shared_ptr<TableStatistics>{};
       if (stored_table_node.table_statistics) {
         // TableStatistics have changed from the original table's statistics
+
         Assert(stored_table_node.table_statistics->column_statistics.size() ==
                    static_cast<size_t>(stored_table->column_count()),
                "Statistics in StoredTableNode should have same number of columns as original table");
         Assert(stored_table_node.table_statistics->row_count >= 0, "Tables can't have negative row counts");
         table_statistics = stored_table_node.table_statistics;
       } else {
-        table_statistics = stored_table->table_statistics();
+        if (with_optimizations) {
+          // std::cout << "Using second statistics for table: " << stored_table_node.table_name << std::endl;
+          table_statistics = stored_table->second_table_statistics();
+        } else {
+          table_statistics = stored_table->table_statistics();
+        }
       }
       _populate_required_column_expressions();
       output_table_statistics = prune_column_statistics(table_statistics, stored_table_node.pruned_column_ids(),
@@ -873,7 +886,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_predicate_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-    const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
+    const std::shared_ptr<TableStatistics>& right_input_table_statistics) const {
   // For inner-equi JoinNodes, a principle-of-inclusion algorithm is used.
   // The same algorithm is used for outer-equi JoinNodes, lacking a better alternative at the moment.
   // All other join modes and predicate conditions are treated as cross joins for now.
@@ -886,6 +899,35 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
   const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
       *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
+  const auto combine_statistics = [&](const auto& unchanged_statistics, const auto& scaled_statistics,
+                                      const auto flip) {
+    const auto column_count =
+        unchanged_statistics->column_statistics.size() + scaled_statistics->column_statistics.size();
+    auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
+    output_column_statistics.reserve(column_count);
+    const auto scaling_factor = unchanged_statistics->row_count / scaled_statistics->row_count;
+
+    const auto append_statistics = [&](const auto& input_statistics, const auto scale) {
+      for (const auto& attribute_statistics : input_statistics) {
+        if (scale) {
+          output_column_statistics.push_back(attribute_statistics->scaled(scaling_factor));
+        } else {
+          output_column_statistics.push_back(attribute_statistics);
+        }
+      }
+    };
+
+    if (flip) {
+      append_statistics(scaled_statistics->column_statistics, true);
+      append_statistics(unchanged_statistics->column_statistics, false);
+    } else {
+      append_statistics(unchanged_statistics->column_statistics, false);
+      append_statistics(scaled_statistics->column_statistics, true);
+    }
+
+    return std::make_shared<TableStatistics>(std::move(output_column_statistics), unchanged_statistics->row_count);
+  };
+
   if (primary_operator_join_predicate) {
     if constexpr (HYRISE_DEBUG) {
       assert_required_statistics(primary_operator_join_predicate->column_ids.first, join_node.left_input(),
@@ -893,6 +935,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
       assert_required_statistics(primary_operator_join_predicate->column_ids.second, join_node.right_input(),
                                  right_input_table_statistics);
     }
+    const auto left_input_column_id = primary_operator_join_predicate->column_ids.first;
+    const auto left_input_join_key = join_node.left_input()->output_expressions()[left_input_column_id];
+
+    const auto right_input_column_id = primary_operator_join_predicate->column_ids.second;
+    const auto right_input_join_key = join_node.right_input()->output_expressions()[right_input_column_id];
+
+    join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key});
+
+    // std::string with_cardinality_estimation_optimization = std::getenv("CARD_EST_OPT");
+    // std::string with_inner = std::getenv("CARD_EST_INNER");
 
     switch (join_node.join_mode) {
       // For now, handle outer joins just as inner joins.
@@ -903,6 +955,36 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
       case JoinMode::Inner:
         switch (primary_operator_join_predicate->predicate_condition) {
           case PredicateCondition::Equals:
+            // if (with_inner == "YES") {
+            if (with_optimizations) {
+              if (join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key})) {
+                // std::cout << "hit inner ind left: " << left_input_join_key->description()
+                //           << " right: " << right_input_join_key->description() << std::endl;
+
+                if (join_node.right_input()->has_matching_ucc({right_input_join_key}).first) {
+                  // std::cout << "has matching ucc (right_input_join_key): " << right_input_join_key->description()
+                  //           << std::endl;
+                  return combine_statistics(left_input_table_statistics, right_input_table_statistics, false);
+                }
+                // else {
+                //   std::cout << "UCC did not match" << std::endl;
+                // }
+              }
+
+              if (join_node.left_input()->has_matching_ind({right_input_join_key}, {left_input_join_key})) {
+                // std::cout << "hit innter ind left: " << left_input_join_key->description()
+                //           << " right: " << right_input_join_key->description() << std::endl;
+                if (join_node.left_input()->has_matching_ucc({left_input_join_key}).first) {
+                  // std::cout << "has matching ucc (left_input_join_key): " << right_input_join_key->description()
+                  //           << std::endl;
+                  return combine_statistics(right_input_table_statistics, left_input_table_statistics, true);
+                }
+                // else {
+                //   std::cout << "UCC did not match" << std::endl;
+                // }
+              }
+              // }
+            }
             return estimate_inner_equi_join(primary_operator_join_predicate->column_ids.first,
                                             primary_operator_join_predicate->column_ids.second,
                                             *left_input_table_statistics, *right_input_table_statistics);
@@ -936,6 +1018,23 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
         Fail("Cross join is not a predicated join.");
 
       case JoinMode::Semi:
+        // if (with_cardinality_estimation_optimization == "YES") {
+        if (with_optimizations) {
+          if (primary_operator_join_predicate->predicate_condition == PredicateCondition::Equals &&
+              join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key})) {
+            // std::cout << "hit semi ind left: " << left_input_join_key->description()
+            //           << " right: " << right_input_join_key->description() << std::endl;
+            if (join_node.right_input()->has_matching_ucc({right_input_join_key}).first) {
+              // std::cout << "has matching ucc (right_input_join_key): " << right_input_join_key->description()
+              //           << std::endl;
+              return left_input_table_statistics;
+            }
+            // else {
+            //   std::cout << "UCC did not match" << std::endl;
+            // }
+          }
+        }
+        // }
         return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
                                   primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
                                   *right_input_table_statistics);
@@ -1012,7 +1111,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
 
 EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate(
     EstimationStatisticsState& estimation_statistics_state, const OperatorScanPredicate& predicate,
-    const PredicateNode& lqp_node) {
+    const PredicateNode& lqp_node) const {
   /**
    * This function analyses the `predicate` and dispatches an appropriate selectivity-estimating algorithm.
    */
@@ -1230,101 +1329,104 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
         // Determine lower and upper bounds for possible optimizations on other columns
         const auto optional_value = lossy_variant_cast<ColumnDataType>(value_variant);
 
-        if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
-        } else {
-          if (!optional_value) {
-            std::cout << "No value. Wtf" << "\n";
+        if (with_optimizations) {
+          if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
           } else {
-            const auto value = optional_value.value();
-            auto value_bin_idx = scan_statistics_object->bin_for_value(value);
-
-            if (value_bin_idx == INVALID_BIN_ID) {
-              std::cout << "Invalid bin ID hit" << "\n";
+            if (!optional_value) {
+              std::cout << "No value. Wtf" << "\n";
             } else {
-              for (auto bin_idx = BinID{0}; bin_idx < value_bin_idx; bin_idx++) {
-                lower += scan_statistics_object->bin_height(bin_idx);
-              }
-              auto value_bin = scan_statistics_object->bin(value_bin_idx);
-              const auto values_per_tuple = value_bin.height / value_bin.distinct_count;
-              auto distinct_values_before =
-                  scan_statistics_object->bin_ratio_less_than(value_bin_idx, value) * value_bin.distinct_count;
-              // std::cout << "Histogram to analyze: " << scan_statistics_object << "\n";
-              switch (predicate.predicate_condition) {
-                case PredicateCondition::Equals:
-                  lower += distinct_values_before * values_per_tuple;
-                  upper = lower + values_per_tuple;
-                  break;
-                case PredicateCondition::LessThan:
-                  upper = lower;
-                  lower = 0;
-                  break;
-                case PredicateCondition::LessThanEquals:
-                  lower += (distinct_values_before + 1) * values_per_tuple;
-                  upper = lower;
-                  lower = 0;
-                  break;
-                case PredicateCondition::GreaterThan:
-                  lower += (distinct_values_before + 1) * values_per_tuple;
-                  upper = scan_statistics_object->total_count();
-                  break;
-                case PredicateCondition::GreaterThanEquals:
-                  lower += distinct_values_before * values_per_tuple;
-                  upper = scan_statistics_object->total_count();
-                  break;
-                case PredicateCondition::BetweenInclusive: {
-                  lower += distinct_values_before * values_per_tuple;
-                  if (!value2_variant) {
-                    std::cout << "No value2 for between inclusive" << "\n";
-                  } else {
-                    const auto optional_value2 = lossy_variant_cast<ColumnDataType>(*value2_variant);
-                    if (!optional_value2) {
-                      std::cout << "No value2 after lossy cast" << "\n";
+              const auto value = optional_value.value();
+              auto value_bin_idx = scan_statistics_object->bin_for_value(value);
+
+              if (value_bin_idx == INVALID_BIN_ID) {
+                std::cout << "Invalid bin ID hit" << "\n";
+              } else {
+                for (auto bin_idx = BinID{0}; bin_idx < value_bin_idx; bin_idx++) {
+                  lower += scan_statistics_object->bin_height(bin_idx);
+                }
+                auto value_bin = scan_statistics_object->bin(value_bin_idx);
+                const auto values_per_tuple = value_bin.height / value_bin.distinct_count;
+                auto distinct_values_before =
+                    scan_statistics_object->bin_ratio_less_than(value_bin_idx, value) * value_bin.distinct_count;
+                // std::cout << "Histogram to analyze: " << scan_statistics_object << "\n";
+                switch (predicate.predicate_condition) {
+                  case PredicateCondition::Equals:
+                    lower += distinct_values_before * values_per_tuple;
+                    upper = lower + values_per_tuple;
+                    break;
+                  case PredicateCondition::LessThan:
+                    upper = lower;
+                    lower = 0;
+                    break;
+                  case PredicateCondition::LessThanEquals:
+                    lower += (distinct_values_before + 1) * values_per_tuple;
+                    upper = lower;
+                    lower = 0;
+                    break;
+                  case PredicateCondition::GreaterThan:
+                    lower += (distinct_values_before + 1) * values_per_tuple;
+                    upper = scan_statistics_object->total_count();
+                    break;
+                  case PredicateCondition::GreaterThanEquals:
+                    lower += distinct_values_before * values_per_tuple;
+                    upper = scan_statistics_object->total_count();
+                    break;
+                  case PredicateCondition::BetweenInclusive: {
+                    lower += distinct_values_before * values_per_tuple;
+                    if (!value2_variant) {
+                      std::cout << "No value2 for between inclusive" << "\n";
                     } else {
-                      const auto value2 = *optional_value2;
-                      auto value2_bin_idx = scan_statistics_object->bin_for_value(value2);
-                      if (value2_bin_idx == INVALID_BIN_ID) {
-                        std::cout << "Invalid bin ID hit for value2" << "\n";
+                      const auto optional_value2 = lossy_variant_cast<ColumnDataType>(*value2_variant);
+                      if (!optional_value2) {
+                        std::cout << "No value2 after lossy cast" << "\n";
                       } else {
-                        for (auto bin_idx = BinID{0}; bin_idx < value2_bin_idx; bin_idx++) {
-                          upper += scan_statistics_object->bin_height(bin_idx);
+                        const auto value2 = *optional_value2;
+                        auto value2_bin_idx = scan_statistics_object->bin_for_value(value2);
+                        if (value2_bin_idx == INVALID_BIN_ID) {
+                          std::cout << "Invalid bin ID hit for value2" << "\n";
+                        } else {
+                          for (auto bin_idx = BinID{0}; bin_idx < value2_bin_idx; bin_idx++) {
+                            upper += scan_statistics_object->bin_height(bin_idx);
+                          }
+                          auto value2_bin = scan_statistics_object->bin(value2_bin_idx);
+                          const auto values_per_tuple2 = value2_bin.height / value2_bin.distinct_count;
+                          auto distinct_values_before2 =
+                              scan_statistics_object->bin_ratio_less_than(value2_bin_idx, value2) *
+                              value2_bin.distinct_count;
+                          upper += distinct_values_before2 * values_per_tuple2;
+                          upper += values_per_tuple2;
                         }
-                        auto value2_bin = scan_statistics_object->bin(value2_bin_idx);
-                        const auto values_per_tuple2 = value2_bin.height / value2_bin.distinct_count;
-                        auto distinct_values_before2 =
-                            scan_statistics_object->bin_ratio_less_than(value2_bin_idx, value2) *
-                            value2_bin.distinct_count;
-                        upper += distinct_values_before2 * values_per_tuple2;
-                        upper += values_per_tuple2;
                       }
                     }
-                  }
-                } break;
-                case PredicateCondition::BetweenExclusive:
-                case PredicateCondition::BetweenLowerExclusive:
-                case PredicateCondition::BetweenUpperExclusive:
-                  std::cout << "Between exclusive not handled yet" << "\n";
-                  lower = -1;
-                  upper = -1;
-                  break;
-                default:
-                  std::cout << "predicate condition not handled: " << static_cast<int>(predicate.predicate_condition)
-                            << "\n";
-                  lower = -1;
-                  upper = -1;
-                  break;
+                  } break;
+                  case PredicateCondition::BetweenExclusive:
+                  case PredicateCondition::BetweenLowerExclusive:
+                  case PredicateCondition::BetweenUpperExclusive:
+                    std::cout << "Between exclusive not handled yet" << "\n";
+                    lower = -1;
+                    upper = -1;
+                    break;
+                  default:
+                    std::cout << "predicate condition not handled: " << static_cast<int>(predicate.predicate_condition)
+                              << "\n";
+                    lower = -1;
+                    upper = -1;
+                    break;
+                }
               }
             }
           }
-        }
 
-        // auto filtered_column = std::make_shared<LQPColumnExpression>(lqp_node.left_input(), predicate.column_id);
-        if (predicate.predicate_condition == PredicateCondition::Equals) {
-          estimation_statistics_state.equivalence_classes.insert(filtered_column);
-          // std::cout << estimation_statistics_state.equivalence_classes.size() << "\n";
-          if (estimation_statistics_state.equivalence_classes.size() > 1) {
-            // std::cout << "equivalence classes size: " << estimation_statistics_state.equivalence_classes.size() << "\n";
+          // auto filtered_column = std::make_shared<LQPColumnExpression>(lqp_node.left_input(), predicate.column_id);
+          if (predicate.predicate_condition == PredicateCondition::Equals) {
+            estimation_statistics_state.equivalence_classes.insert(filtered_column);
+            // std::cout << estimation_statistics_state.equivalence_classes.size() << "\n";
+            if (estimation_statistics_state.equivalence_classes.size() > 1) {
+              // std::cout << "equivalence classes size: " << estimation_statistics_state.equivalence_classes.size() << "\n";
+            }
           }
-        }
+        } // End of with_optimizations
+
         if (estimation_statistics_state.equivalence_classes.size() > 0 &&
             lqp_node.left_input()->has_matching_ucc(estimation_statistics_state.equivalence_classes).first) {
           selectivity = 1 / input_table_statistics->row_count;
@@ -1368,7 +1470,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
   // Scale the other columns' AttributeStatistics (those that we didn't write to above) with the selectivity
   for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
     if (!output_column_statistics[column_id]) {
-      if (lower != -1 && upper != -1) {
+      if (with_optimizations && lower != -1 && upper != -1) {
         // std::cout << "trying ordered " << "\n";
         const auto ordered_column = lqp_node.left_input()->output_expressions().at(column_id);
 
@@ -1805,7 +1907,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
   });
 
-  // more elements than expected, lollllll 
+  // more elements than expected, lollllll
   // whole table only 365, but 2222 in id column...
   // std::cout << "Semi join estimated row count: " << output_table_statistics->row_count << "\n";
   // std::cout << "Left input row count: " << left_input_table_statistics.row_count << "\n";

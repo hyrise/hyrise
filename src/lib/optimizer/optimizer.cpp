@@ -275,10 +275,100 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   return optimizer;
 }
 
+CardinalityEstimator& Optimizer::cardinality_estimator(){
+  return *_cost_estimator->cardinality_estimator;
+}
+
+std::shared_ptr<Optimizer> Optimizer::create_default_optimizer_with_cardinality_estimator() {
+    std::cout << "create_default_optimizer_with_cardinality_estimator2" << std::endl;
+  // auto optimizer = create_default_optimizer();
+
+  auto optimizer = std::make_shared<Optimizer>(std::make_shared<CostEstimatorLogical>(CardinalityEstimator::new_instance_with_optimizations()));
+ 
+  // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
+  // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>(false));
+
+  // The JoinOrderingRule cannot proceed past semi-/anti-joins. These may be part of the initial query plan (in which
+  // case we are out of luck and the join ordering will be sub-optimal) but many of them are also introduced by the
+  // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
+  optimizer->add_rule(std::make_unique<JoinOrderingRule>());
+
+  // Run Group-By Reduction after the JoinOrderingRule ran. The actual join order is not important, but the matching
+  // of cross joins with predicates that is done by that rule is needed to create some of the functional dependencies
+  // (FDs) used by the DependentGroupByReductionRule.
+  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
+
+  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
+  optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
+
+  optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
+
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+
+  // Run the JoinToSemiJoinRule and the JoinToPredicateRewriteRule before the PredicatePlacementRule, as they might turn
+  // joins into semi-joins (which are treated as predicates) or predicates that can be pushed further down. For the same
+  // reason, run them after the JoinOrderingRule, which does not like semi-joins (see above). Furthermore, these two
+  // rules depend on the ColumnPruningRule that flags joins where one input is not used later in the query plan.
+  optimizer->add_rule(std::make_unique<JoinToSemiJoinRule>());
+
+  optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
+
+  // Run the PredicatePlacementRule a second time so that semi-/anti-joins created by the SubqueryToJoinRule, the
+  // JoinToSemiJoinRule, or predicates created by the JoinToPredicateRewriteRule are properly placed, too. Also run the
+  // PredicateReorderingRule before the SemiJoinReductionRule to order semi-/anti-joins before we add semi-join
+  // reductions. Otherwise, we might add unnecessary reductions.
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+  optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
+
+  // Run the PredicatePlacementRule a third time to place semi-joins created by the SemiJoinReductionRule.
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
+
+  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
+  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
+  // StoredTableNode as possible where the ChunkPruningRule can work with them.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
+  // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
+  // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
+  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
+
+  // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+  // Before the IN predicate is rewritten, it should have been moved to a good position. Also, while the IN predicate
+  // might become a join, it is semantically more similar to a predicate. If we run this rule too early, it might
+  // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
+  // joins and would not recognize such a rewritten predicate.
+  optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
+
+  optimizer->add_rule(std::make_unique<IndexScanRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
+
+  return optimizer;
+}
+
+
 Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
 
 void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
   _rules.emplace_back(std::move(rule));
+}
+
+Cardinality Optimizer::estimate_cardinality(std::shared_ptr<const AbstractLQPNode>& lqp) {
+  return _cost_estimator->cardinality_estimator->estimate_cardinality(lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(

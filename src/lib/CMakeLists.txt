@@ -420,6 +420,8 @@ set(
     statistics/statistics_objects/distinct_value_count.hpp
     statistics/statistics_objects/equal_distinct_count_histogram.cpp
     statistics/statistics_objects/equal_distinct_count_histogram.hpp
+    statistics/statistics_objects/max_diff_histogram.cpp
+    statistics/statistics_objects/max_diff_histogram.hpp
     statistics/statistics_objects/generic_histogram.cpp
     statistics/statistics_objects/generic_histogram.hpp
     statistics/statistics_objects/generic_histogram_builder.cpp

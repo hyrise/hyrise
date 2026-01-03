@@ -198,6 +198,9 @@ class Table : private Noncopyable {
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
   /** @} */
 
+  std::shared_ptr<TableStatistics> second_table_statistics() const;
+  void set_second_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
+
   std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
 
   std::vector<TableIndexStatistics> table_indexes_statistics() const;
@@ -300,6 +303,8 @@ class Table : private Noncopyable {
 
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
+  std::shared_ptr<TableStatistics> _second_table_statistics;
+  
   std::mutex _append_mutex;
   std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
   std::vector<TableIndexStatistics> _table_indexes_statistics;

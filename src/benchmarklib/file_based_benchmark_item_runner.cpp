@@ -63,6 +63,10 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   });
 }
 
+std::vector<FileBasedBenchmarkItemRunner::Query> FileBasedBenchmarkItemRunner::queries() const {
+  return _queries;
+}
+
 bool FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   std::shared_ptr<const Table> expected_result_table = nullptr;
   if (!_dedicated_expected_results.empty()) {
@@ -97,7 +101,13 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
 
   auto parse_result = hsql::SQLParserResult{};
   hsql::SQLParser::parse(content, &parse_result);
-  Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
+  // Assert(parse_result.isValid(), invalid_queries++);
+  if (!parse_result.isValid()) {
+    invalid_queries++;
+    std::cout << query_file_path << std::endl;
+    return; 
+  }
+
 
   auto queries_in_file = std::vector<Query>{parse_result.size()};
 
