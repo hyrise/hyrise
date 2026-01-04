@@ -236,9 +236,9 @@ class CardinalityEstimator {
    * Estimate a simple scanning predicate. This function analyses the given predicate and dispatches the actual
    * estimation algorithm.
    */
-  static EstimationStatisticsState estimate_operator_scan_predicate(
+   EstimationStatisticsState estimate_operator_scan_predicate(
       EstimationStatisticsState& estimation_statistics_state, const OperatorScanPredicate& predicate,
-      const PredicateNode& lqp_node);
+      const PredicateNode& lqp_node) const;
 
   /**
    * Estimation of an equi scan between two histograms. Estimating equi scans without correlation information is
