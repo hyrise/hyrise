@@ -391,81 +391,81 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
       return PQPVisitation::VisitInputs;
     });
 
-    std::map<DataType, size_t> predicate_column_datatypes_count;
-    std::map<DataType, size_t> join_column_datatype_count;
+    // std::map<DataType, size_t> predicate_column_datatypes_count;
+    // std::map<DataType, size_t> join_column_datatype_count;
 
-    visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
-      if (pqp->performance_data->has_output && pqp->type() != OperatorType::Validate) {
-        if (pqp->lqp_node->type == LQPNodeType::Predicate) {
-          const auto& predicate_node = static_cast<const PredicateNode&>(*pqp->lqp_node);
-          const auto predicate = predicate_node.predicate();
-          const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
-          if (!operator_scan_predicates.has_value()) {
-            return PQPVisitation::VisitInputs;
-          }
+    // visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
+    //   if (pqp->performance_data->has_output && pqp->type() != OperatorType::Validate) {
+    //     if (pqp->lqp_node->type == LQPNodeType::Predicate) {
+    //       const auto& predicate_node = static_cast<const PredicateNode&>(*pqp->lqp_node);
+    //       const auto predicate = predicate_node.predicate();
+    //       const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
+    //       if (!operator_scan_predicates.has_value()) {
+    //         return PQPVisitation::VisitInputs;
+    //       }
 
-          auto columnid = operator_scan_predicates->front().column_id;
+    //       auto columnid = operator_scan_predicates->front().column_id;
 
-          // auto table_statistics = default_cardinality_estimator->estimate_statistics(pqp->lqp_node);
-          auto estimation_state = default_cardinality_estimator->estimate_statistics(pqp->lqp_node->left_input());
-          auto left_table_statistics = estimation_state.table_statistics;
-          if (columnid > left_table_statistics->column_statistics.size()) {
-            std::cout << "ColumnId: " << columnid << " is out of bounds for table statistics with size: "
-                      << left_table_statistics->column_statistics.size() << '\n';
-            return PQPVisitation::VisitInputs;
-          }
+    //       // auto table_statistics = default_cardinality_estimator->estimate_statistics(pqp->lqp_node);
+    //       auto estimation_state = default_cardinality_estimator->estimate_statistics(pqp->lqp_node->left_input());
+    //       auto left_table_statistics = estimation_state.table_statistics;
+    //       if (columnid > left_table_statistics->column_statistics.size()) {
+    //         std::cout << "ColumnId: " << columnid << " is out of bounds for table statistics with size: "
+    //                   << left_table_statistics->column_statistics.size() << '\n';
+    //         return PQPVisitation::VisitInputs;
+    //       }
 
-          // std::cout << "ColumnId: " << columnid << " Table statistics size: " << table_statistics->column_statistics.size()  << std::endl;
+    //       // std::cout << "ColumnId: " << columnid << " Table statistics size: " << table_statistics->column_statistics.size()  << std::endl;
 
-          // std::cout << "Node Statistics " << *table_statistics << std::endl;
+    //       // std::cout << "Node Statistics " << *table_statistics << std::endl;
 
-          // std::cout << "Left Node Statistics " << *left_table_statistics << std::endl;
+    //       // std::cout << "Left Node Statistics " << *left_table_statistics << std::endl;
 
-          auto predicate_datatype = left_table_statistics->column_data_type(columnid);
-          predicate_column_datatypes_count[predicate_datatype]++;
-        }
+    //       auto predicate_datatype = left_table_statistics->column_data_type(columnid);
+    //       predicate_column_datatypes_count[predicate_datatype]++;
+    //     }
 
-        if (pqp->lqp_node->type == LQPNodeType::Join) {
-          const auto& join_node = static_cast<const JoinNode&>(*pqp->lqp_node);
+    //     if (pqp->lqp_node->type == LQPNodeType::Join) {
+    //       const auto& join_node = static_cast<const JoinNode&>(*pqp->lqp_node);
 
-          const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
-              *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
+    //       const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
+    //           *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
-          if (!primary_operator_join_predicate.has_value()) {
-            return PQPVisitation::VisitInputs;
-          }
-          auto left_columnid = primary_operator_join_predicate->column_ids.first;
+    //       if (!primary_operator_join_predicate.has_value()) {
+    //         return PQPVisitation::VisitInputs;
+    //       }
+    //       auto left_columnid = primary_operator_join_predicate->column_ids.first;
 
-          // auto join_datatype = pqp->left_input_table()->table_statistics()->column_data_type(left_columnid);
-          auto stats = default_cardinality_estimator->estimate_statistics(join_node.left_input());
+    //       // auto join_datatype = pqp->left_input_table()->table_statistics()->column_data_type(left_columnid);
+    //       auto stats = default_cardinality_estimator->estimate_statistics(join_node.left_input());
 
-          auto join_datatype = stats.table_statistics;
-          if (left_columnid > join_datatype->column_statistics.size()) {
-            std::cout << "Join ColumnId: " << left_columnid
-                      << " is out of bounds for table statistics with size: " << join_datatype->column_statistics.size()
-                      << '\n';
-            auto right_columnid = primary_operator_join_predicate->column_ids.second;
-            auto stats2 = default_cardinality_estimator->estimate_statistics(join_node.right_input());
-            auto right_join_datatype = stats2.table_statistics;
-            if (right_columnid > right_join_datatype->column_statistics.size()) {
-              std::cout << "Right Join ColumnId: " << right_columnid
-                        << " is out of bounds for table statistics with size: "
-                        << right_join_datatype->column_statistics.size();
-            } else {
-              auto right_join_column_datatype = right_join_datatype->column_data_type(right_columnid);
-              join_column_datatype_count[right_join_column_datatype]++;
-            }
-            return PQPVisitation::VisitInputs;
-          }
-          auto datatype = join_datatype->column_data_type(left_columnid);
-          join_column_datatype_count[datatype]++;
-        }
-      }
-      return PQPVisitation::VisitInputs;
-    });
+    //       auto join_datatype = stats.table_statistics;
+    //       if (left_columnid > join_datatype->column_statistics.size()) {
+    //         std::cout << "Join ColumnId: " << left_columnid
+    //                   << " is out of bounds for table statistics with size: " << join_datatype->column_statistics.size()
+    //                   << '\n';
+    //         auto right_columnid = primary_operator_join_predicate->column_ids.second;
+    //         auto stats2 = default_cardinality_estimator->estimate_statistics(join_node.right_input());
+    //         auto right_join_datatype = stats2.table_statistics;
+    //         if (right_columnid > right_join_datatype->column_statistics.size()) {
+    //           std::cout << "Right Join ColumnId: " << right_columnid
+    //                     << " is out of bounds for table statistics with size: "
+    //                     << right_join_datatype->column_statistics.size();
+    //         } else {
+    //           auto right_join_column_datatype = right_join_datatype->column_data_type(right_columnid);
+    //           join_column_datatype_count[right_join_column_datatype]++;
+    //         }
+    //         return PQPVisitation::VisitInputs;
+    //       }
+    //       auto datatype = join_datatype->column_data_type(left_columnid);
+    //       join_column_datatype_count[datatype]++;
+    //     }
+    //   }
+    //   return PQPVisitation::VisitInputs;
+    // });
 
-    _metrics->join_column_datatype = join_column_datatype_count;
-    _metrics->predicate_column_datatype = predicate_column_datatypes_count;
+    // _metrics->join_column_datatype = join_column_datatype_count;
+    // _metrics->predicate_column_datatype = predicate_column_datatypes_count;
 
     // std::cout << _metrics->operator_cardinality_metrics.size() << " operator cardinality metrics collected."
     //             << std::endl;
