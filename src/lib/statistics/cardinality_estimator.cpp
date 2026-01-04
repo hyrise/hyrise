@@ -1239,7 +1239,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
             auto value_bin_idx = scan_statistics_object->bin_for_value(value);
 
             if (value_bin_idx == INVALID_BIN_ID) {
-              std::cout << "Invalid bin ID hit" << "\n";
+              // std::cout << "Invalid bin ID hit" << "\n";
             } else {
               for (auto bin_idx = BinID{0}; bin_idx < value_bin_idx; bin_idx++) {
                 lower += scan_statistics_object->bin_height(bin_idx);
@@ -1283,7 +1283,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
                       const auto value2 = *optional_value2;
                       auto value2_bin_idx = scan_statistics_object->bin_for_value(value2);
                       if (value2_bin_idx == INVALID_BIN_ID) {
-                        std::cout << "Invalid bin ID hit for value2" << "\n";
+                        // std::cout << "Invalid bin ID hit for value2" << "\n";
                       } else {
                         for (auto bin_idx = BinID{0}; bin_idx < value2_bin_idx; bin_idx++) {
                           upper += scan_statistics_object->bin_height(bin_idx);
@@ -1385,7 +1385,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
           // std::cout << "\n";
         }
         if (lqp_node.has_matching_od({ordered_column}, {filtered_column})) {
-          std::cout << "hitting ordered" << "\n";
+          // std::cout << "hitting ordered" << "\n";
           // std::cout << "scaling column id with bounds: " << column_id << "\n";
           // std::cout << "scaling : " << ordered_column << " based on " << filtered_column << "\n";
           output_column_statistics[column_id] =
