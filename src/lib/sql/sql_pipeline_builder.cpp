@@ -53,7 +53,11 @@ SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() {
 }
 
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
-  auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
+  std::string optimizer_optimization = std::getenv("DD_OPTIMIZER");
+
+  bool use_data_dependency_optimizer = optimizer_optimization == "ON";
+
+  auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer(use_data_dependency_optimizer);
 
   auto data_dependency_optimizer =
       _data_dependency_optimizer

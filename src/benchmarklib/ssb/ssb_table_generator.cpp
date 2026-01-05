@@ -78,54 +78,63 @@ void SSBTableGenerator::_add_constraints(
 
   unique_constraint(date_table, {"d_datekey"});
 
-  
   unique_constraint(date_table, {"d_date"});
-  unique_constraint(date_table, {"d_daynuminyear","d_yearmonthnum"});
-  unique_constraint(date_table, {"d_daynuminyear","d_yearmonth"});
-  unique_constraint(date_table, {"d_daynuminyear","d_year"});
-  unique_constraint(date_table, {"d_weeknuminyear","d_dayofweek","d_yearmonthnum"});
-  unique_constraint(date_table, {"d_weeknuminyear","d_yearmonthnum","d_daynuminweek"});
-  unique_constraint(date_table, {"d_yearmonthnum","d_daynuminmonth"});
-  unique_constraint(date_table, {"d_weeknuminyear","d_dayofweek","d_yearmonth"});
-  unique_constraint(date_table, {"d_weeknuminyear","d_yearmonth","d_daynuminweek"});
-  unique_constraint(date_table, {"d_yearmonth","d_daynuminmonth"});
-  unique_constraint(date_table, {"d_weeknuminyear","d_year","d_daynuminmonth"});
-  unique_constraint(date_table, {"d_weeknuminyear","d_dayofweek","d_year"});
-  unique_constraint(date_table, {"d_weeknuminyear","d_year","d_daynuminweek"});
-  unique_constraint(date_table, {"d_month","d_year","d_daynuminmonth"});
-  unique_constraint(date_table, {"d_monthnuminyear","d_year","d_daynuminmonth"});
+  unique_constraint(date_table, {"d_daynuminyear", "d_yearmonthnum"});
+  unique_constraint(date_table, {"d_daynuminyear", "d_yearmonth"});
+  unique_constraint(date_table, {"d_daynuminyear", "d_year"});
+  unique_constraint(date_table, {"d_weeknuminyear", "d_dayofweek", "d_yearmonthnum"});
+  unique_constraint(date_table, {"d_weeknuminyear", "d_yearmonthnum", "d_daynuminweek"});
+  unique_constraint(date_table, {"d_yearmonthnum", "d_daynuminmonth"});
+  unique_constraint(date_table, {"d_weeknuminyear", "d_dayofweek", "d_yearmonth"});
+  unique_constraint(date_table, {"d_weeknuminyear", "d_yearmonth", "d_daynuminweek"});
+  unique_constraint(date_table, {"d_yearmonth", "d_daynuminmonth"});
+  unique_constraint(date_table, {"d_weeknuminyear", "d_year", "d_daynuminmonth"});
+  unique_constraint(date_table, {"d_weeknuminyear", "d_dayofweek", "d_year"});
+  unique_constraint(date_table, {"d_weeknuminyear", "d_year", "d_daynuminweek"});
+  unique_constraint(date_table, {"d_month", "d_year", "d_daynuminmonth"});
+  unique_constraint(date_table, {"d_monthnuminyear", "d_year", "d_daynuminmonth"});
   unique_constraint(part_table, {"p_partkey"});
   unique_constraint(supplier_table, {"s_suppkey"});
   unique_constraint(supplier_table, {"s_name"});
   unique_constraint(supplier_table, {"s_address"});
   unique_constraint(supplier_table, {"s_phone"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_revenue","lo_partkey"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_revenue","lo_commitdate"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_revenue","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_revenue","lo_tax"});
-  unique_constraint(lineorder_table, {"lo_ordtotalprice","lo_revenue","lo_commitdate"});
-  unique_constraint(lineorder_table, {"lo_revenue","lo_commitdate","lo_custkey"});
-  unique_constraint(lineorder_table, {"lo_revenue","lo_custkey","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_revenue","lo_suppkey","lo_orderdate"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_extendedprice","lo_commitdate"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_extendedprice","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_partkey","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_supplycost","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_orderkey","lo_linenumber"});
-  unique_constraint(lineorder_table, {"lo_extendedprice","lo_ordtotalprice","lo_commitdate"});
-  unique_constraint(lineorder_table, {"lo_extendedprice","lo_ordtotalprice","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_ordtotalprice","lo_partkey","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_ordtotalprice","lo_supplycost","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_extendedprice","lo_partkey","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_extendedprice","lo_commitdate","lo_custkey"});
-  unique_constraint(lineorder_table, {"lo_extendedprice","lo_custkey","lo_suppkey"});
-  unique_constraint(lineorder_table, {"lo_partkey","lo_suppkey","lo_quantity"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_revenue", "lo_partkey"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_revenue", "lo_commitdate"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_revenue", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_revenue", "lo_tax"});
+  unique_constraint(lineorder_table, {"lo_ordtotalprice", "lo_revenue", "lo_commitdate"});
+  unique_constraint(lineorder_table, {"lo_revenue", "lo_commitdate", "lo_custkey"});
+  unique_constraint(lineorder_table, {"lo_revenue", "lo_custkey", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_revenue", "lo_suppkey", "lo_orderdate"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_extendedprice", "lo_commitdate"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_extendedprice", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_partkey", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_supplycost", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_orderkey", "lo_linenumber"});
+  unique_constraint(lineorder_table, {"lo_extendedprice", "lo_ordtotalprice", "lo_commitdate"});
+  unique_constraint(lineorder_table, {"lo_extendedprice", "lo_ordtotalprice", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_ordtotalprice", "lo_partkey", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_ordtotalprice", "lo_supplycost", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_extendedprice", "lo_partkey", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_extendedprice", "lo_commitdate", "lo_custkey"});
+  unique_constraint(lineorder_table, {"lo_extendedprice", "lo_custkey", "lo_suppkey"});
+  unique_constraint(lineorder_table, {"lo_partkey", "lo_suppkey", "lo_quantity"});
   unique_constraint(customer_table, {"c_custkey"});
   unique_constraint(customer_table, {"c_name"});
   unique_constraint(customer_table, {"c_address"});
   unique_constraint(customer_table, {"c_phone"});
 
+  order_constraint(date_table, {"d_datekey"}, {"d_year"});
+  order_constraint(date_table, {"d_datekey"}, {"d_yearmonthnum"});
+  order_constraint(date_table, {"d_date"}, {"d_month"});
+  order_constraint(date_table, {"d_daynuminweek"}, {"d_lastdayinweekfl"});
+  order_constraint(date_table, {"d_daynuminyear"}, {"d_weeknuminyear"});
+  order_constraint(supplier_table, {"s_suppkey"}, {"s_name"});
+  order_constraint(supplier_table, {"s_city"}, {"s_nation"});
+  order_constraint(customer_table, {"c_city"}, {"c_nation"});
+  order_constraint(customer_table, {"c_custkey"}, {"c_name"});
 
+  
 }
 
 }  // namespace hyrise

@@ -1,0 +1,17 @@
+- Writing benchmark results to './res/1_tpcds.json'
+- Running in single-threaded mode
+- Data preparation will use all available cores
+- 1 simulated client is scheduling items
+- Running benchmark in 'Ordered' mode
+- Encoding is 'Automatic'
+- Chunk size is 65535
+- Max runs per item is 1
+- Max duration per item is 60 seconds
+- No warmup runs are performed
+- Caching tables as binary files
+- Not tracking system metrics
+- Tracking SQL pipeline metrics
+- TPC-DS scale factor is 1
+- SQL plan caching switched off since SQL pipeline metrics tracking is requested
+- Loading/Generating tables
+- Loading/Generating tables done (483 µs 208 ns)

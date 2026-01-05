@@ -1,0 +1,19 @@
+- Writing benchmark results to './res/1_tpch.json'
+- Running in single-threaded mode
+- Data preparation will use all available cores
+- 1 simulated client is scheduling items
+- Running benchmark in 'Ordered' mode
+- Encoding is 'Automatic'
+- Chunk size is 65535
+- Max runs per item is 1
+- Max duration per item is 60 seconds
+- No warmup runs are performed
+- Caching tables as binary files
+- Not tracking system metrics
+- Tracking SQL pipeline metrics
+- Benchmarking Queries: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
+- TPC-H scale factor is 1
+- Using prepared statements: no
+- SQL plan caching switched off since SQL pipeline metrics tracking is requested
+- Loading/Generating tables
+- Loading/Generating tables done (1 ms 92 µs)

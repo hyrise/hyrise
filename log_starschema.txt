@@ -1,0 +1,51 @@
+- Writing benchmark results to './res/1_starschema.json'
+- Running in single-threaded mode
+- Data preparation will use all available cores
+- 1 simulated client is scheduling items
+- Running benchmark in 'Ordered' mode
+- Encoding is 'Automatic'
+- Chunk size is 65535
+- Max runs per item is 1
+- Max duration per item is 60 seconds
+- No warmup runs are performed
+- Caching tables as binary files
+- Not tracking system metrics
+- Tracking SQL pipeline metrics
+- Running all queries
+- SSB scale factor is 1
+- Using SSB dbgen from "/Users/paulrossler/Documents/masterthesis/main_hyrise/cmake-build-debug/third_party/ssb-dbgen"
+- Storing SSB tables in "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1"
+- SQL plan caching switched off since SQL pipeline metrics tracking is requested
+- Loading/Generating tables
+- Creating table data by calling external dbgen (16 s 139 ms)
+-  Loaded table 'supplier' from "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/supplier.csv" (2000 rows; 13 ms 262 µs)
+-  Loaded table 'date' from "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/date.csv" (2556 rows; 26 ms 85 µs)
+-  Loaded table 'customer' from "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/customer.csv" (30000 rows; 207 ms 720 µs)
+-  Loaded table 'part' from "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/part.csv" (200000 rows; 636 ms 902 µs)
+-  Loaded table 'lineorder' from "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/lineorder.csv" (6001171 rows; 11 s 806 ms)
+- Loading/Generating tables done (27 s 970 ms)
+- Encoding tables (if necessary) and generating pruning statistics
+-  Processing 'supplier' - encoding applied (24 ms 251 µs)
+-  Processing 'date' - encoding applied (38 ms 624 µs)
+-  Processing 'customer' - encoding applied (370 ms 790 µs)
+-  Processing 'part' - encoding applied (1 s 509 ms)
+-  Processing 'lineorder' - encoding applied (9 s 662 ms)
+- Encoding tables and generating pruning statistic done (9 s 663 ms)
+- Writing tables into binary files if necessary
+-  Writing 'part' into binary file "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/part.bin" (8 ms 994 µs)
+-  Writing 'date' into binary file "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/date.bin" (732 µs 750 ns)
+-  Writing 'customer' into binary file "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/customer.bin" (17 ms 725 µs)
+-  Writing 'lineorder' into binary file "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/lineorder.bin" (244 ms 647 µs)
+-  Writing 'supplier' into binary file "/Users/paulrossler/Documents/masterthesis/main_hyrise/ssb_data/sf-1/supplier.bin" (1 ms 426 µs)
+- Writing tables into binary files done (273 ms 650 µs)
+- Adding tables to StorageManager and generating table statistics
+-  Added 'supplier' (26 ms 232 µs)
+-  Added 'date' (37 ms 847 µs)
+-  Added 'customer' (181 ms 578 µs)
+-  Added 'part' (2 s 26 ms)
+-  Added 'lineorder' (7 s 295 ms)
+- Adding tables to StorageManager and generating table statistics done (7 s 295 ms)
+- No chunk indexes created as --chunk_indexes was not specified or set to false
+- No table indexes created as --table_indexes was not specified or set to false
+- Starting Benchmark...
+- Benchmarking 1.1

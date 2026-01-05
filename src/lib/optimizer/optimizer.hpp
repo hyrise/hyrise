@@ -29,7 +29,7 @@ class AbstractLQPNode;
  */
 class Optimizer final {
  public:
-  static std::shared_ptr<Optimizer> create_default_optimizer();
+  static std::shared_ptr<Optimizer> create_default_optimizer(bool with_optimizations_for_data_dependencies = false);
 
   static std::shared_ptr<Optimizer> create_default_optimizer_with_cardinality_estimator();
 
