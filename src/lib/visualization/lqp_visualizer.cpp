@@ -41,9 +41,21 @@ void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNo
   ExpressionUnorderedSet visualized_sub_queries;
 
   for (const auto& root : lqp_roots) {
-    const auto cardinality_estimator = CardinalityEstimator{};
-    cardinality_estimator.guarantee_bottom_up_construction(root);
-    _build_subtree(root, visualized_nodes, visualized_sub_queries, cardinality_estimator);
+    // const auto cardinality_estimator = CardinalityEstimator{};
+    std::string optimizer_optimization = std::getenv("DD_OPTIMIZER");
+
+    bool use_data_dependency_optimizer = optimizer_optimization == "ON";
+    std::shared_ptr<CardinalityEstimator> cardinality_estimator;
+    if(use_data_dependency_optimizer){
+      cardinality_estimator =  CardinalityEstimator::new_instance_with_optimizations();
+    } else {
+      cardinality_estimator = CardinalityEstimator::new_instance();
+    }
+
+    // auto data_dependency_cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
+
+    cardinality_estimator->guarantee_bottom_up_construction(root);
+    _build_subtree(root, visualized_nodes, visualized_sub_queries, *cardinality_estimator);
   }
 }
 
