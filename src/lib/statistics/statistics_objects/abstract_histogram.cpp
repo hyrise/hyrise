@@ -531,7 +531,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         const auto new_height = bin_height(value_bin_id) - estimate.first;
         const auto new_distinct_count = distinct_count - estimate.second;
 
-        DebugAssert(new_height > 0, "New height after slicing must be greater than 0.");
+        DebugAssert(new_height >= 0, "New height after slicing must be greater than or equal to 0.");
         builder.add_bin(minimum, maximum, new_height, new_distinct_count);
       }
 

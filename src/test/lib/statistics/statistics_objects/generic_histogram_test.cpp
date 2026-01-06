@@ -93,6 +93,17 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
   EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'000'000), 0.0);
 }
 
+TEST_F(GenericHistogramTest, EstimateCardinalityWithScaledAndSlicedHistogram) {
+  const auto histogram = GenericHistogram<int32_t>::with_single_bin(std::numeric_limits<int32_t>::min(),
+                                                                    std::numeric_limits<int32_t>::max(), 1, 1);
+
+  const auto scaled_histogram = std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(histogram->scaled(0.5));
+
+  const auto sliced_histogram = std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(
+      scaled_histogram->sliced(PredicateCondition::NotEquals, 0));
+  EXPECT_TRUE(sliced_histogram->bin_height(0) >= 0);
+}
+
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
   const auto histogram = GenericHistogram<float>{{0.5f, 2.5f, 3.6f}, {2.2f, 3.3f, 6.1f}, {4, 6, 4}, {4, 3, 3}};
 
