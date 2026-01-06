@@ -207,14 +207,6 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
   return outputs;
 }
 
-// clang-tidy wants this to be const. Technically, it could be, but as this node will be modified via set_input, it is
-// syntactically incorrect.
-void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {  // NOLINT
-  const auto input_side = get_input_side(output);
-  // set_input() will untie the nodes
-  output->set_input(input_side, nullptr);
-}
-
 std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
   auto output_relations = std::vector<LQPOutputRelation>(output_count());
 
@@ -459,9 +451,10 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
      *    node_b.reset(); // `node_b::~AbstractLQPNode()` will call `node_a._remove_output_pointer(*node_b)`. However,
      *                    // we cannot lock node_b anymore: its reference count is already 0.
      */
-    return &output == other.lock().get() || other.expired();
+    const auto other_locked = other.lock();
+    return !other_locked || &output == other_locked.get();
   });
-  DebugAssert(iter != _outputs.end(), "Specified output node is not actually a output node of this node.");
+  DebugAssert(iter != _outputs.end(), "Specified output node is not an output node of this node.");
 
   std::swap(*iter, _outputs.back());
   _outputs.pop_back();
