@@ -140,19 +140,25 @@ TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
 }
 
 TEST_F(LogicalQueryPlanTest, SetInputUntiesOutput) {
-  _predicate_node_a->set_left_input(_mock_node_a);
+  const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node_a, _mock_node_b);
+  union_node->set_left_input(_mock_node_a);
+  union_node->set_right_input(_mock_node_a);
 
-  ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
-  ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
-  ASSERT_FALSE(_predicate_node_a->right_input());
-  ASSERT_TRUE(_predicate_node_a->outputs().empty());
+  const auto outputs = _mock_node_a->outputs();
+  ASSERT_EQ(outputs.size(), 2);
+  EXPECT_EQ(outputs[0], union_node);
+  EXPECT_EQ(outputs[1], union_node);
+  EXPECT_EQ(union_node->left_input(), _mock_node_a);
+  EXPECT_EQ(union_node->right_input(), _mock_node_a);
+  EXPECT_TRUE(union_node->outputs().empty());
 
-  _predicate_node_a->set_left_input(nullptr);
+  union_node->set_left_input(nullptr);
+  union_node->set_right_input(nullptr);
 
-  ASSERT_TRUE(_mock_node_a->outputs().empty());
-  ASSERT_FALSE(_predicate_node_a->left_input());
-  ASSERT_FALSE(_predicate_node_a->right_input());
-  ASSERT_TRUE(_predicate_node_a->outputs().empty());
+  EXPECT_TRUE(_mock_node_a->outputs().empty());
+  EXPECT_FALSE(union_node->left_input());
+  EXPECT_FALSE(union_node->right_input());
+  EXPECT_TRUE(union_node->outputs().empty());
 }
 
 TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {

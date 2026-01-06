@@ -880,7 +880,6 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
 TEST_F(StressTest, ConcurrentLQPNodeOutputDeregistration) {
   const auto thread_count = 20;
   const auto iteration_count = 1'000;
-  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 
   for (auto iteration = 0; iteration < iteration_count; ++iteration) {
     const auto node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
