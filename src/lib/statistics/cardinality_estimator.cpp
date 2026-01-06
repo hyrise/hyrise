@@ -1340,6 +1340,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
 
               if (value_bin_idx == INVALID_BIN_ID) {
                 std::cout << "Invalid bin ID hit" << "\n";
+                // std::cout << *left_input_column_statistics << "\n";
               } else {
                 for (auto bin_idx = BinID{0}; bin_idx < value_bin_idx; bin_idx++) {
                   lower += scan_statistics_object->bin_height(bin_idx);
@@ -1372,7 +1373,9 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
                     upper = scan_statistics_object->total_count();
                     break;
                   case PredicateCondition::BetweenInclusive: {
+                    std::cout << "Between inclusive hit" << "\n";
                     lower += distinct_values_before * values_per_tuple;
+                    lower = std::max<HistogramCountType>(0, lower);
                     if (!value2_variant) {
                       std::cout << "No value2 for between inclusive" << "\n";
                     } else {
@@ -1398,6 +1401,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
                         }
                       }
                     }
+                    std::cout << "Between inclusive lower: " << lower << " upper: " << upper << "\n";
                   } break;
                   case PredicateCondition::BetweenExclusive:
                   case PredicateCondition::BetweenLowerExclusive:

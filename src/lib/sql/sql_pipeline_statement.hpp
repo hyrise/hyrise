@@ -32,6 +32,7 @@ struct OperatorCardinalityMetrics {
   size_t operator_hash{0};
   size_t left_input_hash{0};
   size_t right_input_hash{0};
+  std::string predicate_string;
 };
 
 struct SQLPipelineStatementMetrics {

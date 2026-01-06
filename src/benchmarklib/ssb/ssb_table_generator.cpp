@@ -129,6 +129,9 @@ void SSBTableGenerator::_add_constraints(
   order_constraint(date_table, {"d_date"}, {"d_month"});
   order_constraint(date_table, {"d_daynuminweek"}, {"d_lastdayinweekfl"});
   order_constraint(date_table, {"d_daynuminyear"}, {"d_weeknuminyear"});
+  
+  order_constraint(date_table, {"d_datekey"}, {"d_year", "d_weeknuminyear"} );
+
   order_constraint(supplier_table, {"s_suppkey"}, {"s_name"});
   order_constraint(supplier_table, {"s_city"}, {"s_nation"});
   order_constraint(customer_table, {"c_city"}, {"c_nation"});

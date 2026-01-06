@@ -2928,7 +2928,7 @@ void TPCDSTableGenerator::_add_constraints(
   order_constraint(income_band_table, {"ib_lower_bound"}, {"ib_upper_bound"});
   order_constraint(income_band_table, {"ib_income_band_sk"}, {"ib_lower_bound"});
 
-  // order_constraint(date_dim_table, {"d_date_sk"}, {"d_year", "d_moy"});
+  order_constraint(date_dim_table, {"d_date_sk"}, {"d_year", "d_moy"});
 
 }
 

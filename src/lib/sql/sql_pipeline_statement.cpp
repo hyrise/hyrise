@@ -368,7 +368,8 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
             {.operator_type = pqp->type(),
              .operator_hash = pqp->lqp_node->hash(),
              .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
-             .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0});
+             .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0,
+            .predicate_string = ""});
       }
       if (pqp->performance_data->has_output && pqp->type() != OperatorType::Validate) {
         auto true_cardinality = static_cast<double>(pqp->performance_data->output_row_count);
@@ -378,6 +379,18 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
         // auto test = default_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
 
         // estimate_cardinality(pqp->lqp_node);
+        std::string predicate_string; 
+        if (pqp->lqp_node->type == LQPNodeType::Predicate) {
+          const auto& predicate_node = static_cast<const PredicateNode&>(*pqp->lqp_node);
+          predicate_string = predicate_node.predicate()->description();
+        } else if (pqp->lqp_node->type == LQPNodeType::Join) {
+          const auto& join_node = static_cast<const JoinNode&>(*pqp->lqp_node);
+          if(join_node.join_mode != JoinMode::Cross){
+            predicate_string = join_node.join_predicates().front()->description();
+          } else {
+            predicate_string = "CROSS JOIN";
+          }
+        }
 
         _metrics->operator_cardinality_metrics.push_back(
             {.true_cardinality = true_cardinality,
@@ -386,7 +399,9 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
              .operator_type = pqp->type(),
              .operator_hash = pqp->lqp_node->hash(),
              .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
-             .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0});
+             .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0,
+              .predicate_string = predicate_string}
+            );
       }
       return PQPVisitation::VisitInputs;
     });

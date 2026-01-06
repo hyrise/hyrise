@@ -492,7 +492,8 @@ nlohmann::json BenchmarkRunner::_create_report() const {
                                   magic_enum::enum_name(operator_cardinality_metrics.operator_type)},
                                   {"operator_hash", operator_cardinality_metrics.operator_hash},
                                   {"left_input_hash", operator_cardinality_metrics.left_input_hash},
-                                  {"right_input_hash", operator_cardinality_metrics.right_input_hash}
+                                  {"right_input_hash", operator_cardinality_metrics.right_input_hash},
+                                  {"predicate_string", operator_cardinality_metrics.predicate_string}
                                 });
             }
             

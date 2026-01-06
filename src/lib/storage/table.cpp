@@ -556,10 +556,10 @@ void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_c
     const auto ordering_columns_invalid =
         columns_intersect(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
         existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();
-    const auto ordered_columns_invalid =
-        columns_intersect(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
-        existing_constraint.ordering_columns() == table_order_constraint.ordering_columns();
-    Assert(!ordering_columns_invalid && !ordered_columns_invalid,
+    // const auto ordered_columns_invalid =
+    //     columns_intersect(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
+    //     existing_constraint.ordering_columns() == table_order_constraint.ordering_columns();
+    Assert(!ordering_columns_invalid,
            "TableOrderConstraint for affected columns has already been set.");
   }
   _table_order_constraints.insert(table_order_constraint);
