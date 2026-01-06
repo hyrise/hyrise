@@ -140,7 +140,7 @@ TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
 }
 
 TEST_F(LogicalQueryPlanTest, SetInputUntiesOutput) {
-  const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node_a, _mock_node_b);
+  const auto union_node = UnionNode::make(SetOperationMode::All);
   union_node->set_left_input(_mock_node_a);
   union_node->set_right_input(_mock_node_a);
 
