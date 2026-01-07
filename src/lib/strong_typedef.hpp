@@ -72,7 +72,7 @@
   };                                                                                                      \
   } /* NOLINT */                                                                                          \
   namespace hyrise {                                                                                      \
-  std::size_t hash_value(const D& value) {                                                                \
+  inline std::size_t hash_value(const D& value) {                                                         \
     return std::hash<D>()(value);                                                                         \
   }                                                                                                       \
   } /* NOLINT */                                                                                          \

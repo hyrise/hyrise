@@ -709,7 +709,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
             if (mode == JoinMode::Inner && probe_column_element.row_id.is_null()) {
               // From previous joins, we could potentially have NULL values that do not refer to an actual
-              // `probe_column_element` but to the `NULL_ROW_ID`. Hence, we can only skip for inner joins.
+              // `probe_column_element` but to the `NULL_ROW_ID`. Outer joins do emit NULL values, but inner joins
+              // do not, so we can only skip them for inner joins.
               continue;
             }
 
