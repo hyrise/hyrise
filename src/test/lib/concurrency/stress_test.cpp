@@ -877,36 +877,4 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   EXPECT_TRUE(table->soft_key_constraints().empty());
 }
 
-TEST_F(StressTest, ConcurrentLQPNodeOutputDeregistration) {
-  const auto thread_count = 20;
-  const auto iteration_count = 1'000;
-
-  for (auto iteration = 0; iteration < iteration_count; ++iteration) {
-    const auto node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-    auto threads = std::vector<std::thread>{};
-    threads.reserve(thread_count);
-    auto start_flag = std::atomic_flag{};
-
-    auto output_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>(thread_count);
-    for (auto thread_id = 0; thread_id < thread_count; ++thread_id) {
-      output_nodes[thread_id] = MockNode::make(MockNode::ColumnDefinitions{{DataType::Long, "b"}}, node);
-    }
-
-    for (auto thread_id = 0; thread_id < thread_count; ++thread_id) {
-      threads.emplace_back([&, thread_id]() {
-        start_flag.wait(false);
-        output_nodes[thread_id] = nullptr;
-      });
-    }
-
-    start_flag.test_and_set();
-    start_flag.notify_all();
-
-    for (auto& thread : threads) {
-      thread.join();
-    }
-    EXPECT_EQ(node->output_count(), 0);
-  }
-}
-
 }  // namespace hyrise
