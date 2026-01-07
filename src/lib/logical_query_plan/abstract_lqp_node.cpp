@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
-#include <mutex>
 #include <numeric>
 #include <optional>
 #include <ostream>
