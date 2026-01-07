@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <limits>
 #include <memory>
 #include <string>
@@ -101,7 +103,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityWithScaledAndSlicedHistogram) {
 
   const auto sliced_histogram = std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(
       scaled_histogram->sliced(PredicateCondition::NotEquals, 0));
-  EXPECT_TRUE(sliced_histogram->bin_height(0) >= 0);
+  EXPECT_GE(sliced_histogram->bin_height(0), 0);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
