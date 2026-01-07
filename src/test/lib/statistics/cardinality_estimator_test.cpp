@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <cstdint>
 #include <memory>
 #include <sstream>
@@ -41,6 +43,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -932,57 +935,63 @@ TEST_F(CardinalityEstimatorTest, Validate) {
 }
 
 TEST_F(CardinalityEstimatorTest, Union) {
-  // Test that UnionNodes sum up the input row counts and return the left input statistics (for now)
+  auto test_cases = std::vector<std::pair<std::shared_ptr<MockNode>, std::shared_ptr<MockNode>>>{
+      {node_a, node_b},  // left input larger
+      {node_b, node_a},  // right input larger
+      {node_h, node_a},  // left input empty
+      {node_a, node_h},  // right input empty
+      {node_h, node_h},  // both inputs empty
+  };
 
-  // clang-format off
-  const auto input_lqp =
-  UnionNode::make(SetOperationMode::Positions,
-    node_a,
-    node_b);
-  // clang-format on
+  for (auto [left_node, right_node] : test_cases) {
+    const auto input_lqp = UnionNode::make(SetOperationMode::Positions, left_node, right_node);
+    const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  const auto left_rowcount = node_a->table_statistics()->row_count;
-  const auto right_rowcount = node_b->table_statistics()->row_count;
-  const auto expected_selectivity = (left_rowcount + right_rowcount) / left_rowcount;
+    auto left_rowcount = left_node->table_statistics()->row_count;
+    auto right_rowcount = right_node->table_statistics()->row_count;
 
-  const auto result_statistics = estimator.estimate_statistics(input_lqp);
+    if (left_rowcount < right_rowcount) {
+      std::swap(left_node, right_node);
+      std::swap(left_rowcount, right_rowcount);
+    }
+    const auto& expected_result_rowcount = left_rowcount + right_rowcount;
+    const auto expected_selectivity = std::max(0.0, expected_result_rowcount / left_rowcount);
 
-  ASSERT_EQ(result_statistics->column_statistics.size(), 2);
-  EXPECT_DOUBLE_EQ(result_statistics->row_count,
-                   node_a->table_statistics()->row_count + node_b->table_statistics()->row_count);
+    ASSERT_EQ(result_statistics->column_statistics.size(), 2);
+    EXPECT_DOUBLE_EQ(result_statistics->row_count, expected_result_rowcount);
 
-  for (auto column_id = ColumnID{0}; column_id < result_statistics->column_statistics.size(); ++column_id) {
-    const auto attribute_statistics_a_a = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
-        node_a->table_statistics()->column_statistics.at(column_id));
+    const auto& left_table_statistics = left_node->table_statistics();
+    const auto& left_column_statistics = left_table_statistics->column_statistics;
+    const auto& result_column_statistics = result_statistics->column_statistics;
+    const auto& column_count = result_column_statistics.size();
+    ASSERT_EQ(column_count, left_column_statistics.size());
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      ASSERT_EQ(left_table_statistics->column_data_type(column_id), DataType::Int);
+      ASSERT_EQ(result_statistics->column_data_type(column_id), DataType::Int);
+      const auto& input_statistics =
+          static_cast<const AttributeStatistics<int32_t>&>(*left_column_statistics[column_id]);
+      const auto& output_statistics =
+          static_cast<const AttributeStatistics<int32_t>&>(*result_column_statistics[column_id]);
 
-    const auto res_column = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
-        result_statistics->column_statistics.at(column_id));
+      const auto& input_histogram = input_statistics.histogram;
+      const auto& output_histogram = output_statistics.histogram;
+      const auto& input_bin_count = input_histogram->bin_count();
+      EXPECT_EQ(input_histogram->total_count() * expected_selectivity, output_histogram->total_count());
+      ASSERT_EQ(output_histogram->bin_count(), input_bin_count);
+      for (auto bin_id = BinID{0}; bin_id < input_bin_count; ++bin_id) {
+        const auto& input_bin = input_histogram->bin(bin_id);
+        const auto& output_bin = output_histogram->bin(bin_id);
+        EXPECT_EQ(input_bin.height * expected_selectivity, output_bin.height);
+        EXPECT_EQ(input_bin.distinct_count, output_bin.distinct_count);
+        EXPECT_EQ(input_bin.min, output_bin.min);
+        EXPECT_EQ(input_bin.max, output_bin.max);
+      }
 
-
-    EXPECT_EQ(expected_selectivity, expected_selectivity);
-    // Scaled histograms are just an internal helper to ease such scenarios. What should be tested here is the shape of the result histogram, i.e, it has the same number of bins as the input histogram, the bin bounds are the same, but the counts are scaled.
-    
+      if (right_rowcount == 0) {
+        EXPECT_EQ(&output_statistics, &input_statistics);
+      }
+    }
   }
-}
-
-TEST_F(CardinalityEstimatorTest, UnionWithEmptyInput) {
-  // Test that UnionNode return the table statistics of the non-empty input when the other input is empty
-
-  // clang-format off
-  const auto input_lqp =
-  UnionNode::make(SetOperationMode::Positions,
-    node_h,
-    node_a);
-  // clang-format on
-
-  auto left_rowcount = node_a->table_statistics()->row_count;
-  auto right_rowcount = node_h->table_statistics()->row_count;
-  const auto result_statistics = estimator.estimate_statistics(input_lqp);
-  ASSERT_EQ(result_statistics->column_statistics.size(), 2);
-
-  EXPECT_DOUBLE_EQ(result_statistics->row_count, left_rowcount + right_rowcount);
-  ASSERT_EQ(result_statistics->column_statistics.at(0), node_a->table_statistics()->column_statistics.at(0));
-  ASSERT_EQ(result_statistics->column_statistics.at(1), node_a->table_statistics()->column_statistics.at(1));
 }
 
 TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
