@@ -39,7 +39,7 @@ PQPVisualizer::PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_
     : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
                          std::move(edge_info)) {}
 
-void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans) {
+void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans,  const bool /* datadependency_ce*/) {
   std::unordered_set<std::shared_ptr<const AbstractOperator>> visualized_ops;
 
   for (const auto& plan : plans) {

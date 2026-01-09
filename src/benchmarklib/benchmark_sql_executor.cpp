@@ -175,6 +175,7 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
   }
 
   LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, prefix + "-LQP.svg");
+  LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, prefix + "-LQP_optimized_estimation.svg", true);
   PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, prefix + "-PQP.svg");
 
   ++_num_visualized_plans;

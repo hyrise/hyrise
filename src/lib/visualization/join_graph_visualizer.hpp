@@ -14,7 +14,7 @@ class JoinGraphVisualizer : public AbstractVisualizer<std::vector<JoinGraph>> {
   using AbstractVisualizer<std::vector<JoinGraph>>::AbstractVisualizer;
 
  protected:
-  void _build_graph(const std::vector<JoinGraph>& graphs) override;
+  void _build_graph(const std::vector<JoinGraph>& graphs,  const bool datadependency_ce = false) override;
   static std::string _create_vertex_description(const std::shared_ptr<AbstractLQPNode>& vertex);
 };
 

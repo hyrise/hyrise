@@ -16,7 +16,7 @@
 
 namespace hyrise {
 
-void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
+void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs, const bool datadependency_ce) {
   for (const auto& graph : graphs) {
     const auto vertex_count = graph.vertices.size();
     for (auto vertex_idx = size_t{0}; vertex_idx < vertex_count; ++vertex_idx) {

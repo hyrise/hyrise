@@ -25,7 +25,7 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
                 VizEdgeInfo edge_info = {});
 
  protected:
-  void _build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) override;
+  void _build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots,  const bool datadependency_ce = false) override;
 
   void _build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                       std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,

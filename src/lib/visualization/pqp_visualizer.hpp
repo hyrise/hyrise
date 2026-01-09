@@ -21,7 +21,7 @@ class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
                 VizEdgeInfo edge_info = {});
 
  protected:
-  void _build_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans) override;
+  void _build_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans,  const bool datadependency_ce = false) override;
 
   void _build_subtree(const std::shared_ptr<const AbstractOperator>& op,
                       std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops);

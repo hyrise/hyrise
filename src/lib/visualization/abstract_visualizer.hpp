@@ -121,8 +121,8 @@ class AbstractVisualizer {
 
   virtual ~AbstractVisualizer() = default;
 
-  void visualize(const GraphBase& graph_base, const std::string& img_filename) {
-    _build_graph(graph_base);
+  void visualize(const GraphBase& graph_base, const std::string& img_filename, const bool datadependency_ce = false) {
+    _build_graph(graph_base, datadependency_ce);
 
     char* tmpname = strdup("/tmp/hyrise_viz_XXXXXX");
     auto file_descriptor = mkstemp(tmpname);
@@ -183,7 +183,7 @@ class AbstractVisualizer {
   }
 
  protected:
-  virtual void _build_graph(const GraphBase& graph_base) = 0;
+  virtual void _build_graph(const GraphBase& graph_base, const bool datadependency_ce = false) = 0;
 
   template <typename T>
   static uintptr_t _get_id(const T& v) {

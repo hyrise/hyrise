@@ -36,23 +36,19 @@ LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_
     : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
                          std::move(edge_info)) {}
 
-void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) {
+void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots,  const bool datadependency_ce) {
   std::unordered_set<std::shared_ptr<const AbstractLQPNode>> visualized_nodes;
   ExpressionUnorderedSet visualized_sub_queries;
 
   for (const auto& root : lqp_roots) {
     // const auto cardinality_estimator = CardinalityEstimator{};
-    std::string optimizer_optimization = std::getenv("DD_OPTIMIZER");
 
-    bool use_data_dependency_optimizer = optimizer_optimization == "ON";
     std::shared_ptr<CardinalityEstimator> cardinality_estimator;
-    if(use_data_dependency_optimizer){
-      cardinality_estimator =  CardinalityEstimator::new_instance_with_optimizations();
+    if(datadependency_ce){
+      cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
     } else {
-      cardinality_estimator = CardinalityEstimator::new_instance();
+      cardinality_estimator = CardinalityEstimator::new_instance_without_optimizations();
     }
-
-    // auto data_dependency_cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
 
     cardinality_estimator->guarantee_bottom_up_construction(root);
     _build_subtree(root, visualized_nodes, visualized_sub_queries, *cardinality_estimator);
@@ -118,9 +114,6 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   Cardinality row_count = NAN;
   auto row_percentage = 100.0;
 
-  if (cardinality_estimator.estimate_cardinality(source_node, false) < 0) {
-    row_count = cardinality_estimator.estimate_cardinality(source_node, false);
-  }
   row_count = cardinality_estimator.estimate_cardinality(source_node);
   if (source_node->left_input()) {
     auto input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());
