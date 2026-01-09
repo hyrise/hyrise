@@ -175,9 +175,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
-  auto data_dependency_cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
-  auto default_cardinality_estimator = CardinalityEstimator::new_instance();
-
   // _metrics->data_dependencies_estimated_cardinality = data_dependency_cardinality_estimator->estimate_cardinality(
   //     _optimized_logical_plan);
   // _metrics->estimated_cardinality = default_cardinality_estimator->estimate_cardinality(
@@ -294,8 +291,9 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
 
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
   auto data_dependency_cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
+  auto estimator_without_optimizations = CardinalityEstimator::new_instance_without_optimizations();
   // auto default_cardinality_estimator = CardinalityEstimator::new_instance();
-  auto* default_cardinality_estimator = &_optimizer->cardinality_estimator();
+  // auto* default_cardinality_estimator = &_optimizer->cardinality_estimator();
 
   // Returns true if a transaction was set and that transaction was rolled back.
   const auto has_failed = [&]() {
@@ -360,7 +358,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     }
     _result_table = _root_operator_task->get_operator()->get_output();
 
-    default_cardinality_estimator->estimate_cardinality(_root_operator_task->get_operator()->lqp_node);
 
     visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
       if (pqp->type() == OperatorType::Validate) {
@@ -375,7 +372,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
         auto true_cardinality = static_cast<double>(pqp->performance_data->output_row_count);
         auto data_dependency_estimation = data_dependency_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
         auto default_estimation =
-            default_cardinality_estimator->estimate_statistics(pqp->lqp_node).table_statistics->row_count;
+            estimator_without_optimizations->estimate_statistics(pqp->lqp_node).table_statistics->row_count;
         // auto test = default_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
 
         // estimate_cardinality(pqp->lqp_node);

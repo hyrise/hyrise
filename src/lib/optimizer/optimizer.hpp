@@ -31,8 +31,6 @@ class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer(bool with_optimizations_for_data_dependencies = false);
 
-  static std::shared_ptr<Optimizer> create_default_optimizer_with_cardinality_estimator();
-
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
                          std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>()));
 
