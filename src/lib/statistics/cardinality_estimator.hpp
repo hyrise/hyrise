@@ -40,6 +40,7 @@ class WindowNode;
 struct EstimationStatisticsState {
   std::shared_ptr<TableStatistics> table_statistics;
   ExpressionUnorderedSet equivalence_classes;
+  ExpressionUnorderedSet join_equivalence_classes;
 };
 
 /**
@@ -68,6 +69,8 @@ class CardinalityEstimator {
   static std::shared_ptr<CardinalityEstimator> new_instance();
 
   static std::shared_ptr<CardinalityEstimator> new_instance_with_optimizations();
+
+  static std::shared_ptr<CardinalityEstimator> new_instance_without_optimizations();
 
 
   bool with_optimizations = false;
@@ -215,9 +218,9 @@ class CardinalityEstimator {
                                                     const EstimationStatisticsState& input_estimation_statistics,
                                                     const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
-  std::shared_ptr<TableStatistics> estimate_join_node(
-      const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-      const std::shared_ptr<TableStatistics>& right_input_table_statistics) const;
+  EstimationStatisticsState estimate_join_node(
+      const JoinNode& join_node, const EstimationStatisticsState& left_state,
+      const EstimationStatisticsState& right_state, StatisticsByLQP& statistics_cache) const;
 
   static std::shared_ptr<TableStatistics> estimate_union_node(
       const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
