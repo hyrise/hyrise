@@ -108,6 +108,27 @@ def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=F
         )
         run_build('strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so')
 
+# This function can be used if the previous build has already build libhyrise_impl and moved it to .old. Then bolt can
+# just use the old compilation output. If a source file changed, then this will trigger a full rebuild of libhyrise.
+# So this function should only be called by this script, if it can be sure that itself build the proper binary and did
+# not change anything.
+def build_just_bolt(*targets):
+    run_build("mv lib/libhyrise_impl.so.old lib/libhyrise_impl.so")
+    run_build(f"ninja {" ".join(targets)} -j {args.num_cores}")
+    run_build("mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old")
+    run_build(
+        "llvm-bolt",
+        "lib/libhyrise_impl.so.old",
+        "-o lib/libhyrise_impl.so",
+        "--data bolt.fdata",
+        "--reorder-blocks=ext-tsp",
+        "--reorder-functions=cdsort",
+        "--split-functions",
+        "--split-all-cold",
+        "--split-eh",
+        "--dyno-stats",
+    )
+    run_build('strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so')
 
 def profile(bolt_instrumented=False, pgo_instrumented=False):
     benchmarks_to_run = benchmarks if not args.ci else ci_benchmarks
@@ -154,9 +175,11 @@ def import_profile():
 
 
 def ci_main():
-    build(*ci_benchmarks, bolt_instrument=True, pgo_instrument=True)
-    profile(bolt_instrumented=True, pgo_instrumented=True)
-    build("hyriseTest", bolt_optimize=True, pgo_optimize=True)
+    build(*ci_benchmarks, pgo_instrument=True)
+    profile(pgo_instrumented=True)
+    build(*ci_benchmarks, pgo_optimize=True, bolt_instrument=True)
+    profile(bolt_instrumented=True)
+    build_just_bolt("hyriseTest")
 
 
 def main():
@@ -174,7 +197,10 @@ def main():
         if args.export_profile:
             export_profile()
         else:
-            build(bolt_optimize=args.bolt, pgo_optimize=args.pgo)
+            if not args.import_profile and args.bolt:
+                build_just_bolt()
+            else:
+                build(bolt_optimize=args.bolt, pgo_optimize=args.pgo)
     finally:
         cleanup()
 
