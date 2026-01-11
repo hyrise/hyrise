@@ -154,9 +154,10 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
 
 
 def cleanup():
-    run_build("cmake -DCOMPILE_FOR_BOLT=OFF -DPGO_INSTRUMENT=OFF -UPGO_OPTIMIZE ..")
+    run_build("cmake -DCOMPILE_FOR_BOLT=Off -DPGO_INSTRUMENT=Off -UPGO_OPTIMIZE ..")
     run_build("rm *.fdata", check=False)
     run_build("rm *.profraw", check=False)
+    run_build("rm *.profdata", check=False)
     run_root("rm *.profraw", check=False)
 
 
