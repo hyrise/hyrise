@@ -40,18 +40,10 @@ parser.add_argument(
     help="Don't run benchmarks, just import the profile data from the resources folder.",
 )
 parser.add_argument(
-    "-p",
-    "--pgo",
-    action=BooleanOptionalAction,
-    default=True,
-    help="Use PGO for profiling / optimization"
+    "-p", "--pgo", action=BooleanOptionalAction, default=True, help="Use PGO for profiling / optimization"
 )
 parser.add_argument(
-    "-b",
-    "--bolt",
-    action=BooleanOptionalAction,
-    default=True,
-    help="Use BOLT for profiling / optimization"
+    "-b", "--bolt", action=BooleanOptionalAction, default=True, help="Use BOLT for profiling / optimization"
 )
 args = parser.parse_args()
 
@@ -108,6 +100,7 @@ def build(*targets, bolt_instrument=False, pgo_instrument=False, bolt_optimize=F
         )
         run_build('strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so')
 
+
 # This function can be used if the previous build has already build libhyrise_impl and moved it to .old. Then bolt can
 # just use the old compilation output. If a source file changed, then this will trigger a full rebuild of libhyrise.
 # So this function should only be called by this script, if it can be sure that itself build the proper binary and did
@@ -129,6 +122,7 @@ def build_just_bolt(*targets):
         "--dyno-stats",
     )
     run_build('strip -R .rela.text -R ".rela.text.*" -R .rela.data -R ".rela.data.*" lib/libhyrise_impl.so')
+
 
 def profile(bolt_instrumented=False, pgo_instrumented=False):
     benchmarks_to_run = benchmarks if not args.ci else ci_benchmarks
