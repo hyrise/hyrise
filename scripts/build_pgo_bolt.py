@@ -10,7 +10,7 @@ from subprocess import run
 from os import cpu_count, getcwd
 
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-parser.add_argument("-t", "--time", type=int, default=1800, help="The time to run each benchmark in seconds.")
+parser.add_argument("-t", "--time", type=int, default=3600, help="The time to run each benchmark in seconds.")
 parser.add_argument(
     "-n",
     "--num-cores",
