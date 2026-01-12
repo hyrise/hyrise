@@ -352,34 +352,34 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
                 "Not all outputs have been visited - is the input LQP corrupt?");
     switch (node->type) {
       case LQPNodeType::Mock:
-      case LQPNodeType::StoredTable: {
-        // Prune all unused columns from a StoredTableNode
-        auto pruned_column_ids = std::vector<ColumnID>{};
-        const auto& node_output_expressions = node->output_expressions();
-        for (const auto& expression : node_output_expressions) {
-          if (required_expressions.contains(expression)) {
-            continue;
-          }
+      // case LQPNodeType::StoredTable: {
+      //   // Prune all unused columns from a StoredTableNode
+      //   auto pruned_column_ids = std::vector<ColumnID>{};
+      //   const auto& node_output_expressions = node->output_expressions();
+      //   for (const auto& expression : node_output_expressions) {
+      //     if (required_expressions.contains(expression)) {
+      //       continue;
+      //     }
 
-          const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-          pruned_column_ids.emplace_back(column_expression->original_column_id);
-        }
+      //     const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+      //     pruned_column_ids.emplace_back(column_expression->original_column_id);
+      //   }
 
-        if (pruned_column_ids.size() == node_output_expressions.size()) {
-          // All columns were marked to be pruned. However, while `SELECT 1 FROM table` does not need any particular
-          // column, it needs at least one column so that it knows how many 1s to produce. Thus, we remove a random
-          // column from the pruning list. It does not matter which column it is.
-          pruned_column_ids.resize(pruned_column_ids.size() - 1);
-        }
+      //   if (pruned_column_ids.size() == node_output_expressions.size()) {
+      //     // All columns were marked to be pruned. However, while `SELECT 1 FROM table` does not need any particular
+      //     // column, it needs at least one column so that it knows how many 1s to produce. Thus, we remove a random
+      //     // column from the pruning list. It does not matter which column it is.
+      //     pruned_column_ids.resize(pruned_column_ids.size() - 1);
+      //   }
 
-        if (auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node)) {
-          DebugAssert(stored_table_node->pruned_column_ids().empty(), "Node pruned twice.");
-          stored_table_node->set_pruned_column_ids(pruned_column_ids);
-        } else if (auto mock_node = std::dynamic_pointer_cast<MockNode>(node)) {
-          DebugAssert(mock_node->pruned_column_ids().empty(), "Node pruned twice.");
-          mock_node->set_pruned_column_ids(pruned_column_ids);
-        }
-      } break;
+      //   if (auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node)) {
+      //     DebugAssert(stored_table_node->pruned_column_ids().empty(), "Node pruned twice.");
+      //     stored_table_node->set_pruned_column_ids(pruned_column_ids);
+      //   } else if (auto mock_node = std::dynamic_pointer_cast<MockNode>(node)) {
+      //     DebugAssert(mock_node->pruned_column_ids().empty(), "Node pruned twice.");
+      //     mock_node->set_pruned_column_ids(pruned_column_ids);
+      //   }
+      // } break;
 
       case LQPNodeType::Join: {
         annotate_join_prunable_inputs(node, required_expressions_by_node);

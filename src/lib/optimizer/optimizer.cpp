@@ -230,7 +230,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer(bool with_optimiz
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
-  // optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   // Run the JoinToSemiJoinRule and the JoinToPredicateRewriteRule before the PredicatePlacementRule, as they might turn
   // joins into semi-joins (which are treated as predicates) or predicates that can be pushed further down. For the same
