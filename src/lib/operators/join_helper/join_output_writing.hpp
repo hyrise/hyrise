@@ -26,13 +26,10 @@ enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, Right
  *  responsible to create such a mapping.
  */
 
-template <bool allow_partition_merge>
-std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowIDPosList>& pos_lists_left,
-                                                        std::vector<RowIDPosList>& pos_lists_right,
-                                                        const std::shared_ptr<const Table>& left_input_table,
-                                                        const std::shared_ptr<const Table>& right_input_table,
-                                                        bool create_left_side_pos_lists_by_column,
-                                                        bool create_right_side_pos_lists_by_column,
-                                                        OutputColumnOrder output_column_order);
+std::vector<std::shared_ptr<Chunk>> write_output_chunks(
+    std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
+    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
+    bool create_left_side_pos_lists_by_column, bool create_right_side_pos_lists_by_column,
+    OutputColumnOrder output_column_order, bool allow_partition_merge);
 
 }  // namespace hyrise

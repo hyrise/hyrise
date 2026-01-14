@@ -564,9 +564,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     // A hash join's input can be heavily pre-filtered or the join results in very few matches. To counteract this the
     // partitions can be merged (#2202).
     constexpr auto ALLOW_PARTITION_MERGE = true;
-    auto output_chunks = write_output_chunks<ALLOW_PARTITION_MERGE>(
-        build_side_pos_lists, probe_side_pos_lists, _build_input_table, _probe_input_table,
-        create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment, _output_column_order);
+    auto output_chunks =
+        write_output_chunks(build_side_pos_lists, probe_side_pos_lists, _build_input_table, _probe_input_table,
+                            create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
+                            _output_column_order, ALLOW_PARTITION_MERGE);
 
     _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 

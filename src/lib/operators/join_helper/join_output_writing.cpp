@@ -202,14 +202,11 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
 
 namespace hyrise {
 
-template <bool allow_partition_merge>
-std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowIDPosList>& pos_lists_left,
-                                                        std::vector<RowIDPosList>& pos_lists_right,
-                                                        const std::shared_ptr<const Table>& left_input_table,
-                                                        const std::shared_ptr<const Table>& right_input_table,
-                                                        bool create_left_side_pos_lists_by_column,
-                                                        bool create_right_side_pos_lists_by_column,
-                                                        OutputColumnOrder output_column_order) {
+std::vector<std::shared_ptr<Chunk>> write_output_chunks(
+    std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
+    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
+    bool create_left_side_pos_lists_by_column, bool create_right_side_pos_lists_by_column,
+    OutputColumnOrder output_column_order, bool allow_partition_merge) {
   /**
    * Two caches to avoid redundant reference materialization for Reference input tables. As there might be hundreds of
    * partitions, hundreds of input chunks, and dozens of columns, this speeds up write_output_chunks a lot.
@@ -330,16 +327,4 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(std::vector<RowIDPosList
   output_chunks.resize(chunk_input_position);
   return output_chunks;
 }
-
-template std::vector<std::shared_ptr<Chunk>> write_output_chunks<true>(
-    std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
-    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
-    bool create_left_side_pos_lists_by_column, bool create_right_side_pos_lists_by_column,
-    OutputColumnOrder output_column_order);
-template std::vector<std::shared_ptr<Chunk>> write_output_chunks<false>(
-    std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
-    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
-    bool create_left_side_pos_lists_by_column, bool create_right_side_pos_lists_by_column,
-    OutputColumnOrder output_column_order);
-
 }  // namespace hyrise
