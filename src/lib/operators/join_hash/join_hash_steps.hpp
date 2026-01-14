@@ -520,22 +520,28 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   return hash_tables;
 }
 
-// This is the cacheline size on our commonly benchmarked hardware. Other systems will also run fine with this value.
+// This is the cacheline size for most of the systems Hyrise usually runs on. If a system has larger cachelines (e.g.
+// Apple's M processors or IBM Power), using the default value will still run fine.
 constexpr auto BYTES_PER_CACHELINE = size_t{64};
 // This is a tunable parameter. Increasing it causes more cache usage during radix partioning, but less TLB pressure.
 // Tuning it too high might invalidate the gains from `reduce_tlb_pressure`.
 constexpr auto MIN_CACHELINES_PER_STORE = size_t{1};
 
+// TemporaryRadixBucket is one "chunk" of data that can be copied to one specific partition once full. It is
+// implemented as a union so the number of items contained and the output position can be stored here while the bucket
+// is not full. This way they don't have to be fetched from some other location.
 template <typename T>
-  requires std::is_trivially_destructible_v<T>
+  requires std::is_trivially_copy_assignable_v<T>
 union TemporaryRadixBucket {
   static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
-  // We want the BYTES_PER_ELEMENT to be a divisor of the size of this container. If BYTES_PER_ELEMENT is not a power
-  // of two, we have to extract the part that is not a power of 2 an use it as a factor. For all types in hyrise, this
-  // is either 1 or 3.
+  // We want the size of this container to a multiple of the element size (so we don't copy uninitialized bytes) and
+  // the cacheline size (so we can use aligned vector instructions to copy). Additionally, we want the size of this
+  // container to be at least MIN_CACHELINES_PER_STORE cachelines large. If BYTES_PER_ELEMENT is not a power of two,
+  // we have to extract the part that is not a power of 2 and use it as a factor. For all types in Hyrise, this is
+  // either 1 or 3.
   static constexpr auto CACHELINES_PER_STORE_FACTOR = BYTES_PER_ELEMENT >>
                                                       static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
-  // This is the next multiple of CACHELINES_PER_STORE_FACTOR that is at least MIN_CACHELINES_PER_STORE
+  // CACHELINES_PER_STORE is a multiple of CACHELINES_PER_STORE_FACTOR that is at least MIN_CACHELINES_PER_STORE.
   static constexpr auto CACHELINES_PER_STORE =
       ((MIN_CACHELINES_PER_STORE + CACHELINES_PER_STORE_FACTOR - 1) / CACHELINES_PER_STORE_FACTOR) *
       CACHELINES_PER_STORE_FACTOR;
@@ -552,6 +558,8 @@ union TemporaryRadixBucket {
   } with_indices;
 };
 
+// TemporaryRadixContainer is a group of TemporaryRadixBuckets, one for each output partition. It ensures that all
+// buckets are properly aligned (for vector instructions) and keeps the null values for each partition.
 template <typename T, bool keep_null_values>
 struct TemporaryRadixContainer {
   using bucket = TemporaryRadixBucket<T>;
@@ -569,14 +577,14 @@ struct TemporaryRadixContainer {
   }
 
   void prefetch(size_t partition_id) {
-    const auto* const ptr = reinterpret_cast<char*>(data.data() + partition_id);
+    const auto* const data_pointer = reinterpret_cast<std::byte*>(data.data() + partition_id);
     for (auto cacheline_idx = size_t{0}; cacheline_idx < bucket::CACHELINES_PER_STORE; ++cacheline_idx) {
-      __builtin_prefetch(ptr + (cacheline_idx * BYTES_PER_CACHELINE), 1 /* = write */, 3 /* = highest priority */);
+      __builtin_prefetch(data_pointer + (cacheline_idx * BYTES_PER_CACHELINE), 1 /* = write */, 3 /* = locality */);
     }
     if constexpr (keep_null_values) {
-      const auto* const ptr = reinterpret_cast<char*>(null_values.data() + partition_id);
+      const auto* const nulls_pointer = reinterpret_cast<std::byte*>(null_values.data() + partition_id);
       for (auto cacheline_idx = size_t{0}; cacheline_idx < (bucket::ELEMENTS_PER_STORE + 63) / 64; ++cacheline_idx) {
-        __builtin_prefetch(ptr + (cacheline_idx * BYTES_PER_CACHELINE), 1, 3);
+        __builtin_prefetch(nulls_pointer + (cacheline_idx * BYTES_PER_CACHELINE), 1, 3);
       }
     }
   }
@@ -693,8 +701,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           }
 
           // These two options both use SIMD to copy the temporary data to the actual location. The if block uses
-          // nontemporal stores, whereas the other doesn't. We did not find a solution for gcc that used nontemporal
-          // SIMD and produced correct results (our take at google highway produced wrong results on AVX512).
+          // nontemporal stores, whereas the other does not. We did not find a solution for GCC that used nontemporal
+          // SIMD and produced correct results (our take at Google Highway produced wrong results on AVX512).
 #if defined(__clang__)
           using vec_t = uint8_t __attribute__((vector_size(TMP::BYTES_PER_STORE)));
           auto* const copy_from =

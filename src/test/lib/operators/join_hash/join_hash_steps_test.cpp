@@ -7,6 +7,7 @@
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -110,7 +111,7 @@ TEST_F(JoinHashStepsTest, LargeHashTableExistenceOnly) {
 }
 
 TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
-  const size_t radix_bit_count = 0;
+  const auto radix_bit_count = size_t{0};
   std::vector<std::vector<size_t>> histograms;
 
   // BloomFilters are ignored in this test
@@ -172,7 +173,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
 
 TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
   {
-    std::vector<std::vector<size_t>> histograms;  // Ignored in this test
+    std::vector<std::vector<size_t>> histograms;  // Ignored in this test.
     BloomFilter bloom_filter;
 
     materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
@@ -193,7 +194,7 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
 
 TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
   {
-    std::vector<std::vector<size_t>> histograms;  // Ignored in this test
+    std::vector<std::vector<size_t>> histograms;  // Ignored in this test.
     BloomFilter output_bloom_filter;
 
     // Fill input_bloom_filter
@@ -226,7 +227,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
 TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   {
     std::vector<std::vector<size_t>> histograms;
-    BloomFilter bloom_filter;  // Ignored in this test
+    BloomFilter bloom_filter;  // Ignored in this test.
 
     // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
     // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
@@ -244,7 +245,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
 
   {
     std::vector<std::vector<size_t>> histograms;
-    BloomFilter bloom_filter;  // Ignored in this test
+    BloomFilter bloom_filter;  // Ignored in this test.
 
     // When using 2 bits for radix partitioning, we have four radix clusters determined on the two least
     // significant bits. For the 0/1 table, we expect two non-empty clusters (00/01) and two empty ones (10/11).
@@ -267,9 +268,9 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
 }
 
 TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
-  const size_t radix_bit_count = 1;
+  const auto radix_bit_count = size_t{1};
   std::vector<std::vector<size_t>> histograms;
-  BloomFilter bloom_filter;  // Ignored in this test
+  BloomFilter bloom_filter;  // Ignored in this test.
 
   const auto materialized_without_null_handling = materialize_input<int, int, true>(
       _table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter);
@@ -295,8 +296,8 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
 }
 
 TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
-  std::vector<std::vector<size_t>> histograms;  // Ignored in this test
-  BloomFilter output_bloom_filter;              // Ignored in this test
+  std::vector<std::vector<size_t>> histograms;  // Ignored in this test.
+  BloomFilter output_bloom_filter;              // Ignored in this test.
 
   // Fill input_bloom_filter
   BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
@@ -327,7 +328,7 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
 
   auto radix_bit_count = size_t{0};
   auto histograms = std::vector<std::vector<size_t>>{};
-  BloomFilter bloom_filter;  // Ignored in this test
+  BloomFilter bloom_filter;  // Ignored in this test.
 
   const auto materialized_without_null_handling = materialize_input<int, int, false>(
       _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter);
@@ -343,18 +344,23 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
 }
 
 TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
-  const size_t radix_bit_count = 3;
+  const auto radix_bit_count = size_t{3};
   std::vector<std::vector<size_t>> histograms;
-  BloomFilter bloom_filter;  // Ignored in this test
+  BloomFilter bloom_filter;  // Ignored in this test.
 
   const auto materialized = materialize_input<int, int, false>(_table_with_many_values->get_output(), ColumnID{3},
                                                                histograms, radix_bit_count, bloom_filter);
 
   const auto radix_cluster_result =
-      partition_by_radix<int, int, false, true>(materialized, histograms, radix_bit_count);
+      partition_by_radix<int, int, /* keep nulls */ false, /* reduce tlb pressure */ true>(materialized, histograms, radix_bit_count);
+  for (const auto& partition : radix_cluster_result) {
+    EXPECT_EQ(partition.null_values.size(), 0);
+  }
 
   for (auto partition_id = size_t{0}; partition_id < radix_cluster_result.size(); ++partition_id) {
     for (auto element : radix_cluster_result[partition_id].elements) {
+      Assert(std::hash<int>()(element.value) == static_cast<size_t>(element.value),
+             "We expect the hash function for ints to be the identity function");
       EXPECT_EQ(element.value, partition_id);
     }
 
@@ -367,14 +373,14 @@ TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
 }
 
 TEST_F(JoinHashStepsTest, PartitionLargerDatasetWithNullsCorrectly) {
-  const size_t radix_bit_count = 3;
+  const auto radix_bit_count = size_t{3};
   std::vector<std::vector<size_t>> histograms;
-  BloomFilter bloom_filter;  // Ignored in this test
+  BloomFilter bloom_filter;  // Ignored in this test.
 
   const auto materialized = materialize_input<int, int, true>(_table_with_many_values_and_null->get_output(),
                                                               ColumnID{0}, histograms, radix_bit_count, bloom_filter);
 
-  const auto radix_cluster_result = partition_by_radix<int, int, true, true>(materialized, histograms, radix_bit_count);
+  const auto radix_cluster_result = partition_by_radix<int, int, /* keep nulls */ true, /* reduce tlb pressure */ true>(materialized, histograms, radix_bit_count);
 
   // map[(radix_bits, value)] = count
   auto expected_counts = std::map<std::pair<size_t, int>, size_t>{
@@ -389,20 +395,20 @@ TEST_F(JoinHashStepsTest, PartitionLargerDatasetWithNullsCorrectly) {
     for (auto element_idx = size_t{0}; element_idx < radix_cluster_result[partition_id].elements.size();
          ++element_idx) {
       if (radix_cluster_result[partition_id].null_values[element_idx]) {
-        null_count--;
+        --null_count;
         continue;
       }
 
       const auto value = radix_cluster_result[partition_id].elements[element_idx].value;
       const auto key = std::make_pair(partition_id, value);
       EXPECT_TRUE(expected_counts.contains(key));
-      expected_counts[key]--;
+      --expected_counts[key];
     }
   }
 
   EXPECT_EQ(null_count, 0);
-  for (auto& [_, cnt] : expected_counts) {
-    EXPECT_EQ(cnt, 0);
+  for (const auto& [_, count] : expected_counts) {
+    EXPECT_EQ(count, 0);
   }
 }
 
