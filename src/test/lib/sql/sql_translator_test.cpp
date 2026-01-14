@@ -1352,10 +1352,7 @@ TEST_F(SQLTranslatorTest, OrderByNullOrdering) {
         "SELECT * FROM int_float ORDER BY a DESC NULLS LAST",
     });
     for (const auto& query : invalid_queries) {
-      auto result = hsql::SQLParserResult{};
-      hsql::SQLParser::parse(query, &result);
-      auto sql_translator = SQLTranslator(UseMvcc::Yes);
-      EXPECT_THROW(sql_translator.translate_parser_result(result), InvalidInputException);
+      EXPECT_THROW(sql_to_lqp_helper(query), InvalidInputException);
     }
   }
 }
@@ -3683,10 +3680,7 @@ TEST_F(SQLTranslatorTest, InvalidWindowFunctions) {
       "SELECT rank() OVER (ORDER BY a DESC NULLS LAST) FROM int_float",
   });
   for (const auto& query : invalid_queries) {
-    auto result = hsql::SQLParserResult{};
-    hsql::SQLParser::parse(query, &result);
-    auto sql_translator = SQLTranslator(UseMvcc::Yes);
-    EXPECT_THROW(sql_translator.translate_parser_result(result), InvalidInputException);
+    EXPECT_THROW(sql_to_lqp_helper(query), InvalidInputException);
   }
 }
 
