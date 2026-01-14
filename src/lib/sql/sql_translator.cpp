@@ -41,7 +41,6 @@
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
-#include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -303,6 +302,30 @@ FrameBound translate_frame_bound(const hsql::FrameBound& hsql_frame_bound) {
   Assert(offset >= 0, "Expected non-negative offset. Bug in the SQL parser?");
 
   return FrameBound{static_cast<uint64_t>(offset), bound_type, hsql_frame_bound.unbounded};
+}
+
+std::optional<ParseConfig> process_sql_csv_options(hsql::CsvOptions* csv_options) {
+  if (!csv_options) {
+    return std::nullopt;
+  }
+  auto csv_parse_config = ParseConfig{};
+  if (csv_options->delimiter) {
+    AssertInput(strnlen(csv_options->delimiter, 2) == 1, "CSV delimiter should be exactly one char.");
+    csv_parse_config.delimiter = csv_options->delimiter[0];
+  }
+  if (csv_options->quote) {
+    AssertInput(strnlen(csv_options->quote, 2) == 1, "CSV quote should be exactly one char.");
+    csv_parse_config.quote = csv_options->quote[0];
+  }
+  if (csv_options->null) {
+    auto len = strnlen(csv_options->null, 100);
+    AssertInput(csv_options->null[len] == '\0', "CSV null string cannot be larger than 100 characters.");
+    csv_parse_config.null_string = std::string(csv_options->null, len);
+    boost::to_lower(csv_parse_config.null_string);
+
+    csv_parse_config.null_handling = NullHandling::NullStringAsNull;
+  }
+  return csv_parse_config;
 }
 
 }  // namespace
@@ -1530,7 +1553,7 @@ void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDe
     for (auto expression_idx = size_t{0}; expression_idx < order_list_size; ++expression_idx) {
       const auto& order_description = hsql_order_expressions[expression_idx];
       AssertInput(order_description->null_ordering != hsql::NullOrdering::Last,
-                  "Hyrise currently does not implement NULLS LAST");
+                  "Hyrise currently does not implement NULLS LAST.");
       expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
       sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
     }

@@ -1346,11 +1346,11 @@ TEST_F(SQLTranslatorTest, OrderByNullOrdering) {
 
   {
     // (iii) As of now, Hyrise supports only NULLS FIRST. NULLS LAST should throw an InvalidInputException
-    const auto invalid_queries = std::array<std::string, 3>{
+    const auto invalid_queries = std::to_array<std::string>({
         "SELECT * FROM int_float ORDER BY a NULLS LAST",
         "SELECT * FROM int_float ORDER BY a ASC NULLS LAST",
         "SELECT * FROM int_float ORDER BY a DESC NULLS LAST",
-    };
+    });
     for (const auto& query : invalid_queries) {
       auto result = hsql::SQLParserResult{};
       hsql::SQLParser::parse(query, &result);
@@ -3677,11 +3677,11 @@ TEST_F(SQLTranslatorTest, InvalidWindowFunctions) {
   EXPECT_THROW(sql_to_lqp_helper("SELECT substr(b, 1, 3) OVER () FROM int_string;"), InvalidInputException);
 
   // We currently do not support specifying NULLS FIRST/LAST, not even in the parser.
-  const auto invalid_queries = std::array<std::string, 3>{
+  const auto invalid_queries = std::to_array<std::string>({
       "SELECT rank() OVER (ORDER BY a NULLS LAST) FROM int_float",
       "SELECT rank() OVER (ORDER BY a ASC NULLS LAST) FROM int_float",
       "SELECT rank() OVER (ORDER BY a DESC NULLS LAST) FROM int_float",
-  };
+  });
   for (const auto& query : invalid_queries) {
     auto result = hsql::SQLParserResult{};
     hsql::SQLParser::parse(query, &result);

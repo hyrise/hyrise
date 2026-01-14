@@ -85,7 +85,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
         if (_csv_parse_config) {
           std::cerr << "Warning: Ignoring CSV parsing options in " << meta_filename
-                    << " because CSV parsing options were explicitly specified in the SQL command.\n";
+                    << " because CSV parsing options were explicitly specified in the SQL statement.\n";
           csv_meta.config = *_csv_parse_config;
         }
       } else {
