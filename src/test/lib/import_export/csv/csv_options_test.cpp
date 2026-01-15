@@ -84,4 +84,24 @@ TEST_F(CsvOptionsTest, ParseNull) {
                   TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference);
 }
 
+TEST_F(CsvOptionsTest, ParseTPCHLineItem) {
+  const auto expected_table = load_table("resources/test_data/tbl/tpch/sf-0.002/lineitem.tbl");
+
+  // Create the table to have the proper columns ready for import.
+  const auto create_table_statement =
+      "CREATE TABLE lineitem ( l_orderkey INTEGER not null, l_partkey INTEGER not null, l_suppkey INTEGER not null, "
+      "l_linenumber INTEGER not null, l_quantity DECIMAL(12,2) not null, l_extendedprice DECIMAL(12,2) not null, "
+      "l_discount DECIMAL(12,2) not null, l_tax  DECIMAL(12,2) not null, l_returnflag CHAR(1) not null, l_linestatus "
+      "CHAR(1) not null, l_shipdate DATE not null, l_commitdate DATE not null, l_receiptdate DATE not null, "
+      "l_shipinstruct CHAR(25) not null, l_shipmode CHAR(10) not null, l_comment VARCHAR(44) not null );";
+  const auto [create_status, create_tables] = SQLPipelineBuilder(create_table_statement).create_pipeline().get_result_tables();
+  EXPECT_EQ(create_status, SQLPipelineStatus::Success);
+
+  const auto sql_statement =
+      "COPY lineitem FROM 'resources/test_data/csv/tpch/lineitem.csv' WITH (FORMAT CSV, DELIMITER '|')";
+  const auto [status, tables] = SQLPipelineBuilder(sql_statement).create_pipeline().get_result_tables();
+  EXPECT_EQ(status, SQLPipelineStatus::Success);
+  EXPECT_TABLE_EQ(Hyrise::get().storage_manager.get_table("lineitem"), expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference);
+}
+
 }  // namespace hyrise

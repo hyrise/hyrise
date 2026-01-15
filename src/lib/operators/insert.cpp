@@ -126,7 +126,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     auto remaining_rows = left_input_table()->row_count();
 
-    if (_target_table->chunk_count() == 0) {
+    if (_target_table->chunk_count() == 0 && remaining_rows > 0) {
       _target_table->append_mutable_chunk();
     }
     while (remaining_rows > 0) {
