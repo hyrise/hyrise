@@ -1,17 +1,12 @@
 #include <algorithm>
 #include <memory>
-#include <random>
-#include <ranges>
 #include <utility>
-
-#include "uninitialized_vector.hpp"
 
 #include "base_test.hpp"
 #include "operators/join_hash/join_hash_steps.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
@@ -350,92 +345,70 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
 
 TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
   const auto radix_bit_count = size_t{3};
-  const auto partition_count = size_t{1} << radix_bit_count;
-  const auto elements_count = size_t{100'000};
-  auto histograms = std::vector{{std::vector<size_t>(partition_count)}};
-  auto materialized = RadixContainer<int>{
-      Partition<int>{.elements = uninitialized_vector<PartitionedElement<int>>(elements_count), .null_values = {}}};
-  // This test uses random number generation, but the seed is fixed and the test is therefore deterministic.
-  auto rng = std::mt19937(1338);
+  auto histograms = std::vector<std::vector<size_t>>{};
+  auto bloom_filter = BloomFilter{};  // Ignored in this test.
 
-  for (auto index = uint32_t{0}; index < elements_count; ++index) {
-    materialized[0].elements[index].row_id = RowID(ChunkID{0}, ChunkOffset{index});
-    const auto value = materialized[0].elements[index].value = static_cast<int>(rng());
-    ++histograms[0][value % partition_count];
+  const auto materialized = materialize_input<int, int, false>(_table_with_many_values->get_output(), ColumnID{3},
+                                                               histograms, radix_bit_count, bloom_filter);
+
+  const auto radix_cluster_result =
+      partition_by_radix<int, int, /* keep nulls */ false, /* reduce tlb pressure */ true>(materialized, histograms, radix_bit_count);
+  for (const auto& partition : radix_cluster_result) {
+    EXPECT_EQ(partition.null_values.size(), 0);
   }
 
-  auto radix_cluster_result = partition_by_radix<int, int, /* keep nulls */ false, /* reduce tlb pressure */ true>(
-      materialized, histograms, radix_bit_count);
+  for (auto partition_id = size_t{0}; partition_id < radix_cluster_result.size(); ++partition_id) {
+    for (auto element : radix_cluster_result[partition_id].elements) {
+      Assert(std::hash<int>()(element.value) == static_cast<size_t>(element.value),
+             "We expect the hash function for ints to be the identity function");
+      EXPECT_EQ(element.value, partition_id);
+    }
 
-  auto partition_iterators = std::vector<uninitialized_vector<PartitionedElement<int>>::iterator>{};
-  for (auto& partition : radix_cluster_result) {
-    partition_iterators.push_back(partition.elements.begin());
-  }
-
-  const auto hash = std::hash<int>();
-  for (const auto [row_id, value] : materialized[0].elements) {
-    const auto partition_index = hash(value) % partition_count;
-    auto& partition_iterator = partition_iterators[partition_index];
-    EXPECT_NE(partition_iterator, radix_cluster_result[partition_index].elements.end());
-    EXPECT_EQ(partition_iterator->value, value);
-    ++partition_iterator;
-  }
-
-  for (auto partition_index = size_t{0}; partition_index < radix_cluster_result.size(); ++partition_index) {
-    EXPECT_EQ(radix_cluster_result[partition_index].null_values.size(), 0);
-    EXPECT_EQ(partition_iterators[partition_index], radix_cluster_result[partition_index].elements.end());
+    if (1 <= partition_id && partition_id <= 5) {
+      EXPECT_EQ(radix_cluster_result[partition_id].elements.size(), 36);
+    } else {
+      EXPECT_EQ(radix_cluster_result[partition_id].elements.size(), 0);
+    }
   }
 }
 
 TEST_F(JoinHashStepsTest, PartitionLargerDatasetWithNullsCorrectly) {
   const auto radix_bit_count = size_t{3};
-  const auto partition_count = size_t{1} << radix_bit_count;
-  const auto elements_count = size_t{100'000};
-  auto histograms = std::vector{{std::vector<size_t>(partition_count)}};
-  auto materialized =
-      RadixContainer<int>{Partition<int>{.elements = uninitialized_vector<PartitionedElement<int>>(elements_count),
-                                         .null_values = std::vector<bool>(elements_count)}};
-  // This test uses random number generation, but the seed is fixed and the test is therefore deterministic.
-  auto rng = std::mt19937(1339);
-  auto bernoulli_distribution = std::bernoulli_distribution(.25);
+  auto histograms = std::vector<std::vector<size_t>>{};
+  auto bloom_filter = BloomFilter{};  // Ignored in this test.
 
-  for (auto index = uint32_t{0}; index < elements_count; ++index) {
-    // One in four elements is null.
-    materialized[0].null_values[index] = bernoulli_distribution(rng);
-    materialized[0].elements[index].row_id = RowID(ChunkID{0}, ChunkOffset{index});
-    const auto value = materialized[0].elements[index].value = static_cast<int>(rng());
-    ++histograms[0][value % partition_count];
+  const auto materialized = materialize_input<int, int, true>(_table_with_many_values_and_null->get_output(),
+                                                              ColumnID{0}, histograms, radix_bit_count, bloom_filter);
+
+  const auto radix_cluster_result = partition_by_radix<int, int, /* keep nulls */ true, /* reduce tlb pressure */ true>(materialized, histograms, radix_bit_count);
+
+  // map[(radix_bits, value)] = count
+  auto expected_counts = std::map<std::pair<size_t, int>, size_t>{
+      {{1, 1}, 18}, {{1, 17}, 1}, {{2, 2}, 87}, {{3, 3}, 12}, {{4, 4}, 14},
+      {{4, 12}, 9}, {{5, 5}, 18}, {{5, 13}, 9}, {{6, 6}, 4},  {{7, 7}, 1},
+  };
+  auto null_count = size_t{27};
+
+  for (auto partition_id = size_t{0}; partition_id < radix_cluster_result.size(); ++partition_id) {
+    EXPECT_EQ(radix_cluster_result[partition_id].elements.size(),
+              radix_cluster_result[partition_id].null_values.size());
+    for (auto element_idx = size_t{0}; element_idx < radix_cluster_result[partition_id].elements.size();
+         ++element_idx) {
+      if (radix_cluster_result[partition_id].null_values[element_idx]) {
+        --null_count;
+        continue;
+      }
+
+      const auto value = radix_cluster_result[partition_id].elements[element_idx].value;
+      const auto key = std::make_pair(partition_id, value);
+      EXPECT_TRUE(expected_counts.contains(key));
+      --expected_counts[key];
+    }
   }
 
-  auto radix_cluster_result = partition_by_radix<int, int, /* keep nulls */ true, /* reduce tlb pressure */ true>(
-      materialized, histograms, radix_bit_count);
-
-  auto partition_iterators =
-      std::vector<std::pair<uninitialized_vector<PartitionedElement<int>>::iterator, std::vector<bool>::iterator>>{};
-  for (auto& partition : radix_cluster_result) {
-    partition_iterators.emplace_back(partition.elements.begin(), partition.null_values.begin());
-  }
-
-  const auto hash = std::hash<int>();
-  for (auto index = size_t{0}; index < elements_count; ++index) {
-    const auto [row_id, value] = materialized[0].elements[index];
-    const auto is_null = materialized[0].null_values[index];
-
-    const auto partition_index = hash(value) % partition_count;
-    const auto& partition = radix_cluster_result[partition_index];
-    auto& [elements_iterator, null_iterator] = partition_iterators[partition_index];
-    EXPECT_NE(elements_iterator, partition.elements.end());
-    EXPECT_NE(null_iterator, partition.null_values.end());
-
-    EXPECT_EQ(elements_iterator->value, value);
-    EXPECT_EQ(*null_iterator, is_null);
-    ++elements_iterator;
-    ++null_iterator;
-  }
-
-  for (auto partition_index = size_t{0}; partition_index < radix_cluster_result.size(); ++partition_index) {
-    EXPECT_EQ(partition_iterators[partition_index].first, radix_cluster_result[partition_index].elements.end());
-    EXPECT_EQ(partition_iterators[partition_index].second, radix_cluster_result[partition_index].null_values.end());
+  EXPECT_EQ(null_count, 0);
+  for (const auto& [_, count] : expected_counts) {
+    EXPECT_EQ(count, 0);
   }
 }
 
