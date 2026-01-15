@@ -42,10 +42,10 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 
   // Create table statistics and chunk pruning statistics for added table.
   if (!table->table_statistics()) {
-    table->set_table_statistics(TableStatistics::from_table(*table));
+    table->set_table_statistics(TableStatistics::from_table(*table, "maxdiff"));
   }
   if(!table->second_table_statistics()){
-    table->set_second_table_statistics(TableStatistics::from_table(*table));
+    table->set_second_table_statistics(TableStatistics::from_table(*table, "maxdiff"));
   }
   generate_chunk_pruning_statistics(table);
 
