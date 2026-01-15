@@ -345,8 +345,8 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
 
 TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
   const auto radix_bit_count = size_t{3};
-  std::vector<std::vector<size_t>> histograms;
-  BloomFilter bloom_filter;  // Ignored in this test.
+  auto histograms = std::vector<std::vector<size_t>>{};
+  auto bloom_filter = BloomFilter{};  // Ignored in this test.
 
   const auto materialized = materialize_input<int, int, false>(_table_with_many_values->get_output(), ColumnID{3},
                                                                histograms, radix_bit_count, bloom_filter);
@@ -374,8 +374,8 @@ TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
 
 TEST_F(JoinHashStepsTest, PartitionLargerDatasetWithNullsCorrectly) {
   const auto radix_bit_count = size_t{3};
-  std::vector<std::vector<size_t>> histograms;
-  BloomFilter bloom_filter;  // Ignored in this test.
+  auto histograms = std::vector<std::vector<size_t>>{};
+  auto bloom_filter = BloomFilter{};  // Ignored in this test.
 
   const auto materialized = materialize_input<int, int, true>(_table_with_many_values_and_null->get_output(),
                                                               ColumnID{0}, histograms, radix_bit_count, bloom_filter);
