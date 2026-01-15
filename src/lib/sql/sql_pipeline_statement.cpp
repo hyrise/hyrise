@@ -166,11 +166,11 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       _optimizer->optimize_with_context(std::move(unoptimized_lqp), optimizer_rule_durations);
   std::cout << "first optimization done" << '\n';
 
-  visit_lqp(_optimized_logical_plan, [&](const std::shared_ptr<const AbstractLQPNode>& lqp) {
-    _optimizer->estimate_cardinality(const_cast<std::shared_ptr<const AbstractLQPNode>&>(lqp));
-    return LQPVisitation::VisitInputs;
-  });
-  std::cout << "estimated with same cardinality estimator" << '\n';
+  // visit_lqp(_optimized_logical_plan, [&](const std::shared_ptr<const AbstractLQPNode>& lqp) {
+  //   _optimizer->estimate_cardinality(const_cast<std::shared_ptr<const AbstractLQPNode>&>(lqp));
+  //   return LQPVisitation::VisitInputs;
+  // });
+  // std::cout << "estimated with same cardinality estimator" << '\n';
   const auto done = std::chrono::steady_clock::now();
   _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
@@ -358,6 +358,16 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     }
     _result_table = _root_operator_task->get_operator()->get_output();
 
+    auto q_error_functor = [](double true_cardinality, double estimated_cardinality) {
+      if (true_cardinality == 0 && estimated_cardinality == 0) {
+        return 0.0;
+      }
+      if (true_cardinality == 0 || estimated_cardinality == 0) {
+        return std::numeric_limits<double>::infinity();
+      }
+
+      return std::max(true_cardinality / estimated_cardinality, estimated_cardinality / true_cardinality);
+    };
 
     visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
       if (pqp->type() == OperatorType::Validate) {
@@ -366,23 +376,39 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
              .operator_hash = pqp->lqp_node->hash(),
              .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
              .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0,
-            .predicate_string = ""});
+             .predicate_string = ""});
       }
       if (pqp->performance_data->has_output && pqp->type() != OperatorType::Validate) {
         auto true_cardinality = static_cast<double>(pqp->performance_data->output_row_count);
         auto data_dependency_estimation = data_dependency_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
+        auto second_estimation = data_dependency_cardinality_estimator->estimate_statistics(pqp->lqp_node, false);
+
+        DebugAssert(second_estimation.table_statistics->row_count == data_dependency_estimation,
+                    "Inconsistent cardinality estimates from data dependency estimator.");
         auto default_estimation =
             estimator_without_optimizations->estimate_statistics(pqp->lqp_node).table_statistics->row_count;
+
+        if (pqp->type() == OperatorType::JoinHash || pqp->type() == OperatorType::JoinNestedLoop) {
+          const auto& lqp_node = static_cast<const JoinNode&>(*(pqp->lqp_node));
+          std::cout << "Join Predicate: "
+                    << lqp_node.join_predicates()[0]->description(AbstractExpression::DescriptionMode::Detailed)
+                    << "\n";
+          std::cout << "optimized_qerror: " << q_error_functor(true_cardinality, data_dependency_estimation)
+                    << " default_q_error: " << q_error_functor(true_cardinality, default_estimation) << "\n";
+          std::cout << "true: " << true_cardinality << " " << "dependency: " << data_dependency_estimation << " "
+                    << "default: " << default_estimation << std::endl;
+        }
+
         // auto test = default_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
 
         // estimate_cardinality(pqp->lqp_node);
-        std::string predicate_string; 
+        std::string predicate_string;
         if (pqp->lqp_node->type == LQPNodeType::Predicate) {
           const auto& predicate_node = static_cast<const PredicateNode&>(*pqp->lqp_node);
           predicate_string = predicate_node.predicate()->description();
         } else if (pqp->lqp_node->type == LQPNodeType::Join) {
           const auto& join_node = static_cast<const JoinNode&>(*pqp->lqp_node);
-          if(join_node.join_mode != JoinMode::Cross){
+          if (join_node.join_mode != JoinMode::Cross) {
             predicate_string = join_node.join_predicates().front()->description();
           } else {
             predicate_string = "CROSS JOIN";
@@ -397,8 +423,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
              .operator_hash = pqp->lqp_node->hash(),
              .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
              .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0,
-              .predicate_string = predicate_string}
-            );
+             .predicate_string = predicate_string});
       }
       return PQPVisitation::VisitInputs;
     });

@@ -72,7 +72,6 @@ class CardinalityEstimator {
 
   static std::shared_ptr<CardinalityEstimator> new_instance_without_optimizations();
 
-
   bool with_optimizations = false;
 
   /**
@@ -218,9 +217,21 @@ class CardinalityEstimator {
                                                     const EstimationStatisticsState& input_estimation_statistics,
                                                     const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
-  EstimationStatisticsState estimate_join_node(
-      const JoinNode& join_node, const EstimationStatisticsState& left_state,
-      const EstimationStatisticsState& right_state, StatisticsByLQP& statistics_cache) const;
+  EstimationStatisticsState estimate_join_node(const JoinNode& join_node, const EstimationStatisticsState& left_state,
+                                               const EstimationStatisticsState& right_state,
+                                               StatisticsByLQP& statistics_cache) const;
+
+  struct HasIndResult {
+    bool ind_exists = false;
+    bool is_flipped = false;
+    bool ucc_exists = false;
+  };
+
+  HasIndResult has_ind(const JoinNode& join_node) const;
+
+  Selectivity estimate_scaling_factor_join(
+    const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
+    const std::shared_ptr<TableStatistics>& right_input_table_statistics, const bool is_flipped) const;
 
   static std::shared_ptr<TableStatistics> estimate_union_node(
       const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
@@ -239,9 +250,9 @@ class CardinalityEstimator {
    * Estimate a simple scanning predicate. This function analyses the given predicate and dispatches the actual
    * estimation algorithm.
    */
-   EstimationStatisticsState estimate_operator_scan_predicate(
-      EstimationStatisticsState& estimation_statistics_state, const OperatorScanPredicate& predicate,
-      const PredicateNode& lqp_node) const;
+  EstimationStatisticsState estimate_operator_scan_predicate(EstimationStatisticsState& estimation_statistics_state,
+                                                             const OperatorScanPredicate& predicate,
+                                                             const PredicateNode& lqp_node) const;
 
   /**
    * Estimation of an equi scan between two histograms. Estimating equi scans without correlation information is

@@ -51,6 +51,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table,
         std::shared_ptr<AbstractHistogram<ColumnDataType>> histogram = nullptr;
 
         if (histogram_type == "maxdiff") {
+          std::cout << "Generating MaxDiff histogram for column " << column_id << "\n";
           histogram = MaxDiffHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
         } else {
           histogram = EqualDistinctCountHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);

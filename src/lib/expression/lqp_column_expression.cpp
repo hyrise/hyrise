@@ -41,7 +41,9 @@ std::string LQPColumnExpression::description(const DescriptionMode mode) const {
 
   auto output = std::stringstream{};
   if (mode == AbstractExpression::DescriptionMode::Detailed) {
-    output << original_node_locked << ".";
+    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node_locked);
+
+    output << stored_table_node->table_name << ".";
   }
 
   if (original_column_id == INVALID_COLUMN_ID) {
