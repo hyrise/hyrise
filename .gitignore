@@ -35,6 +35,7 @@ version.hpp
 
 # CLion cmake directory
 cmake-build-*
+cmake-test-*
 
 # llvm coverage information
 default.profdata
