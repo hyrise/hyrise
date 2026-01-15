@@ -353,7 +353,7 @@ TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
   const auto partition_count = size_t{1} << radix_bit_count;
   const auto elements_count = size_t{100'000};
   auto histograms = std::vector{{std::vector<size_t>(partition_count)}};
-  auto materialized = RadixContainer{
+  auto materialized = RadixContainer<int>{
       Partition<int>{.elements = uninitialized_vector<PartitionedElement<int>>(elements_count), .null_values = {}}};
   // This test uses random number generation, but the seed is fixed and the test is therefore deterministic.
   auto rng = std::mt19937(1338);
@@ -393,8 +393,8 @@ TEST_F(JoinHashStepsTest, PartitionLargerDatasetWithNullsCorrectly) {
   const auto elements_count = size_t{100'000};
   auto histograms = std::vector{{std::vector<size_t>(partition_count)}};
   auto materialized =
-      RadixContainer{Partition<int>{.elements = uninitialized_vector<PartitionedElement<int>>(elements_count),
-                                    .null_values = std::vector<bool>(elements_count)}};
+      RadixContainer<int>{Partition<int>{.elements = uninitialized_vector<PartitionedElement<int>>(elements_count),
+                                         .null_values = std::vector<bool>(elements_count)}};
   // This test uses random number generation, but the seed is fixed and the test is therefore deterministic.
   auto rng = std::mt19937(1339);
   auto bernoulli_distribution = std::bernoulli_distribution(.25);

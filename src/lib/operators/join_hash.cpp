@@ -38,7 +38,7 @@ namespace {
 // This seemed to be a reasonable value in micro-benchmarks. See [#2734](https://github.com/hyrise/hyrise/pull/2734)
 // for a more detailed discussion.
 constexpr auto REDUCE_TLB_PRESSURE_MIN_RADIX_BIT_COUNT = size_t{7};
-} // namespace
+}  // namespace
 
 namespace hyrise {
 

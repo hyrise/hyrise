@@ -529,16 +529,19 @@ constexpr auto MIN_CACHELINES_PER_STORE = size_t{1};
 
 // TemporaryRadixBucket is one "chunk" of data that can be copied to one specific partition once full. It is
 // implemented as a union so the number of items contained and the output position can be stored here while the bucket
-// is not full. This way they don't have to be fetched from some other location.
+// is not full (called a micro row layout). This way they don't have to be fetched from some other location. The
+// alter is to store the indices in a separate array (called micro column layout), which is desirable when this
+// separate array is small and fits in caches. Since this struct should only be used if the number of radix partitions
+// is high, we opt for a micro row layout.
 template <typename T>
   requires std::is_trivially_copy_assignable_v<T>
 union TemporaryRadixBucket {
   static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
-  // We want the size of this container to a multiple of the element size (so we don't copy uninitialized bytes) and
+  // We want the size of this container to be a multiple of the element size (so we don't copy uninitialized bytes) and
   // the cacheline size (so we can use aligned vector instructions to copy). Additionally, we want the size of this
   // container to be at least MIN_CACHELINES_PER_STORE cachelines large. If BYTES_PER_ELEMENT is not a power of two,
   // we have to extract the part that is not a power of 2 and use it as a factor. For all types in Hyrise, this is
-  // either 1 or 3.
+  // either 1 (8 byte values like long) or 3 (4 byte values like int).
   static constexpr auto CACHELINES_PER_STORE_FACTOR = BYTES_PER_ELEMENT >>
                                                       static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
   // CACHELINES_PER_STORE is a multiple of CACHELINES_PER_STORE_FACTOR that is at least MIN_CACHELINES_PER_STORE.
@@ -552,7 +555,7 @@ union TemporaryRadixBucket {
 
   struct {
     std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1> elements;
-    // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers
+    // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers.
     uint32_t count;
     uint64_t output_idx;
   } with_indices;
