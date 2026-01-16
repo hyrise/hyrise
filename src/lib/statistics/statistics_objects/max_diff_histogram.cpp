@@ -117,7 +117,7 @@ std::shared_ptr<MaxDiffHistogram<T>> MaxDiffHistogram<T>::from_column(const Tabl
       std::vector<std::pair<int, int>>(value_distribution.size() - 1);
   for (auto i = size_t{1}; i < value_distribution.size(); ++i) {
     frequency_diffs_idx[i - 1] =
-        std::make_pair(std::abs(value_distribution[i].second - value_distribution[i - 1].second), i);
+        std::make_pair(std::abs(value_distribution[i].second - value_distribution[i - 1].second), i - 1);
   }
 
   frequency_diffs_idx.push_back(
@@ -137,8 +137,14 @@ std::shared_ptr<MaxDiffHistogram<T>> MaxDiffHistogram<T>::from_column(const Tabl
     // In case all values are distinct or their frequencies are very similar, 
     // we create equal distinct count histogram by splitting the values equally
     // TODO(paulroes): correct boundaries so buckets are more balanced.
+    auto bins_with_extra_value = value_distribution.size() % bin_count;
     for (auto i = BinID{0}; i < bin_count; ++i) {
       bin_boundaries[i] = static_cast<BinID>((i + 1) * (value_distribution.size() / bin_count)) - 1;
+      if (i < bins_with_extra_value) {
+        bin_boundaries[i] += i + 1;
+      } else {
+        bin_boundaries[i] += bins_with_extra_value;
+      }
     }
   } else {
     for (auto i = BinID{0}; i < bin_count; ++i) {
