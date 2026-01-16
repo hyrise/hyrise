@@ -120,8 +120,8 @@ std::shared_ptr<MaxDiffHistogram<T>> MaxDiffHistogram<T>::from_column(const Tabl
         std::make_pair(std::abs(value_distribution[i].second - value_distribution[i - 1].second), i - 1);
   }
 
-  frequency_diffs_idx.push_back(
-      std::make_pair(0, 0));  // In case number of distinct values equals bin count, we also "split in the beginning"
+  frequency_diffs_idx.emplace_back(
+      0, 0);  // In case number of distinct values equals bin count, we also "split in the beginning"
 
   boost::sort::pdqsort(frequency_diffs_idx.begin(), frequency_diffs_idx.end(), [&](const auto& lhs, const auto& rhs) {
     return lhs.first > rhs.first;
@@ -131,39 +131,40 @@ std::shared_ptr<MaxDiffHistogram<T>> MaxDiffHistogram<T>::from_column(const Tabl
   const auto bin_count =
       value_distribution.size() < max_bin_count ? static_cast<BinID>(value_distribution.size()) : max_bin_count;
 
-  std::vector<BinID> bin_boundaries = std::vector<BinID>(bin_count);
+  std::vector<BinID> bin_maxima_idx = std::vector<BinID>(bin_count);
 
-  if (value_distribution.size() == table.row_count() || frequency_diffs_idx[bin_count - 1].first <= 1) {
-    // In case all values are distinct or their frequencies are very similar, 
-    // we create equal distinct count histogram by splitting the values equally
-    // TODO(paulroes): correct boundaries so buckets are more balanced.
+  // If frequency difference between adjacent values is small (also the case for primary key columns), we
+  // set bin bounds to create EqualDistinctCount histograms.
+  if (frequency_diffs_idx[bin_count - 1].first <= 1) {
     auto bins_with_extra_value = value_distribution.size() % bin_count;
+    auto distincts_values_per_bin = value_distribution.size() / bin_count;
     for (auto i = BinID{0}; i < bin_count; ++i) {
-      bin_boundaries[i] = static_cast<BinID>((i + 1) * (value_distribution.size() / bin_count)) - 1;
+      bin_maxima_idx[i] = static_cast<BinID>((i + 1) * distincts_values_per_bin) - 1;
       if (i < bins_with_extra_value) {
-        bin_boundaries[i] += i + 1;
+        bin_maxima_idx[i] += i + 1;
       } else {
-        bin_boundaries[i] += bins_with_extra_value;
+        bin_maxima_idx[i] += bins_with_extra_value;
       }
     }
   } else {
     for (auto i = BinID{0}; i < bin_count; ++i) {
-      bin_boundaries[i] = frequency_diffs_idx[i].second;
+      bin_maxima_idx[i] = frequency_diffs_idx[i].second;
     }
-    boost::sort::pdqsort(bin_boundaries.begin(), bin_boundaries.end());
+    boost::sort::pdqsort(bin_maxima_idx.begin(), bin_maxima_idx.end());
+    // Ensure the last bin includes remaining values.
+    bin_maxima_idx[bin_count - 1] = static_cast<BinID>(value_distribution.size() - 1);
   }
 
   std::vector<T> bin_minima(bin_count);
   std::vector<T> bin_maxima(bin_count);
   std::vector<HistogramCountType> bin_heights(bin_count);
-
   std::vector<HistogramCountType> bin_distinct_counts(bin_count);
 
   // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution`
   // describing which range of distinct values goes into a bin
   auto min_value_idx = BinID{0};
   for (BinID bin_idx = 0; bin_idx < bin_count; bin_idx++) {
-    auto max_value_idx = bin_idx == bin_count - 1 ? value_distribution.size() - 1 : bin_boundaries[bin_idx];
+    auto max_value_idx = bin_maxima_idx[bin_idx];
 
     // We'd like to move strings, but have to copy if we need the same string for the bin_maximum
     if (std::is_same_v<T, std::string> && min_value_idx != max_value_idx) {

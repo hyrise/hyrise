@@ -24,17 +24,16 @@ class MaxDiffHistogram : public AbstractHistogram<T> {
   using AbstractHistogram<T>::AbstractHistogram;
 
   MaxDiffHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
-                              std::vector<HistogramCountType>&& bin_heights,
-                              std::vector<HistogramCountType>&& bin_distinct_counts,
-                              const HistogramDomain<T>& domain = {});
+                   std::vector<HistogramCountType>&& bin_heights, std::vector<HistogramCountType>&& bin_distinct_counts,
+                   const HistogramDomain<T>& domain = {});
 
   /**
    * Create an MaxDiffHistogram for a column (spanning all Segments) of a Table
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
    */
   static std::shared_ptr<MaxDiffHistogram<T>> from_column(const Table& table, const ColumnID column_id,
-                                                                     const BinID max_bin_count,
-                                                                     const HistogramDomain<T>& domain = {} );
+                                                          const BinID max_bin_count,
+                                                          const HistogramDomain<T>& domain = {});
 
   std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
