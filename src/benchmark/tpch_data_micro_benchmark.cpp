@@ -36,8 +36,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
     if (!sm.has_table("lineitem")) {
-      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and "
-                << benchmark_config->encoding_config.default_encoding_spec << " encoding:\n";
+      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and automatic encoding:\n";
       TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, benchmark_config).generate_and_store();
     }
 

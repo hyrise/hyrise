@@ -1,5 +1,6 @@
 #include <memory>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -20,6 +21,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class ExpressionReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"},
                                                            {DataType::Int, "b"},
                                                            {DataType::Int, "c"},
@@ -160,6 +162,15 @@ TEST_F(ExpressionReductionRuleTest, RewriteLikePrefixWildcard) {
   auto expression_m = std::shared_ptr<AbstractExpression>(or_(a, like_(s, "RED")));
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_m);
   EXPECT_EQ(*expression_m, *or_(a2, equals_(s, "RED")));
+
+  // Case-insensitive patterns should not be rewritten.
+  auto expression_n = std::shared_ptr<AbstractExpression>(ilike_(s, "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_n);
+  EXPECT_EQ(*expression_n, *ilike_(s, "RED%"));
+
+  auto expression_o = std::shared_ptr<AbstractExpression>(not_ilike_(s, "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_n);
+  EXPECT_EQ(*expression_o, *not_ilike_(s, "RED%"));
 }
 
 TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
@@ -187,6 +198,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -206,6 +219,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -225,6 +240,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -238,6 +255,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
 
     const auto expected_lqp = _lqp->deep_copy();
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -256,6 +275,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
 
     const auto expected_lqp = _lqp->deep_copy();
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -269,6 +290,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
 
     const auto expected_lqp = _lqp->deep_copy();
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -290,6 +313,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -311,6 +336,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -366,6 +393,7 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

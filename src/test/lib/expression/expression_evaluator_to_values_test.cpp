@@ -414,40 +414,62 @@ TEST_F(ExpressionEvaluatorToValuesTest, NegateSeries) {
 TEST_F(ExpressionEvaluatorToValuesTest, LikeLiteral) {
   EXPECT_TRUE(test_expression<int32_t>(*like_("hello", "hello"), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*like_("hello", "Hello"), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*ilike_("hello", "Hello"), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like_("hello", "Hello"), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_ilike_("hello", "Hello"), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*like_("hello", "h_ll%o"), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*ilike_("Hello", "h_ll%o"), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like_("hello", "h_ll%o"), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_ilike_("Hello", "h_ll%o"), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*like_("hello", "H_ll_o"), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*ilike_("hello", "H_ll_o"), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like_("hello", "H_ll_o"), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_ilike_("hello", "H_ll_o"), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*like_("hello", "%h%_l%o"), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*ilike_("Hello", "%h%_l%o"), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like_("hello", "%h%_l%o"), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_ilike_("Hello", "%h%_l%o"), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*like_(null_(), "%h%_l%o"), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*ilike_(null_(), "%h%_l%o"), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like_(null_(), "%h%_l%o"), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_ilike_(null_(), "%h%_l%o"), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*like_(null_(), null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*ilike_(null_(), null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like_(null_(), null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_ilike_(null_(), null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*like_("hello", null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*ilike_("hello", null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like_("hello", null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_ilike_("hello", null_()), {std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, LikeSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like_(s1, concat_(s1, "%")), {1, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like_(s1, concat_(s1, "a")), {0, 0, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_like_(s1, "%a%"), {0, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_ilike_(s1, "%A%"), {0, 1, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like_(s1, "%A%"), {0, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *ilike_(s1, "%A%"), {1, 0, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like_(s1, "%H%e%_%l%"), {0, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *ilike_(s1, "%h%e%_%l%"), {0, 1, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_like_(s1, "%H%e%_%l%"), {1, 0, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_ilike_(s1, "%h%e%_%l%"), {1, 0, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like_(s3, "%a%"), {std::nullopt, 1, 0, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *ilike_(s3, "%A%"), {std::nullopt, 1, 0, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_like_(s3, "%a%"), {std::nullopt, 0, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_ilike_(s3, "%A%"), {std::nullopt, 0, 1, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like_(s1, "%a%"), {1, 0, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *ilike_(s1, "%A%"), {1, 0, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like_("Same", s1), {0, 0, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *ilike_("same", s1), {0, 0, 0, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_like_("Same", s1), {1, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_ilike_("Same", s1), {1, 1, 1, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *like_(empty_s, "hello"), {}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *like_("hello", empty_s), {}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, SubstrLiterals) {
-  /** Hyrise follows SQLite semantics for negative indices in SUBSTR */
-
+  // Hyrise follows SQLite semantics for negative indices in SUBSTR.
   EXPECT_TRUE(test_expression<pmr_string>(*substr_("", 3, 4), {""}));
   EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 4, 4), {"lo W"}));
   EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", -18, 4), {""}));

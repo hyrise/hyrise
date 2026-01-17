@@ -46,7 +46,7 @@ std::vector<PluginName> PluginManager::loaded_plugins() const {
     plugin_names.emplace_back(plugin_name);
   }
 
-  std::sort(plugin_names.begin(), plugin_names.end());
+  std::ranges::sort(plugin_names);
 
   return plugin_names;
 }
@@ -81,7 +81,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   auto plugin_get = reinterpret_cast<PluginGetter>(factory);
 
   auto plugin = std::unique_ptr<AbstractPlugin>(plugin_get());
-  PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, std::move(plugin)};
+  auto plugin_handle_wrapper = PluginHandleWrapper{.handle = plugin_handle, .plugin = std::move(plugin)};
   plugin = nullptr;
 
   Assert(!_is_duplicate(plugin_handle_wrapper.plugin),

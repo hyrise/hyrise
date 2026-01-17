@@ -8,6 +8,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/dependent_group_by_reduction_rule.hpp"
 #include "strategy_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -16,6 +17,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class DependentGroupByReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     auto& storage_manager = Hyrise::get().storage_manager;
 
     TableColumnDefinitions column_definitions{{"column0", DataType::Int, false},
@@ -24,7 +26,10 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
                                               {"column3", DataType::Int, false}};
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+
+    // Non-genuine UCC. In practice, primary key constraints will always be genuine (because they are given by
+    // the schema), but we want this constraint to be non-genuine in order to test query plan cacheability.
+    table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
     storage_manager.add_table("table_a", table_a);
     stored_table_node_a = StoredTableNode::make("table_a");
     column_a_0 = stored_table_node_a->get_column("column0");
@@ -63,19 +68,31 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_e_2 = stored_table_node_e->get_column("column2");
     column_e_3 = stored_table_node_e->get_column("column3");
 
+    table_f = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+    table_f->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
+    table_f->add_soft_constraint(
+        TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID});
+    storage_manager.add_table("table_f", table_f);
+    stored_table_node_f = StoredTableNode::make("table_f");
+    column_f_0 = stored_table_node_f->get_column("column0");
+    column_f_1 = stored_table_node_f->get_column("column1");
+    column_f_2 = stored_table_node_f->get_column("column2");
+    column_f_3 = stored_table_node_f->get_column("column3");
+
     rule = std::make_shared<DependentGroupByReductionRule>();
   }
 
   std::shared_ptr<DependentGroupByReductionRule> rule;
 
-  std::shared_ptr<Table> table_a, table_b, table_c, table_d, table_e;
+  std::shared_ptr<Table> table_a, table_b, table_c, table_d, table_e, table_f;
   std::shared_ptr<StoredTableNode> stored_table_node_a, stored_table_node_b, stored_table_node_c, stored_table_node_d,
-      stored_table_node_e;
+      stored_table_node_e, stored_table_node_f;
   std::shared_ptr<LQPColumnExpression> column_a_0, column_a_1, column_a_2;
   std::shared_ptr<LQPColumnExpression> column_b_0, column_b_1, column_b_2;
   std::shared_ptr<LQPColumnExpression> column_c_0, column_c_1, column_c_2;
   std::shared_ptr<LQPColumnExpression> column_d_0;
   std::shared_ptr<LQPColumnExpression> column_e_0, column_e_1, column_e_2, column_e_3;
+  std::shared_ptr<LQPColumnExpression> column_f_0, column_f_1, column_f_2, column_f_3;
 };
 
 // Test simple cases.
@@ -86,6 +103,8 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
 
     const auto expected_lqp = _lqp->deep_copy();
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -95,6 +114,8 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
 
     const auto expected_lqp = _lqp->deep_copy();
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -114,6 +135,9 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    // Not cacheable because FD derived from non-genuine UCC was used.
+    EXPECT_FALSE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   {
@@ -127,9 +151,10 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
       AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2), any_(column_a_1)),  // NOLINT(whitespace/line_length)
         stored_table_node_a));
     // clang-format on
-
     _apply_rule(rule, _lqp);
 
+    EXPECT_FALSE(
+        _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-genuine UCC was used.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -145,6 +170,7 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -159,6 +185,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -174,9 +201,48 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
     AggregateNode::make(expression_vector(column_c_0, column_c_2), expression_vector(sum_(column_c_1), any_(column_c_1)),  // NOLINT(whitespace/line_length)
       stored_table_node_c));
   // clang-format on
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because used FD was derived from genuine UCC.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+// Test that usage of non-genuine FD leads to the result not being cacheable.
+TEST_F(DependentGroupByReductionRuleTest, NonGenuineFDNotCacheable) {
+  // clang-format off
+  _lqp =
+  AggregateNode::make(expression_vector(column_f_1, column_f_2, column_f_3), expression_vector(sum_(column_f_0)),
+    stored_table_node_f);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(column_f_1, column_f_2, column_f_3, sum_(column_f_0)),
+    AggregateNode::make(expression_vector(column_f_2, column_f_3), expression_vector(sum_(column_f_0), any_(column_f_1)),  // NOLINT(whitespace/line_length)
+      stored_table_node_f));
+  // clang-format on
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_FALSE(
+      _optimization_context.is_cacheable());  // Not cacheable because used FD was derived from non-genuine UCC.
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+// Test that when FDs with the same amount of determinants are present, the cacheable one is chosen.
+TEST_F(DependentGroupByReductionRuleTest, EqualDeterminantLengthCacheable) {
+  // clang-format off
+  _lqp =
+  AggregateNode::make(expression_vector(column_f_0, column_f_1, column_f_2, column_f_3), expression_vector(sum_(column_f_0)),  // NOLINT(whitespace/line_length)
+    stored_table_node_f);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(column_f_0, column_f_1, column_f_2, column_f_3, sum_(column_f_0)),
+    AggregateNode::make(expression_vector(column_f_0, column_f_1), expression_vector(sum_(column_f_0), any_(column_f_3), any_(column_f_2)),  // NOLINT(whitespace/line_length)
+      stored_table_node_f));
+  // clang-format on
+
+  _apply_rule(rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because the genuine UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -193,7 +259,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
-    AggregateNode::make(expression_vector(column_a_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1), any_(column_b_0)),  // NOLINT(whitespace/line_length)
+    AggregateNode::make(expression_vector(column_a_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_b_0), any_(column_a_1)),  // NOLINT(whitespace/line_length)
       JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_b_0),
         stored_table_node_a,
         stored_table_node_b)));
@@ -201,6 +267,8 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_FALSE(
+      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-genuine UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -225,6 +293,8 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKeyNoEquiPredicate
 
   _apply_rule(rule, _lqp);
 
+  // Also not cacheable because UCC over column `a_0` is not genuine and used to move `a_1`.
+  EXPECT_FALSE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -239,6 +309,7 @@ TEST_F(DependentGroupByReductionRuleTest, AggregateButNoChanges) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -255,9 +326,10 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
     AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)),
       stored_table_node_a));
   // clang-format on
-
   _apply_rule(rule, _lqp);
 
+  EXPECT_FALSE(
+      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-genuine UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -266,19 +338,21 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
 TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
   // clang-format off
   _lqp =
-  SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0)),
       stored_table_node_a));
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0)),
-    SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::AscendingNullsFirst},
       AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)),
         stored_table_node_a)));
   // clang-format on
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_FALSE(
+      _optimization_context.is_cacheable());  // Not cacheable because FD derived from non-genuine UCC was used.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -295,6 +369,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -313,6 +388,7 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -344,6 +420,7 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -365,8 +442,13 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
 
     const auto expected_lqp = stored_table_node_a->deep_copy();
     _apply_rule(rule, _lqp);
+
+    EXPECT_FALSE(_optimization_context.is_cacheable());  // Not cacheable because UCC used is not genuine.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
+
+  // We need to reset the `_optimization_context` here, because the rule sets it to not cacheable.
+  _optimization_context = OptimizationContext{};
 
   // More advanced case: Column is unique due to another operation (e.g., we grouped by it before).
   // Example query: SELECT DISTINCT column1, MIN(column2) FROM table_a GROUP BY column1;
@@ -383,6 +465,9 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(
+        _optimization_context.is_cacheable());  // Cacheable because used UCC is implied by query and thus genuine.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -402,8 +487,12 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    EXPECT_FALSE(_optimization_context.is_cacheable());  // Not cacheable because UCC used is not genuine.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
+  // We need to reset the `_optimization_context` here, because the rule sets it to not cacheable.
+  _optimization_context = OptimizationContext{};
 
   // All columns are part of the grouped columns, but the order changes. Thus, we need a ProjectionNode that changes the
   // order.
@@ -419,6 +508,8 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
     // clang-format on
 
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -435,6 +526,8 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
 
     const auto expected_lqp = _lqp->deep_copy();
     _apply_rule(rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -448,6 +541,7 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
 
     const auto expected_lqp = _lqp->deep_copy();
     _apply_rule(rule, _lqp);
+    EXPECT_TRUE(_optimization_context.is_cacheable());  // Cacheable because rule was not applied.
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }

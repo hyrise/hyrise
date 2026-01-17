@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -10,6 +11,7 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
@@ -50,11 +52,11 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
    * and are constrained to the predicates and vertices in the JoinGraph.
    */
   const auto caching_cost_estimator = cost_estimator->new_instance();
-  caching_cost_estimator->guarantee_bottom_up_construction();
+  caching_cost_estimator->guarantee_bottom_up_construction(lqp);
   caching_cost_estimator->cardinality_estimator->guarantee_join_graph(*join_graph);
 
   /**
-   * Select and call the actual join ordering algorithm. Simple heuristic: Use DpCcp for any query with less than
+   * Select and call the actual join ordering algorithm. Simple heuristic: Use DPccp for any query with less than
    * MIN_VERTICES_FOR_HEURISTIC tables and GreedyOperatorOrdering for everything more complex.
    */
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
@@ -64,7 +66,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
     // A JoinGraph with only one vertex is no actual join and needs no ordering.
     result_lqp = lqp;
   } else if (vertex_count < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
-    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);
+    result_lqp = DPccp{}(*join_graph, caching_cost_estimator);
   } else {
     result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
   }
@@ -85,8 +87,9 @@ std::string JoinOrderingRule::name() const {
   return name;
 }
 
-void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set.");
+void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                         OptimizationContext& optimization_context) const {
+  DebugAssert(optimization_context.cost_estimator, "JoinOrderingRule requires cost estimator to be set.");
 
   /**
    * Dispatch perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
@@ -97,7 +100,7 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
   const auto expected_column_order = lqp_root->output_expressions();
 
-  auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), cost_estimator);
+  auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), optimization_context.cost_estimator);
 
   // Join ordering might change the output column order, let us fix that.
   if (!expressions_equal(expected_column_order, result_lqp->output_expressions())) {

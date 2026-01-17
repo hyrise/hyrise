@@ -14,9 +14,9 @@
 #include "all_type_variant.hpp"
 #include "base_value_segment.hpp"
 #include "index/abstract_chunk_index.hpp"
-#include "reference_segment.hpp"
 #include "storage/index/chunk_index_type.hpp"
 #include "storage/mvcc_data.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -49,8 +49,9 @@ bool Chunk::is_mutable() const {
   return _is_mutable.load();
 }
 
-void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
-  std::atomic_store(&_segments.at(column_id), segment);
+void Chunk::replace_segment(const ColumnID column_id, const std::shared_ptr<AbstractSegment>& segment) {
+  Assert(column_id < _segments.size(), "ColumnID out of range.");
+  std::atomic_store(&_segments[column_id], segment);
 }
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
@@ -76,7 +77,12 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 }
 
 std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
-  return std::atomic_load(&_segments.at(column_id));
+  Assert(column_id < _segments.size(), "ColumnID out of range.");
+  return std::atomic_load(&_segments[column_id]);
+}
+
+const Segments& Chunk::segments() const {
+  return _segments;
 }
 
 ColumnCount Chunk::column_count() const {
@@ -88,7 +94,7 @@ ChunkOffset Chunk::size() const {
     return ChunkOffset{0};
   }
   const auto first_segment = get_segment(ColumnID{0});
-  return static_cast<ChunkOffset>(first_segment->size());
+  return first_segment->size();
 }
 
 bool Chunk::has_mvcc_data() const {
@@ -102,7 +108,7 @@ std::shared_ptr<MvccData> Chunk::mvcc_data() const {
 std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<AbstractChunkIndex>>();
-  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result), [&](const auto& index) {
+  std::ranges::copy_if(_indexes, std::back_inserter(result), [&](const auto& index) {
     return index->is_index_for(segments);
   });
   return result;
@@ -135,7 +141,7 @@ std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(const std::v
 
 std::shared_ptr<AbstractChunkIndex> Chunk::get_index(
     const ChunkIndexType index_type, const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
-  auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
+  auto index_it = std::ranges::find_if(_indexes, [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
   });
 
@@ -149,7 +155,7 @@ std::shared_ptr<AbstractChunkIndex> Chunk::get_index(const ChunkIndexType index_
 }
 
 void Chunk::remove_index(const std::shared_ptr<AbstractChunkIndex>& index) {
-  auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
+  auto it = std::ranges::find(_indexes, index);
   DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index.");
   _indexes.erase(it);
 }
@@ -230,22 +236,21 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
 
   auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());
-  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments), [&](const auto& column_id) {
+  std::ranges::transform(column_ids, std::back_inserter(segments), [&](const auto& column_id) {
     return get_segment(column_id);
   });
   return segments;
 }
 
-const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const {
-  return _pruning_statistics;
+std::shared_ptr<const ChunkPruningStatistics> Chunk::pruning_statistics() const {
+  return std::atomic_load(&_pruning_statistics);
 }
 
-void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
+void Chunk::set_pruning_statistics(const std::shared_ptr<ChunkPruningStatistics>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
   Assert(!pruning_statistics || pruning_statistics->size() == static_cast<size_t>(column_count()),
          "Pruning statistics must have same number of segments as chunk.");
-
-  _pruning_statistics = pruning_statistics;
+  std::atomic_store(&_pruning_statistics, pruning_statistics);
 }
 
 void Chunk::increase_invalid_row_count(const ChunkOffset count, const std::memory_order memory_order) const {
@@ -262,31 +267,40 @@ void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
 
 void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
   Assert(!is_mutable(), "Cannot set_individually_sorted_by on mutable chunks.");
-  // Currently, we assume that set_individually_sorted_by is called only once at most.
-  // As such, there should be no existing sorting and the new sorting should contain at least one column.
-  // Feel free to remove this assertion if necessary.
+  // Currently, we assume that `set_individually_sorted_by` is called only once at most. Thus, there should be no
+  // existing sorting and the new sorting should contain at least one column. Feel free to remove this assertion if
+  // necessary.
   Assert(!sorted_by.empty() && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
 
   if constexpr (HYRISE_DEBUG) {
+    // "Individually sorted by" means that the chunk is sorted by ALL passed columns individually, NOT only by their
+    // combination.
     for (const auto& sorted_by_column : sorted_by) {
-      const auto& sorted_segment = get_segment(sorted_by_column.column);
+      const auto sorted_segment = get_segment(sorted_by_column.column);
       if (sorted_segment->size() < 2) {
         break;
       }
 
-      segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
+      segment_with_iterators(*sorted_segment, [&](const auto& begin, const auto& end) {
         Assert(std::is_sorted(begin, end,
-                              [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
-                                // is_sorted evaluates the segment by calling the lambda with the SegmentPositions at
-                                // it+n and it (n being non-negative), which needs to evaluate to false.
-                                if (right.is_null()) {
-                                  return false;  // handles right side is NULL and both are NULL
+                              [sort_mode = sorted_by_column.sort_mode](const auto& right, const auto& left) {
+                                // `is_sorted` evaluates the segment by iteratively calling the lambda with the
+                                // SegmentPositions at `iter + 1` and `iter`, which needs to evaluate to false.
+                                if (left.is_null() && right.is_null()) {
+                                  return false;
                                 }
+
+                                const auto nulls_last = sort_mode == SortMode::AscendingNullsLast ||
+                                                        sort_mode == SortMode::DescendingNullsLast;
                                 if (left.is_null()) {
-                                  return true;
+                                  return nulls_last;
                                 }
-                                const auto ascending = sort_mode == SortMode::Ascending;
-                                return ascending ? left.value() < right.value() : left.value() > right.value();
+                                if (right.is_null()) {
+                                  return !nulls_last;
+                                }
+                                const auto ascending = sort_mode == SortMode::AscendingNullsFirst ||
+                                                       sort_mode == SortMode::AscendingNullsLast;
+                                return ascending ? right.value() < left.value() : left.value() < right.value();
                               }),
                "Setting a sort order for a segment which is not sorted accordingly.");
       });
@@ -297,42 +311,43 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  if (_cleanup_commit_id.load() == UNSET_COMMIT_ID) {
-    // Cleanup-Commit-ID is not yet set
+  const auto cleanup_commit_id = _cleanup_commit_id.load();
+  if (cleanup_commit_id == UNSET_COMMIT_ID) {
+    // Cleanup CommitID is not yet set.
     return std::nullopt;
   }
-  return std::optional<CommitID>{_cleanup_commit_id.load()};
+  return cleanup_commit_id;
 }
 
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
-  Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
-  _cleanup_commit_id.store(cleanup_commit_id);
+  const auto previous_cleanup_commit_id = _cleanup_commit_id.exchange(cleanup_commit_id);
+  Assert(previous_cleanup_commit_id == UNSET_COMMIT_ID, "Cleanup CommitID can only be set once.");
 }
 
 void Chunk::mark_as_full() {
-  Assert(!_reached_target_size, "Chunk should not be marked as full multiple times.");
-  _reached_target_size = true;
+  Assert(!_reached_target_size.exchange(true), "Chunk should not be marked as full multiple times.");
 }
 
-void Chunk::try_set_immutable() {
+bool Chunk::try_set_immutable() {
   DebugAssert(_mvcc_data, "Expected to be executed with MVCC enabled.");
   // Mark the chunk as immutable if (i) it reached the target size and a new chunk was added to the table, (ii) it is
   // still mutable, and (iii) all pending Insert operators are either committed or rolled back. We do not have to set
   // the `max_begin_cid` here because committed Insert operators already set it.
   if (!_reached_target_size || !is_mutable() || _mvcc_data->pending_inserts() != 0) {
-    return;
+    return false;
   }
 
   // Mark chunk as immutable. `fetch_and() is only defined for integral types, so we use `compare_exchange_strong()`.
   auto success = true;
-  if (_is_mutable.compare_exchange_strong(success, false)) {
-    // We were the first ones to mark the chunk as immutable. Thus, we have to take care of anything else that needs to
-    // be done. In the future, this can mean to start background statistics generation, encoding, etc.
+  const auto set_immutable = _is_mutable.compare_exchange_strong(success, false);
+  if (set_immutable) {
+    // We are the first ones to mark this chunk as immutable.
     Assert(success, "Value exchanged but value was actually false.");
   } else {
-    // Another thread is about to mark this chunk as immutable. Do nothing.
+    // Another thread is about to mark this chunk as immutable.
     Assert(!success, "Value not exchanged but value was actually true.");
   }
+  return set_immutable;
 }
 
 }  // namespace hyrise

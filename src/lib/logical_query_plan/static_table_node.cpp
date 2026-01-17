@@ -4,6 +4,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -15,6 +16,8 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "storage/constraints/constraint_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
@@ -71,7 +74,11 @@ UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
     auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
-    unique_column_combinations.emplace(std::move(column_expressions));
+    if (key_constraint_is_confidently_valid(table, table_key_constraint)) {
+      // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
+      // otherwise these optimizations could produce invalid query results.
+      unique_column_combinations.emplace(std::move(column_expressions));
+    }
   }
 
   return unique_column_combinations;
@@ -105,8 +112,15 @@ std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
-  return table->column_definitions() == static_table_node.table->column_definitions() &&
-         table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
+
+  if (table->column_definitions() != static_table_node.table->column_definitions()) {
+    return false;
+  }
+
+  // If the column definitions match, we also compare the key constraints. Note that this comparison does only compare
+  // the type and columns of two key constraints, not the validity or stored CommitIDs. This is sufficient for the
+  // StaticTableNode because it should not contain invalid key constraints in the first place.
+  return table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
 }
 
 }  // namespace hyrise

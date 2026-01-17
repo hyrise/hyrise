@@ -27,7 +27,7 @@ class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<AbstractSegment>>;
 using Indexes = pmr_vector<std::shared_ptr<AbstractChunkIndex>>;
-using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
+using ChunkPruningStatistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>;
 
 /**
  * Chunks are horizontal partitions of a table. They stores the table's data segment by segment. Optionally, mostly
@@ -58,7 +58,7 @@ class Chunk : private Noncopyable {
   bool is_mutable() const;
 
   // Atomically replaces the current segment at column_id with the passed segment.
-  void replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment);
+  void replace_segment(const ColumnID column_id, const std::shared_ptr<AbstractSegment>& segment);
 
   // Returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t)).
   ColumnCount column_count() const;
@@ -78,6 +78,7 @@ class Chunk : private Noncopyable {
    *       call `get_segment again`, be aware that the returned object might have changed.
    */
   std::shared_ptr<AbstractSegment> get_segment(ColumnID column_id) const;
+  const Segments& segments() const;
 
   bool has_mvcc_data() const;
 
@@ -125,8 +126,8 @@ class Chunk : private Noncopyable {
    * To perform Chunk pruning, a Chunk can be associated with statistics.
    * @{
    */
-  const std::optional<ChunkPruningStatistics>& pruning_statistics() const;
-  void set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics);
+  std::shared_ptr<const ChunkPruningStatistics> pruning_statistics() const;
+  void set_pruning_statistics(const std::shared_ptr<ChunkPruningStatistics>& pruning_statistics);
   /** @} */
 
   /**
@@ -135,16 +136,18 @@ class Chunk : private Noncopyable {
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
-   * If a chunk is sorted in any way, the sort mode (Ascending/Descending) and the ColumnIDs of the segments by which
-   * it is sorted will be returned.
+   * We use interesting sort orders in a few TableScan implementations (e.g., ColumnVsValue, ColumnIsNull,
+   * ColumnBetween) and AggregateSort. See #1519 for more details. We store the sort modes and the ColumnIDs of the
+   * segments by which the chunk is sorted on the top-level ordering (i.e., the left-most column in an ORDER BY
+   * statement). If the sort information contains two columns a, b, that does NOT mean the chunk is lexicographically
+   * ordered by them (as in ORDER BY a, b). Instead, the chunk is ordered by both columns individually. For instance,
+   * both join keys are sorted after a SortMergeJoin.
    *
-   * In a chunk, multiple segments may be sorted independently. For example, in a table storing orders, both the order
-   * ID and date of incoming orders might have incrementing values. In this case, sorted_by has two entries (assuming
-   * this knowledge is available to the database). However, for cases where the data is first orderered by one column,
-   * then by another (e.g. ORDER_BY last_name, first_name), only the primary order is stored.
+   * Currently, we set the sorting information when applying some operators (SortMergeJoin, Sort) or when clustering
+   * tables. Operators that maintain the sort order must forward this information on their own.
    *
-   * Sort orders are currently exploited in several scan implementations (e.g., ColumnVsValue, ColumnIsNull,
-   * ColumnBetweenScan) and selected other operators (e.g., AggregateSort). See #1519 for more details.
+   * Further order dependencies (e.g., sorting TPC-DS's date_dim table by d_date also orders d_year) are not captured,
+   * yet and are subject to future work.
    */
   const std::vector<SortColumnDefinition>& individually_sorted_by() const;
   void set_individually_sorted_by(const SortColumnDefinition& sorted_by);
@@ -190,7 +193,7 @@ class Chunk : private Noncopyable {
    * Inserts are committed/rolled back, the chunk is immediately marked.
    */
   void mark_as_full();
-  void try_set_immutable();
+  bool try_set_immutable();
 
  private:
   std::vector<std::shared_ptr<const AbstractSegment>> _get_segments_for_ids(
@@ -200,7 +203,7 @@ class Chunk : private Noncopyable {
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
   Indexes _indexes;
-  std::optional<ChunkPruningStatistics> _pruning_statistics;
+  std::shared_ptr<ChunkPruningStatistics> _pruning_statistics;
   std::atomic_bool _is_mutable{true};
   std::atomic_bool _reached_target_size{false};
   std::vector<SortColumnDefinition> _sorted_by;

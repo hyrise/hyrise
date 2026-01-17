@@ -19,7 +19,10 @@
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "scheduler/worker.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -216,7 +219,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 }
 
-TEST_F(StressTest, NodeSchedulerStressTest) {
+TEST_F(StressTest, NodeQueueSchedulerStressTest) {
   if (std::thread::hardware_concurrency() < 2) {
     GTEST_SKIP();
   }
@@ -230,7 +233,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   // Just a sufficiently large number to trigger a non-empty queue.
-  const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
+  const auto job_counts = std::vector<size_t>{node_count << 3, node_count << 4, node_count << 3};
 
   auto num_finished_jobs = std::atomic_uint32_t{0};
   volatile auto start_jobs = std::atomic_bool{false};
@@ -326,7 +329,10 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
     }
     EXPECT_EQ(counter, 0);
 
-    Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    for (const auto& waiting_job : waiting_jobs) {
+      waiting_job->schedule();
+    }
+
     // Wait a bit for workers to pull jobs and decrement semaphore.
     while (active_task_count < CPU_COUNT) {
       std::this_thread::sleep_for(SLEEP_TIME);
@@ -396,7 +402,10 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
       EXPECT_EQ(queue->semaphore.availableApprox(), 0);
     }
 
-    Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    for (const auto& waiting_job : waiting_jobs) {
+      waiting_job->schedule();
+    }
+
     // Wait a bit for workers to pull jobs and decrement semaphore.
     while (active_task_count < CPU_COUNT) {
       std::this_thread::sleep_for(SLEEP_TIME);
@@ -454,6 +463,53 @@ TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
     const auto& [pipeline_status, _] = sql_pipeline.get_result_tables();
     EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   }
+}
+
+TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  const auto worker_count = node_queue_scheduler->workers().size();
+  if (worker_count < NodeQueueScheduler::NUM_GROUPS) {
+    // We would not see any impact of task grouping with too few workers.
+    GTEST_SKIP();
+  }
+
+  const auto multiplier = 1'000;
+  const auto task_count = multiplier * worker_count;
+
+  for (auto run = uint8_t{0}; run < 10; ++run) {
+    auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler::NUM_GROUPS, 0);
+    auto output_counter = std::atomic<size_t>{0};
+    auto concurrently_processed_tasks = std::atomic<int64_t>{0};
+
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+    for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+      tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
+        ++output_counter;
+        const auto active_groups = ++concurrently_processed_tasks;
+        ASSERT_LE(active_groups, NodeQueueScheduler::NUM_GROUPS);
+
+        const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
+        const auto prev_task_id = previous_task_id_per_group[group_id];
+        if (prev_task_id > 0) {
+          // Once the first task of each group has been executed, we check the previous TaskID of the group to verify
+          // that grouping execution happens in the expected round-robin order (see
+          // `void NodeQueueScheduler::_group_tasks()`).
+          EXPECT_EQ(prev_task_id + NodeQueueScheduler::NUM_GROUPS, task_id);
+        }
+        previous_task_id_per_group[group_id] = task_id;
+
+        --concurrently_processed_tasks;
+      }));
+    }
+
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    EXPECT_EQ(output_counter, task_count);
+  }
+
+  Hyrise::get().scheduler()->finish();
 }
 
 TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
@@ -527,6 +583,8 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     thread.join();
   }
 
+  Hyrise::get().scheduler()->wait_for_all_tasks();
+
   // Each iteration of a thread inserts two rows, which are stored in chunks with a target size of 3.
   const auto inserted_rows = insert_count * thread_count * 2;
   const auto expected_chunks = static_cast<ChunkID::base_type>(std::ceil(static_cast<double>(inserted_rows) / 3.0));
@@ -540,10 +598,15 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     ASSERT_TRUE(chunk);
     EXPECT_EQ(chunk->size(), 3);
     EXPECT_FALSE(chunk->is_mutable());
+    // Immutable chunks should have pruning statistics and should be encoded.
+    EXPECT_TRUE(std::static_pointer_cast<AbstractEncodedSegment>(chunk->get_segment(ColumnID{0})));
+    EXPECT_TRUE(chunk->pruning_statistics());
   }
 
   EXPECT_EQ(table->last_chunk()->size(), 1);
   EXPECT_TRUE(table->last_chunk()->is_mutable());
+  EXPECT_TRUE(std::static_pointer_cast<BaseValueSegment>(table->last_chunk()->get_segment(ColumnID{0})));
+  EXPECT_FALSE(table->last_chunk()->pruning_statistics());
 }
 
 // Consuming operators register at their inputs and deregister when they are executed. Thus, operators can clear
@@ -709,7 +772,7 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
 }
 
 /**
- * Test that adding and accessing the TableKeyConstraints of a table concurrently does not lead to 
+ * Test that adding and accessing the TableKeyConstraints of a table concurrently does not lead to
  * deadlocks or inconsistencies (e.g., duplicate constraints).
  */
 TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
@@ -724,7 +787,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   table->append({3, 3, 1});
 
   Hyrise::get().storage_manager.add_table("dummy_table", table);
-  /** 
+  /**
    * This test runs insertions and reads concurrently. Specifically, it tests the following functions:
    * - `UccDiscoveryPlugin::_validate_ucc_candidates`
    * - `StoredTableNode::unique_column_combinations`
