@@ -14,7 +14,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/max_diff_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -49,7 +49,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
         const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
         const auto histogram =
-            EqualDistinctCountHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
+            MaxDiffHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
 
         if (histogram) {
           output_column_statistics->set_statistics_object(histogram);

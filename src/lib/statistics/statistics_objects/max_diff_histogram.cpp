@@ -1,4 +1,4 @@
-#include "equal_distinct_count_histogram.hpp"
+#include "max_diff_histogram.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -79,32 +79,32 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 namespace hyrise {
 
 template <typename T>
-EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
-                                                            std::vector<HistogramCountType>&& bin_heights,
-                                                            const HistogramCountType distinct_count_per_bin,
-                                                            const BinID bin_count_with_extra_value,
-                                                            const HistogramDomain<T>& domain)
+MaxDiffHistogram<T>::MaxDiffHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
+                                      std::vector<HistogramCountType>&& bin_heights,
+                                      std::vector<HistogramCountType>&& bin_distinct_counts,
+                                      const HistogramDomain<T>& domain)
     : AbstractHistogram<T>(domain),
       _bin_minima(std::move(bin_minima)),
       _bin_maxima(std::move(bin_maxima)),
       _bin_heights(std::move(bin_heights)),
-      _distinct_count_per_bin(distinct_count_per_bin),
-      _bin_count_with_extra_value(bin_count_with_extra_value) {
+      _bin_distinct_counts(std::move(bin_distinct_counts)) {
   Assert(_bin_minima.size() == _bin_maxima.size(), "Must have the same number of lower as upper bin edges.");
   Assert(_bin_minima.size() == _bin_heights.size(), "Must have the same number of edges and heights.");
-  Assert(_distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
-  Assert(_bin_count_with_extra_value < _bin_minima.size(), "Cannot have more bins with extra value than bins.");
+  Assert(_bin_minima.size() == _bin_distinct_counts.size(), "Must have the same number of edges and distinct counts.");
+  // Assert(_distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
+  // Assert(_bin_count_with_extra_value < _bin_minima.size(), "Cannot have more bins with extra value than bins.");
 
   AbstractHistogram<T>::_assert_bin_validity();
 
   _total_count = std::accumulate(_bin_heights.cbegin(), _bin_heights.cend(), HistogramCountType{0});
-  _total_distinct_count = _distinct_count_per_bin * static_cast<HistogramCountType>(_bin_heights.size()) +
-                          static_cast<HistogramCountType>(_bin_count_with_extra_value);
+  _total_distinct_count =
+      std::accumulate(_bin_distinct_counts.cbegin(), _bin_distinct_counts.cend(), HistogramCountType{0});
 }
 
 template <typename T>
-std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_column(
-    const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
+std::shared_ptr<MaxDiffHistogram<T>> MaxDiffHistogram<T>::from_column(const Table& table, const ColumnID column_id,
+                                                                      const BinID max_bin_count,
+                                                                      const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero ");
 
   const auto value_distribution = value_distribution_from_column(table, column_id, domain);
@@ -113,26 +113,58 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     return nullptr;
   }
 
+  std::vector<std::pair<int, int>> frequency_diffs_idx =
+      std::vector<std::pair<int, int>>(value_distribution.size() - 1);
+  for (auto i = size_t{1}; i < value_distribution.size(); ++i) {
+    frequency_diffs_idx[i - 1] =
+        std::make_pair(std::abs(value_distribution[i].second - value_distribution[i - 1].second), i - 1);
+  }
+
+  frequency_diffs_idx.emplace_back(
+      0, 0);  // In case number of distinct values equals bin count, we also "split in the beginning"
+
+  boost::sort::pdqsort(frequency_diffs_idx.begin(), frequency_diffs_idx.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs.first > rhs.first;
+  });
+
   // If there are fewer distinct values than the number of desired bins use that instead.
   const auto bin_count =
       value_distribution.size() < max_bin_count ? static_cast<BinID>(value_distribution.size()) : max_bin_count;
 
-  // Split values evenly among bins.
-  const auto distinct_count_per_bin = static_cast<size_t>(value_distribution.size() / bin_count);
-  const BinID bin_count_with_extra_value = value_distribution.size() % bin_count;
+  std::vector<BinID> bin_maxima_idx = std::vector<BinID>(bin_count);
+
+  // If frequency difference between adjacent values is small (also the case for primary key columns), we
+  // set bin bounds to create EqualDistinctCount histograms.
+  if (frequency_diffs_idx[bin_count - 1].first <= 1) {
+    auto bins_with_extra_value = value_distribution.size() % bin_count;
+    auto distincts_values_per_bin = value_distribution.size() / bin_count;
+    for (auto i = BinID{0}; i < bin_count; ++i) {
+      bin_maxima_idx[i] = static_cast<BinID>((i + 1) * distincts_values_per_bin) - 1;
+      if (i < bins_with_extra_value) {
+        bin_maxima_idx[i] += i + 1;
+      } else {
+        bin_maxima_idx[i] += bins_with_extra_value;
+      }
+    }
+  } else {
+    for (auto i = BinID{0}; i < bin_count; ++i) {
+      bin_maxima_idx[i] = frequency_diffs_idx[i].second;
+    }
+    boost::sort::pdqsort(bin_maxima_idx.begin(), bin_maxima_idx.end());
+    // Ensure the last bin includes remaining values.
+    bin_maxima_idx[bin_count - 1] = static_cast<BinID>(value_distribution.size() - 1);
+  }
 
   std::vector<T> bin_minima(bin_count);
   std::vector<T> bin_maxima(bin_count);
   std::vector<HistogramCountType> bin_heights(bin_count);
+  std::vector<HistogramCountType> bin_distinct_counts(bin_count);
 
   // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution`
   // describing which range of distinct values goes into a bin
   auto min_value_idx = BinID{0};
   for (BinID bin_idx = 0; bin_idx < bin_count; bin_idx++) {
-    auto max_value_idx = min_value_idx + distinct_count_per_bin - 1;
-    if (bin_idx < bin_count_with_extra_value) {
-      max_value_idx++;
-    }
+    auto max_value_idx = bin_maxima_idx[bin_idx];
 
     // We'd like to move strings, but have to copy if we need the same string for the bin_maximum
     if (std::is_same_v<T, std::string> && min_value_idx != max_value_idx) {
@@ -150,38 +182,39 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
                           return bin_height + value_and_count.second;
                         });
 
+    bin_distinct_counts[bin_idx] = static_cast<HistogramCountType>(max_value_idx - min_value_idx + 1);
+
     min_value_idx = max_value_idx + 1;
   }
 
-  return std::make_shared<EqualDistinctCountHistogram<T>>(
-      std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
-      static_cast<HistogramCountType>(distinct_count_per_bin), bin_count_with_extra_value);
+  return std::make_shared<MaxDiffHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+                                               std::move(bin_distinct_counts));
 }
 
 template <typename T>
-std::string EqualDistinctCountHistogram<T>::name() const {
-  return "EqualDistinctCount";
+std::string MaxDiffHistogram<T>::name() const {
+  return "MaxDiffHistogram";
 }
 
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> EqualDistinctCountHistogram<T>::clone() const {
+std::shared_ptr<AbstractHistogram<T>> MaxDiffHistogram<T>::clone() const {
   // The new histogram needs a copy of the data
   auto bin_minima_copy = _bin_minima;
   auto bin_maxima_copy = _bin_maxima;
   auto bin_heights_copy = _bin_heights;
+  auto bin_distinct_counts_copy = _bin_distinct_counts;
 
-  return std::make_shared<EqualDistinctCountHistogram<T>>(std::move(bin_minima_copy), std::move(bin_maxima_copy),
-                                                          std::move(bin_heights_copy), _distinct_count_per_bin,
-                                                          _bin_count_with_extra_value);
+  return std::make_shared<MaxDiffHistogram<T>>(std::move(bin_minima_copy), std::move(bin_maxima_copy),
+                                               std::move(bin_heights_copy), std::move(bin_distinct_counts_copy));
 }
 
 template <typename T>
-BinID EqualDistinctCountHistogram<T>::bin_count() const {
+BinID MaxDiffHistogram<T>::bin_count() const {
   return _bin_heights.size();
 }
 
 template <typename T>
-BinID EqualDistinctCountHistogram<T>::bin_for_value(const T& value) const {
+BinID MaxDiffHistogram<T>::bin_for_value(const T& value) const {
   const auto iter = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
   const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), iter));
 
@@ -193,7 +226,7 @@ BinID EqualDistinctCountHistogram<T>::bin_for_value(const T& value) const {
 }
 
 template <typename T>
-BinID EqualDistinctCountHistogram<T>::next_bin_for_value(const T& value) const {
+BinID MaxDiffHistogram<T>::next_bin_for_value(const T& value) const {
   const auto it = std::upper_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
 
   if (it == _bin_maxima.cend()) {
@@ -204,39 +237,39 @@ BinID EqualDistinctCountHistogram<T>::next_bin_for_value(const T& value) const {
 }
 
 template <typename T>
-const T& EqualDistinctCountHistogram<T>::bin_minimum(const BinID index) const {
+const T& MaxDiffHistogram<T>::bin_minimum(const BinID index) const {
   DebugAssert(index < _bin_minima.size(), "Index is not a valid bin.");
   return _bin_minima[index];
 }
 
 template <typename T>
-const T& EqualDistinctCountHistogram<T>::bin_maximum(const BinID index) const {
+const T& MaxDiffHistogram<T>::bin_maximum(const BinID index) const {
   DebugAssert(index < _bin_maxima.size(), "Index is not a valid bin.");
   return _bin_maxima[index];
 }
 
 template <typename T>
-HistogramCountType EqualDistinctCountHistogram<T>::bin_height(const BinID index) const {
+HistogramCountType MaxDiffHistogram<T>::bin_height(const BinID index) const {
   DebugAssert(index < _bin_heights.size(), "Index is not a valid bin.");
   return _bin_heights[index];
 }
 
 template <typename T>
-HistogramCountType EqualDistinctCountHistogram<T>::bin_distinct_count(const BinID index) const {
+HistogramCountType MaxDiffHistogram<T>::bin_distinct_count(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
-  return HistogramCountType{_distinct_count_per_bin + (index < _bin_count_with_extra_value ? 1 : 0)};
+  return _bin_distinct_counts[index];
 }
 
 template <typename T>
-HistogramCountType EqualDistinctCountHistogram<T>::total_count() const {
+HistogramCountType MaxDiffHistogram<T>::total_count() const {
   return _total_count;
 }
 
 template <typename T>
-HistogramCountType EqualDistinctCountHistogram<T>::total_distinct_count() const {
+HistogramCountType MaxDiffHistogram<T>::total_distinct_count() const {
   return _total_distinct_count;
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualDistinctCountHistogram);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(MaxDiffHistogram);
 
 }  // namespace hyrise

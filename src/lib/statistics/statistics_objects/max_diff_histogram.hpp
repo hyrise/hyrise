@@ -19,22 +19,22 @@ class Table;
  * There might be gaps between bins.
  */
 template <typename T>
-class EqualDistinctCountHistogram : public AbstractHistogram<T> {
+class MaxDiffHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
 
-  EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
+  MaxDiffHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                               std::vector<HistogramCountType>&& bin_heights,
-                              const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
+                              std::vector<HistogramCountType>&& bin_distinct_counts,
                               const HistogramDomain<T>& domain = {});
 
   /**
-   * Create an EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
+   * Create an MaxDiffHistogram for a column (spanning all Segments) of a Table
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
    */
-  static std::shared_ptr<EqualDistinctCountHistogram<T>> from_column(const Table& table, const ColumnID column_id,
+  static std::shared_ptr<MaxDiffHistogram<T>> from_column(const Table& table, const ColumnID column_id,
                                                                      const BinID max_bin_count,
-                                                                     const HistogramDomain<T>& domain = {});
+                                                                     const HistogramDomain<T>& domain = {} );
 
   std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
@@ -71,11 +71,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   // Number of values on a per-bin basis.
   std::vector<HistogramCountType> _bin_heights;
 
-  // Number of distinct values per bin.
-  HistogramCountType _distinct_count_per_bin;
-
-  // The first bin_count_with_extra_value bins have an additional distinct value.
-  BinID _bin_count_with_extra_value;
+  // Number of distinct values per bin on a per-bin basis.
+  std::vector<HistogramCountType> _bin_distinct_counts;
 
   // Aggregated counts over all bins, to avoid redundant computation
   HistogramCountType _total_count;

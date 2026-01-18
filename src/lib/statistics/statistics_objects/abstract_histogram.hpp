@@ -86,7 +86,7 @@ class AbstractHistogram : public AbstractStatisticsObject, public std::enable_sh
   explicit AbstractHistogram(const HistogramDomain<T>& domain = {});
 
   /**
-   * @return name of the histogram type, e.g., "EqualDistinctCount"
+   * @return name of the histogram type, e.g., "MaxDiffHistogram"
    */
   virtual std::string name() const = 0;
 
