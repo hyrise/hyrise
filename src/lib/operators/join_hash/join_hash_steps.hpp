@@ -902,6 +902,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
         } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
           // No hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing
           // side get emitted.
+          pos_list_local.reserve(partition_elements_count);
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             auto& probe_column_element = elements[partition_offset];
             pos_list_local.emplace_back(probe_column_element.row_id);
@@ -910,6 +911,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           // No hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
           // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
           const auto build_table_is_empty = build_table.row_count() == 0;
+          pos_list_local.reserve(partition_elements_count);
           for (auto partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
             auto& probe_column_element = elements[partition_offset];
             // A NULL on the probe side never gets emitted, except when the build table is empty.
