@@ -207,8 +207,8 @@ class CardinalityEstimator {
   static std::shared_ptr<TableStatistics> estimate_window_node(
       const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
-  static std::shared_ptr<TableStatistics> estimate_aggregate_node(
-      const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
+  std::shared_ptr<TableStatistics> estimate_aggregate_node(
+      const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
 
   static std::shared_ptr<TableStatistics> estimate_validate_node(
       const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics);

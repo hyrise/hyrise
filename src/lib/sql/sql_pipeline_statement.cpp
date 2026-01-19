@@ -368,7 +368,8 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
       return std::max(true_cardinality / estimated_cardinality, estimated_cardinality / true_cardinality);
     };
-
+    std::cout << "Collecting cardinality metrics per operator..." << std::endl;
+    
     visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
       if (pqp->type() == OperatorType::Validate) {
         _metrics->operator_cardinality_metrics.push_back(
