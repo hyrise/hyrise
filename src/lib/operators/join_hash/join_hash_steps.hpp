@@ -578,19 +578,6 @@ struct TemporaryRadixContainer {
       null_values.resize(output_partition_count);
     }
   }
-
-  void prefetch(size_t partition_id) {
-    const auto* const data_pointer = reinterpret_cast<std::byte*>(data.data() + partition_id);
-    for (auto cacheline_idx = size_t{0}; cacheline_idx < bucket::CACHELINES_PER_STORE; ++cacheline_idx) {
-      __builtin_prefetch(data_pointer + (cacheline_idx * BYTES_PER_CACHELINE), 1 /* = write */, 3 /* = locality */);
-    }
-    if constexpr (keep_null_values) {
-      const auto* const nulls_pointer = reinterpret_cast<std::byte*>(null_values.data() + partition_id);
-      for (auto cacheline_idx = size_t{0}; cacheline_idx < (bucket::ELEMENTS_PER_STORE + 63) / 64; ++cacheline_idx) {
-        __builtin_prefetch(nulls_pointer + (cacheline_idx * BYTES_PER_CACHELINE), 1, 3);
-      }
-    }
-  }
 };
 
 // `reduce_tlb_pressure` enables a software buffers in partition_by_radix, where partitions are written in chunks of
@@ -662,7 +649,6 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         auto tmp = TMP(output_partition_count);
         for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
              ++output_partition_idx) {
-          tmp.prefetch(output_partition_idx);
           tmp.data[output_partition_idx].with_indices.output_idx =
               output_offsets_by_input_partition[input_partition_idx][output_partition_idx];
           tmp.data[output_partition_idx].with_indices.count = 0;
@@ -676,7 +662,6 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           }
 
           const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
-          tmp.prefetch(radix);
 
           const auto output_idx = tmp.data[radix].with_indices.output_idx;
           if (std::bit_cast<uint64_t>(output[radix].elements.data() + output_idx) & (BYTES_PER_CACHELINE - 1)) {
@@ -685,17 +670,21 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
             if constexpr (keep_null_values) {
               null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+              __builtin_prefetch(&null_values_as_char[radix][output_idx + 1], 1, 0);
             }
 
             output[radix].elements[output_idx] = element;
+            __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, 0);
             tmp.data[radix].with_indices.output_idx = output_idx + 1;
             continue;
           }
 
           const auto tmp_idx = tmp.data[radix].with_indices.count;
           tmp.data[radix].elements[tmp_idx] = element;
+          __builtin_prefetch(&tmp.data[radix].elements[tmp_idx + 1], 1, 0);
           if constexpr (keep_null_values) {
             tmp.null_values[radix][tmp_idx] = input_partition.null_values[input_idx];
+            __builtin_prefetch(&tmp.null_values[radix][tmp_idx + 1], 1, 0);
           }
 
           if (tmp_idx + 1 < TMP::ELEMENTS_PER_STORE) {
@@ -773,9 +762,11 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
           if constexpr (keep_null_values) {
             null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+            __builtin_prefetch(&null_values_as_char[radix][output_idx + 1], 1, 0);
           }
 
           output[radix].elements[output_idx] = element;
+          __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, 0);
           ++output_idx;
         }
       };
