@@ -693,7 +693,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
               if (BYTES_PER_CACHELINE -
                       (std::bit_cast<uint64_t>(&output[radix].elements[output_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
                   sizeof(PartitionedElement<T>)) {
-                __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, locality);
+                __builtin_prefetch(&output[radix].elements[output_idx + 2], 1, locality);
               }
             } else if constexpr (variant == 'C') {
               __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, locality);
