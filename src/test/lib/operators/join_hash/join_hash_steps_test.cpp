@@ -352,7 +352,8 @@ TEST_F(JoinHashStepsTest, PartitionLargerDatasetCorrectly) {
                                                                histograms, radix_bit_count, bloom_filter);
 
   const auto radix_cluster_result =
-      partition_by_radix<int, int, /* keep nulls */ false, /* reduce tlb pressure */ true>(materialized, histograms, radix_bit_count);
+      partition_by_radix<int, int, /* keep nulls */ false, /* reduce tlb pressure */ true>(materialized, histograms,
+                                                                                           radix_bit_count);
   for (const auto& partition : radix_cluster_result) {
     EXPECT_EQ(partition.null_values.size(), 0);
   }
@@ -380,7 +381,8 @@ TEST_F(JoinHashStepsTest, PartitionLargerDatasetWithNullsCorrectly) {
   const auto materialized = materialize_input<int, int, true>(_table_with_many_values_and_null->get_output(),
                                                               ColumnID{0}, histograms, radix_bit_count, bloom_filter);
 
-  const auto radix_cluster_result = partition_by_radix<int, int, /* keep nulls */ true, /* reduce tlb pressure */ true>(materialized, histograms, radix_bit_count);
+  const auto radix_cluster_result = partition_by_radix<int, int, /*keep nulls*/ true, /*reduce tlb pressure*/ true>(
+      materialized, histograms, radix_bit_count);
 
   // map[(radix_bits, value)] = count
   auto expected_counts = std::map<std::pair<size_t, int>, size_t>{
