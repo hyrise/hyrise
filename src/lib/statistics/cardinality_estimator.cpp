@@ -303,8 +303,8 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
       auto cached_statistics =
           cardinality_estimation_cache.join_graph_statistics_cache->get(*join_graph_bitmask, lqp->output_expressions());
       if (cached_statistics) {
-        std::cout << "JoinGraphStatisticsCache hit for bitmask " << *join_graph_bitmask << ": "
-                  << cached_statistics->row_count << "\n";
+        // std::cout << "JoinGraphStatisticsCache hit for bitmask " << *join_graph_bitmask << ": "
+        //           << cached_statistics->row_count << "\n";
         return {.table_statistics = cached_statistics,
                 .equivalence_classes = ExpressionUnorderedSet{},
                 .join_equivalence_classes = ExpressionUnorderedSet{}};
@@ -627,8 +627,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
         const auto original_attribute_statistics_right =
             std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
         const auto distinct_count = original_attribute_statistics_right->histogram->total_distinct_count();
-        estimated_row_count *= std::max( distinct_count * factor, 1.0);
-        factor /= 2.0; 
+        estimated_row_count *= std::max(distinct_count * factor, 1.0);
+        factor /= 2.0;
       });
 
     } else {
@@ -638,16 +638,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
 
   // AggregateNodes without GROUP BY columns always return a single row.
 
-  auto cardinality = 0.0; 
-  if(with_optimizations){
-    cardinality =
-          aggregate_node.aggregate_expressions_begin_idx == 0 ? Cardinality{1} : std::min(estimated_row_count, input_table_statistics->row_count);
+  auto cardinality = 0.0;
+  if (with_optimizations) {
+    cardinality = aggregate_node.aggregate_expressions_begin_idx == 0
+                      ? Cardinality{1}
+                      : std::min(estimated_row_count, input_table_statistics->row_count);
   } else {
     cardinality =
-          aggregate_node.aggregate_expressions_begin_idx == 0 ? Cardinality{1} : input_table_statistics->row_count;
- 
+        aggregate_node.aggregate_expressions_begin_idx == 0 ? Cardinality{1} : input_table_statistics->row_count;
   }
-  
+
   return std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
 }
 
@@ -1135,13 +1135,13 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
 
   const auto combine_statistics = [&](const auto& unchanged_statistics, const auto& scaled_statistics,
                                       const auto flip) {
-    std::cout << "combine_statistics" << "\n";
+    // std::cout << "combine_statistics" << "\n";
     const auto column_count =
         unchanged_statistics->column_statistics.size() + scaled_statistics->column_statistics.size();
 
-    std::cout << "unchanged_statistics->column_statistics.size(): " << unchanged_statistics->column_statistics.size()
-              << "\n";
-    std::cout << "scaled_statistics->column_statistics.size(): " << scaled_statistics->column_statistics.size() << "\n";
+    // std::cout << "unchanged_statistics->column_statistics.size(): " << unchanged_statistics->column_statistics.size()
+    //           << "\n";
+    // std::cout << "scaled_statistics->column_statistics.size(): " << scaled_statistics->column_statistics.size() << "\n";
 
     auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
     output_column_statistics.reserve(column_count);
@@ -1151,9 +1151,9 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
       scaling_factor = 1.0;
     }
 
-    std::cout << "scaling_factor: " << scaling_factor << "\n";
-    std::cout << "unchanged_statistics->row_count: " << unchanged_statistics->row_count << "\n";
-    std::cout << "scaled_statistics->row_count: " << scaled_statistics->row_count << "\n";
+    // std::cout << "scaling_factor: " << scaling_factor << "\n";
+    // std::cout << "unchanged_statistics->row_count: " << unchanged_statistics->row_count << "\n";
+    // std::cout << "scaled_statistics->row_count: " << scaled_statistics->row_count << "\n";
 
     const auto append_statistics = [&](const auto& input_statistics, const auto scale) {
       for (const auto& attribute_statistics : input_statistics) {
@@ -1180,7 +1180,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
                                                    const auto flip, const auto outer_scaling_factor) {
     DebugAssert(outer_scaling_factor <= 1.0, "Scaling factor should be <= 1.0");
     DebugAssert(with_optimizations, "Why are we using outer scaling factor without optimizations?");
-    std::cout << "combine_statistics_with_scaling" << "\n";
+    // std::cout << "combine_statistics_with_scaling" << "\n";
     const auto column_count =
         unchanged_statistics->column_statistics.size() + scaled_statistics->column_statistics.size();
     auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
@@ -1224,14 +1224,14 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
   if (with_optimizations) {
     if ((left_state.join_equivalence_classes.contains(join_node.join_predicates()[0]) ||
          right_state.join_equivalence_classes.contains(join_node.join_predicates()[0]))) {
-      std::cout << "Join already executed. probably inner join after semi join" << "\n";
+      // std::cout << "Join already executed. probably inner join after semi join" << "\n";
       if (join_node.join_mode == JoinMode::Semi) {
         return {.table_statistics = left_input_table_statistics,
                 .equivalence_classes = ExpressionUnorderedSet{},
                 .join_equivalence_classes = output_join_equivalence_classes};
       }
       if (join_node.join_mode == JoinMode::AntiNullAsFalse || join_node.join_mode == JoinMode::AntiNullAsTrue) {
-        std::cout << "AntiNUllAsFalse" << "\n";
+        // std::cout << "AntiNUllAsFalse" << "\n";
         return {.table_statistics = left_input_table_statistics,
                 .equivalence_classes = ExpressionUnorderedSet{},
                 .join_equivalence_classes = ExpressionUnorderedSet{}};
@@ -1290,8 +1290,8 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
 
     // ind_flipped = original_left_table->has_matching_ind({second_column_expression}, {first_column_expression});
 
-    const auto* const direction = (has_ind_result.is_flipped ? "<-" : "->");
-    const auto* const ind_string = has_ind_result.ind_exists ? direction : "NO IND";
+    // const auto* const direction = (has_ind_result.is_flipped ? "<-" : "->");
+    // const auto* const ind_string = has_ind_result.ind_exists ? direction : "NO IND";
     // std::cout << "Joining : " << first_column_expression->description(AbstractExpression::DescriptionMode::Detailed)
     //           << primary_operator_join_predicate->predicate_condition
     //           << second_column_expression->description(AbstractExpression::DescriptionMode::Detailed)
@@ -1325,7 +1325,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
             if (with_optimizations) {
               if (join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key})) {
                 if (join_node.right_input()->has_matching_ucc({right_input_join_key}).first) {
-                  std::cout << "Hitting shortcut for inner join with ind and ucc" << std::endl;
+                  // std::cout << "Hitting shortcut for inner join with ind and ucc" << std::endl;
                   return {.table_statistics =
                               combine_statistics(left_input_table_statistics, right_input_table_statistics, false),
                           .equivalence_classes = ExpressionUnorderedSet{},
@@ -1334,7 +1334,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
               }
               if (join_node.left_input()->has_matching_ind({right_input_join_key}, {left_input_join_key})) {
                 if (join_node.left_input()->has_matching_ucc({left_input_join_key}).first) {
-                  std::cout << "Hitting flipped shortcut for inner join with ind and ucc" << std::endl;
+                  // std::cout << "Hitting flipped shortcut for inner join with ind and ucc" << std::endl;
                   return {.table_statistics =
                               combine_statistics(right_input_table_statistics, left_input_table_statistics, true),
                           .equivalence_classes = ExpressionUnorderedSet{},
@@ -1342,30 +1342,30 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
                 }
               }
             }
-            std::cout << "Inner JOIN on " << join_node.join_predicates().at(0)->description()
-                      << "with_ind: " << ind_string << std::endl;
+            // std::cout << "Inner JOIN on " << join_node.join_predicates().at(0)->description()
+            //           << "with_ind: " << ind_string << std::endl;
 
-            std::cout << "has_ind_result.ucc_exists: " << has_ind_result.ucc_exists << std::endl;
+            // std::cout << "has_ind_result.ucc_exists: " << has_ind_result.ucc_exists << std::endl;
             auto scaling_factor = -1.0;
 
             if (with_optimizations && (has_ind_result.ind_exists && has_ind_result.ucc_exists)) {
-              std::cout << "UCC in dimension table. Trying data dependency cardinality estimation" << std::endl;
+              // std::cout << "UCC in dimension table. Trying data dependency cardinality estimation" << std::endl;
               scaling_factor = estimate_scaling_factor_join(join_node, left_input_table_statistics,
                                                             right_input_table_statistics, has_ind_result.is_flipped);
-              std::cout << "Estimated scaling factor: " << scaling_factor << std::endl;
+              // std::cout << "Estimated scaling factor: " << scaling_factor << std::endl;
               if (scaling_factor > 0.0 && scaling_factor <= 1.0) {
-                std::cout << "Actually estimating inner join with INDs and UCC: " << scaling_factor << std::endl;
+                //std::cout << "Actually estimating inner join with INDs and UCC: " << scaling_factor << std::endl;
                 auto output_table_statistics =
                     combine_statistics_with_scaling(left_input_table_statistics, right_input_table_statistics,
                                                     has_ind_result.is_flipped, scaling_factor);
-                std::cout << "Finished estimating inner join with INDs and UCC" << std::endl;
+                //std::cout << "Finished estimating inner join with INDs and UCC" << std::endl;
                 return {.table_statistics = output_table_statistics,
                         .equivalence_classes = ExpressionUnorderedSet{},
                         .join_equivalence_classes = output_join_equivalence_classes};
               }
             }
 
-            std::cout << "Falling back to normal inner equi join estimation" << std::endl;
+            // std::cout << "Falling back to normal inner equi join estimation" << std::endl;
             auto output_table_statistics = estimate_inner_equi_join(
                 primary_operator_join_predicate->column_ids.first, primary_operator_join_predicate->column_ids.second,
                 *left_input_table_statistics, *right_input_table_statistics);
@@ -1412,7 +1412,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
           if (primary_operator_join_predicate->predicate_condition == PredicateCondition::Equals &&
               join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key})) {
             if (join_node.right_input()->has_matching_ucc({right_input_join_key}).first) {
-              std::cout << "Hitting shortcut for semi join with ind and ucc" << std::endl;
+              // std::cout << "Hitting shortcut for semi join with ind and ucc" << std::endl;
               return {.table_statistics = left_input_table_statistics,
                       .equivalence_classes = ExpressionUnorderedSet{},
                       .join_equivalence_classes = output_join_equivalence_classes};
@@ -1521,14 +1521,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
       std::cout << "LIMIT NODE - output expression: " << expr->description() << std::endl;
     }
 
-    std::cout << "LEFT_NODE_OUTPUT_EXPRESSIONS: " << limit_node.left_input()->output_expressions().size() << std::endl;
-    for (const auto& expr : limit_node.left_input()->output_expressions()) {
-      std::cout << "LIMIT NODE - left input expression: " << expr->description() << std::endl;
-    }
+    // std::cout << "LEFT_NODE_OUTPUT_EXPRESSIONS: " << limit_node.left_input()->output_expressions().size() << std::endl;
+    // for (const auto& expr : limit_node.left_input()->output_expressions()) {
+    //   std::cout << "LIMIT NODE - left input expression: " << expr->description() << std::endl;
+    // }
 
     for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
-      std::cout << "LIMIT NODE - processing column id: " << column_id << std::endl;
-      std::cout << "column_statistics.size(): " << column_statistics.size() << std::endl;
+      // std::cout << "LIMIT NODE - processing column id: " << column_id << std::endl;
+      // std::cout << "column_statistics.size(): " << column_statistics.size() << std::endl;
       column_statistics[column_id] =
           std::make_shared<DummyStatistics>(input_table_statistics->column_data_type(column_id));
     }
@@ -1769,7 +1769,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
               auto value_bin_idx = scan_statistics_object->bin_for_value(value);
 
               if (value_bin_idx == INVALID_BIN_ID) {
-                std::cout << "Invalid bin ID hit" << "\n";
+                // std::cout << "Invalid bin ID hit" << "\n";
                 // std::cout << *left_input_column_statistics << "\n";
               } else {
                 for (auto bin_idx = BinID{0}; bin_idx < value_bin_idx; bin_idx++) {
@@ -1803,7 +1803,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
                     upper = scan_statistics_object->total_count();
                     break;
                   case PredicateCondition::BetweenInclusive: {
-                    std::cout << "Between inclusive hit" << "\n";
+                    // std::cout << "Between inclusive hit" << "\n";
                     lower += distinct_values_before * values_per_tuple;
                     lower = std::max<HistogramCountType>(0, lower);
                     if (!value2_variant) {
@@ -1816,7 +1816,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
                         const auto value2 = *optional_value2;
                         auto value2_bin_idx = scan_statistics_object->bin_for_value(value2);
                         if (value2_bin_idx == INVALID_BIN_ID) {
-                          std::cout << "Invalid bin ID hit for value2" << "\n";
+                          // std::cout << "Invalid bin ID hit for value2" << "\n";
                         } else {
                           for (auto bin_idx = BinID{0}; bin_idx < value2_bin_idx; bin_idx++) {
                             upper += scan_statistics_object->bin_height(bin_idx);
@@ -1831,12 +1831,12 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
                         }
                       }
                     }
-                    std::cout << "Between inclusive lower: " << lower << " upper: " << upper << "\n";
+                    // std::cout << "Between inclusive lower: " << lower << " upper: " << upper << "\n";
                   } break;
                   case PredicateCondition::BetweenExclusive:
                   case PredicateCondition::BetweenLowerExclusive:
                   case PredicateCondition::BetweenUpperExclusive:
-                    std::cout << "Between exclusive not handled yet" << "\n";
+                    // std::cout << "Between exclusive not handled yet" << "\n";
                     lower = -1;
                     upper = -1;
                     break;
@@ -1936,7 +1936,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
           // std::cout << "\n";
         }
         if (ordered_column && lqp_node.has_matching_od({ordered_column}, {filtered_column})) {
-          std::cout << "hitting ordered" << "\n";
+          // std::cout << "hitting ordered" << "\n";
           // std::cout << "scaling column id with bounds: " << column_id << "\n";
           // std::cout << "scaling : " << ordered_column << " based on " << filtered_column << "\n";
           output_column_statistics[column_id] =
@@ -2222,11 +2222,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     // std::cout << "Right histogram: " << (right_histogram ? right_histogram->description() : "nullptr") << "\n";
 
     if (left_histogram && right_histogram) {
-      std::cout << "Predicate: " << left_input_table_statistics.column_statistics.at(left_column_id);
+    //  std::cout << "Predicate: " << left_input_table_statistics.column_statistics.at(left_column_id);
       // If we have histograms, we use the principle of inclusion to determine the number of matches between two bins.
       join_column_histogram = estimate_inner_equi_join_with_histograms(*left_histogram, *right_histogram);
       cardinality = join_column_histogram->total_count();
-      std::cout << "Inner Join Estimated cardinality with histograms: " << cardinality << "\n";
+   //   std::cout << "Inner Join Estimated cardinality with histograms: " << cardinality << "\n";
     } else {
       // TODO(anyone): If we do hot have histograms on both sides, use some other algorithm/statistics to estimate the
       //               join.

@@ -290,8 +290,6 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
 }
 
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
-  auto data_dependency_cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
-  auto estimator_without_optimizations = CardinalityEstimator::new_instance_without_optimizations();
   // auto default_cardinality_estimator = CardinalityEstimator::new_instance();
   // auto* default_cardinality_estimator = &_optimizer->cardinality_estimator();
 
@@ -368,67 +366,71 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
       return std::max(true_cardinality / estimated_cardinality, estimated_cardinality / true_cardinality);
     };
-    std::cout << "Collecting cardinality metrics per operator..." << std::endl;
-    
-    visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
-      if (pqp->type() == OperatorType::Validate) {
-        _metrics->operator_cardinality_metrics.push_back(
-            {.operator_type = pqp->type(),
-             .operator_hash = pqp->lqp_node->hash(),
-             .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
-             .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0,
-             .predicate_string = ""});
-      }
-      if (pqp->performance_data->has_output && pqp->type() != OperatorType::Validate) {
-        auto true_cardinality = static_cast<double>(pqp->performance_data->output_row_count);
-        auto data_dependency_estimation = data_dependency_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
-        auto second_estimation = data_dependency_cardinality_estimator->estimate_statistics(pqp->lqp_node, false);
 
-        DebugAssert(second_estimation.table_statistics->row_count == data_dependency_estimation,
-                    "Inconsistent cardinality estimates from data dependency estimator.");
-        auto default_estimation =
-            estimator_without_optimizations->estimate_statistics(pqp->lqp_node).table_statistics->row_count;
+    if (_result_table->row_count() > 1000000000) {
+      std::cout << "Collecting cardinality metrics per operator..." << std::endl;
+      auto data_dependency_cardinality_estimator = CardinalityEstimator::new_instance_with_optimizations();
+      auto estimator_without_optimizations = CardinalityEstimator::new_instance_without_optimizations();
 
-        if (pqp->type() == OperatorType::JoinHash || pqp->type() == OperatorType::JoinNestedLoop) {
-          const auto& lqp_node = static_cast<const JoinNode&>(*(pqp->lqp_node));
-          std::cout << "Join Predicate: "
-                    << lqp_node.join_predicates()[0]->description(AbstractExpression::DescriptionMode::Detailed)
-                    << "\n";
-          std::cout << "optimized_qerror: " << q_error_functor(true_cardinality, data_dependency_estimation)
-                    << " default_q_error: " << q_error_functor(true_cardinality, default_estimation) << "\n";
-          std::cout << "true: " << true_cardinality << " " << "dependency: " << data_dependency_estimation << " "
-                    << "default: " << default_estimation << std::endl;
+      visit_pqp(_root_operator_task->get_operator(), [&](const std::shared_ptr<AbstractOperator>& pqp) {
+        if (pqp->type() == OperatorType::Validate) {
+          _metrics->operator_cardinality_metrics.push_back(
+              {.operator_type = pqp->type(),
+               .operator_hash = pqp->lqp_node->hash(),
+               .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
+               .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0,
+               .predicate_string = ""});
         }
+        if (pqp->performance_data->has_output && pqp->type() != OperatorType::Validate) {
+          auto true_cardinality = static_cast<double>(pqp->performance_data->output_row_count);
+          auto data_dependency_estimation = data_dependency_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
+          auto second_estimation = data_dependency_cardinality_estimator->estimate_statistics(pqp->lqp_node, false);
 
-        // auto test = default_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
+          DebugAssert(second_estimation.table_statistics->row_count == data_dependency_estimation,
+                      "Inconsistent cardinality estimates from data dependency estimator.");
+          auto default_estimation =
+              estimator_without_optimizations->estimate_statistics(pqp->lqp_node).table_statistics->row_count;
 
-        // estimate_cardinality(pqp->lqp_node);
-        std::string predicate_string;
-        if (pqp->lqp_node->type == LQPNodeType::Predicate) {
-          const auto& predicate_node = static_cast<const PredicateNode&>(*pqp->lqp_node);
-          predicate_string = predicate_node.predicate()->description();
-        } else if (pqp->lqp_node->type == LQPNodeType::Join) {
-          const auto& join_node = static_cast<const JoinNode&>(*pqp->lqp_node);
-          if (join_node.join_mode != JoinMode::Cross) {
-            predicate_string = join_node.join_predicates().front()->description();
-          } else {
-            predicate_string = "CROSS JOIN";
+          if (pqp->type() == OperatorType::JoinHash || pqp->type() == OperatorType::JoinNestedLoop) {
+            const auto& lqp_node = static_cast<const JoinNode&>(*(pqp->lqp_node));
+            std::cout << "Join Predicate: "
+                      << lqp_node.join_predicates()[0]->description(AbstractExpression::DescriptionMode::Detailed)
+                      << "\n";
+            std::cout << "optimized_qerror: " << q_error_functor(true_cardinality, data_dependency_estimation)
+                      << " default_q_error: " << q_error_functor(true_cardinality, default_estimation) << "\n";
+            std::cout << "true: " << true_cardinality << " " << "dependency: " << data_dependency_estimation << " "
+                      << "default: " << default_estimation << std::endl;
           }
+
+          // auto test = default_cardinality_estimator->estimate_cardinality(pqp->lqp_node);
+
+          // estimate_cardinality(pqp->lqp_node);
+          std::string predicate_string;
+          if (pqp->lqp_node->type == LQPNodeType::Predicate) {
+            const auto& predicate_node = static_cast<const PredicateNode&>(*pqp->lqp_node);
+            predicate_string = predicate_node.predicate()->description();
+          } else if (pqp->lqp_node->type == LQPNodeType::Join) {
+            const auto& join_node = static_cast<const JoinNode&>(*pqp->lqp_node);
+            if (join_node.join_mode != JoinMode::Cross) {
+              predicate_string = join_node.join_predicates().front()->description();
+            } else {
+              predicate_string = "CROSS JOIN";
+            }
+          }
+
+          _metrics->operator_cardinality_metrics.push_back(
+              {.true_cardinality = true_cardinality,
+               .estimated_cardinality = default_estimation,
+               .data_dependencies_estimated_cardinality = data_dependency_estimation,
+               .operator_type = pqp->type(),
+               .operator_hash = pqp->lqp_node->hash(),
+               .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
+               .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0,
+               .predicate_string = predicate_string});
         }
-
-        _metrics->operator_cardinality_metrics.push_back(
-            {.true_cardinality = true_cardinality,
-             .estimated_cardinality = default_estimation,
-             .data_dependencies_estimated_cardinality = data_dependency_estimation,
-             .operator_type = pqp->type(),
-             .operator_hash = pqp->lqp_node->hash(),
-             .left_input_hash = pqp->left_input() ? pqp->left_input()->lqp_node->hash() : 0,
-             .right_input_hash = pqp->right_input() ? pqp->right_input()->lqp_node->hash() : 0,
-             .predicate_string = predicate_string});
-      }
-      return PQPVisitation::VisitInputs;
-    });
-
+        return PQPVisitation::VisitInputs;
+      });
+    }
     // std::map<DataType, size_t> predicate_column_datatypes_count;
     // std::map<DataType, size_t> join_column_datatype_count;
 
