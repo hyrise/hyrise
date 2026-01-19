@@ -593,10 +593,11 @@ struct TemporaryRadixContainer {
   }
 };
 
-// `reduce_tlb_pressure` enables a special procedure in partition_by_radix, where partitions are written in chunks of
-// elements. You should consider enabling it if the number of radix buckets is larger than the size of your TLB. A good
-// rule of thumb seems to be starting at about 7 radix bits. This setting will be ignored if T is not trivially
-// copy assignable, as we have to copy the elements bitwise when doing chunked copy.
+// `reduce_tlb_pressure` enables a software buffers in partition_by_radix, where partitions are written in chunks of
+// elements. You should consider enabling it if the number of radix buckets is larger than the size of your TLB. See
+// On the Surprising Difficulty of Simple Things: the Case of Radix Partitioning by Schuhknecht et al. for a detailed
+// performance evaluation A good rule of thumb seems to be starting at about 7 radix bits. This setting will be ignored
+// if T is not trivially copy assignable, as we have to copy the elements bitwise when doing chunked copy.
 template <typename T, typename HashedType, bool keep_null_values, bool reduce_tlb_pressure = false>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      const std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
