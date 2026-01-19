@@ -17,7 +17,7 @@ void test_hash_map(const std::vector<T>& values) {
   Partition<T> partition;
   for (ChunkOffset i = ChunkOffset{0}; i < values.size(); ++i) {
     RowID row_id{ChunkID{17}, i};
-    partition.elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
+    partition.elements.emplace_back(PartitionedElement<T>{static_cast<T>(values.at(i)), row_id});
     partition.null_values.emplace_back(false);
   }
 

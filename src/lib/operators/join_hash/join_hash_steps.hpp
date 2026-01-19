@@ -52,8 +52,8 @@ The original value is used to detect hash collisions.
 */
 template <typename T>
 struct PartitionedElement {
-  RowID row_id;
   T value;
+  RowID row_id;
 };
 
 // A partition is a part of a materialized join column, either on the build or the probe side. The partitions of one
@@ -381,7 +381,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
               if constexpr (is_reference_segment_iterable_v<IterableType>) {
                 *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
               } else {
-                *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
+                *elements_iter = PartitionedElement<T>{value.value(), RowID{chunk_id, value.chunk_offset()}};
               }
               ++elements_iter;
 
@@ -521,7 +521,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 }
 
 // This is the cacheline size for most of the systems Hyrise usually runs on. If a system has larger cachelines (e.g.
-// Apple's M processors or IBM Power), using the default value will still run fine.
+// Apple's M processors or IBM Power), using the default value will still run fine. Our implementation assumes that
+// this is a power of two.
 constexpr auto BYTES_PER_CACHELINE = size_t{64};
 // This is a tunable parameter. Increasing it causes more cache usage during radix partioning, but less TLB pressure.
 // Tuning it too high might invalidate the gains from `reduce_tlb_pressure`.
