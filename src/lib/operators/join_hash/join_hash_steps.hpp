@@ -586,7 +586,14 @@ struct TemporaryRadixContainer {
 // On the Surprising Difficulty of Simple Things: the Case of Radix Partitioning by Schuhknecht et al. for a detailed
 // performance evaluation A good rule of thumb seems to be starting at about 7 radix bits. This setting will be ignored
 // if T is not trivially copy assignable, as we have to copy the elements bitwise when doing chunked copy.
-template <typename T, typename HashedType, bool keep_null_values, bool reduce_tlb_pressure = false>
+// Variants:
+// - N: Never prefetch
+// - A: Only prefetch the element if it is completely on a new cacheline
+// - B: Only prefetch the element if it is at least partially on a new cacheline
+// - C: Always prefetch the element
+// - D: Always prefetch the next cacheline
+template <typename T, typename HashedType, bool keep_null_values, bool reduce_tlb_pressure = false, char variant = 'N',
+          int locality = 0>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      const std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
@@ -671,20 +678,57 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
             if constexpr (keep_null_values) {
               null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
-              __builtin_prefetch(&null_values_as_char[radix][output_idx + 1], 1, 0);
+              // Not tested in the benchmark yet.
+              __builtin_prefetch(&null_values_as_char[radix][output_idx + 1], 1, locality);
             }
 
             output[radix].elements[output_idx] = element;
-            __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, 0);
+            // Prefetch output[radix].elements[output_idx+1]
+            if constexpr (variant == 'A') {
+              if ((std::bit_cast<uint64_t>(&output[radix].elements[output_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
+                  sizeof(PartitionedElement<T>)) {
+                __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, locality);
+              }
+            } else if constexpr (variant == 'B') {
+              if (BYTES_PER_CACHELINE -
+                      (std::bit_cast<uint64_t>(&output[radix].elements[output_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
+                  sizeof(PartitionedElement<T>)) {
+                __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, locality);
+              }
+            } else if constexpr (variant == 'C') {
+              __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, locality);
+            } else if constexpr (variant == 'D') {
+              __builtin_prefetch(
+                  reinterpret_cast<std::byte*>(&output[radix].elements[output_idx]) + BYTES_PER_CACHELINE, 1, locality);
+            }
             tmp.data[radix].with_indices.output_idx = output_idx + 1;
             continue;
           }
 
           const auto tmp_idx = tmp.data[radix].with_indices.count;
           tmp.data[radix].elements[tmp_idx] = element;
-          __builtin_prefetch(&tmp.data[radix].elements[tmp_idx + 1], 1, 0);
+          // Prefetch tmp.data[radix].elements[tmp_idx+1]
+          if constexpr (variant == 'A') {
+            if ((std::bit_cast<uint64_t>(&tmp.data[radix].elements[tmp_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
+                sizeof(PartitionedElement<T>)) {
+              __builtin_prefetch(&tmp.data[radix].elements[tmp_idx + 1], 1, locality);
+            }
+          } else if constexpr (variant == 'B') {
+            if (BYTES_PER_CACHELINE -
+                    (std::bit_cast<uint64_t>(&tmp.data[radix].elements[tmp_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
+                sizeof(PartitionedElement<T>)) {
+              __builtin_prefetch(&tmp.data[radix].elements[tmp_idx + 1], 1, locality);
+            }
+          } else if constexpr (variant == 'C') {
+            __builtin_prefetch(&tmp.data[radix].elements[tmp_idx + 1], 1, locality);
+          } else if constexpr (variant == 'D') {
+            __builtin_prefetch(reinterpret_cast<std::byte*>(&tmp.data[radix].elements[tmp_idx]) + BYTES_PER_CACHELINE,
+                               1, locality);
+          }
+
           if constexpr (keep_null_values) {
             tmp.null_values[radix][tmp_idx] = input_partition.null_values[input_idx];
+            // Not tested in the benchmark yet.
             __builtin_prefetch(&tmp.null_values[radix][tmp_idx + 1], 1, 0);
           }
 
@@ -763,10 +807,12 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
           if constexpr (keep_null_values) {
             null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+            // Not tested in the benchmark yet.
             __builtin_prefetch(&null_values_as_char[radix][output_idx + 1], 1, 0);
           }
 
           output[radix].elements[output_idx] = element;
+          // Not tested in the benchmark yet.
           __builtin_prefetch(&output[radix].elements[output_idx + 1], 1, 0);
           ++output_idx;
         }

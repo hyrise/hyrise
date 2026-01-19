@@ -36,14 +36,14 @@ std::vector<std::vector<size_t>> compute_histogram(const RadixContainer<T>& cont
   return histograms;
 }
 
-template <bool reduce_tlb_pressure>
+template <char variant, int locality>
 void BM_Radix_Partitioning(benchmark::State& state) {
   const auto num_elements_per_partition = state.range(0);
   const auto radix_bits = static_cast<uint64_t>(state.range(1));
   const auto input = generate_container<uint32_t>(num_elements_per_partition * (1ull << radix_bits));
   const auto histogram = compute_histogram<uint32_t>(input, radix_bits);
   for (auto _ : state) {
-    partition_by_radix<uint32_t, size_t, false, reduce_tlb_pressure>(input, histogram, radix_bits);
+    partition_by_radix<uint32_t, size_t, false, true, variant, locality>(input, histogram, radix_bits);
   }
 }
 
@@ -51,9 +51,25 @@ void BM_Radix_Partitioning(benchmark::State& state) {
 
 namespace hyrise {
 
-BENCHMARK_TEMPLATE(BM_Radix_Partitioning, true)
-    ->ArgsProduct({benchmark::CreateRange(1e4, 1e6, 10), benchmark::CreateDenseRange(1, 10, 1)});
-BENCHMARK_TEMPLATE(BM_Radix_Partitioning, false)
-    ->ArgsProduct({benchmark::CreateRange(1e4, 1e6, 10), benchmark::CreateDenseRange(1, 10, 1)});
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'A', 0)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'B', 0)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'C', 0)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'D', 0)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
+
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'A', 1)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'B', 1)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'C', 1)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'D', 1)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
+
+BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'N', -1)
+    ->ArgsProduct({benchmark::CreateRange(5e2, 5e4, 10), benchmark::CreateDenseRange(7, 17, 1)});
 
 }  // namespace hyrise
