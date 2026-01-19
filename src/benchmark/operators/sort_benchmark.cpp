@@ -64,7 +64,6 @@ void bm_run_sort(benchmark::State& state, const size_t row_count = 40'000, const
         std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsFirst}};
   }
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto sort = std::make_shared<Sort>(input_operator, sort_definitions);
     sort->execute();

@@ -206,7 +206,6 @@ void bm_table_scan_sorted(
     warm_up->execute();
   }
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto table_scan = std::make_shared<TableScan>(input, predicate);
     table_scan->execute();

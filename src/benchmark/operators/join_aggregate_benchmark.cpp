@@ -172,7 +172,6 @@ void bm_join_aggregate(benchmark::State& state) {
   auto warmup_aggregate = std::make_shared<AggregateType>(warmup_join, aggregates, groupby);
   warmup_aggregate->execute();
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto join =
         std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);

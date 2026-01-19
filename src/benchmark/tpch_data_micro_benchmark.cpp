@@ -135,7 +135,6 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 };
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     const auto table_scan = std::make_shared<TableScan>(table_wrapper_map.at("lineitem"), tpchq6_discount_predicate);
     table_scan->execute();
@@ -147,7 +146,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6SecondScanPredicate)(benchma
   first_scan->never_clear_output();
   first_scan->execute();
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     const auto table_scan = std::make_shared<TableScan>(first_scan, tpchq6_shipdate_less_predicate);
     table_scan->execute();
@@ -163,7 +161,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ThirdScanPredicate)(benchmar
   second_scan->never_clear_output();
   second_scan->execute();
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     const auto table_scan = std::make_shared<TableScan>(second_scan, tpchq6_quantity_predicate);
     table_scan->execute();
@@ -171,7 +168,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ThirdScanPredicate)(benchmar
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnPhysicalTable)(benchmark::State& state) {
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     const auto table_scan = std::make_shared<TableScan>(table_wrapper_map.at("lineitem"), int_predicate);
     table_scan->execute();
@@ -184,7 +180,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnReferenceTable)(
   table_scan->execute();
   const auto scanned_table = table_scan->get_output();
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto reference_table_scan = std::make_shared<TableScan>(table_scan, int_predicate);
     reference_table_scan->execute();
@@ -192,7 +187,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnReferenceTable)(
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnPhysicalTable)(benchmark::State& state) {
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     const auto table_scan = std::make_shared<TableScan>(table_wrapper_map.at("lineitem"), string_predicate);
     table_scan->execute();
@@ -205,7 +199,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
   table_scan->execute();
   const auto scanned_table = table_scan->get_output();
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto reference_table_scan = std::make_shared<TableScan>(table_scan, int_predicate);
     reference_table_scan->execute();
@@ -237,7 +230,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ScanAggregate)(benchmark::State& s
       count_(pqp_column_(group_by_column, mocked_table_scan_output->column_data_type(group_by_column),
                          mocked_table_scan_output->column_is_nullable(group_by_column),
                          mocked_table_scan_output->column_name(group_by_column)))};
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     const auto aggregate = std::make_shared<AggregateSort>(sorted_lineitem, aggregate_expressions, group_by);
     aggregate->execute();
@@ -278,7 +270,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmar
          orders_table_node))));
   // clang-format on
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(pqp);
@@ -297,7 +288,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
       PredicateNode::make(less_than_(lineitem_commitdate, lineitem_receiptdate), lineitem_table_node)));
   // clang-format on
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(pqp);
@@ -313,7 +303,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
  * In case the left relation is significantly smaller, the hash join does not perform optimally due to the switching.
  */
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationSmaller)(benchmark::State& state) {
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto join = std::make_shared<JoinHash>(
         table_wrapper_map.at("orders"), table_wrapper_map.at("lineitem"), JoinMode::Semi,
@@ -323,7 +312,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationSmaller)(benc
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(benchmark::State& state) {
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto join = std::make_shared<JoinHash>(
         table_wrapper_map.at("lineitem"), table_wrapper_map.at("orders"), JoinMode::Semi,
@@ -347,7 +335,6 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
 
   resolve_data_type(column_data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
       EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, histogram_bin_count);
     }

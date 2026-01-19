@@ -39,7 +39,6 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
 
   auto warm_up = std::make_shared<TableScan>(input, predicate);
   warm_up->execute();
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto table_scan = std::make_shared<TableScan>(input, predicate);
     table_scan->execute();
@@ -85,7 +84,6 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& sta
       {"l_comment", pmr_string{"%quick_y__above%even%"}},
   });
 
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     for (const auto& column_name_and_pattern : column_names_and_patterns) {
       const auto column_id = lineitem_table->column_id_by_name(column_name_and_pattern.first);

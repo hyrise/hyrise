@@ -17,7 +17,6 @@ void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<co
                                const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   auto warm_up = std::make_shared<Projection>(input, expressions);
   warm_up->execute();
-  // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
   for (auto _ : state) {
     auto projection = std::make_shared<Projection>(input, expressions);
     projection->execute();

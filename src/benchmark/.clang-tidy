@@ -1,0 +1,2 @@
+# Disables deadstores in the benchmark folder, as the Google benchmark for (auto _ : state) loop triggers this warning
+Checks: '-clang-analyzer-deadcode.DeadStores'
