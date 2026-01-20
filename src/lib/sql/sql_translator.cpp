@@ -304,6 +304,31 @@ FrameBound translate_frame_bound(const hsql::FrameBound& hsql_frame_bound) {
   return FrameBound{static_cast<uint64_t>(offset), bound_type, hsql_frame_bound.unbounded};
 }
 
+std::optional<ParseConfig> process_sql_csv_options(hsql::CsvOptions* csv_options) {
+  if (!csv_options) {
+    return std::nullopt;
+  }
+  auto csv_parse_config = ParseConfig{};
+  if (csv_options->delimiter) {
+    AssertInput(strnlen(csv_options->delimiter, 2) == 1, "CSV delimiter should be exactly one char.");
+    // Postgres calls the char between columns within one row "delimiter", we call it "separator".
+    csv_parse_config.separator = csv_options->delimiter[0];
+  }
+  if (csv_options->quote) {
+    AssertInput(strnlen(csv_options->quote, 2) == 1, "CSV quote should be exactly one char.");
+    csv_parse_config.quote = csv_options->quote[0];
+  }
+  if (csv_options->null) {
+    auto len = strnlen(csv_options->null, 100);
+    AssertInput(csv_options->null[len] == '\0', "CSV null string cannot be larger than 100 characters.");
+    csv_parse_config.null_string = std::string(csv_options->null, len);
+    boost::to_lower(csv_parse_config.null_string);
+
+    csv_parse_config.null_handling = NullHandling::NullStringAsNull;
+  }
+  return csv_parse_config;
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -1528,6 +1553,8 @@ void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDe
     sort_modes.resize(order_list_size);
     for (auto expression_idx = size_t{0}; expression_idx < order_list_size; ++expression_idx) {
       const auto& order_description = hsql_order_expressions[expression_idx];
+      AssertInput(order_description->null_ordering != hsql::NullOrdering::Last,
+                  "Hyrise currently does not implement NULLS LAST.");
       expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
       sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
     }
@@ -1850,7 +1877,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   }
 
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
-                          import_type_to_file_type(import_statement.type), encoding);
+                          import_type_to_file_type(import_statement.type), encoding,
+                          process_sql_csv_options(import_statement.csv_options));
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.
@@ -1874,7 +1902,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
     }
   }
 
-  return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type), lqp);
+  return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type),
+                          process_sql_csv_options(export_statement.csv_options), lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
@@ -2016,6 +2045,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           order_by_expressions.reserve(expression_count);
           sort_modes.reserve(expression_count);
           for (const auto* order_description : order_list) {
+            AssertInput(order_description->null_ordering != hsql::NullOrdering::Last,
+                        "Hyrise currently does not implement NULLS LAST");
             order_by_expressions.emplace_back(_translate_hsql_expr(*order_description->expr, sql_identifier_resolver));
             sort_modes.emplace_back(order_type_to_sort_mode.at(order_description->type));
           }

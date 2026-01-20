@@ -5,6 +5,7 @@
 #include <string>
 
 #include "abstract_non_query_node.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "storage/encoding_type.hpp"
 
@@ -16,7 +17,8 @@ namespace hyrise {
 class ImportNode : public EnableMakeForLQPNode<ImportNode>, public AbstractNonQueryNode {
  public:
   ImportNode(const std::string& init_table_name, const std::string& init_file_name, const FileType init_file_type,
-             const std::optional<EncodingType>& init_table_encoding);
+             const std::optional<EncodingType>& init_table_encoding,
+             std::optional<ParseConfig> init_csv_parse_config = std::nullopt);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
@@ -24,6 +26,7 @@ class ImportNode : public EnableMakeForLQPNode<ImportNode>, public AbstractNonQu
   const std::string file_name;
   const FileType file_type;
   const std::optional<EncodingType> target_encoding;
+  const std::optional<ParseConfig> csv_parse_config;
 
  protected:
   size_t _on_shallow_hash() const override;

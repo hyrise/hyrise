@@ -85,10 +85,13 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
       table->add_soft_constraint(table_key_constraint);
     }
 
-    // Insert table data (if no data is present, insertion makes no difference)
-    _insert = std::make_shared<Insert>(table_name, _left_input);
-    _insert->set_transaction_context(context);
-    _insert->execute();
+    // Insert table data only if there is data. We would generate an empty chunk if we would call this operator without
+    // this check, which would crash when data is appended to the table via copy from.
+    if (_left_input->get_output()->row_count() > 0) {
+      _insert = std::make_shared<Insert>(table_name, _left_input);
+      _insert->set_transaction_context(context);
+      _insert->execute();
+    }
   }
   return nullptr;
 }

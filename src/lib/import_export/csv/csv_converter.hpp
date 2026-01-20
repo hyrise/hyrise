@@ -55,14 +55,14 @@ class CsvConverter : public BaseCsvConverter {
       return;
     }
 
-    if (boost::to_lower_copy(value) == ParseConfig::NULL_STRING) {
+    if (boost::to_lower_copy(value) == _config.null_string) {
       Assert(_config.null_handling != NullHandling::RejectNullStrings,
-             "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null "
-             "value, or set 'null_handling' to the appropriate strategy in parse config.");
+             "Unquoted NULL found in CSV file. Quote it for string literal, leave field empty for NULL value, or set "
+             "'null_handling' to the appropriate strategy in parse config.");
       if (_config.null_handling == NullHandling::NullStringAsNull) {
         Assert(_is_nullable,
-               "Unquoted null found in CSV file, while the associated column is not nullable. Quote it "
-               "for string literal \"null\" or make the column nullable.");
+               "Unquoted NULL found in CSV file, while the associated column is not nullable. Quote it "
+               "for string literal or make the column nullable.");
         _null_values[position] = true;
         return;
       }

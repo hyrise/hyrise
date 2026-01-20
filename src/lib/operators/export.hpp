@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
@@ -29,7 +30,8 @@ class Export : public AbstractReadOnlyOperator {
    * @param file_type      Optional. Type indicating the file format. If not present, it is guessed by the filename.
    */
   explicit Export(const std::shared_ptr<const AbstractOperator>& input_operator, const std::string& filename,
-                  const FileType& file_type = FileType::Auto);
+                  const FileType& file_type = FileType::Auto,
+                  const std::optional<ParseConfig>& csv_parse_config = std::nullopt);
 
   const std::string& name() const final;
   std::string description(DescriptionMode description_mode) const override;
@@ -51,6 +53,7 @@ class Export : public AbstractReadOnlyOperator {
   // Path of the binary file
   const std::string _filename;
   FileType _file_type;
+  std::optional<ParseConfig> _csv_parse_config;
 };
 
 }  // namespace hyrise

@@ -1,5 +1,8 @@
 #include <optional>
 
+#include "SQLParser.h"
+#include "SQLParserResult.h"
+
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -37,6 +40,7 @@
 #include "sql/sql_translator.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -1341,14 +1345,10 @@ TEST_F(SQLTranslatorTest, OrderByNullOrdering) {
   }
 
   {
-    // (iii) As of now, Hyrise supports only NULLS FIRST. Make sure that we notice when the parser supports explicitly
-    //       specifying NULLS FIRST/LAST. If it does, we fail here so we know we have to adapt the SQLTranslator code.
-    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a NULLS FIRST"));
-    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a NULLS LAST"));
-    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a ASC NULLS FIRST"));
-    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a ASC NULLS LAST"));
-    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a DESC NULLS FIRST"));
-    EXPECT_FALSE(is_valid_sql("SELECT * FROM int_float ORDER BY a DESC NULLS LAST"));
+    // (iii) As of now, Hyrise supports only NULLS FIRST. NULLS LAST should throw an InvalidInputException
+    EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a NULLS LAST"), InvalidInputException);
+    EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a ASC NULLS LAST"), InvalidInputException);
+    EXPECT_THROW(sql_to_lqp_helper("SELECT * FROM int_float ORDER BY a DESC NULLS LAST"), InvalidInputException);
   }
 }
 
@@ -3669,12 +3669,11 @@ TEST_F(SQLTranslatorTest, InvalidWindowFunctions) {
   EXPECT_THROW(sql_to_lqp_helper("SELECT substr(b, 1, 3) OVER () FROM int_string;"), InvalidInputException);
 
   // We currently do not support specifying NULLS FIRST/LAST, not even in the parser.
-  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a NULLS FIRST) FROM int_float"));
-  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a NULLS LAST) FROM int_float"));
-  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a ASC NULLS FIRST) FROM int_float"));
-  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a ASC NULLS LAST) FROM int_float"));
-  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a DESC NULLS FIRST) FROM int_float"));
-  EXPECT_FALSE(is_valid_sql("SELECT rank() OVER (ORDER BY a DESC NULLS LAST) FROM int_float"));
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (ORDER BY a NULLS LAST) FROM int_float"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (ORDER BY a ASC NULLS LAST) FROM int_float"),
+               InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (ORDER BY a DESC NULLS LAST) FROM int_float"),
+               InvalidInputException);
 }
 
 }  // namespace hyrise

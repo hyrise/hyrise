@@ -38,7 +38,7 @@ struct ParseConfig {
   // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
   bool rfc_mode = true;
 
-  static constexpr const char* NULL_STRING = "null";
+  std::string null_string = "null";
 };
 
 /*
