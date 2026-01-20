@@ -105,9 +105,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::vector<std::shared_ptr<AbstractLQPNode>> outputs() const;
 
-  void remove_output(const std::shared_ptr<AbstractLQPNode>& output);
-  void clear_outputs();
-
   /**
    * @return {{outputs()[0], get_input_sides()[0]}, ..., {outputs()[n-1], get_input_sides()[n-1]}}
    */
@@ -297,8 +294,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * @{
-   * For internal usage in set_left_input(), set_right_input(), set_input(), remove_output()
-   * Add or remove a output without manipulating this output's input ptr.
+   * For internal usage in `set_input()`. Adds or removes an output without manipulating this output's input ptr.
    */
   void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
   void _remove_output_pointer(const AbstractLQPNode& output);
