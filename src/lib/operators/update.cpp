@@ -49,11 +49,14 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
   }
 
-  // 2. Insert new data with the Insert operator.
-  _insert = std::make_shared<Insert>(_table_to_update_name, _right_input);
-  _insert->set_transaction_context(context);
-  _insert->execute();
-  // Insert cannot fail in the MVCC sense, no check necessary
+  // 2. Insert new data with the Insert operator only if there is data. We would generate an empty chunk if we would
+  // call this operator without this check, which would crash when data is appended to the table via copy from.
+  if (_right_input->get_output()->row_count() > 0) {
+    _insert = std::make_shared<Insert>(_table_to_update_name, _right_input);
+    _insert->set_transaction_context(context);
+    _insert->execute();
+    // Insert cannot fail in the MVCC sense, no check necessary
+  }
 
   return nullptr;
 }

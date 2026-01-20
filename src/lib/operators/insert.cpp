@@ -125,8 +125,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     const auto append_lock = _target_table->acquire_append_mutex();
 
     auto remaining_rows = left_input_table()->row_count();
+    Assert(remaining_rows > 0, "Insert operator should only be called if there are rows to insert");
 
-    if (_target_table->chunk_count() == 0 && remaining_rows > 0) {
+    if (_target_table->chunk_count() == 0) {
       _target_table->append_mutable_chunk();
     }
     while (remaining_rows > 0) {
