@@ -20,6 +20,7 @@
 
 #include "benchmark_config.hpp"
 #include "server/server_types.hpp"
+#include "ssb/ssb_table_generator.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -40,9 +41,9 @@ cxxopts::Options get_server_cli_options() {
     ("p,port", "Specify the port number. 0 means randomly select an available one. If no port is specified, the "
                "server will start on PostgreSQL's official port", cxxopts::value<uint16_t>()->default_value("5432"))
     ("benchmark_data", "Optional for benchmarking purposes: specify the benchmark name and sizing factor to generate "
-                       "at server start (e.g., \"TPC-C:5\", \"TPC-DS:5\", or \"TPC-H:10\"). Supported are TPC-C, "
-                       "TPC-DS, and TPC-H. The sizing factor determines the scale factor in TPC-DS and TPC-H, and the "
-                       "warehouse count in TPC-C.", cxxopts::value<std::string>())
+                       "at server start (e.g., \"TPC-C:5\", \"TPC-DS:5\", \"TPC-H:10\", or \"SSB:10\"). Supported are "
+                       "TPC-C, TPC-DS, TPC-H, and SSB. The sizing factor determines the scale factor in TPC-DS, TPC-H, "
+                       "and SSB, and the warehouse count in TPC-C.", cxxopts::value<std::string>())
     ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
   // clang-format on
 
@@ -77,6 +78,8 @@ void generate_benchmark_data(std::string argument_string) {
     TPCDSTableGenerator{static_cast<uint32_t>(scale_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpch") {
     TPCHTableGenerator{scale_factor, ClusteringConfiguration::None, config}.generate_and_store();
+  } else if (benchmark_name == "ssb") {
+    SSBTableGenerator{scale_factor, ClusteringConfiguration::None, config}.generate_and_store();
   } else {
     Fail("Unexpected benchmark name passed in parameter 'benchmark_data'.");
   }
