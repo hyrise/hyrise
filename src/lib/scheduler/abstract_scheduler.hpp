@@ -54,6 +54,8 @@ class TaskQueue;
  */
 
 class AbstractScheduler : public Noncopyable {
+  friend class SchedulerTest;
+
  public:
   virtual ~AbstractScheduler() = default;
 
