@@ -739,9 +739,11 @@ TEST_P(JoinTestRunner, TestJoin) {
     } else {
       std::cout << "No Table produced by the reference join operator\n";
     }
-    std::cout << "======================== Difference ========================\n";
-    std::cout << *table_difference_message;
-    std::cout << "\n============================================================\n";
+    if (table_difference_message) {
+      std::cout << "======================== Difference ========================\n";
+      std::cout << *table_difference_message;
+      std::cout << "\n============================================================\n";
+    }
   };
 
   try {
