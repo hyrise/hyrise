@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
@@ -16,9 +17,8 @@
 namespace hyrise {
 
 class AbstractExpression;
-class LQPSubqueryExpression;
 
-enum class LQPInputSide;
+enum class LQPInputSide : uint8_t;
 
 using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>;
 
@@ -92,7 +92,7 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
  * allow_right_input is set, the node must not have a right input. If allow_right_input is set, the caller has to
  * retie that right input of the node (or reinsert the node at a different position where the right input is valid).
  */
-enum class AllowRightInput { No, Yes };
+enum class AllowRightInput : uint8_t { No, Yes };
 void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
@@ -120,7 +120,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes. It traverses the LQP from the
  * begin node until it reaches the end node if set or an LQP node which is a not a Predicate, Union, Projection, Sort,
  * Validate or Limit node. The end node is necessary if a certain Predicate should not be part of the created expression
- * 
+ *
  * Subsequent PredicateNodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
  * Projection, Sort, Validate or Limit LQP nodes are ignored during the traversal.
  *
@@ -148,7 +148,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
     const std::shared_ptr<AbstractLQPNode>& begin,
     const std::optional<const std::shared_ptr<AbstractLQPNode>>& end = std::nullopt);
 
-enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
+enum class LQPVisitation : uint8_t { VisitInputs, DoNotVisitInputs };
 
 /**
  * Calls the passed @param visitor on @param lqp and recursively on its INPUTS. This will NOT visit subqueries. The
@@ -185,7 +185,7 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
   }
 }
 
-enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
+enum class LQPUpwardVisitation : uint8_t { VisitOutputs, DoNotVisitOutputs };
 
 /**
  * Calls the passed @param visitor on @param lqp and recursively on each node that uses it as an OUTPUT. If the LQP is
@@ -249,7 +249,7 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
 /**
  * @return A `const_iterator` that points to the UCC in the given set of @param unique_column_combinations matching
  *         the given set of @param expressions. A unique column combination matches if it covers a subset of @param
- *         expressions. If no such UCC exists, the end iterator is returned. We prefer genuine UCCs over 
+ *         expressions. If no such UCC exists, the end iterator is returned. We prefer genuine UCCs over
  *         non-genuine UCCs, and we do not guarantee to find a minimal UCC. This means that if a genuine UCC exists, it
  *         will be returned even if another (genuine or non-genuine) UCC exists that consists of fewer expressions.
  */

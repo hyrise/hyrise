@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "chunk_index_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -61,8 +60,6 @@ class AbstractChunkIndex : private Noncopyable {
 
   AbstractChunkIndex() = delete;
   explicit AbstractChunkIndex(const ChunkIndexType type);
-  AbstractChunkIndex(AbstractChunkIndex&&) = default;
-  virtual ~AbstractChunkIndex() = default;
 
   /**
    * Checks whether the given segments are covered by the index. This is the case when the order of the given columns
@@ -161,6 +158,6 @@ class AbstractChunkIndex : private Noncopyable {
   std::vector<ChunkOffset> _null_positions;
 
  private:
-  const ChunkIndexType _type;
+  ChunkIndexType _type;
 };
 }  // namespace hyrise

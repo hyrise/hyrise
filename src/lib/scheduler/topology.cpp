@@ -18,9 +18,9 @@
 namespace hyrise {
 
 #if HYRISE_NUMA_SUPPORT
-const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();  // NOLINT
+const int Topology::number_of_hardware_nodes = numa_num_configured_nodes();
 #else
-const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
+const int Topology::number_of_hardware_nodes = 1;
 #endif
 
 Topology::Topology() {

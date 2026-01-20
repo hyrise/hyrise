@@ -1,4 +1,6 @@
+#include <cstddef>
 #include <memory>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 
@@ -8,12 +10,14 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/chunk.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
+using namespace hyrise;  // NOLINT(build/namespaces)
 constexpr auto NUMBER_OF_CHUNKS = size_t{50};
 
 // These numbers were arbitrarily chosen to form a representative group of JoinBenchmarks
@@ -24,16 +28,13 @@ constexpr auto TABLE_SIZE_BIG = size_t{10'000'000};
 
 void clear_cache() {
   auto clear = std::vector<int>();
-  clear.resize(500 * 1000 * 1000, 42);
+  clear.resize(size_t{500} * 1000 * 1000, 42);
   const auto clear_cache_size = clear.size();
   for (auto index = size_t{0}; index < clear_cache_size; index++) {
     clear[index] += 1;
   }
   clear.resize(0);
 }
-}  // namespace
-
-namespace hyrise {
 
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
@@ -42,7 +43,7 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   Assert(chunk_size > 0, "The chunk size is 0 or less, cannot generate such a table.");
 
   auto table =
-      table_generator->generate_table(1ul, number_of_rows, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary});
+      table_generator->generate_table(1, number_of_rows, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary});
 
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -62,8 +63,8 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
 }
 
 template <class C>
-void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_wrapper_left,
-                  std::shared_ptr<TableWrapper> table_wrapper_right) {
+void bm_join_impl(benchmark::State& state, const std::shared_ptr<TableWrapper>& table_wrapper_left,
+                  const std::shared_ptr<TableWrapper>& table_wrapper_right) {
   clear_cache();
 
   auto warm_up = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
@@ -79,7 +80,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
 }
 
 template <class C>
-void BM_Join_SmallAndSmall(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+void bm_join_small_and_small(benchmark::State& state) {  // 1,000 x 1,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_SMALL);
 
@@ -87,7 +88,7 @@ void BM_Join_SmallAndSmall(benchmark::State& state) {  // NOLINT 1,000 x 1,000
 }
 
 template <class C>
-void BM_Join_SmallAndBig(benchmark::State& state) {  // NOLINT 1,000 x 10,000,000
+void bm_join_small_and_big(benchmark::State& state) {  // 1,000 x 10,000,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_BIG);
 
@@ -95,25 +96,29 @@ void BM_Join_SmallAndBig(benchmark::State& state) {  // NOLINT 1,000 x 10,000,00
 }
 
 template <class C>
-void BM_Join_MediumAndMedium(benchmark::State& state) {  // NOLINT 100,000 x 100,000
+void bm_join_medium_and_medium(benchmark::State& state) {  // 100,000 x 100,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_MEDIUM);
   auto table_wrapper_right = generate_table(TABLE_SIZE_MEDIUM);
 
   bm_join_impl<C>(state, table_wrapper_left, table_wrapper_right);
 }
 
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinNestedLoop);
+}  // namespace
 
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinIndex);
-BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinIndex);
-BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinIndex);
+namespace hyrise {
 
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinHash);
-BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinHash);
-BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinNestedLoop);
 
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinIndex);
+BENCHMARK_TEMPLATE(bm_join_small_and_big, JoinIndex);
+BENCHMARK_TEMPLATE(bm_join_medium_and_medium, JoinIndex);
+
+BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_small_and_big, JoinHash);
+BENCHMARK_TEMPLATE(bm_join_medium_and_medium, JoinHash);
+
+BENCHMARK_TEMPLATE(bm_join_small_and_small, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_small_and_big, JoinSortMerge);
+BENCHMARK_TEMPLATE(bm_join_medium_and_medium, JoinSortMerge);
 
 }  // namespace hyrise

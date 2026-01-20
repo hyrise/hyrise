@@ -16,7 +16,7 @@ namespace hyrise {
 class AbstractLQPNode;
 class AbstractOperator;
 
-enum class ExpressionType {
+enum class ExpressionType : uint8_t {
   Arithmetic,
   Cast,
   Case,
@@ -52,8 +52,6 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
  public:
   AbstractExpression(const ExpressionType init_type,
                      const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments);
-  virtual ~AbstractExpression() = default;
-
   /**
    * Recursively check for Expression equality.
    * @pre Both expressions need to reference the same LQP
@@ -86,7 +84,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   /**
    * @return the expression's column name or, optionally, a more detailed description of the expression
    */
-  enum class DescriptionMode {
+  enum class DescriptionMode : uint8_t {
     ColumnName,  // returns only the column name
     Detailed     // additionally includes the address of referenced nodes
   };
@@ -173,12 +171,12 @@ struct ExpressionSharedPtrHash final {
 struct ExpressionSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<const AbstractExpression>& expression_a,
                     const std::shared_ptr<const AbstractExpression>& expression_b) const {
-    return *expression_a == *expression_b;
+    return static_cast<size_t>(*expression_a == *expression_b);
   }
 
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression_a,
                     const std::shared_ptr<AbstractExpression>& expression_b) const {
-    return *expression_a == *expression_b;
+    return static_cast<size_t>(*expression_a == *expression_b);
   }
 };
 

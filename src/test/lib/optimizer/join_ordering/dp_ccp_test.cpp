@@ -1,17 +1,19 @@
+#include <cstdint>
+#include <memory>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "statistics/table_statistics.hpp"
-#include "utils/load_table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 /**
  * The number of tests in here might seem few, but actually all main parts of DPccp are covered: Join order, Join
@@ -68,7 +70,7 @@ TEST_F(DPccpTest, JoinOrdering) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c, join_edge_b_c}));
 
-  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);
 
   // clang-format off
   const auto expected_lqp =
@@ -94,7 +96,7 @@ TEST_F(DPccpTest, CrossJoin) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, cross_join_edge_a_c}));
 
-  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);
 
   // clang-format off
   const auto expected_lqp =
@@ -130,7 +132,7 @@ TEST_F(DPccpTest, LocalPredicateOrdering) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, self_edge_a, self_edge_b}));
 
-  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);
 
   // clang-format off
   const auto expected_lqp =
@@ -159,7 +161,7 @@ TEST_F(DPccpTest, ComplexJoinPredicate) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b}));
 
-  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);
 
   // clang-format off
   const auto expected_lqp =
@@ -190,7 +192,7 @@ TEST_F(DPccpTest, HyperEdge) {
       JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c, node_d}),
                 std::vector<JoinGraphEdge>({join_edge_a_b_c, join_edge_a_b, join_edge_b_c, cross_edge_b_d}));
 
-  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);
 
   // clang-format off
   const auto expected_lqp =
@@ -226,7 +228,7 @@ TEST_F(DPccpTest, UncorrelatedPredicates) {
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_d}),
                                     std::vector<JoinGraphEdge>({join_edge_a_d, join_edge_uncorrelated}));
 
-  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);  // NOLINT
+  const auto actual_lqp = DPccp{}(join_graph, cost_estimator);
 
   // clang-format off
   const auto expected_lqp =

@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -5,8 +6,8 @@
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

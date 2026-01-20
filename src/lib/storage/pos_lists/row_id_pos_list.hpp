@@ -16,6 +16,10 @@ namespace hyrise {
 // inheritance. By making the inheritance private and this class final, we can assure that the problems that come with
 // a non-virtual destructor do not occur.
 
+// I tried to make AbstractPosList a pure virtual class, but it is very difficult because of the begin and end
+// functions. These return completely different types in RowIDPosList and EntireChunkPosList, so I can't make this
+// function virtual.
+// NOLINTNEXTLINE(fuchsia-multiple-inheritance)
 class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
  public:
   using Vector = pmr_vector<RowID>;
@@ -33,7 +37,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using reverse_iterator = Vector::reverse_iterator;
   using const_reverse_iterator = Vector::const_reverse_iterator;
 
-  /* (1 ) */ RowIDPosList() noexcept(noexcept(allocator_type())) {}
+  /* (1 ) */ RowIDPosList() noexcept(noexcept(allocator_type())) = default;
 
   /* (1 ) */ explicit RowIDPosList(const allocator_type& allocator) noexcept : Vector(allocator) {}
 
@@ -44,24 +48,27 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
       : Vector(count, alloc) {}
 
   /* (4 ) */ template <class InputIt>
-  RowIDPosList(InputIt first, InputIt last, const allocator_type& alloc = allocator_type())
+  RowIDPosList(InputIt first, InputIt last, const allocator_type& /*alloc*/ = allocator_type())
       : Vector(std::move(first), std::move(last)) {}
 
   /* (5 ) */  // RowIDPosList(const Vector& other) : Vector(other); - Oh no, you don't.
   /* (5 ) */  // RowIDPosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
   /* (6 ) */ RowIDPosList(RowIDPosList&& other) noexcept
-      : Vector(std::move(other)), _references_single_chunk{other._references_single_chunk} {}
+      : RowIDPosList(std::move(other), other._references_single_chunk) {}
 
   /* (6+) */ explicit RowIDPosList(Vector&& other) noexcept : Vector(std::move(other)) {}
 
   /* (7 ) */ RowIDPosList(RowIDPosList&& other, const allocator_type& alloc)
-      : Vector(std::move(other), alloc), _references_single_chunk{other._references_single_chunk} {}
+      : RowIDPosList(std::move(other), alloc, other._references_single_chunk) {}
 
   /* (7+) */ RowIDPosList(Vector&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
 
   /* (8 ) */ RowIDPosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
-      : Vector(std::move(init), alloc) {}
+      : Vector(init, alloc) {}
 
+  RowIDPosList(const RowIDPosList&) = delete;
+  RowIDPosList& operator=(const RowIDPosList&) = delete;
+  ~RowIDPosList() override = default;
   RowIDPosList& operator=(RowIDPosList&& other) = default;
 
   // If we know that all entries in the RowIDPosList share a single ChunkID, we can optimize the indirection by
@@ -128,6 +135,12 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   size_t memory_usage(const MemoryUsageCalculationMode /*mode*/) const final;
 
  private:
+  RowIDPosList(Vector&& other, bool references_single_chunk) noexcept
+      : Vector(std::move(other)), _references_single_chunk(references_single_chunk) {}
+
+  RowIDPosList(Vector&& other, const allocator_type& alloc, bool references_single_chunk)
+      : Vector(std::move(other), alloc), _references_single_chunk(references_single_chunk) {}
+
   bool _references_single_chunk = false;
 };
 

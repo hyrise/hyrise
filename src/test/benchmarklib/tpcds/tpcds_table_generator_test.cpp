@@ -1,12 +1,22 @@
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <tuple>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
+#include "testing_assert.hpp"
+// This header is needed, as porting.h requires a type HUGE_TYPE, which it does not include itself.
+#include "tpcds-kit/tools/config.h"  // IWYU pragma: keep
+#include "tpcds-kit/tools/porting.h"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-using namespace hyrise;  // NOLINT(build/namespaces)
-
 namespace {
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::shared_ptr<Table> load_csv(const std::string& file_name) {
   return CsvParser::parse(

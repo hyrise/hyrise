@@ -139,4 +139,8 @@ void FileBasedTableGenerator::_add_constraints(
   }
 }
 
+const std::string& FileBasedTableGenerator::path() {
+  return _path;
+}
+
 }  // namespace hyrise

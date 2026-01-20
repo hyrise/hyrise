@@ -1,3 +1,6 @@
+#include <vector>
+
+#include "gtest/gtest.h"
 #include "sqlite_testrunner.hpp"
 #include "storage/encoding_type.hpp"
 
@@ -9,7 +12,7 @@ std::vector<EncodingType> encoding_types_without_unencoded() {
   static auto encodings = std::vector<EncodingType>{};
 
   if (encodings.empty()) {
-    for (const auto encoding_type : encoding_types) {
+    for (const auto encoding_type : ENCODING_TYPES) {
       if (encoding_type != EncodingType::Unencoded) {
         encodings.push_back(encoding_type);
       }

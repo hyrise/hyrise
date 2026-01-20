@@ -1,6 +1,15 @@
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "../mock_setting.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
 
 namespace hyrise {

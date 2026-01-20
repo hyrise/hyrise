@@ -2,17 +2,19 @@
 #include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "statistics/table_statistics.hpp"
-#include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

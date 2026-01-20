@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <utility>
 
 #include "commit_context.hpp"
 #include "transaction_context.hpp"
@@ -22,6 +23,12 @@ TransactionManager::~TransactionManager() {
   Assert(_active_snapshot_commit_ids.empty(),
          "Some transactions do not seem to have finished yet as they are still registered as active.");
 }
+
+TransactionManager::TransactionManager(TransactionManager&& transaction_manager) noexcept
+    : _next_transaction_id(transaction_manager._next_transaction_id.load()),
+      _last_commit_id(transaction_manager._last_commit_id.load()),
+      _last_commit_context(std::move(transaction_manager._last_commit_context)),
+      _active_snapshot_commit_ids(std::move(transaction_manager._active_snapshot_commit_ids)) {}
 
 TransactionManager& TransactionManager::operator=(TransactionManager&& transaction_manager) noexcept {
   _next_transaction_id = transaction_manager._next_transaction_id.load();

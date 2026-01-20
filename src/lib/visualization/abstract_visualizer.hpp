@@ -41,7 +41,7 @@ struct VizGraphInfo {
 };
 
 struct VizVertexInfo {
-  uintptr_t id;
+  uintptr_t id{};
   std::string label;
   std::string tooltip;
   std::string color = "white";
@@ -77,10 +77,10 @@ class AbstractVisualizer {
                                       VizVertexInfo, VizEdgeInfo, VizGraphInfo>;
 
   // No label in a node should be wider than this many characters. If it is longer, line breaks should be added.
-  static const uint8_t MAX_LABEL_WIDTH = 50;
+  static constexpr uint8_t MAX_LABEL_WIDTH = 50;
 
  public:
-  enum class InputSide { Left, Right };
+  enum class InputSide : uint8_t { Left, Right };
 
   AbstractVisualizer() : AbstractVisualizer(GraphvizConfig{}, VizGraphInfo{}, VizVertexInfo{}, VizEdgeInfo{}) {}
 
@@ -135,8 +135,10 @@ class AbstractVisualizer {
     // This unique_ptr serves as a scope guard that guarantees the deletion of the temp file once we return from this
     // method.
     const auto delete_temp_file = [&tmpname](auto ptr) {
+      // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
       delete ptr;
-      std::remove(tmpname);
+      const auto return_code = std::remove(tmpname);
+      Assert(return_code == 0, "Temp file could not be deleted.");
     };
     const auto delete_guard = std::unique_ptr<char, decltype(delete_temp_file)>(new char, delete_temp_file);
 
@@ -145,7 +147,7 @@ class AbstractVisualizer {
     // so that the thickest pen has a width of max_normalized_width and the thinnest one has a width of 1. Using
     // a logarithm makes the operators that follow the most expensive one more visible. Not sure if this is what
     // statisticians would do, but it makes for beautiful images.
-    const auto normalize_penwidths = [&](auto iter_pair) {
+    const auto normalize_penwidths = [&](const auto& iter_pair) {
       const auto max_normalized_width = 8.0;
       const auto log_base = std::log(1.5);
       auto max_unnormalized_width = 0.0;
@@ -174,6 +176,8 @@ class AbstractVisualizer {
     auto format = _graphviz_config.format;
 
     auto cmd = renderer + " -T" + format + " \"" + tmpname + "\" > \"" + img_filename + "\"";
+    // On Linux, system is thread safe https://man7.org/linux/man-pages/man3/system.3.html
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
     auto ret = system(cmd.c_str());
 
     Assert(ret == 0, "Calling graphviz' " + renderer +
@@ -186,16 +190,16 @@ class AbstractVisualizer {
   virtual void _build_graph(const GraphBase& graph_base) = 0;
 
   template <typename T>
-  static uintptr_t _get_id(const T& v) {
-    return reinterpret_cast<uintptr_t>(&v);
+  static uintptr_t _get_id(const T& vertex) {
+    return reinterpret_cast<uintptr_t>(&vertex);
   }
 
   template <typename T>
-  static uintptr_t _get_id(const std::shared_ptr<T>& v) {
-    return reinterpret_cast<uintptr_t>(v.get());
+  static uintptr_t _get_id(const std::shared_ptr<T>& vertex) {
+    return reinterpret_cast<uintptr_t>(vertex.get());
   }
 
-  enum class WrapLabel { On, Off };
+  enum class WrapLabel : uint8_t { On, Off };
 
   template <typename T>
   void _add_vertex(const T& vertex, const std::string& label = "", const WrapLabel wrap_label = WrapLabel::On) {
@@ -222,19 +226,19 @@ class AbstractVisualizer {
   }
 
   template <typename T, typename K>
-  void _add_edge(const T& from, const K& to) {
-    _add_edge(from, to, _default_edge);
+  void _add_edge(const T& source, const K& destination) {
+    _add_edge(source, destination, _default_edge);
   }
 
   template <typename T, typename K>
-  void _add_edge(const T& from, const K& to, const VizEdgeInfo& edge_info) {
-    auto from_id = _get_id(from);
-    auto to_id = _get_id(to);
+  void _add_edge(const T& source, const K& destination, const VizEdgeInfo& edge_info) {
+    auto source_id = _get_id(source);
+    auto destination_id = _get_id(destination);
 
-    auto from_pos = _id_to_position.at(from_id);
-    auto to_pos = _id_to_position.at(to_id);
+    auto source_pos = _id_to_position.at(source_id);
+    auto destination_pos = _id_to_position.at(destination_id);
 
-    boost::add_edge(from_pos, to_pos, edge_info, _graph);
+    boost::add_edge(source_pos, destination_pos, edge_info, _graph);
   }
 
   template <typename T>

@@ -1,10 +1,22 @@
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "SQLParser.h"
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/window_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -25,6 +37,7 @@
 #include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -35,8 +48,13 @@
 #include "logical_query_plan/window_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"

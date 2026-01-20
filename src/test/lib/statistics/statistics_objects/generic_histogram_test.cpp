@@ -1,12 +1,19 @@
+#include <cmath>
+#include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
-#include "utils/load_table.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
+#include "types.hpp"
 
 /**
  * As well as testing GenericHistogram, we also test a lot of the functionally implemented in AbstractHistogram here.
@@ -1130,6 +1137,7 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
 }
 
 TEST_F(GenericHistogramTest, SplitAtBinBoundsTwoHistograms) {
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   const auto histogram_1 = GenericHistogram<int32_t>(
           std::vector<int32_t>{0,  5, 15, 20, 35, 45, 50},
@@ -1151,10 +1159,11 @@ TEST_F(GenericHistogramTest, SplitAtBinBoundsTwoHistograms) {
   // The reason is that bins which do not contain any values are not created,
   // so some bins are missing in one histogram, and some are missing in the other.
   const auto histogram_1_expected_minima = std::vector<int32_t>{0, 2, 5,  8,     15,     20, 26, 35, 40,     45, 50};
-  const auto histogram_2_expected_minima = std::vector<int32_t>{   2, 5,     12, 15, 19, 20,         40, 41, 45, 50, 52};  // NOLINT
+  const auto histogram_2_expected_minima = std::vector<int32_t>{   2, 5,     12, 15, 19, 20,         40, 41, 45, 50, 52};
   const auto histogram_1_expected_maxima = std::vector<int32_t>{1, 4, 7, 10,     18,     25, 29, 39, 40,     48, 51};
-  const auto histogram_2_expected_maxima = std::vector<int32_t>{   4, 7,     14, 18, 19, 25,         40, 42, 48, 51, 52};  // NOLINT
+  const auto histogram_2_expected_maxima = std::vector<int32_t>{   4, 7,     14, 18, 19, 25,         40, 42, 48, 51, 52};
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   const auto new_histogram_1 = histogram_1.split_at_bin_bounds(histogram_2.bin_bounds());
   const auto new_histogram_2 = histogram_2.split_at_bin_bounds(histogram_1.bin_bounds());

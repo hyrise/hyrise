@@ -1,6 +1,8 @@
+#include <memory>
+#include <stdexcept>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "expression/expression_functional.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 

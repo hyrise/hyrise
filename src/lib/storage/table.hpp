@@ -126,7 +126,7 @@ class Table : private Noncopyable {
    *
    * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
-  void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
+  void append_chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
                     const PolymorphicAllocator<Chunk> alloc = PolymorphicAllocator<Chunk>{});
 
   // Create and append a Chunk consisting of ValueSegments.
@@ -217,7 +217,7 @@ class Table : private Noncopyable {
   void add_soft_constraint(const AbstractTableConstraint& table_constraint);
 
   /**
-   * NOTE: All key constraints are currently stored. If a constraint is invalidated it is not deleted. To check if a 
+   * NOTE: All key constraints are currently stored. If a constraint is invalidated it is not deleted. To check if a
    * key constraint is guaranteed to be valid, use `key_constraint_is_confidently_valid`.
    */
   const TableKeyConstraints& soft_key_constraints() const;

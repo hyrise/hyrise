@@ -1,8 +1,14 @@
 #include "meta_mock_table.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "all_type_variant.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {
 

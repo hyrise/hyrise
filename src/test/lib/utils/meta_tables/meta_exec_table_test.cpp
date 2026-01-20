@@ -1,6 +1,14 @@
+#include <memory>
+#include <stdexcept>
+#include <utility>
+
 #include "../plugin_test_utils.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 #include "utils/meta_tables/meta_exec_table.hpp"
 
 namespace hyrise {

@@ -1,16 +1,20 @@
+#include <cstdint>
 #include <cstdio>
-#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

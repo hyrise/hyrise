@@ -38,11 +38,11 @@ BitPackingDecompressor BitPackingVector::on_create_decompressor() const {
 }
 
 BitPackingIterator BitPackingVector::on_begin() const {
-  return BitPackingIterator(_data, 0u);
+  return BitPackingIterator(_data, 0);
 }
 
 BitPackingIterator BitPackingVector::on_end() const {
-  return BitPackingIterator(_data, _data.size());
+  return BitPackingIterator(_data, static_cast<ptrdiff_t>(_data.size()));
 }
 
 std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_memory_resource(

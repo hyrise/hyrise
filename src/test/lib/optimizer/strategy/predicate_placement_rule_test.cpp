@@ -1,5 +1,8 @@
 #include <memory>
+#include <utility>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -13,8 +16,11 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
+#include "storage/table.hpp"
 #include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

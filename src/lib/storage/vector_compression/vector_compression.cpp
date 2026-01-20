@@ -13,9 +13,9 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace hyrise {
-
 namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * @brief Mapping of vector compression types to compressors
@@ -36,6 +36,8 @@ std::unique_ptr<BaseVectorCompressor> create_compressor_by_type(VectorCompressio
 }
 
 }  // namespace
+
+namespace hyrise {
 
 std::unique_ptr<const BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector,
                                                             const VectorCompressionType type,

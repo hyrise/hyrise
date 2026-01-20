@@ -25,11 +25,9 @@
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"  // IWYU pragma: keep
+#include "storage/index/chunk_index_map.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"  // IWYU pragma: keep
-#include "storage/index/group_key/group_key_index.hpp"            // IWYU pragma: keep
-#include "storage/index/partial_hash/partial_hash_index.hpp"      // IWYU pragma: keep
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
@@ -307,7 +305,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
   std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>{});
 }
 
-void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
+void Table::append_chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data,
                          PolymorphicAllocator<Chunk> alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables if MVCC is enabled.");

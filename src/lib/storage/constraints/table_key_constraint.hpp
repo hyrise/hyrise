@@ -11,9 +11,10 @@
 
 namespace hyrise {
 
-enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
+// NOLINTNEXTLINE(readability-identifier-naming)
+enum class KeyConstraintType : uint8_t { PRIMARY_KEY, UNIQUE };
 
-enum class ValidationResultType { VALID, INVALID };
+enum class ValidationResultType : uint8_t { VALID, INVALID };
 
 /**
  * Container class to define uniqueness constraints for tables. As defined by SQL, two types of keys are supported:
@@ -88,7 +89,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   mutable std::atomic<CommitID> _last_validated_on;
   /**
    * Commit ID of the snapshot this constraint was last invalidated on. Similarly, as above, this constraint will still
-   * be invalid during transactions with larger commit IDs if only insertions have been performed since the last CID. 
+   * be invalid during transactions with larger commit IDs if only insertions have been performed since the last CID.
    */
   mutable std::atomic<CommitID> _last_invalidated_on;
 };

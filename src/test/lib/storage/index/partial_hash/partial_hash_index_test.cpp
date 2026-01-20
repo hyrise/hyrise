@@ -1,9 +1,26 @@
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <set>
+#include <shared_mutex>
+#include <stdexcept>
+#include <thread>
+#include <utility>
 #include <vector>
 
+#include "tsl/sparse_map.h"
+#include "tsl/sparse_set.h"
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "storage/chunk.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index_impl.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {

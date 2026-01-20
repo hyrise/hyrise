@@ -32,7 +32,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>
@@ -353,7 +353,7 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool /*colum
 template <typename T>
 CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(
     const AbstractEncodedSegment& abstract_encoded_segment) {
-  uint8_t compressed_vector_type_id = 0u;
+  auto compressed_vector_type_id = uint8_t{0};
   resolve_encoded_segment_type<T>(abstract_encoded_segment, [&compressed_vector_type_id](auto& typed_segment) {
     const auto compressed_vector_type = typed_segment.compressed_vector_type();
     Assert(compressed_vector_type, "Expected Segment to use vector compression");

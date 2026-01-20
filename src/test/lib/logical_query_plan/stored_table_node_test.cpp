@@ -1,8 +1,11 @@
+#include <memory>
+#include <stdexcept>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -15,8 +18,10 @@
 #include "storage/encoding_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

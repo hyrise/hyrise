@@ -1,26 +1,29 @@
-#include <iostream>
-#include <map>
+#include <cstddef>
 #include <memory>
-#include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
-#include "operators/abstract_read_only_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
-#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

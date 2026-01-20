@@ -1,22 +1,33 @@
+#include <atomic>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <numeric>
+#include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_function_expression.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
-#include "operators/insert.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
 

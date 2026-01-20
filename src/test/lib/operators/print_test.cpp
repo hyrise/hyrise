@@ -1,15 +1,27 @@
 #include <algorithm>
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
 #include <memory>
+#include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
@@ -55,7 +67,7 @@ class PrintWrapper : public Print {
   }
 
   uint16_t get_max_cell_width() {
-    return _max_cell_width;
+    return MAX_CELL_WIDTH;
   }
 
   bool is_printing_mvcc_information() {

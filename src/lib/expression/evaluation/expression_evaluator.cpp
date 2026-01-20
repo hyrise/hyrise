@@ -1169,7 +1169,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
             resolve_binary_predicate_evaluator(predicate_condition, [&](const auto functor) {
               using ExpressionFunctorType = typename decltype(functor)::type;
 
-              if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
+              if constexpr (ExpressionFunctorType::template Supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                      RightDataType>::value) {
                 for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                   if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) {
@@ -1343,7 +1343,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
-    if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
+    if constexpr (Functor::template Supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_size = _result_size(left.size(), right.size());
       values.resize(result_size);
       nulls = _evaluate_default_null_logic(left.nulls, right.nulls);
@@ -1379,7 +1379,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
-    if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
+    if constexpr (Functor::template Supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_row_count = _result_size(left.size(), right.size());
 
       auto nulls = pmr_vector<bool>(result_row_count);

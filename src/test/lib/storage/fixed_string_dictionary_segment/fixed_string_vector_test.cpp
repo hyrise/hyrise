@@ -1,4 +1,10 @@
+#include <algorithm>
+#include <cstddef>
 #include <memory>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"

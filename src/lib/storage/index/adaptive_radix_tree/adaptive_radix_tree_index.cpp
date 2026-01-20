@@ -14,7 +14,7 @@
 #include "all_type_variant.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
-#include "storage/index/chunk_index_type.hpp"
+#include "storage/index/chunk_index_map.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -111,7 +111,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
 
   _chunk_offsets.reserve(values.size());
   auto begin = _chunk_offsets.cbegin();
-  return _bulk_insert(values, static_cast<size_t>(0u), begin);
+  return _bulk_insert(values, 0, begin);
 }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
@@ -184,7 +184,7 @@ AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _par
     // grab the 8 least significant bits and put them at the front of the vector
     _parts[_parts.size() - byte_id] = static_cast<uint8_t>(value) & 0xFFu;
     // rightshift 8 bits
-    value >>= 8u;
+    value >>= uint8_t{8};
   }
 }
 

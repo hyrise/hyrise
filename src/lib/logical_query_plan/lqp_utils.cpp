@@ -156,6 +156,57 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
                                                       only_correlated);
 }
 
+/**
+ * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
+ * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
+ * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
+ * translated expressions to the translation of its children nodes, which allows to add the translated expression of
+ * child node before its parent node to the output expression.
+ */
+std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
+    const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
+    const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
+  if (end && begin == *end) {
+    return nullptr;
+  }
+
+  switch (begin->type) {
+    case LQPNodeType::Predicate: {
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
+      const auto predicate = predicate_node->predicate();
+      auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
+      auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
+      if (left_input_expression) {
+        return left_input_expression;
+      }
+
+      return expression;
+    }
+
+    case LQPNodeType::Union: {
+      const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
+      const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, std::nullopt);
+      const auto right_input_expression =
+          lqp_subplan_to_boolean_expression_impl(begin->right_input(), end, std::nullopt);
+      if (left_input_expression && right_input_expression) {
+        const auto or_expression = or_(left_input_expression, right_input_expression);
+        return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
+      }
+
+      return nullptr;
+    }
+
+    case LQPNodeType::Projection:
+    case LQPNodeType::Sort:
+    case LQPNodeType::Validate:
+    case LQPNodeType::Limit:
+      return lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, subsequent_expression);
+
+    default:
+      return nullptr;
+  }
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -350,59 +401,6 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
 
   return modified_tables;
 }
-
-namespace {
-/**
- * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
- * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
- * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
- * translated expressions to the translation of its children nodes, which allows to add the translated expression of
- * child node before its parent node to the output expression.
- */
-std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
-    const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
-    const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
-  if (end && begin == *end) {
-    return nullptr;
-  }
-
-  switch (begin->type) {
-    case LQPNodeType::Predicate: {
-      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
-      const auto predicate = predicate_node->predicate();
-      auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
-      auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
-      if (left_input_expression) {
-        return left_input_expression;
-      }
-
-      return expression;
-    }
-
-    case LQPNodeType::Union: {
-      const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
-      const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, std::nullopt);
-      const auto right_input_expression =
-          lqp_subplan_to_boolean_expression_impl(begin->right_input(), end, std::nullopt);
-      if (left_input_expression && right_input_expression) {
-        const auto or_expression = or_(left_input_expression, right_input_expression);
-        return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
-      }
-
-      return nullptr;
-    }
-
-    case LQPNodeType::Projection:
-    case LQPNodeType::Sort:
-    case LQPNodeType::Validate:
-    case LQPNodeType::Limit:
-      return lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, subsequent_expression);
-
-    default:
-      return nullptr;
-  }
-}
-}  // namespace
 
 // Function wraps the call to the lqp_subplan_to_boolean_expression_impl() function to hide its third parameter,
 // subsequent_predicate, which is only used internally.

@@ -19,13 +19,14 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT (build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,

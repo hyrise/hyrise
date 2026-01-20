@@ -1,6 +1,7 @@
 #include "test_plugin.hpp"
 
 #include <cstdint>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -10,8 +11,6 @@
 
 #include "nlohmann/json.hpp"
 
-// NOLINTNEXTLINE(misc-include-cleaner): We access methods of AbstractBenchmarkItemRunner in `pre_benchmark_hook()`.
-#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table.hpp"
@@ -29,11 +28,15 @@ void TestPlugin::start() {
   const auto column_definitions = TableColumnDefinitions{{"col_1", DataType::Int, false}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  storage_manager.add_table("DummyTable", table);
+  Hyrise::get().storage_manager.add_table("DummyTable", table);
 }
 
 void TestPlugin::stop() {
   Hyrise::get().storage_manager.drop_table("DummyTable");
+
+  for (auto index = size_t{0}; index < _added_tables_count; ++index) {
+    Hyrise::get().storage_manager.drop_table("TableOfTestPlugin_" + std::to_string(index));
+  }
 }
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::provided_user_executable_functions() {
@@ -50,7 +53,7 @@ void TestPlugin::a_user_executable_function() {
   const auto column_definitions = TableColumnDefinitions{{"col_A", DataType::Int, false}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  storage_manager.add_table("TableOfTestPlugin_" + std::to_string(_added_tables_count), table);
+  Hyrise::get().storage_manager.add_table("TableOfTestPlugin_" + std::to_string(_added_tables_count), table);
   ++_added_tables_count;
 }
 
@@ -66,13 +69,13 @@ std::optional<PreBenchmarkHook> TestPlugin::pre_benchmark_hook() {
     for (const auto item_id : benchmark_item_runner.items()) {
       table->append({static_cast<int32_t>(item_id)});
     }
-    storage_manager.add_table("BenchmarkItems", table);
+    Hyrise::get().storage_manager.add_table("BenchmarkItems", table);
   };
 }
 
 std::optional<PostBenchmarkHook> TestPlugin::post_benchmark_hook() {
   return [&](auto& report) {
-    storage_manager.drop_table("BenchmarkItems");
+    Hyrise::get().storage_manager.drop_table("BenchmarkItems");
     report["dummy"] = 1;
   };
 }

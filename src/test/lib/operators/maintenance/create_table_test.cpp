@@ -1,7 +1,9 @@
 #include <memory>
+#include <stdexcept>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "concurrency/transaction_context.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
@@ -10,8 +12,11 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
-#include "utils/assert.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

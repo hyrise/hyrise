@@ -1,27 +1,35 @@
-#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
 
 #include "cxxopts.hpp"
 
+#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
-#include "utils/performance_warning.hpp"
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   cli_options.add_options()
-      ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(".")) // NOLINT
-      ("query_path", "A specific .sql file or a directory containing .sql files", cxxopts::value<std::string>()->default_value(".")) // NOLINT
-      ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
+      ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value("."))
+      ("query_path", "A specific .sql file or a directory containing .sql files", cxxopts::value<std::string>()->default_value("."))
+      ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all"));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   auto benchmark_config = std::shared_ptr<BenchmarkConfig>{};
   auto query_path = std::string{};

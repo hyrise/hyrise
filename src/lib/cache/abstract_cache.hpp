@@ -15,7 +15,7 @@ class AbstractCache {
  public:
   explicit AbstractCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : _capacity(capacity) {}
 
-  virtual ~AbstractCache() {}
+  virtual ~AbstractCache() = default;
 
   // Cache the value at the given key.
   // If the new size exceeds the capacity an item will be evicted.

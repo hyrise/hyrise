@@ -13,7 +13,7 @@
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/abstract_read_write_operator.hpp"  // IWYU pragma: keep
+#include "operators/abstract_read_write_operator.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
@@ -26,9 +26,9 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace hyrise {
-
 namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
                     const MvccData& mvcc_data) {
@@ -39,6 +39,8 @@ bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOff
 }
 
 }  // namespace
+
+namespace hyrise {
 
 bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
                               const CommitID begin_cid, const CommitID end_cid) {
@@ -210,7 +212,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
           auto temp_pos_list = RowIDPosList{};
           temp_pos_list.guarantee_single_chunk();
           for (const auto row_id : *pos_list_in) {
-            if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            if (::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
           }
@@ -246,7 +248,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->mvcc_data();
-          if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+          if (::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
             temp_pos_list.emplace_back(row_id);
           }
         }
@@ -279,7 +281,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-          if (hyrise::is_row_visible(our_tid, snapshot_commit_id, chunk_offset, *mvcc_data)) {
+          if (::is_row_visible(our_tid, snapshot_commit_id, chunk_offset, *mvcc_data)) {
             temp_pos_list.emplace_back(chunk_id, chunk_offset);
           }
         }

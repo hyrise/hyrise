@@ -50,8 +50,6 @@ class CompositeGroupKeyIndex : public AbstractChunkIndex {
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
-  CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
-
   explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
  private:
@@ -102,7 +100,6 @@ class CompositeGroupKeyIndex : public AbstractChunkIndex {
    */
   Iterator _get_position_iterator_for_key(const VariableLengthKey& key) const;
 
- private:
   // The segments the index is based on.
   std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;
 

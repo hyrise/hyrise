@@ -1,12 +1,22 @@
+#include <filesystem>
 #include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
+
+#include "cxxopts.hpp"
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
 #include "ssb/ssb_table_generator.hpp"
+#include "utils/assert.hpp"
 
 /**
  * The Star Schema Benchmark was introduced by O'Neil et al. "The Star Schema Benchmark and Augmented Fact Table

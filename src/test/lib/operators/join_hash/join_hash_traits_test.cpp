@@ -1,7 +1,9 @@
-#include <string>
+#include <cstdint>
+#include <type_traits>
 
 #include "base_test.hpp"
 #include "operators/join_hash/join_hash_traits.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

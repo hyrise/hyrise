@@ -5,6 +5,7 @@
 #include <boost/hana/hash.hpp>
 #include <boost/hana/value.hpp>
 
+// NOLINTBEGIN(readability-identifier-naming)
 namespace hyrise {
 
 /**
@@ -43,6 +44,7 @@ struct enum_constant {
  * Example: enum_c<DataType::Int> (compare to: hana::type_c<int32_t>)
  */
 template <typename EnumType, EnumType enum_value>
+// NOLINTNEXTLINE(google-readability-casting)
 [[maybe_unused]] constexpr auto enum_c = enum_constant<EnumType, enum_value>{};
 
 /**
@@ -86,3 +88,5 @@ struct hash_impl<E, when<hyrise::is_enum_constant_v<E>>> {
 };
 
 }  // namespace boost::hana
+
+// NOLINTEND(readability-identifier-naming)

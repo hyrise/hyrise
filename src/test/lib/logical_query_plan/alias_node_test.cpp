@@ -1,5 +1,9 @@
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"

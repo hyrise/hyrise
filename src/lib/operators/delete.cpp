@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "all_type_variant.hpp"
+#include "abstract_read_write_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/validate.hpp"

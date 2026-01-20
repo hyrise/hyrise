@@ -17,8 +17,8 @@ class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
  public:
   PQPVisualizer();
 
-  PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info = {}, VizVertexInfo vertex_info = {},
-                VizEdgeInfo edge_info = {});
+  explicit PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info = {}, VizVertexInfo vertex_info = {},
+                         VizEdgeInfo edge_info = {});
 
  protected:
   void _build_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans) override;

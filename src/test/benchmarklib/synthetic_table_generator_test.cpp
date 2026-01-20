@@ -1,9 +1,21 @@
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <iterator>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include "magic_enum/magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "hyrise.hpp"
 #include "lib/storage/encoding_test.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/table.hpp"
 #include "synthetic_table_generator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

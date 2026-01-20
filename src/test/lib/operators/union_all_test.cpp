@@ -1,15 +1,19 @@
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "base_test.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 class OperatorsUnionAllTest : public BaseTest {

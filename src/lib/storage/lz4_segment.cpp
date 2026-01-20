@@ -169,7 +169,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
    */
   auto offset_decompressor = _string_offsets->create_base_decompressor();
   auto decompressed_strings = std::vector<pmr_string>();
-  for (auto offset_index = size_t{0u}; offset_index < offset_decompressor->size(); ++offset_index) {
+  for (auto offset_index = size_t{0}; offset_index < offset_decompressor->size(); ++offset_index) {
     auto start_char_offset = offset_decompressor->get(offset_index);
     auto end_char_offset = size_t{0};
     if (offset_index + 1 == offset_decompressor->size()) {
@@ -233,7 +233,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   }
 
   // We use the string method since we handle a char-vector (even though the data is no necessarily string data).
-  _decompress_block_to_bytes(block_index, decompressed_data, 0u);
+  _decompress_block_to_bytes(block_index, decompressed_data, 0);
 
   /**
     * In the case of the last block, the decompressed data is possibly smaller than _block_size (its size equals
@@ -472,7 +472,7 @@ size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode /*mode*/) co
   // size of NULL values vector) or the actual size is already stored (e.g., data_size()).
 
   // The null value vector is only stored if there is at least 1 null value in the segment.
-  auto null_value_vector_size = size_t{0u};
+  auto null_value_vector_size = size_t{0};
   if (_null_values) {
     null_value_vector_size = _null_values->capacity() / CHAR_BIT;
   }

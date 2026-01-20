@@ -1,6 +1,12 @@
-#include <filesystem>
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -8,14 +14,15 @@
 
 #include "cxxopts.hpp"
 
+#include "abstract_table_generator.hpp"
+#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
 #include "storage/constraints/constraint_utils.hpp"
-#include "types.hpp"
-#include "utils/performance_warning.hpp"
+#include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
 /**
@@ -28,6 +35,7 @@
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
+namespace {
 void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   // Get all tables.
   const auto& aka_name_table = table_info_by_name.at("aka_name").table;
@@ -142,18 +150,22 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
   foreign_key_constraint(title_table, {"kind_id"}, kind_type_table, {"id"});
 }
 
+}  // namespace
+
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Join Order Benchmark");
 
-  const auto DEFAULT_TABLE_PATH = "imdb_data";
-  const auto DEFAULT_QUERY_PATH = "third_party/join-order-benchmark";
+  constexpr auto DEFAULT_TABLE_PATH = "imdb_data";
+  constexpr auto DEFAULT_QUERY_PATH = "third_party/join-order-benchmark";
 
+  // NOLINTBEGIN(whitespace/line_length)
   // clang-format off
   cli_options.add_options()
-  ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH)) // NOLINT
-  ("query_path", "Directory containing the .sql files of the Join Order Benchmark", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH)) // NOLINT
-  ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
+  ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH))
+  ("query_path", "Directory containing the .sql files of the Join Order Benchmark", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH))
+  ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all"));
   // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   auto benchmark_config = std::shared_ptr<BenchmarkConfig>{};
   auto query_path = std::string{};
@@ -186,6 +198,8 @@ int main(int argc, char* argv[]) {
    * unzipping is straight forward in Python (and we suspect in C++ it might be... cumbersome).
    */
   const auto setup_imdb_command = "python3 scripts/setup_imdb.py " + table_path;
+  // On Linux, system is thread safe https://man7.org/linux/man-pages/man3/system.3.html
+  // NOLINTNEXTLINE(concurrency-mt-unsafe)
   const auto setup_imdb_return_code = std::system(setup_imdb_command.c_str());
   Assert(setup_imdb_return_code == 0, "setup_imdb.py failed. Did you run the benchmark from the project root dir?");
 

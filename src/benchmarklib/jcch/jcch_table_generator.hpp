@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "abstract_table_generator.hpp"
 #include "file_based_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -15,9 +16,7 @@ namespace hyrise {
 // FileBasedTableGenerator (for the csv loading part). One could argue if composition would be more appropriate
 // here. The relationship between FileBasedTableGenerator and JCCHTableGenerator does not really satisfy the Liskov
 // substitution principle. However, it makes reusing the TPC-H definitions much easier.
-class JCCHTableGenerator : virtual public AbstractTableGenerator,
-                           private TPCHTableGenerator,
-                           private FileBasedTableGenerator {
+class JCCHTableGenerator : public TPCHTableGenerator {
  public:
   // Convenience constructor for creating a JCCHTableGenerator without a benchmarking context.
   explicit JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
@@ -37,6 +36,9 @@ class JCCHTableGenerator : virtual public AbstractTableGenerator,
   using TPCHTableGenerator::_sort_order_by_table;
 
   std::string _dbgen_path;
+
+ private:
+  FileBasedTableGenerator _file_based_table_generator;
 };
 
 }  // namespace hyrise

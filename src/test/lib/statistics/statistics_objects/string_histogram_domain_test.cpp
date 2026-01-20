@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include "base_test.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
 

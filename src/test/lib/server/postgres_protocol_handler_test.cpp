@@ -1,7 +1,14 @@
-#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "mock_socket.hpp"
+#include "server/postgres_message_type.hpp"
 #include "server/postgres_protocol_handler.hpp"
 
 namespace hyrise {

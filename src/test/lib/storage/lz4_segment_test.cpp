@@ -1,14 +1,17 @@
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/lz4_segment/lz4_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
@@ -16,7 +19,7 @@ namespace hyrise {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
-  static constexpr auto row_count = LZ4Encoder::_block_size + size_t{1000};
+  static constexpr auto row_count = LZ4Encoder::BLOCK_SIZE + size_t{1000};
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
   std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>(true);
 };
@@ -182,7 +185,7 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneStringSegment) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
-  const auto block_size = LZ4Encoder::_block_size;
+  const auto block_size = LZ4Encoder::BLOCK_SIZE;
   const auto size_diff = size_t{1000};
   static_assert(block_size > size_diff, "LZ4 block size is too small.");
 
@@ -249,7 +252,7 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
-  const auto block_size = LZ4Encoder::_block_size;
+  const auto block_size = LZ4Encoder::BLOCK_SIZE;
   constexpr auto num_rows = 100'000 / 20;
 
   for (auto index = size_t{0}; index < num_rows; ++index) {
@@ -296,7 +299,7 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {
-  const auto block_size = LZ4Encoder::_block_size;
+  const auto block_size = LZ4Encoder::BLOCK_SIZE;
   const auto num_rows = 100'000 / 4;
 
   for (auto index = size_t{0}; index < num_rows; ++index) {

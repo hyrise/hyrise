@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "abstract_read_write_operator.hpp"
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"

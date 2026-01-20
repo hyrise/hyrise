@@ -1,6 +1,14 @@
+#include <memory>
+#include <string>
+
 #include "base_test.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
+#include "server/postgres_protocol_handler.hpp"
 #include "server/query_handler.hpp"
+#include "server/server_types.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

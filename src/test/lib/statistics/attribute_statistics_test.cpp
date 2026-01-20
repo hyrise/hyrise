@@ -1,3 +1,9 @@
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/distinct_value_count.hpp"
@@ -5,6 +11,7 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

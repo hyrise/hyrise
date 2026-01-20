@@ -25,8 +25,6 @@ class ARTNode : private Noncopyable {
  public:
   ARTNode() = default;
 
-  virtual ~ARTNode() = default;
-
   virtual std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
                                                                size_t depth) const = 0;
   virtual std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
@@ -43,7 +41,7 @@ class ARTNode : private Noncopyable {
  *
  * _partial_key[i] is the partial_key for child _children[i]
  *
- * The default value of the _partial_keys array is 255u
+ * The default value of the _partial_keys array is 255
  */
 class ARTNode4 final : public ARTNode {
   friend class AdaptiveRadixTreeIndexTest_BulkInsert_Test;
@@ -79,7 +77,7 @@ class ARTNode4 final : public ARTNode {
  *
  * _partial_key[i] is the partial_key for child _children[i]
  *
- * The default value of the _partial_keys array is 255u
+ * The default value of the _partial_keys array is 255
  *
  */
 
@@ -111,7 +109,7 @@ class ARTNode16 final : public ARTNode {
  *
  * _index_to_child[partial_key] stores the index for the child in _children
  *
- * The default value of the _index_to_child array is 255u. This is safe as the maximum value set in _index_to_child
+ * The default value of the _index_to_child array is 255. This is safe as the maximum value set in _index_to_child
  * will
  * be
  * 47 as this is the maximum index for _children.
@@ -193,9 +191,9 @@ class Leaf final : public ARTNode {
   explicit Leaf(std::vector<ChunkOffset>::const_iterator& lower, std::vector<ChunkOffset>::const_iterator& upper);
 
   std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/,
-                                                       size_t) const override;
+                                                       size_t /*depth*/) const override;
   std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/,
-                                                       size_t) const override;
+                                                       size_t /*depth*/) const override;
   std::vector<ChunkOffset>::const_iterator begin() const override;
   std::vector<ChunkOffset>::const_iterator end() const override;
 

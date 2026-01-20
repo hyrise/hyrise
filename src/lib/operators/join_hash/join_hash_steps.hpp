@@ -38,7 +38,7 @@ namespace hyrise {
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
 // in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
 // track all occurrences of a value as that first position might be disqualified later.
-enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
+enum class JoinHashBuildMode : uint8_t { AllPositions, ExistenceOnly };
 
 using Hash = size_t;
 
@@ -176,7 +176,7 @@ class PosHashTable {
 
   // For a value seen on the probe side, return an iterator pair into the matching positions on the build side
   template <typename InputType>
-  const std::pair<RowIDPosList::const_iterator, RowIDPosList::const_iterator> find(const InputType& value) const {
+  std::pair<RowIDPosList::const_iterator, RowIDPosList::const_iterator> find(const InputType& value) const {
     DebugAssert(_mode == JoinHashBuildMode::AllPositions,
                 "`find()` is invalid for ExistenceOnly mode, use `contains()`.");
     DebugAssert(_unified_pos_list, "_unified_pos_list not set - was `finalize()` called?");
@@ -230,7 +230,7 @@ class PosHashTable {
 
   JoinHashBuildMode _mode{};
   OffsetHashTable _offset_hash_table{};
-  std::vector<SmallPosList> _small_pos_lists{};
+  std::vector<SmallPosList> _small_pos_lists;
 
   std::optional<UnifiedPosList> _unified_pos_list{};
 };
@@ -249,7 +249,7 @@ class PosHashTable {
 // Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
 // We did not yet work on this because the Bloom filter was a byproduct of a research project and we have not had the
 // resources to optimize it at the time.
-static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
+static constexpr auto BLOOM_FILTER_SIZE = uint32_t{1} << uint8_t{20};
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
@@ -260,7 +260,7 @@ using BloomFilter = boost::dynamic_bitset<>;
 // ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
 // negation (~x). As the negation is surprisingly expensive, we create a static empty Bloom filter and reference
 // it where needed. Having a Bloom filter that always returns true avoids a branch in the hot loop.
-static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
+static const auto all_true_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 // @param in_table             Table to materialize
 // @param column_id            Column within that table to materialize
@@ -275,7 +275,7 @@ template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                     BloomFilter& output_bloom_filter,
-                                    const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+                                    const BloomFilter& input_bloom_filter = all_true_bloom_filter) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
@@ -285,7 +285,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   radix_container.resize(chunk_count);
 
   // Fan-out
-  const size_t num_radix_partitions = 1ull << radix_bits;
+  const auto num_radix_partitions = size_t{1} << radix_bits;
 
   // Currently, we just do one pass
   const auto pass = size_t{0};
@@ -523,7 +523,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+                                     const BloomFilter& /*input_bloom_filter*/ = all_true_bloom_filter) {
   if (radix_container.empty()) {
     return radix_container;
   }

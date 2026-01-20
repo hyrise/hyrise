@@ -42,9 +42,8 @@ std::enable_if_t<std::is_same_v<int64_t, Source> && std::is_same_v<int32_t, Targ
 lossless_cast(const Source& source) {
   if (source < std::numeric_limits<int32_t>::min() || source > std::numeric_limits<int32_t>::max()) {
     return std::nullopt;
-  } else {
-    return static_cast<Target>(source);
   }
+  return static_cast<Target>(source);
 }
 
 // int32_t to int64_t
@@ -57,14 +56,14 @@ lossless_cast(const Source& source) {
 // NULL to anything but NULL
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<NullValue, Source> && !std::is_same_v<NullValue, Target>, std::optional<Target>>
-lossless_cast(const Source& source) {
+lossless_cast(const Source& /*source*/) {
   return std::nullopt;
 }
 
 // Anything but NULL to NULL
 template <typename Target, typename Source>
 std::enable_if_t<!std::is_same_v<NullValue, Source> && std::is_same_v<NullValue, Target>, std::optional<Target>>
-lossless_cast(const Source& source) {
+lossless_cast(const Source& /*source*/) {
   return std::nullopt;
 }
 
@@ -90,7 +89,7 @@ std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target
 //                was not.
 template <typename Target, typename Source>
 std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_floating_point_v<Target>, std::optional<Target>>
-lossless_cast(const Source& source) {
+lossless_cast(const Source& /*source*/) {
   return std::nullopt;
 }
 
@@ -108,7 +107,7 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target
 //                functions do not openly support such a conversion
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
-lossless_cast(const Source& source) {
+lossless_cast(const Source& /*source*/) {
   return std::nullopt;
 }
 

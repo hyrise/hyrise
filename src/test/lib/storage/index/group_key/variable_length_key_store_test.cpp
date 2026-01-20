@@ -1,9 +1,7 @@
 #include <algorithm>
+#include <cstdint>
 #include <iterator>
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
+#include <stdexcept>
 #include <vector>
 
 #include "base_test.hpp"

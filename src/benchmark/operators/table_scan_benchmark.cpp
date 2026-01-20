@@ -1,28 +1,35 @@
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 
+#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
-namespace hyrise {
-
+namespace {
+using namespace hyrise;                 // NOLINT(build/namespaces)
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
+void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
                               ColumnID left_column_id, const PredicateCondition predicate_condition,
-                              const AllParameterVariant right_parameter) {
-  const auto left_operand = pqp_column_(left_column_id, in->get_output()->column_data_type(left_column_id),
-                                        in->get_output()->column_is_nullable(left_column_id), "");
+                              const AllParameterVariant& right_parameter) {
+  const auto left_operand = pqp_column_(left_column_id, input->get_output()->column_data_type(left_column_id),
+                                        input->get_output()->column_is_nullable(left_column_id), "");
   auto right_operand = std::shared_ptr<AbstractExpression>{};
   if (right_parameter.type() == typeid(ColumnID)) {
     const auto right_column_id = boost::get<ColumnID>(right_parameter);
-    right_operand = pqp_column_(right_column_id, in->get_output()->column_data_type(right_column_id),
-                                in->get_output()->column_is_nullable(right_column_id), "");
+    right_operand = pqp_column_(right_column_id, input->get_output()->column_data_type(right_column_id),
+                                input->get_output()->column_is_nullable(right_column_id), "");
 
   } else {
     right_operand = value_(boost::get<AllTypeVariant>(right_parameter));
@@ -30,13 +37,17 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
 
   const auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
 
-  auto warm_up = std::make_shared<TableScan>(in, predicate);
+  auto warm_up = std::make_shared<TableScan>(input, predicate);
   warm_up->execute();
   for (auto _ : state) {
-    auto table_scan = std::make_shared<TableScan>(in, predicate);
+    auto table_scan = std::make_shared<TableScan>(input, predicate);
     table_scan->execute();
   }
 }
+
+}  // namespace
+
+namespace hyrise {
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
   _clear_cache();

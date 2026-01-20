@@ -47,9 +47,14 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(
 template <typename T, typename SegmentType>
 class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
+  SegmentAccessor(const SegmentAccessor&) = default;
+  SegmentAccessor(SegmentAccessor&&) = default;
+  SegmentAccessor& operator=(const SegmentAccessor&) = default;
+  SegmentAccessor& operator=(SegmentAccessor&&) = default;
+
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  std::optional<T> access(ChunkOffset offset) const final {
     ++_accesses;
     return _segment.get_typed_value(offset);
   }
@@ -73,9 +78,9 @@ template <typename T>
 class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
-      : _segment{segment}, _table{segment.referenced_table()}, _accessors{1} {}
+      : _segment{segment}, _table{segment.referenced_table()} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  std::optional<T> access(ChunkOffset offset) const final {
     const auto& row_id = (*_segment.pos_list())[offset];
     if (row_id.is_null()) {
       return std::nullopt;
@@ -100,18 +105,23 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
   const ReferenceSegment& _segment;
   const std::shared_ptr<const Table> _table;
   // Serves as a "dictionary" from ChunkID to Accessor. Lazily increased in size as Chunks are accessed.
-  mutable std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors;
+  mutable std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors{1};
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above
 template <typename T, typename Segment>
 class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
+  SingleChunkReferenceSegmentAccessor(const SingleChunkReferenceSegmentAccessor&) = default;
+  SingleChunkReferenceSegmentAccessor(SingleChunkReferenceSegmentAccessor&&) = default;
+  SingleChunkReferenceSegmentAccessor& operator=(const SingleChunkReferenceSegmentAccessor&) = default;
+  SingleChunkReferenceSegmentAccessor& operator=(SingleChunkReferenceSegmentAccessor&&) = default;
+
   explicit SingleChunkReferenceSegmentAccessor(const AbstractPosList& pos_list, const ChunkID chunk_id,
                                                const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  std::optional<T> access(ChunkOffset offset) const final {
     ++_accesses;
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
     return _segment.get_typed_value(referenced_chunk_offset);
@@ -131,7 +141,8 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
 // Accessor for ReferenceSegments that reference only NULL values
 template <typename T>
 class NullAccessor final : public AbstractSegmentAccessor<T> {
-  const std::optional<T> access(ChunkOffset offset) const final {
+ public:
+  std::optional<T> access(ChunkOffset /*offset*/) const final {
     return std::nullopt;
   }
 };

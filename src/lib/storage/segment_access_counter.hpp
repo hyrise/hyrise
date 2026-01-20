@@ -21,9 +21,9 @@ class SegmentAccessCounter {
   friend class SegmentAccessCounterTest;
 
  public:
-  using CounterType = std::atomic_uint64_t;
+  using CounterType = std::atomic<uint64_t>;
 
-  enum class AccessType {
+  enum class AccessType : uint8_t {
     Point /* Single point access */,
     Sequential /* 0, 1, 1, 2, 3, 4 */,
     Monotonic /* 0, 0, 1, 2, 4, 8, 17 */,
@@ -39,8 +39,14 @@ class SegmentAccessCounter {
       {AccessType::Dictionary, "Dictionary"}};
 
   SegmentAccessCounter();
+  ~SegmentAccessCounter() = default;
   SegmentAccessCounter(const SegmentAccessCounter& other);
   SegmentAccessCounter& operator=(const SegmentAccessCounter& other);
+
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted
+  // You can implement them, but you should think about the implications for this class.
+  SegmentAccessCounter(SegmentAccessCounter&&) = delete;
+  SegmentAccessCounter& operator=(SegmentAccessCounter&&) = delete;
 
   bool operator==(const SegmentAccessCounter& other) const;
   bool operator!=(const SegmentAccessCounter& other) const;
@@ -66,7 +72,7 @@ class SegmentAccessCounter {
   // 3 (sequentially decreasing), difference between two neighboring elements is -1 or 0.
   // 4 (monotonically decreasing)
   // 5 (random access)
-  enum class AccessPattern {
+  enum class AccessPattern : uint8_t {
     Point,
     SequentiallyIncreasing,
     MonotonicallyIncreasing,

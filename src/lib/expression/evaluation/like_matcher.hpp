@@ -29,7 +29,7 @@ class LikeMatcher {
  public:
   explicit LikeMatcher(const pmr_string& pattern, const PredicateCondition predicate_condition);
 
-  enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
+  enum class Wildcard : uint8_t { SingleChar /* '_' */, AnyChars /* '%' */ };
   using PatternToken = std::variant<pmr_string, Wildcard>;  // Keep type order, users rely on which()
   using PatternTokens = std::vector<PatternToken>;
 
@@ -171,7 +171,7 @@ class LikeMatcher {
       auto searchers = std::vector<Searcher>{};
       searchers.reserve(contains_strs.size());
       for (const auto& contains_str : contains_strs) {
-        searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
+        searchers.emplace_back(contains_str.begin(), contains_str.end());
       }
 
       functor([&](const auto& string) {

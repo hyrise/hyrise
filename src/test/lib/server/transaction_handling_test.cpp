@@ -1,5 +1,12 @@
+#include <memory>
+#include <string>
+
 #include "base_test.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "server/query_handler.hpp"
+#include "server/server_types.hpp"
+#include "types.hpp"
+#include "utils/invalid_input_exception.hpp"
 
 namespace hyrise {
 

@@ -10,11 +10,11 @@
 
 #include "types.hpp"
 #include "utils/singleton.hpp"
+#include "abstract_benchmark_item_runner.hpp"
 
 namespace hyrise {
 
-class AbstractBenchmarkItemRunner;
-
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,bugprone-macro-parentheses)
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid ugly mangled names. Use
 // EXPORT in the implementation file of your plugin.
 // clang-format off
@@ -25,6 +25,7 @@ class AbstractBenchmarkItemRunner;
   }                                                         \
   static_assert(true, "End call of macro with a semicolon.")
 // clang-format on
+// NOLINTEND(cppcoreguidelines-macro-usage,bugprone-macro-parentheses)
 
 using PluginFunctionName = std::string;
 using PluginFunctionPointer = std::function<void(void)>;
@@ -34,6 +35,7 @@ using PostBenchmarkHook = std::function<void(nlohmann::json& report)>;
 // AbstractPlugin is the abstract super class for all plugins. An example implementation can be found under
 // test/utils/test_plugin.cpp. Usually plugins are implemented as singletons because there should not be multiple
 // instances of them as they would compete against each other.
+
 class AbstractPlugin {
  public:
   virtual ~AbstractPlugin() = default;

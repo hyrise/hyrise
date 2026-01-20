@@ -1,15 +1,15 @@
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "lib/storage/encoding_test.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_encoding_utils.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
-#include "storage/value_segment/value_segment_iterable.hpp"
 
 namespace hyrise {
 

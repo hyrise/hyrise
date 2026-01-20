@@ -152,12 +152,12 @@ constexpr RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 // The Scheduler currently supports just these two priorities.
-enum class SchedulePriority {
+enum class SchedulePriority : uint8_t {
   Default = 1,  // Schedule task of normal priority.
   High = 0      // Schedule task of high priority, subject to be preferred in scheduling.
 };
 
-enum class PredicateCondition {
+enum class PredicateCondition : uint8_t {
   Equals,
   NotEquals,
   LessThan,
@@ -207,39 +207,39 @@ PredicateCondition conditions_to_between(PredicateCondition lower, PredicateCond
 //                      dropped. This behavior mirrors NOT IN.
 // AntiNullAsFalse:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
 //                      dropped. This behavior mirrors NOT EXISTS
-enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
+enum class JoinMode : uint8_t { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
 bool is_semi_or_anti_join(JoinMode join_mode);
 
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,
 // see union_positions.hpp for details.
-enum class SetOperationMode { Unique, All, Positions };
+enum class SetOperationMode : uint8_t { Unique, All, Positions };
 
-enum class SortMode { AscendingNullsFirst, DescendingNullsFirst, AscendingNullsLast, DescendingNullsLast };
+enum class SortMode : uint8_t { AscendingNullsFirst, DescendingNullsFirst, AscendingNullsLast, DescendingNullsLast };
 
-enum class TableType { References, Data };
+enum class TableType : uint8_t { References, Data };
 
-enum class DescriptionMode { SingleLine, MultiLine };
+enum class DescriptionMode : uint8_t { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
 
 enum class RollbackReason : bool { User, Conflict };
 
-enum class MemoryUsageCalculationMode { Sampled, Full };
+enum class MemoryUsageCalculationMode : uint8_t { Sampled, Full };
 
 enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
 
-enum class MetaTableChangeType { Insert, Delete, Update };
+enum class MetaTableChangeType : uint8_t { Insert, Delete, Update };
 
 enum class AutoCommit : bool { Yes = true, No = false };
 
-enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
+enum class DatetimeComponent : uint8_t { Year, Month, Day, Hour, Minute, Second };
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
 // AnySegmentIterators that use virtual method calls.
-enum class EraseTypes { OnlyInDebugBuild, Always };
+enum class EraseTypes : uint8_t { OnlyInDebugBuild, Always };
 
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
@@ -257,13 +257,13 @@ inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefiniti
 class Noncopyable {
  public:
   Noncopyable(const Noncopyable&) = delete;
-  const Noncopyable& operator=(const Noncopyable&) = delete;
+  Noncopyable& operator=(const Noncopyable&) = delete;
+  virtual ~Noncopyable() = default;
 
  protected:
   Noncopyable() = default;
   Noncopyable(Noncopyable&&) noexcept = default;
   Noncopyable& operator=(Noncopyable&&) noexcept = default;
-  ~Noncopyable() = default;
 };
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value

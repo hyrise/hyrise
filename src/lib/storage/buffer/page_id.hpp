@@ -19,13 +19,13 @@ constexpr uint64_t OS_PAGE_SIZE = 4096;
 // Page sizes are always a multiple of the OS page size and increase by powers of two.
 // The smallest page size is 16 KiB on Mac OS and 4 KiB on Linux.
 #ifdef __APPLE__
-enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
+enum class PageSizeType : uint8_t { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #elif __linux__
-enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
+enum class PageSizeType : uint8_t { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #endif
 
 // Get the number of bytes for a given PageSizeType.
-constexpr inline uint64_t bytes_for_size_type(const PageSizeType size) {
+constexpr uint64_t bytes_for_size_type(const PageSizeType size) {
   // We assume that the OS page size is either 4 KiB on Linux or 16 KiB on Mac OS.
   // The page size types increase by power of two.
   return OS_PAGE_SIZE << static_cast<uint64_t>(size);
@@ -49,10 +49,10 @@ constexpr uint64_t PAGE_SIZE_TYPE_BITS =
  * PageIDs are used for addressing pages. They consist of a validity flag, a PageSizeType, and an index. A PageID can be unambiguously
  * converted into a virtual address and back. The valid flag indicates that the page is stored in the buffer pool. Otherwise, the page
  * does not exist or the virtual memory address is outside of the buffer pool.
- * 
- * For the implementation, we use C++ bitfields to compress multiple fields into a single 64-bit values without manual bit shifting. 
- * The valid flag is stored in the most significant bit. The PageSizeType is stored in the next PAGE_SIZE_TYPE_BITS bits. The index 
- * is stored in the remaining bits. The state and address of each page can be accessed via the PageSizeType and the index. 
+ *
+ * For the implementation, we use C++ bitfields to compress multiple fields into a single 64-bit values without manual bit shifting.
+ * The valid flag is stored in the most significant bit. The PageSizeType is stored in the next PAGE_SIZE_TYPE_BITS bits. The index
+ * is stored in the remaining bits. The state and address of each page can be accessed via the PageSizeType and the index.
 */
 struct PageID {
   using PageIDType = uint64_t;
@@ -91,7 +91,7 @@ struct PageID {
  private:
   PageIDType _valid : 1;
   PageIDType _size_type : PAGE_SIZE_TYPE_BITS;
-  PageIDType _index : sizeof(PageIDType) * std::numeric_limits<unsigned char>::digits - PAGE_SIZE_TYPE_BITS - 1;
+  PageIDType _index : (sizeof(PageIDType) * std::numeric_limits<unsigned char>::digits) - PAGE_SIZE_TYPE_BITS - 1;
 };
 
 static_assert(sizeof(PageID) == 8, "PageID must be 64 bit");

@@ -1,9 +1,19 @@
+#include <exception>
+#include <memory>
+#include <stdexcept>
+#include <unordered_map>
+
 #include "nlohmann/json.hpp"
 
+#include "abstract_benchmark_item_runner.hpp"
 #include "base_test.hpp"
+#include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "plugin_test_utils.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
+#include "tpch/tpch_constants.hpp"
+#include "utils/log_manager.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace hyrise {
 

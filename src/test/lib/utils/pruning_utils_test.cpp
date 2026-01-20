@@ -1,4 +1,8 @@
+#include <stdexcept>
+#include <vector>
+
 #include "base_test.hpp"
+#include "types.hpp"
 #include "utils/pruning_utils.hpp"
 
 namespace hyrise {

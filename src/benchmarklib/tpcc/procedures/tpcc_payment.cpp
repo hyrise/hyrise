@@ -19,40 +19,40 @@
 
 namespace hyrise {
 
-TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTPCCProcedure(sql_executor) {
+TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& init_sql_executor)
+    : AbstractTPCCProcedure(init_sql_executor) {
   auto warehouse_dist = std::uniform_int_distribution<>{1, num_warehouses};
-  w_id = warehouse_dist(_random_engine);
+  w_id = warehouse_dist(random_engine);
 
   auto district_dist = std::uniform_int_distribution<>{1, 10};
-  d_id = district_dist(_random_engine);
+  d_id = district_dist(random_engine);
 
   c_w_id = w_id;  // NOLINT(cppcoreguidelines-prefer-member-initializer)
   c_d_id = d_id;  // NOLINT(cppcoreguidelines-prefer-member-initializer)
 
   // Use home warehouse in 85% of cases, otherwise select a random one
   auto home_warehouse_dist = std::uniform_int_distribution<>{1, 100};
-  if (num_warehouses > 2 && home_warehouse_dist(_random_engine) > 85) {
+  if (num_warehouses > 2 && home_warehouse_dist(random_engine) > 85) {
     // Choose remote warehouse.
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
     do {
-      c_w_id = warehouse_dist(_random_engine);
+      c_w_id = warehouse_dist(random_engine);
     } while (c_w_id == w_id);
-    c_d_id = district_dist(_random_engine);
+    c_d_id = district_dist(random_engine);
   }
 
   // Select 6 out of 10 customers by last name.
   auto customer_selection_method_dist = std::uniform_int_distribution<>{1, 10};
-  select_customer_by_name = customer_selection_method_dist(_random_engine) <= 6;
+  select_customer_by_name = customer_selection_method_dist(random_engine) <= 6;
   if (select_customer_by_name) {
-    customer = pmr_string{_tpcc_random_generator.last_name(_tpcc_random_generator.nurand(255, 0, 999))};
+    customer = pmr_string{tpcc_random_generator.last_name(tpcc_random_generator.nurand(255, 0, 999))};
   } else {
-    customer = static_cast<int32_t>(_tpcc_random_generator.nurand(1023, 1, 3000));
+    customer = static_cast<int32_t>(tpcc_random_generator.nurand(1023, 1, 3000));
   }
 
   // Generate payment information
   std::uniform_real_distribution<float> amount_dist{1.f, 5000.f};
-  h_amount = amount_dist(_random_engine);
+  h_amount = amount_dist(random_engine);
   h_date = static_cast<int32_t>(std::time(nullptr));
 }
 

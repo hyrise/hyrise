@@ -110,15 +110,15 @@ class ExpressionResult : public BaseExpressionResult {
    * overhead
    */
   template <typename Functor>
-  void as_view(const Functor& fn) const {
+  void as_view(const Functor& functor) const {
     if (size() == 1) {
-      fn(ExpressionResultLiteral(values.front(), is_nullable() && nulls.front()));
+      functor(ExpressionResultLiteral(values.front(), is_nullable() && nulls.front()));
     } else if (nulls.size() == 1 && nulls.front()) {
-      fn(ExpressionResultLiteral(T{}, true));
+      functor(ExpressionResultLiteral(T{}, true));
     } else if (!is_nullable()) {
-      fn(ExpressionResultNonNullSeries(values));
+      functor(ExpressionResultNonNullSeries(values));
     } else {
-      fn(ExpressionResultNullableSeries(values, nulls));
+      functor(ExpressionResultNullableSeries(values, nulls));
     }
   }
 

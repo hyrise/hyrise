@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_statistics_object.hpp"
+#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -37,6 +38,10 @@ class RangeFilter : public AbstractStatisticsObject, public std::enable_shared_f
 
   explicit RangeFilter(std::vector<std::pair<T, T>> init_ranges);
 
+  constexpr DataType data_type() const override {
+    return data_type_from_type<T>();
+  }
+
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary,
                                                       uint32_t max_ranges_count = DEFAULT_MAX_RANGES_COUNT);
 
@@ -49,6 +54,10 @@ class RangeFilter : public AbstractStatisticsObject, public std::enable_shared_f
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<const AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
+
+  std::shared_ptr<const AbstractStatisticsObject> pruned(
+      const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2) const override;
 
   bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;

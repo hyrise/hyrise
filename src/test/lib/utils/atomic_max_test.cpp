@@ -1,4 +1,8 @@
+#include <atomic>
+#include <cstdint>
+
 #include "base_test.hpp"
+#include "types.hpp"
 #include "utils/atomic_max.hpp"
 
 namespace hyrise {

@@ -120,7 +120,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     std::getline(stat_file, cpu_line);
     stat_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/stat (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/stat ("} + fail.what() + ").");
   }
 
   const auto cpu_ticks = _parse_value_string(cpu_line);
@@ -206,7 +206,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
     }
     meminfo_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/meminfo (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/meminfo ("} + fail.what() + ").");
   }
 
   return memory_usage;
@@ -260,7 +260,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 
     self_status_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/self/status (" + fail.what() + ").");
+    Fail(std::string{"Failed to read /proc/self/status ("} + fail.what() + ").");
   }
 
   return memory_usage;

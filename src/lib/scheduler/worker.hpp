@@ -50,9 +50,6 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   // cautious when using this method in any other context (see comments in #2526).
   uint64_t num_finished_tasks() const;
 
-  void operator=(const Worker&) = delete;
-  void operator=(Worker&&) = delete;
-
  protected:
   enum class AllowSleep : bool { Yes = true, No = false };
 
@@ -69,8 +66,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
    */
   void _set_affinity();
 
-  std::shared_ptr<AbstractTask> _next_task{};
-  std::shared_ptr<TaskQueue> _queue{};
+  std::shared_ptr<AbstractTask> _next_task;
+  std::shared_ptr<TaskQueue> _queue;
   WorkerID _id{0};
   CpuID _cpu_id{0};
   std::thread _thread;
@@ -78,7 +75,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
 
   bool _active{true};
 
-  std::vector<uint32_t> _random{};
+  std::vector<uint32_t> _random;
   size_t _next_random{0};
 };
 
