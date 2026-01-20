@@ -106,4 +106,22 @@ TEST_F(CsvOptionsTest, ParseTPCHLineItem) {
                   TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference);
 }
 
+TEST_F(CsvOptionsTest, ParseTPCHRegion) {
+  const auto expected_table = load_table("resources/test_data/tbl/tpch/sf-0.001/region.tbl");
+
+  // Create the table to have the proper columns ready for import.
+  const auto create_table_statement =
+      "CREATE TABLE region ( r_regionkey INTEGER not null, r_name CHAR(25) not null, r_comment VARCHAR(152) not null );";
+  const auto [create_status, create_tables] =
+      SQLPipelineBuilder(create_table_statement).create_pipeline().get_result_tables();
+  EXPECT_EQ(create_status, SQLPipelineStatus::Success);
+
+  const auto sql_statement =
+      "COPY region FROM 'resources/test_data/csv/tpch/region.csv' WITH (FORMAT CSV, DELIMITER '|')";
+  const auto [status, tables] = SQLPipelineBuilder(sql_statement).create_pipeline().get_result_tables();
+  EXPECT_EQ(status, SQLPipelineStatus::Success);
+  EXPECT_TABLE_EQ(Hyrise::get().storage_manager.get_table("region"), expected_table, OrderSensitivity::Yes,
+                  TypeCmpMode::Strict, FloatComparisonMode::AbsoluteDifference);
+}
+
 }  // namespace hyrise
