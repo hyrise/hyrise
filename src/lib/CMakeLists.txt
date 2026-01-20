@@ -2,6 +2,35 @@
 # Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
 # scope
 include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
+
+# We have to add a few compile flags, so BOLT can work:
+# > BOLT operates on X86-64 and AArch64 ELF binaries. At the minimum, the binaries should have an unstripped symbol
+# > table, and, to get maximum performance gains, they should be linked with relocations (--emit-relocs or -q linker
+# > flag).
+# > NOTE: BOLT is currently incompatible with the -freorder-blocks-and-partition compiler option. Since GCC8 enables
+# > this option by default, you have to explicitly disable it by adding -fno-reorder-blocks-and-partition flag if you
+# > are compiling with GCC8 or above.
+# https://github.com/llvm/llvm-project/tree/main/bolt
+option(COMPILE_FOR_BOLT "Set to TRUE to build Hyrise for further optimization / instrumentation / profiling with BOLT. Default: FALSE" FALSE)
+if (${COMPILE_FOR_BOLT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options(-fno-reorder-blocks-and-partition)
+    endif()
+    add_link_options(-Wl,--emit-relocs)
+endif()
+
+option(PGO_INSTRUMENT "Set to TRUE to build an instrumented hyrise binary that will generate pgo profile data when run. Default: FALSE" FALSE)
+if (${PGO_INSTRUMENT})
+    add_compile_options(-fprofile-generate)
+    add_link_options(-fprofile-generate)
+endif()
+
+set(PGO_OPTIMIZE "" CACHE PATH "Set to the path to a PGO profile to use PGO")
+if (PGO_OPTIMIZE)
+    add_compile_options(-fprofile-use=${PGO_OPTIMIZE})
+    add_link_options(-fprofile-use=${PGO_OPTIMIZE})
+endif()
+
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES

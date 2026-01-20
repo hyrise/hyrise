@@ -95,9 +95,20 @@ do
   # Checkout and build from scratch, tracking the compile time.
   git checkout "$commit"
   git submodule update --init --recursive
-  echo "Building $commit..."
-  $build_system clean
-  /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
+
+  # If there is a bolt or pgo profile, we should use it.
+  if [ -f ../resources/bolt.fdata ] || [ -f ../resources/libhyrise.profdata ]
+  then
+    echo "Detected bolt.fdata or libhyrise.profdata file, building optimized binary"
+    args="--num-cores $(nproc) --import-profile"
+    [ ! -f ../resources/bolt.fdata ] && args="$args --no-bolt"
+    [ ! -f ../resources/libhyrise.profdata ] && args="$args --no-pgo"
+    /usr/bin/time -p sh -c "( python3 ../scripts/build_pgo_bolt.py $args 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
+  else
+    echo "Building $commit..."
+    $build_system clean
+    /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
+  fi
 
   # Run the benchmarks.
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root.
