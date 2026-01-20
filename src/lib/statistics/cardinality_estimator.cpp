@@ -915,20 +915,33 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
     const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
-  // Since UnionNodes are not really used right now, implementing an involved algorithm to union two TableStatistics
-  // seems unjustified. For now, we just concatenate the two statistics objects
-
   DebugAssert(
       left_input_table_statistics->column_statistics.size() == right_input_table_statistics->column_statistics.size(),
       "Input TableStatistics need to have the same number of columns to perform a union");
+  auto scale_table_statistics = [&](const auto& left, const auto& right) {
+    if (right->row_count == 0) {
+      auto column_statistics = left->column_statistics;
+      return std::make_shared<TableStatistics>(std::move(column_statistics), left->row_count);
+    }
 
-  auto column_statistics = left_input_table_statistics->column_statistics;
+    const auto output_row_count = left->row_count + right->row_count;
+    const auto selectivity = Selectivity{(output_row_count) / left->row_count};
+    const auto column_count = left->column_statistics.size();
+    auto output_column_statistics =
+        std::vector<std::shared_ptr<const BaseAttributeStatistics>>{left->column_statistics.size()};
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      // TODO(anyone): Merge histograms. Scaling histograms does not adjust the distinct counts.
+      // Also we currently do not consider the SetOperation (Positions/All/Unique).
+      output_column_statistics[column_id] = left->column_statistics[column_id]->scaled(selectivity);
+    }
+    return std::make_shared<TableStatistics>(std::move(output_column_statistics), output_row_count);
+  };
 
-  const auto row_count = left_input_table_statistics->row_count + right_input_table_statistics->row_count;
-
-  auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
-
-  return output_table_statistics;
+  // We assume same distribution of values in both inputs and scale the larger input's statistics.
+  if (left_input_table_statistics->row_count >= right_input_table_statistics->row_count) {
+    return scale_table_statistics(left_input_table_statistics, right_input_table_statistics);
+  }
+  return scale_table_statistics(right_input_table_statistics, left_input_table_statistics);
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(

@@ -1,3 +1,6 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -19,6 +22,7 @@
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -39,6 +43,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -136,11 +141,19 @@ class CardinalityEstimatorTest : public BaseTest {
                                               {GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 40)});
 
     g_a = node_g->get_column("a");
+
+    /**
+     * node_h
+     * Has no rows
+     */
+    node_h = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 0,
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 100, 0, 0),
+                                               GenericHistogram<int32_t>::with_single_bin(10, 129, 0, 0)});
   }
 
   CardinalityEstimator estimator{};
   std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b, c_x, c_y, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
-  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g;
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h;
 };
 
 TEST_F(CardinalityEstimatorTest, Aggregate) {
@@ -928,22 +941,63 @@ TEST_F(CardinalityEstimatorTest, Validate) {
 }
 
 TEST_F(CardinalityEstimatorTest, Union) {
-  // Test that UnionNodes sum up the input row counts and return the left input statistics (for now)
+  auto test_cases = std::vector<std::pair<std::shared_ptr<MockNode>, std::shared_ptr<MockNode>>>{
+      {node_a, node_b},  // left input larger
+      {node_b, node_a},  // right input larger
+      {node_h, node_a},  // left input empty
+      {node_a, node_h},  // right input empty
+      {node_h, node_h},  // both inputs empty
+  };
 
-  // clang-format off
-  const auto input_lqp =
-  UnionNode::make(SetOperationMode::Positions,
-    node_a,
-    node_b);
-  // clang-format on
+  for (auto [left_node, right_node] : test_cases) {
+    const auto input_lqp = UnionNode::make(SetOperationMode::Positions, left_node, right_node);
+    const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  EXPECT_DOUBLE_EQ(estimator.estimate_cardinality(input_lqp), 132.0);
+    auto left_rowcount = left_node->table_statistics()->row_count;
+    auto right_rowcount = right_node->table_statistics()->row_count;
 
-  const auto result_statistics = estimator.estimate_statistics(input_lqp);
+    if (left_rowcount < right_rowcount) {
+      std::swap(left_node, right_node);
+      std::swap(left_rowcount, right_rowcount);
+    }
+    const auto& expected_result_rowcount = left_rowcount + right_rowcount;
+    const auto expected_selectivity = std::max(0.0, expected_result_rowcount / left_rowcount);
 
-  ASSERT_EQ(result_statistics->column_statistics.size(), 2);
-  ASSERT_EQ(result_statistics->column_statistics.at(0), node_a->table_statistics()->column_statistics.at(0));
-  ASSERT_EQ(result_statistics->column_statistics.at(1), node_a->table_statistics()->column_statistics.at(1));
+    ASSERT_EQ(result_statistics->column_statistics.size(), 2);
+    EXPECT_DOUBLE_EQ(result_statistics->row_count, expected_result_rowcount);
+
+    const auto& left_table_statistics = left_node->table_statistics();
+    const auto& left_column_statistics = left_table_statistics->column_statistics;
+    const auto& result_column_statistics = result_statistics->column_statistics;
+    const auto& column_count = result_column_statistics.size();
+    ASSERT_EQ(column_count, left_column_statistics.size());
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      ASSERT_EQ(left_table_statistics->column_data_type(column_id), DataType::Int);
+      ASSERT_EQ(result_statistics->column_data_type(column_id), DataType::Int);
+      const auto& input_statistics =
+          static_cast<const AttributeStatistics<int32_t>&>(*left_column_statistics[column_id]);
+      const auto& output_statistics =
+          static_cast<const AttributeStatistics<int32_t>&>(*result_column_statistics[column_id]);
+
+      const auto& input_histogram = input_statistics.histogram;
+      const auto& output_histogram = output_statistics.histogram;
+      const auto& input_bin_count = input_histogram->bin_count();
+      EXPECT_EQ(input_histogram->total_count() * expected_selectivity, output_histogram->total_count());
+      ASSERT_EQ(output_histogram->bin_count(), input_bin_count);
+      for (auto bin_id = BinID{0}; bin_id < input_bin_count; ++bin_id) {
+        const auto& input_bin = input_histogram->bin(bin_id);
+        const auto& output_bin = output_histogram->bin(bin_id);
+        EXPECT_EQ(input_bin.height * expected_selectivity, output_bin.height);
+        EXPECT_EQ(input_bin.distinct_count, output_bin.distinct_count);
+        EXPECT_EQ(input_bin.min, output_bin.min);
+        EXPECT_EQ(input_bin.max, output_bin.max);
+      }
+
+      if (right_rowcount == 0) {
+        EXPECT_EQ(&output_statistics, &input_statistics);
+      }
+    }
+  }
 }
 
 TEST_F(CardinalityEstimatorTest, NonQueryNodes) {

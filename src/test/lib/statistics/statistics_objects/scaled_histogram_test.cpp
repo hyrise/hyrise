@@ -25,7 +25,8 @@ class ScaledHistogramTest : public BaseTestWithParam<DataType> {
   }
 
   template <typename T>
-  static std::shared_ptr<const AbstractHistogram<T>> referenced_histogram(const ScaledHistogram<T>& scaled_histogram) {
+  static const std::shared_ptr<const AbstractHistogram<T>>& referenced_histogram(
+      const ScaledHistogram<T>& scaled_histogram) {
     return scaled_histogram._referenced_histogram;
   }
 
