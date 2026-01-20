@@ -24,14 +24,26 @@ endif()
 # third_party stuff
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
-    add_compile_options(-O0 -fno-inline)
+    add_compile_options(
+        -O0
+        -fno-inline
+    )
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        add_compile_options(-fprofile-arcs -ftest-coverage)
+        add_compile_options(
+            -fprofile-arcs
+            -ftest-coverage
+        )
         set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
-        add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+        add_compile_options(
+            -fprofile-instr-generate
+            -fcoverage-mapping
+        )
+        add_link_options(
+            -fprofile-instr-generate
+            -fcoverage-mapping
+        )
         set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
     else()
         message(FATAL_ERROR "Don't know how to run coverage on your compiler (${CMAKE_CXX_COMPILER_ID}).")
@@ -42,20 +54,57 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-pthread -Wno-unknown-warning-option)
+add_compile_options(
+    -pthread
+    -Wno-unknown-warning-option
+)
 
-# Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported system)
+# Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported
+# system)
 if (NOT "${HYRISE_RELAXED_BUILD}")
-    add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas -Wno-subobject-linkage -Wno-deprecated-dynamic-exception-spec)
-
-    # -Wno-deprecated-dynamic-exception-spec is needed for jemalloc, at least for the older version that we are using
+    add_compile_options(
+        -pthread
+        -Wall
+        -Wextra
+        -pedantic
+        -Werror
+        -Wno-subobject-linkage
+        -Wno-unknown-pragmas
+        -Wno-unused-parameter
+    )
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        add_compile_options(-Weverything -Wshadow-all -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-padded -Wno-global-constructors -Wno-sign-conversion -Wno-exit-time-destructors -Wno-switch-enum -Wno-weak-vtables -Wno-double-promotion -Wno-covered-switch-default -Wno-unused-macros -Wno-newline-eof -Wno-missing-variable-declarations -Wno-weak-template-vtables -Wno-missing-prototypes -Wno-float-equal -Wno-return-std-move-in-c++11 -Wno-unreachable-code-break -Wno-undefined-func-template -Wno-unknown-warning-option -Wno-pass-failed -Wno-ctad-maybe-unsupported -Wno-header-hygiene -Wno-poison-system-directories -Wno-zero-as-null-pointer-constant)
-
-        # We access buffers via pointers / pointer arithmetic in some cases when we know what we do (e.g., uninitialized
-        # vector works like this).
-        add_compile_options(-Wno-unsafe-buffer-usage)
+        add_compile_options(
+            -Weverything
+            -Wno-c++98-compat-pedantic          # We are incompatible with C++98.
+            -Wno-ctad-maybe-unsupported         # Warns on some of the class template argument deductions we use. Could
+                                                # be fixable.
+            -Wno-documentation                  # We do not use Doxygen.
+            -Wno-double-promotion               # We implicitly convert float to double several times.
+            -Wno-exit-time-destructors          # We use declarations that require exit-time destructors.
+            -Wno-float-equal                    # Currently we compare floats for equality or inequality.
+            -Wno-global-constructors            # We use declarations that require global destructors.
+            -Wno-header-hygiene                 # Complains about "using namespace hyrise" in our tests and benchmarks
+                                                # when a unity builds are activated.
+            -Wno-missing-variable-declarations  # Complains about non-static variables. I do not know if fixable.
+            -Wno-missing-prototypes             # Messes with our tests and benchmarks.
+            -Wno-newline-eof                    # Warns about the third_party sql-parser. Please examine.
+            -Wno-padded                         # Of course the compiler adds padding to our classes.
+            -Wno-pass-failed                    # Complains about failed loop unrolling when building release builds
+                                                # with sanitization.
+            -Wno-poison-system-directories      # Only fails on the x86 Mac CI stage. Could be worth a closer look.
+            -Wno-sign-conversion                # Currently we do many implicit conversions that change signedness.
+            -Wno-switch-default                 # Warns if a switch has no default, even if all enum values are
+                                                # covered. Contradicts -Wcovered-switch-default.
+            -Wno-switch-enum                    # We have switches in which we do not want to cover every enum value
+                                                # but use a default.
+            -Wno-undefined-func-template        # Complains about missing explicit instantiation declarations. I do not
+                                                # know if this is fixable.
+            -Wno-unsafe-buffer-usage            # We access buffers via pointers / pointer arithmetic in some cases when
+                                                # we know what we do (e.g., uninitialized vector works like this).
+            -Wno-weak-vtables                   # Some of our base classes have no out-of-line virtual method
+                                                # definitions. I do not know if this is fixable.
+        )
     endif()
 
 else()
@@ -86,7 +135,7 @@ add_subdirectory(bin)
 add_subdirectory(lib)
 add_subdirectory(plugins)
 
-# No clang-tidy for the following subfolders
+# No clang-tidy for the following subfolders:
 set(CMAKE_CXX_CLANG_TIDY "")
 add_subdirectory(benchmark)
 add_subdirectory(test)

@@ -258,9 +258,8 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
       return {std::make_shared<JobTask>([this] {
         _transaction_context->rollback(RollbackReason::User);
       })};
-    default:
-      Fail("Unexpected transaction command!");
   }
+  Fail("Make GCC happy - line never reached.");
 }
 
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
