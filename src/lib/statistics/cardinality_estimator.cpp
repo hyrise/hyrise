@@ -1147,7 +1147,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
     output_column_statistics.reserve(column_count);
     auto scaling_factor = unchanged_statistics->row_count / scaled_statistics->row_count;
 
-    if (isnan(scaling_factor) || isinf(scaling_factor)) {
+    if (std::isnan(scaling_factor) || std::isinf(scaling_factor)) {
       scaling_factor = 1.0;
     }
 
