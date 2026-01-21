@@ -216,6 +216,7 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
       if (!boundary->boundary_is_column_expression) {
         // This value might be a placeholder, which is prioritized lower than values.
         // TODO(lukas): Should we break ties between placeholders based on whether they are inclusive or not?
+        // TODO(lukas): What about uncorrelated subqueries?
         const auto boundary_border_expression = std::dynamic_pointer_cast<ValueExpression>(boundary->border_expression);
         switch (boundary->type) {
           case ColumnBoundaryType::UpperBoundaryInclusive:

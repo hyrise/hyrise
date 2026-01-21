@@ -1118,6 +1118,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           case PredicateCondition::NotLikeInsensitive:
             // Lacking better options, assume a "magic" selectivity for >, >=, <, <=, ... Any number would be equally
             // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
+            // TODO(Lukas): Evaluate whether this makes sense for optimizers on prepared statements, especially in the
+            // context of the index scan rule.
             selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
             break;
 

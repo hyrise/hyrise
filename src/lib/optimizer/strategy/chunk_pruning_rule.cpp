@@ -187,12 +187,12 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
       stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
     }
 
-    // (2.4) Collect predicates with uncorrelated subqueries that we can use for dynamic pruning during execution and
-    //       set them as prunable_subquery_predicates of the respective StoredTableNodes (for more details, see
-    //       get_table.hpp).
-    // (2.4.1) Collect predicates with uncorrelated subqueries that are part of each chain in a new "pseudo" chain. When
-    //         we want to use them for pruning during execution, it is safe to add the chunks pruned by them to the
-    //         already pruned chunks.
+    // (2.4) Collect predicates with uncorrelated subqueries or placeholders that we can use for dynamic pruning
+    //       during execution and set them as prunable_subquery_predicates of the respective StoredTableNodes (for
+    //       more details, see get_table.hpp).
+    // (2.4.1) Collect predicates with uncorrelated subqueries or placeholders that are part of each chain in a new
+    //         "pseudo" chain. When we want to use them for pruning during execution, it is safe to add the chunks
+    //         pruned by them to the already pruned chunks.
     const auto chain_count = predicate_pruning_chains.size();
     auto chain_count_per_subquery_predicate = std::unordered_map<std::shared_ptr<PredicateNode>, uint64_t>{};
     auto prunable_subquery_predicates = std::vector<std::weak_ptr<AbstractLQPNode>>{};
@@ -211,8 +211,9 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
         }
 
         for (auto& argument : predicate->arguments) {
-          if (argument->type == ExpressionType::LQPSubquery &&
-              !static_cast<const LQPSubqueryExpression&>(*argument).is_correlated()) {
+          if ((argument->type == ExpressionType::LQPSubquery &&
+               !static_cast<const LQPSubqueryExpression&>(*argument).is_correlated()) ||
+              argument->type == ExpressionType::Placeholder) {
             /**
              * Count the number of occurrences and add the predicate iff it appears in all chains. Otherwise, we could
              * produce incorrect query results.
