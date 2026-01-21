@@ -33,6 +33,13 @@
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
+namespace {
+// We use the reduce_tlb_pressure option of partition_by_radix for all partitionings that use at least this many bits.
+// This seemed to be a reasonable value in micro-benchmarks. See [#2734](https://github.com/hyrise/hyrise/pull/2734)
+// for a more detailed discussion.
+constexpr auto REDUCE_TLB_PRESSURE_MIN_RADIX_BIT_COUNT = size_t{7};
+}  // namespace
+
 namespace hyrise {
 
 bool JoinHash::supports(const JoinConfiguration config) {
@@ -400,13 +407,23 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
-        // radix partition the build table
+        // Radix-partition the build table.
         if (keep_nulls_build_column) {
-          radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
-              materialized_build_column, histograms_build_column, _radix_bits);
+          if (_radix_bits >= REDUCE_TLB_PRESSURE_MIN_RADIX_BIT_COUNT) {
+            radix_build_column = partition_by_radix<BuildColumnType, HashedType, true, true>(
+                materialized_build_column, histograms_build_column, _radix_bits);
+          } else {
+            radix_build_column = partition_by_radix<BuildColumnType, HashedType, true, false>(
+                materialized_build_column, histograms_build_column, _radix_bits);
+          }
         } else {
-          radix_build_column = partition_by_radix<BuildColumnType, HashedType, false>(
-              materialized_build_column, histograms_build_column, _radix_bits);
+          if (_radix_bits >= REDUCE_TLB_PRESSURE_MIN_RADIX_BIT_COUNT) {
+            radix_build_column = partition_by_radix<BuildColumnType, HashedType, false, true>(
+                materialized_build_column, histograms_build_column, _radix_bits);
+          } else {
+            radix_build_column = partition_by_radix<BuildColumnType, HashedType, false, false>(
+                materialized_build_column, histograms_build_column, _radix_bits);
+          }
         }
 
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.

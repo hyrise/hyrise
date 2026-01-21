@@ -2,13 +2,16 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
 #include <limits>
 #include <memory>
 #include <memory_resource>
 #include <mutex>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
+#include <boost/align/aligned_allocator.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
@@ -26,6 +29,7 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -52,8 +56,8 @@ The original value is used to detect hash collisions.
 */
 template <typename T>
 struct PartitionedElement {
-  RowID row_id;
   T value;
+  RowID row_id;
 };
 
 // A partition is a part of a materialized join column, either on the build or the probe side. The partitions of one
@@ -379,9 +383,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
               values from different inputs (important for Multi Joins).
               */
               if constexpr (is_reference_segment_iterable_v<IterableType>) {
-                *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
+                *elements_iter = PartitionedElement<T>{value.value(), RowID{chunk_id, reference_chunk_offset}};
               } else {
-                *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
+                *elements_iter = PartitionedElement<T>{value.value(), RowID{chunk_id, value.chunk_offset()}};
               }
               ++elements_iter;
 
@@ -520,9 +524,82 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   return hash_tables;
 }
 
-template <typename T, typename HashedType, bool keep_null_values>
+// This is the cacheline size for most of the systems Hyrise usually runs on. If a system has larger cachelines (e.g.
+// Apple's M processors or IBM Power), using the default value will still run fine. Our implementation assumes that
+// this is a power of two.
+constexpr auto BYTES_PER_CACHELINE = size_t{64};
+// This is a tunable parameter. Increasing it causes more cache usage during radix partioning, but less TLB pressure.
+// Tuning it too high might invalidate the gains from `reduce_tlb_pressure`.
+constexpr auto MIN_CACHELINES_PER_STORE = size_t{1};
+
+// TemporaryRadixBucket is one "chunk" of data that can be copied to one specific partition once full. It is
+// implemented as a union so the number of items contained and the output position can be stored here while the bucket
+// is not full (called a micro row layout). This way they don't have to be fetched from some other location. The
+// alter is to store the indices in a separate array (called micro column layout), which is desirable when this
+// separate array is small and fits in caches. Since this struct should only be used if the number of radix partitions
+// is high, we opt for a micro row layout.
+template <typename T>
+  requires std::is_trivially_copy_assignable_v<T>
+union TemporaryRadixBucket {
+  static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
+  // We want the size of this container to be a multiple of the element size (so we don't copy uninitialized bytes) and
+  // the cacheline size (so we can use aligned vector instructions to copy). Additionally, we want the size of this
+  // container to be at least MIN_CACHELINES_PER_STORE cachelines large. If BYTES_PER_ELEMENT is not a power of two,
+  // we have to extract the part that is not a power of 2 and use it as a factor. For all types in Hyrise, this is
+  // either 1 (8 byte values like long) or 3 (4 byte values like int).
+  static constexpr auto CACHELINES_PER_STORE_FACTOR = BYTES_PER_ELEMENT >>
+                                                      static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
+  // CACHELINES_PER_STORE is a multiple of CACHELINES_PER_STORE_FACTOR that is at least MIN_CACHELINES_PER_STORE.
+  static constexpr auto CACHELINES_PER_STORE =
+      ((MIN_CACHELINES_PER_STORE + CACHELINES_PER_STORE_FACTOR - 1) / CACHELINES_PER_STORE_FACTOR) *
+      CACHELINES_PER_STORE_FACTOR;
+  static constexpr auto BYTES_PER_STORE = BYTES_PER_CACHELINE * CACHELINES_PER_STORE;
+  static constexpr auto ELEMENTS_PER_STORE = BYTES_PER_STORE / BYTES_PER_ELEMENT;
+
+  std::array<PartitionedElement<T>, ELEMENTS_PER_STORE> elements;
+
+  struct {
+    std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1> elements;
+    // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers.
+    uint32_t count;
+    uint64_t output_idx;
+  } with_indices;
+};
+
+// TemporaryRadixContainer is a group of TemporaryRadixBuckets, one for each output partition. It ensures that all
+// buckets are properly aligned (for vector instructions) and keeps the null values for each partition.
+template <typename T, bool keep_null_values>
+struct TemporaryRadixContainer {
+  using bucket = TemporaryRadixBucket<T>;
+  using allocator = boost::alignment::aligned_allocator<bucket, BYTES_PER_CACHELINE>;
+  uninitialized_vector<bucket, allocator> data;
+  uninitialized_vector<std::array<char, bucket::ELEMENTS_PER_STORE>> null_values;
+
+  static constexpr auto BYTES_PER_STORE = bucket::BYTES_PER_STORE;
+  static constexpr auto ELEMENTS_PER_STORE = bucket::ELEMENTS_PER_STORE;
+
+  explicit TemporaryRadixContainer(size_t output_partition_count) : data(output_partition_count) {
+    if constexpr (keep_null_values) {
+      null_values.resize(output_partition_count);
+    }
+  }
+};
+
+// `reduce_tlb_pressure` enables a software buffers in partition_by_radix, where partitions are written in chunks of
+// elements. You should consider enabling it if the number of radix buckets is larger than the size of your TLB. See
+// On the Surprising Difficulty of Simple Things: the Case of Radix Partitioning by Schuhknecht et al. for a detailed
+// performance evaluation A good rule of thumb seems to be starting at about 7 radix bits. This setting will be ignored
+// if T is not trivially copy assignable, as we have to copy the elements bitwise when doing chunked copy.
+// Variants:
+// - N: Never prefetch
+// - A: Only prefetch the element if it is completely on a new cacheline
+// - B: Only prefetch the element if it is at least partially on a new cacheline
+// - C: Always prefetch the element
+// - D: Always prefetch the next cacheline
+template <typename T, typename HashedType, bool keep_null_values, bool reduce_tlb_pressure = false, char variant = 'N',
+          int locality = 0>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
-                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                     const std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   if (radix_container.empty()) {
     return radix_container;
@@ -556,7 +633,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
   auto output_offsets_by_input_partition =
-      std::vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count));
+      std::vector(input_partition_count, std::vector<size_t>(output_partition_count));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -565,7 +642,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
 
     output[output_partition_idx].elements.resize(this_output_partition_size);
-    if (keep_null_values) {
+    if constexpr (keep_null_values) {
       output[output_partition_idx].null_values.resize(this_output_partition_size);
       null_values_as_char[output_partition_idx].resize(this_output_partition_size);
     }
@@ -578,39 +655,179 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     const auto& input_partition = radix_container[input_partition_idx];
     const auto& elements = input_partition.elements;
     const auto elements_count = elements.size();
-
-    const auto perform_partition = [&, input_partition_idx, elements_count]() {
-      for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
-        const auto& element = elements[input_idx];
-
-        if constexpr (!keep_null_values) {
-          DebugAssert(!(element.row_id == NULL_ROW_ID), "NULL_ROW_ID should not have made it this far");
+    if constexpr (std::is_trivially_copy_assignable_v<T> && reduce_tlb_pressure) {
+      const auto perform_partition = [&, input_partition_idx, elements_count]() {
+        using TMP = TemporaryRadixContainer<T, keep_null_values>;
+        auto tmp = TMP(output_partition_count);
+        for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
+             ++output_partition_idx) {
+          tmp.data[output_partition_idx].with_indices.output_idx =
+              output_offsets_by_input_partition[input_partition_idx][output_partition_idx];
+          tmp.data[output_partition_idx].with_indices.count = 0;
         }
 
-        const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
+        for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
+          const auto& element = elements[input_idx];
 
-        auto& output_idx = output_offsets_by_input_partition[input_partition_idx][radix];
-        DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
-        if (input_partition_idx < input_partition_count - 1) {
-          DebugAssert(output_idx < output_offsets_by_input_partition[input_partition_idx + 1][radix],
-                      "output_idx goes into next range");
+          if constexpr (!keep_null_values) {
+            DebugAssert(!(element.row_id == NULL_ROW_ID), "NULL_ROW_ID should not have made it this far");
+          }
+
+          const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
+
+          const auto output_idx = tmp.data[radix].with_indices.output_idx;
+          if (std::bit_cast<uint64_t>(output[radix].elements.data() + output_idx) & (BYTES_PER_CACHELINE - 1)) {
+            // We are not properly aligned with a cacheline yet, just write the element manually.
+            DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
+
+            if constexpr (keep_null_values) {
+              null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+              // Not tested in the benchmark yet.
+              __builtin_prefetch(null_values_as_char[radix].data() + output_idx + 1, 1, locality);
+            }
+
+            output[radix].elements[output_idx] = element;
+            // Prefetch output[radix].elements[output_idx+1]
+            if constexpr (variant == 'A') {
+              if ((std::bit_cast<uint64_t>(output[radix].elements.data() + output_idx + 1) &
+                   (BYTES_PER_CACHELINE - 1)) < sizeof(PartitionedElement<T>)) {
+                __builtin_prefetch(output[radix].elements.data() + output_idx + 1, 1, locality);
+              }
+            } else if constexpr (variant == 'B') {
+              if ((std::bit_cast<uint64_t>(
+                       reinterpret_cast<std::byte*>(output[radix].elements.data() + output_idx + 2) - 1) &
+                   (BYTES_PER_CACHELINE - 1)) < sizeof(PartitionedElement<T>)) {
+                __builtin_prefetch(output[radix].elements.data() + output_idx + 2, 1, locality);
+              }
+            } else if constexpr (variant == 'C') {
+              __builtin_prefetch(output[radix].elements.data() + output_idx + 1, 1, locality);
+            } else if constexpr (variant == 'D') {
+              __builtin_prefetch(
+                  reinterpret_cast<std::byte*>(output[radix].elements.data() + output_idx) + BYTES_PER_CACHELINE, 1,
+                  locality);
+            }
+            tmp.data[radix].with_indices.output_idx = output_idx + 1;
+            continue;
+          }
+
+          const auto tmp_idx = tmp.data[radix].with_indices.count;
+          tmp.data[radix].elements[tmp_idx] = element;
+          // Prefetch tmp.data[radix].elements[tmp_idx+1]
+          if constexpr (variant == 'A') {
+            if ((std::bit_cast<uint64_t>(tmp.data[radix].elements.data() + tmp_idx + 1) & (BYTES_PER_CACHELINE - 1)) <
+                sizeof(PartitionedElement<T>)) {
+              __builtin_prefetch(tmp.data[radix].elements.data() + tmp_idx + 1, 1, locality);
+            }
+          } else if constexpr (variant == 'B') {
+            if ((std::bit_cast<uint64_t>(reinterpret_cast<std::byte*>(tmp.data[radix].elements.data() + tmp_idx + 2) -
+                                         1) &
+                 (BYTES_PER_CACHELINE - 1)) < sizeof(PartitionedElement<T>)) {
+              __builtin_prefetch(tmp.data[radix].elements.data() + tmp_idx + 2, 1, locality);
+            }
+          } else if constexpr (variant == 'C') {
+            __builtin_prefetch(tmp.data[radix].elements.data() + tmp_idx + 1, 1, locality);
+          } else if constexpr (variant == 'D') {
+            __builtin_prefetch(
+                reinterpret_cast<std::byte*>(tmp.data[radix].elements.data() + tmp_idx) + BYTES_PER_CACHELINE, 1,
+                locality);
+          }
+
+          if constexpr (keep_null_values) {
+            tmp.null_values[radix][tmp_idx] = input_partition.null_values[input_idx];
+            // Not tested in the benchmark yet.
+            __builtin_prefetch(tmp.null_values[radix].data() + tmp_idx + 1, 1, 0);
+          }
+
+          if (tmp_idx + 1 < TMP::ELEMENTS_PER_STORE) {
+            // We have not fully written this cache line, just continue with the next element.
+            tmp.data[radix].with_indices.count = tmp_idx + 1;
+            continue;
+          }
+
+          // These two options both use SIMD to copy the temporary data to the actual location. The if block uses
+          // nontemporal stores, whereas the other does not. We did not find a solution for GCC that used nontemporal
+          // SIMD and produced correct results (our take at Google Highway produced wrong results on AVX512).
+#if defined(__clang__)
+          using vec_t = uint8_t __attribute__((vector_size(TMP::BYTES_PER_STORE)));
+          auto* const copy_from =
+              reinterpret_cast<vec_t*>(std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data()));
+          auto* const copy_to = reinterpret_cast<vec_t*>(
+              std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx));
+          __builtin_nontemporal_store(*copy_from, copy_to);
+#else
+          const auto copy_from = std::assume_aligned<BYTES_PER_CACHELINE>(tmp.data[radix].elements.data());
+          const auto copy_to = std::assume_aligned<BYTES_PER_CACHELINE>(output[radix].elements.data() + output_idx);
+          std::memcpy(copy_to, copy_from, TMP::BYTES_PER_STORE);
+#endif
+
+          if constexpr (keep_null_values) {
+            std::ranges::copy(tmp.null_values[radix], null_values_as_char[radix].begin() + output_idx);
+          }
+
+          tmp.data[radix].with_indices.count = 0;
+          tmp.data[radix].with_indices.output_idx = output_idx + TMP::ELEMENTS_PER_STORE;
         }
 
-        // In case NULL values have been materialized in materialize_input(), we need to keep them during the radix
-        // clustering phase.
-        if constexpr (keep_null_values) {
-          null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+        for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count;
+             ++output_partition_idx) {
+          const auto& bucket = tmp.data[output_partition_idx];
+          if (bucket.with_indices.count != 0) {
+            std::ranges::copy(std::span(bucket.elements.begin(), bucket.with_indices.count),
+                              output[output_partition_idx].elements.begin() + bucket.with_indices.output_idx);
+            if constexpr (keep_null_values) {
+              std::ranges::copy(std::span(tmp.null_values[output_partition_idx].begin(), bucket.with_indices.count),
+                                null_values_as_char[output_partition_idx].begin() + bucket.with_indices.output_idx);
+            }
+          }
+
+          if (input_partition_idx + 1 != input_partition_count) {
+            DebugAssert(bucket.with_indices.output_idx + bucket.with_indices.count ==
+                            output_offsets_by_input_partition[input_partition_idx + 1][output_partition_idx],
+                        "The radix boundaries of different input partitions don't match up.");
+          }
         }
-
-        output[radix].elements[output_idx] = element;
-
-        ++output_idx;
+      };
+      if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
+        perform_partition();
+      } else {
+        jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
       }
-    };
-    if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
-      perform_partition();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
+      // Just do the partitioning without cache tricks.
+      const auto perform_partition = [&, input_partition_idx, elements_count]() {
+        for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
+          const auto& element = elements[input_idx];
+
+          if constexpr (!keep_null_values) {
+            DebugAssert(!(element.row_id == NULL_ROW_ID), "NULL_ROW_ID should not have made it this far");
+          }
+
+          const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
+          auto& output_idx = output_offsets_by_input_partition[input_partition_idx][radix];
+
+          DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
+          if (input_partition_idx < input_partition_count - 1) {
+            DebugAssert(output_idx < output_offsets_by_input_partition[input_partition_idx + 1][radix],
+                        "output_idx goes into next range");
+          }
+
+          if constexpr (keep_null_values) {
+            null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
+            // Not tested in the benchmark yet.
+            __builtin_prefetch(null_values_as_char[radix].data() + output_idx + 1, 1, 0);
+          }
+
+          output[radix].elements[output_idx] = element;
+          // Not tested in the benchmark yet.
+          __builtin_prefetch(output[radix].elements.data() + output_idx + 1, 1, 0);
+          ++output_idx;
+        }
+      };
+      if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
+        perform_partition();
+      } else {
+        jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
+      }
     }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
