@@ -33,6 +33,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 10.0f;
     const auto benchmark_config = std::make_shared<BenchmarkConfig>();
+    benchmark_config->cache_binary_tables = true;
 
     if (!sm.has_table("lineitem")) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and automatic encoding:\n";
@@ -310,20 +311,20 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
-
   const auto& sm = Hyrise::get().storage_manager;
   const auto& lineitem_table = sm.get_table("lineitem");
-
-  const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, lineitem_table->row_count() / 2'000));
-
   const auto column_data_type = lineitem_table->column_data_type(column_id);
+  const auto row_count = lineitem_table->row_count();
 
   resolve_data_type(column_data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
+    const auto bin_count = EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(row_count);
     for (auto _ : state) {
-      EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, histogram_bin_count);
+      EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, bin_count);
     }
   });
+
+  node_queue_scheduler->finish();
 }
 
 constexpr auto LINEITEM_COLUMN_COUNT = 15;
