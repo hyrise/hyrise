@@ -689,21 +689,22 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
             output[radix].elements[output_idx] = element;
             // Prefetch output[radix].elements[output_idx+1]
             if constexpr (variant == 'A') {
-              if ((std::bit_cast<uint64_t>(&output[radix].elements[output_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
-                  sizeof(PartitionedElement<T>)) {
+              if ((std::bit_cast<uint64_t>(output[radix].elements.data() + output_idx + 1) &
+                   (BYTES_PER_CACHELINE - 1)) < sizeof(PartitionedElement<T>)) {
                 __builtin_prefetch(output[radix].elements.data() + output_idx + 1, 1, locality);
               }
             } else if constexpr (variant == 'B') {
-              if (BYTES_PER_CACHELINE -
-                      (std::bit_cast<uint64_t>(&output[radix].elements[output_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
-                  sizeof(PartitionedElement<T>)) {
+              if ((std::bit_cast<uint64_t>(
+                       reinterpret_cast<std::byte*>(output[radix].elements.data() + output_idx + 2) - 1) &
+                   (BYTES_PER_CACHELINE - 1)) < sizeof(PartitionedElement<T>)) {
                 __builtin_prefetch(output[radix].elements.data() + output_idx + 2, 1, locality);
               }
             } else if constexpr (variant == 'C') {
               __builtin_prefetch(output[radix].elements.data() + output_idx + 1, 1, locality);
             } else if constexpr (variant == 'D') {
               __builtin_prefetch(
-                  reinterpret_cast<std::byte*>(output[radix].elements.data() + output_idx) + BYTES_PER_CACHELINE, 1, locality);
+                  reinterpret_cast<std::byte*>(output[radix].elements.data() + output_idx) + BYTES_PER_CACHELINE, 1,
+                  locality);
             }
             tmp.data[radix].with_indices.output_idx = output_idx + 1;
             continue;
@@ -713,21 +714,22 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           tmp.data[radix].elements[tmp_idx] = element;
           // Prefetch tmp.data[radix].elements[tmp_idx+1]
           if constexpr (variant == 'A') {
-            if ((std::bit_cast<uint64_t>(&tmp.data[radix].elements[tmp_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
+            if ((std::bit_cast<uint64_t>(tmp.data[radix].elements.data() + tmp_idx + 1) & (BYTES_PER_CACHELINE - 1)) <
                 sizeof(PartitionedElement<T>)) {
               __builtin_prefetch(tmp.data[radix].elements.data() + tmp_idx + 1, 1, locality);
             }
           } else if constexpr (variant == 'B') {
-            if (BYTES_PER_CACHELINE -
-                    (std::bit_cast<uint64_t>(&tmp.data[radix].elements[tmp_idx + 1]) & (BYTES_PER_CACHELINE - 1)) <
-                sizeof(PartitionedElement<T>)) {
+            if ((std::bit_cast<uint64_t>(reinterpret_cast<std::byte*>(tmp.data[radix].elements.data() + tmp_idx + 2) -
+                                         1) &
+                 (BYTES_PER_CACHELINE - 1)) < sizeof(PartitionedElement<T>)) {
               __builtin_prefetch(tmp.data[radix].elements.data() + tmp_idx + 2, 1, locality);
             }
           } else if constexpr (variant == 'C') {
             __builtin_prefetch(tmp.data[radix].elements.data() + tmp_idx + 1, 1, locality);
           } else if constexpr (variant == 'D') {
-            __builtin_prefetch(reinterpret_cast<std::byte*>(tmp.data[radix].elements.data() + tmp_idx) + BYTES_PER_CACHELINE,
-                               1, locality);
+            __builtin_prefetch(
+                reinterpret_cast<std::byte*>(tmp.data[radix].elements.data() + tmp_idx) + BYTES_PER_CACHELINE, 1,
+                locality);
           }
 
           if constexpr (keep_null_values) {
