@@ -13,6 +13,10 @@
 #include "benchmark_config.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/aggregate_hash.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
@@ -23,7 +27,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  */
 struct PlaygroundConfig {
   float scale_factor = 0.1f;    // TPC-H Scale Factor
-  uint32_t num_workers = 1;     // Number of workers for Multi-Threaded variants
+  uint32_t num_workers = 4;     // Number of workers for Multi-Threaded variants
   bool run_single_baseline = true;
   bool run_single_optimized = false;
   bool run_multi_naive = false;
@@ -60,8 +64,33 @@ void setup_scheduler(bool multi_threaded, uint32_t worker_count = 1) {
  */
 
 std::shared_ptr<Table> hash_single_baseline(const std::shared_ptr<Table>& input) {
-  // TODO: Implement single-threaded Hash Aggregation (Baseline)
-  return nullptr; // Placeholder
+  // 1. Prepare Input
+  auto table_wrapper = std::make_shared<TableWrapper>(input);
+  table_wrapper->execute();
+
+  // 2. Define Columns
+  // Group By: l_returnflag, l_linestatus
+  // Aggregate: SUM(l_quantity)
+  const auto returnflag_col_id = input->column_id_by_name("l_returnflag");
+  const auto linestatus_col_id = input->column_id_by_name("l_linestatus");
+  const auto quantity_col_id = input->column_id_by_name("l_quantity");
+
+  auto quantity_expr = std::make_shared<PQPColumnExpression>(quantity_col_id, input->column_data_type(quantity_col_id), input->column_is_nullable(quantity_col_id), input->column_name(quantity_col_id));
+
+  // 3. Define Aggregate Expressions
+  // usage: sum_(expression)
+  auto sum_expr = expression_functional::sum_(quantity_expr);
+
+  // 4. Create and Run Operator
+  auto aggregate_op = std::make_shared<AggregateHash>(
+      table_wrapper,
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{sum_expr},
+      std::vector<ColumnID>{returnflag_col_id, linestatus_col_id}
+  );
+
+  aggregate_op->execute();
+
+  return std::const_pointer_cast<Table>(aggregate_op->get_output());
 }
 
 std::shared_ptr<Table> hash_single_optimized(const std::shared_ptr<Table>& input) {
