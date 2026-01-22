@@ -9,8 +9,8 @@
 #include "hyrise.hpp"
 #include "types.hpp"
 #include "storage/table.hpp"
-#include "benchmarklib/tpch/tpch_table_generator.hpp"
-#include "benchmarklib/benchmark_config.hpp"
+#include "tpch/tpch_table_generator.hpp"
+#include "benchmark_config.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 
@@ -33,41 +33,11 @@ struct PlaygroundConfig {
 // Global Config Instance
 const auto CONFIG = PlaygroundConfig{};
 
-/**
- * HELPER: LineItem Generator
- * 
- * Wraps TPCHTableGenerator but ensures only 'lineitem' is stored/returned to save RAM.
- * The TPC-H generator is deterministic, so SF X always produces the same data.
- */
-class LineItemTableGenerator : public TPCHTableGenerator {
- public:
-  using TPCHTableGenerator::TPCHTableGenerator;
 
-  // Overwrite generate to only return lineitem
-  std::unordered_map<std::string, BenchmarkTableInfo> generate() override {
-    // Generate all (unfortunately necessary due to internal coupling in dbgen)
-    // But we will intercept and clear the others immediately if possible, or just extract lineitem.
-    // Since TPCHTableGenerator stores tables in a map, we just wait for it to finish and then
-    // discard everything else.
-    // Note: If memory provided by std::vector is an issue during generation, we would need 
-    // to copy-paste the TPCHTableGenerator code and hack `tpch_dbgen` calls. 
-    // For now, assuming the machine has enough RAM to hold the temporary vectors or that 
-    // we largely just want the resulting Table object.
-    
-    auto tables = TPCHTableGenerator::generate();
-    
-    // Keep only lineitem
-    auto lineitem = tables["lineitem"];
-    tables.clear();
-    tables["lineitem"] = lineitem;
-    
-    return tables;
-  }
-};
 
 std::shared_ptr<Table> generate_lineitem_data(float scale_factor) {
   std::cout << "- Generating TPC-H LineItem (SF " << scale_factor << ")..." << std::endl;
-  auto generator = LineItemTableGenerator{scale_factor, ClusteringConfiguration::None};
+  auto generator = TPCHTableGenerator{scale_factor, ClusteringConfiguration::None};
   auto tables = generator.generate();
   return tables["lineitem"].table;
 }
