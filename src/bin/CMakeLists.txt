@@ -23,6 +23,8 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+target_include_directories(hyrisePlayground PRIVATE ../benchmarklib)
+
 # Configure client
 add_executable(
     hyriseClient
