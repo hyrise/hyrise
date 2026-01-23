@@ -7,6 +7,7 @@
 #include <numeric>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "hyrise.hpp"
@@ -252,22 +253,102 @@ std::shared_ptr<Table> sort_multi_optimized(const std::shared_ptr<Table>& input)
 
 
 /**
+ * HELPER: Compare two aggregation result tables
+ * Since aggregation results can have rows in different orders, we convert to sets for comparison.
+ */
+bool verify_tables_equal(const Table& actual, const Table& expected) {
+  // Check row counts
+  if (actual.row_count() != expected.row_count()) {
+    std::cerr << "    [VALIDATION FAILED] Row count mismatch: "
+              << actual.row_count() << " vs " << expected.row_count() << std::endl;
+    return false;
+  }
+
+  // Check column counts
+  if (actual.column_count() != expected.column_count()) {
+    std::cerr << "    [VALIDATION FAILED] Column count mismatch: "
+              << actual.column_count() << " vs " << expected.column_count() << std::endl;
+    return false;
+  }
+
+  // Convert both tables to set of rows (represented as strings for simplicity)
+  auto table_to_set = [](const Table& table) {
+    std::unordered_set<std::string> row_set;
+    const auto chunk_count = table.chunk_count();
+
+    // Iterate through all chunks
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = table.get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      const auto chunk_size = chunk->size();
+      const auto col_count = table.column_count();
+
+      // Build vector of column values for each column
+      std::vector<std::vector<std::string>> column_values(col_count);
+
+      for (auto col_idx = ColumnID{0}; col_idx < col_count; ++col_idx) {
+        const auto& segment = *chunk->get_segment(col_idx);
+        const auto data_type = table.column_data_type(col_idx);
+
+        column_values[col_idx].reserve(chunk_size);
+
+        if (data_type == DataType::String) {
+          segment_iterate<pmr_string>(segment, [&](const auto& pos) {
+            column_values[col_idx].push_back(pos.is_null() ? "NULL" : std::string(pos.value()));
+          });
+        } else if (data_type == DataType::Double) {
+          segment_iterate<double>(segment, [&](const auto& pos) {
+            column_values[col_idx].push_back(pos.is_null() ? "NULL" : std::to_string(pos.value()));
+          });
+        } else if (data_type == DataType::Float) {
+          segment_iterate<float>(segment, [&](const auto& pos) {
+            column_values[col_idx].push_back(pos.is_null() ? "NULL" : std::to_string(pos.value()));
+          });
+        }
+      }
+
+      // Combine values for each row
+      for (size_t row_in_chunk = 0; row_in_chunk < chunk_size; ++row_in_chunk) {
+        std::string row_str;
+        for (auto col_idx = ColumnID{0}; col_idx < col_count; ++col_idx) {
+          row_str += column_values[col_idx][row_in_chunk] + "|";
+        }
+        row_set.insert(row_str);
+      }
+    }
+    return row_set;
+  };
+
+  auto actual_rows = table_to_set(actual);
+  auto expected_rows = table_to_set(expected);
+
+  if (actual_rows != expected_rows) {
+    std::cerr << "    [VALIDATION FAILED] Row content mismatch" << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * BENCHMARK DRIVER
  */
-void run_algorithm(const std::string& name,
-                   std::function<std::shared_ptr<Table>(const std::shared_ptr<Table>&)> func,
-                   const std::shared_ptr<Table>& input,
-                   const std::shared_ptr<Table>& expected_result) {
+std::shared_ptr<Table> run_algorithm(const std::string& name,
+                                     std::function<std::shared_ptr<Table>(const std::shared_ptr<Table>&)> func,
+                                     const std::shared_ptr<Table>& input,
+                                     const std::shared_ptr<Table>& expected_result) {
   const auto num_iterations = CONFIG.num_iterations;
 
   std::cout << "  Running " << name << " (" << num_iterations << " iterations)... " << std::flush;
 
   auto durations = std::vector<int64_t>{};
   durations.reserve(num_iterations);
+  std::shared_ptr<Table> result = nullptr;
 
   for (uint32_t i = 0; i < num_iterations; ++i) {
     const auto start = std::chrono::high_resolution_clock::now();
-    auto result = func(input);
+    result = func(input);
     Hyrise::get().scheduler()->wait_for_all_tasks();  // Ensure async tasks are done
     const auto end = std::chrono::high_resolution_clock::now();
 
@@ -276,7 +357,12 @@ void run_algorithm(const std::string& name,
 
     // Verify result on first iteration only
     if (i == 0 && expected_result && result) {
-      // TODO: Implement verify_tables_equal(*result, *expected_result);
+      if (!verify_tables_equal(*result, *expected_result)) {
+        std::cout << "FAILED VALIDATION!" << std::endl;
+        return result;
+      } else {
+        std::cout << "[VALIDATED] " << std::flush;
+      }
     }
   }
 
@@ -290,11 +376,13 @@ void run_algorithm(const std::string& name,
   std::cout << "    Avg: " << std::fixed << std::setprecision(1) << avg << " ms"
             << " | Min: " << min << " ms"
             << " | Max: " << max << " ms" << std::endl;
+
+  return result;
 }
 
 void run_hash_micro_benchmark(float scale_factor) {
   std::cout << "=== Running HASH Microbenchmark ===" << std::endl;
-  
+
   // 1. Data Generation
   auto input_table = generate_lineitem_data(scale_factor);
   std::shared_ptr<Table> expected_result = nullptr;
@@ -303,8 +391,7 @@ void run_hash_micro_benchmark(float scale_factor) {
   if (CONFIG.run_single_baseline) {
     setup_scheduler(false); // Single
     std::cout << "  [Mode: Single Threaded]" << std::endl;
-    run_algorithm("Hash Single Baseline", hash_single_baseline, input_table, nullptr);
-    // expected_result = ...; // Store this result
+    expected_result = run_algorithm("Hash Single Baseline", hash_single_baseline, input_table, nullptr);
   }
 
   // 3. Single Threaded Optimized
@@ -327,7 +414,7 @@ void run_hash_micro_benchmark(float scale_factor) {
     std::cout << "  [Mode: Multi Threaded (" << CONFIG.num_workers << " workers)]" << std::endl;
     run_algorithm("Hash Multi Optimized", hash_multi_optimized, input_table, expected_result);
   }
-  
+
   std::cout << "=== HASH Microbenchmark Finished ===" << std::endl;
 }
 
@@ -341,29 +428,28 @@ void run_sort_micro_benchmark(float scale_factor) {
   if (CONFIG.run_single_baseline) {
     setup_scheduler(false); // Single
     std::cout << "  [Mode: Single Threaded]" << std::endl;
-    run_algorithm("Sort Single Baseline", hash_single_baseline, input_table, nullptr);
-    // expected_result = ...; // Store this result
+    expected_result = run_algorithm("Sort Single Baseline", sort_single_baseline, input_table, nullptr);
   }
 
   // 3. Single Threaded Optimized
   if (CONFIG.run_single_optimized) {
     setup_scheduler(false);
     std::cout << "  [Mode: Single Threaded]" << std::endl;
-    run_algorithm("Sort Single Optimized", hash_single_optimized, input_table, expected_result);
+    run_algorithm("Sort Single Optimized", sort_single_optimized, input_table, expected_result);
   }
 
   // 4. Multi Baseline
   if (CONFIG.run_multi_naive) {
     setup_scheduler(true, CONFIG.num_workers);
     std::cout << "  [Mode: Multi Threaded (" << CONFIG.num_workers << " workers)]" << std::endl;
-    run_algorithm("Sort Multi Naive", hash_multi_naive, input_table, expected_result);
+    run_algorithm("Sort Multi Naive", sort_multi_naive, input_table, expected_result);
   }
 
   // 5. Multi Optimized
   if (CONFIG.run_multi_optimized) {
     setup_scheduler(true, CONFIG.num_workers);
     std::cout << "  [Mode: Multi Threaded (" << CONFIG.num_workers << " workers)]" << std::endl;
-    run_algorithm("Sort Multi Optimized", hash_multi_optimized, input_table, expected_result);
+    run_algorithm("Sort Multi Optimized", sort_multi_optimized, input_table, expected_result);
   }
 
   std::cout << "=== SORT Microbenchmark Finished ===" << std::endl;
