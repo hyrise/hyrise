@@ -33,7 +33,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  * Edit this struct to change the run configuration without modifying the whole main().
  */
 struct PlaygroundConfig {
-  float scale_factor = 0.5f;    // TPC-H Scale Factor
+  float scale_factor = 0.2f;    // TPC-H Scale Factor
   uint32_t num_workers = 10;    // Number of workers for Multi-Threaded variants
   uint32_t num_iterations = 5;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
@@ -739,12 +739,14 @@ std::shared_ptr<Table> run_algorithm(const std::string& name,
 
   double avg;
   if (num_iterations >= 3) {
-    // Trimmed mean: exclude min and max to reduce impact of outliers
+    // Trimmed mean: exclude ONE min and ONE max to reduce impact of outliers
+    auto sorted_durations = durations;
+    std::sort(sorted_durations.begin(), sorted_durations.end());
+
+    // Sum middle values (exclude first and last)
     int64_t sum = 0;
-    for (const auto duration : durations) {
-      if (duration != min && duration != max) {
-        sum += duration;
-      }
+    for (size_t i = 1; i < sorted_durations.size() - 1; ++i) {
+      sum += sorted_durations[i];
     }
     avg = static_cast<double>(sum) / static_cast<double>(num_iterations - 2);
   } else {
