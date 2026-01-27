@@ -31,9 +31,10 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  * CONFIGURATION
  * 
  * Edit this struct to change the run configuration without modifying the whole main().
+ * TODO: Make this command line arguments for SLURM script execution
  */
 struct PlaygroundConfig {
-  float scale_factor = 0.2f;    // TPC-H Scale Factor
+  float scale_factor = 8.0f;    // TPC-H Scale Factor
   uint32_t num_workers = 10;    // Number of workers for Multi-Threaded variants
   uint32_t num_iterations = 5;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
