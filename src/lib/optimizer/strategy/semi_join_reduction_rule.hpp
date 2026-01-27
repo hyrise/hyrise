@@ -56,6 +56,7 @@ class SemiJoinReductionRule : public AbstractRule {
     if (const char* env = std::getenv("SELECTIVITY")) {
       return std::stod(std::string{env});
     }
+    std::cout << "Using default selectivity of 0.25 for SemiJoinReductionRule\n";
     return 0.25;
   }();
 

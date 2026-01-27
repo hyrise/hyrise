@@ -27,6 +27,7 @@ std::string SemiJoinReductionRule::name() const {
 void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
                                                               OptimizationContext& optimization_context) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto.");
+  std::cout << "Maximum selectivity for SemiJoinReductionRule: " << MINIMUM_SELECTIVITY << "\n";
 
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
   // reductions that we want to add to the plan, write them into semi_join_reductions and actually add them after

@@ -322,10 +322,10 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
     if (false_positive_rate_blocked(l1_size_bits, static_cast<double>(input_row_count), _k) > max_false_positive_rate) {
       _filter_size_exponent = l2_exponent;
     }
-    const auto expected_false_positive_rate = false_positive_rate_blocked(l2_size_bits, static_cast<double>(input_row_count), _k);
-    if (expected_false_positive_rate > max_false_positive_rate) {
-      std::cout << "Expected FPR: " << expected_false_positive_rate << std::endl;
-    }
+    // const auto expected_false_positive_rate = false_positive_rate_blocked(l2_size_bits, static_cast<double>(input_row_count), _k);
+    // if (expected_false_positive_rate > max_false_positive_rate) {
+    //   std::cout << "Expected FPR: " << expected_false_positive_rate << std::endl;
+    // }
 
     // std::cout << "Selected exponent: " << static_cast<int>(_filter_size_exponent) << ", k: " << static_cast<int>(_k)
     //           << std::endl;
