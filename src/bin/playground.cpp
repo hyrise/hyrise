@@ -34,7 +34,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  * TODO: Make this command line arguments for SLURM script execution
  */
 struct PlaygroundConfig {
-  float scale_factor = 8.0f;    // TPC-H Scale Factor
+  // scale_factor removed - now a loop variable in main()
   uint32_t num_workers = 10;    // Number of workers for Multi-Threaded variants
   uint32_t num_iterations = 5;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
@@ -848,10 +848,47 @@ void run_sort_micro_benchmark(float scale_factor) {
  */
 int main() {
   std::cout << "Hyrise Playground: Hash vs Sort Aggregation" << std::endl;
+  std::cout << "=============================================" << std::endl;
 
-  // Just uncomment/comment the parts you want to run
-  run_hash_micro_benchmark(CONFIG.scale_factor);
-  // run_sort_micro_benchmark(CONFIG.scale_factor);
+  // Scale factors to benchmark
+  const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f};
+
+  // Start total benchmark timer
+  const auto total_start = std::chrono::high_resolution_clock::now();
+
+  for (const auto scale_factor : scale_factors) {
+    std::cout << "\n";
+    std::cout << "######################################" << std::endl;
+    std::cout << "# SCALE FACTOR: " << scale_factor << std::endl;
+    std::cout << "# Workers: " << CONFIG.num_workers << std::endl;
+    std::cout << "######################################" << std::endl;
+    std::cout << "\n";
+
+    // Start timer for this scale factor
+    const auto sf_start = std::chrono::high_resolution_clock::now();
+
+    run_hash_micro_benchmark(scale_factor);
+    // run_sort_micro_benchmark(scale_factor);
+
+    // Calculate and display time for this scale factor
+    const auto sf_end = std::chrono::high_resolution_clock::now();
+    const auto sf_duration = std::chrono::duration_cast<std::chrono::milliseconds>(sf_end - sf_start).count();
+
+    std::cout << "\n";
+    std::cout << ">>> Scale Factor " << scale_factor << " completed in "
+              << sf_duration << " ms ("
+              << std::fixed << std::setprecision(2) << (sf_duration / 1000.0) << " s)" << std::endl;
+  }
+
+  // Calculate and display total benchmark time
+  const auto total_end = std::chrono::high_resolution_clock::now();
+  const auto total_duration = std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start).count();
+
+  std::cout << "\n";
+  std::cout << "=============================================" << std::endl;
+  std::cout << "TOTAL BENCHMARK TIME: " << total_duration << " ms ("
+            << std::fixed << std::setprecision(2) << (total_duration / 1000.0) << " s)" << std::endl;
+  std::cout << "=============================================" << std::endl;
 
   // Cleanup scheduler before exit
   Hyrise::get().scheduler()->finish();
