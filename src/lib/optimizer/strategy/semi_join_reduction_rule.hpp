@@ -11,7 +11,7 @@ class AbstractLQPNode;
 class PredicateNode;
 
 /**
- * A semi join reduction is a semi join that is added to the LQP without being present in the unoptimized LQP. This
+ * A semi-join reduction is a semi-join that is added to the LQP without being present in the unoptimized LQP. This
  * means that it does not change the final results. Take the following query as an example - it is loosely based on
  * TPC-H 20:
  *
@@ -24,18 +24,18 @@ class PredicateNode;
  *
  * Before this rule is applied, the LQP might look as follows:
  *
- * [ part p1 ] -> [ Predicate p_container IN (...) ------------> [ Semi Join p1.p_container = p2.p_container
+ * [ part p1 ] -> [ Predicate p_container IN (...) ------------> [ Semi-Join p1.p_container = p2.p_container
  *                                                              /             AND p1.p_size > AVG(p2.p_size) ]
  * [ part p2 ] -> [ Aggregate AVG(p_size) GROUP BY p_container ]
  *
  * As we can see, part is first fully aggregated, even though 37 container types will become irrelevant later. This
- * rule adds a second semi join (the semi join reduction), which uses the p2 side as the left (reduced) input. While
- * this rule adds the semi join reduction directly below the join, the PredicatePlacementRule will push in below the
+ * rule adds a second semi-join (the semi-join reduction), which uses the p2 side as the left (reduced) input. While
+ * this rule adds the semi-join reduction directly below the join, the PredicatePlacementRule will push in below the
  * aggregate. As a result, the LQP after this rule looks like this:
  *
  * [ part p1 ] -> [ Predicate p_container IN (...) ] -----------------------------------------------------------------> ...  // NOLINT
  *                                                   \                                                               /
- * [ part p2 ] --------------------------------------> [ Semi Join p1.p_container = p2.p_container ] -> [ Aggregate ]
+ * [ part p2 ] --------------------------------------> [ Semi-Join p1.p_container = p2.p_container ] -> [ Aggregate ]
  *
  * We call p2 the REDUCED NODE on the reduced side and p1 the REDUCER NODE on the reducing side.
  *
@@ -50,9 +50,9 @@ class SemiJoinReductionRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  // Defines the minimum selectivity for a semi join reduction to be added. For a candidate location in the LQP with an
-  // input cardinality `i`, the output cardinality of the semi join has to be lower than `i * MINIMUM_SELECTIVITY`.
-  constexpr static auto MINIMUM_SELECTIVITY = .25;
+  // Defines the minimum selectivity for a semi-join reduction to be added. For a candidate location in the LQP with an
+  // input cardinality `i`, the output cardinality of the semi-join has to be lower than `i * MAXIMUM_SELECTIVITY`.
+  constexpr static auto MAXIMUM_SELECTIVITY = .25;
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
