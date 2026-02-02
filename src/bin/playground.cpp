@@ -2,6 +2,7 @@
 #include <chrono>
 #include <functional>
 #include <iomanip>
+#include <immintrin.h> // AVX2
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -42,9 +43,9 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 struct PlaygroundConfig {
   // scale_factor removed - now a loop variable in main()
   uint32_t num_workers = 10;    // Number of workers for Multi-Threaded variants
-  uint32_t num_iterations = 7;  // Number of benchmark iterations per algorithm
+  uint32_t num_iterations = 5;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
-  bool run_single_optimized = true;
+  bool run_single_optimized = false;
   bool run_multi_naive = true;
   bool run_multi_optimized = true;
 };
@@ -639,7 +640,6 @@ std::shared_ptr<Table> sort_single_baseline(const std::shared_ptr<Table>& input)
   return std::const_pointer_cast<Table>(aggregate_op->get_output());
 }
 
-
 std::shared_ptr<Table> sort_single_optimized(const std::shared_ptr<Table>& input) {
   // TODO: Implement single-threaded Sort Aggregation (Optimized)
   return nullptr;
@@ -723,93 +723,131 @@ std::shared_ptr<Table> sort_multi_naive(const std::shared_ptr<Table>& input) {
   return result;
 }
 
-std::shared_ptr<Table> sort_multi_optimized(const std::shared_ptr<Table>& input) {
+std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise::Table>& input) {
+  using namespace hyrise;
+
   const auto rf_col  = input->column_id_by_name("l_returnflag");
   const auto ls_col  = input->column_id_by_name("l_linestatus");
   const auto qty_col = input->column_id_by_name("l_quantity");
 
+  struct AggKey {
+    uint16_t rf;
+    uint16_t ls;
+    bool operator==(const AggKey& other) const { return rf == other.rf && ls == other.ls; }
+    bool operator<(const AggKey& other) const { return rf < other.rf || (rf == other.rf && ls < other.ls); }
+  };
+
+  // Wrap input in TableWrapper
   auto table_wrapper = std::make_shared<TableWrapper>(input);
   table_wrapper->execute();
 
+  // Sort by l_returnflag + l_linestatus
   std::vector<SortColumnDefinition> sort_defs;
   sort_defs.emplace_back(rf_col, SortMode::AscendingNullsFirst);
   sort_defs.emplace_back(ls_col, SortMode::AscendingNullsFirst);
 
-  auto& storage_manager = hyrise::Hyrise::get().storage_manager;
-
-  if (storage_manager.has_table("my_table")) {
-    storage_manager.drop_table("my_table");
-  }
-  storage_manager.add_table("my_table", input);
-
-  auto table_node = std::make_shared<StoredTableNode>("my_table");
-  auto column_expr = std::make_shared<LQPColumnExpression>(table_node, qty_col);
-
-  auto sum_expr = std::make_shared<WindowFunctionExpression>(WindowFunction::Sum, column_expr, nullptr);
-
-  std::vector<std::shared_ptr<WindowFunctionExpression>> aggregates_for_sort;
-  aggregates_for_sort.emplace_back(sum_expr);
-
   auto sort_op = std::make_shared<SortForAggregate>(
-  std::static_pointer_cast<const AbstractOperator>(table_wrapper),
-  sort_defs,
-  aggregates_for_sort,
-  Chunk::DEFAULT_SIZE,
-  SortForAggregate::ForceMaterialization::No
+      std::static_pointer_cast<const AbstractOperator>(table_wrapper),
+      sort_defs,
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{}, // no window aggregates
+      Chunk::DEFAULT_SIZE,
+      SortForAggregate::ForceMaterialization::No
   );
 
   sort_op->execute();
   auto sorted = sort_op->get_output();
-  // 3. Prepare output table
+
+  // 1️⃣ Encode strings to integers for SIMD-friendly aggregation
+  std::unordered_map<pmr_string, uint16_t> rf_dict;
+  std::unordered_map<pmr_string, uint16_t> ls_dict;
+
+  std::vector<uint32_t> keys;    // packed key: (rf << 16) | ls
+  std::vector<double> qty_values;
+
+  uint16_t rf_next = 0;
+  uint16_t ls_next = 0;
+
+  for (ChunkID chunk_id{0}; chunk_id < sorted->chunk_count(); ++chunk_id) {
+    const auto chunk = sorted->get_chunk(chunk_id);
+    const auto& rf_seg  = chunk->get_segment(rf_col);
+    const auto& ls_seg  = chunk->get_segment(ls_col);
+    const auto& qty_seg = chunk->get_segment(qty_col);
+
+    for (ChunkOffset offset{0}; offset < chunk->size(); ++offset) {
+      const auto rf_val  = boost::get<pmr_string>((*rf_seg)[offset]);
+      const auto ls_val  = boost::get<pmr_string>((*ls_seg)[offset]);
+      const auto qty_val = static_cast<double>(boost::get<float>((*qty_seg)[offset]));
+
+      if (!rf_dict.contains(rf_val)) rf_dict[rf_val] = rf_next++;
+      if (!ls_dict.contains(ls_val)) ls_dict[ls_val] = ls_next++;
+
+      uint32_t packed = (static_cast<uint32_t>(rf_dict[rf_val]) << 16) |
+                         static_cast<uint32_t>(ls_dict[ls_val]);
+
+      keys.push_back(packed);
+      qty_values.push_back(qty_val);
+    }
+  }
+
+  // 2️⃣ AVX2 SIMD aggregation over sorted keys
+  std::vector<uint32_t> unique_keys;
+  std::vector<double> sums;
+
+  size_t i = 0;
+  const size_t n = keys.size();
+
+  while (i < n) {
+    const uint32_t current_key = keys[i];
+    double sum = 0.0;
+    size_t j = i;
+
+    // Process 4 doubles at a time
+    for (; j + 3 < n; j += 4) {
+      // Check if all 4 keys match current
+      __m128i key_vec = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&keys[j]));
+      __m128i current_vec = _mm_set1_epi32(static_cast<int>(current_key));
+      __m128i cmp = _mm_cmpeq_epi32(key_vec, current_vec);
+      int mask = _mm_movemask_ps(_mm_castsi128_ps(cmp));
+
+      if (mask != 0xF) break; // not all match, fallback to scalar
+
+      // Load 4 doubles
+      __m256d qty_vec = _mm256_loadu_pd(qty_values.data() + j);
+      __m256d hadd1 = _mm256_hadd_pd(qty_vec, qty_vec);
+      double tmp[4];
+      _mm256_storeu_pd(tmp, hadd1);
+      sum += tmp[0] + tmp[2];
+    }
+
+    // Scalar fallback for remaining
+    for (; j < n && keys[j] == current_key; ++j) {
+      sum += qty_values[j];
+    }
+
+    unique_keys.push_back(current_key);
+    sums.push_back(sum);
+    i = j;
+  }
+
+  // 3️⃣ Build result table
   TableColumnDefinitions columns{
       {"l_returnflag", DataType::String, false},
       {"l_linestatus", DataType::String, false},
       {"sum_qty", DataType::Double, false}
   };
-
   auto result = std::make_shared<Table>(columns, TableType::Data);
 
-  // 4. Naive linear aggregation over sorted data
-  bool first = true;
-  pmr_string current_rf;
-  pmr_string current_ls;
-  double current_sum = 0.0;
+  // Reverse mapping integer -> string
+  std::vector<pmr_string> rf_rev(rf_next);
+  std::vector<pmr_string> ls_rev(ls_next);
+  for (const auto& [str, id] : rf_dict) rf_rev[id] = str;
+  for (const auto& [str, id] : ls_dict) ls_rev[id] = str;
 
-
-  for (ChunkID chunk_id{0}; chunk_id < sorted->chunk_count(); ++chunk_id) {
-    const auto chunk = sorted->get_chunk(chunk_id);
-
-    const auto& rf_seg = chunk->get_segment(rf_col);
-    const auto& ls_seg = chunk->get_segment(ls_col);
-    const auto& qty_seg = chunk->get_segment(qty_col);
-
-    for (ChunkOffset offset{0}; offset < chunk->size(); ++offset) {
-      const auto rf = boost::get<pmr_string>((*rf_seg)[offset]);
-      const auto ls = boost::get<pmr_string>((*ls_seg)[offset]);
-      const auto qty = boost::get<float>((*qty_seg)[offset]);
-
-      if (first) {
-        current_rf = rf;
-        current_ls = ls;
-        current_sum = qty;
-        first = false;
-      } else if (rf == current_rf && ls == current_ls) {
-        current_sum += qty;
-      } else {
-        // Emit previous group
-        result->append({current_rf, current_ls, current_sum});
-
-        // Start new group
-        current_rf = rf;
-        current_ls = ls;
-        current_sum = qty;
-      }
-    }
-  }
-
-  // Emit last group
-  if (!first) {
-    result->append({current_rf, current_ls, current_sum});
+  for (size_t k = 0; k < unique_keys.size(); ++k) {
+    const uint32_t key = unique_keys[k];
+    uint16_t rf_id = key >> 16;
+    uint16_t ls_id = key & 0xFFFF;
+    result->append({rf_rev[rf_id], ls_rev[ls_id], sums[k]});
   }
 
   return result;
@@ -1047,7 +1085,8 @@ int main() {
   std::cout << "=============================================" << std::endl;
 
   // Scale factors to benchmark
-  const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f};
+  // const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f};
+  const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f};
 
   // Start total benchmark timer
   const auto total_start = std::chrono::high_resolution_clock::now();
@@ -1068,7 +1107,7 @@ int main() {
      ***** Comment / Uncomment here ******
      *************************************/
     run_hash_micro_benchmark(scale_factor);
-    // run_sort_micro_benchmark(scale_factor);
+    run_sort_micro_benchmark(scale_factor);
 
     // Calculate and display time for this scale factor
     const auto sf_end = std::chrono::high_resolution_clock::now();
