@@ -13,14 +13,20 @@
 #include "hyrise.hpp"
 #include "types.hpp"
 #include "storage/table.hpp"
+#include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "benchmark_config.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/aggregate_sort.hpp"
+#include "operators/sort_for_aggregate.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
@@ -599,9 +605,40 @@ std::shared_ptr<Table> hash_multi_optimized(const std::shared_ptr<Table>& input)
  */
 
 std::shared_ptr<Table> sort_single_baseline(const std::shared_ptr<Table>& input) {
-  // TODO: Implement single-threaded Sort Aggregation (Baseline)
-  return nullptr;
+  using namespace hyrise;
+
+  // 1. Prepare Input
+  auto table_wrapper = std::make_shared<TableWrapper>(input);
+  table_wrapper->execute();
+
+  // 2. Define Columns
+  // Group By: l_returnflag, l_linestatus
+  // Aggregate: SUM(l_quantity)
+  const auto returnflag_col_id = input->column_id_by_name("l_returnflag");
+  const auto linestatus_col_id = input->column_id_by_name("l_linestatus");
+  const auto quantity_col_id = input->column_id_by_name("l_quantity");
+
+  auto quantity_expr = std::make_shared<PQPColumnExpression>(
+      quantity_col_id,
+      input->column_data_type(quantity_col_id),
+      input->column_is_nullable(quantity_col_id),
+      input->column_name(quantity_col_id));
+
+  // 3. Define Aggregate Expressions
+  auto sum_expr = expression_functional::sum_(quantity_expr);
+
+  // 4. Create and Run Sort Aggregate
+  auto aggregate_op = std::make_shared<AggregateSort>(
+      table_wrapper,
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{sum_expr},
+      std::vector<ColumnID>{returnflag_col_id, linestatus_col_id}
+  );
+
+  aggregate_op->execute();
+
+  return std::const_pointer_cast<Table>(aggregate_op->get_output());
 }
+
 
 std::shared_ptr<Table> sort_single_optimized(const std::shared_ptr<Table>& input) {
   // TODO: Implement single-threaded Sort Aggregation (Optimized)
@@ -609,14 +646,173 @@ std::shared_ptr<Table> sort_single_optimized(const std::shared_ptr<Table>& input
 }
 
 std::shared_ptr<Table> sort_multi_naive(const std::shared_ptr<Table>& input) {
-  // TODO: Implement multi-threaded Sort Aggregation (Naive)
-  // Use JobTask
-  return nullptr;
+
+  const auto rf_col  = input->column_id_by_name("l_returnflag");
+  const auto ls_col  = input->column_id_by_name("l_linestatus");
+  const auto qty_col = input->column_id_by_name("l_quantity");
+
+  auto table_wrapper = std::make_shared<TableWrapper>(input);
+  table_wrapper->execute();
+
+  std::vector<SortColumnDefinition> sort_defs;
+  sort_defs.emplace_back(rf_col, SortMode::AscendingNullsFirst);
+  sort_defs.emplace_back(ls_col, SortMode::AscendingNullsFirst);
+
+  auto sort_op = std::make_shared<SortForAggregate>(
+  std::static_pointer_cast<const AbstractOperator>(table_wrapper),
+  sort_defs,
+  std::vector<std::shared_ptr<WindowFunctionExpression>>{},
+  Chunk::DEFAULT_SIZE,
+  SortForAggregate::ForceMaterialization::No
+  );
+
+  sort_op->execute();
+  auto sorted = sort_op->get_output();
+  // 3. Prepare output table
+  TableColumnDefinitions columns{
+      {"l_returnflag", DataType::String, false},
+      {"l_linestatus", DataType::String, false},
+      {"sum_qty", DataType::Double, false}
+  };
+
+  auto result = std::make_shared<Table>(columns, TableType::Data);
+
+  // 4. Naive linear aggregation over sorted data
+  bool first = true;
+  pmr_string current_rf;
+  pmr_string current_ls;
+  double current_sum = 0.0;
+
+
+  for (ChunkID chunk_id{0}; chunk_id < sorted->chunk_count(); ++chunk_id) {
+    const auto chunk = sorted->get_chunk(chunk_id);
+
+    const auto& rf_seg = chunk->get_segment(rf_col);
+    const auto& ls_seg = chunk->get_segment(ls_col);
+    const auto& qty_seg = chunk->get_segment(qty_col);
+
+    for (ChunkOffset offset{0}; offset < chunk->size(); ++offset) {
+      const auto rf = boost::get<pmr_string>((*rf_seg)[offset]);
+      const auto ls = boost::get<pmr_string>((*ls_seg)[offset]);
+      const auto qty = boost::get<float>((*qty_seg)[offset]);
+
+      if (first) {
+        current_rf = rf;
+        current_ls = ls;
+        current_sum = qty;
+        first = false;
+      } else if (rf == current_rf && ls == current_ls) {
+        current_sum += qty;
+      } else {
+        // Emit previous group
+        result->append({current_rf, current_ls, current_sum});
+
+        // Start new group
+        current_rf = rf;
+        current_ls = ls;
+        current_sum = qty;
+      }
+    }
+  }
+
+  // Emit last group
+  if (!first) {
+    result->append({current_rf, current_ls, current_sum});
+  }
+
+  return result;
 }
 
 std::shared_ptr<Table> sort_multi_optimized(const std::shared_ptr<Table>& input) {
-  // TODO: Implement multi-threaded Sort Aggregation (Optimized)
-  return nullptr;
+  const auto rf_col  = input->column_id_by_name("l_returnflag");
+  const auto ls_col  = input->column_id_by_name("l_linestatus");
+  const auto qty_col = input->column_id_by_name("l_quantity");
+
+  auto table_wrapper = std::make_shared<TableWrapper>(input);
+  table_wrapper->execute();
+
+  std::vector<SortColumnDefinition> sort_defs;
+  sort_defs.emplace_back(rf_col, SortMode::AscendingNullsFirst);
+  sort_defs.emplace_back(ls_col, SortMode::AscendingNullsFirst);
+
+  auto& storage_manager = hyrise::Hyrise::get().storage_manager;
+
+  if (storage_manager.has_table("my_table")) {
+    storage_manager.drop_table("my_table");
+  }
+  storage_manager.add_table("my_table", input);
+
+  auto table_node = std::make_shared<StoredTableNode>("my_table");
+  auto column_expr = std::make_shared<LQPColumnExpression>(table_node, qty_col);
+
+  auto sum_expr = std::make_shared<WindowFunctionExpression>(WindowFunction::Sum, column_expr, nullptr);
+
+  std::vector<std::shared_ptr<WindowFunctionExpression>> aggregates_for_sort;
+  aggregates_for_sort.emplace_back(sum_expr);
+
+  auto sort_op = std::make_shared<SortForAggregate>(
+  std::static_pointer_cast<const AbstractOperator>(table_wrapper),
+  sort_defs,
+  aggregates_for_sort,
+  Chunk::DEFAULT_SIZE,
+  SortForAggregate::ForceMaterialization::No
+  );
+
+  sort_op->execute();
+  auto sorted = sort_op->get_output();
+  // 3. Prepare output table
+  TableColumnDefinitions columns{
+      {"l_returnflag", DataType::String, false},
+      {"l_linestatus", DataType::String, false},
+      {"sum_qty", DataType::Double, false}
+  };
+
+  auto result = std::make_shared<Table>(columns, TableType::Data);
+
+  // 4. Naive linear aggregation over sorted data
+  bool first = true;
+  pmr_string current_rf;
+  pmr_string current_ls;
+  double current_sum = 0.0;
+
+
+  for (ChunkID chunk_id{0}; chunk_id < sorted->chunk_count(); ++chunk_id) {
+    const auto chunk = sorted->get_chunk(chunk_id);
+
+    const auto& rf_seg = chunk->get_segment(rf_col);
+    const auto& ls_seg = chunk->get_segment(ls_col);
+    const auto& qty_seg = chunk->get_segment(qty_col);
+
+    for (ChunkOffset offset{0}; offset < chunk->size(); ++offset) {
+      const auto rf = boost::get<pmr_string>((*rf_seg)[offset]);
+      const auto ls = boost::get<pmr_string>((*ls_seg)[offset]);
+      const auto qty = boost::get<float>((*qty_seg)[offset]);
+
+      if (first) {
+        current_rf = rf;
+        current_ls = ls;
+        current_sum = qty;
+        first = false;
+      } else if (rf == current_rf && ls == current_ls) {
+        current_sum += qty;
+      } else {
+        // Emit previous group
+        result->append({current_rf, current_ls, current_sum});
+
+        // Start new group
+        current_rf = rf;
+        current_ls = ls;
+        current_sum = qty;
+      }
+    }
+  }
+
+  // Emit last group
+  if (!first) {
+    result->append({current_rf, current_ls, current_sum});
+  }
+
+  return result;
 }
 
 

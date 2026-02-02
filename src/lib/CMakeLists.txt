@@ -192,6 +192,11 @@ set(
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
     operators/aggregate_sort.hpp
+    operators/sort_algorithms/abstract_row_id_sorter.hpp
+    operators/sort_algorithms/parallel_merge_sorter.cpp    
+    operators/sort_algorithms/parallel_merge_sorter.hpp  
+    operators/sort_for_aggregate.cpp
+    operators/sort_for_aggregate.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
     operators/change_meta_table.cpp
