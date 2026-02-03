@@ -257,6 +257,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   const LQPNodeType type;
 
+  
+
+  bool is_data_dependency_optimized() const; 
+  void set_is_data_dependency_optmized(bool is_optimized) const; 
+
   /**
    * Expressions used by this node; semantics depend on the actual node type.
    * E.g., for the PredicateNode, this will be a single predicate expression; for a ProjectionNode it holds one
@@ -312,6 +317,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
+  mutable bool _is_data_dependency_optimized; 
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);

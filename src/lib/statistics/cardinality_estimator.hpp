@@ -207,6 +207,9 @@ class CardinalityEstimator {
   static std::shared_ptr<TableStatistics> estimate_window_node(
       const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
+  Cardinality estimate_output_cardinality(const AggregateNode& aggregate_node,
+                                          const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+
   std::shared_ptr<TableStatistics> estimate_aggregate_node(
       const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
 
@@ -229,9 +232,11 @@ class CardinalityEstimator {
 
   HasIndResult has_ind(const JoinNode& join_node) const;
 
-  Selectivity estimate_scaling_factor_join(
-    const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-    const std::shared_ptr<TableStatistics>& right_input_table_statistics, const bool is_flipped) const;
+  Selectivity estimate_scaling_factor_join(const JoinNode& join_node,
+                                           const std::shared_ptr<TableStatistics>& left_input_table_statistics,
+                                           const std::shared_ptr<TableStatistics>& right_input_table_statistics,
+                                           const bool is_flipped,
+                                           const bool estimate_proportion_referenced = false) const;
 
   static std::shared_ptr<TableStatistics> estimate_union_node(
       const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
@@ -284,6 +289,10 @@ class CardinalityEstimator {
 
   static std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& left_input_table_statistics,
                                                               const TableStatistics& right_input_table_statistics);
+
+  template <typename T>
+  Cardinality estimate_referenced_tuples(const AbstractHistogram<T>& referencing_histogram,
+                                         const AbstractHistogram<T>& referenced_histogram) const;
 
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(

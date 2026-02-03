@@ -50,15 +50,20 @@ void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNo
       cardinality_estimator = CardinalityEstimator::new_instance_without_optimizations();
     }
 
+    std::shared_ptr<CardinalityEstimator> default_cardinality_estimator = CardinalityEstimator::new_instance_without_optimizations(); 
+
+
+    default_cardinality_estimator->guarantee_bottom_up_construction(root);
     cardinality_estimator->guarantee_bottom_up_construction(root);
-    _build_subtree(root, visualized_nodes, visualized_sub_queries, *cardinality_estimator);
+    _build_subtree(root, visualized_nodes, visualized_sub_queries, *cardinality_estimator, *default_cardinality_estimator);
   }
 }
 
 void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                                    std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
                                    ExpressionUnorderedSet& visualized_sub_queries,
-                                   const CardinalityEstimator& cardinality_estimator) {
+                                   const CardinalityEstimator& cardinality_estimator, const CardinalityEstimator& default_cardinality_estimator
+                                  ) {
   // Avoid drawing dataflows/nodes redundantly in diamond-shaped plans.
   if (visualized_nodes.contains(node)) {
     return;
@@ -73,14 +78,14 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
   if (node->left_input()) {
     auto left_input = node->left_input();
-    _build_subtree(left_input, visualized_nodes, visualized_sub_queries, cardinality_estimator);
-    _build_dataflow(left_input, node, InputSide::Left, cardinality_estimator);
+    _build_subtree(left_input, visualized_nodes, visualized_sub_queries, cardinality_estimator, default_cardinality_estimator);
+    _build_dataflow(left_input, node, InputSide::Left, cardinality_estimator, default_cardinality_estimator);
   }
 
   if (node->right_input()) {
     auto right_input = node->right_input();
-    _build_subtree(right_input, visualized_nodes, visualized_sub_queries, cardinality_estimator);
-    _build_dataflow(right_input, node, InputSide::Right, cardinality_estimator);
+    _build_subtree(right_input, visualized_nodes, visualized_sub_queries, cardinality_estimator, default_cardinality_estimator);
+    _build_dataflow(right_input, node, InputSide::Right, cardinality_estimator, default_cardinality_estimator);
   }
 
   // Visualize subqueries.
@@ -95,7 +100,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
         return ExpressionVisitation::VisitArguments;
       }
 
-      _build_subtree(subquery_expression->lqp, visualized_nodes, visualized_sub_queries, cardinality_estimator);
+      _build_subtree(subquery_expression->lqp, visualized_nodes, visualized_sub_queries, cardinality_estimator, default_cardinality_estimator);
 
       auto edge_info = _default_edge;
       auto correlated_str = std::string(subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
@@ -110,11 +115,14 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
                                     const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side,
-                                    const CardinalityEstimator& cardinality_estimator) {
+                                    const CardinalityEstimator& cardinality_estimator, const CardinalityEstimator& default_cardinality_estimator) {
   Cardinality row_count = NAN;
   auto row_percentage = 100.0;
 
   row_count = cardinality_estimator.estimate_cardinality(source_node);
+  auto dd_optimized = source_node->is_data_dependency_optimized();
+  auto default_estimation_rowcount = default_cardinality_estimator.estimate_cardinality(source_node);
+
   if (source_node->left_input()) {
     auto input_count = cardinality_estimator.estimate_cardinality(source_node->left_input());
 
@@ -144,6 +152,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
                  << "% estd.";
   } else {
     label_stream << "no est.";
+  }
+
+  if(dd_optimized){
+    label_stream << "\n (dd_optimized) " << default_estimation_rowcount;
+
   }
 
   auto tooltip_stream = std::stringstream{};

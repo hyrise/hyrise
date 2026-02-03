@@ -294,6 +294,14 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
+bool AbstractLQPNode::is_data_dependency_optimized() const {
+  return _is_data_dependency_optimized;
+}
+
+void AbstractLQPNode::set_is_data_dependency_optmized(bool is_optimized) const {
+  _is_data_dependency_optimized = is_optimized;
+};
+
 std::pair<bool, bool> AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
   Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),

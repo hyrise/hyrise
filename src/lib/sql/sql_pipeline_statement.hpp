@@ -33,6 +33,7 @@ struct OperatorCardinalityMetrics {
   size_t left_input_hash{0};
   size_t right_input_hash{0};
   std::string predicate_string;
+  bool is_data_dependency_optimized = false;
 };
 
 struct SQLPipelineStatementMetrics {
