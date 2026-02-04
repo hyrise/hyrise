@@ -56,3 +56,6 @@ sftp*
 # Clangd files
 compile_commands.json
 .cache/
+
+# HPC benchmark results
+results/

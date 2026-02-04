@@ -1,13 +1,15 @@
 #!/bin/bash
 #SBATCH --job-name=hyrise-benchmark
 #SBATCH --account=UPDATE_THIS_ACCOUNT
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=slack:<UPDATE_THIS_ACCOUNT>
 #SBATCH --partition=cpu-batch
 #SBATCH --constraint=ARCH:X86
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
-#SBATCH --time=6:00:00
+#SBATCH --time=7:00:00
 #SBATCH --exclusive
 #SBATCH --output=results/benchmark_%j.log
 #SBATCH --error=results/benchmark_%j.err
