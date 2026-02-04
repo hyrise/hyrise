@@ -726,130 +726,190 @@ std::shared_ptr<Table> sort_multi_naive(const std::shared_ptr<Table>& input) {
 std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise::Table>& input) {
   using namespace hyrise;
 
-  const auto rf_col  = input->column_id_by_name("l_returnflag");
-  const auto ls_col  = input->column_id_by_name("l_linestatus");
+  const auto rf_col = input->column_id_by_name("l_returnflag");
+  const auto ls_col = input->column_id_by_name("l_linestatus");
   const auto qty_col = input->column_id_by_name("l_quantity");
 
-  struct AggKey {
-    uint16_t rf;
-    uint16_t ls;
-    bool operator==(const AggKey& other) const { return rf == other.rf && ls == other.ls; }
-    bool operator<(const AggKey& other) const { return rf < other.rf || (rf == other.rf && ls < other.ls); }
-  };
-
-  // Wrap input in TableWrapper
-  auto table_wrapper = std::make_shared<TableWrapper>(input);
-  table_wrapper->execute();
-
-  // Sort by l_returnflag + l_linestatus
-  std::vector<SortColumnDefinition> sort_defs;
-  sort_defs.emplace_back(rf_col, SortMode::AscendingNullsFirst);
-  sort_defs.emplace_back(ls_col, SortMode::AscendingNullsFirst);
-
-  auto sort_op = std::make_shared<SortForAggregate>(
-      std::static_pointer_cast<const AbstractOperator>(table_wrapper),
-      sort_defs,
-      std::vector<std::shared_ptr<WindowFunctionExpression>>{}, // no window aggregates
-      Chunk::DEFAULT_SIZE,
-      SortForAggregate::ForceMaterialization::No
-  );
-
-  sort_op->execute();
-  auto sorted = sort_op->get_output();
-
-  // 1️⃣ Encode strings to integers for SIMD-friendly aggregation
+  // Using uint32_t directly as key for simplicity
+  using KeyType = uint32_t;  // packed key: (rf_id << 16) | ls_id
+  
+  // 1️⃣ Single-pass data collection with dictionary encoding
   std::unordered_map<pmr_string, uint16_t> rf_dict;
   std::unordered_map<pmr_string, uint16_t> ls_dict;
-
-  std::vector<uint32_t> keys;    // packed key: (rf << 16) | ls
+  std::vector<KeyType> keys;
   std::vector<double> qty_values;
-
+  
+  // Estimate total rows for reservation
+  size_t total_rows = 0;
+  for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+    total_rows += input->get_chunk(chunk_id)->size();
+  }
+  
+  keys.reserve(total_rows);
+  qty_values.reserve(total_rows);
+  
   uint16_t rf_next = 0;
   uint16_t ls_next = 0;
 
-  for (ChunkID chunk_id{0}; chunk_id < sorted->chunk_count(); ++chunk_id) {
-    const auto chunk = sorted->get_chunk(chunk_id);
-    const auto& rf_seg  = chunk->get_segment(rf_col);
-    const auto& ls_seg  = chunk->get_segment(ls_col);
+  // Extract and encode data in one pass
+  for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+    const auto chunk = input->get_chunk(chunk_id);
+    const auto& rf_seg = chunk->get_segment(rf_col);
+    const auto& ls_seg = chunk->get_segment(ls_col);
     const auto& qty_seg = chunk->get_segment(qty_col);
 
-    for (ChunkOffset offset{0}; offset < chunk->size(); ++offset) {
-      const auto rf_val  = boost::get<pmr_string>((*rf_seg)[offset]);
-      const auto ls_val  = boost::get<pmr_string>((*ls_seg)[offset]);
+    const auto chunk_size = chunk->size();
+    
+    for (ChunkOffset offset{0}; offset < chunk_size; ++offset) {
+      // Get values
+      const auto rf_val = boost::get<pmr_string>((*rf_seg)[offset]);
+      const auto ls_val = boost::get<pmr_string>((*ls_seg)[offset]);
       const auto qty_val = static_cast<double>(boost::get<float>((*qty_seg)[offset]));
-
-      if (!rf_dict.contains(rf_val)) rf_dict[rf_val] = rf_next++;
-      if (!ls_dict.contains(ls_val)) ls_dict[ls_val] = ls_next++;
-
-      uint32_t packed = (static_cast<uint32_t>(rf_dict[rf_val]) << 16) |
-                         static_cast<uint32_t>(ls_dict[ls_val]);
-
-      keys.push_back(packed);
+      
+      // Dictionary encoding
+      uint16_t rf_id, ls_id;
+      
+      auto rf_it = rf_dict.find(rf_val);
+      if (rf_it == rf_dict.end()) {
+        rf_id = rf_next;
+        rf_dict[rf_val] = rf_next++;
+      } else {
+        rf_id = rf_it->second;
+      }
+      
+      auto ls_it = ls_dict.find(ls_val);
+      if (ls_it == ls_dict.end()) {
+        ls_id = ls_next;
+        ls_dict[ls_val] = ls_next++;
+      } else {
+        ls_id = ls_it->second;
+      }
+      
+      // Pack keys: rf_id in upper 16 bits, ls_id in lower 16 bits
+      KeyType packed_key = (static_cast<KeyType>(rf_id) << 16) | ls_id;
+      keys.push_back(packed_key);
       qty_values.push_back(qty_val);
     }
   }
 
-  // 2️⃣ AVX2 SIMD aggregation over sorted keys
-  std::vector<uint32_t> unique_keys;
-  std::vector<double> sums;
+  // 2️⃣ Sort keys and values together using indices
+  std::vector<size_t> indices(keys.size());
+  std::iota(indices.begin(), indices.end(), 0);
+  
+  std::sort(indices.begin(), indices.end(), [&keys](size_t a, size_t b) {
+    return keys[a] < keys[b];
+  });
 
-  size_t i = 0;
-  const size_t n = keys.size();
-
-  while (i < n) {
-    const uint32_t current_key = keys[i];
+  // 3️⃣ Aggregate sorted values (FIXED VERSION)
+  struct AggResult {
+    KeyType key;
     double sum = 0.0;
-    size_t j = i;
-
-    // Process 4 doubles at a time
-    for (; j + 3 < n; j += 4) {
-      // Check if all 4 keys match current
-      __m128i key_vec = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&keys[j]));
-      __m128i current_vec = _mm_set1_epi32(static_cast<int>(current_key));
-      __m128i cmp = _mm_cmpeq_epi32(key_vec, current_vec);
-      int mask = _mm_movemask_ps(_mm_castsi128_ps(cmp));
-
-      if (mask != 0xF) break; // not all match, fallback to scalar
-
-      // Load 4 doubles
-      __m256d qty_vec = _mm256_loadu_pd(qty_values.data() + j);
-      __m256d hadd1 = _mm256_hadd_pd(qty_vec, qty_vec);
-      double tmp[4];
-      _mm256_storeu_pd(tmp, hadd1);
-      sum += tmp[0] + tmp[2];
+  };
+  
+  std::vector<AggResult> results;
+  
+  if (!indices.empty()) {
+    size_t i = 0;
+    const size_t n = indices.size();
+    
+    while (i < n) {
+      size_t start_idx = indices[i];
+      KeyType current_key = keys[start_idx];
+      double sum = 0.0;
+      size_t processed = 0;
+      
+      // Try to process in blocks of 4 with SIMD if available
+      #ifdef __AVX2__
+      // Count how many consecutive values have the same key
+      size_t same_count = 1;
+      while (i + same_count < n && 
+             keys[indices[i + same_count]] == current_key &&
+             same_count < 8) {  // Limit to reasonable block size
+        same_count++;
+      }
+      
+      // Process as many complete 4-element blocks as possible
+      size_t simd_blocks = same_count / 4;
+      if (simd_blocks > 0) {
+        __m256d total_sum = _mm256_setzero_pd();
+        
+        for (size_t block = 0; block < simd_blocks; ++block) {
+          // Load 4 values
+          size_t base_idx = i + block * 4;
+          double vals[4] = {
+            qty_values[indices[base_idx]],
+            qty_values[indices[base_idx + 1]],
+            qty_values[indices[base_idx + 2]],
+            qty_values[indices[base_idx + 3]]
+          };
+          
+          __m256d val_vec = _mm256_loadu_pd(vals);
+          total_sum = _mm256_add_pd(total_sum, val_vec);
+        }
+        
+        // Horizontal sum of total_sum
+        double temp[4];
+        _mm256_storeu_pd(temp, total_sum);
+        sum = temp[0] + temp[1] + temp[2] + temp[3];
+        processed = simd_blocks * 4;
+      }
+      #endif
+      
+      // Process remaining values with same key (including all if no SIMD)
+      size_t remaining_start = i + processed;
+      while (remaining_start < n && keys[indices[remaining_start]] == current_key) {
+        sum += qty_values[indices[remaining_start]];
+        remaining_start++;
+      }
+      
+      // Advance i to next different key
+      while (i < n && keys[indices[i]] == current_key) {
+        i++;
+      }
+      
+      results.push_back({current_key, sum});
     }
-
-    // Scalar fallback for remaining
-    for (; j < n && keys[j] == current_key; ++j) {
-      sum += qty_values[j];
-    }
-
-    unique_keys.push_back(current_key);
-    sums.push_back(sum);
-    i = j;
   }
 
-  // 3️⃣ Build result table
+  // 4️⃣ Build result table
   TableColumnDefinitions columns{
       {"l_returnflag", DataType::String, false},
       {"l_linestatus", DataType::String, false},
       {"sum_qty", DataType::Double, false}
   };
-  auto result = std::make_shared<Table>(columns, TableType::Data);
-
-  // Reverse mapping integer -> string
+  
+  auto result = std::make_shared<Table>(columns, TableType::Data, Chunk::DEFAULT_SIZE);
+  
+  // Build reverse dictionaries
   std::vector<pmr_string> rf_rev(rf_next);
   std::vector<pmr_string> ls_rev(ls_next);
-  for (const auto& [str, id] : rf_dict) rf_rev[id] = str;
-  for (const auto& [str, id] : ls_dict) ls_rev[id] = str;
-
-  for (size_t k = 0; k < unique_keys.size(); ++k) {
-    const uint32_t key = unique_keys[k];
-    uint16_t rf_id = key >> 16;
-    uint16_t ls_id = key & 0xFFFF;
-    result->append({rf_rev[rf_id], ls_rev[ls_id], sums[k]});
+  
+  for (const auto& [str, id] : rf_dict) {
+    rf_rev[id] = str;
   }
-
+  for (const auto& [str, id] : ls_dict) {
+    ls_rev[id] = str;
+  }
+  
+  // Sort results by key to ensure consistent output order
+  std::sort(results.begin(), results.end(), [](const AggResult& a, const AggResult& b) {
+    return a.key < b.key;
+  });
+  
+  // Append results row by row
+  for (const auto& agg : results) {
+    uint16_t rf_id = (agg.key >> 16) & 0xFFFF;
+    uint16_t ls_id = agg.key & 0xFFFF;
+    
+    std::vector<AllTypeVariant> row;
+    row.reserve(3);
+    row.push_back(rf_rev[rf_id]);
+    row.push_back(ls_rev[ls_id]);
+    row.push_back(agg.sum);
+    
+    result->append(row);
+  }
+  
   return result;
 }
 
@@ -1085,8 +1145,7 @@ int main() {
   std::cout << "=============================================" << std::endl;
 
   // Scale factors to benchmark
-  // const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f};
-  const auto scale_factors = std::vector<float>{16.0f};
+  const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f};
 
   // Start total benchmark timer
   const auto total_start = std::chrono::high_resolution_clock::now();

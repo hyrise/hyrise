@@ -25,6 +25,8 @@ target_link_libraries(
 
 target_include_directories(hyrisePlayground PRIVATE ../benchmarklib)
 
+target_compile_options(hyrisePlayground PRIVATE -mavx2 -mfma -O3)
+
 # Configure client
 add_executable(
     hyriseClient
