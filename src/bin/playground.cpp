@@ -42,8 +42,8 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  */
 struct PlaygroundConfig {
   // scale_factor removed - now a loop variable in main()
-  uint32_t num_workers = 10;    // Number of workers for Multi-Threaded variants
-  uint32_t num_iterations = 5;  // Number of benchmark iterations per algorithm
+  uint32_t num_workers = 32;    // Number of workers for Multi-Threaded variants
+  uint32_t num_iterations = 7;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
   bool run_single_optimized = false;
   bool run_multi_naive = true;
@@ -1086,7 +1086,7 @@ int main() {
 
   // Scale factors to benchmark
   // const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f};
-  const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f};
+  const auto scale_factors = std::vector<float>{16.0f};
 
   // Start total benchmark timer
   const auto total_start = std::chrono::high_resolution_clock::now();
