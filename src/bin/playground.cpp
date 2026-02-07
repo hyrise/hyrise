@@ -51,7 +51,7 @@ struct PlaygroundConfig {
 };
 
 // Global Config Instance
-const auto CONFIG = PlaygroundConfig{};
+auto CONFIG = PlaygroundConfig{};
 
 
 
@@ -84,8 +84,8 @@ void setup_scheduler(bool multi_threaded, uint32_t worker_count = 1) {
 using EncodedKey = uint16_t;
 
 inline EncodedKey encode_key(char rf, char ls) {
-  return static_cast<EncodedKey>(static_cast<uint8_t>(rf)) |
-         (static_cast<EncodedKey>(static_cast<uint8_t>(ls)) << 8);
+  return static_cast<EncodedKey>(static_cast<uint8_t>(rf) |
+         (static_cast<uint16_t>(static_cast<uint8_t>(ls)) << 8));
 }
 
 inline std::pair<char, char> decode_key(EncodedKey encoded) {
@@ -1175,7 +1175,7 @@ int main() {
     std::cout << "\n";
     std::cout << ">>> Scale Factor " << scale_factor << " completed in "
               << sf_duration << " ms ("
-              << std::fixed << std::setprecision(2) << (sf_duration / 1000.0) << " s)" << std::endl;
+              << std::fixed << std::setprecision(2) << (static_cast<double>(sf_duration) / 1000.0) << " s)" << std::endl;
   }
 
   // Calculate and display total benchmark time
@@ -1185,7 +1185,7 @@ int main() {
   std::cout << "\n";
   std::cout << "=============================================" << std::endl;
   std::cout << "TOTAL BENCHMARK TIME: " << total_duration << " ms ("
-            << std::fixed << std::setprecision(2) << (total_duration / 1000.0) << " s)" << std::endl;
+            << std::fixed << std::setprecision(2) << (static_cast<double>(total_duration) / 1000.0) << " s)" << std::endl;
   std::cout << "=============================================" << std::endl;
 
   // Cleanup scheduler before exit
