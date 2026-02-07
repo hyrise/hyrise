@@ -3,10 +3,11 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=slack:<YOUR_USERNAME>
 #SBATCH --partition=cpu-batch
-#SBATCH -C ARCH:X86
+#SBATCH --constraint=CPU_SKU:7742 # Only use AMD EPYC 7742 for consistency
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=64
+#SBATCH --hint=nomultithread # Physical Cores only
 #SBATCH --mem=128G
 #SBATCH --time=2:00:00
 #SBATCH --exclusive
