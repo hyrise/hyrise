@@ -28,6 +28,7 @@ echo "Starting benchmark job"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURMD_NODENAME"
 echo "CPUs: $SLURM_CPUS_PER_TASK"
+echo "CPU Model: $(cat /proc/cpuinfo | grep 'model name' | head -1 | cut -d: -f2 | xargs)"
 
 # Step 1: Set up container with dependencies and build (reuses container across jobs)
 echo "Setting up container..."
