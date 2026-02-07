@@ -8,7 +8,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
-#SBATCH --time=1:00:00
+#SBATCH --time=2:00:00
 #SBATCH --exclusive
 #SBATCH --job-name=hyrise-benchmark
 #SBATCH --output=slurm-benchmark-%j.out
