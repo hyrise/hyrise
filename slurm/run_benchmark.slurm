@@ -40,7 +40,7 @@ srun --container-image="ubuntu:25.04" \
 set -e
 if [ ! -f /workspace/$BUILD_DIR/hyrisePlayground ]; then
   echo 'Building hyrisePlayground...'
-  apt-get update -qq && apt-get install -y -qq sudo
+  apt-get update -qq && apt-get install -y -qq sudo make
   cd /workspace
   HYRISE_HEADLESS_SETUP=true DEBIAN_FRONTEND=noninteractive ./install_dependencies.sh
   mkdir -p $BUILD_DIR && cd $BUILD_DIR
