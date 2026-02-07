@@ -11,8 +11,7 @@
 #SBATCH --mem=128G
 #SBATCH --time=7:00:00
 #SBATCH --exclusive
-#SBATCH --output=results/benchmark_%j.log
-#SBATCH --error=results/benchmark_%j.err
+#SBATCH --output=slurm-benchmark-%j.log
 
 # ============================================
 # Hyrise Playground Benchmark - SLURM Script
