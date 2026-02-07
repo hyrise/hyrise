@@ -8,7 +8,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
-#SBATCH --time=7:00:00
+#SBATCH --time=1:00:00
 #SBATCH --exclusive
 #SBATCH --job-name=hyrise-benchmark
 #SBATCH --output=slurm-benchmark-%j.out
@@ -45,7 +45,7 @@ if [ ! -f /workspace/$BUILD_DIR/hyrisePlayground ]; then
   cd /workspace
   HYRISE_HEADLESS_SETUP=true DEBIAN_FRONTEND=noninteractive ./install_dependencies.sh
   mkdir -p $BUILD_DIR && cd $BUILD_DIR
-  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DENABLE_NUMA_SUPPORT=OFF ..
+  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-march=native" -DENABLE_NUMA_SUPPORT=OFF ..
   make -j$NUM_CORES hyrisePlayground
 else
   echo 'Binary found, skipping build'
