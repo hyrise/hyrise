@@ -13,6 +13,8 @@
 #SBATCH --job-name=hyrise-benchmark
 #SBATCH --output=slurm-benchmark-%j.out
 
+set -e
+
 # Hyrise Playground Benchmark
 # IMPORTANT: Update REPO_PATH to match your cluster home directory path
 # Submit from anywhere: sbatch slurm/run_benchmark.slurm
@@ -32,11 +34,13 @@ echo "Setting up container..."
 srun --container-image="ubuntu:25.04" \
      --container-name=$CONTAINER_NAME \
      --container-writable \
+     --container-remap-root \
      --container-mounts=$REPO_PATH:/workspace \
      bash -c "
+set -e
 if [ ! -f /workspace/$BUILD_DIR/hyrisePlayground ]; then
   echo 'Building hyrisePlayground...'
-  apt-get update -qq && apt-get install -y -qq sudo > /dev/null 2>&1
+  apt-get update -qq && apt-get install -y -qq sudo
   cd /workspace
   HYRISE_HEADLESS_SETUP=true DEBIAN_FRONTEND=noninteractive ./install_dependencies.sh
   mkdir -p $BUILD_DIR && cd $BUILD_DIR
@@ -50,6 +54,7 @@ fi
 # Step 2: Run benchmark (reuses cached container)
 echo "Running benchmark..."
 srun --container-name=$CONTAINER_NAME \
+     --container-remap-root \
      --container-mounts=$REPO_PATH:/workspace \
      --container-workdir=/workspace/$BUILD_DIR \
      ./hyrisePlayground
