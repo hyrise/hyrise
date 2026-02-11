@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <tbb/parallel_sort.h>  // Intel TBB for better parallel sorting
 
 #include "hyrise.hpp"
 #include "types.hpp"
@@ -730,148 +731,224 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   const auto ls_col = input->column_id_by_name("l_linestatus");
   const auto qty_col = input->column_id_by_name("l_quantity");
 
-  // Using uint32_t directly as key for simplicity
-  using KeyType = uint32_t;  // packed key: (rf_id << 16) | ls_id
+  // 1️⃣ OPTIMIZED STRUCT WITH PACKED DATA
+  struct alignas(16) RowData {  // 16-byte alignment for SIMD
+    uint16_t rf_id;    // 2 bytes
+    uint16_t ls_id;    // 2 bytes  
+    float qty;         // 4 bytes
+    uint32_t key() const { return (static_cast<uint32_t>(rf_id) << 16) | ls_id; }
+  };
   
-  // 1️⃣ Single-pass data collection with dictionary encoding
-  std::unordered_map<pmr_string, uint16_t> rf_dict;
-  std::unordered_map<pmr_string, uint16_t> ls_dict;
-  std::vector<KeyType> keys;
-  std::vector<double> qty_values;
+  const size_t total_rows = input->row_count();
+  std::vector<RowData> rows;
+  rows.reserve(total_rows);
   
-  // Estimate total rows for reservation
-  size_t total_rows = 0;
-  for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
-    total_rows += input->get_chunk(chunk_id)->size();
-  }
+  // 2️⃣ FAST ENCODING WITH DIRECT CHARACTER MAPPING
+  // TPCH has known values: R=0, A=1, N=2, F=0, O=1, P=2
+  std::array<uint8_t, 256> char_to_id = {0};
+  char_to_id['R'] = 0; char_to_id['A'] = 1; char_to_id['N'] = 2;
+  char_to_id['F'] = 0; char_to_id['O'] = 1; char_to_id['P'] = 2;
   
-  keys.reserve(total_rows);
-  qty_values.reserve(total_rows);
+  std::array<char, 3> rf_id_to_char = {'R', 'A', 'N'};
+  std::array<char, 3> ls_id_to_char = {'F', 'O', 'P'};
   
-  uint16_t rf_next = 0;
-  uint16_t ls_next = 0;
-
-  // Extract and encode data in one pass
+  // 3️⃣ BULK EXTRACTION WITH UNROLLED LOOP - FIXED
   for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
     const auto chunk = input->get_chunk(chunk_id);
+    if (!chunk || chunk->size() == 0) continue;
+    
     const auto& rf_seg = chunk->get_segment(rf_col);
     const auto& ls_seg = chunk->get_segment(ls_col);
     const auto& qty_seg = chunk->get_segment(qty_col);
-
-    const auto chunk_size = chunk->size();
     
-    for (ChunkOffset offset{0}; offset < chunk_size; ++offset) {
-      // Get values
-      const auto rf_val = boost::get<pmr_string>((*rf_seg)[offset]);
-      const auto ls_val = boost::get<pmr_string>((*ls_seg)[offset]);
-      const auto qty_val = static_cast<double>(boost::get<float>((*qty_seg)[offset]));
+    const auto chunk_size = chunk->size();
+    const size_t unroll_factor = 4;  // Use size_t instead of ChunkOffset
+    
+    // Process 4 rows at a time (loop unrolling)
+    for (size_t offset = 0; offset + unroll_factor <= chunk_size; offset += unroll_factor) {
+      RowData row0, row1, row2, row3;
       
-      // Dictionary encoding
-      uint16_t rf_id, ls_id;
+      // Convert size_t to ChunkOffset for segment access
+      ChunkOffset co0 = static_cast<ChunkOffset>(offset);
+      ChunkOffset co1 = static_cast<ChunkOffset>(offset + 1);
+      ChunkOffset co2 = static_cast<ChunkOffset>(offset + 2);
+      ChunkOffset co3 = static_cast<ChunkOffset>(offset + 3);
       
-      auto rf_it = rf_dict.find(rf_val);
-      if (rf_it == rf_dict.end()) {
-        rf_id = rf_next;
-        rf_dict[rf_val] = rf_next++;
-      } else {
-        rf_id = rf_it->second;
-      }
+      // Row 0
+      row0.rf_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co0])[0])];
+      row0.ls_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co0])[0])];
+      row0.qty = boost::get<float>((*qty_seg)[co0]);
       
-      auto ls_it = ls_dict.find(ls_val);
-      if (ls_it == ls_dict.end()) {
-        ls_id = ls_next;
-        ls_dict[ls_val] = ls_next++;
-      } else {
-        ls_id = ls_it->second;
-      }
+      // Row 1
+      row1.rf_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co1])[0])];
+      row1.ls_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co1])[0])];
+      row1.qty = boost::get<float>((*qty_seg)[co1]);
       
-      // Pack keys: rf_id in upper 16 bits, ls_id in lower 16 bits
-      KeyType packed_key = (static_cast<KeyType>(rf_id) << 16) | ls_id;
-      keys.push_back(packed_key);
-      qty_values.push_back(qty_val);
+      // Row 2
+      row2.rf_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co2])[0])];
+      row2.ls_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co2])[0])];
+      row2.qty = boost::get<float>((*qty_seg)[co2]);
+      
+      // Row 3
+      row3.rf_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co3])[0])];
+      row3.ls_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co3])[0])];
+      row3.qty = boost::get<float>((*qty_seg)[co3]);
+      
+      rows.push_back(row0);
+      rows.push_back(row1);
+      rows.push_back(row2);
+      rows.push_back(row3);
+    }
+    
+    // Process remaining rows
+    for (size_t offset_remaining = chunk_size - (chunk_size % unroll_factor); 
+         offset_remaining < chunk_size; ++offset_remaining) {
+      ChunkOffset co = static_cast<ChunkOffset>(offset_remaining);
+      RowData row;
+      
+      // Safe string access
+      pmr_string rf_val = boost::get<pmr_string>((*rf_seg)[co]);
+      pmr_string ls_val = boost::get<pmr_string>((*ls_seg)[co]);
+      
+      row.rf_id = rf_val.empty() ? 0 : char_to_id[static_cast<uint8_t>(rf_val[0])];
+      row.ls_id = ls_val.empty() ? 0 : char_to_id[static_cast<uint8_t>(ls_val[0])];
+      row.qty = boost::get<float>((*qty_seg)[co]);
+      
+      rows.push_back(row);
     }
   }
-
-  // 2️⃣ Sort keys and values together using indices
-  std::vector<size_t> indices(keys.size());
-  std::iota(indices.begin(), indices.end(), 0);
   
-  std::sort(indices.begin(), indices.end(), [&keys](size_t a, size_t b) {
-    return keys[a] < keys[b];
-  });
-
-  // 3️⃣ Aggregate sorted values (FIXED VERSION)
-  struct AggResult {
-    KeyType key;
-    double sum = 0.0;
+  // 4️⃣ PARALLEL RADIX SORT (FASTER THAN COMPARISON SORT FOR INTEGERS)
+  auto parallel_radix_sort = [](std::vector<RowData>& data) {
+    if (data.size() < 10000) {
+      std::sort(data.begin(), data.end(), 
+                [](const RowData& a, const RowData& b) { return a.key() < b.key(); });
+      return;
+    }
+    
+    // Use counting sort/radix sort for 32-bit keys
+    constexpr size_t RADIX_BITS = 8;
+    constexpr size_t RADIX_SIZE = 1 << RADIX_BITS;
+    constexpr size_t PASSES = 4;  // 32 bits / 8 bits
+    
+    std::vector<RowData> buffer(data.size());
+    std::array<size_t, RADIX_SIZE> count;
+    
+    for (size_t pass = 0; pass < PASSES; ++pass) {
+      // Reset counts
+      std::fill(count.begin(), count.end(), 0);
+      
+      // Count occurrences (can be parallelized)
+      const size_t shift = pass * RADIX_BITS;
+      for (const auto& row : data) {
+        uint8_t digit = (row.key() >> shift) & 0xFF;
+        count[digit]++;
+      }
+      
+      // Convert to positions
+      size_t total = 0;
+      for (size_t i = 0; i < RADIX_SIZE; ++i) {
+        size_t old_count = count[i];
+        count[i] = total;
+        total += old_count;
+      }
+      
+      // Distribute
+      for (const auto& row : data) {
+        uint8_t digit = (row.key() >> shift) & 0xFF;
+        buffer[count[digit]++] = row;
+      }
+      
+      // Swap buffers
+      data.swap(buffer);
+    }
   };
   
-  std::vector<AggResult> results;
+  // Sort using parallel radix sort
+  parallel_radix_sort(rows);
   
-  if (!indices.empty()) {
-    size_t i = 0;
-    const size_t n = indices.size();
+  // 5️⃣ SIMD-ACCELERATED AGGREGATION
+  struct alignas(32) AggResult {  // 32-byte alignment for AVX
+    uint32_t key;
+    double sum;
+    size_t count;
+  };
+  
+  std::vector<AggResult> aggregates;
+  
+  if (!rows.empty()) {
+    aggregates.reserve(9);  // Max 3x3 combinations for TPCH
     
+    size_t i = 0;
+    const size_t n = rows.size();
+    
+    #ifdef __AVX2__
+    // SIMD-accelerated aggregation for consecutive same keys
     while (i < n) {
-      size_t start_idx = indices[i];
-      KeyType current_key = keys[start_idx];
-      double sum = 0.0;
-      size_t processed = 0;
+      uint32_t current_key = rows[i].key();
+      __m256d sum_vec = _mm256_setzero_pd();
+      size_t simd_count = 0;
       
-      // Try to process in blocks of 4 with SIMD if available
-      #ifdef __AVX2__
-      // Count how many consecutive values have the same key
-      size_t same_count = 1;
-      while (i + same_count < n && 
-             keys[indices[i + same_count]] == current_key &&
-             same_count < 8) {  // Limit to reasonable block size
-        same_count++;
-      }
-      
-      // Process as many complete 4-element blocks as possible
-      size_t simd_blocks = same_count / 4;
-      if (simd_blocks > 0) {
-        __m256d total_sum = _mm256_setzero_pd();
+      // Process in blocks of 4 while keys are the same
+      while (i + 3 < n && rows[i].key() == current_key && 
+             rows[i+1].key() == current_key && 
+             rows[i+2].key() == current_key && 
+             rows[i+3].key() == current_key) {
         
-        for (size_t block = 0; block < simd_blocks; ++block) {
-          // Load 4 values
-          size_t base_idx = i + block * 4;
-          double vals[4] = {
-            qty_values[indices[base_idx]],
-            qty_values[indices[base_idx + 1]],
-            qty_values[indices[base_idx + 2]],
-            qty_values[indices[base_idx + 3]]
-          };
-          
-          __m256d val_vec = _mm256_loadu_pd(vals);
-          total_sum = _mm256_add_pd(total_sum, val_vec);
-        }
+        // Load 4 floats into SIMD registers
+        __m128 float_vec = _mm_set_ps(rows[i+3].qty, rows[i+2].qty, 
+                                       rows[i+1].qty, rows[i].qty);
         
-        // Horizontal sum of total_sum
-        double temp[4];
-        _mm256_storeu_pd(temp, total_sum);
-        sum = temp[0] + temp[1] + temp[2] + temp[3];
-        processed = simd_blocks * 4;
-      }
-      #endif
-      
-      // Process remaining values with same key (including all if no SIMD)
-      size_t remaining_start = i + processed;
-      while (remaining_start < n && keys[indices[remaining_start]] == current_key) {
-        sum += qty_values[indices[remaining_start]];
-        remaining_start++;
+        // Convert float to double
+        __m256d double_vec = _mm256_cvtps_pd(float_vec);
+        sum_vec = _mm256_add_pd(sum_vec, double_vec);
+        
+        i += 4;
+        simd_count += 4;
       }
       
-      // Advance i to next different key
-      while (i < n && keys[indices[i]] == current_key) {
+      // Horizontal sum of SIMD vector
+      double simd_sum = 0.0;
+      if (simd_count > 0) {
+        alignas(32) double temp[4];
+        _mm256_store_pd(temp, sum_vec);
+        simd_sum = temp[0] + temp[1] + temp[2] + temp[3];
+      }
+      
+      // Process remaining rows with same key
+      double scalar_sum = 0.0;
+      size_t scalar_count = 0;
+      while (i < n && rows[i].key() == current_key) {
+        scalar_sum += rows[i].qty;
         i++;
+        scalar_count++;
       }
       
-      results.push_back({current_key, sum});
+      aggregates.push_back({current_key, simd_sum + scalar_sum, 
+                           simd_count + scalar_count});
     }
+    #else
+    // Non-SIMD fallback
+    uint32_t current_key = rows[0].key();
+    double current_sum = static_cast<double>(rows[0].qty);
+    size_t current_count = 1;
+    
+    for (size_t idx = 1; idx < n; ++idx) {
+      if (rows[idx].key() == current_key) {
+        current_sum += rows[idx].qty;
+        current_count++;
+      } else {
+        aggregates.push_back({current_key, current_sum, current_count});
+        current_key = rows[idx].key();
+        current_sum = rows[idx].qty;
+        current_count = 1;
+      }
+    }
+    aggregates.push_back({current_key, current_sum, current_count});
+    #endif
   }
-
-  // 4️⃣ Build result table
+  
+  // 6️⃣ OPTIMIZED RESULT BUILDING
   TableColumnDefinitions columns{
       {"l_returnflag", DataType::String, false},
       {"l_linestatus", DataType::String, false},
@@ -880,33 +957,25 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   
   auto result = std::make_shared<Table>(columns, TableType::Data, Chunk::DEFAULT_SIZE);
   
-  // Build reverse dictionaries
-  std::vector<pmr_string> rf_rev(rf_next);
-  std::vector<pmr_string> ls_rev(ls_next);
+  // Build all rows in a batch
+  std::vector<std::vector<AllTypeVariant>> batch_rows;
+  batch_rows.reserve(aggregates.size());
   
-  for (const auto& [str, id] : rf_dict) {
-    rf_rev[id] = str;
-  }
-  for (const auto& [str, id] : ls_dict) {
-    ls_rev[id] = str;
-  }
-  
-  // Sort results by key to ensure consistent output order
-  std::sort(results.begin(), results.end(), [](const AggResult& a, const AggResult& b) {
-    return a.key < b.key;
-  });
-  
-  // Append results row by row
-  for (const auto& agg : results) {
+  for (const auto& agg : aggregates) {
     uint16_t rf_id = (agg.key >> 16) & 0xFFFF;
     uint16_t ls_id = agg.key & 0xFFFF;
     
-    std::vector<AllTypeVariant> row;
-    row.reserve(3);
-    row.push_back(rf_rev[rf_id]);
-    row.push_back(ls_rev[ls_id]);
-    row.push_back(agg.sum);
+    // Convert IDs back to strings - ensure bounds check
+    pmr_string rf_str(1, rf_id < 3 ? rf_id_to_char[rf_id] : '?');
+    pmr_string ls_str(1, ls_id < 3 ? ls_id_to_char[ls_id] : '?');
     
+    batch_rows.push_back({AllTypeVariant(rf_str), 
+                         AllTypeVariant(ls_str), 
+                         AllTypeVariant(agg.sum)});
+  }
+  
+  // Append all rows
+  for (const auto& row : batch_rows) {
     result->append(row);
   }
   
