@@ -54,6 +54,8 @@ enum class LQPInputSide { Left, Right };
 struct LQPOutputRelation {
   std::shared_ptr<AbstractLQPNode> output;
   LQPInputSide input_side{LQPInputSide::Left};
+
+  auto operator<=>(const LQPOutputRelation&) const = default;
 };
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
