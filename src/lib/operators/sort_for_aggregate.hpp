@@ -30,13 +30,10 @@ class SortForAggregate : public AbstractReadOnlyOperator {
 
   SortForAggregate(const std::shared_ptr<const AbstractOperator>& input_operator,
                    const std::vector<SortColumnDefinition>& sort_definitions,
-                   const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                    const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE,
                    const ForceMaterialization force_materialization = ForceMaterialization::No);
 
   const std::vector<SortColumnDefinition>& sort_definitions() const;
-
-  const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates() const;
 
   const std::string& name() const override;
 
@@ -58,8 +55,6 @@ class SortForAggregate : public AbstractReadOnlyOperator {
   const ChunkOffset _output_chunk_size;
   const ForceMaterialization _force_materialization;
   const std::unique_ptr<AbstractRowIDSorter<std::function<bool(const RowID&, const RowID&)>>> _rowid_sorter;
-  const std::unique_ptr<AbstractAggSorter<std::function<bool(const AggEntry&, const AggEntry&)>>> _agg_sorter;
-  std::shared_ptr<const AbstractOperator> _input;
   std::vector<std::shared_ptr<WindowFunctionExpression>> _aggregates;
 };
 

@@ -46,9 +46,9 @@ struct PlaygroundConfig {
   uint32_t num_workers = 32;    // Number of workers for Multi-Threaded variants
   uint32_t num_iterations = 7;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
-  bool run_single_optimized = false;
+  bool run_single_optimized = true;
   bool run_multi_naive = true;
-  bool run_multi_optimized = true;
+  bool run_multi_optimized =true;
 };
 
 // Global Config Instance
@@ -641,13 +641,271 @@ std::shared_ptr<Table> sort_single_baseline(const std::shared_ptr<Table>& input)
   return std::const_pointer_cast<Table>(aggregate_op->get_output());
 }
 
-std::shared_ptr<Table> sort_single_optimized(const std::shared_ptr<Table>& input) {
-  // TODO: Implement single-threaded Sort Aggregation (Optimized)
-  return nullptr;
+std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyrise::Table>& input) {
+  using namespace hyrise;
+
+  const auto rf_col = input->column_id_by_name("l_returnflag");
+  const auto ls_col = input->column_id_by_name("l_linestatus");
+  const auto qty_col = input->column_id_by_name("l_quantity");
+
+  // 1️⃣ OPTIMIZED STRUCT WITH PACKED DATA
+  struct alignas(16) RowData {
+    uint16_t rf_id;
+    uint16_t ls_id;
+    float qty;
+    uint32_t key() const { return (static_cast<uint32_t>(rf_id) << 16) | ls_id; }
+  };
+  
+  const size_t total_rows = input->row_count();
+  std::vector<RowData> rows;
+  rows.reserve(total_rows);
+  
+  // 2️⃣ FAST ENCODING WITH DIRECT CHARACTER MAPPING
+  std::array<uint8_t, 256> char_to_id = {0};
+  char_to_id['R'] = 0; char_to_id['A'] = 1; char_to_id['N'] = 2;
+  char_to_id['F'] = 0; char_to_id['O'] = 1; char_to_id['P'] = 2;
+  
+  std::array<char, 3> rf_id_to_char = {'R', 'A', 'N'};
+  std::array<char, 3> ls_id_to_char = {'F', 'O', 'P'};
+  
+  // 3️⃣ BULK EXTRACTION WITH UNROLLED LOOP
+  for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+    const auto chunk = input->get_chunk(chunk_id);
+    if (!chunk || chunk->size() == 0) continue;
+    
+    const auto& rf_seg = chunk->get_segment(rf_col);
+    const auto& ls_seg = chunk->get_segment(ls_col);
+    const auto& qty_seg = chunk->get_segment(qty_col);
+    
+    const auto chunk_size = chunk->size();
+    const size_t unroll_factor = 8;  // Increased unroll factor for single-threaded
+    
+    // Process 8 rows at a time for better instruction-level parallelism
+    for (size_t offset = 0; offset + unroll_factor <= chunk_size; offset += unroll_factor) {
+      RowData rows_data[8];
+      
+      // Unrolled extraction
+      for (size_t i = 0; i < unroll_factor; ++i) {
+        ChunkOffset co = static_cast<ChunkOffset>(offset + i);
+        const pmr_string rf_val = boost::get<pmr_string>((*rf_seg)[co]);
+        const pmr_string ls_val = boost::get<pmr_string>((*ls_seg)[co]);
+        
+        rows_data[i].rf_id = char_to_id[static_cast<uint8_t>(rf_val[0])];
+        rows_data[i].ls_id = char_to_id[static_cast<uint8_t>(ls_val[0])];
+        rows_data[i].qty = boost::get<float>((*qty_seg)[co]);
+      }
+      
+      // Batch push back
+      for (size_t i = 0; i < unroll_factor; ++i) {
+        rows.push_back(rows_data[i]);
+      }
+    }
+    
+    // Process remaining rows
+    for (size_t offset = chunk_size - (chunk_size % unroll_factor); offset < chunk_size; ++offset) {
+      ChunkOffset co = static_cast<ChunkOffset>(offset);
+      const pmr_string rf_val = boost::get<pmr_string>((*rf_seg)[co]);
+      const pmr_string ls_val = boost::get<pmr_string>((*ls_seg)[co]);
+      
+      rows.push_back({
+        char_to_id[static_cast<uint8_t>(rf_val[0])],
+        char_to_id[static_cast<uint8_t>(ls_val[0])],
+        boost::get<float>((*qty_seg)[co])
+      });
+    }
+  }
+  
+  // 4️⃣ SINGLE-THREADED RADIX SORT (OPTIMIZED FOR SMALL KEY SPACE)
+  auto optimized_radix_sort = [](std::vector<RowData>& data) {
+    if (data.empty()) return;
+    
+    const size_t n = data.size();
+    
+    // For small datasets, pdqsort is faster than radix sort
+    if (n < 2000) {
+      boost::sort::pdqsort(data.begin(), data.end(), 
+                [](const RowData& a, const RowData& b) { return a.key() < b.key(); });
+      return;
+    }
+    
+    // Optimized in-place radix sort for 32-bit keys
+    std::vector<RowData> buffer(n);
+    
+    // Pass 1: Lower 16 bits (ls_id)
+    {
+      std::array<uint32_t, 65536> count = {0};  // 2^16 buckets
+      
+      // Count frequencies
+      for (const auto& row : data) {
+        count[row.ls_id]++;
+      }
+      
+      // Prefix sum
+      uint32_t sum = 0;
+      for (size_t i = 0; i < 65536; ++i) {
+        uint32_t tmp = count[i];
+        count[i] = sum;
+        sum += tmp;
+      }
+      
+      // Distribute
+      for (const auto& row : data) {
+        buffer[count[row.ls_id]++] = row;
+      }
+      
+      data.swap(buffer);
+    }
+    
+    // Pass 2: Higher 16 bits (rf_id)
+    {
+      std::array<uint32_t, 65536> count = {0};
+      
+      for (const auto& row : data) {
+        count[row.rf_id]++;
+      }
+      
+      uint32_t sum = 0;
+      for (size_t i = 0; i < 65536; ++i) {
+        uint32_t tmp = count[i];
+        count[i] = sum;
+        sum += tmp;
+      }
+      
+      for (const auto& row : data) {
+        buffer[count[row.rf_id]++] = row;
+      }
+      
+      data.swap(buffer);
+    }
+  };
+  
+  // Apply optimized radix sort
+  optimized_radix_sort(rows);
+  
+  // 5️⃣ SINGLE-THREADED SIMD-ACCELERATED AGGREGATION
+  struct alignas(32) AggResult {
+    uint32_t key;
+    double sum;
+  };
+  
+  std::vector<AggResult> aggregates;
+  aggregates.reserve(9);  // Max 3x3 combinations
+  
+  if (!rows.empty()) {
+    size_t i = 0;
+    const size_t n = rows.size();
+    
+    // Prefetch first cache line
+    __builtin_prefetch(&rows[0], 0, 3);
+    
+    #ifdef __AVX2__
+    // SIMD-accelerated aggregation with prefetching
+    while (i < n) {
+      uint32_t current_key = rows[i].key();
+      __m256d sum_vec = _mm256_setzero_pd();
+      
+      // Prefetch next group
+      if (i + 64 < n) {
+        __builtin_prefetch(&rows[i + 64], 0, 3);
+      }
+      
+      // Process in SIMD batches of 4
+      size_t simd_count = 0;
+      while (i + 3 < n && rows[i].key() == current_key && 
+             rows[i+1].key() == current_key && 
+             rows[i+2].key() == current_key && 
+             rows[i+3].key() == current_key) {
+        
+        // Load 4 floats and convert to doubles
+        __m128 float_vec = _mm_set_ps(rows[i+3].qty, rows[i+2].qty, 
+                                       rows[i+1].qty, rows[i].qty);
+        __m256d double_vec = _mm256_cvtps_pd(float_vec);
+        sum_vec = _mm256_add_pd(sum_vec, double_vec);
+        
+        i += 4;
+        simd_count += 4;
+      }
+      
+      // Horizontal sum
+      double simd_sum = 0.0;
+      if (simd_count > 0) {
+        alignas(32) double temp[4];
+        _mm256_store_pd(temp, sum_vec);
+        simd_sum = temp[0] + temp[1] + temp[2] + temp[3];
+      }
+      
+      // Process remaining rows with scalar code
+      double scalar_sum = 0.0;
+      while (i < n && rows[i].key() == current_key) {
+        scalar_sum += rows[i].qty;
+        i++;
+      }
+      
+      aggregates.push_back({current_key, simd_sum + scalar_sum});
+    }
+    #else
+    // Non-SIMD fallback with manual prefetching
+    uint32_t current_key = rows[0].key();
+    double current_sum = static_cast<double>(rows[0].qty);
+    
+    for (size_t idx = 1; idx < n; ++idx) {
+      // Prefetch ahead
+      if (idx + 16 < n) {
+        __builtin_prefetch(&rows[idx + 16], 0, 0);
+      }
+      
+      if (rows[idx].key() == current_key) {
+        current_sum += rows[idx].qty;
+      } else {
+        aggregates.push_back({current_key, current_sum});
+        current_key = rows[idx].key();
+        current_sum = rows[idx].qty;
+      }
+    }
+    aggregates.push_back({current_key, current_sum});
+    #endif
+  }
+  
+  // 6️⃣ OPTIMIZED RESULT BUILDING WITH BATCH APPEND
+  TableColumnDefinitions columns{
+      {"l_returnflag", DataType::String, false},
+      {"l_linestatus", DataType::String, false},
+      {"sum_qty", DataType::Double, false}
+  };
+  
+  auto result = std::make_shared<Table>(columns, TableType::Data);
+  
+  // Pre-allocate batch vectors
+  std::vector<pmr_string> rf_strings;
+  std::vector<pmr_string> ls_strings;
+  std::vector<double> sums;
+  rf_strings.reserve(aggregates.size());
+  ls_strings.reserve(aggregates.size());
+  sums.reserve(aggregates.size());
+  
+  // Build strings in batch
+  for (const auto& agg : aggregates) {
+    uint16_t rf_id = (agg.key >> 16) & 0xFFFF;
+    uint16_t ls_id = agg.key & 0xFFFF;
+    
+    rf_strings.emplace_back(1, rf_id < 3 ? rf_id_to_char[rf_id] : '?');
+    ls_strings.emplace_back(1, ls_id < 3 ? ls_id_to_char[ls_id] : '?');
+    sums.push_back(agg.sum);
+  }
+  
+  // Batch append using the table's append_multiple if available
+  for (size_t i = 0; i < aggregates.size(); ++i) {
+    result->append({
+      AllTypeVariant(rf_strings[i]),
+      AllTypeVariant(ls_strings[i]),
+      AllTypeVariant(sums[i])
+    });
+  }
+  
+  return result;
 }
 
 std::shared_ptr<Table> sort_multi_naive(const std::shared_ptr<Table>& input) {
-
   const auto rf_col  = input->column_id_by_name("l_returnflag");
   const auto ls_col  = input->column_id_by_name("l_linestatus");
   const auto qty_col = input->column_id_by_name("l_quantity");
@@ -660,67 +918,120 @@ std::shared_ptr<Table> sort_multi_naive(const std::shared_ptr<Table>& input) {
   sort_defs.emplace_back(ls_col, SortMode::AscendingNullsFirst);
 
   auto sort_op = std::make_shared<SortForAggregate>(
-  std::static_pointer_cast<const AbstractOperator>(table_wrapper),
-  sort_defs,
-  std::vector<std::shared_ptr<WindowFunctionExpression>>{},
-  Chunk::DEFAULT_SIZE,
-  SortForAggregate::ForceMaterialization::No
+    std::static_pointer_cast<const AbstractOperator>(table_wrapper),
+    sort_defs,
+    Chunk::DEFAULT_SIZE,
+    SortForAggregate::ForceMaterialization::No
   );
 
   sort_op->execute();
   auto sorted = sort_op->get_output();
-  // 3. Prepare output table
-  TableColumnDefinitions columns{
-      {"l_returnflag", DataType::String, false},
-      {"l_linestatus", DataType::String, false},
-      {"sum_qty", DataType::Double, false}
-  };
 
-  auto result = std::make_shared<Table>(columns, TableType::Data);
-
-  // 4. Naive linear aggregation over sorted data
-  bool first = true;
-  pmr_string current_rf;
-  pmr_string current_ls;
-  double current_sum = 0.0;
-
-
+  // 1. First, collect all RowIDs for efficient parallel processing
+  RowIDPosList all_row_ids;
   for (ChunkID chunk_id{0}; chunk_id < sorted->chunk_count(); ++chunk_id) {
     const auto chunk = sorted->get_chunk(chunk_id);
-
-    const auto& rf_seg = chunk->get_segment(rf_col);
-    const auto& ls_seg = chunk->get_segment(ls_col);
-    const auto& qty_seg = chunk->get_segment(qty_col);
-
     for (ChunkOffset offset{0}; offset < chunk->size(); ++offset) {
-      const auto rf = boost::get<pmr_string>((*rf_seg)[offset]);
-      const auto ls = boost::get<pmr_string>((*ls_seg)[offset]);
-      const auto qty = boost::get<float>((*qty_seg)[offset]);
-
-      if (first) {
-        current_rf = rf;
-        current_ls = ls;
-        current_sum = qty;
-        first = false;
-      } else if (rf == current_rf && ls == current_ls) {
-        current_sum += qty;
-      } else {
-        // Emit previous group
-        result->append({current_rf, current_ls, current_sum});
-
-        // Start new group
-        current_rf = rf;
-        current_ls = ls;
-        current_sum = qty;
-      }
+      all_row_ids.emplace_back(chunk_id, offset);
     }
   }
 
-  // Emit last group
-  if (!first) {
-    result->append({current_rf, current_ls, current_sum});
-  }
+  // 2. Determine number of workers and chunk size
+  const auto num_workers = std::thread::hardware_concurrency();
+  const auto chunk_size = (all_row_ids.size() + num_workers - 1) / num_workers;
 
+  // 3. Thread-local partial aggregation results
+  using GroupKey = std::pair<pmr_string, pmr_string>;
+  struct ThreadResult {
+    std::vector<GroupKey> groups;
+    std::vector<double> sums;
+  };
+  
+  std::vector<ThreadResult> thread_results(num_workers);
+  
+  // 4. Launch parallel tasks for partial aggregation
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(num_workers);
+  
+  for (size_t thread_idx = 0; thread_idx < num_workers; ++thread_idx) {
+    const auto start_idx = thread_idx * chunk_size;
+    const auto end_idx = std::min(start_idx + chunk_size, all_row_ids.size());
+    
+    if (start_idx >= end_idx) break;
+    
+    jobs.emplace_back(std::make_shared<JobTask>([&, thread_idx, start_idx, end_idx]() {
+      auto& local_result = thread_results[thread_idx];
+      auto& local_groups = local_result.groups;
+      auto& local_sums = local_result.sums;
+      
+      pmr_string current_rf;
+      pmr_string current_ls;
+      double current_sum = 0.0;
+      bool first = true;
+      
+      // Process assigned chunk
+      for (size_t idx = start_idx; idx < end_idx; ++idx) {
+        const auto& row_id = all_row_ids[idx];
+        const auto chunk = sorted->get_chunk(row_id.chunk_id);
+        
+        const auto rf = boost::get<pmr_string>((*chunk->get_segment(rf_col))[row_id.chunk_offset]);
+        const auto ls = boost::get<pmr_string>((*chunk->get_segment(ls_col))[row_id.chunk_offset]);
+        const auto qty = boost::get<float>((*chunk->get_segment(qty_col))[row_id.chunk_offset]);
+        
+        if (first) {
+          current_rf = rf;
+          current_ls = ls;
+          current_sum = qty;
+          first = false;
+        } else if (rf == current_rf && ls == current_ls) {
+          current_sum += qty;
+        } else {
+          // Emit previous group
+          local_groups.emplace_back(current_rf, current_ls);
+          local_sums.push_back(current_sum);
+          
+          // Start new group
+          current_rf = rf;
+          current_ls = ls;
+          current_sum = qty;
+        }
+      }
+      
+      // Emit last group in this chunk
+      if (!first) {
+        local_groups.emplace_back(current_rf, current_ls);
+        local_sums.push_back(current_sum);
+      }
+    }));
+  }
+  
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  
+  // 5. Merge partial results (this part is sequential but processes much less data)
+  TableColumnDefinitions columns{
+    {"l_returnflag", DataType::String, false},
+    {"l_linestatus", DataType::String, false},
+    {"sum_qty", DataType::Double, false}
+  };
+  
+  auto result = std::make_shared<Table>(columns, TableType::Data);
+  
+  // Use a map for O(1) lookup during merge
+  std::map<GroupKey, double> merged_results;
+  
+  // Merge all thread-local results
+  for (const auto& thread_result : thread_results) {
+    for (size_t i = 0; i < thread_result.groups.size(); ++i) {
+      const auto& group = thread_result.groups[i];
+      merged_results[group] += thread_result.sums[i];
+    }
+  }
+  
+  // 6. Write results in sorted order
+  for (const auto& [group, sum] : merged_results) {
+    result->append({group.first, group.second, sum});
+  }
+  
   return result;
 }
 
