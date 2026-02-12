@@ -64,8 +64,8 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_segments.size() == values.size()),
-              ("append: number of segments (" + std::to_string(_segments.size()) + ") does not match value list (" +
-               std::to_string(values.size()) + ")."));
+              std::format("append: number of segments ({}) does not match value list ({}).",
+                          std::to_string(_segments.size()), std::to_string(values.size())));
 
   auto segment_it = _segments.cbegin();
   auto value_it = values.begin();
@@ -228,9 +228,8 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
   if constexpr (HYRISE_DEBUG) {
     const auto number_of_columns = static_cast<ColumnID>(column_count());
     for (const auto& column_id : column_ids) {
-      Assert(column_id < number_of_columns, "ColumnID " + std::to_string(column_id) +
-                                                " exceeds the maximum column index which is " +
-                                                std::to_string(column_count() - 1) + ".");
+      Assert(column_id < number_of_columns, std::format("ColumnID {} exceeds the maximum column index which is {}.",
+                                                        std::to_string(column_id), std::to_string(column_count() - 1)));
     }
   }
 

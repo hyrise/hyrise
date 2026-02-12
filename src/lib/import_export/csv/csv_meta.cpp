@@ -56,7 +56,7 @@ void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
   } else if (json_string == "null_string_as_value") {
     null_handling = NullHandling::NullStringAsValue;
   } else {
-    Fail(std::string{"Illegal value for null_handling: "} + json_string.get<std::string>());
+    Fail(std::format("Illegal value for null_handling: '{}'.", json_string.get<std::string>()));
   }
 }
 
@@ -64,7 +64,7 @@ void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
 
 CsvMeta process_csv_meta_file(const std::string& filename) {
   auto metafile = std::ifstream{filename};
-  Assert(metafile.good(), "Meta file does not exist: " + filename);
+  Assert(metafile.good(), std::format("Meta file does not exist: '{}'.", filename));
   auto meta_json = nlohmann::json{};
   metafile >> meta_json;
   return static_cast<CsvMeta>(meta_json);

@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
   const auto executable_path = std::filesystem::canonical(std::string{argv[0]}).remove_filename();
   const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
   Assert(std::filesystem::exists(ssb_dbgen_path / "dbgen"),
-         std::string{"SSB dbgen not found at "} + ssb_dbgen_path.c_str());
+         std::format("SSB dbgen not found at '{}'.", ssb_dbgen_path.c_str()));
   const auto query_path = executable_path / "../resources/benchmark/ssb/queries";
   const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
 

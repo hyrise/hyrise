@@ -355,37 +355,37 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
     case OperatorType::CreatePreparedPlan: {
       const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
       AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->prepared_plan_name()),
-                  "Prepared Plan '" + create_prepared_plan->prepared_plan_name() + "' already exists.");
+                  std::format("Prepared Plan '{}' already exists.", create_prepared_plan->prepared_plan_name()));
       break;
     }
     case OperatorType::CreateTable: {
       const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
       AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
-                  "Table '" + create_table->table_name + "' already exists.");
+                  std::format("Table '{}' already exists.", create_table->table_name));
       break;
     }
     case OperatorType::CreateView: {
       const auto create_view = std::dynamic_pointer_cast<CreateView>(pqp);
       AssertInput(create_view->if_not_exists() || !storage_manager.has_view(create_view->view_name()),
-                  "View '" + create_view->view_name() + "' already exists.");
+                  std::format("View '{}' already exists.", create_view->view_name()));
       break;
     }
     case OperatorType::DropTable: {
       const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
       AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
-                  "There is no table '" + drop_table->table_name + "'.");
+                  std::format("There is no table '{}'.", drop_table->table_name));
       break;
     }
     case OperatorType::DropView: {
       const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
       AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
-                  "There is no view '" + drop_view->view_name + "'.");
+                  std::format("There is no view '{}'.", drop_view->view_name));
       break;
     }
     case OperatorType::Import: {
       const auto import = std::dynamic_pointer_cast<Import>(pqp);
       const auto file = std::ifstream{import->filename};
-      AssertInput(file.good(), "There is no file '" + import->filename + "'.");
+      AssertInput(file.good(), std::format("There is no file '{}'.", import->filename));
       break;
     }
     default:

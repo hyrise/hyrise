@@ -32,8 +32,9 @@ void Frame::set_node_id(const NodeID node_id) {
     }
   }
 
-  DebugAssert(Frame::node_id(_state_and_version.load()) == node_id,
-              "Setting NUMA node didnt work: " + std::to_string(Frame::node_id(_state_and_version.load())));
+  DebugAssert(
+      Frame::node_id(_state_and_version.load()) == node_id,
+      std::format("Setting NUMA node didnt work: {}", std::to_string(Frame::node_id(_state_and_version.load()))));
 }
 
 void Frame::mark_dirty() {
@@ -52,9 +53,9 @@ void Frame::unlock_exclusive_and_set_evicted() {
 }
 
 bool Frame::try_mark(const Frame::StateVersionType old_state_and_version) {
-  DebugAssert(
-      state(_state_and_version.load()) == UNLOCKED,
-      "Frame must be UNLOCKED to transition to MARKED, instead: " + std::to_string(state(_state_and_version.load())));
+  DebugAssert(state(_state_and_version.load()) == UNLOCKED,
+              std::format("Frame must be UNLOCKED to transition to MARKED, instead: {}",
+                          std::to_string(state(_state_and_version.load()))));
   auto state_and_version = old_state_and_version;
   return _state_and_version.compare_exchange_strong(state_and_version,
                                                     _update_state_with_same_version(old_state_and_version, MARKED));
@@ -106,8 +107,8 @@ bool Frame::try_lock_shared(const Frame::StateVersionType old_state_and_version)
 bool Frame::try_lock_exclusive(const Frame::StateVersionType old_state_and_version) {
   DebugAssert(state(old_state_and_version) == UNLOCKED || state(old_state_and_version) == MARKED ||
                   state(old_state_and_version) == EVICTED,
-              "Frame must be unlocked, marked or evicted to lock exclusive, instead: " +
-                  std::to_string(state(old_state_and_version)));
+              std::format("Frame must be unlocked, marked or evicted to lock exclusive, instead: {}",
+                          std::to_string(state(old_state_and_version))));
   auto state_and_version = old_state_and_version;
   return _state_and_version.compare_exchange_strong(state_and_version,
                                                     _update_state_with_same_version(old_state_and_version, LOCKED));
@@ -129,8 +130,9 @@ bool Frame::unlock_shared() {
 }
 
 void Frame::unlock_exclusive() {
-  DebugAssert(state(_state_and_version.load()) == LOCKED,
-              "Frame must be locked to unlock exclusive. " + std::to_string(state(_state_and_version.load())));
+  DebugAssert(
+      state(_state_and_version.load()) == LOCKED,
+      std::format("Frame must be locked to unlock exclusive. {}", std::to_string(state(_state_and_version.load()))));
   _state_and_version.store(_update_state_with_incremented_version(_state_and_version.load(), UNLOCKED),
                            std::memory_order_release);
 }

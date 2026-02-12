@@ -92,16 +92,15 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
       // outside of the LQP that is currently optimized. For example, if you create a bunch of LQP nodes in the test's
       // SetUp method but these are not used in the current LQP, this can cause this assertion to fail. This is only
       // enforced when rules are executed through the optimizer, not when tests call the rule directly.
-      Assert(nodes_by_lqp.at(root_lqp).contains(output), std::string{"Output `"} + output->description() +
-                                                             "` of node `" + node->description() +
-                                                             "` not found in LQP.");
+      Assert(nodes_by_lqp.at(root_lqp).contains(output),
+             std::format("Output '{}' of node '{}' not found in LQP.", output->description(), node->description()));
 
       for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
         if (other_lqp == root_lqp) {
           continue;
         }
-        Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
-                                          node->description() + "` found in different LQP.");
+        Assert(!nodes.contains(node), std::format("Output '{}' of node '{}' found in different LQP.",
+                                                  output->description(), node->description()));
       }
     }
 
@@ -118,7 +117,7 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
         const auto original_node = static_cast<LQPColumnExpression&>(*sub_expression).original_node.lock();
         Assert(original_node, "LQPColumnExpression is expired, LQP is invalid.");
         Assert(nodes_by_lqp.at(root_lqp).contains(original_node),
-               std::string{"LQPColumnExpression "} + sub_expression->as_column_name() + " cannot be resolved.");
+               std::format("LQPColumnExpression '{}' cannot be resolved.", sub_expression->as_column_name()));
         return ExpressionVisitation::VisitArguments;
       });
     }
@@ -168,9 +167,9 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
         num_expected_inputs = change_meta_table_node.change_type == MetaTableChangeType::Update ? 2 : 1;
       }
     }
-    Assert(node->input_count() == num_expected_inputs, std::string{"Node "} + node->description() + " has " +
-                                                           std::to_string(node->input_count()) + " inputs, while " +
-                                                           std::to_string(num_expected_inputs) + " were expected.");
+    Assert(node->input_count() == num_expected_inputs,
+           std::format("Node '{}' has {} inputs, while {} were expected.", node->description(),
+                       std::to_string(node->input_count()), std::to_string(num_expected_inputs)));
 
     for (const auto& uncorrelated_subquery : uncorrelated_subqueries_per_node(node)) {
       validate_lqp_with_uncorrelated_subqueries(uncorrelated_subquery, root_lqp, nodes_by_lqp);

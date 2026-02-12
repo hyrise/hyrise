@@ -274,7 +274,7 @@ std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
   const auto column_id = find_column_id(expression);
-  Assert(column_id, "This node has no column '" + expression.as_column_name() + "'.");
+  Assert(column_id, std::format("This node has no column '{}'.", expression.as_column_name()));
   return *column_id;
 }
 

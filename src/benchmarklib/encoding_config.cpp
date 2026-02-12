@@ -42,7 +42,7 @@ std::optional<EncodingType> EncodingConfig::encoding_string_to_type(const std::s
   }
 
   const auto type = magic_enum::enum_cast<EncodingType>(encoding_str);
-  Assert(type, "Invalid encoding type: '" + encoding_str + "'");
+  Assert(type, std::format("Invalid encoding type: '{}'.", encoding_str));
   return type;
 }
 
@@ -53,7 +53,7 @@ std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(
 
   const auto compression = vector_compression_type_to_string.right.find(compression_str);
   Assert(compression != vector_compression_type_to_string.right.end(),
-         "Invalid compression type: '" + compression_str + "'");
+         std::format("Invalid compression type: '{}'.", compression_str));
   return compression->second;
 }
 

@@ -60,7 +60,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   const auto plugin_name = plugin_name_from_path(path);
 
   Assert(!_plugins.contains(plugin_name),
-         "Loading plugin failed: A plugin with name " + plugin_name + " already exists.");
+         std::format("Loading plugin failed: A plugin with name '{}' already exists.", plugin_name));
 
   // Lock for dl* functions (see clang-tidy's "concurrency-mt-unsafe")
   static auto dl_mutex = std::mutex{};
@@ -68,7 +68,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   // NOLINTNEXTLINE(concurrency-mt-unsafe): dlerror is not thread-safe, but it is guarded by dl_mutex.
-  Assert(plugin_handle, std::string{"Loading plugin failed: "} + dlerror());
+  Assert(plugin_handle, std::format("Loading plugin failed: '{}'.", dlerror()));
 
   // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
   // factory method. See the sources of AbstractPlugin and TestPlugin for further details.
@@ -108,7 +108,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
 void PluginManager::exec_user_function(const PluginName& plugin_name, const PluginFunctionName& function_name) {
   Assert(_user_executable_functions.contains({plugin_name, function_name}),
-         "There is no function '" + function_name + "' defined for plugin '" + plugin_name + "'.");
+         std::format("There is no function '{}' defined for plugin '{}'.", function_name, plugin_name));
 
   const auto& user_executable_function = _user_executable_functions[{plugin_name, function_name}];
   user_executable_function();
@@ -123,7 +123,7 @@ void PluginManager::exec_user_function(const PluginName& plugin_name, const Plug
 void PluginManager::exec_pre_benchmark_hook(const PluginName& plugin_name,
                                             AbstractBenchmarkItemRunner& benchmark_item_runner) {
   Assert(_pre_benchmark_hooks.contains({plugin_name}),
-         "There is no pre-benchmark hook defined for plugin '" + plugin_name + "'.");
+         std::format("There is no pre-benchmark hook defined for plugin '{}'.", plugin_name));
 
   const auto& pre_benchmark_hook = _pre_benchmark_hooks[plugin_name];
   pre_benchmark_hook(benchmark_item_runner);
@@ -135,7 +135,7 @@ void PluginManager::exec_pre_benchmark_hook(const PluginName& plugin_name,
 
 void PluginManager::exec_post_benchmark_hook(const PluginName& plugin_name, nlohmann::json& report) {
   Assert(_post_benchmark_hooks.contains({plugin_name}),
-         "There is no post-benchmark hook defined for plugin '" + plugin_name + "'.");
+         std::format("There is no post-benchmark hook defined for plugin '{}'.", plugin_name));
 
   const auto& post_benchmark_hook = _post_benchmark_hooks[plugin_name];
   post_benchmark_hook(report);
@@ -156,7 +156,7 @@ bool PluginManager::has_post_benchmark_hook(const PluginName& plugin_name) const
 void PluginManager::unload_plugin(const PluginName& plugin_name) {
   auto plugin_iter = _plugins.find(plugin_name);
   Assert(plugin_iter != _plugins.cend(),
-         "Unloading plugin failed: A plugin with name '" + plugin_name + "' does not exist.");
+         std::format("Unloading plugin failed: A plugin with name '{}' does not exist.", plugin_name));
 
   _unload_and_erase_plugin(plugin_iter);
 }

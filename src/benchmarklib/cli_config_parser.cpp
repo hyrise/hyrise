@@ -182,7 +182,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
-  Assert(std::filesystem::is_regular_file(encoding_file_str), "No such file: " + encoding_file_str);
+  Assert(std::filesystem::is_regular_file(encoding_file_str), std::format("No such file: '{}'.", encoding_file_str));
 
   auto encoding_config_json = nlohmann::json{};
   auto json_file = std::ifstream{encoding_file_str};
@@ -207,7 +207,8 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     for (const auto& type : type_encoding.items()) {
       const auto type_str = boost::to_lower_copy(type.key());
       const auto data_type_it = data_type_to_string.right.find(type_str);
-      Assert(data_type_it != data_type_to_string.right.end(), "Unknown data type for encoding: " + type_str);
+      Assert(data_type_it != data_type_to_string.right.end(),
+             std::format("Unknown data type for encoding: '{}'.", type_str));
 
       const auto& encoding_info = type.value();
       Assert(encoding_info.is_object(), "The type encoding info needs to be specified as a json object.");

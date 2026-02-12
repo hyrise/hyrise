@@ -156,7 +156,7 @@ SQLiteWrapper::Connection::Connection(const std::string& uri) {
       sqlite3_open_v2(uri.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr);
   if (ret != SQLITE_OK) {
     sqlite3_close(db);
-    Fail(std::string{"Cannot open database '"} + std::string(sqlite3_errmsg(db)) + "'.");
+    Fail(std::format("Cannot open database '{}'.", std::string(sqlite3_errmsg(db))));
   }
 
   // Make LIKE case sensitive, just like in Hyrise
@@ -207,7 +207,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
     if (return_code != SQLITE_OK) {
       sqlite3_finalize(sqlite_statement);
-      Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + ".");
+      Fail(std::format("Failed to execute query \"{}\": '{}'.", query, std::string(sqlite3_errmsg(db))));
     }
 
     while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {}
@@ -250,7 +250,7 @@ void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql) const 
   if (return_code != SQLITE_OK) {
     auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
-    Fail(std::string{"Failed to execute query ("} + sql + "). SQL error: " + msg + "\n");
+    Fail(std::format("Failed to execute query \"{}\". SQL error: '{}'\n", sql, msg));
   }
 }
 
@@ -309,7 +309,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
       sqlite3_prepare_v2(main_connection.db, insert_into_str.c_str(), static_cast<int>(insert_into_str.size() + 1),
                          &insert_into_statement, nullptr);
   Assert(sqlite3_prepare_return_code == SQLITE_OK,
-         "Failed to prepare statement: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
+         std::format("Failed to prepare statement: '{}'.", std::string(sqlite3_errmsg(main_connection.db))));
 
   // Insert values row-by-row
   const auto chunk_count = table.chunk_count();
@@ -365,16 +365,16 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
         }
 
         Assert(sqlite3_bind_return_code == SQLITE_OK,
-               "Failed to bind value: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
+               std::format("Failed to bind value: '{}'.", std::string(sqlite3_errmsg(main_connection.db))));
       }
 
       const auto sqlite3_step_return_code = sqlite3_step(insert_into_statement);
       Assert(sqlite3_step_return_code == SQLITE_DONE,
-             "Failed to step INSERT: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
+             std::format("Failed to step INSERT: '{}'.", std::string(sqlite3_errmsg(main_connection.db))));
 
       const auto sqlite3_reset_return_code = sqlite3_reset(insert_into_statement);
       Assert(sqlite3_reset_return_code == SQLITE_OK,
-             "Failed to reset statement: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
+             std::format("Failed to reset statement: '{}'", std::string(sqlite3_errmsg(main_connection.db))));
     }
   }
 

@@ -306,7 +306,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
 
   for (const auto& expression : output_expressions) {
     const auto column_id = find_expression_idx(*expression, input_expressions);
-    Assert(column_id, "Could not resolve " + expression->as_column_name() + ".");
+    Assert(column_id, std::format("Could not resolve '{}'.", expression->as_column_name()));
     column_ids.emplace_back(*column_id);
   }
 
@@ -339,8 +339,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++sort_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
-    Assert(pqp_column_expression,
-           "Sort Expression '" + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid.");
+    Assert(pqp_column_expression, std::format("Sort Expression '{}' must be available as column, LQP is invalid.",
+                                              pqp_expression->as_column_name()));
 
     column_definitions.emplace_back(pqp_column_expression->column_id, *sort_mode_iter);
   }
@@ -371,7 +371,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
         OperatorJoinPredicate::from_expression(*predicate_expression, *node->left_input(), *node->right_input());
     // Assert that the Join Predicates are simple, e.g. of the form <column_a> <predicate> <column_b>.
     // <column_a> and <column_b> must be on separate sides, but <column_a> need not be on the left.
-    Assert(join_predicate, "Couldn't translate join predicate: " + predicate_expression->as_column_name() + ".");
+    Assert(join_predicate,
+           std::format("Couldn't translate join predicate: '{}'.", predicate_expression->as_column_name()));
     join_predicates.emplace_back(*join_predicate);
   }
 
@@ -405,7 +406,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     }
     // NOLINTEND(bugprone-use-after-move, hicpp-invalid-access-moved)
   });
-  Assert(join_operator, "No operator implementation available for join '" + join_node->description() + "'.");
+  Assert(join_operator, std::format("No operator implementation available for join '{}'.", join_node->description()));
 
   return join_operator;
 }
@@ -426,8 +427,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
 
     Assert(lqp_expression->type == ExpressionType::WindowFunction,
-           "Expression '" + lqp_expression->as_column_name() +
-               "' used as WindowFunctionExpression is not an WindowFunctionExpression.");
+           std::format("Expression '{}' used as WindowFunctionExpression is not an WindowFunctionExpression.",
+                       lqp_expression->as_column_name()));
 
     const auto pqp_expression = _translate_expression(lqp_expression, node->left_input(), input_expressions);
     const auto aggregate_expression = std::static_pointer_cast<WindowFunctionExpression>(pqp_expression);
@@ -443,7 +444,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
        ++expression_idx) {
     const auto& expression = aggregate_node->node_expressions[expression_idx];
     const auto column_id = find_expression_idx(*expression, input_expressions);
-    Assert(column_id, "GroupBy expression '" + expression->as_column_name() + "' not available as column.");
+    Assert(column_id, std::format("GroupBy expression '{}' not available as column.", expression->as_column_name()));
     group_by_column_ids.emplace_back(*column_id);
   }
   return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
@@ -687,7 +688,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     }
 
     AssertInput(expression->type != ExpressionType::LQPColumn,
-                "Failed to resolve column '" + expression->as_column_name() + "', LQP is invalid.");
+                std::format("Failed to resolve column '{}', LQP is invalid.", expression->as_column_name()));
 
     return ExpressionVisitation::VisitArguments;
   });

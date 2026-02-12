@@ -1165,8 +1165,8 @@ void AggregateHash::_aggregate() {
             case WindowFunction::PercentRank:
             case WindowFunction::Rank:
             case WindowFunction::RowNumber:
-              Fail(std::string{"Unsupported aggregate function "} +
-                   window_function_to_string.left.at(aggregate->window_function) + ".");
+              Fail(std::format("Unsupported aggregate function '{}'.",
+                               window_function_to_string.left.at(aggregate->window_function)));
           }
         });
 
@@ -1262,8 +1262,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         case WindowFunction::PercentRank:
         case WindowFunction::Rank:
         case WindowFunction::RowNumber:
-          Fail(std::string{"Unsupported aggregate function "} +
-               window_function_to_string.left.at(aggregate->window_function) + ".");
+          Fail(std::format("Unsupported aggregate function '{}'.",
+                           window_function_to_string.left.at(aggregate->window_function)));
       }
     });
 
@@ -1493,8 +1493,8 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       case WindowFunction::PercentRank:
       case WindowFunction::Rank:
       case WindowFunction::RowNumber:
-        Fail(std::string{"Unsupported aggregate function '"} + window_function_to_string.left.at(aggregate_function) +
-             "'.");
+        Fail(
+            std::format("Unsupported aggregate function '{}'.", window_function_to_string.left.at(aggregate_function)));
     }
   });
 

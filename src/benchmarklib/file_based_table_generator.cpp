@@ -29,7 +29,7 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
-  Assert(std::filesystem::is_directory(_path), std::string{"Table path "} + _path + " must be a directory.");
+  Assert(std::filesystem::is_directory(_path), std::format("Table path '{}' must be a directory.", _path));
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
@@ -60,11 +60,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
     if (extension == ".bin") {
       Assert(!table_info.binary_file_path,
-             std::string{"Multiple binary files found for table '"} + table_name.string() + "'");
+             std::format("Multiple binary files found for table '{}'.", table_name.string()));
       table_info.binary_file_path = file_path;
     } else {
       Assert(!table_info.text_file_path,
-             std::string{"Multiple text files found for table '"} + table_name.string() + "'");
+             std::format("Multiple text files found for table '{}'. ", table_name.string()));
       table_info.text_file_path = file_path;
     }
   }

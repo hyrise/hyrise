@@ -469,7 +469,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
   for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
     const auto& expression = *output_expressions[expression_idx];
     const auto input_column_id = find_expression_idx(expression, input_expressions);
-    Assert(input_column_id, "Could not resolve " + expression.as_column_name());
+    Assert(input_column_id, std::format("Could not resolve '{}'.", expression.as_column_name()));
     column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
   }
 

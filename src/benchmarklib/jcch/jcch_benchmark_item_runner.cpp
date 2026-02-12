@@ -76,7 +76,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
     // Check for the existence of dbgen's query templates (1.sql etc.) at the expected location.
     const auto dbgen_queries_path = _dbgen_path + "/queries/";
     Assert(std::filesystem::exists(dbgen_queries_path),
-           std::string{"Query templates not found at "} + dbgen_queries_path);
+           std::format("Query templates not found at '{}'.", dbgen_queries_path));
 
     // NOLINTBEGIN(concurrency-mt-unsafe): std::system() is not thread-safe. We can ignore this warning, because
     // _load_params is only called in the constructor once.
@@ -109,7 +109,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
   // Open the params file, which looks like this:
   //   query_id|param0|param1
   auto file = std::ifstream(params_path);
-  Assert(file.is_open(), std::string{"Could not open JCC-H parameters at "} + params_path);
+  Assert(file.is_open(), std::format("Could not open JCC-H parameters at '{}'.", params_path));
 
   auto line = std::string{};
   while (std::getline(file, line)) {

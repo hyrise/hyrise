@@ -153,14 +153,14 @@ void AbstractOperator::execute() {
         // We cannot check the name of the column as LQP expressions do not know their alias.
         const auto column_count = _output->column_count();
         Assert(column_count == lqp_expressions.size(),
-               std::string{"Mismatching number of output columns for "} + name());
+               std::format("Mismatching number of output columns for '{}'.", name()));
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (_type != OperatorType::Alias) {
             const auto lqp_type = lqp_expressions[column_id]->data_type();
             const auto pqp_type = _output->column_data_type(column_id);
             const auto pqp_name = _output->column_name(column_id);
             Assert(pqp_type == lqp_type,
-                   std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
+                   std::format("Mismatching column type in '{}' for PQP column '{}'.", name(), pqp_name));
           }
         }
       }
@@ -179,8 +179,9 @@ void AbstractOperator::execute() {
             using SegmentType = std::decay_t<decltype(segment)>;
             if constexpr (std::is_same_v<SegmentType, ValueSegment<ColumnDataType>>) {
               // If segment is nullable, the column must be nullable as well
-              Assert(!segment.is_nullable() || _output->column_is_nullable(column_id),
-                     std::string{"Nullable segment found in non-nullable column "} + _output->column_name(column_id));
+              Assert(
+                  !segment.is_nullable() || _output->column_is_nullable(column_id),
+                  std::format("Nullable segment found in non-nullable column '{}'.", _output->column_name(column_id)));
             }
           });
         }
@@ -285,7 +286,8 @@ bool AbstractOperator::transaction_context_is_set() const {
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
   DebugAssert(!transaction_context_is_set() || !_transaction_context->expired(),
-              "TransactionContext is expired, but SQL Query Executor should still own it (Operator: " + name() + ")");
+              std::format("TransactionContext is expired, but SQL Query Executor should still own it (Operator: '{}')",
+                          name()));
   return transaction_context_is_set() ? _transaction_context->lock() : nullptr;
 }
 

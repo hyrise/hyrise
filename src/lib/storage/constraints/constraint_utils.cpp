@@ -36,7 +36,7 @@ std::set<ColumnID> column_ids_by_name(const std::shared_ptr<Table>& table, const
 
   for (const auto& column : columns) {
     [[maybe_unused]] const auto success = column_ids.emplace(table->column_id_by_name(column)).second;
-    DebugAssert(success, "Column '" + column + "' is already part of the constraint.");
+    DebugAssert(success, std::format("Column '{}' is already part of the constraint.", column));
   }
 
   return column_ids;

@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     if (clustering_configuration_parameter == "Pruning") {
       clustering_configuration = ClusteringConfiguration::Pruning;
     } else if (clustering_configuration_parameter != "None") {
-      Fail(std::string{"Invalid clustering config: '"} + clustering_configuration_parameter + "'.");
+      Fail(std::format("Invalid clustering config: '{}'.", clustering_configuration_parameter));
     }
 
     std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration) << "' configuration\n";
@@ -179,9 +179,9 @@ int main(int argc, char* argv[]) {
     auto jcch_dbgen_path =
         std::filesystem::canonical(std::string{argv[0]}).remove_filename() / "third_party/jcch-dbgen";
     Assert(std::filesystem::exists(jcch_dbgen_path / "dbgen"),
-           std::string{"JCC-H dbgen not found at "} + jcch_dbgen_path.c_str());
+           std::format("JCC-H dbgen not found at '{}'.", jcch_dbgen_path.c_str()));
     Assert(std::filesystem::exists(jcch_dbgen_path / "qgen"),
-           std::string{"JCC-H qgen not found at "} + jcch_dbgen_path.c_str());
+           std::format("JCC-H qgen not found at '{}'.", jcch_dbgen_path.c_str()));
 
     // Create the jcch_data directory (if needed) and generate the jcch_data/sf-... path
     auto jcch_data_path_str = std::ostringstream{};

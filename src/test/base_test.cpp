@@ -195,10 +195,10 @@ bool file_exists(const std::string& name) {
 
 bool compare_files(const std::string& original_file, const std::string& created_file) {
   std::ifstream original(original_file);
-  Assert(original.is_open(), "compare_file: Could not find file '" + original_file + "'.");
+  Assert(original.is_open(), std::format("compare_file: Could not find file '{}'.", original_file));
 
   std::ifstream created(created_file);
-  Assert(created.is_open(), "compare_file: Could not find file '" + created_file + "'.");
+  Assert(created.is_open(), std::format("compare_file: Could not find file '{}'.", created_file));
 
   std::istreambuf_iterator<char> iterator_original(original);
   std::istreambuf_iterator<char> iterator_created(created);

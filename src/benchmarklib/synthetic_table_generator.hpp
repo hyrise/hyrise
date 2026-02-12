@@ -107,8 +107,9 @@ class SyntheticTableGenerator {
           'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
           'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
       const auto chars_base = chars.size();
-      Assert(static_cast<double>(input) < std::pow(chars_base, VARIABLE_STRING_LENGTH),
-             "Input too large. Cannot be represented in " + std::to_string(VARIABLE_STRING_LENGTH) + " chars.");
+      Assert(
+          static_cast<double>(input) < std::pow(chars_base, VARIABLE_STRING_LENGTH),
+          std::format("Input too large. Cannot be represented in '{}' chars.", std::to_string(VARIABLE_STRING_LENGTH)));
 
       auto result = pmr_string(GENERATED_STRING_LENGTH, ' ');  // Fill entire length with spaces
       if (input == 0) {

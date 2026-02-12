@@ -45,7 +45,7 @@ class CsvWriterTest : public BaseTest {
 
   bool compare_file(const std::string& filename, const std::string& expected_content) {
     std::ifstream file(filename);
-    Assert(file.is_open(), "compare_file: Could not find file " + filename);
+    Assert(file.is_open(), std::format("compare_file: Could not find file '{}'.", filename));
 
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 

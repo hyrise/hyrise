@@ -39,36 +39,36 @@ bool AbstractMetaTable::can_delete() const {
 }
 
 void AbstractMetaTable::_insert(const std::vector<AllTypeVariant>& values) {
-  Assert(can_insert(), "Cannot insert into " + MetaTableManager::META_PREFIX + name() + ".");
+  Assert(can_insert(), std::format("Cannot insert into '{}{}'.", MetaTableManager::META_PREFIX, name()));
   _validate_data_types(values);
   _on_insert(values);
 }
 
 void AbstractMetaTable::_remove(const std::vector<AllTypeVariant>& values) {
-  Assert(can_delete(), "Cannot delete from " + MetaTableManager::META_PREFIX + name() + ".");
+  Assert(can_delete(), std::format("Cannot delete from '{}{}'.", MetaTableManager::META_PREFIX, name()));
   _validate_data_types(values);
   _on_remove(values);
 }
 
 void AbstractMetaTable::_update(const std::vector<AllTypeVariant>& selected_values,
                                 const std::vector<AllTypeVariant>& update_values) {
-  Assert(can_update(), "Cannot update " + MetaTableManager::META_PREFIX + name() + ".");
+  Assert(can_update(), std::format("Cannot update '{}{}'.", MetaTableManager::META_PREFIX, name()));
   _validate_data_types(selected_values);
   _validate_data_types(update_values);
   _on_update(selected_values, update_values);
 }
 
 void AbstractMetaTable::_on_insert(const std::vector<AllTypeVariant>& /*values*/) {
-  Fail(std::string{"Cannot insert into "} + MetaTableManager::META_PREFIX + name() + ".");
+  Fail(std::format("Cannot insert into '{}{}'.", MetaTableManager::META_PREFIX, name()));
 }
 
 void AbstractMetaTable::_on_remove(const std::vector<AllTypeVariant>& /*values*/) {
-  Fail(std::string{"Cannot delete from "} + MetaTableManager::META_PREFIX + name() + ".");
+  Fail(std::format("Cannot delete from '{}{}'.", MetaTableManager::META_PREFIX, name()));
 }
 
 void AbstractMetaTable::_on_update(const std::vector<AllTypeVariant>& /*selected_values*/,
                                    const std::vector<AllTypeVariant>& /*update_values*/) {
-  Fail(std::string{"Cannot update "} + MetaTableManager::META_PREFIX + name() + ".");
+  Fail(std::format("Cannot update '{}{}'.", MetaTableManager::META_PREFIX, name()));
 }
 
 void AbstractMetaTable::_validate_data_types(const std::vector<AllTypeVariant>& values) const {

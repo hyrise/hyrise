@@ -180,9 +180,9 @@ class AbstractVisualizer {
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     auto ret = system(cmd.c_str());
 
-    Assert(ret == 0, "Calling graphviz' " + renderer +
-                         " failed. Have you installed graphviz "
-                         "(apt-get install graphviz / brew install graphviz)?");
+    Assert(ret == 0, std::format("Calling graphviz' '{}' failed. Have you installed graphviz (apt-get install graphviz "
+                                 "/ brew install graphviz)?",
+                                 renderer));
     // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
   }
 
