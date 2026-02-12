@@ -1,6 +1,7 @@
 #include "file_based_table_generator.hpp"
 
 #include <filesystem>
+#include <format>
 #include <functional>
 #include <iostream>
 #include <memory>
