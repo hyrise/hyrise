@@ -18,7 +18,7 @@ class CsvOptionsTest : public BaseTest {};
 TEST_F(CsvOptionsTest, ParseDelimier) {
   const auto columns = std::vector{ColumnMeta{.name = "Int1", .type = "int"}, ColumnMeta{.name = "Int2", .type = "int"},
                                    ColumnMeta{.name = "Int3", .type = "int"}};
-  const auto csv_meta = CsvMeta{.config = ParseConfig{.separator = ';'}, .columns = columns};
+  const auto csv_meta = CsvMeta{.config = CsvParseConfig{.separator = ';'}, .columns = columns};
   const auto expected_table = CsvParser::parse("resources/test_data/csv/ints_semicolon_separator.csv", csv_meta);
 
   auto table_column_definitions = TableColumnDefinitions(columns.size());
@@ -42,7 +42,7 @@ TEST_F(CsvOptionsTest, ParseDelimier) {
 TEST_F(CsvOptionsTest, ParseQuote) {
   const auto columns =
       std::vector{ColumnMeta{.name = "Int", .type = "int"}, ColumnMeta{.name = "String", .type = "string"}};
-  const auto csv_meta = CsvMeta{.config = ParseConfig{.quote = '"'}, .columns = columns};
+  const auto csv_meta = CsvMeta{.config = CsvParseConfig{.quote = '"'}, .columns = columns};
   const auto expected_table = CsvParser::parse("resources/test_data/csv/int_string2.csv", csv_meta);
 
   auto table_column_definitions = TableColumnDefinitions(columns.size());
@@ -65,7 +65,7 @@ TEST_F(CsvOptionsTest, ParseNull) {
   const auto columns = std::vector{ColumnMeta{.name = "Float", .type = "float", .nullable = true},
                                    ColumnMeta{.name = "Int1", .type = "int", .nullable = true},
                                    ColumnMeta{.name = "Int2", .type = "int", .nullable = true}};
-  const auto csv_meta = CsvMeta{.config = ParseConfig{}, .columns = columns};
+  const auto csv_meta = CsvMeta{.config = CsvParseConfig{}, .columns = columns};
   const auto expected_table = CsvParser::parse("resources/test_data/csv/float_int_with_null.csv", csv_meta);
 
   auto table_column_definitions = TableColumnDefinitions(columns.size());
@@ -111,7 +111,8 @@ TEST_F(CsvOptionsTest, ParseTPCHRegion) {
 
   // Create the table to have the proper columns ready for import.
   const auto create_table_statement =
-      "CREATE TABLE region ( r_regionkey INTEGER not null, r_name CHAR(25) not null, r_comment VARCHAR(152) not null );";
+      "CREATE TABLE region ( r_regionkey INTEGER not null, r_name CHAR(25) not null, r_comment VARCHAR(152) not null "
+      ");";
   const auto [create_status, create_tables] =
       SQLPipelineBuilder(create_table_statement).create_pipeline().get_result_tables();
   EXPECT_EQ(create_status, SQLPipelineStatus::Success);

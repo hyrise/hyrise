@@ -48,7 +48,5 @@ class Update : public AbstractReadWriteOperator {
 
  protected:
   const std::string _table_to_update_name;
-  std::shared_ptr<Delete> _delete;
-  std::shared_ptr<Insert> _insert;
 };
 }  // namespace hyrise

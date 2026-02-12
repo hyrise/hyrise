@@ -304,11 +304,11 @@ FrameBound translate_frame_bound(const hsql::FrameBound& hsql_frame_bound) {
   return FrameBound{static_cast<uint64_t>(offset), bound_type, hsql_frame_bound.unbounded};
 }
 
-std::optional<ParseConfig> process_sql_csv_options(hsql::CsvOptions* csv_options) {
+std::optional<CsvParseConfig> process_sql_csv_options(hsql::CsvOptions* csv_options) {
   if (!csv_options) {
     return std::nullopt;
   }
-  auto csv_parse_config = ParseConfig{};
+  auto csv_parse_config = CsvParseConfig{};
   if (csv_options->delimiter) {
     AssertInput(strnlen(csv_options->delimiter, 2) == 1, "CSV delimiter should be exactly one char.");
     // Postgres calls the char between columns within one row "delimiter", we call it "separator".
@@ -319,11 +319,7 @@ std::optional<ParseConfig> process_sql_csv_options(hsql::CsvOptions* csv_options
     csv_parse_config.quote = csv_options->quote[0];
   }
   if (csv_options->null) {
-    auto len = strnlen(csv_options->null, 100);
-    AssertInput(csv_options->null[len] == '\0', "CSV null string cannot be larger than 100 characters.");
-    csv_parse_config.null_string = std::string(csv_options->null, len);
-    boost::to_lower(csv_parse_config.null_string);
-
+    csv_parse_config.null_string = std::string(csv_options->null);
     csv_parse_config.null_handling = NullHandling::NullStringAsNull;
   }
   return csv_parse_config;

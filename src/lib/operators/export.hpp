@@ -31,7 +31,7 @@ class Export : public AbstractReadOnlyOperator {
    */
   explicit Export(const std::shared_ptr<const AbstractOperator>& input_operator, const std::string& filename,
                   const FileType& file_type = FileType::Auto,
-                  const std::optional<ParseConfig>& csv_parse_config = std::nullopt);
+                  const std::optional<CsvParseConfig>& csv_parse_config = std::nullopt);
 
   const std::string& name() const final;
   std::string description(DescriptionMode description_mode) const override;
@@ -53,7 +53,7 @@ class Export : public AbstractReadOnlyOperator {
   // Path of the binary file
   const std::string _filename;
   FileType _file_type;
-  std::optional<ParseConfig> _csv_parse_config;
+  std::optional<CsvParseConfig> _csv_parse_config;
 };
 
 }  // namespace hyrise

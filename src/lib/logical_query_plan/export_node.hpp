@@ -15,13 +15,13 @@ namespace hyrise {
 class ExportNode : public EnableMakeForLQPNode<ExportNode>, public AbstractNonQueryNode {
  public:
   ExportNode(const std::string& init_file_name, const FileType init_file_type,
-             std::optional<ParseConfig> init_csv_parse_config = std::nullopt);
+             std::optional<CsvParseConfig> init_csv_parse_config = std::nullopt);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string file_name;
   const FileType file_type;
-  const std::optional<ParseConfig> csv_parse_config;
+  const std::optional<CsvParseConfig> csv_parse_config;
 
  protected:
   size_t _on_shallow_hash() const override;

@@ -23,7 +23,7 @@ struct ColumnMeta {
 // NullStringAsNull:  An unquoted null string (case-insensitive) is parsed as a null value.
 enum class NullHandling { RejectNullStrings, NullStringAsNull, NullStringAsValue };
 
-struct ParseConfig {
+struct CsvParseConfig {
   char delimiter = '\n';
   char separator = ',';
   char quote = '"';
@@ -48,7 +48,7 @@ struct ParseConfig {
  * columns       column meta information (name, type, nullable) for each column
  */
 struct CsvMeta {
-  ParseConfig config;
+  CsvParseConfig config;
   std::vector<ColumnMeta> columns;
 
   static constexpr const char* META_FILE_EXTENSION = ".json";
@@ -77,6 +77,6 @@ void to_json(nlohmann::json& json, const CsvMeta& meta);
  */
 bool operator==(const ColumnMeta& left, const ColumnMeta& right);
 bool operator==(const CsvMeta& left, const CsvMeta& right);
-bool operator==(const ParseConfig& left, const ParseConfig& right);
+bool operator==(const CsvParseConfig& left, const CsvParseConfig& right);
 
 }  // namespace hyrise

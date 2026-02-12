@@ -24,7 +24,7 @@
 namespace hyrise {
 
 Export::Export(const std::shared_ptr<const AbstractOperator>& input_operator, const std::string& filename,
-               const FileType& file_type, const std::optional<ParseConfig>& csv_parse_config)
+               const FileType& file_type, const std::optional<CsvParseConfig>& csv_parse_config)
     : AbstractReadOnlyOperator(OperatorType::Export, input_operator),
       _filename(filename),
       _file_type(file_type),

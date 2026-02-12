@@ -30,13 +30,13 @@ namespace hyrise {
 
 Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
                const FileType file_type, const std::optional<EncodingType> target_encoding,
-               const std::optional<ParseConfig>& csv_parser_config)
+               const std::optional<CsvParseConfig>& csv_parse_config)
     : AbstractReadOnlyOperator(OperatorType::Import),
       filename(init_filename),
       _tablename(tablename),
       _chunk_size(chunk_size),
       _file_type(file_type),
-      _csv_parse_config(csv_parser_config),
+      _csv_parse_config(csv_parse_config),
       _target_encoding(target_encoding) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
