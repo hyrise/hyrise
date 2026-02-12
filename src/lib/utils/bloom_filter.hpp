@@ -60,7 +60,7 @@ class BloomFilter : public BaseBloomFilter {
   // Array size: 2 ^ FilterSizeExponent bits / 64 bits per uint64_t = 2 ^ (FilterSizeExponent - 6)
   static constexpr auto array_size = 1ULL << (FilterSizeExponent - 6);
   alignas(64) std::array<std::atomic<uint64_t>, array_size> _filter;
-  uint64_t* _readonly_filter;
+  uint64_t* _integer_filter_view;
 };
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
@@ -83,8 +83,6 @@ class BlockBloomFilter : public BaseBloomFilter {
 
   bool _get_bit(uint32_t bit_index) const;
 
-  uint32_t _extract_bits(uint64_t hash, uint8_t hash_function_index) const;
-
   // Compile-time validation
   static_assert(FilterSizeExponent >= 6, "FilterSizeExponent must be at least 6 (minimum 64 bits)");
   static_assert(K > 0, "K must be greater than 0");
@@ -98,7 +96,7 @@ class BlockBloomFilter : public BaseBloomFilter {
   static constexpr auto bits_required_for_block_offset = FilterSizeExponent - 6;
   static constexpr auto bits_required_for_cacheline_offset = bits_required_for_block_offset - 3;
   alignas(64) std::array<std::atomic<uint64_t>, array_size> _filter;
-  uint64_t* _readonly_filter;
+  uint64_t* _integer_filter_view;
 };
 
 template <typename Functor>

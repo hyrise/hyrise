@@ -24,7 +24,7 @@ uint8_t BaseBloomFilter::k() const {
 
 template <uint8_t FilterSizeExponent, uint8_t K>
 BloomFilter<FilterSizeExponent, K>::BloomFilter() : BaseBloomFilter(FilterSizeExponent, 0, K) {
-  _readonly_filter = reinterpret_cast<uint64_t*>(_filter.data());
+  _integer_filter_view = reinterpret_cast<uint64_t*>(_filter.data());
 }
 
 template <uint8_t FilterSizeExponent, uint8_t K>
@@ -99,14 +99,14 @@ template <uint8_t FilterSizeExponent, uint8_t K>
 void BloomFilter<FilterSizeExponent, K>::_set_bit(uint32_t bit_index) {
   uint32_t array_index = bit_index >> 6;   // bit_index / 64
   uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
-  _filter[array_index] |= (1ULL << bit_offset);
+  _integer_filter_view[array_index] |= (1ULL << bit_offset);
 }
 
 template <uint8_t FilterSizeExponent, uint8_t K>
 bool BloomFilter<FilterSizeExponent, K>::_get_bit(uint32_t bit_index) const {
   uint32_t array_index = bit_index >> 6;   // bit_index / 64
   uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
-  return (_readonly_filter[array_index] >> bit_offset) & 1ULL;
+  return (_integer_filter_view[array_index] >> bit_offset) & 1ULL;
 }
 
 template <uint8_t FilterSizeExponent, uint8_t K>
@@ -118,43 +118,34 @@ uint32_t BloomFilter<FilterSizeExponent, K>::_extract_bits(uint64_t hash, uint8_
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::BlockBloomFilter()
     : BaseBloomFilter(FilterSizeExponent, BlockSizeExponent, K) {
-  _readonly_filter = reinterpret_cast<uint64_t*>(_filter.data());
+  _integer_filter_view = reinterpret_cast<uint64_t*>(_filter.data());
 }
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 void BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::insert(uint64_t hash) {
   const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
-  // const auto& block = &_filter[block_index];
   for (uint8_t i = 0; i < K; ++i) {
     const auto bit_index_in_block = (hash >> i * 9) & 511;
     const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
     const auto bit_index_in_item = bit_index_in_block & 63;
     DebugAssert(block_index + block_item_index < _filter.size(), "Calculated index out of range.");
-    _filter[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
+    _integer_filter_view[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
   }
 }
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::probe(uint64_t hash) const {
-  // The upper bits give us the block.
-  const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
-  // const auto& block = &_readonly_filter[block_index];
   auto result = true;
+  const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
+
   for (uint8_t i = 0; i < K; ++i) {
     const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
     const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
     const auto bit_index_in_item = bit_index_in_block & 63;
-    DebugAssert(block_index + block_item_index < _filter.size(), "Calculated index out of range.");
 
-    // std::cout << "Loop result: " << std::boolalpha << result << '\n';
-    result &= static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
-    // if (static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item))) {
-    //   std::cout << "Loop result: " << std::boolalpha << static_cast<bool>(_readonly_filter[block_index + block_item_index] & (size_t{1} << bit_index_in_item)) << '\n';
-    //   std::cout << "Hash: " << std::bitset<64>(hash) << ". Block: " << block_index << ". For k " << size_t{i} << ", I want to access bit " << bit_index_in_block << ". That's block item " << block_item_index << " and bit in item: " << bit_index_in_item << "\n";
-    //   std::cout << "Loop result: " << std::boolalpha << result << '\n';
-    // }
+    result &= static_cast<bool>(_integer_filter_view[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
   }
-  // std::cout << "Result: " << std::boolalpha << result << '\n';
+
   return result;
 }
 
@@ -219,94 +210,12 @@ template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::_get_bit(uint32_t bit_index) const {
   uint32_t array_index = bit_index >> 6;   // bit_index / 64
   uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
-  return (_readonly_filter[array_index] >> bit_offset) & 1ULL;
-}
-
-template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
-uint32_t BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::_extract_bits(uint64_t hash,
-                                                                                   uint8_t hash_function_index) const {
-  // Blocked addressing via slicing:
-  // - block index: top (FilterSizeExponent - BlockSizeExponent) bits
-  // - per-function offset: successive BlockSizeExponent-wide slices from LSB
-  constexpr uint32_t block_bits = 1u << BlockSizeExponent;
-  constexpr uint32_t block_mask = block_bits - 1u;
-  const uint8_t block_index_bits = FilterSizeExponent - BlockSizeExponent;
-
-  uint32_t block_index = 0u;
-  if (block_index_bits > 0) {
-    const uint64_t blocks_mask = (1ULL << block_index_bits) - 1ULL;
-    block_index = static_cast<uint32_t>((hash >> (64 - block_index_bits)) & blocks_mask);
-  }
-
-  const uint32_t offset_shift = static_cast<uint32_t>(hash_function_index) * BlockSizeExponent;
-  const uint32_t offset = static_cast<uint32_t>((hash >> offset_shift) & block_mask);
-
-  return (block_index << BlockSizeExponent) | offset;
+  return (_integer_filter_view[array_index] >> bit_offset) & 1ULL;
 }
 
 // template class BloomFilter<16, 1>;
-// template class BloomFilter<16, 2>;
-// template class BloomFilter<16, 3>;
-// template class BloomFilter<17, 1>;
-// template class BloomFilter<17, 2>;
-// template class BloomFilter<17, 3>;
-// template class BloomFilter<18, 1>;
-// template class BloomFilter<18, 2>;
-// template class BloomFilter<18, 3>;
-// template class BloomFilter<19, 1>;
-// template class BloomFilter<19, 2>;
-// template class BloomFilter<19, 3>;
-// template class BloomFilter<20, 1>;
-// template class BloomFilter<20, 2>;
-// template class BloomFilter<20, 3>;
-// template class BloomFilter<21, 1>;
-// template class BloomFilter<21, 2>;
-// template class BloomFilter<21, 3>;
-// template class BloomFilter<22, 1>;
-// template class BloomFilter<22, 2>;
-// template class BloomFilter<22, 3>;
-// template class BloomFilter<23, 1>;
-// template class BloomFilter<23, 2>;
-// template class BloomFilter<13, 3>;
-
-// 512-bit blocks (BlockSizeExponent = 9)
-// template class BlockBloomFilter<18, 8, 1>;
-// template class BlockBloomFilter<18, 8, 2>;
-// template class BlockBloomFilter<18, 8, 3>;
-// template class BlockBloomFilter<19, 8, 1>;
-// template class BlockBloomFilter<19, 8, 2>;
-// template class BlockBloomFilter<19, 8, 3>;
-// template class BlockBloomFilter<20, 8, 1>;
-// template class BlockBloomFilter<20, 8, 2>;
-// template class BlockBloomFilter<20, 8, 3>;
-// template class BlockBloomFilter<21, 8, 1>;
-// template class BlockBloomFilter<21, 8, 2>;
-// template class BlockBloomFilter<21, 8, 3>;
-// template class BlockBloomFilter<22, 8, 1>;
-// template class BlockBloomFilter<22, 8, 2>;
-// template class BlockBloomFilter<23, 8, 3>;
-// template class BlockBloomFilter<23, 8, 1>;
-// template class BlockBloomFilter<23, 8, 2>;
-// template class BlockBloomFilter<18, 9, 1>;
-// template class BlockBloomFilter<18, 9, 2>;
-// template class BlockBloomFilter<18, 9, 3>;
 template class BlockBloomFilter<18, 9, 4>;
-// template class BlockBloomFilter<19, 9, 1>;
-// template class BlockBloomFilter<19, 9, 2>;
-// template class BlockBloomFilter<19, 9, 3>;
-// template class BlockBloomFilter<20, 9, 1>;
-// template class BlockBloomFilter<20, 9, 2>;
-// template class BlockBloomFilter<20, 9, 3>;
-// template class BlockBloomFilter<21, 9, 1>;
-// template class BlockBloomFilter<21, 9, 2>;
-// template class BlockBloomFilter<21, 9, 3>;
 template class BlockBloomFilter<21, 9, 4>;
-// template class BlockBloomFilter<22, 9, 1>;
-// template class BlockBloomFilter<22, 9, 2>;
-// template class BlockBloomFilter<22, 9, 3>;
-// template class BlockBloomFilter<23, 9, 1>;
-// template class BlockBloomFilter<23, 9, 2>;
-// template class BlockBloomFilter<23, 9, 3>;
 template class BlockBloomFilter<23, 9, 4>;
 
 }  // namespace hyrise
