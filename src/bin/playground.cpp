@@ -48,7 +48,7 @@ struct PlaygroundConfig {
   bool run_single_baseline = true;
   bool run_single_optimized = true;
   bool run_multi_naive = true;
-  bool run_multi_optimized =true;
+  bool run_multi_optimized =false;
 };
 
 // Global Config Instance
@@ -641,6 +641,40 @@ std::shared_ptr<Table> sort_single_baseline(const std::shared_ptr<Table>& input)
   return std::const_pointer_cast<Table>(aggregate_op->get_output());
 }
 
+std::shared_ptr<Table> sort_single_baseline_hc(const std::shared_ptr<Table>& input) {
+  using namespace hyrise;
+
+  // 1. Prepare Input
+  auto table_wrapper = std::make_shared<TableWrapper>(input);
+  table_wrapper->execute();
+
+  // 2. Define Columns
+  // Group By: l_orderkey
+  // Aggregate: SUM(l_quantity)
+  const auto quantity_col_id = input->column_id_by_name("l_quantity");
+  const auto orderkey_col = input->column_id_by_name("l_orderkey");
+
+  auto quantity_expr = std::make_shared<PQPColumnExpression>(
+      quantity_col_id,
+      input->column_data_type(quantity_col_id),
+      input->column_is_nullable(quantity_col_id),
+      input->column_name(quantity_col_id));
+
+  // 3. Define Aggregate Expressions
+  auto sum_expr = expression_functional::sum_(quantity_expr);
+
+  // 4. Create and Run Sort Aggregate
+  auto aggregate_op = std::make_shared<AggregateSort>(
+      table_wrapper,
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{sum_expr},
+      std::vector<ColumnID>{orderkey_col}
+  );
+
+  aggregate_op->execute();
+
+  return std::const_pointer_cast<Table>(aggregate_op->get_output());
+}
+
 std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyrise::Table>& input) {
   using namespace hyrise;
 
@@ -648,12 +682,13 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   const auto ls_col = input->column_id_by_name("l_linestatus");
   const auto qty_col = input->column_id_by_name("l_quantity");
 
-  // 1️⃣ OPTIMIZED STRUCT WITH PACKED DATA
+  // 1️⃣ OPTIMIZED STRUCT WITH PACKED KEY (store key directly for counting sort)
   struct alignas(16) RowData {
-    uint16_t rf_id;
-    uint16_t ls_id;
+    uint32_t key;  // Packed key (rf_id << 16 | ls_id)
     float qty;
-    uint32_t key() const { return (static_cast<uint32_t>(rf_id) << 16) | ls_id; }
+    
+    RowData(uint32_t k, float v) : key(k), qty(v) {}
+    RowData() : key(0), qty(0.0f) {}
   };
   
   const size_t total_rows = input->row_count();
@@ -668,7 +703,7 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   std::array<char, 3> rf_id_to_char = {'R', 'A', 'N'};
   std::array<char, 3> ls_id_to_char = {'F', 'O', 'P'};
   
-  // 3️⃣ BULK EXTRACTION WITH UNROLLED LOOP
+  // 3️⃣ BULK EXTRACTION - STORE KEY DIRECTLY
   for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
     const auto chunk = input->get_chunk(chunk_id);
     if (!chunk || chunk->size() == 0) continue;
@@ -678,118 +713,172 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     const auto& qty_seg = chunk->get_segment(qty_col);
     
     const auto chunk_size = chunk->size();
-    const size_t unroll_factor = 8;  // Increased unroll factor for single-threaded
+    const size_t unroll_factor = 8;
     
-    // Process 8 rows at a time for better instruction-level parallelism
+    // Process 8 rows at a time
     for (size_t offset = 0; offset + unroll_factor <= chunk_size; offset += unroll_factor) {
-      RowData rows_data[8];
+      // Unrolled extraction - 8 rows
+      ChunkOffset co0 = static_cast<ChunkOffset>(offset);
+      ChunkOffset co1 = static_cast<ChunkOffset>(offset + 1);
+      ChunkOffset co2 = static_cast<ChunkOffset>(offset + 2);
+      ChunkOffset co3 = static_cast<ChunkOffset>(offset + 3);
+      ChunkOffset co4 = static_cast<ChunkOffset>(offset + 4);
+      ChunkOffset co5 = static_cast<ChunkOffset>(offset + 5);
+      ChunkOffset co6 = static_cast<ChunkOffset>(offset + 6);
+      ChunkOffset co7 = static_cast<ChunkOffset>(offset + 7);
       
-      // Unrolled extraction
-      for (size_t i = 0; i < unroll_factor; ++i) {
-        ChunkOffset co = static_cast<ChunkOffset>(offset + i);
-        const pmr_string rf_val = boost::get<pmr_string>((*rf_seg)[co]);
-        const pmr_string ls_val = boost::get<pmr_string>((*ls_seg)[co]);
-        
-        rows_data[i].rf_id = char_to_id[static_cast<uint8_t>(rf_val[0])];
-        rows_data[i].ls_id = char_to_id[static_cast<uint8_t>(ls_val[0])];
-        rows_data[i].qty = boost::get<float>((*qty_seg)[co]);
-      }
+      // Row 0
+      uint16_t rf0 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co0])[0])];
+      uint16_t ls0 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co0])[0])];
+      rows.emplace_back((static_cast<uint32_t>(rf0) << 16) | ls0, boost::get<float>((*qty_seg)[co0]));
       
-      // Batch push back
-      for (size_t i = 0; i < unroll_factor; ++i) {
-        rows.push_back(rows_data[i]);
-      }
+      // Row 1
+      uint16_t rf1 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co1])[0])];
+      uint16_t ls1 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co1])[0])];
+      rows.emplace_back((static_cast<uint32_t>(rf1) << 16) | ls1, boost::get<float>((*qty_seg)[co1]));
+      
+      // Row 2
+      uint16_t rf2 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co2])[0])];
+      uint16_t ls2 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co2])[0])];
+      rows.emplace_back((static_cast<uint32_t>(rf2) << 16) | ls2, boost::get<float>((*qty_seg)[co2]));
+      
+      // Row 3
+      uint16_t rf3 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co3])[0])];
+      uint16_t ls3 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co3])[0])];
+      rows.emplace_back((static_cast<uint32_t>(rf3) << 16) | ls3, boost::get<float>((*qty_seg)[co3]));
+      
+      // Row 4
+      uint16_t rf4 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co4])[0])];
+      uint16_t ls4 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co4])[0])];
+      rows.emplace_back((static_cast<uint32_t>(rf4) << 16) | ls4, boost::get<float>((*qty_seg)[co4]));
+      
+      // Row 5
+      uint16_t rf5 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co5])[0])];
+      uint16_t ls5 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co5])[0])];
+      rows.emplace_back((static_cast<uint32_t>(rf5) << 16) | ls5, boost::get<float>((*qty_seg)[co5]));
+      
+      // Row 6
+      uint16_t rf6 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co6])[0])];
+      uint16_t ls6 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co6])[0])];
+      rows.emplace_back((static_cast<uint32_t>(rf6) << 16) | ls6, boost::get<float>((*qty_seg)[co6]));
+      
+      // Row 7
+      uint16_t rf7 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co7])[0])];
+      uint16_t ls7 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co7])[0])];
+      rows.emplace_back((static_cast<uint32_t>(rf7) << 16) | ls7, boost::get<float>((*qty_seg)[co7]));
     }
     
     // Process remaining rows
     for (size_t offset = chunk_size - (chunk_size % unroll_factor); offset < chunk_size; ++offset) {
       ChunkOffset co = static_cast<ChunkOffset>(offset);
-      const pmr_string rf_val = boost::get<pmr_string>((*rf_seg)[co]);
-      const pmr_string ls_val = boost::get<pmr_string>((*ls_seg)[co]);
       
-      rows.push_back({
-        char_to_id[static_cast<uint8_t>(rf_val[0])],
-        char_to_id[static_cast<uint8_t>(ls_val[0])],
-        boost::get<float>((*qty_seg)[co])
-      });
+      uint16_t rf_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co])[0])];
+      uint16_t ls_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co])[0])];
+      uint32_t key = (static_cast<uint32_t>(rf_id) << 16) | ls_id;
+      
+      rows.emplace_back(key, boost::get<float>((*qty_seg)[co]));
     }
   }
   
-  // 4️⃣ SINGLE-THREADED RADIX SORT (OPTIMIZED FOR SMALL KEY SPACE)
-  auto optimized_radix_sort = [](std::vector<RowData>& data) {
+  // 4️⃣ SPARSE COUNTING SORT - SUPER FAST FOR 9 KEYS!
+  auto sparse_counting_sort = [](std::vector<RowData>& data) {
     if (data.empty()) return;
     
     const size_t n = data.size();
     
-    // For small datasets, pdqsort is faster than radix sort
-    if (n < 2000) {
+    // For very small datasets, use pdqsort
+    if (n < 1000) {
       boost::sort::pdqsort(data.begin(), data.end(), 
-                [](const RowData& a, const RowData& b) { return a.key() < b.key(); });
+                [](const RowData& a, const RowData& b) { return a.key < b.key; });
       return;
     }
     
-    // Optimized in-place radix sort for 32-bit keys
-    std::vector<RowData> buffer(n);
+    // Step 1: Find unique keys and assign dense IDs (0-8)
+    std::array<uint32_t, 9> unique_keys;  // At most 9 keys
+    std::array<uint8_t, 9> dense_to_key_index;  // Map dense ID to unique_keys index
+    uint8_t num_unique = 0;
     
-    // Pass 1: Lower 16 bits (ls_id)
-    {
-      std::array<uint32_t, 65536> count = {0};  // 2^16 buckets
-      
-      // Count frequencies
-      for (const auto& row : data) {
-        count[row.ls_id]++;
+    // First pass: collect unique keys
+    for (const auto& row : data) {
+      bool found = false;
+      for (uint8_t i = 0; i < num_unique; ++i) {
+        if (unique_keys[i] == row.key) {
+          found = true;
+          break;
+        }
       }
-      
-      // Prefix sum
-      uint32_t sum = 0;
-      for (size_t i = 0; i < 65536; ++i) {
-        uint32_t tmp = count[i];
-        count[i] = sum;
-        sum += tmp;
+      if (!found && num_unique < 9) {
+        unique_keys[num_unique] = row.key;
+        dense_to_key_index[num_unique] = num_unique;
+        num_unique++;
       }
-      
-      // Distribute
-      for (const auto& row : data) {
-        buffer[count[row.ls_id]++] = row;
-      }
-      
-      data.swap(buffer);
     }
     
-    // Pass 2: Higher 16 bits (rf_id)
-    {
-      std::array<uint32_t, 65536> count = {0};
-      
-      for (const auto& row : data) {
-        count[row.rf_id]++;
-      }
-      
-      uint32_t sum = 0;
-      for (size_t i = 0; i < 65536; ++i) {
-        uint32_t tmp = count[i];
-        count[i] = sum;
-        sum += tmp;
-      }
-      
-      for (const auto& row : data) {
-        buffer[count[row.rf_id]++] = row;
-      }
-      
-      data.swap(buffer);
+    // Sort unique keys to ensure correct order (0x00000, 0x00001, 0x00002, 0x10000, ...)
+    std::sort(unique_keys.begin(), unique_keys.begin() + num_unique);
+    
+    // Instead, create a small lookup array for the 9 keys
+    std::array<uint8_t, 9> key_to_dense = {0};
+    for (uint8_t i = 0; i < num_unique; ++i) {
+      // Store mapping from key to dense ID
+      // Since keys are sparse, we'll do direct comparison during second pass
+      key_to_dense[i] = i;  // We'll match by index
     }
+    
+    // Step 2: Generate dense IDs for each row (second pass)
+    std::vector<uint8_t> dense_ids;
+    dense_ids.reserve(n);
+    
+    for (const auto& row : data) {
+      // Linear search over 9 keys - FASTER than hash table for such small n!
+      uint8_t dense_id = 0;
+      for (uint8_t i = 0; i < num_unique; ++i) {
+        if (unique_keys[i] == row.key) {
+          dense_id = i;
+          break;
+        }
+      }
+      dense_ids.push_back(dense_id);
+    }
+    
+    // Step 3: COUNTING SORT on dense IDs (0 to num_unique-1)
+    std::array<size_t, 9> count = {0};  // 72 bytes - L1 cache!
+    
+    // Count frequencies
+    for (uint8_t dense_id : dense_ids) {
+      count[dense_id]++;
+    }
+    
+    // Prefix sum
+    size_t total = 0;
+    for (size_t i = 0; i < num_unique; ++i) {
+      size_t old_count = count[i];
+      count[i] = total;
+      total += old_count;
+    }
+    
+    // Distribute - THIS IS THE SORTING STEP!
+    std::vector<RowData> output(n);
+    for (size_t i = 0; i < n; ++i) {
+      uint8_t dense_id = dense_ids[i];
+      output[count[dense_id]++] = data[i];
+    }
+    
+    // Replace with sorted data
+    data.swap(output);
   };
   
-  // Apply optimized radix sort
-  optimized_radix_sort(rows);
+  // Apply sparse counting sort - REPLACES radix sort
+  sparse_counting_sort(rows);
   
-  // 5️⃣ SINGLE-THREADED SIMD-ACCELERATED AGGREGATION
+  // 5️⃣ SINGLE-THREADED SIMD-ACCELERATED AGGREGATION ON SORTED DATA
   struct alignas(32) AggResult {
     uint32_t key;
     double sum;
   };
   
   std::vector<AggResult> aggregates;
-  aggregates.reserve(9);  // Max 3x3 combinations
+  aggregates.reserve(9);
   
   if (!rows.empty()) {
     size_t i = 0;
@@ -801,7 +890,7 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     #ifdef __AVX2__
     // SIMD-accelerated aggregation with prefetching
     while (i < n) {
-      uint32_t current_key = rows[i].key();
+      uint32_t current_key = rows[i].key;
       __m256d sum_vec = _mm256_setzero_pd();
       
       // Prefetch next group
@@ -810,25 +899,23 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
       }
       
       // Process in SIMD batches of 4
-      size_t simd_count = 0;
-      while (i + 3 < n && rows[i].key() == current_key && 
-             rows[i+1].key() == current_key && 
-             rows[i+2].key() == current_key && 
-             rows[i+3].key() == current_key) {
+      while (i + 3 < n && 
+             rows[i].key == current_key && 
+             rows[i+1].key == current_key && 
+             rows[i+2].key == current_key && 
+             rows[i+3].key == current_key) {
         
-        // Load 4 floats and convert to doubles
         __m128 float_vec = _mm_set_ps(rows[i+3].qty, rows[i+2].qty, 
                                        rows[i+1].qty, rows[i].qty);
         __m256d double_vec = _mm256_cvtps_pd(float_vec);
         sum_vec = _mm256_add_pd(sum_vec, double_vec);
         
         i += 4;
-        simd_count += 4;
       }
       
       // Horizontal sum
       double simd_sum = 0.0;
-      if (simd_count > 0) {
+      if (i > 0) {
         alignas(32) double temp[4];
         _mm256_store_pd(temp, sum_vec);
         simd_sum = temp[0] + temp[1] + temp[2] + temp[3];
@@ -836,7 +923,7 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
       
       // Process remaining rows with scalar code
       double scalar_sum = 0.0;
-      while (i < n && rows[i].key() == current_key) {
+      while (i < n && rows[i].key == current_key) {
         scalar_sum += rows[i].qty;
         i++;
       }
@@ -844,21 +931,16 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
       aggregates.push_back({current_key, simd_sum + scalar_sum});
     }
     #else
-    // Non-SIMD fallback with manual prefetching
-    uint32_t current_key = rows[0].key();
-    double current_sum = static_cast<double>(rows[0].qty);
+    // Non-SIMD fallback
+    uint32_t current_key = rows[0].key;
+    double current_sum = rows[0].qty;
     
     for (size_t idx = 1; idx < n; ++idx) {
-      // Prefetch ahead
-      if (idx + 16 < n) {
-        __builtin_prefetch(&rows[idx + 16], 0, 0);
-      }
-      
-      if (rows[idx].key() == current_key) {
+      if (rows[idx].key == current_key) {
         current_sum += rows[idx].qty;
       } else {
         aggregates.push_back({current_key, current_sum});
-        current_key = rows[idx].key();
+        current_key = rows[idx].key;
         current_sum = rows[idx].qty;
       }
     }
@@ -866,7 +948,7 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     #endif
   }
   
-  // 6️⃣ OPTIMIZED RESULT BUILDING WITH BATCH APPEND
+  // 6️⃣ OPTIMIZED RESULT BUILDING
   TableColumnDefinitions columns{
       {"l_returnflag", DataType::String, false},
       {"l_linestatus", DataType::String, false},
@@ -875,32 +957,257 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   
   auto result = std::make_shared<Table>(columns, TableType::Data);
   
-  // Pre-allocate batch vectors
-  std::vector<pmr_string> rf_strings;
-  std::vector<pmr_string> ls_strings;
-  std::vector<double> sums;
-  rf_strings.reserve(aggregates.size());
-  ls_strings.reserve(aggregates.size());
-  sums.reserve(aggregates.size());
-  
-  // Build strings in batch
   for (const auto& agg : aggregates) {
     uint16_t rf_id = (agg.key >> 16) & 0xFFFF;
     uint16_t ls_id = agg.key & 0xFFFF;
     
-    rf_strings.emplace_back(1, rf_id < 3 ? rf_id_to_char[rf_id] : '?');
-    ls_strings.emplace_back(1, ls_id < 3 ? ls_id_to_char[ls_id] : '?');
-    sums.push_back(agg.sum);
-  }
-  
-  // Batch append using the table's append_multiple if available
-  for (size_t i = 0; i < aggregates.size(); ++i) {
+    pmr_string rf_str(1, rf_id < 3 ? rf_id_to_char[rf_id] : '?');
+    pmr_string ls_str(1, ls_id < 3 ? ls_id_to_char[ls_id] : '?');
+    
     result->append({
-      AllTypeVariant(rf_strings[i]),
-      AllTypeVariant(ls_strings[i]),
-      AllTypeVariant(sums[i])
+      AllTypeVariant(rf_str),
+      AllTypeVariant(ls_str),
+      AllTypeVariant(agg.sum)
     });
   }
+  
+  return result;
+}
+
+
+  std::shared_ptr<hyrise::Table> sort_single_optimized_hc(const std::shared_ptr<hyrise::Table>& input) {
+  using namespace hyrise;
+
+  const auto orderkey_col = input->column_id_by_name("l_orderkey");
+  const auto qty_col = input->column_id_by_name("l_quantity");
+
+  // 1️⃣ OPTIMIZED STRUCT WITH DIRECT INTEGER KEY
+  struct RowData {
+    int32_t key;
+    float qty;
+    
+    RowData(int32_t k, float v) : key(k), qty(v) {}
+    RowData() : key(0), qty(0.0f) {}
+  };
+  
+  const size_t total_rows = input->row_count();
+  std::vector<RowData> rows;
+  rows.reserve(total_rows);
+  
+  // 2️⃣ BULK EXTRACTION - DIRECT INTEGER ACCESS
+  for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+    const auto chunk = input->get_chunk(chunk_id);
+    if (!chunk || chunk->size() == 0) continue;
+    
+    const auto& orderkey_seg = chunk->get_segment(orderkey_col);
+    const auto& qty_seg = chunk->get_segment(qty_col);
+    
+    const auto chunk_size = chunk->size();
+    const size_t unroll_factor = 8;
+    
+    for (size_t offset = 0; offset + unroll_factor <= chunk_size; offset += unroll_factor) {
+      ChunkOffset co0 = static_cast<ChunkOffset>(offset);
+      ChunkOffset co1 = static_cast<ChunkOffset>(offset + 1);
+      ChunkOffset co2 = static_cast<ChunkOffset>(offset + 2);
+      ChunkOffset co3 = static_cast<ChunkOffset>(offset + 3);
+      ChunkOffset co4 = static_cast<ChunkOffset>(offset + 4);
+      ChunkOffset co5 = static_cast<ChunkOffset>(offset + 5);
+      ChunkOffset co6 = static_cast<ChunkOffset>(offset + 6);
+      ChunkOffset co7 = static_cast<ChunkOffset>(offset + 7);
+      
+      rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co0]), boost::get<float>((*qty_seg)[co0]));
+      rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co1]), boost::get<float>((*qty_seg)[co1]));
+      rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co2]), boost::get<float>((*qty_seg)[co2]));
+      rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co3]), boost::get<float>((*qty_seg)[co3]));
+      rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co4]), boost::get<float>((*qty_seg)[co4]));
+      rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co5]), boost::get<float>((*qty_seg)[co5]));
+      rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co6]), boost::get<float>((*qty_seg)[co6]));
+      rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co7]), boost::get<float>((*qty_seg)[co7]));
+    }
+    
+    for (size_t offset = chunk_size - (chunk_size % unroll_factor); offset < chunk_size; ++offset) {
+      ChunkOffset co = static_cast<ChunkOffset>(offset);
+      rows.emplace_back(
+        boost::get<int32_t>((*orderkey_seg)[co]),
+        boost::get<float>((*qty_seg)[co])
+      );
+    }
+  }
+  
+  std::cout << "Extracted " << rows.size() << " rows" << std::endl;
+  if (!rows.empty()) {
+    std::cout << "First key: " << rows[0].key << std::endl;
+    std::cout << "Last key: " << rows[rows.size()-1].key << std::endl;
+  }
+  
+  auto radix_sort = [](std::vector<RowData>& data) {
+    if (data.empty()) return;
+  
+  const size_t n = data.size();
+  std::cout << "2-pass radix sort start - n=" << n << std::endl;
+  
+  if (n < 5000) {
+    std::sort(data.begin(), data.end(), 
+              [](const RowData& a, const RowData& b) { return a.key < b.key; });
+    return;
+  }
+  
+  std::vector<RowData> buffer(n);
+  
+  // PASS 1: Lower 16 bits (with sign bit flipped)
+  {
+    std::array<size_t, 65536> count = {0}; 
+    
+    // Count frequencies
+    for (size_t i = 0; i < n; ++i) {
+      uint32_t unsigned_key = static_cast<uint32_t>(data[i].key) ^ 0x80000000;
+      uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
+      count[lower]++;
+    }
+    
+    // Prefix sum
+    uint32_t sum = 0;
+    for (size_t i = 0; i < 65536; ++i) {
+      uint32_t tmp = count[i];
+      count[i] = sum;
+      sum += tmp;
+    }
+    
+    // Distribute
+    for (size_t i = 0; i < n; ++i) {
+      uint32_t unsigned_key = static_cast<uint32_t>(data[i].key) ^ 0x80000000;
+      uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
+      buffer[count[lower]++] = data[i];
+    }
+    
+    data.swap(buffer);
+  }
+  
+  // PASS 2: Higher 16 bits
+  {
+    std::array<uint32_t, 65536> count = {0};  // 256KB - L3 cache
+    
+    for (size_t i = 0; i < n; ++i) {
+      uint32_t unsigned_key = static_cast<uint32_t>(data[i].key) ^ 0x80000000;
+      uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
+      count[upper]++;
+    }
+    
+    uint32_t sum = 0;
+    for (size_t i = 0; i < 65536; ++i) {
+      uint32_t tmp = count[i];
+      count[i] = sum;
+      sum += tmp;
+    }
+    
+    for (size_t i = 0; i < n; ++i) {
+      uint32_t unsigned_key = static_cast<uint32_t>(data[i].key) ^ 0x80000000;
+      uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
+      buffer[count[upper]++] = data[i];
+    }
+    
+    data.swap(buffer);
+  }
+  
+  std::cout << "2-pass radix sort complete" << std::endl;
+  };
+  
+  // Apply radix sort
+  radix_sort(rows);
+  std::cout << "Radix sort complete" << std::endl;
+  
+  // 4️⃣ SINGLE-THREADED SIMD-ACCELERATED AGGREGATION
+  struct AggResult {
+    int32_t key;
+    double sum;
+  };
+  
+  std::vector<AggResult> aggregates;
+  
+  if (!rows.empty()) {
+    aggregates.reserve(std::min(rows.size() / 10, size_t(1000000)));
+    
+    size_t i = 0;
+    const size_t n = rows.size();
+    
+    #ifdef __AVX2__
+    while (i < n) {
+      int32_t current_key = rows[i].key;
+      __m256d sum_vec = _mm256_setzero_pd();
+      
+      while (i + 3 < n && 
+             rows[i].key == current_key && 
+             rows[i+1].key == current_key && 
+             rows[i+2].key == current_key && 
+             rows[i+3].key == current_key) {
+        
+        __m128 float_vec = _mm_set_ps(rows[i+3].qty, rows[i+2].qty, 
+                                       rows[i+1].qty, rows[i].qty);
+        __m256d double_vec = _mm256_cvtps_pd(float_vec);
+        sum_vec = _mm256_add_pd(sum_vec, double_vec);
+        
+        i += 4;
+      }
+      
+      double simd_sum = 0.0;
+      if (i > 0) {
+        alignas(32) double temp[4];
+        _mm256_store_pd(temp, sum_vec);
+        simd_sum = temp[0] + temp[1] + temp[2] + temp[3];
+      }
+      
+      double scalar_sum = 0.0;
+      while (i < n && rows[i].key == current_key) {
+        scalar_sum += rows[i].qty;
+        i++;
+      }
+      
+      aggregates.push_back({current_key, simd_sum + scalar_sum});
+    }
+    #else
+    int32_t current_key = rows[0].key;
+    double current_sum = static_cast<double>(rows[0].qty);
+    
+    for (size_t idx = 1; idx < n; ++idx) {
+      if (rows[idx].key == current_key) {
+        current_sum += rows[idx].qty;
+      } else {
+        aggregates.push_back({current_key, current_sum});
+        current_key = rows[idx].key;
+        current_sum = rows[idx].qty;
+      }
+    }
+    aggregates.push_back({current_key, current_sum});
+    #endif
+  }
+  
+  std::cout << "Aggregation complete - " << aggregates.size() << " groups" << std::endl;
+  
+  // 5️⃣ OPTIMIZED RESULT BUILDING - SINGLE COLUMN
+TableColumnDefinitions columns{
+    {"l_orderkey", DataType::Int, false},
+    {"sum_qty", DataType::Double, false}
+};
+
+auto result = std::make_shared<Table>(columns, TableType::Data);
+
+std::cout << "Building result table with " << aggregates.size() << " rows" << std::endl;
+
+for (size_t i = 0; i < aggregates.size(); ++i) {
+  const auto& agg = aggregates[i];
+  
+  // Debug first few rows
+  if (i < 5) {
+    std::cout << "Row " << i << ": key=" << agg.key << ", sum=" << agg.sum << std::endl;
+  }
+  
+  result->append({
+    AllTypeVariant(static_cast<int32_t>(agg.key)),  // ← FIXED: explicit cast
+    AllTypeVariant(agg.sum)
+  });
+}
+
+std::cout << "Result table built successfully" << std::endl;
   
   return result;
 }
@@ -1123,119 +1430,116 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   
   // 4️⃣ SEQUENTIAL RADIX SORT - SIMPLIFIED
   auto sequential_radix_sort = [](std::vector<RowData>& data) {
-    if (data.empty()) return;
-    
-    const size_t n = data.size();
-    std::vector<RowData> buffer(n);
-    
-    // 3-pass radix sort for 24-bit keys
-    for (size_t pass = 0; pass < 3; ++pass) {
-      const size_t shift = pass * 8;
-      std::array<size_t, 256> count = {0};
-      
-      for (const auto& row : data) {
-        uint8_t digit = (row.key >> shift) & 0xFF;  // Direct field access!
-        count[digit]++;
-      }
-      
-      size_t total = 0;
-      for (size_t i = 0; i < 256; ++i) {
-        size_t old_count = count[i];
-        count[i] = total;
-        total += old_count;
-      }
-      
-      for (const auto& row : data) {
-        uint8_t digit = (row.key >> shift) & 0xFF;
-        buffer[count[digit]++] = row;
-      }
-      
-      data.swap(buffer);
-    }
-  };
+  if (data.empty()) return;
   
-  // 5️⃣ PARALLEL RADIX SORT - SIMPLIFIED & FIXED
-  // 5️⃣ PARALLEL RADIX SORT - PROVEN CORRECT
+  const size_t n = data.size();
+  std::vector<RowData> buffer(n);
+  
+  // Pass 1: Lower 16 bits (ls_id)
+  {
+    std::array<uint32_t, 65536> count = {0};
+    
+    for (const auto& row : data) {
+      count[row.key & 0xFFFF]++;  // ls_id is lower 16 bits
+    }
+    
+    uint32_t sum = 0;
+    for (size_t i = 0; i < 65536; ++i) {
+      uint32_t tmp = count[i];
+      count[i] = sum;
+      sum += tmp;
+    }
+    
+    for (const auto& row : data) {
+      buffer[count[row.key & 0xFFFF]++] = row;
+    }
+    
+    data.swap(buffer);
+  }
+  
+  // Pass 2: Higher 16 bits (rf_id)
+  {
+    std::array<uint32_t, 65536> count = {0};
+    
+    for (const auto& row : data) {
+      count[(row.key >> 16) & 0xFFFF]++;  // rf_id is upper 16 bits
+    }
+    
+    uint32_t sum = 0;
+    for (size_t i = 0; i < 65536; ++i) {
+      uint32_t tmp = count[i];
+      count[i] = sum;
+      sum += tmp;
+    }
+    
+    for (const auto& row : data) {
+      buffer[count[(row.key >> 16) & 0xFFFF]++] = row;
+    }
+    
+    data.swap(buffer);
+  }
+};
+
+// 5️⃣ PARALLEL RADIX SORT - 2-PASS VERSION
 auto parallel_radix_sort = [&sequential_radix_sort](std::vector<RowData>& data) {
   const size_t n = data.size();
   
-  if (n < 5000) {
+  if (n < 5000000) {
     sequential_radix_sort(data);
     return;
   }
   
-  constexpr size_t RADIX = 256;
-  constexpr size_t PASSES = 3;
+  constexpr size_t RADIX = 65536;  // 2^16 buckets
   const size_t num_workers = std::thread::hardware_concurrency();
   const size_t chunk_size = (n + num_workers - 1) / num_workers;
   
   std::vector<RowData> buffer(n);
-  std::array<std::atomic<size_t>, RADIX> global_counts;
   
-  for (size_t pass = 0; pass < PASSES; ++pass) {
-    const size_t shift = pass * 8;
+  for (size_t pass = 0; pass < 2; ++pass) {
+    const size_t shift = pass * 16;
     
-    // Reset counts
-    for (auto& c : global_counts) c.store(0, std::memory_order_relaxed);
+    // PHASE 1: PER-THREAD HISTOGRAMS
+    std::vector<std::array<uint32_t, RADIX>> histograms(num_workers, {0});
     
-    // PHASE 1: PARALLEL COUNT
-    auto count_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    count_jobs.reserve(num_workers);
+    auto hist_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    hist_jobs.reserve(num_workers);
     
     for (size_t chunk = 0; chunk < num_workers; ++chunk) {
       const size_t start = chunk * chunk_size;
       const size_t end = std::min(start + chunk_size, n);
       if (start >= end) break;
       
-      count_jobs.emplace_back(std::make_shared<JobTask>([&, start, end]() {
-        std::array<size_t, RADIX> local_counts = {0};
-        
+      hist_jobs.emplace_back(std::make_shared<JobTask>([&, chunk, start, end]() {
+        auto& local_hist = histograms[chunk];
         for (size_t i = start; i < end; ++i) {
-          uint8_t digit = (data[i].key >> shift) & 0xFF;
-          local_counts[digit]++;
-        }
-        
-        for (size_t i = 0; i < RADIX; ++i) {
-          if (local_counts[i] > 0) {
-            global_counts[i].fetch_add(local_counts[i], std::memory_order_relaxed);
-          }
+          uint16_t digit = (data[i].key >> shift) & 0xFFFF;
+          local_hist[digit]++;
         }
       }));
     }
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(count_jobs);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(hist_jobs);
     
-    // PHASE 2: COMPUTE GLOBAL PREFIX SUM
-    std::array<size_t, RADIX> global_prefix;
-    size_t total = 0;
-    for (size_t i = 0; i < RADIX; ++i) {
-      global_prefix[i] = total;
-      total += global_counts[i].load(std::memory_order_relaxed);
+    // PHASE 2: GLOBAL PREFIX SUM
+    std::array<uint32_t, RADIX> global_prefix;
+    uint32_t total = 0;
+    for (size_t d = 0; d < RADIX; ++d) {
+      global_prefix[d] = total;
+      for (size_t t = 0; t < num_workers; ++t) {
+        total += histograms[t][d];
+      }
     }
     
-    // PHASE 3: COMPUTE PER-THREAD, PER-DIGIT OFFSETS
-    std::vector<std::array<size_t, RADIX>> thread_prefixes(num_workers);
+    // PHASE 3: PER-THREAD OFFSETS
+    std::vector<std::array<uint32_t, RADIX>> thread_offsets(num_workers);
+    thread_offsets[0] = global_prefix;
     
-    // Initialize thread 0 with global prefix
-    thread_prefixes[0] = global_prefix;
-    
-    // For each subsequent thread, add previous thread's counts
     for (size_t t = 1; t < num_workers; ++t) {
       for (size_t d = 0; d < RADIX; ++d) {
-        thread_prefixes[t][d] = thread_prefixes[t-1][d];
-      }
-      
-      // Add counts from previous chunk
-      const size_t prev_start = (t-1) * chunk_size;
-      const size_t prev_end = std::min(prev_start + chunk_size, n);
-      if (prev_start < prev_end) {
-        for (size_t i = prev_start; i < prev_end; ++i) {
-          uint8_t digit = (data[i].key >> shift) & 0xFF;
-          thread_prefixes[t][digit]++;
-        }
+        thread_offsets[t][d] = thread_offsets[t-1][d] + histograms[t-1][d];
       }
     }
     
-    // PHASE 4: PARALLEL DISTRIBUTION - EACH THREAD USES ITS OWN OFFSETS
+    // PHASE 4: PARALLEL DISTRIBUTION
     auto dist_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     dist_jobs.reserve(num_workers);
     
@@ -1245,12 +1549,11 @@ auto parallel_radix_sort = [&sequential_radix_sort](std::vector<RowData>& data) 
       if (start >= end) continue;
       
       dist_jobs.emplace_back(std::make_shared<JobTask>([&, chunk, start, end]() {
-        // Local copy of this thread's positions
-        auto local_positions = thread_prefixes[chunk];
+        auto local_offsets = thread_offsets[chunk];
         
         for (size_t i = start; i < end; ++i) {
-          uint8_t digit = (data[i].key >> shift) & 0xFF;
-          size_t pos = local_positions[digit]++;
+          uint16_t digit = (data[i].key >> shift) & 0xFFFF;
+          size_t pos = local_offsets[digit]++;
           buffer[pos] = data[i];
         }
       }));
@@ -1433,8 +1736,81 @@ bool verify_tables_equal(const Table& actual, const Table& expected) {
   return true;
 }
 
+bool verify_tables_equal_hc(const Table& actual, const Table& expected) {
+  // Quick checks
+  if (actual.row_count() != expected.row_count()) {
+    std::cerr << "    [VALIDATION FAILED] Row count mismatch: "
+              << actual.row_count() << " vs " << expected.row_count() << std::endl;
+    return false;
+  }
+
+  if (actual.column_count() != expected.column_count()) {
+    std::cerr << "    [VALIDATION FAILED] Column count mismatch" << std::endl;
+    return false;
+  }
+
+  // For high cardinality, sort both tables and compare row by row
+  std::vector<std::pair<int32_t, double>> actual_rows;
+  std::vector<std::pair<int32_t, double>> expected_rows;
+  
+  actual_rows.reserve(actual.row_count());
+  expected_rows.reserve(expected.row_count());
+  
+  // Extract actual table
+  for (auto chunk_id = ChunkID{0}; chunk_id < actual.chunk_count(); ++chunk_id) {
+    const auto chunk = actual.get_chunk(chunk_id);
+    if (!chunk) continue;
+    
+    const auto& key_seg = *chunk->get_segment(ColumnID{0});
+    const auto& sum_seg = *chunk->get_segment(ColumnID{1});
+    
+    for (ChunkOffset offset{0}; offset < chunk->size(); ++offset) {
+      int32_t key = boost::get<int32_t>(key_seg[offset]);
+      double sum = boost::get<double>(sum_seg[offset]);
+      actual_rows.emplace_back(key, sum);
+    }
+  }
+  
+  // Extract expected table
+  for (auto chunk_id = ChunkID{0}; chunk_id < expected.chunk_count(); ++chunk_id) {
+    const auto chunk = expected.get_chunk(chunk_id);
+    if (!chunk) continue;
+    
+    const auto& key_seg = *chunk->get_segment(ColumnID{0});
+    const auto& sum_seg = *chunk->get_segment(ColumnID{1});
+    
+    for (ChunkOffset offset{0}; offset < chunk->size(); ++offset) {
+      int32_t key = boost::get<int32_t>(key_seg[offset]);
+      double sum = boost::get<double>(sum_seg[offset]);
+      expected_rows.emplace_back(key, sum);
+    }
+  }
+  
+  // Sort both by key
+  std::sort(actual_rows.begin(), actual_rows.end());
+  std::sort(expected_rows.begin(), expected_rows.end());
+  
+  // Compare row by row
+  const double EPSILON = 0.001;
+  for (size_t i = 0; i < actual_rows.size(); ++i) {
+    if (actual_rows[i].first != expected_rows[i].first) {
+      std::cerr << "    [VALIDATION FAILED] Key mismatch at row " << i << ": "
+                << actual_rows[i].first << " vs " << expected_rows[i].first << std::endl;
+      return false;
+    }
+    if (std::abs(actual_rows[i].second - expected_rows[i].second) > EPSILON) {
+      std::cerr << "    [VALIDATION FAILED] Sum mismatch at key " << actual_rows[i].first << ": "
+                << actual_rows[i].second << " vs " << expected_rows[i].second << std::endl;
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+
 /**
- * BENCHMARK DRIVER
+ * BENCHMARK DRIVER - Low Cardinality
  */
 std::shared_ptr<Table> run_algorithm(const std::string& name,
                                      std::function<std::shared_ptr<Table>(const std::shared_ptr<Table>&)> func,
@@ -1451,13 +1827,12 @@ std::shared_ptr<Table> run_algorithm(const std::string& name,
   for (uint32_t i = 0; i < num_iterations; ++i) {
     const auto start = std::chrono::high_resolution_clock::now();
     result = func(input);
-    Hyrise::get().scheduler()->wait_for_all_tasks();  // Ensure async tasks are done
+    Hyrise::get().scheduler()->wait_for_all_tasks();
     const auto end = std::chrono::high_resolution_clock::now();
 
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     durations.push_back(duration);
 
-    // Verify result on first iteration only
     if (i == 0 && expected_result && result) {
       if (!verify_tables_equal(*result, *expected_result)) {
         std::cout << "FAILED VALIDATION!" << std::endl;
@@ -1474,18 +1849,79 @@ std::shared_ptr<Table> run_algorithm(const std::string& name,
 
   double avg;
   if (num_iterations >= 3) {
-    // Trimmed mean: exclude ONE min and ONE max to reduce impact of outliers
     auto sorted_durations = durations;
     std::sort(sorted_durations.begin(), sorted_durations.end());
 
-    // Sum middle values (exclude first and last)
     int64_t sum = 0;
     for (size_t i = 1; i < sorted_durations.size() - 1; ++i) {
       sum += sorted_durations[i];
     }
     avg = static_cast<double>(sum) / static_cast<double>(num_iterations - 2);
   } else {
-    // For n < 3, use all values
+    const auto sum = std::accumulate(durations.begin(), durations.end(), int64_t{0});
+    avg = static_cast<double>(sum) / static_cast<double>(num_iterations);
+  }
+
+  std::cout << "Done." << std::endl;
+  std::cout << "    Avg: " << std::fixed << std::setprecision(1) << avg << " ms";
+  if (num_iterations >= 3) {
+    std::cout << " (trimmed)";
+  }
+  std::cout << " | Min: " << min << " ms"
+            << " | Max: " << max << " ms" << std::endl;
+
+  return result;
+}
+
+/**
+ * BENCHMARK DRIVER - High Cardinality
+ */
+std::shared_ptr<Table> run_algorithm_hc(const std::string& name,
+                                        std::function<std::shared_ptr<Table>(const std::shared_ptr<Table>&)> func,
+                                        const std::shared_ptr<Table>& input,
+                                        const std::shared_ptr<Table>& expected_result) {
+  const auto num_iterations = CONFIG.num_iterations;
+
+  std::cout << "  Running " << name << " (" << num_iterations << " iterations)... " << std::flush;
+
+  auto durations = std::vector<int64_t>{};
+  durations.reserve(num_iterations);
+  std::shared_ptr<Table> result = nullptr;
+
+  for (uint32_t i = 0; i < num_iterations; ++i) {
+    const auto start = std::chrono::high_resolution_clock::now();
+    result = func(input);
+    Hyrise::get().scheduler()->wait_for_all_tasks();
+    const auto end = std::chrono::high_resolution_clock::now();
+
+    const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    durations.push_back(duration);
+
+    if (i == 0 && expected_result && result) {
+      if (!verify_tables_equal_hc(*result, *expected_result)) {
+        std::cout << "FAILED VALIDATION!" << std::endl;
+        return result;
+      } else {
+        std::cout << "[VALIDATED] " << std::flush;
+      }
+    }
+  }
+
+  // Calculate statistics
+  const auto min = *std::min_element(durations.begin(), durations.end());
+  const auto max = *std::max_element(durations.begin(), durations.end());
+
+  double avg;
+  if (num_iterations >= 3) {
+    auto sorted_durations = durations;
+    std::sort(sorted_durations.begin(), sorted_durations.end());
+
+    int64_t sum = 0;
+    for (size_t i = 1; i < sorted_durations.size() - 1; ++i) {
+      sum += sorted_durations[i];
+    }
+    avg = static_cast<double>(sum) / static_cast<double>(num_iterations - 2);
+  } else {
     const auto sum = std::accumulate(durations.begin(), durations.end(), int64_t{0});
     avg = static_cast<double>(sum) / static_cast<double>(num_iterations);
   }
@@ -1576,6 +2012,29 @@ void run_sort_micro_benchmark(float scale_factor) {
   std::cout << "=== SORT Microbenchmark Finished ===" << std::endl;
 }
 
+void run_sort_micro_benchmark_hc(float scale_factor) {
+  std::cout << "=== Running SORT Microbenchmark (high cardinality) ===" << std::endl;
+  // 1. Data Generation
+  auto input_table = generate_lineitem_data(scale_factor);
+  std::shared_ptr<Table> expected_result = nullptr;
+
+  // 2. Single Threaded Baseline (Ground Truth)
+  if (CONFIG.run_single_baseline) {
+    setup_scheduler(false); // Single
+    std::cout << "  [Mode: Single Threaded]" << std::endl;
+    expected_result = run_algorithm_hc("Sort Single Baseline HC", sort_single_baseline_hc, input_table, nullptr);
+  }
+
+  // 3. Single Threaded Optimized
+  if (CONFIG.run_single_optimized) {
+    setup_scheduler(false);
+    std::cout << "  [Mode: Single Threaded]" << std::endl;
+    run_algorithm_hc("Sort Single Optimized HC", sort_single_optimized_hc, input_table, expected_result);
+  }
+
+  std::cout << "=== SORT Microbenchmark (high cardinality) Finished ===" << std::endl;
+}
+
 
 /**
  * MAIN
@@ -1605,8 +2064,9 @@ int main() {
     /*************************************
      ***** Comment / Uncomment here ******
      *************************************/
-    run_hash_micro_benchmark(scale_factor);
+    //run_hash_micro_benchmark(scale_factor);
     run_sort_micro_benchmark(scale_factor);
+    run_sort_micro_benchmark_hc(scale_factor);
 
     // Calculate and display time for this scale factor
     const auto sf_end = std::chrono::high_resolution_clock::now();
