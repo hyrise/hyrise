@@ -12,7 +12,6 @@ import pandas as pd
 import sys
 from collections import defaultdict
 
-
 benchmarks = []
 rule_benchmarks = []
 

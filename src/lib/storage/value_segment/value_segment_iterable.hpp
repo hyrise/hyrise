@@ -9,6 +9,8 @@
 #include "storage/value_segment.hpp"
 
 namespace hyrise {
+// Our function naming for iterables is not correct. `_on_with` is a public function and should not start with `_`,
+// whereas the iterator functions should start with `_` as they are private (but can't, because boost requires them).
 // NOLINTBEGIN(readability-identifier-naming)
 template <typename T>
 class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentIterable<T>> {

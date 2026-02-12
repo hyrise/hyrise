@@ -109,8 +109,9 @@ ExcludeHeaderFilterRegex: 'third_party|version.hpp'
 #                                                               do not matter with our limited set of supported compilers.
 #   - boost-use-ranges                                          As most boost-ranges implementations are now in C++20, we prefer `std::ranges`.
 #   - portability-template-virtual-member-function              We do not mind being incompatible with the MSVC compiler.
-#   - cppcoreguidelines-avoid-const-or-ref-data-members         We have quite a few const and ref data members. This is a bad thing, but it would take quite a while to fix it all.
-#                                                               These make constrcutors / assignments more expensive, but we use shared pointers, which should negate that.
+#   - cppcoreguidelines-avoid-const-or-ref-data-members         We have quite a few const and ref data members. This can be problematic as the object is not copy-assignable, but
+#                                                               it would take quite a while to fix it all. These make constrcutors / assignments more expensive, but we use shared
+#                                                               pointers, which should negate that.
 
 CheckOptions:
   - { key: readability-identifier-naming.ClassCase, value: CamelCase }

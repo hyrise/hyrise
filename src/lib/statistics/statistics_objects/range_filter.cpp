@@ -333,7 +333,7 @@ template <typename T>
 std::shared_ptr<const AbstractStatisticsObject> RangeFilter<T>::pruned(
     const size_t /* num_values_pruned */, const PredicateCondition /* predicate_condition */,
     const AllTypeVariant& /* variant_value */, const std::optional<AllTypeVariant>& /* variant_value2 */) const {
-  Fail("Pruning has not yet been implemented for the given statistics object");
+  Fail("Pruning has not yet been implemented for the RangeFilter object");
 }
 
 template class RangeFilter<int32_t>;

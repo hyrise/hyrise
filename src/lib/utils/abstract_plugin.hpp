@@ -8,9 +8,9 @@
 
 #include "nlohmann/json.hpp"
 
+#include "abstract_benchmark_item_runner.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
-#include "abstract_benchmark_item_runner.hpp"
 
 namespace hyrise {
 

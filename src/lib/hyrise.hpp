@@ -48,7 +48,8 @@ class Hyrise : public Singleton<Hyrise> {
   Topology topology;
 
   // We need to implement the move assignment operator so that the storage manager and plugin manager are destructed
-  // in the correct order.
+  // in the correct order. This is because the plugin manager might have plugins that need to delete tables, which
+  // fails if the storage manager is already destructed.
   Hyrise(const Hyrise&) = delete;
   Hyrise(Hyrise&&) noexcept = default;
   ~Hyrise() override = default;

@@ -38,8 +38,4 @@ void MicroBenchmarkBasicFixture::TearDown(::benchmark::State& /*state*/) {
   Hyrise::reset();
 }
 
-void MicroBenchmarkBasicFixture::_clear_cache() {
-  micro_benchmark_clear_cache();
-}
-
 }  // namespace hyrise

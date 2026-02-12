@@ -102,7 +102,7 @@ std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<in
 
   auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
 
-  for (auto chunk_index = ptrdiff_t{0}; std::cmp_less(chunk_index, NUMBER_OF_CHUNKS_JOIN_AGGREGATE); ++chunk_index) {
+  for (auto chunk_index = size_t{0}; chunk_index < NUMBER_OF_CHUNKS_JOIN_AGGREGATE; ++chunk_index) {
     const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
         ids_vector.begin() + (chunk_index * chunk_size), ids_vector.begin() + ((chunk_index + 1) * chunk_size)));
     const auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
@@ -184,8 +184,6 @@ void bm_join_aggregate(benchmark::State& state) {
 }  // namespace
 
 namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
 
 BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinSortMerge);
 BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinHash);

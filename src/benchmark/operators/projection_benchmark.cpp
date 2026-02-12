@@ -30,7 +30,7 @@ namespace hyrise {
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   const auto column_1 = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "column_1");
 
@@ -38,7 +38,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& 
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_VariableTerm)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   // "column_1" + "column_2"
   const auto column_1 = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "column_1");
@@ -48,7 +48,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_VariableTerm)(benchmark::S
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_ConstantTerm)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   const auto column_1 = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "column_1");
 

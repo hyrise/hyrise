@@ -18,7 +18,7 @@ namespace hyrise {
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
@@ -34,7 +34,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& stat
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedNoGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
@@ -50,7 +50,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedNoGroupBy)(benc
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
@@ -74,7 +74,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchma
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedOneGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
@@ -90,7 +90,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedOneGroupBy)(ben
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
@@ -114,7 +114,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchm
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedMultipleGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
@@ -130,7 +130,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedMultipleGroupBy
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};

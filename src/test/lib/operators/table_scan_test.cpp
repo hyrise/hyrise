@@ -1000,7 +1000,7 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
 
   // clang-format off
-// NOLINTBEGIN(whitespace/line_length)
+  // NOLINTBEGIN(whitespace/line_length)
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, 5)}.create_impl().get()));
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));
@@ -1024,6 +1024,8 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_float_op(), between_inclusive_(column_a, 0, null_())}.create_impl().get()));
   EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_int_float_with_null_op(), is_null_(column_an)}.create_impl().get()));
   EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_int_float_with_null_op(), is_not_null_(column_an)}.create_impl().get()));
+  // NOLINTEND(whitespace/line_length)
+  // clang-format on
 
   // Cases where the lossless_predicate_cast is used and the predicate condition gets adjusted:
   {
@@ -1090,7 +1092,8 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   }
 
   {
-    const auto abstract_impl = TableScan{get_int_float_op(), between_upper_exclusive_(column_b, 3.1, 4.0)}.create_impl();
+    const auto abstract_impl =
+        TableScan{get_int_float_op(), between_upper_exclusive_(column_b, 3.1, 4.0)}.create_impl();
     const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::BetweenUpperExclusive);
@@ -1129,9 +1132,6 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
     ASSERT_TRUE(impl);
     // Cannot use ColumnBetweenTableScanImpl as upper bound is not a value
   }
-
-  // NOLINTEND(whitespace/line_length)
-  // clang-format on
 }
 
 TEST_P(OperatorsTableScanTest, TwoBigScans) {

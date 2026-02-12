@@ -50,22 +50,22 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
 namespace hyrise {
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
   benchmark_tablescan_impl(state, _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 7);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
   benchmark_tablescan_impl(state, _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant_OnDict)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
   benchmark_tablescan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 7);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanVariable_OnDict)(benchmark::State& state) {
-  _clear_cache();
+  micro_benchmark_clear_cache();
   benchmark_tablescan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
 }
 

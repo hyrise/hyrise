@@ -43,7 +43,7 @@ class SegmentAccessCounter {
   SegmentAccessCounter(const SegmentAccessCounter& other);
   SegmentAccessCounter& operator=(const SegmentAccessCounter& other);
 
-  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted
+  // These two need not be deleted, but they are for the same reason that std::atomic has them deleted.
   // You can implement them, but you should think about the implications for this class.
   SegmentAccessCounter(SegmentAccessCounter&&) = delete;
   SegmentAccessCounter& operator=(SegmentAccessCounter&&) = delete;
