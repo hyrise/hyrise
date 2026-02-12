@@ -1,6 +1,7 @@
 #include "constraint_utils.hpp"
 
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <set>
 #include <string>

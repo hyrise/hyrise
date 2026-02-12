@@ -1,6 +1,7 @@
 #include "sql_pipeline_statement.hpp"
 
 #include <chrono>
+#include <format>
 #include <fstream>
 #include <memory>
 #include <string>

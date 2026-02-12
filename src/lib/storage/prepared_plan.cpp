@@ -1,6 +1,7 @@
 #include "prepared_plan.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <ostream>
 #include <string>

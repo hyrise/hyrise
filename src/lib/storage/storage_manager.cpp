@@ -1,6 +1,7 @@
 #include "storage_manager.hpp"
 
 #include <algorithm>
+#include <format>
 #include <memory>
 #include <ostream>
 #include <string>

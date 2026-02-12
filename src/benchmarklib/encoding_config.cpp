@@ -1,5 +1,6 @@
 #include "encoding_config.hpp"
 
+#include <format>
 #include <optional>
 #include <string>
 #include <utility>

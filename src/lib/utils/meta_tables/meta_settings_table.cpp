@@ -1,5 +1,6 @@
 #include "meta_settings_table.hpp"
 
+#include <format>
 #include <memory>
 #include <string>
 #include <vector>

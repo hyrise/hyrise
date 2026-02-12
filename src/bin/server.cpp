@@ -1,6 +1,7 @@
 #include "server/server.hpp"
 
 #include <cstdint>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <string>

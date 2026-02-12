@@ -1,5 +1,6 @@
 #include "sqlite_add_indices.hpp"
 
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <iterator>

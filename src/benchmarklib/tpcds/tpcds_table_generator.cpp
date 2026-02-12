@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <format>
 #include <limits>
 #include <memory>
 #include <optional>

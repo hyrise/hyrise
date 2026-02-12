@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <optional>

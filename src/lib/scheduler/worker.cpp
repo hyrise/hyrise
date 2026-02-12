@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <numeric>
 #include <random>

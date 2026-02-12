@@ -1,6 +1,7 @@
 #include "abstract_operator.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <mutex>
 #include <ostream>

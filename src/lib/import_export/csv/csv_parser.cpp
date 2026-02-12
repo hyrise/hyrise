@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <format>
 #include <fstream>
 #include <ios>
 #include <list>

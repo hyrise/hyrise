@@ -1,6 +1,7 @@
 #include "frame.hpp"
 
 #include <atomic>
+#include <format>
 #include <ostream>
 #include <string>
 

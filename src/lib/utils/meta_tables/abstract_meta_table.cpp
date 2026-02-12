@@ -1,5 +1,6 @@
 #include "abstract_meta_table.hpp"
 
+#include <format>
 #include <memory>
 #include <string>
 #include <vector>

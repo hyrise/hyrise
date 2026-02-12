@@ -1,5 +1,6 @@
 #include "csv_meta.hpp"
 
+#include <format>
 #include <fstream>
 #include <string>
 #include <tuple>

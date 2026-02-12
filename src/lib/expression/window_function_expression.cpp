@@ -1,6 +1,7 @@
 #include "window_function_expression.hpp"
 
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <memory>
 #include <ostream>

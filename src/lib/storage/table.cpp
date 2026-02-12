@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <mutex>

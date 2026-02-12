@@ -1,6 +1,7 @@
 #include "load_table.hpp"
 
 #include <cstddef>
+#include <format>
 #include <fstream>
 #include <memory>
 #include <string>

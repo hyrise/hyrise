@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <memory>

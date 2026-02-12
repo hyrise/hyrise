@@ -1,6 +1,7 @@
 #include "abstract_table_generator.hpp"
 
 #include <filesystem>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <numeric>
