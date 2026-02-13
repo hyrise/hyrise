@@ -1459,13 +1459,16 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
     RowData() : key(0), qty(0.0f) {}
   };
   
-  // Character mappings
+  // Character mappings - FIXED!
   std::array<uint8_t, 256> char_to_id = {0};
-  char_to_id['R'] = 0; char_to_id['A'] = 1; char_to_id['N'] = 2;
-  char_to_id['F'] = 0; char_to_id['O'] = 1; char_to_id['P'] = 2;
-  
+  char_to_id['R'] = 0; 
+  char_to_id['A'] = 1; 
+  char_to_id['N'] = 2;
+  char_to_id['F'] = 0; 
+  char_to_id['O'] = 1; 
+
   std::array<char, 3> rf_id_to_char = {'R', 'A', 'N'};
-  std::array<char, 3> ls_id_to_char = {'F', 'O', 'P'};
+  std::array<char, 2> ls_id_to_char = {'F', 'O'};  // FIXED: only 2 values!
   
   // ───────────────────────────────────────────────────────────────────────
   // PHASE 1: PARALLEL EXTRACTION + PER-CHUNK COUNTING SORT
@@ -1662,236 +1665,67 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   }
   
   // ───────────────────────────────────────────────────────────────────────
-  // PHASE 3: PARALLEL K-WAY MERGE USING TOURNAMENT TREE
-  // ───────────────────────────────────────────────────────────────────────
-  
-  // Calculate global unique keys across all chunks
-  std::array<uint32_t, 9> global_unique_keys = {0};
-  uint8_t global_num_unique = 0;
-  
-  for (const auto& chunk : non_empty_chunks) {
-    for (uint8_t i = 0; i < chunk.num_unique; ++i) {
-      uint32_t key = chunk.unique_keys[i];
-      bool found = false;
-      for (uint8_t j = 0; j < global_num_unique; ++j) {
-        if (global_unique_keys[j] == key) {
-          found = true;
-          break;
-        }
-      }
-      if (!found && global_num_unique < 9) {
-        global_unique_keys[global_num_unique++] = key;
+// PHASE 3: DIRECT PARALLEL REDUCTION (NO MERGE!)
+// ───────────────────────────────────────────────────────────────────────
+
+// Calculate global unique keys across all chunks
+std::array<uint32_t, 9> global_unique_keys = {0};
+uint8_t global_num_unique = 0;
+
+for (const auto& chunk : non_empty_chunks) {
+  for (uint8_t i = 0; i < chunk.num_unique; ++i) {
+    uint32_t key = chunk.unique_keys[i];
+    bool found = false;
+    for (uint8_t j = 0; j < global_num_unique; ++j) {
+      if (global_unique_keys[j] == key) {
+        found = true;
+        break;
       }
     }
-  }
-  
-  // Sort global keys for final ordering
-  std::sort(global_unique_keys.begin(), global_unique_keys.begin() + global_num_unique);
-  
-  // Create mapping from key to global dense ID
-  std::unordered_map<uint32_t, uint8_t> key_to_global_id;
-  for (uint8_t i = 0; i < global_num_unique; ++i) {
-    key_to_global_id[global_unique_keys[i]] = i;
-  }
-  
-  // Parallel merge - split chunks among merge tasks
-  const size_t num_mergers = std::thread::hardware_concurrency();
-  const size_t chunks_per_merger = (non_empty_chunks.size() + num_mergers - 1) / num_mergers;
-  
-  std::vector<std::vector<RowData>> merged_runs(num_mergers);
-  std::vector<std::shared_ptr<AbstractTask>> merge_tasks;
-  
-  for (size_t m = 0; m < num_mergers; ++m) {
-    size_t start_chunk = m * chunks_per_merger;
-    size_t end_chunk = std::min(start_chunk + chunks_per_merger, non_empty_chunks.size());
-    
-    if (start_chunk >= end_chunk) break;
-    
-    merge_tasks.emplace_back(std::make_shared<JobTask>([&, m, start_chunk, end_chunk]() {
-      // If only one chunk, just move it
-      if (start_chunk + 1 == end_chunk) {
-        merged_runs[m] = std::move(non_empty_chunks[start_chunk].data);
-        return;
-      }
-      
-      // Multi-way merge using min-heap
-      struct HeapEntry {
-        RowData row;
-        size_t chunk_idx;
-        size_t pos;
-        
-        bool operator<(const HeapEntry& other) const {
-          return row.key > other.row.key;  // Min-heap
-        }
-      };
-      
-      std::priority_queue<HeapEntry> pq;
-      
-      // Initialize heap with first element from each chunk
-      for (size_t i = start_chunk; i < end_chunk; ++i) {
-        if (!non_empty_chunks[i].data.empty()) {
-          pq.push({non_empty_chunks[i].data[0], i, 0});
-        }
-      }
-      
-      std::vector<RowData> merged;
-      merged.reserve(total_rows / num_mergers + total_rows / (num_mergers * 10));
-      
-      while (!pq.empty()) {
-        HeapEntry smallest = pq.top();
-        pq.pop();
-        
-        merged.push_back(smallest.row);
-        
-        size_t next_pos = smallest.pos + 1;
-        if (next_pos < non_empty_chunks[smallest.chunk_idx].data.size()) {
-          pq.push({non_empty_chunks[smallest.chunk_idx].data[next_pos], 
-                  smallest.chunk_idx, next_pos});
-        }
-      }
-      
-      merged_runs[m] = std::move(merged);
-    }));
-  }
-  
-  // Schedule merge tasks
-  for (auto& task : merge_tasks) {
-    task->schedule();
-  }
-  // Wait for merge tasks using scheduler
-  Hyrise::get().scheduler()->wait_for_tasks(merge_tasks);
-  
-  // ───────────────────────────────────────────────────────────────────────
-  // PHASE 4: FINAL MERGE (single-threaded, runs are already small)
-  // ───────────────────────────────────────────────────────────────────────
-  
-  std::vector<RowData> final_sorted;
-  
-  // Count total rows in merged runs
-  size_t total_merged_rows = 0;
-  for (const auto& run : merged_runs) {
-    total_merged_rows += run.size();
-  }
-  final_sorted.reserve(total_merged_rows);
-  
-  if (merged_runs.size() == 1) {
-    final_sorted = std::move(merged_runs[0]);
-  } else {
-    // Merge the merged runs
-    struct FinalHeapEntry {
-      RowData row;
-      size_t run_idx;
-      size_t pos;
-      bool operator<(const FinalHeapEntry& other) const {
-        return row.key > other.row.key;
-      }
-    };
-    
-    std::priority_queue<FinalHeapEntry> pq;
-    
-    for (size_t i = 0; i < merged_runs.size(); ++i) {
-      if (!merged_runs[i].empty()) {
-        pq.push({merged_runs[i][0], i, 0});
-      }
-    }
-    
-    while (!pq.empty()) {
-      FinalHeapEntry entry = pq.top();
-      pq.pop();
-      
-      final_sorted.push_back(entry.row);
-      
-      if (entry.pos + 1 < merged_runs[entry.run_idx].size()) {
-        pq.push({merged_runs[entry.run_idx][entry.pos + 1], 
-                entry.run_idx, entry.pos + 1});
-      }
+    if (!found && global_num_unique < 9) {
+      global_unique_keys[global_num_unique++] = key;
     }
   }
-  
-  // ───────────────────────────────────────────────────────────────────────
-  // PHASE 5: PARALLEL AGGREGATION (using global key mapping)
-  // ───────────────────────────────────────────────────────────────────────
-  
-  std::array<double, 9> final_sums = {0};
-  
-  if (!final_sorted.empty()) {
-    #ifdef __AVX2__
-    // Parallel SIMD aggregation - split the sorted array
-    std::vector<std::array<double, 9>> local_sums(num_mergers);
-    std::vector<std::shared_ptr<AbstractTask>> agg_tasks;
-    
-    const size_t rows_per_task = (final_sorted.size() + num_mergers - 1) / num_mergers;
-    
-    for (size_t t = 0; t < num_mergers; ++t) {
-      size_t start = t * rows_per_task;
-      size_t end = std::min(start + rows_per_task, final_sorted.size());
-      
-      if (start >= end) break;
-      
-      agg_tasks.emplace_back(std::make_shared<JobTask>([&, t, start, end]() {
-        std::array<double, 9> sums = {0};
-        
-        size_t i = start;
-        while (i < end) {
-          uint8_t global_id = key_to_global_id[final_sorted[i].key];
-          __m256d sum_vec = _mm256_setzero_pd();
-          
-          // SIMD batch of 4
-          while (i + 3 < end && 
-                 key_to_global_id[final_sorted[i].key] == global_id &&
-                 key_to_global_id[final_sorted[i+1].key] == global_id &&
-                 key_to_global_id[final_sorted[i+2].key] == global_id &&
-                 key_to_global_id[final_sorted[i+3].key] == global_id) {
-            
-            __m128 float_vec = _mm_set_ps(final_sorted[i+3].qty, final_sorted[i+2].qty,
-                                         final_sorted[i+1].qty, final_sorted[i].qty);
-            __m256d double_vec = _mm256_cvtps_pd(float_vec);
-            sum_vec = _mm256_add_pd(sum_vec, double_vec);
-            
-            i += 4;
-          }
-          
-          // Horizontal sum
-          alignas(32) double temp[4];
-          _mm256_store_pd(temp, sum_vec);
-          sums[global_id] += temp[0] + temp[1] + temp[2] + temp[3];
-          
-          // Scalar remainder
-          while (i < end && key_to_global_id[final_sorted[i].key] == global_id) {
-            sums[global_id] += final_sorted[i].qty;
-            i++;
-          }
-        }
-        
-        local_sums[t] = sums;
-      }));
+}
+
+// Sort global keys for final ordering
+std::sort(global_unique_keys.begin(), global_unique_keys.begin() + global_num_unique);
+
+// Create mapping from key to global dense ID
+std::unordered_map<uint32_t, uint8_t> key_to_global_id;
+for (uint8_t i = 0; i < global_num_unique; ++i) {
+  key_to_global_id[global_unique_keys[i]] = i;
+}
+
+// PARALLEL REDUCTION - NO MERGE, NO SORTING!
+std::array<std::atomic<double>, 9> final_sums = {0};
+std::vector<std::shared_ptr<AbstractTask>> reduction_tasks;
+
+for (auto& chunk : non_empty_chunks) {
+  reduction_tasks.emplace_back(std::make_shared<JobTask>([&, chunk = std::move(chunk)]() {
+    // Direct aggregation - the data is already per-chunk sorted but we don't care!
+    for (const auto& row : chunk.data) {
+      uint8_t global_id = key_to_global_id[row.key];
+      final_sums[global_id].fetch_add(row.qty, std::memory_order_relaxed);
     }
-    
-    // Schedule aggregation tasks
-    for (auto& task : agg_tasks) {
-      task->schedule();
-    }
-    // Wait for aggregation tasks using scheduler
-    Hyrise::get().scheduler()->wait_for_tasks(agg_tasks);
-    
-    // Combine local sums
-    for (const auto& sums : local_sums) {
-      for (uint8_t i = 0; i < global_num_unique; ++i) {
-        final_sums[i] += sums[i];
-      }
-    }
-    
-    #else
-    // Fallback to single-threaded
-    for (const auto& row : final_sorted) {
-      final_sums[key_to_global_id[row.key]] += row.qty;
-    }
-    #endif
-  }
-  
-  // ───────────────────────────────────────────────────────────────────────
-  // PHASE 6: BUILD RESULT TABLE
-  // ───────────────────────────────────────────────────────────────────────
+  }));
+}
+
+// Schedule and wait for reduction tasks
+for (auto& task : reduction_tasks) {
+  task->schedule();
+}
+Hyrise::get().scheduler()->wait_for_tasks(reduction_tasks);
+
+// Convert atomic to regular doubles
+std::array<double, 9> sums;
+for (uint8_t i = 0; i < global_num_unique; ++i) {
+  sums[i] = final_sums[i].load();
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// PHASE 4: BUILD RESULT TABLE (no merge, no final sort needed!)
+// ───────────────────────────────────────────────────────────────────────
   
   TableColumnDefinitions columns{
     {"l_returnflag", DataType::String, false},
@@ -2692,14 +2526,14 @@ void run_sort_micro_benchmark_hc(float scale_factor) {
   if (CONFIG.run_multi_naive) {
     setup_scheduler(true, CONFIG.num_workers);
     std::cout << "  [Mode: Multi Threaded (" << CONFIG.num_workers << " workers)]" << std::endl;
-    run_algorithm_hc("Sort Multi Naive", sort_multi_naive_hc, input_table, expected_result);
+    run_algorithm_hc("Sort Multi Naive HC", sort_multi_naive_hc, input_table, expected_result);
   }
 
   // 5. Multi Optimized
   if (CONFIG.run_multi_optimized) {
     setup_scheduler(true, CONFIG.num_workers);
     std::cout << "  [Mode: Multi Threaded (" << CONFIG.num_workers << " workers)]" << std::endl;
-    run_algorithm_hc("Sort Multi Optimized", sort_multi_optimized_hc, input_table, expected_result);
+    run_algorithm_hc("Sort Multi Optimized HC", sort_multi_optimized_hc, input_table, expected_result);
   }
 
   std::cout << "=== SORT Microbenchmark (high cardinality) Finished ===" << std::endl;
@@ -2734,9 +2568,9 @@ int main() {
     /*************************************
      ***** Comment / Uncomment here ******
      *************************************/
-    run_hash_micro_benchmark(scale_factor);
+    //run_hash_micro_benchmark(scale_factor);
     run_sort_micro_benchmark(scale_factor);
-    run_sort_micro_benchmark_hc(scale_factor);
+    //run_sort_micro_benchmark_hc(scale_factor);
 
     // Calculate and display time for this scale factor
     const auto sf_end = std::chrono::high_resolution_clock::now();
