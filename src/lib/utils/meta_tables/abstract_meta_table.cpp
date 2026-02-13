@@ -2,7 +2,6 @@
 
 #include <format>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "all_type_variant.hpp"
