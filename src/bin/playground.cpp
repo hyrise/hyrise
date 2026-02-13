@@ -2331,6 +2331,8 @@ std::shared_ptr<Table> run_algorithm_hc(const std::string& name,
                                         std::function<std::shared_ptr<Table>(const std::shared_ptr<Table>&)> func,
                                         const std::shared_ptr<Table>& input,
                                         const std::shared_ptr<Table>& expected_result) {
+  // 🔥 FIX: Clean up any stale tasks from previous benchmarks
+  Hyrise::get().scheduler()->wait_for_all_tasks();
   const auto num_iterations = CONFIG.num_iterations;
 
   std::cout << "  Running " << name << " (" << num_iterations << " iterations)... " << std::flush;
