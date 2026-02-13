@@ -1735,7 +1735,7 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
       }
       
       std::vector<RowData> merged;
-      merged.reserve(static_cast<size_t>(total_rows / num_mergers * 1.1));
+      merged.reserve(total_rows / num_mergers + total_rows / (num_mergers * 10));
       
       while (!pq.empty()) {
         HeapEntry smallest = pq.top();
@@ -2123,7 +2123,7 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
       }
       
       std::vector<RowData> merged;
-      merged.reserve(static_cast<size_t>(total_rows / num_mergers * 1.1));
+      merged.reserve(total_rows / num_mergers + total_rows / (num_mergers * 10));
       
       while (!pq.empty()) {
         HeapEntry smallest = pq.top();
