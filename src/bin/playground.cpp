@@ -773,16 +773,16 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   }
   
   auto extract_end = std::chrono::high_resolution_clock::now();
-  auto extract_time = std::chrono::duration_cast<std::chrono::microseconds>(extract_end - extract_start).count() / 1000.0;
+  auto extract_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(extract_end - extract_start).count()) / 1000.0;
   
   // --- TIMING: COUNTING SORT ---
   auto sort_start = std::chrono::high_resolution_clock::now();
   
   // DIRECT COUNTING SORT
   auto get_dense_id = [](uint32_t key) constexpr -> uint8_t {
-    return ((key >> 16) & 0xFFFF) * 2 + (key & 0xFFFF);
+    return static_cast<uint8_t>(((key >> 16) & 0xFFFF) * 2 + (key & 0xFFFF));
   };
-  
+
   std::array<size_t, 6> count = {0};
   for (const auto& row : rows) {
     count[get_dense_id(row.key)]++;
@@ -804,7 +804,7 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   rows.swap(sorted);
   
   auto sort_end = std::chrono::high_resolution_clock::now();
-  auto sort_time = std::chrono::duration_cast<std::chrono::microseconds>(sort_end - sort_start).count() / 1000.0;
+  auto sort_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(sort_end - sort_start).count()) / 1000.0;
   
   // --- TIMING: AGGREGATION ---
   auto agg_start = std::chrono::high_resolution_clock::now();
@@ -865,7 +865,7 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   }
   
   auto agg_end = std::chrono::high_resolution_clock::now();
-  auto agg_time = std::chrono::duration_cast<std::chrono::microseconds>(agg_end - agg_start).count() / 1000.0;
+  auto agg_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(agg_end - agg_start).count()) / 1000.0;
   
   // --- TIMING: RESULT BUILDING ---
   auto result_start = std::chrono::high_resolution_clock::now();
@@ -906,8 +906,8 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   }
   
   auto result_end = std::chrono::high_resolution_clock::now();
-  auto result_time = std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count() / 1000.0;
-  auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count() / 1000.0;
+  auto result_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count()) / 1000.0;
+  auto total_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count()) / 1000.0;
   
   // --- PRINT TIMING RESULTS ---
   std::cout << "\n══════════════════════════════════════════════\n";
@@ -1421,7 +1421,7 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   std::array<char, 2> ls_id_to_char = {'F', 'O'};
   
   auto get_dense_id = [](uint32_t key) constexpr -> uint8_t {
-    return ((key >> 16) & 0xFFFF) * 2 + (key & 0xFFFF);
+    return static_cast<uint8_t>(((key >> 16) & 0xFFFF) * 2 + (key & 0xFFFF));
   };
   
   // --- TIMING: EXTRACTION + PER-CHUNK SORT ---
@@ -1534,7 +1534,7 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   
   auto extract_sort_end = std::chrono::high_resolution_clock::now();
-  auto extract_sort_time = std::chrono::duration_cast<std::chrono::microseconds>(extract_sort_end - extract_sort_start).count() / 1000.0;
+  auto extract_sort_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(extract_sort_end - extract_sort_start).count()) / 1000.0;
   
   // --- TIMING: REDUCTION ---
   auto reduce_start = std::chrono::high_resolution_clock::now();
@@ -1568,7 +1568,7 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   Hyrise::get().scheduler()->wait_for_tasks(reduction_tasks);
   
   auto reduce_end = std::chrono::high_resolution_clock::now();
-  auto reduce_time = std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count() / 1000.0;
+  auto reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count()) / 1000.0;
   
   // --- TIMING: RESULT BUILDING ---
   auto result_start = std::chrono::high_resolution_clock::now();
@@ -1607,8 +1607,8 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   }
   
   auto result_end = std::chrono::high_resolution_clock::now();
-  auto result_time = std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count() / 1000.0;
-  auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count() / 1000.0;
+  auto result_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count()) / 1000.0;
+  auto total_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count()) / 1000.0;
   
   // --- PRINT TIMING RESULTS ---
   std::cout << "\n══════════════════════════════════════════════\n";
