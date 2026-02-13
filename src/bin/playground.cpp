@@ -1466,7 +1466,6 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
         uint16_t ls0 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co0])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf0) << 16) | ls0, boost::get<float>((*qty_seg)[co0]));
         
-        // ... rows 1-7 (same as before) ...
         uint16_t rf1 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co1])[0])];
         uint16_t ls1 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co1])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf1) << 16) | ls1, boost::get<float>((*qty_seg)[co1]));
@@ -1552,14 +1551,28 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
     return std::make_shared<Table>(cols, TableType::Data);
   }
   
-  std::array<std::atomic<double>, 6> final_sums = {0};
+  // 🔥 FIXED: Thread-local storage instead of atomic operations!
+  std::array<double, 6> final_sums = {0};
+  std::mutex final_mutex;  // Only locked once per thread
+  
   std::vector<std::shared_ptr<AbstractTask>> reduction_tasks;
+  reduction_tasks.reserve(non_empty_chunks.size());
   
   for (auto& chunk : non_empty_chunks) {
     reduction_tasks.emplace_back(std::make_shared<JobTask>([&, chunk = std::move(chunk)]() {
+      // Thread-local accumulator - NO ATOMIC OPERATIONS!
+      std::array<double, 6> local_sums = {0};
+      
+      // Fast local aggregation - normal addition
       for (const auto& row : chunk.data) {
         uint8_t dense_id = get_dense_id(row.key);
-        final_sums[dense_id].fetch_add(row.qty, std::memory_order_relaxed);
+        local_sums[dense_id] += row.qty;  // Just normal addition!
+      }
+      
+      // Single lock per thread, not per row!
+      std::lock_guard<std::mutex> lock(final_mutex);
+      for (size_t i = 0; i < 6; ++i) {
+        final_sums[i] += local_sums[i];
       }
     }));
   }
@@ -1591,10 +1604,11 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
     true, false, true, false, true, true
   };
   
+  // No more atomic loads - just direct reads!
   for (uint8_t i = 0; i < 6; ++i) {
     if (GROUP_EXISTS[i]) {
       uint32_t key = sorted_keys[i];
-      double sum = final_sums[i].load();
+      double sum = final_sums[i];  // Direct read, no atomic!
       uint16_t rf_id = (key >> 16) & 0xFFFF;
       uint16_t ls_id = key & 0xFFFF;
       
