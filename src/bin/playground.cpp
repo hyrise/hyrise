@@ -1764,7 +1764,6 @@ auto reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::m
         local_rows.emplace_back(boost::get<int32_t>((*orderkey_seg)[co7]), boost::get<float>((*qty_seg)[co7]));
       }
       
-      // Process remaining rows
       for (size_t offset = chunk_size - (chunk_size % unroll_factor); offset < chunk_size; ++offset) {
         ChunkOffset co = static_cast<ChunkOffset>(offset);
         local_rows.emplace_back(
@@ -1773,14 +1772,13 @@ auto reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::m
         );
       }
       
-      // ----- PER-CHUNK RADIX SORT (16-bit passes) -----
+      // ----- PER-CHUNK RADIX SORT -----
       if (!local_rows.empty()) {
         std::vector<RowData> buffer(local_rows.size());
         
-        // PASS 1: Lower 16 bits (with sign bit flipped)
+        // PASS 1: Lower 16 bits
         {
           std::array<uint32_t, 65536> count = {0};
-          
           for (const auto& row : local_rows) {
             uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
             uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
@@ -1799,14 +1797,12 @@ auto reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::m
             uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
             buffer[count[lower]++] = row;
           }
-          
           local_rows.swap(buffer);
         }
         
         // PASS 2: Higher 16 bits
         {
           std::array<uint32_t, 65536> count = {0};
-          
           for (const auto& row : local_rows) {
             uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
             uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
@@ -1825,7 +1821,6 @@ auto reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::m
             uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
             buffer[count[upper]++] = row;
           }
-          
           local_rows.swap(buffer);
         }
       }
@@ -1866,219 +1861,199 @@ auto reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::m
   double remove_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(remove_end - remove_start).count()) / 1000.0;
   
   // ───────────────────────────────────────────────────────────────────────
-  // PHASE 3: PARALLEL K-WAY MERGE
+  // PHASE 3: SAMPLE-BASED PARTITIONING - NO MERGE!
   // ───────────────────────────────────────────────────────────────────────
   
-  auto merge_start = std::chrono::high_resolution_clock::now();
+  auto partition_start = std::chrono::high_resolution_clock::now();
   
-  const size_t num_mergers = std::thread::hardware_concurrency();
-  const size_t chunks_per_merger = (non_empty_chunks.size() + num_mergers - 1) / num_mergers;
+  const size_t num_partitions = std::thread::hardware_concurrency();
   
-  std::vector<std::vector<RowData>> merged_runs(num_mergers);
-  std::vector<std::shared_ptr<AbstractTask>> merge_tasks;
+  // 1. Collect samples from all chunks (O(chunks))
+  std::vector<int32_t> samples;
+  samples.reserve(non_empty_chunks.size() * 100);
   
-  for (size_t m = 0; m < num_mergers; ++m) {
-    size_t start_chunk = m * chunks_per_merger;
-    size_t end_chunk = std::min(start_chunk + chunks_per_merger, non_empty_chunks.size());
-    
-    if (start_chunk >= end_chunk) break;
-    
-    merge_tasks.emplace_back(std::make_shared<JobTask>([&, m, start_chunk, end_chunk]() {
-      if (start_chunk + 1 == end_chunk) {
-        merged_runs[m] = std::move(non_empty_chunks[start_chunk].data);
-        return;
+  for (const auto& chunk : non_empty_chunks) {
+    if (chunk.data.empty()) continue;
+    // Sample every 100th row
+    for (size_t i = 0; i < chunk.data.size(); i += 100) {
+      samples.push_back(chunk.data[i].key);
+    }
+  }
+  
+  // 2. Find quantile boundaries
+  std::sort(samples.begin(), samples.end());
+  std::vector<int32_t> boundaries;
+  boundaries.push_back(std::numeric_limits<int32_t>::min());
+  
+  for (size_t i = 1; i < num_partitions; ++i) {
+    size_t idx = (samples.size() * i) / num_partitions;
+    boundaries.push_back(samples[idx]);
+  }
+  boundaries.push_back(std::numeric_limits<int32_t>::max());
+  
+  // 3. Parallel partition chunks into final buckets
+  std::vector<std::vector<RowData>> final_partitions(num_partitions);
+  std::array<std::mutex, 64> partition_mutexes;  // Enough for up to 64 partitions
+  std::vector<std::shared_ptr<AbstractTask>> partition_tasks;
+  
+  for (auto& chunk : non_empty_chunks) {
+    partition_tasks.emplace_back(std::make_shared<JobTask>([&, chunk = std::move(chunk)]() {
+      // Thread-local buffers to avoid locking
+      thread_local std::vector<RowData> local_buffers[64];
+      
+      // For each row, find its partition via binary search
+      for (const auto& row : chunk.data) {
+        auto it = std::upper_bound(boundaries.begin(), boundaries.end(), row.key);
+        size_t partition_idx = std::distance(boundaries.begin(), it) - 1;
+        local_buffers[partition_idx].push_back(row);
       }
       
-      // Multi-way merge using min-heap
-      struct HeapEntry {
-        RowData row;
-        size_t chunk_idx;
-        size_t pos;
-        bool operator<(const HeapEntry& other) const {
-          return row.key > other.row.key;
-        }
-      };
-      
-      std::priority_queue<HeapEntry> pq;
-      
-      for (size_t i = start_chunk; i < end_chunk; ++i) {
-        if (!non_empty_chunks[i].data.empty()) {
-          pq.push({non_empty_chunks[i].data[0], i, 0});
+      // Merge thread-local buffers into final partitions
+      for (size_t p = 0; p < num_partitions; ++p) {
+        if (!local_buffers[p].empty()) {
+          std::lock_guard<std::mutex> lock(partition_mutexes[p]);
+          final_partitions[p].insert(final_partitions[p].end(),
+                                   std::make_move_iterator(local_buffers[p].begin()),
+                                   std::make_move_iterator(local_buffers[p].end()));
+          local_buffers[p].clear();
         }
       }
-      
-      size_t total_rows_value = total_rows.load();
-      std::vector<RowData> merged;
-      merged.reserve(total_rows_value / num_mergers + total_rows_value / (num_mergers * 10));
-      
-      while (!pq.empty()) {
-        HeapEntry smallest = pq.top();
-        pq.pop();
-        merged.push_back(smallest.row);
-        
-        size_t next_pos = smallest.pos + 1;
-        if (next_pos < non_empty_chunks[smallest.chunk_idx].data.size()) {
-          pq.push({non_empty_chunks[smallest.chunk_idx].data[next_pos], 
-                  smallest.chunk_idx, next_pos});
-        }
-      }
-      
-      merged_runs[m] = std::move(merged);
     }));
   }
   
-  for (auto& task : merge_tasks) task->schedule();
-  Hyrise::get().scheduler()->wait_for_tasks(merge_tasks);
+  for (auto& task : partition_tasks) task->schedule();
+  Hyrise::get().scheduler()->wait_for_tasks(partition_tasks);
   
-  auto merge_end = std::chrono::high_resolution_clock::now();
-  double merge_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(merge_end - merge_start).count()) / 1000.0;
+  // 4. Sort each partition in parallel (they're partially sorted per chunk!)
+  std::vector<std::shared_ptr<AbstractTask>> sort_tasks;
+  for (size_t p = 0; p < num_partitions; ++p) {
+    sort_tasks.emplace_back(std::make_shared<JobTask>([&, p]() {
+      // Each partition is small and unsorted - use pdqsort
+      boost::sort::pdqsort(final_partitions[p].begin(), final_partitions[p].end(),
+          [](const RowData& a, const RowData& b) { return a.key < b.key; });
+    }));
+  }
   
-  // ───────────────────────────────────────────────────────────────────────
-  // PHASE 4: FINAL MERGE
-  // ───────────────────────────────────────────────────────────────────────
+  for (auto& task : sort_tasks) task->schedule();
+  Hyrise::get().scheduler()->wait_for_tasks(sort_tasks);
   
-  auto final_merge_start = std::chrono::high_resolution_clock::now();
-  
+  // 5. Concatenate partitions - NO FINAL MERGE NEEDED!
   std::vector<RowData> final_sorted;
+  size_t total_size = 0;
+  for (const auto& p : final_partitions) total_size += p.size();
+  final_sorted.reserve(total_size);
+  for (auto& p : final_partitions) {
+    final_sorted.insert(final_sorted.end(),
+                       std::make_move_iterator(p.begin()),
+                       std::make_move_iterator(p.end()));
+  }
   
-  size_t total_merged_rows = 0;
-  for (const auto& run : merged_runs) total_merged_rows += run.size();
-  final_sorted.reserve(total_merged_rows);
+  auto partition_end = std::chrono::high_resolution_clock::now();
+  double partition_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(partition_end - partition_start).count()) / 1000.0;
   
-  if (merged_runs.size() == 1) {
-    final_sorted = std::move(merged_runs[0]);
-  } else {
+  // ───────────────────────────────────────────────────────────────────────
+  // PHASE 4: PARALLEL AGGREGATION - PERFECT KEY BOUNDARY PARTITIONING!
+  // ───────────────────────────────────────────────────────────────────────
+  
+  auto agg_start = std::chrono::high_resolution_clock::now();
+  
+  struct AggResult {
+    int32_t key;
+    double sum;
+  };
+  std::vector<AggResult> aggregates;
+  
+  if (!final_sorted.empty()) {
+    const size_t num_tasks = std::thread::hardware_concurrency();
+    
+    // Find perfect split points at key boundaries
+    std::vector<size_t> split_points;
+    split_points.push_back(0);
+    
+    size_t target_rows_per_task = final_sorted.size() / num_tasks;
+    
+    for (size_t t = 1; t < num_tasks; ++t) {
+      size_t target = t * target_rows_per_task;
+      if (target >= final_sorted.size()) break;
+      
+      // Find the next key boundary
+      while (target < final_sorted.size() && 
+             target > 0 && 
+             final_sorted[target].key == final_sorted[target - 1].key) {
+        target++;
+      }
+      if (target < final_sorted.size()) {
+        split_points.push_back(target);
+      }
+    }
+    split_points.push_back(final_sorted.size());
+    
+    // Thread-local aggregation on KEY-ALIGNED ranges
+    std::vector<std::vector<AggResult>> local_results(split_points.size() - 1);
+    std::vector<std::shared_ptr<AbstractTask>> agg_tasks;
+    
+    for (size_t t = 0; t < split_points.size() - 1; ++t) {
+      size_t start = split_points[t];
+      size_t end = split_points[t + 1];
+      
+      agg_tasks.emplace_back(std::make_shared<JobTask>([&, t, start, end]() {
+        std::vector<AggResult> local;
+        local.reserve((end - start) / 10);
+        
+        size_t i = start;
+        while (i < end) {
+          int32_t current_key = final_sorted[i].key;
+          double sum = 0.0;
+          
+          while (i < end && final_sorted[i].key == current_key) {
+            sum += final_sorted[i].qty;
+            i++;
+          }
+          local.push_back({current_key, sum});
+        }
+        local_results[t] = std::move(local);
+      }));
+    }
+    
+    for (auto& task : agg_tasks) task->schedule();
+    Hyrise::get().scheduler()->wait_for_tasks(agg_tasks);
+    
+    // Merge local results (they're already sorted by key!)
+    size_t total_agg_size = 0;
+    for (const auto& local : local_results) total_agg_size += local.size();
+    aggregates.reserve(total_agg_size);
+    
+    // Multi-way merge of sorted vectors
     struct HeapEntry {
-      RowData row;
-      size_t run_idx;
+      AggResult agg;
+      size_t task_idx;
       size_t pos;
-      bool operator<(const HeapEntry& other) const { return row.key > other.row.key; }
+      bool operator<(const HeapEntry& other) const { return agg.key > other.agg.key; }
     };
     
     std::priority_queue<HeapEntry> pq;
-    for (size_t i = 0; i < merged_runs.size(); ++i) {
-      if (!merged_runs[i].empty()) pq.push({merged_runs[i][0], i, 0});
+    for (size_t i = 0; i < local_results.size(); ++i) {
+      if (!local_results[i].empty()) {
+        pq.push({local_results[i][0], i, 0});
+      }
     }
     
     while (!pq.empty()) {
       HeapEntry entry = pq.top();
       pq.pop();
-      final_sorted.push_back(entry.row);
+      aggregates.push_back(entry.agg);
       
-      if (entry.pos + 1 < merged_runs[entry.run_idx].size()) {
-        pq.push({merged_runs[entry.run_idx][entry.pos + 1], entry.run_idx, entry.pos + 1});
+      if (entry.pos + 1 < local_results[entry.task_idx].size()) {
+        pq.push({local_results[entry.task_idx][entry.pos + 1], entry.task_idx, entry.pos + 1});
       }
     }
   }
-  
-  auto final_merge_end = std::chrono::high_resolution_clock::now();
-  double final_merge_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(final_merge_end - final_merge_start).count()) / 1000.0;
-  
-  // ───────────────────────────────────────────────────────────────────────
-// PHASE 5: PARALLEL AGGREGATION - PERFECT KEY BOUNDARY PARTITIONING!
-// ───────────────────────────────────────────────────────────────────────
-
-auto agg_start = std::chrono::high_resolution_clock::now();
-
-struct AggResult {
-  int32_t key;
-  double sum;
-};
-std::vector<AggResult> aggregates;
-
-if (!final_sorted.empty()) {
-  const size_t num_tasks = std::thread::hardware_concurrency();
-  
-  // 🔥 FIX: Find perfect split points at key boundaries
-  std::vector<size_t> split_points;
-  split_points.push_back(0);
-  
-  size_t target_rows_per_task = final_sorted.size() / num_tasks;
-  
-  for (size_t t = 1; t < num_tasks; ++t) {
-    size_t target = t * target_rows_per_task;
-    // Ensure target is within bounds
-    if (target >= final_sorted.size()) break;
-    
-    // Find the next key boundary
-    while (target < final_sorted.size() && 
-           target > 0 && 
-           final_sorted[target].key == final_sorted[target - 1].key) {
-      target++;
-    }
-    if (target < final_sorted.size()) {
-      split_points.push_back(target);
-    }
-  }
-  split_points.push_back(final_sorted.size());
-  
-  // Thread-local aggregation on KEY-ALIGNED ranges
-  std::vector<std::vector<AggResult>> local_results(split_points.size() - 1);
-  std::vector<std::shared_ptr<AbstractTask>> agg_tasks;
-  
-  for (size_t t = 0; t < split_points.size() - 1; ++t) {
-    size_t start = split_points[t];
-    size_t end = split_points[t + 1];
-    
-    agg_tasks.emplace_back(std::make_shared<JobTask>([&, t, start, end]() {
-      std::vector<AggResult> local;
-      local.reserve((end - start) / 10);  // Estimate ~10 rows per key
-      
-      size_t i = start;
-      while (i < end) {
-        int32_t current_key = final_sorted[i].key;
-        double sum = 0.0;
-        
-        // Run-length aggregation on SORTED data
-        while (i < end && final_sorted[i].key == current_key) {
-          sum += final_sorted[i].qty;
-          i++;
-        }
-        local.push_back({current_key, sum});
-      }
-      local_results[t] = std::move(local);
-    }));
-  }
-  
-  for (auto& task : agg_tasks) task->schedule();
-  Hyrise::get().scheduler()->wait_for_tasks(agg_tasks);
-  
-  // Merge local results (they're already sorted by key!)
-  size_t total_size = 0;
-  for (const auto& local : local_results) total_size += local.size();
-  aggregates.reserve(total_size);
-  
-  // Multi-way merge of sorted vectors
-  struct HeapEntry {
-    AggResult agg;
-    size_t task_idx;
-    size_t pos;
-    bool operator<(const HeapEntry& other) const { return agg.key > other.agg.key; }
-  };
-  
-  std::priority_queue<HeapEntry> pq;
-  for (size_t i = 0; i < local_results.size(); ++i) {
-    if (!local_results[i].empty()) {
-      pq.push({local_results[i][0], i, 0});
-    }
-  }
-  
-  while (!pq.empty()) {
-    HeapEntry entry = pq.top();
-    pq.pop();
-    aggregates.push_back(entry.agg);
-    
-    if (entry.pos + 1 < local_results[entry.task_idx].size()) {
-      pq.push({local_results[entry.task_idx][entry.pos + 1], entry.task_idx, entry.pos + 1});
-    }
-  }
-}
   
   auto agg_end = std::chrono::high_resolution_clock::now();
   double agg_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(agg_end - agg_start).count()) / 1000.0;
   
   // ───────────────────────────────────────────────────────────────────────
-  // PHASE 6: BATCHED RESULT BUILDING - 100x FASTER!
+  // PHASE 5: BATCHED RESULT BUILDING
   // ───────────────────────────────────────────────────────────────────────
   
   auto result_start = std::chrono::high_resolution_clock::now();
@@ -2088,7 +2063,6 @@ if (!final_sorted.empty()) {
     {"sum_qty", DataType::Double, false}
   };
   
-  // Create vectors with Hyrise's PMR allocator
   pmr_vector<int32_t> orderkeys;
   pmr_vector<double> sums;
   orderkeys.reserve(aggregates.size());
@@ -2099,16 +2073,13 @@ if (!final_sorted.empty()) {
     sums.push_back(agg.sum);
   }
   
-  // Create segments directly from pmr_vectors
   auto orderkey_segment = std::make_shared<ValueSegment<int32_t>>(std::move(orderkeys));
   auto sum_segment = std::make_shared<ValueSegment<double>>(std::move(sums));
   
-  // Create a single chunk with both segments
   Segments segments;
   segments.push_back(orderkey_segment);
   segments.push_back(sum_segment);
   
-  // Append the segments directly to the table
   auto result = std::make_shared<Table>(columns, TableType::Data);
   result->append_chunk(segments);
   
@@ -2124,10 +2095,8 @@ if (!final_sorted.empty()) {
             << std::setw(6) << std::setprecision(1) << (extract_sort_time/total_time*100) << "%\n";
   std::cout << "  ▸ Remove Empty Chunks:  " << std::setw(10) << std::fixed << std::setprecision(2) << remove_time << " ms  "
             << std::setw(6) << std::setprecision(1) << (remove_time/total_time*100) << "%\n";
-  std::cout << "  ▸ Parallel Merge:       " << std::setw(10) << std::fixed << std::setprecision(2) << merge_time << " ms  "
-            << std::setw(6) << std::setprecision(1) << (merge_time/total_time*100) << "%\n";
-  std::cout << "  ▸ Final Merge:          " << std::setw(10) << std::fixed << std::setprecision(2) << final_merge_time << " ms  "
-            << std::setw(6) << std::setprecision(1) << (final_merge_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Sample Partitioning:  " << std::setw(10) << std::fixed << std::setprecision(2) << partition_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (partition_time/total_time*100) << "%\n";
   std::cout << "  ▸ Parallel Aggregation: " << std::setw(10) << std::fixed << std::setprecision(2) << agg_time << " ms  "
             << std::setw(6) << std::setprecision(1) << (agg_time/total_time*100) << "%\n";
   std::cout << "  ▸ Result Building:      " << std::setw(10) << std::fixed << std::setprecision(2) << result_time << " ms  "
@@ -2560,7 +2529,7 @@ int main() {
     /*************************************
      ***** Comment / Uncomment here ******
      *************************************/
-    //run_hash_micro_benchmark(scale_factor);
+    run_hash_micro_benchmark(scale_factor);
     run_sort_micro_benchmark(scale_factor);
     run_sort_micro_benchmark_hc(scale_factor);
 
