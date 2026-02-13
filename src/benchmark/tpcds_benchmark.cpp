@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
   const auto query_path = std::string{"resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification"};
 
-  Assert(std::filesystem::is_directory(query_path), std::format("Query path ({}) has to be a directory.", query_path));
+  Assert(std::filesystem::is_directory(query_path), std::format("Query path '{}' has to be a directory.", query_path));
   Assert(std::filesystem::exists(std::filesystem::path{query_path + "/01.sql"}), "Queries have to be available.");
 
   auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_excludelist());

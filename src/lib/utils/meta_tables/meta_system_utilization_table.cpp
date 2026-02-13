@@ -120,7 +120,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     std::getline(stat_file, cpu_line);
     stat_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail(std::format("Failed to read /proc/stat ({}).", fail.what()));
+    Fail(std::format("Failed to read /proc/stat '{}'.", fail.what()));
   }
 
   const auto cpu_ticks = _parse_value_string(cpu_line);

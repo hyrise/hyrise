@@ -340,7 +340,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++sort_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
-    Assert(pqp_column_expression, std::format("Sort Expression '{}' must be available as column, LQP is invalid.",
+    Assert(pqp_column_expression, std::format("Sort expression '{}' must be available as column, LQP is invalid.",
                                               pqp_expression->as_column_name()));
 
     column_definitions.emplace_back(pqp_column_expression->column_id, *sort_mode_iter);
@@ -428,7 +428,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
 
     Assert(lqp_expression->type == ExpressionType::WindowFunction,
-           std::format("Expression '{}' used as WindowFunctionExpression is not an WindowFunctionExpression.",
+           std::format("Expression '{}' used as WindowFunctionExpression is not a WindowFunctionExpression.",
                        lqp_expression->as_column_name()));
 
     const auto pqp_expression = _translate_expression(lqp_expression, node->left_input(), input_expressions);

@@ -257,7 +257,7 @@ static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 // constructor does not do what you would expect it to, so try to avoid it.
 using BloomFilter = boost::dynamic_bitset<>;
 
-// ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
+// all_true_bloom_filter is initialized by creating a BloomFilter with every value being false and using bitwise
 // negation (~x). As the negation is surprisingly expensive, we create a static empty Bloom filter and reference
 // it where needed. Having a Bloom filter that always returns true avoids a branch in the hot loop.
 static const auto all_true_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
