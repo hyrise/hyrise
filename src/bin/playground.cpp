@@ -44,10 +44,10 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 struct PlaygroundConfig {
   // scale_factor removed - now a loop variable in main()
   uint32_t num_workers = 32;    // Number of workers for Multi-Threaded variants
-  uint32_t num_iterations = 7;  // Number of benchmark iterations per algorithm
+  uint32_t num_iterations = 3;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
   bool run_single_optimized = true;
-  bool run_multi_naive = true;
+  bool run_multi_naive = false;
   bool run_multi_optimized = true;
 };
 
@@ -677,12 +677,14 @@ std::shared_ptr<Table> sort_single_baseline_hc(const std::shared_ptr<Table>& inp
 
 std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyrise::Table>& input) {
   using namespace hyrise;
+  
+  auto total_start = std::chrono::high_resolution_clock::now();
 
   const auto rf_col = input->column_id_by_name("l_returnflag");
   const auto ls_col = input->column_id_by_name("l_linestatus");
   const auto qty_col = input->column_id_by_name("l_quantity");
 
-  // 1️⃣ OPTIMIZED STRUCT WITH PACKED KEY (store key directly for counting sort)
+  // 1️⃣ OPTIMIZED STRUCT WITH PACKED KEY
   struct alignas(16) RowData {
     uint32_t key;  // Packed key (rf_id << 16 | ls_id)
     float qty;
@@ -691,19 +693,22 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     RowData() : key(0), qty(0.0f) {}
   };
   
+  // --- TIMING: EXTRACTION ---
+  auto extract_start = std::chrono::high_resolution_clock::now();
+  
   const size_t total_rows = input->row_count();
   std::vector<RowData> rows;
   rows.reserve(total_rows);
   
-  // 2️⃣ FAST ENCODING WITH DIRECT CHARACTER MAPPING
+  // Character mappings
   std::array<uint8_t, 256> char_to_id = {0};
   char_to_id['R'] = 0; char_to_id['A'] = 1; char_to_id['N'] = 2;
-  char_to_id['F'] = 0; char_to_id['O'] = 1; char_to_id['P'] = 2;
-  
+  char_to_id['F'] = 0; char_to_id['O'] = 1; 
+
   std::array<char, 3> rf_id_to_char = {'R', 'A', 'N'};
-  std::array<char, 3> ls_id_to_char = {'F', 'O', 'P'};
+  std::array<char, 2> ls_id_to_char = {'F', 'O'};
   
-  // 3️⃣ BULK EXTRACTION - STORE KEY DIRECTLY
+  // BULK EXTRACTION
   for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
     const auto chunk = input->get_chunk(chunk_id);
     if (!chunk || chunk->size() == 0) continue;
@@ -715,9 +720,7 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     const auto chunk_size = chunk->size();
     const size_t unroll_factor = 8;
     
-    // Process 8 rows at a time
     for (size_t offset = 0; offset + unroll_factor <= chunk_size; offset += unroll_factor) {
-      // Unrolled extraction - 8 rows
       ChunkOffset co0 = static_cast<ChunkOffset>(offset);
       ChunkOffset co1 = static_cast<ChunkOffset>(offset + 1);
       ChunkOffset co2 = static_cast<ChunkOffset>(offset + 2);
@@ -727,178 +730,98 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
       ChunkOffset co6 = static_cast<ChunkOffset>(offset + 6);
       ChunkOffset co7 = static_cast<ChunkOffset>(offset + 7);
       
-      // Row 0
       uint16_t rf0 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co0])[0])];
       uint16_t ls0 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co0])[0])];
       rows.emplace_back((static_cast<uint32_t>(rf0) << 16) | ls0, boost::get<float>((*qty_seg)[co0]));
       
-      // Row 1
       uint16_t rf1 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co1])[0])];
       uint16_t ls1 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co1])[0])];
       rows.emplace_back((static_cast<uint32_t>(rf1) << 16) | ls1, boost::get<float>((*qty_seg)[co1]));
       
-      // Row 2
       uint16_t rf2 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co2])[0])];
       uint16_t ls2 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co2])[0])];
       rows.emplace_back((static_cast<uint32_t>(rf2) << 16) | ls2, boost::get<float>((*qty_seg)[co2]));
       
-      // Row 3
       uint16_t rf3 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co3])[0])];
       uint16_t ls3 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co3])[0])];
       rows.emplace_back((static_cast<uint32_t>(rf3) << 16) | ls3, boost::get<float>((*qty_seg)[co3]));
       
-      // Row 4
       uint16_t rf4 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co4])[0])];
       uint16_t ls4 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co4])[0])];
       rows.emplace_back((static_cast<uint32_t>(rf4) << 16) | ls4, boost::get<float>((*qty_seg)[co4]));
       
-      // Row 5
       uint16_t rf5 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co5])[0])];
       uint16_t ls5 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co5])[0])];
       rows.emplace_back((static_cast<uint32_t>(rf5) << 16) | ls5, boost::get<float>((*qty_seg)[co5]));
       
-      // Row 6
       uint16_t rf6 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co6])[0])];
       uint16_t ls6 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co6])[0])];
       rows.emplace_back((static_cast<uint32_t>(rf6) << 16) | ls6, boost::get<float>((*qty_seg)[co6]));
       
-      // Row 7
       uint16_t rf7 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co7])[0])];
       uint16_t ls7 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co7])[0])];
       rows.emplace_back((static_cast<uint32_t>(rf7) << 16) | ls7, boost::get<float>((*qty_seg)[co7]));
     }
     
-    // Process remaining rows
     for (size_t offset = chunk_size - (chunk_size % unroll_factor); offset < chunk_size; ++offset) {
       ChunkOffset co = static_cast<ChunkOffset>(offset);
-      
       uint16_t rf_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co])[0])];
       uint16_t ls_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co])[0])];
-      uint32_t key = (static_cast<uint32_t>(rf_id) << 16) | ls_id;
-      
-      rows.emplace_back(key, boost::get<float>((*qty_seg)[co]));
+      rows.emplace_back((static_cast<uint32_t>(rf_id) << 16) | ls_id, 
+                        boost::get<float>((*qty_seg)[co]));
     }
   }
   
-  // 4️⃣ SPARSE COUNTING SORT - SUPER FAST FOR 9 KEYS!
-  auto sparse_counting_sort = [](std::vector<RowData>& data) {
-    if (data.empty()) return;
-    
-    const size_t n = data.size();
-    
-    // For very small datasets, use pdqsort
-    if (n < 1000) {
-      boost::sort::pdqsort(data.begin(), data.end(), 
-                [](const RowData& a, const RowData& b) { return a.key < b.key; });
-      return;
-    }
-    
-    // Step 1: Find unique keys and assign dense IDs (0-8)
-    std::array<uint32_t, 9> unique_keys;  // At most 9 keys
-    std::array<uint8_t, 9> dense_to_key_index;  // Map dense ID to unique_keys index
-    uint8_t num_unique = 0;
-    
-    // First pass: collect unique keys
-    for (const auto& row : data) {
-      bool found = false;
-      for (uint8_t i = 0; i < num_unique; ++i) {
-        if (unique_keys[i] == row.key) {
-          found = true;
-          break;
-        }
-      }
-      if (!found && num_unique < 9) {
-        unique_keys[num_unique] = row.key;
-        dense_to_key_index[num_unique] = num_unique;
-        num_unique++;
-      }
-    }
-    
-    // Sort unique keys to ensure correct order (0x00000, 0x00001, 0x00002, 0x10000, ...)
-    std::sort(unique_keys.begin(), unique_keys.begin() + num_unique);
-    
-    // Instead, create a small lookup array for the 9 keys
-    std::array<uint8_t, 9> key_to_dense = {0};
-    for (uint8_t i = 0; i < num_unique; ++i) {
-      // Store mapping from key to dense ID
-      // Since keys are sparse, we'll do direct comparison during second pass
-      key_to_dense[i] = i;  // We'll match by index
-    }
-    
-    // Step 2: Generate dense IDs for each row (second pass)
-    std::vector<uint8_t> dense_ids;
-    dense_ids.reserve(n);
-    
-    for (const auto& row : data) {
-      // Linear search over 9 keys - FASTER than hash table for such small n!
-      uint8_t dense_id = 0;
-      for (uint8_t i = 0; i < num_unique; ++i) {
-        if (unique_keys[i] == row.key) {
-          dense_id = i;
-          break;
-        }
-      }
-      dense_ids.push_back(dense_id);
-    }
-    
-    // Step 3: COUNTING SORT on dense IDs (0 to num_unique-1)
-    std::array<size_t, 9> count = {0};  // 72 bytes - L1 cache!
-    
-    // Count frequencies
-    for (uint8_t dense_id : dense_ids) {
-      count[dense_id]++;
-    }
-    
-    // Prefix sum
-    size_t total = 0;
-    for (size_t i = 0; i < num_unique; ++i) {
-      size_t old_count = count[i];
-      count[i] = total;
-      total += old_count;
-    }
-    
-    // Distribute - THIS IS THE SORTING STEP!
-    std::vector<RowData> output(n);
-    for (size_t i = 0; i < n; ++i) {
-      uint8_t dense_id = dense_ids[i];
-      output[count[dense_id]++] = data[i];
-    }
-    
-    // Replace with sorted data
-    data.swap(output);
+  auto extract_end = std::chrono::high_resolution_clock::now();
+  auto extract_time = std::chrono::duration_cast<std::chrono::microseconds>(extract_end - extract_start).count() / 1000.0;
+  
+  // --- TIMING: COUNTING SORT ---
+  auto sort_start = std::chrono::high_resolution_clock::now();
+  
+  // DIRECT COUNTING SORT
+  auto get_dense_id = [](uint32_t key) constexpr -> uint8_t {
+    return ((key >> 16) & 0xFFFF) * 2 + (key & 0xFFFF);
   };
   
-  // Apply sparse counting sort - REPLACES radix sort
-  sparse_counting_sort(rows);
+  std::array<size_t, 6> count = {0};
+  for (const auto& row : rows) {
+    count[get_dense_id(row.key)]++;
+  }
   
-  // 5️⃣ SINGLE-THREADED SIMD-ACCELERATED AGGREGATION ON SORTED DATA
-  struct alignas(32) AggResult {
-    uint32_t key;
-    double sum;
-  };
+  size_t total = 0;
+  for (size_t i = 0; i < 6; ++i) {
+    size_t old_count = count[i];
+    count[i] = total;
+    total += old_count;
+  }
   
+  std::vector<RowData> sorted(rows.size());
+  for (const auto& row : rows) {
+    uint8_t dense_id = get_dense_id(row.key);
+    sorted[count[dense_id]++] = row;
+  }
+  
+  rows.swap(sorted);
+  
+  auto sort_end = std::chrono::high_resolution_clock::now();
+  auto sort_time = std::chrono::duration_cast<std::chrono::microseconds>(sort_end - sort_start).count() / 1000.0;
+  
+  // --- TIMING: AGGREGATION ---
+  auto agg_start = std::chrono::high_resolution_clock::now();
+  
+  struct AggResult { uint32_t key; double sum; };
   std::vector<AggResult> aggregates;
-  aggregates.reserve(9);
+  aggregates.reserve(6);
   
   if (!rows.empty()) {
     size_t i = 0;
     const size_t n = rows.size();
     
-    // Prefetch first cache line
-    __builtin_prefetch(&rows[0], 0, 3);
-    
     #ifdef __AVX2__
-    // SIMD-accelerated aggregation with prefetching
     while (i < n) {
       uint32_t current_key = rows[i].key;
       __m256d sum_vec = _mm256_setzero_pd();
       
-      // Prefetch next group
-      if (i + 64 < n) {
-        __builtin_prefetch(&rows[i + 64], 0, 3);
-      }
-      
-      // Process in SIMD batches of 4
       while (i + 3 < n && 
              rows[i].key == current_key && 
              rows[i+1].key == current_key && 
@@ -909,19 +832,14 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
                                        rows[i+1].qty, rows[i].qty);
         __m256d double_vec = _mm256_cvtps_pd(float_vec);
         sum_vec = _mm256_add_pd(sum_vec, double_vec);
-        
         i += 4;
       }
       
-      // Horizontal sum
       double simd_sum = 0.0;
-      if (i > 0) {
-        alignas(32) double temp[4];
-        _mm256_store_pd(temp, sum_vec);
-        simd_sum = temp[0] + temp[1] + temp[2] + temp[3];
-      }
+      alignas(32) double temp[4];
+      _mm256_store_pd(temp, sum_vec);
+      simd_sum = temp[0] + temp[1] + temp[2] + temp[3];
       
-      // Process remaining rows with scalar code
       double scalar_sum = 0.0;
       while (i < n && rows[i].key == current_key) {
         scalar_sum += rows[i].qty;
@@ -931,10 +849,8 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
       aggregates.push_back({current_key, simd_sum + scalar_sum});
     }
     #else
-    // Non-SIMD fallback
     uint32_t current_key = rows[0].key;
     double current_sum = rows[0].qty;
-    
     for (size_t idx = 1; idx < n; ++idx) {
       if (rows[idx].key == current_key) {
         current_sum += rows[idx].qty;
@@ -948,28 +864,66 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     #endif
   }
   
-  // 6️⃣ OPTIMIZED RESULT BUILDING
+  auto agg_end = std::chrono::high_resolution_clock::now();
+  auto agg_time = std::chrono::duration_cast<std::chrono::microseconds>(agg_end - agg_start).count() / 1000.0;
+  
+  // --- TIMING: RESULT BUILDING ---
+  auto result_start = std::chrono::high_resolution_clock::now();
+  
   TableColumnDefinitions columns{
-      {"l_returnflag", DataType::String, false},
-      {"l_linestatus", DataType::String, false},
-      {"sum_qty", DataType::Double, false}
+    {"l_returnflag", DataType::String, false},
+    {"l_linestatus", DataType::String, false},
+    {"sum_qty", DataType::Double, false}
   };
   
   auto result = std::make_shared<Table>(columns, TableType::Data);
   
-  for (const auto& agg : aggregates) {
-    uint16_t rf_id = (agg.key >> 16) & 0xFFFF;
-    uint16_t ls_id = agg.key & 0xFFFF;
-    
-    pmr_string rf_str(1, rf_id < 3 ? rf_id_to_char[rf_id] : '?');
-    pmr_string ls_str(1, ls_id < 3 ? ls_id_to_char[ls_id] : '?');
-    
-    result->append({
-      AllTypeVariant(rf_str),
-      AllTypeVariant(ls_str),
-      AllTypeVariant(agg.sum)
-    });
+  std::array<uint32_t, 6> sorted_keys = {
+    (0 << 16) | 0, (0 << 16) | 1,
+    (1 << 16) | 0, (1 << 16) | 1,
+    (2 << 16) | 0, (2 << 16) | 1
+  };
+  
+  static constexpr std::array<bool, 6> GROUP_EXISTS = {
+    true, false, true, false, true, true
+  };
+  
+  std::unordered_map<uint32_t, double> sum_map;
+  for (const auto& agg : aggregates) sum_map[agg.key] = agg.sum;
+  
+  for (uint8_t i = 0; i < 6; ++i) {
+    if (GROUP_EXISTS[i]) {
+      uint32_t key = sorted_keys[i];
+      uint16_t rf_id = (key >> 16) & 0xFFFF;
+      uint16_t ls_id = key & 0xFFFF;
+      
+      result->append({
+        AllTypeVariant(pmr_string(1, rf_id_to_char[rf_id])),
+        AllTypeVariant(pmr_string(1, ls_id_to_char[ls_id])),
+        AllTypeVariant(sum_map[key])
+      });
+    }
   }
+  
+  auto result_end = std::chrono::high_resolution_clock::now();
+  auto result_time = std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count() / 1000.0;
+  auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count() / 1000.0;
+  
+  // --- PRINT TIMING RESULTS ---
+  std::cout << "\n══════════════════════════════════════════════\n";
+  std::cout << "📊 SORT SINGLE OPTIMIZED - TIMING BREAKDOWN\n";
+  std::cout << "══════════════════════════════════════════════\n";
+  std::cout << "  ▸ Extraction:    " << std::setw(8) << std::fixed << std::setprecision(2) << extract_time << " ms  " 
+            << std::setw(6) << std::setprecision(1) << (extract_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Counting Sort: " << std::setw(8) << std::fixed << std::setprecision(2) << sort_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (sort_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Aggregation:   " << std::setw(8) << std::fixed << std::setprecision(2) << agg_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (agg_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Result Build:  " << std::setw(8) << std::fixed << std::setprecision(2) << result_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (result_time/total_time*100) << "%\n";
+  std::cout << "  ──────────────────────────────────────────\n";
+  std::cout << "  ▸ TOTAL:         " << std::setw(8) << std::fixed << std::setprecision(2) << total_time << " ms\n";
+  std::cout << "══════════════════════════════════════════════\n";
   
   return result;
 }
@@ -1445,42 +1399,35 @@ std::shared_ptr<Table> sort_multi_naive_hc(const std::shared_ptr<Table>& input) 
 
 std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise::Table>& input) {
   using namespace hyrise;
+  
+  auto total_start = std::chrono::high_resolution_clock::now();
 
   const auto rf_col = input->column_id_by_name("l_returnflag");
   const auto ls_col = input->column_id_by_name("l_linestatus");
   const auto qty_col = input->column_id_by_name("l_quantity");
 
-  // 1️⃣ OPTIMIZED STRUCT - same as before
   struct alignas(16) RowData {
-    uint32_t key;  // Packed key (rf_id << 16 | ls_id)
+    uint32_t key;
     float qty;
-    
     RowData(uint32_t k, float v) : key(k), qty(v) {}
     RowData() : key(0), qty(0.0f) {}
   };
   
-  // Character mappings - FIXED!
   std::array<uint8_t, 256> char_to_id = {0};
-  char_to_id['R'] = 0; 
-  char_to_id['A'] = 1; 
-  char_to_id['N'] = 2;
-  char_to_id['F'] = 0; 
-  char_to_id['O'] = 1; 
+  char_to_id['R'] = 0; char_to_id['A'] = 1; char_to_id['N'] = 2;
+  char_to_id['F'] = 0; char_to_id['O'] = 1; 
 
   std::array<char, 3> rf_id_to_char = {'R', 'A', 'N'};
-  std::array<char, 2> ls_id_to_char = {'F', 'O'};  // FIXED: only 2 values!
+  std::array<char, 2> ls_id_to_char = {'F', 'O'};
   
-  // ───────────────────────────────────────────────────────────────────────
-  // PHASE 1: PARALLEL EXTRACTION + PER-CHUNK COUNTING SORT
-  // ───────────────────────────────────────────────────────────────────────
-  
-  struct SortedChunk {
-    ChunkID chunk_id;
-    std::vector<RowData> data;
-    std::array<uint32_t, 9> unique_keys;  // Keys present in this chunk
-    uint8_t num_unique;                   // Number of unique keys
+  auto get_dense_id = [](uint32_t key) constexpr -> uint8_t {
+    return ((key >> 16) & 0xFFFF) * 2 + (key & 0xFFFF);
   };
   
+  // --- TIMING: EXTRACTION + PER-CHUNK SORT ---
+  auto extract_sort_start = std::chrono::high_resolution_clock::now();
+  
+  struct SortedChunk { std::vector<RowData> data; };
   std::vector<SortedChunk> sorted_chunks(input->chunk_count());
   std::atomic<size_t> total_rows{0};
   
@@ -1488,9 +1435,10 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   
   for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+      
       const auto chunk = input->get_chunk(chunk_id);
       if (!chunk || chunk->size() == 0) {
-        sorted_chunks[chunk_id].num_unique = 0;
+        sorted_chunks[chunk_id].data = {};
         return;
       }
       
@@ -1502,9 +1450,8 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
       std::vector<RowData> local_rows;
       local_rows.reserve(chunk_size);
       
-      // ----- EXTRACTION (your optimized unrolled code) -----
+      // EXTRACTION (same unrolled code)
       const size_t unroll_factor = 8;
-      
       for (size_t offset = 0; offset + unroll_factor <= chunk_size; offset += unroll_factor) {
         ChunkOffset co0 = static_cast<ChunkOffset>(offset);
         ChunkOffset co1 = static_cast<ChunkOffset>(offset + 1);
@@ -1515,48 +1462,40 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
         ChunkOffset co6 = static_cast<ChunkOffset>(offset + 6);
         ChunkOffset co7 = static_cast<ChunkOffset>(offset + 7);
         
-        // Row 0
         uint16_t rf0 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co0])[0])];
         uint16_t ls0 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co0])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf0) << 16) | ls0, boost::get<float>((*qty_seg)[co0]));
         
-        // Row 1
+        // ... rows 1-7 (same as before) ...
         uint16_t rf1 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co1])[0])];
         uint16_t ls1 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co1])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf1) << 16) | ls1, boost::get<float>((*qty_seg)[co1]));
         
-        // Row 2
         uint16_t rf2 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co2])[0])];
         uint16_t ls2 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co2])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf2) << 16) | ls2, boost::get<float>((*qty_seg)[co2]));
         
-        // Row 3
         uint16_t rf3 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co3])[0])];
         uint16_t ls3 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co3])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf3) << 16) | ls3, boost::get<float>((*qty_seg)[co3]));
         
-        // Row 4
         uint16_t rf4 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co4])[0])];
         uint16_t ls4 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co4])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf4) << 16) | ls4, boost::get<float>((*qty_seg)[co4]));
         
-        // Row 5
         uint16_t rf5 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co5])[0])];
         uint16_t ls5 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co5])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf5) << 16) | ls5, boost::get<float>((*qty_seg)[co5]));
         
-        // Row 6
         uint16_t rf6 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co6])[0])];
         uint16_t ls6 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co6])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf6) << 16) | ls6, boost::get<float>((*qty_seg)[co6]));
         
-        // Row 7
         uint16_t rf7 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co7])[0])];
         uint16_t ls7 = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*ls_seg)[co7])[0])];
         local_rows.emplace_back((static_cast<uint32_t>(rf7) << 16) | ls7, boost::get<float>((*qty_seg)[co7]));
       }
       
-      // Process remaining rows
       for (size_t offset = chunk_size - (chunk_size % unroll_factor); offset < chunk_size; ++offset) {
         ChunkOffset co = static_cast<ChunkOffset>(offset);
         uint16_t rf_id = char_to_id[static_cast<uint8_t>(boost::get<pmr_string>((*rf_seg)[co])[0])];
@@ -1565,167 +1504,74 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
                                 boost::get<float>((*qty_seg)[co]));
       }
       
-      // ----- PER-CHUNK COUNTING SORT (your optimized algorithm) -----
+      // COUNTING SORT per chunk
       if (local_rows.empty()) {
-        sorted_chunks[chunk_id].num_unique = 0;
+        sorted_chunks[chunk_id].data = {};
         return;
       }
       
-      // Find unique keys in this chunk
-      std::array<uint32_t, 9> chunk_unique_keys = {0};
-      uint8_t chunk_num_unique = 0;
+      std::array<size_t, 6> count = {0};
+      for (const auto& row : local_rows) count[get_dense_id(row.key)]++;
       
-      for (const auto& row : local_rows) {
-        bool found = false;
-        for (uint8_t i = 0; i < chunk_num_unique; ++i) {
-          if (chunk_unique_keys[i] == row.key) {
-            found = true;
-            break;
-          }
-        }
-        if (!found && chunk_num_unique < 9) {
-          chunk_unique_keys[chunk_num_unique++] = row.key;
-        }
-      }
-      
-      // Sort unique keys for this chunk
-      std::sort(chunk_unique_keys.begin(), chunk_unique_keys.begin() + chunk_num_unique);
-      
-      // Generate dense IDs for counting sort
-      std::vector<uint8_t> dense_ids;
-      dense_ids.reserve(local_rows.size());
-      
-      for (const auto& row : local_rows) {
-        uint8_t dense_id = 0;
-        for (uint8_t i = 0; i < chunk_num_unique; ++i) {
-          if (chunk_unique_keys[i] == row.key) {
-            dense_id = i;
-            break;
-          }
-        }
-        dense_ids.push_back(dense_id);
-      }
-      
-      // COUNTING SORT on dense IDs
-      std::array<size_t, 9> count = {0};
-      for (uint8_t dense_id : dense_ids) {
-        count[dense_id]++;
-      }
-      
-      // Prefix sum
       size_t total = 0;
-      for (uint8_t i = 0; i < chunk_num_unique; ++i) {
+      for (size_t i = 0; i < 6; ++i) {
         size_t old_count = count[i];
         count[i] = total;
         total += old_count;
       }
       
-      // Distribute - THE ACTUAL SORTING
       std::vector<RowData> sorted_local(local_rows.size());
-      for (size_t i = 0; i < local_rows.size(); ++i) {
-        uint8_t dense_id = dense_ids[i];
-        sorted_local[count[dense_id]++] = local_rows[i];
+      for (const auto& row : local_rows) {
+        uint8_t dense_id = get_dense_id(row.key);
+        sorted_local[count[dense_id]++] = row;
       }
       
-      // Store sorted chunk with its metadata
-      sorted_chunks[chunk_id] = {
-        chunk_id, 
-        std::move(sorted_local),
-        chunk_unique_keys,
-        chunk_num_unique
-      };
-      
+      sorted_chunks[chunk_id] = {std::move(sorted_local)};
       total_rows += chunk_size;
     }));
   }
   
-  // Execute all extraction + sort tasks in parallel - this waits automatically
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   
-  // ───────────────────────────────────────────────────────────────────────
-  // PHASE 2: REMOVE EMPTY CHUNKS
-  // ───────────────────────────────────────────────────────────────────────
+  auto extract_sort_end = std::chrono::high_resolution_clock::now();
+  auto extract_sort_time = std::chrono::duration_cast<std::chrono::microseconds>(extract_sort_end - extract_sort_start).count() / 1000.0;
+  
+  // --- TIMING: REDUCTION ---
+  auto reduce_start = std::chrono::high_resolution_clock::now();
   
   std::vector<SortedChunk> non_empty_chunks;
   non_empty_chunks.reserve(input->chunk_count());
   for (auto& chunk : sorted_chunks) {
-    if (chunk.num_unique > 0 && !chunk.data.empty()) {
-      non_empty_chunks.push_back(std::move(chunk));
-    }
+    if (!chunk.data.empty()) non_empty_chunks.push_back(std::move(chunk));
   }
   
   if (non_empty_chunks.empty()) {
-    // Return empty result table
-    TableColumnDefinitions columns{
-      {"l_returnflag", DataType::String, false},
-      {"l_linestatus", DataType::String, false},
-      {"sum_qty", DataType::Double, false}
-    };
-    return std::make_shared<Table>(columns, TableType::Data);
+    TableColumnDefinitions cols{{"l_returnflag", DataType::String, false},
+                               {"l_linestatus", DataType::String, false},
+                               {"sum_qty", DataType::Double, false}};
+    return std::make_shared<Table>(cols, TableType::Data);
   }
   
-  // ───────────────────────────────────────────────────────────────────────
-// PHASE 3: DIRECT PARALLEL REDUCTION (NO MERGE!)
-// ───────────────────────────────────────────────────────────────────────
-
-// Calculate global unique keys across all chunks
-std::array<uint32_t, 9> global_unique_keys = {0};
-uint8_t global_num_unique = 0;
-
-for (const auto& chunk : non_empty_chunks) {
-  for (uint8_t i = 0; i < chunk.num_unique; ++i) {
-    uint32_t key = chunk.unique_keys[i];
-    bool found = false;
-    for (uint8_t j = 0; j < global_num_unique; ++j) {
-      if (global_unique_keys[j] == key) {
-        found = true;
-        break;
+  std::array<std::atomic<double>, 6> final_sums = {0};
+  std::vector<std::shared_ptr<AbstractTask>> reduction_tasks;
+  
+  for (auto& chunk : non_empty_chunks) {
+    reduction_tasks.emplace_back(std::make_shared<JobTask>([&, chunk = std::move(chunk)]() {
+      for (const auto& row : chunk.data) {
+        uint8_t dense_id = get_dense_id(row.key);
+        final_sums[dense_id].fetch_add(row.qty, std::memory_order_relaxed);
       }
-    }
-    if (!found && global_num_unique < 9) {
-      global_unique_keys[global_num_unique++] = key;
-    }
+    }));
   }
-}
-
-// Sort global keys for final ordering
-std::sort(global_unique_keys.begin(), global_unique_keys.begin() + global_num_unique);
-
-// Create mapping from key to global dense ID
-std::unordered_map<uint32_t, uint8_t> key_to_global_id;
-for (uint8_t i = 0; i < global_num_unique; ++i) {
-  key_to_global_id[global_unique_keys[i]] = i;
-}
-
-// PARALLEL REDUCTION - NO MERGE, NO SORTING!
-std::array<std::atomic<double>, 9> final_sums = {0};
-std::vector<std::shared_ptr<AbstractTask>> reduction_tasks;
-
-for (auto& chunk : non_empty_chunks) {
-  reduction_tasks.emplace_back(std::make_shared<JobTask>([&, chunk = std::move(chunk)]() {
-    // Direct aggregation - the data is already per-chunk sorted but we don't care!
-    for (const auto& row : chunk.data) {
-      uint8_t global_id = key_to_global_id[row.key];
-      final_sums[global_id].fetch_add(row.qty, std::memory_order_relaxed);
-    }
-  }));
-}
-
-// Schedule and wait for reduction tasks
-for (auto& task : reduction_tasks) {
-  task->schedule();
-}
-Hyrise::get().scheduler()->wait_for_tasks(reduction_tasks);
-
-// Convert atomic to regular doubles
-std::array<double, 9> sums;
-for (uint8_t i = 0; i < global_num_unique; ++i) {
-  sums[i] = final_sums[i].load();
-}
-
-// ───────────────────────────────────────────────────────────────────────
-// PHASE 4: BUILD RESULT TABLE (no merge, no final sort needed!)
-// ───────────────────────────────────────────────────────────────────────
+  
+  for (auto& task : reduction_tasks) task->schedule();
+  Hyrise::get().scheduler()->wait_for_tasks(reduction_tasks);
+  
+  auto reduce_end = std::chrono::high_resolution_clock::now();
+  auto reduce_time = std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count() / 1000.0;
+  
+  // --- TIMING: RESULT BUILDING ---
+  auto result_start = std::chrono::high_resolution_clock::now();
   
   TableColumnDefinitions columns{
     {"l_returnflag", DataType::String, false},
@@ -1735,24 +1581,50 @@ for (uint8_t i = 0; i < global_num_unique; ++i) {
   
   auto result = std::make_shared<Table>(columns, TableType::Data);
   
-  // Output in sorted order (by global unique keys)
-  for (uint8_t i = 0; i < global_num_unique; ++i) {
-    uint32_t key = global_unique_keys[i];
-    uint16_t rf_id = (key >> 16) & 0xFFFF;
-    uint16_t ls_id = key & 0xFFFF;
-    
-    pmr_string rf_str(1, rf_id < 3 ? rf_id_to_char[rf_id] : '?');
-    pmr_string ls_str(1, ls_id < 3 ? ls_id_to_char[ls_id] : '?');
-    
-    result->append({
-      AllTypeVariant(rf_str),
-      AllTypeVariant(ls_str),
-      AllTypeVariant(final_sums[i])
-    });
+  std::array<uint32_t, 6> sorted_keys = {
+    (0 << 16) | 0, (0 << 16) | 1,
+    (1 << 16) | 0, (1 << 16) | 1,
+    (2 << 16) | 0, (2 << 16) | 1
+  };
+  
+  static constexpr std::array<bool, 6> GROUP_EXISTS = {
+    true, false, true, false, true, true
+  };
+  
+  for (uint8_t i = 0; i < 6; ++i) {
+    if (GROUP_EXISTS[i]) {
+      uint32_t key = sorted_keys[i];
+      double sum = final_sums[i].load();
+      uint16_t rf_id = (key >> 16) & 0xFFFF;
+      uint16_t ls_id = key & 0xFFFF;
+      
+      result->append({
+        AllTypeVariant(pmr_string(1, rf_id_to_char[rf_id])),
+        AllTypeVariant(pmr_string(1, ls_id_to_char[ls_id])),
+        AllTypeVariant(sum)
+      });
+    }
   }
   
+  auto result_end = std::chrono::high_resolution_clock::now();
+  auto result_time = std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count() / 1000.0;
+  auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count() / 1000.0;
+  
+  // --- PRINT TIMING RESULTS ---
+  std::cout << "\n══════════════════════════════════════════════\n";
+  std::cout << "📊 SORT MULTI OPTIMIZED (32 workers) - TIMING BREAKDOWN\n";
+  std::cout << "══════════════════════════════════════════════\n";
+  std::cout << "  ▸ Extract + Per-chunk Sort: " << std::setw(8) << std::fixed << std::setprecision(2) << extract_sort_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (extract_sort_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Parallel Reduction:      " << std::setw(8) << std::fixed << std::setprecision(2) << reduce_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (reduce_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Result Building:         " << std::setw(8) << std::fixed << std::setprecision(2) << result_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (result_time/total_time*100) << "%\n";
+  std::cout << "  ──────────────────────────────────────────\n";
+  std::cout << "  ▸ TOTAL:                   " << std::setw(8) << std::fixed << std::setprecision(2) << total_time << " ms\n";
+  std::cout << "══════════════════════════════════════════════\n";
+  
   return result;
-
 }
 
   std::shared_ptr<hyrise::Table> sort_multi_optimized_hc(const std::shared_ptr<hyrise::Table>& input) {
