@@ -44,10 +44,10 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 struct PlaygroundConfig {
   // scale_factor removed - now a loop variable in main()
   uint32_t num_workers = 32;    // Number of workers for Multi-Threaded variants
-  uint32_t num_iterations = 3;  // Number of benchmark iterations per algorithm
+  uint32_t num_iterations = 7;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
   bool run_single_optimized = true;
-  bool run_multi_naive = false;
+  bool run_multi_naive = true;
   bool run_multi_optimized = true;
 };
 
@@ -2561,7 +2561,7 @@ int main() {
      ***** Comment / Uncomment here ******
      *************************************/
     //run_hash_micro_benchmark(scale_factor);
-    //run_sort_micro_benchmark(scale_factor);
+    run_sort_micro_benchmark(scale_factor);
     run_sort_micro_benchmark_hc(scale_factor);
 
     // Calculate and display time for this scale factor
