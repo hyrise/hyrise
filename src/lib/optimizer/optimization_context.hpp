@@ -23,6 +23,10 @@ struct OptimizationContext {
 
   std::shared_ptr<AbstractCostEstimator> cost_estimator;  // The cost estimator used for the optimization.
 
+  std::unique_ptr<OptimizationContext> deep_copy() const {
+    return std::make_unique<OptimizationContext>(*this);
+  }
+
  private:
   bool _is_cacheable{true};  // Indicates whether the optimizer can cache the optimized LQP.
 };
