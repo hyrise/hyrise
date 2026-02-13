@@ -603,6 +603,456 @@ std::shared_ptr<Table> hash_multi_optimized(const std::shared_ptr<Table>& input)
 
 
 /**
+ * HIGH CARDINALITY HASH AGGREGATION IMPLEMENTATIONS
+ * Query: SELECT l_orderkey, SUM(l_quantity) FROM lineitem GROUP BY l_orderkey
+ * Duplicated from LC versions and adapted for int32_t keys with ~1.5M groups (SF=1).
+ */
+
+inline size_t next_power_of_2(size_t n) {
+  size_t p = 1;
+  while (p < n) p <<= 1;
+  return p;
+}
+
+// --- 1. Single Baseline HC: Uses built-in AggregateHash operator ---
+
+std::shared_ptr<Table> hash_single_baseline_hc(const std::shared_ptr<Table>& input) {
+  // 1. Prepare Input
+  auto table_wrapper = std::make_shared<TableWrapper>(input);
+  table_wrapper->execute();
+
+  // 2. Define Columns
+  const auto orderkey_col_id = input->column_id_by_name("l_orderkey");
+  const auto quantity_col_id = input->column_id_by_name("l_quantity");
+
+  auto quantity_expr = std::make_shared<PQPColumnExpression>(
+      quantity_col_id, input->column_data_type(quantity_col_id),
+      input->column_is_nullable(quantity_col_id), input->column_name(quantity_col_id));
+
+  // 3. Define Aggregate Expressions
+  auto sum_expr = expression_functional::sum_(quantity_expr);
+
+  // 4. Create and Run Operator
+  auto aggregate_op = std::make_shared<AggregateHash>(
+      table_wrapper,
+      std::vector<std::shared_ptr<WindowFunctionExpression>>{sum_expr},
+      std::vector<ColumnID>{orderkey_col_id});
+
+  aggregate_op->execute();
+
+  return std::const_pointer_cast<Table>(aggregate_op->get_output());
+}
+
+// --- 2. Single Optimized HC: Ticketing with int32_t keys ---
+
+std::shared_ptr<Table> hash_single_optimized_hc(const std::shared_ptr<Table>& input) {
+  const auto chunk_count = input->chunk_count();
+
+  // Column IDs
+  const auto orderkey_col_id = input->column_id_by_name("l_orderkey");
+  const auto quantity_col_id = input->column_id_by_name("l_quantity");
+
+  // Estimate unique orderkeys: ~row_count/4 (TPC-H has ~4 line items per order)
+  const auto estimated_groups = input->row_count() / 4;
+
+  // Simple hash table: int32_t -> ticket
+  auto key_to_ticket = std::unordered_map<int32_t, uint32_t>{};
+  key_to_ticket.reserve(estimated_groups);
+
+  // Aggregates indexed by ticket
+  auto partial_sums = std::vector<double>{};
+  partial_sums.reserve(estimated_groups);
+
+  // Simple ticket counter
+  uint32_t next_ticket = 0;
+
+  // Process all chunks
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = input->get_chunk(chunk_id);
+    if (!chunk) continue;
+
+    const auto chunk_size = chunk->size();
+    const auto& key_seg = *chunk->get_segment(orderkey_col_id);
+    const auto& qty_seg = *chunk->get_segment(quantity_col_id);
+
+    // Materialize values for this chunk
+    auto key_vals = std::vector<int32_t>{};
+    auto qty_vals = std::vector<float>{};
+    key_vals.reserve(chunk_size);
+    qty_vals.reserve(chunk_size);
+
+    segment_iterate<int32_t>(key_seg, [&](const auto& pos) {
+      key_vals.push_back(pos.is_null() ? 0 : pos.value());
+    });
+    segment_iterate<float>(qty_seg, [&](const auto& pos) {
+      qty_vals.push_back(pos.is_null() ? 0.0f : pos.value());
+    });
+
+    // Process each row: get or assign ticket, update aggregate
+    for (size_t i = 0; i < key_vals.size(); ++i) {
+      auto [it, inserted] = key_to_ticket.try_emplace(key_vals[i], next_ticket);
+      if (inserted) {
+        partial_sums.push_back(0.0);
+        ++next_ticket;
+      }
+      partial_sums[it->second] += static_cast<double>(qty_vals[i]);
+    }
+  }
+
+  // Build output table
+  auto column_definitions = TableColumnDefinitions{
+      TableColumnDefinition{"l_orderkey", DataType::Int, false},
+      TableColumnDefinition{"sum_qty", DataType::Double, false}};
+
+  auto output = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  auto key_out = pmr_vector<int32_t>{};
+  auto sum_out = pmr_vector<double>{};
+  key_out.reserve(next_ticket);
+  sum_out.reserve(next_ticket);
+
+  for (const auto& [orderkey, ticket] : key_to_ticket) {
+    key_out.push_back(orderkey);
+    sum_out.push_back(partial_sums[ticket]);
+  }
+
+  auto segments = Segments{};
+  segments.push_back(std::make_shared<ValueSegment<int32_t>>(std::move(key_out)));
+  segments.push_back(std::make_shared<ValueSegment<double>>(std::move(sum_out)));
+
+  output->append_chunk(segments);
+
+  return output;
+}
+
+// --- 3. Multi Naive HC: Per-worker hash maps, single-threaded merge ---
+
+std::shared_ptr<Table> hash_multi_naive_hc(const std::shared_ptr<Table>& input) {
+  const auto num_workers = CONFIG.num_workers;
+  const auto chunk_count = input->chunk_count();
+
+  // Column IDs
+  const auto orderkey_col_id = input->column_id_by_name("l_orderkey");
+  const auto quantity_col_id = input->column_id_by_name("l_quantity");
+
+  const auto estimated_groups = input->row_count() / 4;
+
+  // Pre-allocate partial maps (one per worker)
+  using PartialMap = std::unordered_map<int32_t, double>;
+  auto partial_maps = std::vector<PartialMap>(num_workers);
+  for (auto& map : partial_maps) {
+    map.reserve(estimated_groups / num_workers);
+  }
+
+  // PHASE 1: Parallel aggregation with JobTasks
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(num_workers);
+
+  for (uint32_t worker_id = 0; worker_id < num_workers; ++worker_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, worker_id] {
+      auto& local_map = partial_maps[worker_id];
+
+      // Round-robin chunk assignment
+      for (auto chunk_id = ChunkID{worker_id};
+           static_cast<ChunkID::base_type>(chunk_id) < static_cast<ChunkID::base_type>(chunk_count);
+           chunk_id = ChunkID{static_cast<ChunkID::base_type>(chunk_id) + num_workers}) {
+        const auto chunk = input->get_chunk(chunk_id);
+        if (!chunk) continue;
+
+        const auto chunk_size = chunk->size();
+        const auto& key_seg = *chunk->get_segment(orderkey_col_id);
+        const auto& qty_seg = *chunk->get_segment(quantity_col_id);
+
+        // Materialize values for this chunk
+        auto key_vals = std::vector<int32_t>{};
+        auto qty_vals = std::vector<float>{};
+        key_vals.reserve(chunk_size);
+        qty_vals.reserve(chunk_size);
+
+        segment_iterate<int32_t>(key_seg, [&](const auto& pos) {
+          key_vals.push_back(pos.is_null() ? 0 : pos.value());
+        });
+        segment_iterate<float>(qty_seg, [&](const auto& pos) {
+          qty_vals.push_back(pos.is_null() ? 0.0f : pos.value());
+        });
+
+        // Aggregate into local map
+        for (size_t i = 0; i < key_vals.size(); ++i) {
+          local_map[key_vals[i]] += static_cast<double>(qty_vals[i]);
+        }
+      }
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+  // PHASE 2: Merge partial results (single-threaded)
+  PartialMap merged_map;
+  merged_map.reserve(estimated_groups);
+  for (const auto& partial_map : partial_maps) {
+    for (const auto& [key, sum] : partial_map) {
+      merged_map[key] += sum;
+    }
+  }
+
+  // PHASE 3: Build output table
+  auto column_definitions = TableColumnDefinitions{
+      TableColumnDefinition{"l_orderkey", DataType::Int, false},
+      TableColumnDefinition{"sum_qty", DataType::Double, false}};
+
+  auto output = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  auto key_out = pmr_vector<int32_t>{};
+  auto sum_out = pmr_vector<double>{};
+  key_out.reserve(merged_map.size());
+  sum_out.reserve(merged_map.size());
+
+  for (const auto& [key, sum] : merged_map) {
+    key_out.push_back(key);
+    sum_out.push_back(sum);
+  }
+
+  auto segments = Segments{};
+  segments.push_back(std::make_shared<ValueSegment<int32_t>>(std::move(key_out)));
+  segments.push_back(std::make_shared<ValueSegment<double>>(std::move(sum_out)));
+
+  output->append_chunk(segments);
+
+  return output;
+}
+
+// --- Data Structure: FolkloreHashTableHC (int32_t keys) ---
+// Lock-free linear probing with ticketing, adapted for high-cardinality int32_t keys.
+// Slot states: 0 = empty, 1 = write in progress, >= 2 = ticket + 2
+
+class FolkloreHashTableHC {
+ public:
+  static constexpr uint32_t EMPTY = 0;
+  static constexpr uint32_t WRITE_IN_PROGRESS = 1;
+  static constexpr uint32_t TICKET_OFFSET = 2;
+
+  struct Slot {
+    std::atomic<uint32_t> state{EMPTY};
+    std::atomic<int32_t> key{0};
+  };
+
+  explicit FolkloreHashTableHC(size_t capacity)
+      : _capacity(capacity), _mask(capacity - 1), _slots(capacity) {
+    Assert((capacity & (capacity - 1)) == 0, "Capacity must be power of 2");
+  }
+
+  // GET_OR_INSERT: returns existing ticket or inserts new one
+  uint32_t get_or_insert(int32_t key, FuzzyTicketer& ticketer,
+                         FuzzyTicketer::LocalState& local_ticketer) {
+    const size_t hash = std::hash<int32_t>{}(key);
+    size_t idx = hash & _mask;
+
+    while (true) {
+      uint32_t state = _slots[idx].state.load(std::memory_order_acquire);
+
+      if (state >= TICKET_OFFSET) {
+        // Slot occupied with a ticket - check if key matches
+        int32_t existing_key = _slots[idx].key.load(std::memory_order_acquire);
+        if (existing_key == key) {
+          return state - TICKET_OFFSET;  // Found - return ticket
+        }
+        // Collision - linear probe
+        idx = (idx + 1) & _mask;
+        continue;
+      }
+
+      if (state == EMPTY) {
+        // Try to claim this slot
+        uint32_t expected = EMPTY;
+        if (_slots[idx].state.compare_exchange_strong(
+                expected, WRITE_IN_PROGRESS,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire)) {
+          // Successfully claimed - assign ticket and store key
+          uint32_t ticket = ticketer.get_ticket(local_ticketer);
+          _slots[idx].key.store(key, std::memory_order_release);
+          _slots[idx].state.store(ticket + TICKET_OFFSET, std::memory_order_release);
+          return ticket;
+        }
+        // CAS failed - retry from this slot
+        continue;
+      }
+
+      if (state == WRITE_IN_PROGRESS) {
+        // Another thread is writing - spin briefly
+        #if defined(__x86_64__) || defined(_M_X64)
+        __builtin_ia32_pause();
+        #endif
+        continue;
+      }
+    }
+  }
+
+  // Iterate all entries for final materialization
+  template <typename Func>
+  void for_each_entry(Func&& func) const {
+    for (size_t i = 0; i < _capacity; ++i) {
+      uint32_t state = _slots[i].state.load(std::memory_order_acquire);
+      if (state >= TICKET_OFFSET) {
+        int32_t key = _slots[i].key.load(std::memory_order_acquire);
+        uint32_t ticket = state - TICKET_OFFSET;
+        func(key, ticket);
+      }
+    }
+  }
+
+ private:
+  size_t _capacity;
+  size_t _mask;
+  std::vector<Slot> _slots;
+};
+
+// --- 4. Multi Optimized HC: Global hash table with ticketing ---
+// Based on "Global Hash Tables Strike Back" paper.
+// Critical: hash table capacity is estimated from input cardinality.
+
+std::shared_ptr<Table> hash_multi_optimized_hc(const std::shared_ptr<Table>& input) {
+  const auto num_workers = CONFIG.num_workers;
+  const auto chunk_count = input->chunk_count();
+
+  // Column IDs
+  const auto orderkey_col_id = input->column_id_by_name("l_orderkey");
+  const auto quantity_col_id = input->column_id_by_name("l_quantity");
+
+  // Cardinality estimation: ~row_count/4 unique orderkeys (TPC-H ~4 line items per order)
+  // Size hash table to next_power_of_2(estimated * 2) for ~50% load factor
+  const size_t estimated_cardinality = input->row_count() / 4;
+  const size_t ht_capacity = next_power_of_2(std::max<size_t>(estimated_cardinality * 2, 16));
+
+  auto hash_table = FolkloreHashTableHC(ht_capacity);
+  auto ticketer = FuzzyTicketer();
+
+  // Per-worker partial aggregates (indexed by ticket)
+  auto worker_partials = std::vector<std::vector<double>>(num_workers);
+
+  // =========================================
+  // PHASE 1: Parallel Ticketing + Local Updates
+  // =========================================
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(num_workers);
+
+  for (uint32_t worker_id = 0; worker_id < num_workers; ++worker_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, worker_id] {
+      FuzzyTicketer::LocalState local_ticketer;
+      auto& partials = worker_partials[worker_id];
+      uint32_t max_ticket_seen = 0;
+
+      // Round-robin chunk assignment
+      for (auto chunk_id = ChunkID{worker_id};
+           static_cast<ChunkID::base_type>(chunk_id) <
+               static_cast<ChunkID::base_type>(chunk_count);
+           chunk_id = ChunkID{static_cast<ChunkID::base_type>(chunk_id) + num_workers}) {
+        const auto chunk = input->get_chunk(chunk_id);
+        if (!chunk) continue;
+
+        const auto chunk_size = chunk->size();
+        const auto& key_seg = *chunk->get_segment(orderkey_col_id);
+        const auto& qty_seg = *chunk->get_segment(quantity_col_id);
+
+        // Materialize values for this chunk
+        auto key_vals = std::vector<int32_t>{};
+        auto qty_vals = std::vector<float>{};
+        key_vals.reserve(chunk_size);
+        qty_vals.reserve(chunk_size);
+
+        segment_iterate<int32_t>(key_seg, [&](const auto& pos) {
+          key_vals.push_back(pos.is_null() ? 0 : pos.value());
+        });
+        segment_iterate<float>(qty_seg, [&](const auto& pos) {
+          qty_vals.push_back(pos.is_null() ? 0.0f : pos.value());
+        });
+
+        // Process each row: get ticket, update local partial
+        for (size_t i = 0; i < key_vals.size(); ++i) {
+          uint32_t ticket = hash_table.get_or_insert(key_vals[i], ticketer, local_ticketer);
+
+          // Ensure partials vector is large enough
+          if (ticket >= partials.size()) {
+            partials.resize(std::max<size_t>(ticket + 1, partials.size() * 2 + 8), 0.0);
+          }
+
+          partials[ticket] += static_cast<double>(qty_vals[i]);
+          max_ticket_seen = std::max(max_ticket_seen, ticket);
+        }
+      }
+
+      // Trim to actual size
+      if (!partials.empty() && max_ticket_seen + 1 < partials.size()) {
+        partials.resize(max_ticket_seen + 1);
+      }
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+  // =========================================
+  // PHASE 2: Parallel Merge by Ticket
+  // =========================================
+  const uint32_t num_tickets = ticketer.max_ticket();
+  auto final_sums = std::vector<double>(num_tickets, 0.0);
+
+  // Parallel merge: partition ticket ranges across workers
+  auto merge_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  merge_jobs.reserve(num_workers);
+
+  const uint32_t tickets_per_worker = (num_tickets + num_workers - 1) / num_workers;
+
+  for (uint32_t worker_id = 0; worker_id < num_workers; ++worker_id) {
+    const uint32_t ticket_start = worker_id * tickets_per_worker;
+    const uint32_t ticket_end = std::min(ticket_start + tickets_per_worker, num_tickets);
+    if (ticket_start >= ticket_end) break;
+
+    merge_jobs.emplace_back(std::make_shared<JobTask>([&, ticket_start, ticket_end] {
+      for (uint32_t ticket = ticket_start; ticket < ticket_end; ++ticket) {
+        double sum = 0.0;
+        for (uint32_t w = 0; w < num_workers; ++w) {
+          if (ticket < worker_partials[w].size()) {
+            sum += worker_partials[w][ticket];
+          }
+        }
+        final_sums[ticket] = sum;
+      }
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(merge_jobs);
+
+  // =========================================
+  // PHASE 3: Materialization
+  // =========================================
+  auto column_definitions = TableColumnDefinitions{
+      TableColumnDefinition{"l_orderkey", DataType::Int, false},
+      TableColumnDefinition{"sum_qty", DataType::Double, false}};
+
+  auto output = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  auto key_out = pmr_vector<int32_t>{};
+  auto sum_out = pmr_vector<double>{};
+  key_out.reserve(num_tickets);
+  sum_out.reserve(num_tickets);
+
+  // Iterate hash table to get key->ticket mapping
+  hash_table.for_each_entry([&](int32_t orderkey, uint32_t ticket) {
+    key_out.push_back(orderkey);
+    sum_out.push_back(final_sums[ticket]);
+  });
+
+  auto segments = Segments{};
+  segments.push_back(std::make_shared<ValueSegment<int32_t>>(std::move(key_out)));
+  segments.push_back(std::make_shared<ValueSegment<double>>(std::move(sum_out)));
+
+  output->append_chunk(segments);
+
+  return output;
+}
+
+
+/**
  * SORT AGGREGATION IMPLEMENTATIONS
  */
 
@@ -2465,6 +2915,44 @@ void run_sort_micro_benchmark(float scale_factor) {
   std::cout << "=== SORT Microbenchmark Finished ===" << std::endl;
 }
 
+void run_hash_micro_benchmark_hc(float scale_factor) {
+  std::cout << "=== Running HASH Microbenchmark (high cardinality) ===" << std::endl;
+
+  // 1. Data Generation
+  auto input_table = generate_lineitem_data(scale_factor);
+  std::shared_ptr<Table> expected_result = nullptr;
+
+  // 2. Single Threaded Baseline (Ground Truth)
+  if (CONFIG.run_single_baseline) {
+    setup_scheduler(false);
+    std::cout << "  [Mode: Single Threaded]" << std::endl;
+    expected_result = run_algorithm_hc("Hash Single Baseline HC", hash_single_baseline_hc, input_table, nullptr);
+  }
+
+  // 3. Single Threaded Optimized
+  if (CONFIG.run_single_optimized) {
+    setup_scheduler(false);
+    std::cout << "  [Mode: Single Threaded]" << std::endl;
+    run_algorithm_hc("Hash Single Optimized HC", hash_single_optimized_hc, input_table, expected_result);
+  }
+
+  // 4. Multi Naive
+  if (CONFIG.run_multi_naive) {
+    setup_scheduler(true, CONFIG.num_workers);
+    std::cout << "  [Mode: Multi Threaded (" << CONFIG.num_workers << " workers)]" << std::endl;
+    run_algorithm_hc("Hash Multi Naive HC", hash_multi_naive_hc, input_table, expected_result);
+  }
+
+  // 5. Multi Optimized
+  if (CONFIG.run_multi_optimized) {
+    setup_scheduler(true, CONFIG.num_workers);
+    std::cout << "  [Mode: Multi Threaded (" << CONFIG.num_workers << " workers)]" << std::endl;
+    run_algorithm_hc("Hash Multi Optimized HC", hash_multi_optimized_hc, input_table, expected_result);
+  }
+
+  std::cout << "=== HASH Microbenchmark (high cardinality) Finished ===" << std::endl;
+}
+
 void run_sort_micro_benchmark_hc(float scale_factor) {
   std::cout << "=== Running SORT Microbenchmark (high cardinality) ===" << std::endl;
   // 1. Data Generation
@@ -2533,6 +3021,7 @@ int main() {
      *************************************/
     run_hash_micro_benchmark(scale_factor);
     run_sort_micro_benchmark(scale_factor);
+    run_hash_micro_benchmark_hc(scale_factor);
     run_sort_micro_benchmark_hc(scale_factor);
 
     // Calculate and display time for this scale factor
