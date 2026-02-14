@@ -44,10 +44,10 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 struct PlaygroundConfig {
   // scale_factor removed - now a loop variable in main()
   uint32_t num_workers = 32;    // Number of workers for Multi-Threaded variants
-  uint32_t num_iterations = 7;  // Number of benchmark iterations per algorithm
+  uint32_t num_iterations = 3;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
   bool run_single_optimized = true;
-  bool run_multi_naive = true;
+  bool run_multi_naive = false;
   bool run_multi_optimized = true;
 };
 
@@ -2261,101 +2261,92 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized_hc(const std::shared_ptr<hyr
   // PHASE 2: SORT-BASED PARALLEL REDUCTION (NO MERGE!)
   // ───────────────────────────────────────────────────────────────────────
   
-  auto reduce_start = std::chrono::high_resolution_clock::now();
+  // Replace the reduction phase with this OPTIMIZED version:
 
-  // Collect non-empty chunks
-  std::vector<std::vector<RowData>> chunks;
-  for (auto& chunk : sorted_chunks) {
-    if (!chunk.empty()) {
-      chunks.push_back(std::move(chunk));
-    }
+auto reduce_start = std::chrono::high_resolution_clock::now();
+
+// Collect non-empty chunks
+std::vector<std::vector<RowData>> chunks;
+for (auto& chunk : sorted_chunks) {
+  if (!chunk.empty()) {
+    chunks.push_back(std::move(chunk));
   }
+}
 
-  if (chunks.empty()) {
-    TableColumnDefinitions columns{{"l_orderkey", DataType::Int, false}, {"sum_qty", DataType::Double, false}};
-    return std::make_shared<Table>(columns, TableType::Data);
-  }
+if (chunks.empty()) {
+  TableColumnDefinitions columns{{"l_orderkey", DataType::Int, false}, {"sum_qty", DataType::Double, false}};
+  return std::make_shared<Table>(columns, TableType::Data);
+}
 
-  struct AggResult {
-    int32_t key;
-    double sum;
-  };
+struct AggResult {
+  int32_t key;
+  double sum;
+};
 
-  // Each thread aggregates its chunk locally (chunks are already sorted!)
-  std::vector<std::vector<AggResult>> local_results(chunks.size());
-  std::vector<std::shared_ptr<AbstractTask>> reduce_tasks;
+// PHASE 2a: Local aggregation (already have this)
+std::vector<std::vector<AggResult>> local_results(chunks.size());
+std::vector<std::shared_ptr<AbstractTask>> reduce_tasks;
 
-  for (size_t i = 0; i < chunks.size(); ++i) {
-    reduce_tasks.emplace_back(std::make_shared<JobTask>([&, i, chunk = std::move(chunks[i])]() {
-      std::vector<AggResult> local;
-      local.reserve(chunk.size() / 10);  // Estimate unique keys
+for (size_t i = 0; i < chunks.size(); ++i) {
+  reduce_tasks.emplace_back(std::make_shared<JobTask>([&, i, chunk = std::move(chunks[i])]() {
+    std::vector<AggResult> local;
+    local.reserve(chunk.size() / 10);
+    
+    size_t j = 0;
+    while (j < chunk.size()) {
+      int32_t current_key = chunk[j].key;
+      double sum = 0.0;
       
-      size_t j = 0;
-      while (j < chunk.size()) {
-        int32_t current_key = chunk[j].key;
-        double sum = 0.0;
-        
-        while (j < chunk.size() && chunk[j].key == current_key) {
-          sum += chunk[j].qty;
-          j++;
-        }
-        local.push_back({current_key, sum});
+      while (j < chunk.size() && chunk[j].key == current_key) {
+        sum += chunk[j].qty;
+        j++;
       }
-      local_results[i] = std::move(local);
-    }));
-  }
-
-  for (auto& task : reduce_tasks) task->schedule();
-  Hyrise::get().scheduler()->wait_for_tasks(reduce_tasks);
-
-  // Multi-way merge of sorted local results
-  using HeapElem = std::pair<int32_t, size_t>;
-  auto comp = [](const HeapElem& a, const HeapElem& b) { return a.first > b.first; };
-  std::priority_queue<HeapElem, std::vector<HeapElem>, decltype(comp)> pq(comp);
-
-  std::vector<size_t> positions(local_results.size(), 0);
-  std::vector<AggResult> aggregates;
-
-  // Initialize heap
-  for (size_t i = 0; i < local_results.size(); ++i) {
-    if (!local_results[i].empty()) {
-      pq.emplace(local_results[i][0].key, i);
+      local.push_back({current_key, sum});
     }
-  }
+    local_results[i] = std::move(local);
+  }));
+}
 
-  // Merge and combine
-  while (!pq.empty()) {
-    auto [key, idx] = pq.top();
-    pq.pop();
-    
-    size_t& pos = positions[idx];
-    const auto& current = local_results[idx][pos];
-    
-    // Check if next in heap has same key
-    double sum = current.sum;
-    while (!pq.empty() && pq.top().first == key) {
-      auto [same_key, same_idx] = pq.top();
-      pq.pop();
-      
-      size_t& same_pos = positions[same_idx];
-      sum += local_results[same_idx][same_pos].sum;
-      same_pos++;
-      
-      if (same_pos < local_results[same_idx].size()) {
-        pq.emplace(local_results[same_idx][same_pos].key, same_idx);
-      }
-    }
-    
-    aggregates.push_back({key, sum});
-    pos++;
-    
-    if (pos < local_results[idx].size()) {
-      pq.emplace(local_results[idx][pos].key, idx);
-    }
-  }
+for (auto& task : reduce_tasks) task->schedule();
+Hyrise::get().scheduler()->wait_for_tasks(reduce_tasks);
 
-  auto reduce_end = std::chrono::high_resolution_clock::now();
-  double reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count()) / 1000.0;
+// PHASE 2b: FAST MERGE - Flatten and sort instead of heap merge
+std::vector<AggResult> flattened;
+size_t total_agg = 0;
+for (const auto& local : local_results) {
+  total_agg += local.size();
+}
+flattened.reserve(total_agg);
+
+for (auto& local : local_results) {
+  flattened.insert(flattened.end(), 
+                   std::make_move_iterator(local.begin()),
+                   std::make_move_iterator(local.end()));
+}
+
+// Sort flattened results (they're already mostly sorted)
+boost::sort::pdqsort(flattened.begin(), flattened.end(),
+                    [](const AggResult& a, const AggResult& b) { return a.key < b.key; });
+
+// Combine adjacent with same key
+std::vector<AggResult> aggregates;
+aggregates.reserve(flattened.size());
+
+size_t i = 0;
+while (i < flattened.size()) {
+  int32_t current_key = flattened[i].key;
+  double sum = flattened[i].sum;
+  i++;
+  
+  while (i < flattened.size() && flattened[i].key == current_key) {
+    sum += flattened[i].sum;
+    i++;
+  }
+  aggregates.push_back({current_key, sum});
+}
+
+auto reduce_end = std::chrono::high_resolution_clock::now();
+double reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count()) / 1000.0;
   
   // ───────────────────────────────────────────────────────────────────────
   // PHASE 3: RESULT BUILDING
@@ -2874,9 +2865,9 @@ int main() {
     /*************************************
      ***** Comment / Uncomment here ******
      *************************************/
-    run_hash_micro_benchmark(scale_factor);
-    run_sort_micro_benchmark(scale_factor);
-    run_hash_micro_benchmark_hc(scale_factor);
+    //run_hash_micro_benchmark(scale_factor);
+    //run_sort_micro_benchmark(scale_factor);
+    //run_hash_micro_benchmark_hc(scale_factor);
     run_sort_micro_benchmark_hc(scale_factor);
 
     // Calculate and display time for this scale factor
