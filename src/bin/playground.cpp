@@ -44,10 +44,10 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 struct PlaygroundConfig {
   // scale_factor removed - now a loop variable in main()
   uint32_t num_workers = 32;    // Number of workers for Multi-Threaded variants
-  uint32_t num_iterations = 20;  // Number of benchmark iterations per algorithm
+  uint32_t num_iterations = 3;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
   bool run_single_optimized = true;
-  bool run_multi_naive = true;
+  bool run_multi_naive = false;
   bool run_multi_optimized = true;
 };
 
@@ -1127,6 +1127,8 @@ std::shared_ptr<Table> sort_single_baseline_hc(const std::shared_ptr<Table>& inp
 
 std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyrise::Table>& input) {
   using namespace hyrise;
+  
+  auto total_start = std::chrono::high_resolution_clock::now();
 
   const auto rf_col = input->column_id_by_name("l_returnflag");
   const auto ls_col = input->column_id_by_name("l_linestatus");
@@ -1140,6 +1142,9 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     RowData(uint32_t k, float v) : key(k), qty(v) {}
     RowData() : key(0), qty(0.0f) {}
   };
+  
+  // --- TIMING: EXTRACTION ---
+  auto extract_start = std::chrono::high_resolution_clock::now();
   
   const size_t total_rows = input->row_count();
   std::vector<RowData> rows;
@@ -1217,6 +1222,12 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     }
   }
   
+  auto extract_end = std::chrono::high_resolution_clock::now();
+  auto extract_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(extract_end - extract_start).count()) / 1000.0;
+  
+  // --- TIMING: COUNTING SORT ---
+  auto sort_start = std::chrono::high_resolution_clock::now();
+  
   // DIRECT COUNTING SORT
   auto get_dense_id = [](uint32_t key) constexpr -> uint8_t {
     return static_cast<uint8_t>(((key >> 16) & 0xFFFF) * 2 + (key & 0xFFFF));
@@ -1241,6 +1252,12 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   }
   
   rows.swap(sorted);
+  
+  auto sort_end = std::chrono::high_resolution_clock::now();
+  auto sort_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(sort_end - sort_start).count()) / 1000.0;
+  
+  // --- TIMING: AGGREGATION ---
+  auto agg_start = std::chrono::high_resolution_clock::now();
   
   struct AggResult { uint32_t key; double sum; };
   std::vector<AggResult> aggregates;
@@ -1297,6 +1314,12 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     #endif
   }
   
+  auto agg_end = std::chrono::high_resolution_clock::now();
+  auto agg_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(agg_end - agg_start).count()) / 1000.0;
+  
+  // --- TIMING: RESULT BUILDING ---
+  auto result_start = std::chrono::high_resolution_clock::now();
+  
   TableColumnDefinitions columns{
     {"l_returnflag", DataType::String, false},
     {"l_linestatus", DataType::String, false},
@@ -1332,12 +1355,34 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     }
   }
   
+  auto result_end = std::chrono::high_resolution_clock::now();
+  auto result_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count()) / 1000.0;
+  auto total_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count()) / 1000.0;
+  
+  // --- PRINT TIMING RESULTS ---
+  std::cout << "\n══════════════════════════════════════════════\n";
+  std::cout << "📊 SORT SINGLE OPTIMIZED - TIMING BREAKDOWN\n";
+  std::cout << "══════════════════════════════════════════════\n";
+  std::cout << "  ▸ Extraction:    " << std::setw(8) << std::fixed << std::setprecision(2) << extract_time << " ms  " 
+            << std::setw(6) << std::setprecision(1) << (extract_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Counting Sort: " << std::setw(8) << std::fixed << std::setprecision(2) << sort_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (sort_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Aggregation:   " << std::setw(8) << std::fixed << std::setprecision(2) << agg_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (agg_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Result Build:  " << std::setw(8) << std::fixed << std::setprecision(2) << result_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (result_time/total_time*100) << "%\n";
+  std::cout << "  ──────────────────────────────────────────\n";
+  std::cout << "  ▸ TOTAL:         " << std::setw(8) << std::fixed << std::setprecision(2) << total_time << " ms\n";
+  std::cout << "══════════════════════════════════════════════\n";
+  
   return result;
 }
 
 
   std::shared_ptr<hyrise::Table> sort_single_optimized_hc(const std::shared_ptr<hyrise::Table>& input) {
   using namespace hyrise;
+  
+  auto total_start = std::chrono::high_resolution_clock::now();
 
   const auto orderkey_col = input->column_id_by_name("l_orderkey");
   const auto qty_col = input->column_id_by_name("l_quantity");
@@ -1350,6 +1395,9 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     RowData(int32_t k, float v) : key(k), qty(v) {}
     RowData() : key(0), qty(0.0f) {}
   };
+  
+  // --- TIMING: EXTRACTION ---
+  auto extract_start = std::chrono::high_resolution_clock::now();
   
   const size_t total_rows = input->row_count();
   std::vector<RowData> rows;
@@ -1394,6 +1442,12 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
       );
     }
   }
+  
+  auto extract_end = std::chrono::high_resolution_clock::now();
+  double extract_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(extract_end - extract_start).count()) / 1000.0;
+  
+  // --- TIMING: RADIX SORT ---
+  auto sort_start = std::chrono::high_resolution_clock::now();
   
   auto radix_sort = [](std::vector<RowData>& data) {
     if (data.empty()) return;
@@ -1455,6 +1509,12 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   };
   
   radix_sort(rows);
+  
+  auto sort_end = std::chrono::high_resolution_clock::now();
+  double sort_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(sort_end - sort_start).count()) / 1000.0;
+  
+  // --- TIMING: AGGREGATION ---
+  auto agg_start = std::chrono::high_resolution_clock::now();
   
   struct AggResult {
     int32_t key;
@@ -1523,6 +1583,12 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
     #endif
   }
   
+  auto agg_end = std::chrono::high_resolution_clock::now();
+  double agg_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(agg_end - agg_start).count()) / 1000.0;
+  
+  // --- TIMING: RESULT BUILDING ---
+  auto result_start = std::chrono::high_resolution_clock::now();
+  
   TableColumnDefinitions columns{
   {"l_orderkey", DataType::Int, false},
   {"sum_qty", DataType::Double, false}
@@ -1552,6 +1618,26 @@ std::shared_ptr<hyrise::Table> sort_single_optimized(const std::shared_ptr<hyris
   // Append the entire chunk at once - ONE OPERATION!
   auto result = std::make_shared<Table>(columns, TableType::Data);
   result->append_chunk(segments);
+  
+  auto result_end = std::chrono::high_resolution_clock::now();
+  double result_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count()) / 1000.0;
+  double total_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count()) / 1000.0;
+  
+  // --- PRINT TIMING RESULTS ---
+  std::cout << "\n══════════════════════════════════════════════════════════════════\n";
+  std::cout << "📊 SORT SINGLE OPTIMIZED HIGH CARDINALITY - TIMING BREAKDOWN\n";
+  std::cout << "══════════════════════════════════════════════════════════════════\n";
+  std::cout << "  ▸ Extraction:       " << std::setw(10) << std::fixed << std::setprecision(2) << extract_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (extract_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Radix Sort:       " << std::setw(10) << std::fixed << std::setprecision(2) << sort_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (sort_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Aggregation:      " << std::setw(10) << std::fixed << std::setprecision(2) << agg_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (agg_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Result Building:  " << std::setw(10) << std::fixed << std::setprecision(2) << result_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (result_time/total_time*100) << "%\n";
+  std::cout << "  ──────────────────────────────────────────────────────────────\n";
+  std::cout << "  ▸ TOTAL:            " << std::setw(10) << std::fixed << std::setprecision(2) << total_time << " ms\n";
+  std::cout << "══════════════════════════════════════════════════════════════════\n\n";
   
   return result;
 }
@@ -1814,6 +1900,8 @@ std::shared_ptr<Table> sort_multi_naive_hc(const std::shared_ptr<Table>& input) 
 
 std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise::Table>& input) {
   using namespace hyrise;
+  
+  auto total_start = std::chrono::high_resolution_clock::now();
 
   const auto rf_col = input->column_id_by_name("l_returnflag");
   const auto ls_col = input->column_id_by_name("l_linestatus");
@@ -1836,6 +1924,9 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   auto get_dense_id = [](uint32_t key) constexpr -> uint8_t {
     return static_cast<uint8_t>(((key >> 16) & 0xFFFF) * 2 + (key & 0xFFFF));
   };
+  
+  // --- TIMING: EXTRACTION + PER-CHUNK SORT ---
+  auto extract_sort_start = std::chrono::high_resolution_clock::now();
   
   struct SortedChunk { std::vector<RowData> data; };
   std::vector<SortedChunk> sorted_chunks(input->chunk_count());
@@ -1941,6 +2032,12 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized(const std::shared_ptr<hyrise
   }
   
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  
+  auto extract_sort_end = std::chrono::high_resolution_clock::now();
+  auto extract_sort_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(extract_sort_end - extract_sort_start).count()) / 1000.0;
+  
+  // --- TIMING: REDUCTION ---
+auto reduce_start = std::chrono::high_resolution_clock::now();
 
 std::vector<SortedChunk> non_empty_chunks;
 non_empty_chunks.reserve(input->chunk_count());
@@ -1985,6 +2082,12 @@ for (auto& chunk : non_empty_chunks) {
 
 for (auto& task : reduction_tasks) task->schedule();
 Hyrise::get().scheduler()->wait_for_tasks(reduction_tasks);
+
+auto reduce_end = std::chrono::high_resolution_clock::now();
+auto reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count()) / 1000.0;
+  
+  // --- TIMING: RESULT BUILDING ---
+  auto result_start = std::chrono::high_resolution_clock::now();
   
   TableColumnDefinitions columns{
     {"l_returnflag", DataType::String, false},
@@ -2020,11 +2123,31 @@ Hyrise::get().scheduler()->wait_for_tasks(reduction_tasks);
     }
   }
   
+  auto result_end = std::chrono::high_resolution_clock::now();
+  auto result_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count()) / 1000.0;
+  auto total_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count()) / 1000.0;
+  
+  // --- PRINT TIMING RESULTS ---
+  std::cout << "\n══════════════════════════════════════════════\n";
+  std::cout << "📊 SORT MULTI OPTIMIZED (32 workers) - TIMING BREAKDOWN\n";
+  std::cout << "══════════════════════════════════════════════\n";
+  std::cout << "  ▸ Extract + Per-chunk Sort: " << std::setw(8) << std::fixed << std::setprecision(2) << extract_sort_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (extract_sort_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Parallel Reduction:      " << std::setw(8) << std::fixed << std::setprecision(2) << reduce_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (reduce_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Result Building:         " << std::setw(8) << std::fixed << std::setprecision(2) << result_time << " ms  "
+            << std::setw(6) << std::setprecision(1) << (result_time/total_time*100) << "%\n";
+  std::cout << "  ──────────────────────────────────────────\n";
+  std::cout << "  ▸ TOTAL:                   " << std::setw(8) << std::fixed << std::setprecision(2) << total_time << " ms\n";
+  std::cout << "══════════════════════════════════════════════\n";
+  
   return result;
 }
 
 std::shared_ptr<hyrise::Table> sort_multi_optimized_hc(const std::shared_ptr<hyrise::Table>& input) {
   using namespace hyrise;
+  
+  auto total_start = std::chrono::high_resolution_clock::now();
 
   const auto orderkey_col = input->column_id_by_name("l_orderkey");
   const auto qty_col = input->column_id_by_name("l_quantity");
@@ -2038,120 +2161,109 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized_hc(const std::shared_ptr<hyr
   };
   
   // ───────────────────────────────────────────────────────────────────────
-  // PHASE 1: WORK-STEALING EXTRACTION + PER-CHUNK RADIX SORT
+  // PHASE 1: PARALLEL EXTRACTION + PER-CHUNK RADIX SORT
   // ───────────────────────────────────────────────────────────────────────
+  
+  auto extract_sort_start = std::chrono::high_resolution_clock::now();
   
   std::vector<std::vector<RowData>> sorted_chunks(input->chunk_count());
   std::atomic<size_t> total_rows{0};
-  std::atomic<size_t> next_chunk{0};
   
-  const size_t num_chunks = input->chunk_count();
-  const size_t num_workers = std::thread::hardware_concurrency();
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
   
-  std::vector<std::shared_ptr<AbstractTask>> worker_tasks;
-  
-  for (size_t w = 0; w < num_workers; ++w) {
-    worker_tasks.emplace_back(std::make_shared<JobTask>([&]() {
-      // Each worker processes chunks until none left
-      while (true) {
-        size_t idx = next_chunk.fetch_add(1);
-        if (idx >= num_chunks) break;
-        
-        ChunkID chunk_id{static_cast<ChunkID::base_type>(idx)};
-        const auto chunk = input->get_chunk(chunk_id);
-        if (!chunk || chunk->size() == 0) continue;
-        
-        const auto& orderkey_seg = chunk->get_segment(orderkey_col);
-        const auto& qty_seg = chunk->get_segment(qty_col);
-        
-        const auto chunk_size = chunk->size();
-        std::vector<RowData> local_rows;
-        local_rows.reserve(chunk_size);
-        
-        // ----- EXTRACTION -----
-        for (ChunkOffset offset{0}; offset < chunk_size; ++offset) {
-          local_rows.emplace_back(
-            boost::get<int32_t>((*orderkey_seg)[offset]),
-            boost::get<float>((*qty_seg)[offset])
-          );
-        }
-        
-        // ----- PER-CHUNK RADIX SORT -----
-        if (!local_rows.empty()) {
-          std::vector<RowData> buffer(local_rows.size());
-          
-          // PASS 1: Lower 16 bits
-          {
-            std::array<uint32_t, 65536> count = {0};
-            for (const auto& row : local_rows) {
-              uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
-              uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
-              count[lower]++;
-            }
-            
-            uint32_t sum = 0;
-            for (size_t i = 0; i < 65536; ++i) {
-              uint32_t tmp = count[i];
-              count[i] = sum;
-              sum += tmp;
-            }
-            
-            for (const auto& row : local_rows) {
-              uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
-              uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
-              buffer[count[lower]++] = row;
-            }
-            local_rows.swap(buffer);
-          }
-          
-          // PASS 2: Higher 16 bits
-          {
-            std::array<uint32_t, 65536> count = {0};
-            for (const auto& row : local_rows) {
-              uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
-              uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
-              count[upper]++;
-            }
-            
-            uint32_t sum = 0;
-            for (size_t i = 0; i < 65536; ++i) {
-              uint32_t tmp = count[i];
-              count[i] = sum;
-              sum += tmp;
-            }
-            
-            for (const auto& row : local_rows) {
-              uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
-              uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
-              buffer[count[upper]++] = row;
-            }
-            local_rows.swap(buffer);
-          }
-        }
-        
-        // Store result with lock
-        {
-          std::lock_guard<std::mutex> lock(chunks_mutex);
-          sorted_chunks.push_back(std::move(local_rows));
-        }
-        total_rows += chunk_size;
+  for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+      const auto chunk = input->get_chunk(chunk_id);
+      if (!chunk || chunk->size() == 0) {
+        sorted_chunks[chunk_id] = {};
+        return;
       }
+      
+      const auto& orderkey_seg = chunk->get_segment(orderkey_col);
+      const auto& qty_seg = chunk->get_segment(qty_col);
+      
+      const auto chunk_size = chunk->size();
+      std::vector<RowData> local_rows;
+      local_rows.reserve(chunk_size);
+      
+      // ----- EXTRACTION -----
+      for (ChunkOffset offset{0}; offset < chunk_size; ++offset) {
+        local_rows.emplace_back(
+          boost::get<int32_t>((*orderkey_seg)[offset]),
+          boost::get<float>((*qty_seg)[offset])
+        );
+      }
+      
+      // ----- PER-CHUNK RADIX SORT -----
+      if (!local_rows.empty()) {
+        std::vector<RowData> buffer(local_rows.size());
+        
+        // PASS 1: Lower 16 bits
+        {
+          std::array<uint32_t, 65536> count = {0};
+          for (const auto& row : local_rows) {
+            uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
+            uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
+            count[lower]++;
+          }
+          
+          uint32_t sum = 0;
+          for (size_t i = 0; i < 65536; ++i) {
+            uint32_t tmp = count[i];
+            count[i] = sum;
+            sum += tmp;
+          }
+          
+          for (const auto& row : local_rows) {
+            uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
+            uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
+            buffer[count[lower]++] = row;
+          }
+          local_rows.swap(buffer);
+        }
+        
+        // PASS 2: Higher 16 bits
+        {
+          std::array<uint32_t, 65536> count = {0};
+          for (const auto& row : local_rows) {
+            uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
+            uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
+            count[upper]++;
+          }
+          
+          uint32_t sum = 0;
+          for (size_t i = 0; i < 65536; ++i) {
+            uint32_t tmp = count[i];
+            count[i] = sum;
+            sum += tmp;
+          }
+          
+          for (const auto& row : local_rows) {
+            uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
+            uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
+            buffer[count[upper]++] = row;
+          }
+          local_rows.swap(buffer);
+        }
+      }
+      
+      sorted_chunks[chunk_id] = std::move(local_rows);
+      total_rows += chunk_size;
     }));
   }
   
-  // Schedule all workers
-  for (auto& task : worker_tasks) {
-    task->schedule();
-  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   
-  // Wait for all workers using the scheduler
-  Hyrise::get().scheduler()->wait_for_tasks(worker_tasks);
+  auto extract_sort_end = std::chrono::high_resolution_clock::now();
+  double extract_sort_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(extract_sort_end - extract_sort_start).count()) / 1000.0;
   
   // ───────────────────────────────────────────────────────────────────────
-  // PHASE 2: SORT-BASED PARALLEL REDUCTION
+  // PHASE 2: SORT-BASED PARALLEL REDUCTION (NO MERGE!)
   // ───────────────────────────────────────────────────────────────────────
   
-  auto reduce_start = std::chrono::high_resolution_clock::now();
+  // Replace the reduction phase with this OPTIMIZED version:
+
+auto reduce_start = std::chrono::high_resolution_clock::now();
 
 // Collect non-empty chunks
 std::vector<std::vector<RowData>> chunks;
@@ -2159,41 +2271,88 @@ for (auto& chunk : sorted_chunks) {
   if (!chunk.empty()) {
     chunks.push_back(std::move(chunk));
   }
+}
 
-  struct AggResult {
-    int32_t key;
-    double sum;
-  };
+if (chunks.empty()) {
+  TableColumnDefinitions columns{{"l_orderkey", DataType::Int, false}, {"sum_qty", DataType::Double, false}};
+  return std::make_shared<Table>(columns, TableType::Data);
+}
 
-  // PHASE 2a: Local aggregation
-  std::vector<std::vector<AggResult>> local_results(sorted_chunks.size());
-  std::vector<std::shared_ptr<AbstractTask>> reduce_tasks;
+struct AggResult {
+  int32_t key;
+  double sum;
+};
 
-  for (size_t i = 0; i < sorted_chunks.size(); ++i) {
-    reduce_tasks.emplace_back(std::make_shared<JobTask>([&, i, chunk = std::move(sorted_chunks[i])]() {
-      std::vector<AggResult> local;
-      local.reserve(chunk.size() / 10);
+// PHASE 2a: Local aggregation (already have this)
+std::vector<std::vector<AggResult>> local_results(chunks.size());
+std::vector<std::shared_ptr<AbstractTask>> reduce_tasks;
+
+for (size_t i = 0; i < chunks.size(); ++i) {
+  reduce_tasks.emplace_back(std::make_shared<JobTask>([&, i, chunk = std::move(chunks[i])]() {
+    std::vector<AggResult> local;
+    local.reserve(chunk.size() / 10);
+    
+    size_t j = 0;
+    while (j < chunk.size()) {
+      int32_t current_key = chunk[j].key;
+      double sum = 0.0;
       
-      size_t j = 0;
-      while (j < chunk.size()) {
-        int32_t current_key = chunk[j].key;
-        double sum = 0.0;
-        
-        while (j < chunk.size() && chunk[j].key == current_key) {
-          sum += chunk[j].qty;
-          j++;
-        }
-        local.push_back({current_key, sum});
+      while (j < chunk.size() && chunk[j].key == current_key) {
+        sum += chunk[j].qty;
+        j++;
       }
-      local_results[i] = std::move(local);
-    }));
+      local.push_back({current_key, sum});
+    }
+    local_results[i] = std::move(local);
+  }));
+}
+
+for (auto& task : reduce_tasks) task->schedule();
+Hyrise::get().scheduler()->wait_for_tasks(reduce_tasks);
+
+// PHASE 2b: FAST MERGE - Flatten and sort instead of heap merge
+std::vector<AggResult> flattened;
+size_t total_agg = 0;
+for (const auto& local : local_results) {
+  total_agg += local.size();
+}
+flattened.reserve(total_agg);
+
+for (auto& local : local_results) {
+  flattened.insert(flattened.end(), 
+                   std::make_move_iterator(local.begin()),
+                   std::make_move_iterator(local.end()));
+}
+
+// Sort flattened results (they're already mostly sorted)
+boost::sort::pdqsort(flattened.begin(), flattened.end(),
+                    [](const AggResult& a, const AggResult& b) { return a.key < b.key; });
+
+// Combine adjacent with same key
+std::vector<AggResult> aggregates;
+aggregates.reserve(flattened.size());
+
+size_t i = 0;
+while (i < flattened.size()) {
+  int32_t current_key = flattened[i].key;
+  double sum = flattened[i].sum;
+  i++;
+  
+  while (i < flattened.size() && flattened[i].key == current_key) {
+    sum += flattened[i].sum;
+    i++;
   }
   aggregates.push_back({current_key, sum});
 }
+
+auto reduce_end = std::chrono::high_resolution_clock::now();
+double reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count()) / 1000.0;
   
   // ───────────────────────────────────────────────────────────────────────
   // PHASE 3: RESULT BUILDING
   // ───────────────────────────────────────────────────────────────────────
+  
+  auto result_start = std::chrono::high_resolution_clock::now();
   
   TableColumnDefinitions columns{
     {"l_orderkey", DataType::Int, false},
@@ -2223,6 +2382,24 @@ for (auto& chunk : sorted_chunks) {
   
   auto result = std::make_shared<Table>(columns, TableType::Data);
   result->append_chunk({orderkey_segment, sum_segment});
+  
+  auto result_end = std::chrono::high_resolution_clock::now();
+  double result_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - result_start).count()) / 1000.0;
+  double total_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(result_end - total_start).count()) / 1000.0;
+  
+  // Print timing
+  std::cout << "\n══════════════════════════════════════════════════════════════════\n";
+  std::cout << "📊 SORT MULTI OPTIMIZED HIGH CARDINALITY (32 workers) - TIMING BREAKDOWN\n";
+  std::cout << "══════════════════════════════════════════════════════════════════\n";
+  std::cout << "  ▸ Extract + Radix Sort: " << std::setw(10) << std::fixed << std::setprecision(2) << extract_sort_time << " ms  "
+            << std::setw(5) << std::setprecision(1) << (extract_sort_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Parallel Reduction:   " << std::setw(10) << std::fixed << std::setprecision(2) << reduce_time << " ms  "
+            << std::setw(5) << std::setprecision(1) << (reduce_time/total_time*100) << "%\n";
+  std::cout << "  ▸ Result Building:      " << std::setw(10) << std::fixed << std::setprecision(2) << result_time << " ms  "
+            << std::setw(5) << std::setprecision(1) << (result_time/total_time*100) << "%\n";
+  std::cout << "  ──────────────────────────────────────────────────────────────\n";
+  std::cout << "  ▸ TOTAL:                " << std::setw(10) << std::fixed << std::setprecision(2) << total_time << " ms\n";
+  std::cout << "══════════════════════════════════════════════════════════════════\n\n";
   
   return result;
 }
@@ -2688,9 +2865,9 @@ int main() {
     /*************************************
      ***** Comment / Uncomment here ******
      *************************************/
-    run_hash_micro_benchmark(scale_factor);
-    run_sort_micro_benchmark(scale_factor);
-    run_hash_micro_benchmark_hc(scale_factor);
+    //run_hash_micro_benchmark(scale_factor);
+    //run_sort_micro_benchmark(scale_factor);
+    //run_hash_micro_benchmark_hc(scale_factor);
     run_sort_micro_benchmark_hc(scale_factor);
 
     // Calculate and display time for this scale factor
