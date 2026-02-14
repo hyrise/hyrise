@@ -44,7 +44,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 struct PlaygroundConfig {
   // scale_factor removed - now a loop variable in main()
   uint32_t num_workers = 32;    // Number of workers for Multi-Threaded variants
-  uint32_t num_iterations = 3;  // Number of benchmark iterations per algorithm
+  uint32_t num_iterations = 7;  // Number of benchmark iterations per algorithm
   bool run_single_baseline = true;
   bool run_single_optimized = true;
   bool run_multi_naive = false;
@@ -2161,192 +2161,202 @@ std::shared_ptr<hyrise::Table> sort_multi_optimized_hc(const std::shared_ptr<hyr
   };
   
   // ───────────────────────────────────────────────────────────────────────
-  // PHASE 1: PARALLEL EXTRACTION + PER-CHUNK RADIX SORT
+  // PHASE 1: WORK-STEALING EXTRACTION + PER-CHUNK RADIX SORT
   // ───────────────────────────────────────────────────────────────────────
   
   auto extract_sort_start = std::chrono::high_resolution_clock::now();
   
-  std::vector<std::vector<RowData>> sorted_chunks(input->chunk_count());
+  // Result container - now a simple vector, not pre-sized
+  std::vector<std::vector<RowData>> sorted_chunks;
+  std::mutex chunks_mutex;
   std::atomic<size_t> total_rows{0};
+  std::atomic<size_t> next_chunk{0};
   
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
+  const size_t num_chunks = input->chunk_count();
+  const size_t num_workers = std::thread::hardware_concurrency();
   
-  for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      const auto chunk = input->get_chunk(chunk_id);
-      if (!chunk || chunk->size() == 0) {
-        sorted_chunks[chunk_id] = {};
-        return;
-      }
-      
-      const auto& orderkey_seg = chunk->get_segment(orderkey_col);
-      const auto& qty_seg = chunk->get_segment(qty_col);
-      
-      const auto chunk_size = chunk->size();
-      std::vector<RowData> local_rows;
-      local_rows.reserve(chunk_size);
-      
-      // ----- EXTRACTION -----
-      for (ChunkOffset offset{0}; offset < chunk_size; ++offset) {
-        local_rows.emplace_back(
-          boost::get<int32_t>((*orderkey_seg)[offset]),
-          boost::get<float>((*qty_seg)[offset])
-        );
-      }
-      
-      // ----- PER-CHUNK RADIX SORT -----
-      if (!local_rows.empty()) {
-        std::vector<RowData> buffer(local_rows.size());
+  std::vector<std::shared_ptr<AbstractTask>> worker_tasks;
+  
+  for (size_t w = 0; w < num_workers; ++w) {
+    worker_tasks.emplace_back(std::make_shared<JobTask>([&]() {
+      // Each worker processes chunks until none left
+      while (true) {
+        size_t idx = next_chunk.fetch_add(1);
+        if (idx >= num_chunks) break;
         
-        // PASS 1: Lower 16 bits
-        {
-          std::array<uint32_t, 65536> count = {0};
-          for (const auto& row : local_rows) {
-            uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
-            uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
-            count[lower]++;
-          }
-          
-          uint32_t sum = 0;
-          for (size_t i = 0; i < 65536; ++i) {
-            uint32_t tmp = count[i];
-            count[i] = sum;
-            sum += tmp;
-          }
-          
-          for (const auto& row : local_rows) {
-            uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
-            uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
-            buffer[count[lower]++] = row;
-          }
-          local_rows.swap(buffer);
+        ChunkID chunk_id{static_cast<ChunkID::base_type>(idx)};
+        const auto chunk = input->get_chunk(chunk_id);
+        if (!chunk || chunk->size() == 0) continue;
+        
+        const auto& orderkey_seg = chunk->get_segment(orderkey_col);
+        const auto& qty_seg = chunk->get_segment(qty_col);
+        
+        const auto chunk_size = chunk->size();
+        std::vector<RowData> local_rows;
+        local_rows.reserve(chunk_size);
+        
+        // ----- EXTRACTION -----
+        for (ChunkOffset offset{0}; offset < chunk_size; ++offset) {
+          local_rows.emplace_back(
+            boost::get<int32_t>((*orderkey_seg)[offset]),
+            boost::get<float>((*qty_seg)[offset])
+          );
         }
         
-        // PASS 2: Higher 16 bits
-        {
-          std::array<uint32_t, 65536> count = {0};
-          for (const auto& row : local_rows) {
-            uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
-            uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
-            count[upper]++;
+        // ----- PER-CHUNK RADIX SORT -----
+        if (!local_rows.empty()) {
+          std::vector<RowData> buffer(local_rows.size());
+          
+          // PASS 1: Lower 16 bits
+          {
+            std::array<uint32_t, 65536> count = {0};
+            for (const auto& row : local_rows) {
+              uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
+              uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
+              count[lower]++;
+            }
+            
+            uint32_t sum = 0;
+            for (size_t i = 0; i < 65536; ++i) {
+              uint32_t tmp = count[i];
+              count[i] = sum;
+              sum += tmp;
+            }
+            
+            for (const auto& row : local_rows) {
+              uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
+              uint16_t lower = static_cast<uint16_t>(unsigned_key & 0xFFFF);
+              buffer[count[lower]++] = row;
+            }
+            local_rows.swap(buffer);
           }
           
-          uint32_t sum = 0;
-          for (size_t i = 0; i < 65536; ++i) {
-            uint32_t tmp = count[i];
-            count[i] = sum;
-            sum += tmp;
+          // PASS 2: Higher 16 bits
+          {
+            std::array<uint32_t, 65536> count = {0};
+            for (const auto& row : local_rows) {
+              uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
+              uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
+              count[upper]++;
+            }
+            
+            uint32_t sum = 0;
+            for (size_t i = 0; i < 65536; ++i) {
+              uint32_t tmp = count[i];
+              count[i] = sum;
+              sum += tmp;
+            }
+            
+            for (const auto& row : local_rows) {
+              uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
+              uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
+              buffer[count[upper]++] = row;
+            }
+            local_rows.swap(buffer);
           }
-          
-          for (const auto& row : local_rows) {
-            uint32_t unsigned_key = static_cast<uint32_t>(row.key) ^ 0x80000000;
-            uint16_t upper = static_cast<uint16_t>((unsigned_key >> 16) & 0xFFFF);
-            buffer[count[upper]++] = row;
-          }
-          local_rows.swap(buffer);
         }
+        
+        // Store result with lock
+        {
+          std::lock_guard<std::mutex> lock(chunks_mutex);
+          sorted_chunks.push_back(std::move(local_rows));
+        }
+        total_rows += chunk_size;
       }
-      
-      sorted_chunks[chunk_id] = std::move(local_rows);
-      total_rows += chunk_size;
     }));
   }
   
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  // Schedule all workers
+  for (auto& task : worker_tasks) {
+    task->schedule();
+  }
+  
+  // Wait for all workers using the scheduler
+  Hyrise::get().scheduler()->wait_for_tasks(worker_tasks);
   
   auto extract_sort_end = std::chrono::high_resolution_clock::now();
   double extract_sort_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(extract_sort_end - extract_sort_start).count()) / 1000.0;
   
   // ───────────────────────────────────────────────────────────────────────
-  // PHASE 2: SORT-BASED PARALLEL REDUCTION (NO MERGE!)
+  // PHASE 2: SORT-BASED PARALLEL REDUCTION
   // ───────────────────────────────────────────────────────────────────────
   
-  // Replace the reduction phase with this OPTIMIZED version:
+  auto reduce_start = std::chrono::high_resolution_clock::now();
 
-auto reduce_start = std::chrono::high_resolution_clock::now();
-
-// Collect non-empty chunks
-std::vector<std::vector<RowData>> chunks;
-for (auto& chunk : sorted_chunks) {
-  if (!chunk.empty()) {
-    chunks.push_back(std::move(chunk));
+  if (sorted_chunks.empty()) {
+    TableColumnDefinitions columns{{"l_orderkey", DataType::Int, false}, {"sum_qty", DataType::Double, false}};
+    return std::make_shared<Table>(columns, TableType::Data);
   }
-}
 
-if (chunks.empty()) {
-  TableColumnDefinitions columns{{"l_orderkey", DataType::Int, false}, {"sum_qty", DataType::Double, false}};
-  return std::make_shared<Table>(columns, TableType::Data);
-}
+  struct AggResult {
+    int32_t key;
+    double sum;
+  };
 
-struct AggResult {
-  int32_t key;
-  double sum;
-};
+  // PHASE 2a: Local aggregation
+  std::vector<std::vector<AggResult>> local_results(sorted_chunks.size());
+  std::vector<std::shared_ptr<AbstractTask>> reduce_tasks;
 
-// PHASE 2a: Local aggregation (already have this)
-std::vector<std::vector<AggResult>> local_results(chunks.size());
-std::vector<std::shared_ptr<AbstractTask>> reduce_tasks;
-
-for (size_t i = 0; i < chunks.size(); ++i) {
-  reduce_tasks.emplace_back(std::make_shared<JobTask>([&, i, chunk = std::move(chunks[i])]() {
-    std::vector<AggResult> local;
-    local.reserve(chunk.size() / 10);
-    
-    size_t j = 0;
-    while (j < chunk.size()) {
-      int32_t current_key = chunk[j].key;
-      double sum = 0.0;
+  for (size_t i = 0; i < sorted_chunks.size(); ++i) {
+    reduce_tasks.emplace_back(std::make_shared<JobTask>([&, i, chunk = std::move(sorted_chunks[i])]() {
+      std::vector<AggResult> local;
+      local.reserve(chunk.size() / 10);
       
-      while (j < chunk.size() && chunk[j].key == current_key) {
-        sum += chunk[j].qty;
-        j++;
+      size_t j = 0;
+      while (j < chunk.size()) {
+        int32_t current_key = chunk[j].key;
+        double sum = 0.0;
+        
+        while (j < chunk.size() && chunk[j].key == current_key) {
+          sum += chunk[j].qty;
+          j++;
+        }
+        local.push_back({current_key, sum});
       }
-      local.push_back({current_key, sum});
-    }
-    local_results[i] = std::move(local);
-  }));
-}
-
-for (auto& task : reduce_tasks) task->schedule();
-Hyrise::get().scheduler()->wait_for_tasks(reduce_tasks);
-
-// PHASE 2b: FAST MERGE - Flatten and sort instead of heap merge
-std::vector<AggResult> flattened;
-size_t total_agg = 0;
-for (const auto& local : local_results) {
-  total_agg += local.size();
-}
-flattened.reserve(total_agg);
-
-for (auto& local : local_results) {
-  flattened.insert(flattened.end(), 
-                   std::make_move_iterator(local.begin()),
-                   std::make_move_iterator(local.end()));
-}
-
-// Sort flattened results (they're already mostly sorted)
-boost::sort::pdqsort(flattened.begin(), flattened.end(),
-                    [](const AggResult& a, const AggResult& b) { return a.key < b.key; });
-
-// Combine adjacent with same key
-std::vector<AggResult> aggregates;
-aggregates.reserve(flattened.size());
-
-size_t i = 0;
-while (i < flattened.size()) {
-  int32_t current_key = flattened[i].key;
-  double sum = flattened[i].sum;
-  i++;
-  
-  while (i < flattened.size() && flattened[i].key == current_key) {
-    sum += flattened[i].sum;
-    i++;
+      local_results[i] = std::move(local);
+    }));
   }
-  aggregates.push_back({current_key, sum});
-}
 
-auto reduce_end = std::chrono::high_resolution_clock::now();
-double reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count()) / 1000.0;
+  for (auto& task : reduce_tasks) task->schedule();
+  Hyrise::get().scheduler()->wait_for_tasks(reduce_tasks);
+
+  // PHASE 2b: FAST MERGE - Flatten and sort
+  std::vector<AggResult> flattened;
+  size_t total_agg = 0;
+  for (const auto& local : local_results) {
+    total_agg += local.size();
+  }
+  flattened.reserve(total_agg);
+
+  for (auto& local : local_results) {
+    flattened.insert(flattened.end(), 
+                     std::make_move_iterator(local.begin()),
+                     std::make_move_iterator(local.end()));
+  }
+
+  // Sort flattened results
+  std::sort(flattened.begin(), flattened.end(),
+            [](const AggResult& a, const AggResult& b) { return a.key < b.key; });
+
+  // Combine adjacent with same key
+  std::vector<AggResult> aggregates;
+  aggregates.reserve(flattened.size());
+
+  size_t i = 0;
+  while (i < flattened.size()) {
+    int32_t current_key = flattened[i].key;
+    double sum = flattened[i].sum;
+    i++;
+    
+    while (i < flattened.size() && flattened[i].key == current_key) {
+      sum += flattened[i].sum;
+      i++;
+    }
+    aggregates.push_back({current_key, sum});
+  }
+
+  auto reduce_end = std::chrono::high_resolution_clock::now();
+  double reduce_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(reduce_end - reduce_start).count()) / 1000.0;
   
   // ───────────────────────────────────────────────────────────────────────
   // PHASE 3: RESULT BUILDING
