@@ -86,20 +86,18 @@ void JCCHBenchmarkItemRunner::_load_params() {
     const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
     Assert(std::filesystem::exists(local_queries_path), "Creating JCC-H queries folder failed.");
     if (local_queries_dir_created) {
-      auto cmd = std::stringstream{};
-      cmd << "cd " << local_queries_path << " && ln -s " << _dbgen_path << "/queries/*.sql .";
-      const auto ret = std::system(cmd.str().c_str());
+      const auto cmd = std::format("cd {} && ln -s {}/queries/*.sql .", local_queries_path, _dbgen_path);
+      const auto ret = std::system(cmd.c_str());
       Assert(!ret, "Creating symlinks to query templates failed.");
     }
 
     // Call qgen a couple of times with different PRNG seeds and store the resulting query parameters in queries/params.
     // dbgen doesn't like `-r 0`, so we start at 1.
     for (auto seed = int64_t{1}; seed <= (_config->max_runs > 0 ? _config->max_runs : 100'000); ++seed) {
-      auto cmd = std::stringstream{};
-      cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen " << (_skewed ? "-k" : "") << " -s "
-          << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << seed << " -l " << params_path
-          << " >/dev/null";
-      const auto ret = std::system(cmd.str().c_str());
+      const auto cmd =
+          std::format("cd {0} && {1}/qgen {2} -s {3} -b {1}/dists.dss -r {4} -l {5} >/dev/null", local_queries_path,
+                      _dbgen_path, _skewed ? "-k" : "", _scale_factor, seed, params_path);
+      const auto ret = std::system(cmd.c_str());
       Assert(!ret, "Calling qgen failed.");
     }
     // NOLINTEND(concurrency-mt-unsafe)

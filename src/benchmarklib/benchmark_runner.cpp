@@ -147,11 +147,10 @@ void BenchmarkRunner::run() {
     while (track_system_utilization) {
       const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
 
-      auto sql_builder = std::stringstream{};
-      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
-                  << "as LONG), * FROM meta_system_utilization";
-
-      SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+      const auto sql = std::format(
+          "INSERT INTO benchmark_system_utilization_log SELECT CAST({} as LONG), * FROM meta_system_utilization",
+          timestamp);
+      SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
 
       std::this_thread::sleep_for(SYSTEM_UTILIZATION_TRACKING_INTERVAL);
     }
@@ -604,19 +603,18 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   // clang-format off
-  auto compiler = std::stringstream{};
   #if defined(__clang__)
-    compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
+    const auto compiler = std::format("clang {}.{}.{}", __clang_major__, __clang_minor__, __clang_patchlevel__);
   #elif defined(__GNUC__)
-    compiler << "gcc " << __GNUC__ << "." << __GNUC_MINOR__;
+    const auto compiler = std::format("gcc {}.{}", __GNUC__, __GNUC_MINOR__);
   #else
-    compiler << "unknown";
+    const auto compiler = "unknown";
   #endif
   // clang-format on
 
   return nlohmann::json{{"date", timestamp_stream.str()},
                         {"chunk_size", static_cast<ChunkOffset::base_type>(config.chunk_size)},
-                        {"compiler", compiler.str()},
+                        {"compiler", compiler},
                         {"build_type", HYRISE_DEBUG ? "debug" : "release"},
                         {"encoding", config.encoding_config.to_json()},
                         {"chunk_indexes", config.chunk_indexes},
@@ -675,11 +673,10 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
 
   ++_snapshot_id;
 
-  auto sql_builder = std::stringstream{};
-  sql_builder << "INSERT INTO benchmark_segments_log SELECT " << _snapshot_id << ", '" << moment_or_timestamp + "'"
-              << ", * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'";
-
-  SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+  const auto sql = std::format(
+      "INSERT INTO benchmark_segments_log SELECT {}, '{}', * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'",
+      _snapshot_id, moment_or_timestamp);
+  SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
 }
 
 Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& result) const {

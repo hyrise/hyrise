@@ -74,10 +74,7 @@ class MetaTableManagerTest : public BaseTest {
 class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};
 
 auto meta_table_manager_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
-  auto stream = std::stringstream{};
-  stream << info.param->name();
-
-  auto string = stream.str();
+  auto string = info.param->name();
   string.erase(std::remove_if(string.begin(), string.end(),
                               [](char c) {
                                 return !std::isalnum(c);

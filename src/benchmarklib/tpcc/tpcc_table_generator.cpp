@@ -164,10 +164,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
                          return random_gen.random_number(10, 100);
                        });
   for (auto district_i = int32_t{1}; district_i <= 10; district_i++) {
-    auto district_i_str = std::stringstream{};
-    district_i_str << std::setw(2) << std::setfill('0') << district_i;
-    _add_column<pmr_string>(segments_by_chunk, column_definitions, "S_DIST_" + district_i_str.str(), cardinalities,
-                            [&](const std::vector<size_t>& /*indices*/) {
+    _add_column<pmr_string>(segments_by_chunk, column_definitions, std::format("S_DIST_{:0>2}", district_i),
+                            cardinalities, [&](const std::vector<size_t>& /*indices*/) {
                               return pmr_string{random_gen.astring(24, 24)};
                             });
   }

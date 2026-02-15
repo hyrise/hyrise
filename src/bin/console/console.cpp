@@ -598,13 +598,12 @@ int Console::_generate_ssb(const std::string& args) {
   }
 
   // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
-  auto ssb_data_path = std::stringstream{};
-  ssb_data_path << "ssb_data/sf-" << std::noshowpoint << scale_factor;
-  std::filesystem::create_directories(ssb_data_path.str());
+  const auto ssb_data_path = std::format("ssb_data/sf-{}", scale_factor);
+  std::filesystem::create_directories(ssb_data_path);
 
   out("Generating all SSB tables (this might take a while) ...\n");
   const auto config = std::make_shared<BenchmarkConfig>(chunk_size, _binary_caching);
-  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, config}.generate_and_store();
+  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }

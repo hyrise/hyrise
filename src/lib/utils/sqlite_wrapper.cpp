@@ -384,11 +384,10 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
 
 void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset,
                                           const std::string& table_name_to_copy_from) const {
-  auto command_sstream = std::stringstream{};
-  command_sstream << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
-  command_sstream << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
+  const auto command = std::format("DROP TABLE IF EXISTS {0}; CREATE TABLE {0} AS SELECT * FROM {1};",
+                                   table_name_to_reset, table_name_to_copy_from);
 
-  main_connection.raw_execute_query(command_sstream.str());
+  main_connection.raw_execute_query(command);
 }
 
 }  // namespace hyrise

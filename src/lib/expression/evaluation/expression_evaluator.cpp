@@ -789,10 +789,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
           try {
             values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
           } catch (boost::bad_lexical_cast& /* exception */) {
-            auto error_message = std::stringstream{};
-            error_message << "Cannot cast '" << argument_value << "' as "
-                          << magic_enum::enum_name(cast_expression.data_type());
-            Fail(error_message.str());
+            Fail(std::format("Cannot cast '{}' as {}", argument_value,
+                             magic_enum::enum_name(cast_expression.data_type())));
           }
         }
       }

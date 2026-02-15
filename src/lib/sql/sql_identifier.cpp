@@ -14,12 +14,7 @@ bool SQLIdentifier::operator==(const SQLIdentifier& rhs) const {
 }
 
 std::string SQLIdentifier::as_string() const {
-  auto sstream = std::stringstream{};
-  if (table_name) {
-    sstream << *table_name << ".";
-  }
-  sstream << column_name;
-  return sstream.str();
+  return std::format("{}{}{}", table_name.value_or(""), table_name ? "." : "", column_name);
 }
 
 }  // namespace hyrise

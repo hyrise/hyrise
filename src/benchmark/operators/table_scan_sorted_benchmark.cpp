@@ -248,13 +248,12 @@ void register_table_scan_sorted_benchmarks() {
             for (const auto is_between_scan : {false, true}) {
               const auto& table_generator = table_types.at(data_type);
 
-              const std::string between_label = is_between_scan ? "Between" : "";
-              const std::string ref_scan_label = is_reference_scan ? "ReferenceTableScan" : "DataTableScan";
-              auto name = std::stringstream{};
-              name << "BM_Table" << between_label << "ScanSorted/" << ref_scan_label << "/" << encoding_name << "/"
-                   << selectivity << "/" << data_type << "/" << mode;
-              benchmark::RegisterBenchmark(name.str(), bm_table_scan_sorted, ROWS, selectivity, encoding_type, mode,
-                                           is_between_scan, is_reference_scan, table_generator);
+              benchmark::RegisterBenchmark(
+                  std::format("BM_Table{}ScanSorted/{}/{}/{}/{}/{}", is_between_scan ? "Between" : "",
+                              is_reference_scan ? "ReferenceTableScan" : "DataTableScan", encoding_name, selectivity,
+                              data_type, mode),
+                  bm_table_scan_sorted, ROWS, selectivity, encoding_type, mode, is_between_scan, is_reference_scan,
+                  table_generator);
             }
           }
         }

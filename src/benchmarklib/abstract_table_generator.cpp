@@ -153,9 +153,8 @@ void AbstractTableGenerator::generate_and_store() {
           });
 
           if (is_sorted) {
-            auto output = std::stringstream{};
-            output << "-  Table '" << table_name << "' is already sorted by '" << column_name << "'\n";
-            std::cout << output.str() << std::flush;
+            std::cout << std::format("-  Table '{}' is already sorted by '{}'\n", table_name, column_name)
+                      << std::flush;
             const SortColumnDefinition sort_column{sort_column_id, sort_mode};
 
             if (_all_chunks_sorted_by(table, sort_column)) {
@@ -202,10 +201,9 @@ void AbstractTableGenerator::generate_and_store() {
             table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
           }
 
-          auto output = std::stringstream{};
-          output << "-  Sorted '" << table_name << "' by '" << column_name << "' (" << per_table_timer.lap_formatted()
-                 << ")\n";
-          std::cout << output.str() << std::flush;
+          std::cout << std::format("-  Sorted '{}' by '{}' ({})\n", table_name, column_name,
+                                   per_table_timer.lap_formatted())
+                    << std::flush;
         };
         jobs.emplace_back(std::make_shared<JobTask>(sort_table));
       }
@@ -237,12 +235,10 @@ void AbstractTableGenerator::generate_and_store() {
         auto per_table_timer = Timer{};
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
-        auto output = std::stringstream{};
-        output << "-  Processing '" + table_name << "' - "
-               << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
-               << per_table_timer.lap_formatted() << ")\n"
-               << std::flush;
-        std::cout << output.str() << std::flush;
+        std::cout << std::format("-  Processing '{}' - {} ({})\n", table_name,
+                                 table_info.re_encoded ? "encoding applied" : "no encoding necessary",
+                                 per_table_timer.lap_formatted())
+                  << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(encode_table));
     }
@@ -481,10 +477,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
       auto& table_info = table_name_info_pair.second;
       table_info.table = BinaryParser::parse(*table_info.binary_file_path);
 
-      auto message = std::stringstream{};
-      message << "-  Loaded table '" << table_name_info_pair.first << "' from cached binary "
-              << *table_info.binary_file_path << " (" << timer.lap_formatted() << ")\n";
-      std::cout << message.str() << std::flush;
+      std::cout << std::format("-  Loaded table '{}' from cached binary {} ({})", table_name_info_pair.first,
+                               table_info.binary_file_path->string(), timer.lap_formatted())
+                << std::flush;
     }));
   }
 

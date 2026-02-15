@@ -28,10 +28,9 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
 
     {
       // Call dbgen.
-      auto cmd = std::stringstream{};
-      cmd << "cd " << tables_path << " && " << dbgen_path << "/dbgen -f -s " << scale_factor << " "
-          << additional_cli_args << "  -b " << dbgen_path << "/dists.dss >/dev/null 2>&1";
-      auto ret = std::system(cmd.str().c_str());
+      const auto cmd = std::format("cd {} && {}/dbgen -f -s {} {} -b {}/dists.dss >/dev/null 2>&1", tables_path,
+                                   dbgen_path, scale_factor, additional_cli_args, dbgen_path);
+      auto ret = std::system(cmd.c_str());
       Assert(!ret, "Calling dbgen failed.");
     }
 
@@ -48,18 +47,16 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
         const auto* const sed_inplace = "-i''";
 #endif
 
-        auto cmd = std::stringstream{};
-        cmd << "sed -Ee 's/\\|$//' " << sed_inplace << " " << tables_path << table_name << ".csv";
-        const auto ret = std::system(cmd.str().c_str());
+        const auto cmd = std::format("sed -Ee 's/\\|$//' {} {}{}.csv", sed_inplace, tables_path, table_name);
+        const auto ret = std::system(cmd.c_str());
         Assert(!ret, "Removing trailing separators using sed failed.");
       }
 
       // std::filesystem::copy does not seem to work. We could use symlinks here, but those would make reading the file
       // via ifstream more complicated.
       {
-        auto cmd = std::stringstream{};
-        cmd << "cp  " << csv_meta_path << "/" << table_name << ".csv.json " << tables_path << table_name << ".csv.json";
-        const auto ret = std::system(cmd.str().c_str());
+        auto cmd = std::format("cp {}/{}.csv.json {}{}.csv.json", csv_meta_path, table_name, tables_path, table_name);
+        const auto ret = std::system(cmd.c_str());
         Assert(!ret, "Copying csv.json files failed.");
       }
     }
@@ -70,9 +67,8 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
 
 void remove_csv_tables(const std::string& tables_path) {
   if (std::filesystem::exists(tables_path + "customer.csv")) {
-    auto cmd = std::stringstream{};
-    cmd << "rm " << tables_path << "*.csv*";
-    const auto ret = std::system(cmd.str().c_str());
+    const auto cmd = std::format("rm {}*.csv*", tables_path);
+    const auto ret = std::system(cmd.c_str());
     Assert(!ret, "Removing csv/csv.json files failed.");
   }
 }

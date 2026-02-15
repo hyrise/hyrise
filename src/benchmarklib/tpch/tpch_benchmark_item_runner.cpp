@@ -525,9 +525,7 @@ std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkIte
                                                               const std::vector<std::string>& parameter_values) const {
   if (_use_prepared_statements) {
     // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
-    auto sql = std::stringstream{};
-    sql << "EXECUTE TPCH" << (item_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
-    return sql.str();
+    return std::format("EXECUTE TPCH{} ({})", item_id + 1, boost::algorithm::join(parameter_values, ", "));
   }
 
   // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another
