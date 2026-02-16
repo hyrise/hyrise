@@ -51,20 +51,20 @@ if __name__ == "__main__":
 
   os.makedirs(hostname, exist_ok=True)
 
-  if args.master:
-    os.system("git checkout master")
-  else:
-    os.system("git checkout martin/perf/num_groups")
+  # if args.master:
+  #   os.system("git checkout master")
+  # else:
+  #   os.system("git checkout martin/perf/num_groups")
 
   os.system("git submodule update --recursive --init")
   os.system(f"ninja -C {build_dir} hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema")
 
   runtime = 1200 if not args.verbose else 5
-  runs = 50 if not args.verbose else 1
+  runs = 30 if not args.verbose else 1
   core_count = args.cores if args.cores else MAX_CORE_COUNT
 
-  num_groups_min_factors = [0.1, 0.25, 0.5] if not args.master else [17]
-  num_groups_max_factors = [1.0, 1.5, 2.0] if not args.master else [17]
+  num_groups_min_factors = [0.1008] if not args.master else [17]
+  num_groups_max_factors = [2.0] if not args.master else [17]
   upper_limit_queue_size_factor = [2, 4, 8] if not args.master else [17]
 
   for NUM_GROUPS_MIN_FACTOR in num_groups_min_factors:
@@ -75,7 +75,7 @@ if __name__ == "__main__":
             client_count = 1 if mode == "Ordered" else core_count
             run_limit = f"--runs={runs}" if mode == "Ordered" else f"--time={runtime}"
             output_filename = f'./{hostname}/{"master" if args.master else "branch"}__{benchmark}__min_{NUM_GROUPS_MIN_FACTOR}__max_{NUM_GROUPS_MAX_FACTOR}__limit_{UPPER_LIMIT_QUEUE_SIZE_FACTOR}__clients_{client_count}__cores_{core_count}.json'
-            scale = "" if benchmark == "JoinOrder" else ("--scale=1" if args.verbose else "--scale=10")
+            scale = "" if benchmark == "JoinOrder" else ("--scale=1" if args.verbose else "--scale=5")
 
             if Path(output_filename).exists():
               print(f"Skipping as result JSON already exists ({output_filename}).")

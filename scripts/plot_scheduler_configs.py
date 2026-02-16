@@ -3,6 +3,7 @@
 import argparse
 import atexit
 import json
+import lzma
 import matplotlib.pyplot as plt
 import multiprocessing
 import numpy as np
@@ -39,19 +40,24 @@ def geo_mean(series):
 
 
 def get_results(result_file_path):
-  with open(file) as json_file:
-    result_file = json.load(json_file)
+  result_file_content = None
+  if str(result_file_path).endswith(".json.xz"):
+    with lzma.open(result_file_path, "rt") as json_file:
+      result_file_content = json.load(json_file)
+  else:
+    assert str(result_file_path).endswith(".json")
+    with open(file) as json_file:
+      result_file_content = json.load(json_file)
 
-    averages = []
+  assert result_file_content is not None
 
-    for benchmark in result_file["benchmarks"]:
-      averages.append(sum([item["duration"] for item in benchmark["successful_runs"]]) / len(benchmark["successful_runs"]))
-      # print(benchmark["name"], " - ", averages[-1] / 1000, " us")
+  averages = []
 
-    sum_runtimes = sum(averages)
-    geo_mean_runtimes = geometric_mean(averages)
-    # print(f"Sum: {sum_runtimes / 1000} us")
-    # print(f"Geomean: {geo_mean_runtimes / 1000} us")
+  for benchmark in result_file_content["benchmarks"]:
+    averages.append(sum([item["duration"] for item in benchmark["successful_runs"]]) / len(benchmark["successful_runs"]))
+
+  sum_runtimes = sum(averages)
+  geo_mean_runtimes = geometric_mean(averages)
   return (sum_runtimes, geo_mean_runtimes)
 
 
@@ -88,7 +94,7 @@ if __name__ == "__main__":
   df_dict = []
 
   for file in Path(args.host_dir).iterdir():
-    if not str(file).endswith(".json"):
+    if not str(file).endswith(".json") and not str(file).endswith(".json.xz"):
       continue
 
     settings = get_settings_from_filename(file)
@@ -112,7 +118,7 @@ if __name__ == "__main__":
 
   df_merged = df_merged[["NUM_GROUPS_MIN_FACTOR_branch", "NUM_GROUPS_MAX_FACTOR_branch",
                          "UPPER_LIMIT_QUEUE_SIZE_FACTOR_branch", "clients", "cores", "benchmark", "RUNTIME_DIFF", "GEOMEAN_DIFF"]]
-  print(df_merged.sort_values(by="RUNTIME_DIFF").to_string())
+  # print(df_merged.sort_values(by="RUNTIME_DIFF").to_string())
 
   # Pivot data for each category
   def draw_heatmap(*args, **kwargs):
@@ -121,7 +127,7 @@ if __name__ == "__main__":
     vmax = kwargs.pop("vmax")
     value = kwargs.pop("value")
     d = data.pivot(index="NUM_GROUPS_MIN_FACTOR_branch", columns="NUM_GROUPS_MAX_FACTOR_branch", values=value)
-    sns.heatmap(d, vmin=rt_diff_min, vmax=rt_diff_max, annot=True, **kwargs)
+    sns.heatmap(d, vmin=rt_diff_min, vmax=rt_diff_max, annot=True, fmt=".3g", **kwargs)
 
   for client_title, client_filter in [("Single-User", "clients == 1"), ("Multi-User", "clients > 1")]:
     df_filtered = df_merged.query(client_filter)
@@ -129,16 +135,18 @@ if __name__ == "__main__":
     rt_diff_min = df_filtered["RUNTIME_DIFF"].min()
     rt_diff_max = df_filtered["RUNTIME_DIFF"].max()
 
-    fg = sns.FacetGrid(df_filtered, col="UPPER_LIMIT_QUEUE_SIZE_FACTOR_branch", row="benchmark")
+    row_order = sorted(df_filtered["benchmark"].unique(), reverse=True)
+
+    fg = sns.FacetGrid(df_filtered, col="UPPER_LIMIT_QUEUE_SIZE_FACTOR_branch", row="benchmark", row_order=row_order)
     fg.map_dataframe(draw_heatmap, vmin=rt_diff_min, vmax=rt_diff_max, value="RUNTIME_DIFF", cbar=True, cmap="coolwarm")
     plt.savefig(f"{args.host_dir}/{client_title}.pdf")
 
 
   ######
-  ######  Grouped ...
+  ######  Grouped per Benchmark Type
   ######
   df_grouped = df.groupby(['NUM_GROUPS_MIN_FACTOR', 'NUM_GROUPS_MAX_FACTOR', 'UPPER_LIMIT_QUEUE_SIZE_FACTOR',
-                           'clients', 'cores', 'branch'], dropna=False)["RUNTIME_US"].apply(geo_mean).reset_index(name="GEOMEAN_RUNTIME_US")
+                           'clients', 'cores', 'branch'], dropna=True)["RUNTIME_US"].apply(geo_mean).reset_index(name="GEOMEAN_RUNTIME_US")
 
   df_grouped_branch = df_grouped.query("branch != 'master'")
   df_grouped_master = df_grouped.query("branch == 'master'")
@@ -152,11 +160,27 @@ if __name__ == "__main__":
     rt_diff_min = df_filtered["GEOMEAN_RUNTIME_US_DIFF"].min()
     rt_diff_max = df_filtered["GEOMEAN_RUNTIME_US_DIFF"].max()
 
-    # print(df_filtered)
-    # df_filtered_pivoted = df_filtered.pivot(index="NUM_GROUPS_MIN_FACTOR_branch", columns="NUM_GROUPS_MAX_FACTOR_branch", values="GEOMEAN_RUNTIME_US_DIFF")
-    # sns.heatmap(df_filtered_pivoted, cbar=True, cmap="coolwarm")
-    # plt.savefig(f"{args.host_dir}/grouped_{client_title}.pdf")
-
     fg = sns.FacetGrid(df_filtered, col="UPPER_LIMIT_QUEUE_SIZE_FACTOR_branch")
     fg.map_dataframe(draw_heatmap, vmin=rt_diff_min, vmax=rt_diff_max, value="GEOMEAN_RUNTIME_US_DIFF", cbar=True, cmap="coolwarm")
     plt.savefig(f"{args.host_dir}/grouped_{client_title}.pdf")
+
+  ######
+  ######  Grouped Overall
+  ######
+  df_grouped = df.groupby(['NUM_GROUPS_MIN_FACTOR', 'NUM_GROUPS_MAX_FACTOR', 'UPPER_LIMIT_QUEUE_SIZE_FACTOR', 'cores',
+                           'branch'], dropna=True)["RUNTIME_US"].apply(geo_mean).reset_index(name="GEOMEAN_RUNTIME_US")
+  # print(df_grouped.to_string())
+
+  df_grouped_branch = df_grouped.query("branch != 'master'")
+  df_grouped_master = df_grouped.query("branch == 'master'")
+
+  df_grouped_merged = df_grouped_branch.merge(df_grouped_master, on=["cores"], suffixes=("_branch", "_master"))
+  df_grouped_merged["GEOMEAN_RUNTIME_US_DIFF"] = df_grouped_merged.GEOMEAN_RUNTIME_US_branch / df_grouped_merged.GEOMEAN_RUNTIME_US_master
+  # print(df_grouped_merged.to_string())
+
+  rt_diff_min = df_grouped_merged["GEOMEAN_RUNTIME_US_DIFF"].min()
+  rt_diff_max = df_grouped_merged["GEOMEAN_RUNTIME_US_DIFF"].max()
+
+  fg = sns.FacetGrid(df_grouped_merged, col="UPPER_LIMIT_QUEUE_SIZE_FACTOR_branch")
+  fg.map_dataframe(draw_heatmap, vmin=rt_diff_min, vmax=rt_diff_max, value="GEOMEAN_RUNTIME_US_DIFF", cbar=True, cmap="coolwarm")
+  plt.savefig(f"{args.host_dir}/grouped_total.pdf")
