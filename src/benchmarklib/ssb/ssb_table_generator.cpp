@@ -24,7 +24,7 @@ SSBTableGenerator::SSBTableGenerator(const std::string& dbgen_path, const std::s
 SSBTableGenerator::SSBTableGenerator(const std::string& dbgen_path, const std::string& csv_meta_path,
                                      const std::string& data_path, float scale_factor,
                                      const std::shared_ptr<BenchmarkConfig>& benchmark_config)
-    : FileBasedTableGenerator{benchmark_config, data_path + "/"},
+    : FileBasedTableGenerator{benchmark_config, std::format("{}/", data_path)},
       _dbgen_path{dbgen_path},
       _csv_meta_path{csv_meta_path},
       _scale_factor{scale_factor} {}

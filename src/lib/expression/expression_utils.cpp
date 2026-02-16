@@ -385,7 +385,7 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
         result = *lossy_variant_cast<TargetDataType>(value_expression.value);
       } catch (boost::bad_lexical_cast&) {
         Fail(std::format("Cannot cast '{}' as '{}'.", cast_expression.argument()->as_column_name(),
-                         std::string{magic_enum::enum_name(expression.data_type())}));
+                         magic_enum::enum_name(expression.data_type())));
       }
     });
     return result;

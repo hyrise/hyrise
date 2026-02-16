@@ -47,11 +47,12 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
   if (pipeline_status == SQLPipelineStatus::Failure) {
     const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
     auto execution_info = ExecutionInformation(OperatorType::Mock);
-    execution_info.error_messages = {{PostgresMessageType::HumanReadableError,
-                                      "Transaction conflict, transaction was rolled back. Following statements might "
-                                      "have still been sent and executed. Failed statement: " +
-                                          failed_statement},
-                                     {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
+    execution_info.error_messages = {
+        {PostgresMessageType::HumanReadableError,
+         std::format("Transaction conflict, transaction was rolled back. Following statements might have still been "
+                     "sent and executed. Failed statement: '{}'",
+                     failed_statement)},
+        {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
     return {execution_info, sql_pipeline.transaction_context()};
   }
 

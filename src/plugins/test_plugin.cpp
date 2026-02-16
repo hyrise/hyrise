@@ -35,7 +35,7 @@ void TestPlugin::stop() {
   Hyrise::get().storage_manager.drop_table("DummyTable");
 
   for (auto index = size_t{0}; index < _added_tables_count; ++index) {
-    Hyrise::get().storage_manager.drop_table("TableOfTestPlugin_" + std::to_string(index));
+    Hyrise::get().storage_manager.drop_table(std::format("TableOfTestPlugin_{}", index));
   }
 }
 
@@ -53,7 +53,7 @@ void TestPlugin::a_user_executable_function() {
   const auto column_definitions = TableColumnDefinitions{{"col_A", DataType::Int, false}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  Hyrise::get().storage_manager.add_table("TableOfTestPlugin_" + std::to_string(_added_tables_count), table);
+  Hyrise::get().storage_manager.add_table(std::format("TableOfTestPlugin_{}", _added_tables_count), table);
   ++_added_tables_count;
 }
 

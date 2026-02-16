@@ -40,8 +40,8 @@ std::string Export::description(DescriptionMode description_mode) const {
 
   auto file_type = std::string{magic_enum::enum_name(_file_type)};
   boost::algorithm::to_lower(file_type);
-  return AbstractOperator::description(description_mode) + separator + "to '" + _filename + "'" + separator + "(" +
-         file_type + ")";
+  return AbstractOperator::description(description_mode) + separator + std::format("to '{}'", _filename) + separator +
+         std::format("({})", file_type);
 }
 
 std::shared_ptr<const Table> Export::_on_execute() {

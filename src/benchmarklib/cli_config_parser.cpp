@@ -43,9 +43,8 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   const auto enable_scheduler = parse_result["scheduler"].as<bool>();
   const auto cores = parse_result["cores"].as<uint32_t>();
   const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
-  const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
-  std::cout << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
-            << '\n';
+  const auto core_info = enable_scheduler ? std::format(" using {} cores", number_of_cores_str) : "";
+  std::cout << std::format("- Running in {}-threaded mode{}\n", (enable_scheduler ? "multi" : "single"), core_info);
   const auto data_preparation_cores = parse_result["data_preparation_cores"].as<uint32_t>();
   const auto number_of_data_preparation_cores_str =
       (data_preparation_cores == 0) ? "all available" : std::to_string(data_preparation_cores);
@@ -53,7 +52,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
             << (data_preparation_cores == 1 ? " core" : " cores") << '\n';
 
   const auto clients = parse_result["clients"].as<uint32_t>();
-  std::cout << "- " + std::to_string(clients) + " simulated ";
+  std::cout << std::format("- {} simulated", clients);
   std::cout << (clients == 1 ? "client is " : "clients are ") << "scheduling items";
   std::cout << (clients > 1 ? " in parallel" : "") << '\n';
 
@@ -78,7 +77,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   } else if (benchmark_mode_str == "Shuffled") {
     benchmark_mode = BenchmarkMode::Shuffled;
   } else {
-    throw std::runtime_error("Invalid benchmark mode: '" + benchmark_mode_str + "'");
+    throw std::runtime_error(std::format("Invalid benchmark mode: '{}'.", benchmark_mode_str));
   }
   std::cout << "- Running benchmark in '" << benchmark_mode_str << "' mode\n";
 

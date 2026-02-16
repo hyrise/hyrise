@@ -168,8 +168,8 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
       }
     }
     Assert(node->input_count() == num_expected_inputs,
-           std::format("Node '{}' has {} inputs, while {} were expected.", node->description(),
-                       std::to_string(node->input_count()), std::to_string(num_expected_inputs)));
+           std::format("Node '{}' has {} inputs, while {} were expected.", node->description(), node->input_count(),
+                       num_expected_inputs));
 
     for (const auto& uncorrelated_subquery : uncorrelated_subqueries_per_node(node)) {
       validate_lqp_with_uncorrelated_subqueries(uncorrelated_subquery, root_lqp, nodes_by_lqp);

@@ -104,7 +104,7 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
 
   auto sql_string_offset = size_t{0};
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
-    const auto item_name = item_name_prefix + '.' + std::to_string(statement_idx);
+    const auto item_name = std::format("{}.{}", item_name_prefix, statement_idx);
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;

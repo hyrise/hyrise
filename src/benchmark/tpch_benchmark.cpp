@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
     std::filesystem::create_directories(jcch_data_path_str.str());
     // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths:
     const auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
-    const auto jcch_tables_path = jcch_data_path.string() + "/tables";
+    const auto jcch_tables_path = std::format("{}/tables", jcch_data_path.string());
 
     std::cout << "- Using JCC-H dbgen from " << jcch_dbgen_path << '\n';
     std::cout << "- Storing JCC-H tables and query parameters in " << jcch_data_path << '\n';

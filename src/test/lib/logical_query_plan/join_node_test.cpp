@@ -184,9 +184,15 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{3}));
   EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{4}));
 
-  const auto lqp_left_join = ProjectionNode::make(
-      expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
-      JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b));
+  // NOLINTBEGIN(whitespace/line_length)
+  // clang-format off
+  const auto lqp_left_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
+    JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{0}));
   EXPECT_TRUE(lqp_left_join->is_column_nullable(ColumnID{1}));
@@ -194,9 +200,15 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{3}));
   EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{4}));
 
-  const auto lqp_right_join = ProjectionNode::make(
-      expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
-      JoinNode::make(JoinMode::Right, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b));
+  // NOLINTBEGIN(whitespace/line_length)
+  // clang-format off
+  const auto lqp_right_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
+    JoinNode::make(JoinMode::Right, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{0}));
   EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{1}));
@@ -204,9 +216,15 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{3}));
   EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{4}));
 
-  const auto lqp_full_join = ProjectionNode::make(
-      expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
-      JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b));
+  // NOLINTBEGIN(whitespace/line_length)
+  // clang-format off
+  const auto lqp_full_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),
+    JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{1}));

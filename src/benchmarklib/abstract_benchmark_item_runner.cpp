@@ -27,7 +27,7 @@ AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<B
 void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
     const std::filesystem::path& expected_results_directory_path) {
   Assert(std::filesystem::is_directory(expected_results_directory_path),
-         "Expected results path (" + expected_results_directory_path.string() + ") has to be a directory.");
+         std::format("Expected results path '{}' has to be a directory.", expected_results_directory_path.string()));
 
   _dedicated_expected_results.resize(items().size());
 
@@ -44,7 +44,7 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
       return this->item_name(item) == item_name;
     });
     if (iter != items().cend()) {
-      std::cout << "-  Loading result table " + file_path.string() << "\n";
+      std::cout << std::format("-  Loading result table '{}'\n", file_path.string());
       _dedicated_expected_results[*iter] = load_table(file_path.string());
     }
   }

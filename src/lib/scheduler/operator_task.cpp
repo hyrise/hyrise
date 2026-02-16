@@ -93,7 +93,7 @@ OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, SchedulePriorit
     : AbstractTask(priority, stealable), _op(std::move(op)) {}
 
 std::string OperatorTask::description() const {
-  return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();
+  return std::format("OperatorTask with id: {} for op: {}", id().t, _op->description());
 }
 
 std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>>

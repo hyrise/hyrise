@@ -136,18 +136,18 @@ bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
 
 std::ostream& operator<<(std::ostream& stream, const VariableLengthKeyBase& key) {
   stream << std::hex << std::setfill('0');
-  const auto* const rawdata = reinterpret_cast<uint8_t*>(key.data);
+  const auto* const raw_data = reinterpret_cast<uint8_t*>(key.data);
 
   if constexpr (std::endian::native == std::endian::little) {
     for (auto key_id = CompositeKeyLength{1}; key_id <= key.size; ++key_id) {
-      stream << std::setw(2) << +rawdata[key.size - key_id];
+      stream << std::setw(2) << +raw_data[key.size - key_id];
       if (key_id != key.size) {
         stream << ' ';
       }
     }
   } else {
     for (auto key_id = CompositeKeyLength{0}; key_id < key.size; ++key_id) {
-      stream << std::setw(2) << +rawdata[key_id];
+      stream << std::setw(2) << +raw_data[key_id];
       if (key_id != key.size - 1) {
         stream << ' ';
       }

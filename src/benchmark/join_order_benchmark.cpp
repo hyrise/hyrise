@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
    * Use a Python script to download and unzip the IMDB. We do this in Python and not in C++ because downloading and
    * unzipping is straight forward in Python (and we suspect in C++ it might be... cumbersome).
    */
-  const auto setup_imdb_command = "python3 scripts/setup_imdb.py " + table_path;
+  const auto setup_imdb_command = std::format("python3 scripts/setup_imdb.py {}", table_path);
   // On Linux, system is thread safe https://man7.org/linux/man-pages/man3/system.3.html
   // NOLINTNEXTLINE(concurrency-mt-unsafe)
   const auto setup_imdb_return_code = std::system(setup_imdb_command.c_str());
@@ -244,7 +244,8 @@ int main(int argc, char* argv[]) {
   Hyrise::get().benchmark_runner = benchmark_runner;
 
   if (benchmark_config->verify) {
-    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner->sqlite_wrapper);
+    add_indices_to_sqlite(std::format("{}/schema.sql", query_path), std::format("{}/fkindexes.sql", query_path),
+                          benchmark_runner->sqlite_wrapper);
   }
 
   std::cout << "done.\n";

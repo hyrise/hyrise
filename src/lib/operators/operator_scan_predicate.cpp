@@ -51,7 +51,7 @@ namespace hyrise {
 
 std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
                                                       const std::shared_ptr<const Table>& table) const {
-  std::string column_name_left = std::string("Column #") + std::to_string(column_id);
+  std::string column_name_left = std::format("Column #{}", column_id.t);
   if (table) {
     column_name_left = table->column_name(column_id);
   }

@@ -48,8 +48,7 @@ class AbstractSegmentIterator
     : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {
   AbstractSegmentIterator() = default;
   friend Derived;
-  template <typename D, typename V, typename I>
-  friend class AbstractPointAccessSegmentIterator;
+  friend AbstractPointAccessSegmentIterator<Derived, Value, AbstractPosList::PosListIterator<>>;
 };
 
 /**

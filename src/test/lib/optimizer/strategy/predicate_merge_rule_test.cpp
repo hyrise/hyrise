@@ -279,15 +279,27 @@ TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
 }
 
 TEST_F(PredicateMergeRuleTest, MergeSimpleNestedConjunctionsAndDisjunctions) {
+  // NOLINTBEGIN(whitespace/line_length)
+  // clang-format off
   const auto lower_union_node =
-      UnionNode::make(SetOperationMode::Positions, PredicateNode::make(greater_than_(a_a, 10), node_a),
-                      PredicateNode::make(less_than_(a_a, 8), node_a));
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(greater_than_(a_a, 10),
+      node_a),
+    PredicateNode::make(less_than_(a_a, 8),
+      node_a));
 
-  _lqp = UnionNode::make(SetOperationMode::Positions, PredicateNode::make(less_than_equals_(a_b, 7), lower_union_node),
-                         PredicateNode::make(equals_(11, a_b), lower_union_node));
+  _lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(less_than_equals_(a_b, 7),
+      lower_union_node),
+    PredicateNode::make(equals_(11, a_b),
+      lower_union_node));
 
-  const auto expected_lqp = PredicateNode::make(
-      and_(or_(greater_than_(a_a, 10), less_than_(a_a, 8)), or_(less_than_equals_(a_b, 7), equals_(11, a_b))), node_a);
+  const auto expected_lqp =
+  PredicateNode::make(and_(or_(greater_than_(a_a, 10), less_than_(a_a, 8)), or_(less_than_equals_(a_b, 7), equals_(11, a_b))),
+    node_a);
+  // clang-format on
+  // NOLINTEND(whitespace/line_length)
 
   _apply_rule(rule, _lqp);
 

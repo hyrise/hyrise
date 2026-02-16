@@ -18,9 +18,7 @@ LimitNode::LimitNode(const std::shared_ptr<AbstractExpression>& num_rows_express
 std::string LimitNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
-  auto stream = std::stringstream{};
-  stream << "[Limit] " << num_rows_expression()->description(expression_mode);
-  return stream.str();
+  return std::format("[Limit] {}", num_rows_expression()->description(expression_mode));
 }
 
 UniqueColumnCombinations LimitNode::unique_column_combinations() const {

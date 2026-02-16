@@ -90,8 +90,8 @@ size_t PreparedPlan::hash() const {
 std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
     const std::vector<std::shared_ptr<AbstractExpression>>& parameters) const {
   Assert(parameters.size() == parameter_ids.size(),
-         std::format("Incorrect number of parameters supplied - expected {} got {}",
-                     std::to_string(parameter_ids.size()), std::to_string(parameters.size())));
+         std::format("Incorrect number of parameters supplied: expected {} got {}.", parameter_ids.size(),
+                     parameters.size()));
 
   auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
   for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {

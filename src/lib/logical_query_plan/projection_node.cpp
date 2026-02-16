@@ -21,10 +21,7 @@ ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpress
 
 std::string ProjectionNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
-
-  auto stream = std::stringstream{};
-  stream << "[Projection] " << expression_descriptions(node_expressions, expression_mode);
-  return stream.str();
+  return std::format("[Projection] {}", expression_descriptions(node_expressions, expression_mode));
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::output_expressions() const {

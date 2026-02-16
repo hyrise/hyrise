@@ -23,7 +23,7 @@ IntersectNode::IntersectNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Intersect), set_operation_mode(init_operation_mode) {}
 
 std::string IntersectNode::description(const DescriptionMode /*mode*/) const {
-  return "[IntersectNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
+  return std::format("[IntersectNode] Mode: {}", magic_enum::enum_name(set_operation_mode));
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> IntersectNode::output_expressions() const {

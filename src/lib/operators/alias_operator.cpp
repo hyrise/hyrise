@@ -37,7 +37,7 @@ std::string AliasOperator::description(DescriptionMode description_mode) const {
   auto stream = std::stringstream{};
 
   stream << AbstractOperator::description(description_mode) << separator;
-  stream << "[" << boost::algorithm::join(_aliases, ", ") << "]";
+  stream << std::format("[{}]", boost::algorithm::join(_aliases, ", "));
   return stream.str();
 }
 

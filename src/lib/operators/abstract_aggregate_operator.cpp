@@ -59,7 +59,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
     if (lqp_node) {
       description << lqp_node->left_input()->output_expressions()[group_by_column_id]->as_column_name();
     } else {
-      description << "Column #" + std::to_string(group_by_column_id);
+      description << std::format("Column #{}", group_by_column_id);
     }
   }
   description << "}" << separator;

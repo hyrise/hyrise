@@ -520,8 +520,8 @@ nlohmann::json BenchmarkRunner::_create_report() const {
   // We have to use system_clock here, as the LogManager uses it to provide human-readable timestamps.
   // Because the system_clock can be readjusted anytime, the timestamps could be slightly out of line.
   const auto benchmark_start_ns = std::chrono::nanoseconds{_benchmark_wall_clock_start.time_since_epoch()}.count();
-  auto log_json = _sql_to_json(std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
-                               " AS \"timestamp\", log_level, reporter, message FROM meta_log");
+  auto log_json = _sql_to_json(std::format(
+      "SELECT \"timestamp\" - {} AS \"timestamp\", log_level, reporter, message FROM meta_log", benchmark_start_ns));
 
   auto report = nlohmann::json{{"context", _context},
                                {"benchmarks", std::move(benchmarks)},
@@ -575,9 +575,9 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("w,warmup", "Number of seconds that each item is run for warm up. Warming up also caches the query plans", cxxopts::value<uint64_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode))
-    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + all_encoding_options(), cxxopts::value<std::string>()->default_value("Automatic"))  // NOLINT(whitespace/line_length)
+    ("e,encoding", std::format("Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: {}", all_encoding_options()), cxxopts::value<std::string>()->default_value("Automatic"))  // NOLINT(whitespace/line_length)
     ("p,plugins", "Specify plugins to be loaded and execute their pre-/post-benchmark hooks (comma-separated paths to shared libraries w/o whitespaces)", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
-    ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
+    ("compression", std::format("Specify vector compression as a string. Options: {}", compression_strings_option), cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("chunk_indexes", "Create chunk indexes (separate index per chunk; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("table_indexes", "Create table indexes (index per table column; columns defined by benchmark)", cxxopts::value<bool>()->default_value(default_table_indexes))  // NOLINT(whitespace/line_length)
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false"))
@@ -628,7 +628,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
                         {"data_preparation_cores", config.data_preparation_cores},
                         {"verify", config.verify},
                         {"time_unit", "ns"},
-                        {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
+                        {"GIT-HASH", GIT_IS_DIRTY ? std::format("{}-dirty", GIT_HEAD_SHA1) : GIT_HEAD_SHA1}};
 }
 
 nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {

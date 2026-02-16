@@ -138,15 +138,9 @@ bool TPCCPayment::_on_execute() {
 
   // Retrieve C_CREDIT and check for "bad credit".
   if (*customer_table->get_value<pmr_string>(ColumnID{11}, customer_offset) == "BC") {
-    auto new_c_data_stream = std::stringstream{};
-    new_c_data_stream << *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);  // C_ID
-    new_c_data_stream << c_d_id;
-    new_c_data_stream << c_w_id;
-    new_c_data_stream << d_id;
-    new_c_data_stream << w_id;
-    new_c_data_stream << h_amount;
-    new_c_data_stream << *customer_table->get_value<pmr_string>(ColumnID{15}, customer_offset);  // C_DATA
-    auto new_c_data = new_c_data_stream.str();
+    const auto c_id = *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
+    const auto c_data = *customer_table->get_value<pmr_string>(ColumnID{15}, customer_offset);
+    auto new_c_data = std::format("{}{}{}{}{}{}{}", c_id, c_d_id, c_w_id, d_id, w_id, h_amount, c_data);
     new_c_data.resize(std::min(new_c_data.size(), size_t{500}));
     const auto customer_update_data_pair = _sql_executor.execute(
         std::string{"UPDATE CUSTOMER SET C_DATA = '"} + new_c_data + "' WHERE C_W_ID = " + std::to_string(w_id) +

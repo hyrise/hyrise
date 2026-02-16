@@ -32,9 +32,7 @@ std::shared_ptr<AbstractExpression> IntervalExpression::_on_deep_copy(
 }
 
 std::string IntervalExpression::description(const DescriptionMode /*mode*/) const {
-  auto stream = std::stringstream{};
-  stream << "INTERVAL '" << duration << "' " << magic_enum::enum_name(unit);
-  return stream.str();
+  return std::format("INTERVAL '{}' {}", duration, magic_enum::enum_name(unit));
 }
 
 bool IntervalExpression::_shallow_equals(const AbstractExpression& expression) const {

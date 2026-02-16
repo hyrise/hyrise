@@ -260,7 +260,7 @@ void AbstractTableGenerator::generate_and_store() {
         Fail(
             std::format("Table '{}' was loaded from binary, but has a mismatching chunk size of '{}'. Delete cached "
                         "files or use '--dont_cache_binary_tables'.",
-                        table_name, std::to_string(table->get_chunk(ChunkID{0})->size())));
+                        table_name, table->get_chunk(ChunkID{0})->size()));
       }
     }
 
@@ -308,8 +308,7 @@ void AbstractTableGenerator::generate_and_store() {
           storage_manager.drop_table(table_name);
         }
         storage_manager.add_table(table_name, table_info.table);
-        const auto output =
-            std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
+        const auto output = std::format("-  Added '{}' ({})\n", table_name, per_table_timer.lap_formatted());
         std::cout << output << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(add_table));

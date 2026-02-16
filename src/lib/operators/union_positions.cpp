@@ -348,11 +348,11 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
           Assert(ref_segment->referenced_table() == _referenced_tables[next_cluster_id - 1],
                  std::format("ReferenceSegment (Chunk: {}, Column: {}) does not reference the same table as the "
                              "segment at the same index in the first chunk of the left input table does.",
-                             std::to_string(chunk_id), std::to_string(column_id)));
+                             chunk_id.t, column_id.t));
           Assert(ref_segment->referenced_column_id() == _referenced_column_ids[column_id],
                  std::format("ReferenceSegment (Chunk: {}, Column: {}) does not reference the same column as the "
                              "segment at the same index in the first chunk of the left input table does.",
-                             std::to_string(chunk_id), std::to_string(column_id)));
+                             chunk_id.t, column_id.t));
           Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster.");
         }
       }

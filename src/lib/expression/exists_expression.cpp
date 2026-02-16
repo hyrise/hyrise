@@ -28,10 +28,8 @@ std::shared_ptr<AbstractExpression> ExistsExpression::subquery() const {
 }
 
 std::string ExistsExpression::description(const DescriptionMode mode) const {
-  auto stream = std::stringstream{};
-  stream << (exists_expression_type == ExistsExpressionType::Exists ? "EXISTS" : "NOT EXISTS");
-  stream << "(" << subquery()->description(mode) << ")";
-  return stream.str();
+  return std::format("{}({})", exists_expression_type == ExistsExpressionType::Exists ? "EXISTS" : "NOT EXISTS",
+                     subquery()->description(mode));
 }
 
 std::shared_ptr<AbstractExpression> ExistsExpression::_on_deep_copy(

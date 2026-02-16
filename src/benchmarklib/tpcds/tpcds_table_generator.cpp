@@ -204,7 +204,7 @@ std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& ad
     return pmr_string{address.street_name1};
   }
 
-  return pmr_string{address.street_name1} + " " + address.street_name2;
+  return pmr_string{std::format("{} {}", address.street_name1, address.street_name2)};
 }
 
 // Mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
@@ -307,7 +307,7 @@ TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor,
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCDSTableGenerator::generate() {
-  const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);
+  const auto cache_directory = std::format("tpcds_cached_tables/sf-{}", _scale_factor);
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     return _load_binary_tables_from_path(cache_directory);
   }
@@ -692,7 +692,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows)
   for (auto date_index = ds_key_t{0}; date_index < date_count; ++date_index) {
     const auto date = call_dbgen_mk<W_DATE_TBL, &mk_w_date, DATE>(date_first + date_index);
 
-    auto quarter_name = pmr_string{std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy)};
+    auto quarter_name = pmr_string{std::format("{}Q{}", date.d_year, date.d_qoy)};
 
     date_builder.append_row(
         date.d_date_sk, date.d_date_id,

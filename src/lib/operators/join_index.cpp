@@ -272,11 +272,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
   if (join_index_performance_data.chunks_scanned_with_index <
       join_index_performance_data.chunks_scanned_without_index) {
-    PerformanceWarning(std::string("Only ") + std::to_string(join_index_performance_data.chunks_scanned_with_index) +
-                       " of " +
-                       std::to_string(join_index_performance_data.chunks_scanned_with_index +
-                                      join_index_performance_data.chunks_scanned_without_index) +
-                       " chunks processed using an index.");
+    PerformanceWarning(std::format("Only {} of {} chunks processed using an index",
+                                   join_index_performance_data.chunks_scanned_with_index,
+                                   join_index_performance_data.chunks_scanned_with_index +
+                                       join_index_performance_data.chunks_scanned_without_index));
   }
 
   auto chunks = std::vector<std::shared_ptr<Chunk>>{};

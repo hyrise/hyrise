@@ -49,8 +49,9 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   SegmentAccessor(const SegmentAccessor&) = default;
   SegmentAccessor(SegmentAccessor&&) = default;
-  SegmentAccessor& operator=(const SegmentAccessor&) = default;
-  SegmentAccessor& operator=(SegmentAccessor&&) = default;
+  // These are deleted because `_segment` is a const reference
+  SegmentAccessor& operator=(const SegmentAccessor&) = delete;
+  SegmentAccessor& operator=(SegmentAccessor&&) = delete;
 
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 

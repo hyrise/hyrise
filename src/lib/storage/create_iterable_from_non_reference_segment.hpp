@@ -26,9 +26,9 @@ class LZ4Segment;
  * These methods cannot be part of the segments' interfaces because reference segment are not templated and thus don’t
  * know their type. All iterables implement the same interface using static polymorphism (i.e. the CRTP pattern, see
  * segment_iterables/.hpp). In debug mode, create_iterable_from_segment returns a type erased iterable, i.e., all
- * iterators have the same type Functions must be forward-declared because otherwise, we run into circular include
+ * iterators have the same type. Functions must be forward-declared because otherwise, we run into circular include
  * dependencies.
- * 
+ *
  * @{
  */
 

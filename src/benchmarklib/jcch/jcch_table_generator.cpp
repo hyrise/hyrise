@@ -25,7 +25,7 @@ JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std:
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : TPCHTableGenerator(scale_factor, clustering_configuration, benchmark_config),
       _dbgen_path(dbgen_path),
-      _file_based_table_generator(benchmark_config, data_path + "/") {}
+      _file_based_table_generator(benchmark_config, std::format("{}/", data_path)) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate() {
   auto table_names = std::vector<std::string>{};

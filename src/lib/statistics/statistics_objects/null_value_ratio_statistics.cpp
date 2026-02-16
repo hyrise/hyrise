@@ -27,7 +27,7 @@ std::shared_ptr<const AbstractStatisticsObject> NullValueRatioStatistics::sliced
 std::shared_ptr<const AbstractStatisticsObject> NullValueRatioStatistics::pruned(
     const size_t /* num_values_pruned */, const PredicateCondition /* predicate_condition */,
     const AllTypeVariant& /* variant_value */, const std::optional<AllTypeVariant>& /* variant_value2 */) const {
-  Fail("Pruning has not yet been implemented for the NullValueRatioStatistics object");
+  Fail("Pruning is not implemented for the NullValueRatioStatistics object.");
 }
 
 std::shared_ptr<const AbstractStatisticsObject> NullValueRatioStatistics::scaled(

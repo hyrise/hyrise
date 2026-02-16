@@ -24,9 +24,7 @@ std::shared_ptr<AbstractExpression> PlaceholderExpression::_on_deep_copy(
 }
 
 std::string PlaceholderExpression::description(const DescriptionMode /*mode*/) const {
-  auto stream = std::stringstream{};
-  stream << "Placeholder[ParameterID=" << std::to_string(parameter_id) << "]";
-  return stream.str();
+  return std::format("Placeholder[ParameterID={}]", parameter_id.t);
 }
 
 bool PlaceholderExpression::requires_computation() const {

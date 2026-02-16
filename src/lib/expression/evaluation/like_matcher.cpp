@@ -50,7 +50,7 @@ std::string sql_like_to_regex(pmr_string sql_like) {
     boost::replace_all(sql_like, original, replacement);
   }
 
-  return std::string{"^" + sql_like + "$"};
+  return std::format("^{}$", sql_like);
 }
 
 }  // namespace

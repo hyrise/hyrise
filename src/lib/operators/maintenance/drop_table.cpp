@@ -22,7 +22,7 @@ const std::string& DropTable::name() const {
 }
 
 std::string DropTable::description(DescriptionMode description_mode) const {
-  return AbstractOperator::description(description_mode) + " '" + table_name + "'";
+  return AbstractOperator::description(description_mode) + std::format(" '{}'", table_name);
 }
 
 std::shared_ptr<const Table> DropTable::_on_execute() {

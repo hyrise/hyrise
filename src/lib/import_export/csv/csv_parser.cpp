@@ -225,8 +225,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
       }
     }
   } catch (const std::exception& exception) {
-    Fail(std::format("Exception while parsing CSV, row {}, column {}:\n{}", std::to_string(row_id),
-                     std::to_string(column_id), exception.what()));
+    Fail(std::format("Exception while parsing CSV, row {}, column {}:\n{}", row_id.t, column_id.t, exception.what()));
   }
 
   // Transform the field_offsets to segments and add segments to chunk.

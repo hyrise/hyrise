@@ -31,15 +31,8 @@ std::shared_ptr<AbstractExpression> IsNullExpression::_on_deep_copy(
 }
 
 std::string IsNullExpression::description(const DescriptionMode mode) const {
-  auto stream = std::stringstream{};
-
-  if (predicate_condition == PredicateCondition::IsNull) {
-    stream << _enclose_argument(*operand(), mode) << " IS NULL";
-  } else {
-    stream << _enclose_argument(*operand(), mode) << " IS NOT NULL";
-  }
-
-  return stream.str();
+  return std::format("{} IS {}NULL", _enclose_argument(*operand(), mode),
+                     predicate_condition == PredicateCondition::IsNull ? "" : "NOT ");
 }
 
 ExpressionPrecedence IsNullExpression::_precedence() const {

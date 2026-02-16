@@ -145,8 +145,7 @@ namespace hyrise {
 // See also https://www.sqlite.org/inmemorydb.html, starting at "If two or more distinct but shareable
 // in-memory databases"
 SQLiteWrapper::SQLiteWrapper()
-    : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(reinterpret_cast<uintptr_t>(this)) +
-           "?mode=memory&cache=shared"},
+    : _uri{std::format("file:sqlitewrapper_{}?mode=memory&cache=shared", reinterpret_cast<uintptr_t>(this))},
       main_connection{_uri} {
   Assert(sqlite3_threadsafe(), "Expected sqlite to be compiled with thread safety.");
 }
@@ -157,7 +156,7 @@ SQLiteWrapper::Connection::Connection(const std::string& uri) {
       sqlite3_open_v2(uri.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr);
   if (ret != SQLITE_OK) {
     sqlite3_close(db);
-    Fail(std::format("Cannot open database '{}'.", std::string(sqlite3_errmsg(db))));
+    Fail(std::format("Cannot open database: {}", sqlite3_errmsg(db)));
   }
 
   // Make LIKE case sensitive, just like in Hyrise
@@ -208,7 +207,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
     if (return_code != SQLITE_OK) {
       sqlite3_finalize(sqlite_statement);
-      Fail(std::format("Failed to execute query \"{}\": '{}'.", query, std::string(sqlite3_errmsg(db))));
+      Fail(std::format("Failed to execute query '{}': {}", query, sqlite3_errmsg(db)));
     }
 
     while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {}
@@ -217,7 +216,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
   return_code = sqlite3_prepare_v2(db, select_query.c_str(), -1, &sqlite_statement, nullptr);
 
   if (return_code != SQLITE_OK) {
-    auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(db)) + ".";
+    const auto error_message = std::format("Failed to execute query '{}': {}", select_query, sqlite3_errmsg(db));
     sqlite3_finalize(sqlite_statement);
     Fail(error_message);
   }
@@ -251,7 +250,7 @@ void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql) const 
   if (return_code != SQLITE_OK) {
     auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
-    Fail(std::format("Failed to execute query \"{}\". SQL error: '{}'\n", sql, msg));
+    Fail(std::format("Failed to execute query '{}'. SQL error: {}", sql, msg));
   }
 }
 
@@ -278,7 +277,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   }
 
   // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape all table names.
-  const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+  const auto escaped_table_name = std::format("\"{}\"", table_name);
 
   auto create_table_query = std::stringstream{};
   create_table_query << "CREATE TABLE " << escaped_table_name << "(";
@@ -310,7 +309,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
       sqlite3_prepare_v2(main_connection.db, insert_into_str.c_str(), static_cast<int>(insert_into_str.size() + 1),
                          &insert_into_statement, nullptr);
   Assert(sqlite3_prepare_return_code == SQLITE_OK,
-         std::format("Failed to prepare statement: '{}'.", std::string(sqlite3_errmsg(main_connection.db))));
+         std::format("Failed to prepare statement: {}", sqlite3_errmsg(main_connection.db)));
 
   // Insert values row-by-row
   const auto chunk_count = table.chunk_count();
@@ -352,12 +351,9 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
               break;
             case DataType::String: {
               const auto& string_value = boost::get<pmr_string>(value);
-              // clang-tidy doesn't like SQLITE_TRANSIENT
-              // NOLINTBEGIN(whitespace/line_length)
-              // clang-format off
-              sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), static_cast<int>(string_value.size()), SQLITE_TRANSIENT);
-              // clang-format on
-              // NOLINTEND(whitespace/line_length)
+              sqlite3_bind_return_code =
+                  sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(),
+                                    static_cast<int>(string_value.size()), SQLITE_TRANSIENT);
             } break;
             case DataType::Null:
               Fail("SQLiteWrapper: column type not supported.");
@@ -366,16 +362,16 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
         }
 
         Assert(sqlite3_bind_return_code == SQLITE_OK,
-               std::format("Failed to bind value: '{}'.", std::string(sqlite3_errmsg(main_connection.db))));
+               std::format("Failed to bind value: {}", sqlite3_errmsg(main_connection.db)));
       }
 
       const auto sqlite3_step_return_code = sqlite3_step(insert_into_statement);
       Assert(sqlite3_step_return_code == SQLITE_DONE,
-             std::format("Failed to step INSERT: '{}'.", std::string(sqlite3_errmsg(main_connection.db))));
+             std::format("Failed to step INSERT: {}", sqlite3_errmsg(main_connection.db)));
 
       const auto sqlite3_reset_return_code = sqlite3_reset(insert_into_statement);
       Assert(sqlite3_reset_return_code == SQLITE_OK,
-             std::format("Failed to reset statement: '{}'", std::string(sqlite3_errmsg(main_connection.db))));
+             std::format("Failed to reset statement: {}", sqlite3_errmsg(main_connection.db)));
     }
   }
 

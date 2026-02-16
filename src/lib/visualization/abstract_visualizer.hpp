@@ -175,7 +175,7 @@ class AbstractVisualizer {
     auto renderer = _graphviz_config.renderer;
     auto format = _graphviz_config.format;
 
-    auto cmd = renderer + " -T" + format + " \"" + tmpname + "\" > \"" + img_filename + "\"";
+    auto cmd = std::format("({} -T{} '{}' > '{}')", renderer, format, tmpname, img_filename);
     // On Linux, system is thread safe https://man7.org/linux/man-pages/man3/system.3.html
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     auto ret = system(cmd.c_str());

@@ -130,7 +130,7 @@ CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_
 std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::DummyStatistics::pruned(
     const size_t /* num_values_pruned */, const PredicateCondition /* predicate_condition */,
     const AllTypeVariant& /* variant_value */, const std::optional<AllTypeVariant>& /* variant_value2 */) const {
-  Fail("Pruning has not yet been implemented for the DummyStatistics object");
+  Fail("Pruning is not implemented for the DummyStatistics object.");
 }
 
 DataType CardinalityEstimator::DummyStatistics::data_type() const {

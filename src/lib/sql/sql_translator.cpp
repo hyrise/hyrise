@@ -217,7 +217,7 @@ std::vector<std::shared_ptr<AbstractExpression>> unwrap_elements(
 }
 
 std::string trim_meta_table_name(const std::string& name) {
-  DebugAssert(MetaTableManager::is_meta_table_name(name), name + " is not a meta table name.");
+  DebugAssert(MetaTableManager::is_meta_table_name(name), std::format("'{}' is not a meta table name.", name));
   return name.substr(MetaTableManager::META_PREFIX.size());
 }
 
@@ -1428,8 +1428,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
                                           [&](const auto& group_by_expression) {
                                             return *pre_aggregate_expression == *group_by_expression;
                                           }),
-                      std::string("Expression ") + pre_aggregate_expression->as_column_name() +
-                          " was added to SELECT list when resolving *, but it is not part of the GROUP BY clause.");
+                      std::format("Expression '{}' was added to SELECT list when resolving *, but it is not part of "
+                                  "the GROUP BY clause.",
+                                  pre_aggregate_expression->as_column_name()));
         }
       }
 
@@ -1753,7 +1754,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
       // Resolve column IDs
       DebugAssert(table_constraint->columnNames,
-                  std::string{magic_enum::enum_name(constraint_type)} + " table constraint must contain columns.");
+                  std::format("{} table constraint must contain columns.", magic_enum::enum_name(constraint_type)));
       auto column_ids = std::set<ColumnID>{};
       for (const auto& constraint_column_name : *table_constraint->columnNames) {
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
@@ -1770,9 +1771,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           }
         }
       }
-      AssertInput(column_ids.size() == table_constraint->columnNames->size(),
-                  std::format("Could not resolve columns of '{}' table constraint.",
-                              std::string{magic_enum::enum_name(constraint_type)}));
+      AssertInput(
+          column_ids.size() == table_constraint->columnNames->size(),
+          std::format("Could not resolve columns of '{}' table constraint.", magic_enum::enum_name(constraint_type)));
       table_key_constraints.emplace(std::move(column_ids), constraint_type);
       std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " table constraint will not be enforced.\n";
     }
@@ -1854,7 +1855,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   auto encoding = std::optional<EncodingType>{};
   if (import_statement.encoding) {
     encoding = magic_enum::enum_cast<EncodingType>(import_statement.encoding);
-    AssertInput(encoding, std::format("Unknown encoding type '{}'.", std::string{import_statement.encoding}));
+    AssertInput(encoding, std::format("Unknown encoding type '{}'.", import_statement.encoding));
   }
 
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
@@ -2365,12 +2366,11 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       if (target_hsql_data_type == hsql::DataType::DATE || target_hsql_data_type == hsql::DataType::DATETIME) {
         AssertInput(source_data_type == DataType::String,
                     std::format("Cannot cast '{}' as '{}'", left->as_column_name(),
-                                std::string{magic_enum::enum_name(target_hsql_data_type)}));
+                                magic_enum::enum_name(target_hsql_data_type)));
         // We do not know if an expression to be casted other than a ValueExpression actually contains date time
         // values, and we cannot check this later due to the lack of proper data types.
-        AssertInput(left->type == ExpressionType::Value,
-                    std::format("Only ValueExpressions can be casted as '{}'",
-                                std::string{magic_enum::enum_name(target_hsql_data_type)}));
+        AssertInput(left->type == ExpressionType::Value, std::format("Only ValueExpressions can be casted as '{}'",
+                                                                     magic_enum::enum_name(target_hsql_data_type)));
         const auto input_string = std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
 
         if (target_hsql_data_type == hsql::DataType::DATE) {
@@ -2392,9 +2392,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       }
 
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
-      AssertInput(
-          data_type_iter != supported_hsql_data_types.cend(),
-          std::format("CAST as '{}' is not supported.", std::string{magic_enum::enum_name(expr.columnType.data_type)}));
+      AssertInput(data_type_iter != supported_hsql_data_types.cend(),
+                  std::format("CAST as '{}' is not supported.", magic_enum::enum_name(expr.columnType.data_type)));
       const auto target_data_type = data_type_iter->second;
       // Omit redundant casts
       if (source_data_type == target_data_type) {

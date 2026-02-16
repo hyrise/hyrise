@@ -72,8 +72,8 @@ std::string TableScan::description(DescriptionMode description_mode) const {
   auto stream = std::stringstream{};
 
   stream << AbstractOperator::description(description_mode) << separator;
-  stream << "Impl: " << _impl_description;
-  stream << separator << _predicate->as_column_name();
+  stream << std::format("Impl: {}", _impl_description) << separator;
+  stream << _predicate->as_column_name();
 
   return stream.str();
 }

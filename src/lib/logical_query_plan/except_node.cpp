@@ -23,7 +23,7 @@ ExceptNode::ExceptNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Except), set_operation_mode(init_operation_mode) {}
 
 std::string ExceptNode::description(const DescriptionMode /*mode*/) const {
-  return "[ExceptNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
+  return std::format("[ExceptNode] Mode: {}", magic_enum::enum_name(set_operation_mode));
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> ExceptNode::output_expressions() const {

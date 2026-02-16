@@ -15,7 +15,7 @@ DropViewNode::DropViewNode(const std::string& init_view_name, const bool init_if
     : AbstractNonQueryNode(LQPNodeType::DropView), view_name(init_view_name), if_exists(init_if_exists) {}
 
 std::string DropViewNode::description(const DescriptionMode /*mode*/) const {
-  return std::string{"[Drop] View: '"} + view_name + "'";
+  return std::format("[Drop] View: '{}'", view_name);
 }
 
 size_t DropViewNode::_on_shallow_hash() const {

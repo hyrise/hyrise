@@ -265,7 +265,7 @@ ChunkOffset Table::target_chunk_size() const {
 }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", std::to_string(chunk_id)));
+  DebugAssert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", chunk_id.t));
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks[chunk_id];
@@ -275,7 +275,7 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
-  DebugAssert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", std::to_string(chunk_id)));
+  DebugAssert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", chunk_id.t));
   if (_type == TableType::References) {
     // see comment in non-const function
     return _chunks[chunk_id];
@@ -297,7 +297,7 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
 void Table::remove_chunk(ChunkID chunk_id) {
   Assert(_type == TableType::Data, "Removing chunks from other tables than data tables is not intended yet.");
   if constexpr (HYRISE_DEBUG) {
-    Assert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", std::to_string(chunk_id)));
+    Assert(chunk_id < _chunks.size(), std::format("ChunkID {} out of range.", chunk_id.t));
     const auto chunk = get_chunk(chunk_id);
     Assert(chunk && chunk->invalid_row_count() == chunk->size(),
            "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
