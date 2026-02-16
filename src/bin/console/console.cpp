@@ -1104,8 +1104,9 @@ char* Console::_command_generator(const char* text, int state, const std::vector
     it = commands.begin();
   }
 
-  for (; it != commands.end(); ++it) {
+  while (it != commands.end()) {
     const auto& command = *it;
+    ++it;
     if (command.find(text) != std::string::npos) {
       auto* completion = new char[command.size()];  // NOLINT(cppcoreguidelines-owning-memory)
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
