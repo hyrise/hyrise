@@ -94,9 +94,10 @@ int main(int argc, char* argv[]) {
   const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
 
   // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
-  std::filesystem::create_directories(std::format("ssb_data/sf-{}", scale_factor));
+  const auto ssb_data_path_str = std::format("ssb_data/sf-{}", scale_factor);
+  std::filesystem::create_directories(ssb_data_path_str);
   // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths.
-  const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str.str());
+  const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str);
 
   std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << '\n';
   std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';

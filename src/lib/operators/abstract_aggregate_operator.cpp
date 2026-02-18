@@ -1,6 +1,7 @@
 #include "abstract_aggregate_operator.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <sstream>
 #include <string>

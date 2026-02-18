@@ -1,5 +1,6 @@
 #include "drop_table.hpp"
 
+#include <format>
 #include <memory>
 #include <string>
 #include <unordered_map>

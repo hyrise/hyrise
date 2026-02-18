@@ -1,5 +1,6 @@
 #include "ssb_table_generator.hpp"
 
+#include <format>
 #include <memory>
 #include <string>
 #include <unordered_map>

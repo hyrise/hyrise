@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <format>
 #include <optional>
 #include <ostream>
 #include <regex>

@@ -1,6 +1,7 @@
 #include "lqp_visualizer.hpp"
 
 #include <cmath>
+#include <format>
 #include <iomanip>
 #include <ios>
 #include <locale>

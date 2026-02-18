@@ -1,6 +1,7 @@
 #include "abstract_task.hpp"
 
 #include <atomic>
+#include <format>
 #include <functional>
 #include <memory>
 #include <mutex>

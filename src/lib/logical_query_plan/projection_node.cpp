@@ -1,7 +1,7 @@
 #include "projection_node.hpp"
 
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 

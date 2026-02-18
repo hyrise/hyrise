@@ -1,6 +1,7 @@
 #include "benchmark_sql_executor.hpp"
 
 #include <filesystem>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <optional>

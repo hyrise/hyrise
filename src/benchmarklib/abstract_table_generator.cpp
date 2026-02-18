@@ -6,7 +6,6 @@
 #include <memory>
 #include <numeric>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -260,7 +259,7 @@ void AbstractTableGenerator::generate_and_store() {
         Fail(
             std::format("Table '{}' was loaded from binary, but has a mismatching chunk size of '{}'. Delete cached "
                         "files or use '--dont_cache_binary_tables'.",
-                        table_name, table->get_chunk(ChunkID{0})->size()));
+                        table_name, table->get_chunk(ChunkID{0})->size().t));
       }
     }
 

@@ -1,8 +1,8 @@
 #include "exists_expression.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 

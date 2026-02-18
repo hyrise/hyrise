@@ -7,7 +7,6 @@
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -789,8 +788,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
           try {
             values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
           } catch (boost::bad_lexical_cast& /* exception */) {
-            Fail(std::format("Cannot cast '{}' as {}", argument_value,
-                             magic_enum::enum_name(cast_expression.data_type())));
+            auto error_message = std::stringstream{};
+            error_message << "Cannot cast '" << argument_value << "' as "
+                          << magic_enum::enum_name(cast_expression.data_type());
+            Fail(error_message.str());
           }
         }
       }

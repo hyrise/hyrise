@@ -1,9 +1,9 @@
 #include "predicate_node.hpp"
 
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <memory>
-#include <sstream>
 #include <string>
 
 #include "expression/expression_utils.hpp"

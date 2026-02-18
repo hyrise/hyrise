@@ -4,11 +4,11 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <thread>
 #include <vector>
 

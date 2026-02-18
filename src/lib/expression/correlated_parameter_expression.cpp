@@ -1,9 +1,9 @@
 #include "correlated_parameter_expression.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 

@@ -1,7 +1,7 @@
 #include "is_null_expression.hpp"
 
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 

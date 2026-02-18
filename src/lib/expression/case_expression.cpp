@@ -1,7 +1,7 @@
 #include "case_expression.hpp"
 
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 

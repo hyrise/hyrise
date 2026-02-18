@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <format>
 #include <memory>
 #include <string>
 #include <unordered_map>

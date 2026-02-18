@@ -1,6 +1,7 @@
 #include "query_handler.hpp"
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <sstream>
 #include <string>

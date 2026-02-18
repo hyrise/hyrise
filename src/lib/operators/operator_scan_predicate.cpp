@@ -1,5 +1,6 @@
 #include "operator_scan_predicate.hpp"
 
+#include <format>
 #include <memory>
 #include <optional>
 #include <ostream>

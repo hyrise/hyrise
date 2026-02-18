@@ -3,7 +3,6 @@
 #include <atomic>
 #include <format>
 #include <ostream>
-#include <string>
 
 #include "types.hpp"
 #include "utils/assert.hpp"

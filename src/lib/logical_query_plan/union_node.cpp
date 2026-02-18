@@ -1,6 +1,7 @@
 #include "union_node.hpp"
 
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <memory>
 #include <string>

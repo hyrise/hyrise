@@ -1,5 +1,6 @@
 #include "operator_task.hpp"
 
+#include <format>
 #include <memory>
 #include <string>
 #include <unordered_set>
