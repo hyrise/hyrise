@@ -310,12 +310,12 @@ std::optional<CsvParseConfig> process_sql_csv_options(hsql::CsvOptions* csv_opti
   }
   auto csv_parse_config = CsvParseConfig{};
   if (csv_options->delimiter) {
-    AssertInput(strnlen(csv_options->delimiter, 2) == 1, "CSV delimiter should be exactly one char.");
+    AssertInput(strnlen(csv_options->delimiter, 2) == 1, "CSV delimiter should be exactly one character.");
     // Postgres calls the char between columns within one row "delimiter", we call it "separator".
     csv_parse_config.separator = csv_options->delimiter[0];
   }
   if (csv_options->quote) {
-    AssertInput(strnlen(csv_options->quote, 2) == 1, "CSV quote should be exactly one char.");
+    AssertInput(strnlen(csv_options->quote, 2) == 1, "CSV quote should be exactly one character.");
     csv_parse_config.quote = csv_options->quote[0];
   }
   if (csv_options->null) {

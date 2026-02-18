@@ -85,8 +85,8 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
       table->add_soft_constraint(table_key_constraint);
     }
 
-    // Insert table data only if there is data. We would generate an empty chunk if we would call this operator without
-    // this check, which would crash when data is appended to the table via a `COPY FROM` statement.
+    // A table must not have an empty chunk, because the Import operator would crash when making the empty chunk
+    // immutable to append to the table. We, therefore, only create the Insert operator if there are rows in the input.
     if (_left_input->get_output()->row_count() > 0) {
       const auto insert = std::make_shared<Insert>(table_name, _left_input);
       insert->set_transaction_context(context);

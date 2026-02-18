@@ -15,7 +15,7 @@
 namespace hyrise {
 class CsvOptionsTest : public BaseTest {};
 
-TEST_F(CsvOptionsTest, ParseDelimier) {
+TEST_F(CsvOptionsTest, ParseDelimiter) {
   const auto columns = std::vector{ColumnMeta{.name = "Int1", .type = "int"}, ColumnMeta{.name = "Int2", .type = "int"},
                                    ColumnMeta{.name = "Int3", .type = "int"}};
   const auto csv_meta = CsvMeta{.config = CsvParseConfig{.separator = ';'}, .columns = columns};

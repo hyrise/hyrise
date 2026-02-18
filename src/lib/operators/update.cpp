@@ -49,8 +49,8 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
   }
 
-  // 2. Insert new data with the Insert operator only if there is data. We would generate an empty chunk if we would
-  // call this operator without this check, which would crash when data is appended to the table via copy from.
+  // A table must not have an empty chunk, because the Import operator would crash when making the empty chunk
+  // immutable to append to the table. We, therefore, only create the Insert operator if there are rows in the input.
   if (_right_input->get_output()->row_count() > 0) {
     const auto insert = std::make_shared<Insert>(_table_to_update_name, _right_input);
     insert->set_transaction_context(context);
