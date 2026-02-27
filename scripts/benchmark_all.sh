@@ -99,7 +99,7 @@ do
   # If there is a bolt or pgo profile, we should use it.
   if [ -f ../resources/bolt.fdata ] || [ -f ../resources/libhyrise.profdata ]
   then
-    echo "Detected bolt.fdata or libhyrise.profdata file, building optimized binary"
+    echo "Detected bolt.fdata or libhyrise.profdata file, building $commit with PGO/BOLT..."
     args="--num-cores $(nproc) --import-profile"
     [ ! -f ../resources/bolt.fdata ] && args="$args --no-bolt"
     [ ! -f ../resources/libhyrise.profdata ] && args="$args --no-pgo"
