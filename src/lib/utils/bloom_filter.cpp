@@ -143,7 +143,8 @@ bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::probe(uint64_t 
     const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
     const auto bit_index_in_item = bit_index_in_block & 63;
 
-    result &= static_cast<bool>(_integer_filter_view[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
+    result &=
+        static_cast<bool>(_integer_filter_view[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
   }
 
   return result;
@@ -213,9 +214,17 @@ bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::_get_bit(uint32
   return (_integer_filter_view[array_index] >> bit_offset) & 1ULL;
 }
 
-// template class BloomFilter<16, 1>;
+template class BlockBloomFilter<18, 9, 1>;
+template class BlockBloomFilter<18, 9, 2>;
+template class BlockBloomFilter<18, 9, 3>;
 template class BlockBloomFilter<18, 9, 4>;
+template class BlockBloomFilter<21, 9, 1>;
+template class BlockBloomFilter<21, 9, 2>;
+template class BlockBloomFilter<21, 9, 3>;
 template class BlockBloomFilter<21, 9, 4>;
+template class BlockBloomFilter<23, 9, 1>;
+template class BlockBloomFilter<23, 9, 2>;
+template class BlockBloomFilter<23, 9, 3>;
 template class BlockBloomFilter<23, 9, 4>;
 
 }  // namespace hyrise

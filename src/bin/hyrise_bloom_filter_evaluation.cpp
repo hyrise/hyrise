@@ -27,9 +27,9 @@ inline uint64_t MurmurHash64(int32_t input) {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000, 10'000'000, 100'000'000};
-std::vector<double> distinctivenesses = {0.01, 0.1, 0.5, 1.0, 2.0, 3.0};
-std::vector<double> overlaps = {0.0, 0.25, 0.5, 0.75, 1.0};
+std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000, 10'000'000};
+std::vector<double> distinctivenesses = {0.01, 0.5, 1.0};
+std::vector<double> overlaps = {0.0, 0.5, 1.0};
 uint8_t hash_functions = 4;  // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
 uint16_t min_runs = 10;
 uint16_t max_runs = 2000;
@@ -123,9 +123,9 @@ void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec, const st
     } else if (hash_function == 1) {
       build_time = measure_duration([&]() {
         for (const auto& val : build_vec) {
-          size_t seed = 0;
-          boost::hash_combine(seed, val);
-          bloom_filter.insert(static_cast<uint64_t>(seed));  // Use the generated random number as the hash
+          auto hash = size_t{11400714819323198485ul};
+          boost::hash_combine(hash, val);
+          bloom_filter.insert(static_cast<uint64_t>(hash));  // Use the generated random number as the hash
         }
       });
     } else if (hash_function == 2) {
@@ -243,24 +243,14 @@ int main(int argc, char* argv[]) {
         const auto [build_vec, probe_vec] = generate_data(vector_size, distinctiveness, overlap);
 
         for (uint8_t hash_function = 0; hash_function < hash_functions; ++hash_function) {
-          // RUN_EVALUATION(16, 1)
-          // RUN_EVALUATION(17, 1)
+          RUN_EVALUATION(18, 1)
+          RUN_EVALUATION(18, 2)
+          RUN_EVALUATION(18, 3)
           RUN_EVALUATION(18, 4)
-          // RUN_EVALUATION(19, 1)
-          // RUN_EVALUATION(20, 1)
-          RUN_EVALUATION(21, 4)
+          RUN_EVALUATION(23, 1)
+          RUN_EVALUATION(23, 2)
+          RUN_EVALUATION(23, 3)
           RUN_EVALUATION(23, 4)
-          // RUN_EVALUATION(17, 2)
-          // RUN_EVALUATION(18, 2)
-          // RUN_EVALUATION(19, 2)
-          // RUN_EVALUATION(20, 2)
-          // RUN_EVALUATION(21, 2)
-          // RUN_EVALUATION(16, 3)
-          // RUN_EVALUATION(17, 3)
-          // RUN_EVALUATION(18, 3)
-          // RUN_EVALUATION(19, 3)
-          // RUN_EVALUATION(20, 3)
-          // RUN_EVALUATION(21, 3)
         }
       }
     }
