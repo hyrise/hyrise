@@ -531,7 +531,7 @@ int Console::_generate_tpch(const std::string& args) {
     out(            "  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
     out(std::format("                                            Chunk size is {} by default. \n", Chunk::DEFAULT_SIZE.t));
     // clang-format on
-    // NOLINTENd(whitespace/line_length,whitespace/parens)
+    // NOLINTEND(whitespace/line_length,whitespace/parens)
     return ReturnCode::Error;
   }
 

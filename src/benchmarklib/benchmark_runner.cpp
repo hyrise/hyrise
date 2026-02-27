@@ -522,7 +522,7 @@ nlohmann::json BenchmarkRunner::_create_report() const {
   // Because the system_clock can be readjusted anytime, the timestamps could be slightly out of line.
   const auto benchmark_start_ns = std::chrono::nanoseconds{_benchmark_wall_clock_start.time_since_epoch()}.count();
   auto log_json = _sql_to_json(std::format(
-      "SELECT \"timestamp\" - {} AS \"timestamp\", log_level, reporter, message FROM meta_log", benchmark_start_ns));
+      R"(SELECT "timestamp" - {} AS "timestamp", log_level, reporter, message FROM meta_log)", benchmark_start_ns));
 
   auto report = nlohmann::json{{"context", _context},
                                {"benchmarks", std::move(benchmarks)},

@@ -327,7 +327,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   }
 
   if (has_error) {
-    const auto error_type = "Cell data mismatch";
+    const auto error_type = std::string{"Cell data mismatch"};
     std::string error_msg = "Mismatched cells (row,column): ";
     for (auto cell : mismatched_cells) {
       error_msg += std::format("({},{}) ", cell.first - HEADER_SIZE, cell.second);
