@@ -2687,7 +2687,7 @@ int main() {
   std::cout << "=============================================" << std::endl;
 
   // Scale factors to benchmark
-  const auto scale_factors = std::vector<float>{1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f};
+  const auto scale_factors = std::vector<float>{32.0f};
 
   // Start total benchmark timer
   const auto total_start = std::chrono::high_resolution_clock::now();
@@ -2707,9 +2707,9 @@ int main() {
     /*************************************
      ***** Comment / Uncomment here ******
      *************************************/
-    run_hash_micro_benchmark(scale_factor);
-    run_sort_micro_benchmark(scale_factor);
-    run_hash_micro_benchmark_hc(scale_factor);
+    //run_hash_micro_benchmark(scale_factor);
+    //run_sort_micro_benchmark(scale_factor);
+    //run_hash_micro_benchmark_hc(scale_factor);
     run_sort_micro_benchmark_hc(scale_factor);
 
     // Calculate and display time for this scale factor
