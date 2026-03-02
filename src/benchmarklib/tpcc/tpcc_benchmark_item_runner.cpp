@@ -28,16 +28,17 @@ void TPCCBenchmarkItemRunner::on_tables_loaded() {
                                arr_span(TPCCPayment::PREPARED_STATEMENTS),
                                arr_span(TPCCStockLevel::PREPARED_STATEMENTS)};
 
-  const auto sqlite_connection = _sqlite_wrapper ? std::optional{_sqlite_wrapper->new_connection()} : std::nullopt;
+  // const auto sqlite_connection = _sqlite_wrapper ? std::optional{_sqlite_wrapper->new_connection()} : std::nullopt;
+  Assert(!_sqlite_wrapper, "sqlite3 verification currently does not work with prepared statements");
 
   for (const auto statements : all_statements) {
     for (const auto* const sql : statements) {
       const auto [status, table] = SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
       Assert(status == SQLPipelineStatus::Success, "Prepared statements should always be created");
 
-      if (sqlite_connection) {
-        sqlite_connection->raw_execute_query(sql);
-      }
+      // if (sqlite_connection) {
+      //   sqlite_connection->raw_execute_query(sql);
+      // }
     }
   }
 }

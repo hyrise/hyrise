@@ -12,10 +12,10 @@ class TPCCStockLevel : public AbstractTPCCProcedure {
 
   // clang-format off
   static constexpr auto PREPARED_STATEMENTS = std::to_array({
-    "PREPARE stock_level_next_o_id(int, int) AS SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = ? AND D_ID = ?",
+    "PREPARE stock_level_next_o_id (int, int) AS SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = ? AND D_ID = ?",
     // Some inputs are the same. We don't implement the postgresql syntax for prepared statement placeholders (e.g.
     // '$1' '$2' '$3') and use '?' instead. This hinders us from reusing inputs.
-    "PREPARE stock_level_count_items(int, int, int, int, int, int) AS SELECT COUNT(DISTINCT(S_I_ID)) item_count FROM ORDER_LINE, STOCK WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID < ? AND OL_O_ID >= ? AND S_W_ID = ? AND S_I_ID = OL_I_ID AND S_QUANTITY < ?"
+    "PREPARE stock_level_count_items (int, int, int, int, int, int) AS SELECT COUNT(DISTINCT(S_I_ID)) item_count FROM ORDER_LINE, STOCK WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID < ? AND OL_O_ID >= ? AND S_W_ID = ? AND S_I_ID = OL_I_ID AND S_QUANTITY < ?"
   });
   // clang-format on
  protected:
