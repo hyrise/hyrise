@@ -22,16 +22,17 @@ class TPCCDelivery : public AbstractTPCCProcedure {
   int32_t o_carrier_id;   // Carrier ID           [1..10]
   int32_t ol_delivery_d;  // Current datetime
 
-  // clang-format(off)
-  static constexpr auto PREPARED_STATEMENTS = std::to_array(
-      {"PREPARE select_min_no_o_id (int, int) AS SELECT MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = ? AND NO_D_ID = ?",
-       "PREPARE delete_new_order (int, int) AS DELETE FROM NEW_ORDER WHERE NO_W_ID = ? AND NO_D_ID = ? AND NO_O_ID = ?",
-       "PREPARE select_o_c_id (int, int) AS SELECT O_C_ID FROM \"ORDER\" WHERE O_W_ID = ? AND O_D_ID = ? AND O_ID = ?",
-       "PREPARE update_order (int, int) AS UPDATE \"ORDER\" SET O_CARRIER_ID = ? WHERE O_W_ID = ? AND O_D_ID = ? AND O_ID = ?",
-       "PREPARE select_sum_ol_amount (int, int) AS SELECT SUM(OL_AMOUNT) FROM ORDER_LINE WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID = ?",
-       "PREPARE update_order_line (int, int) AS UPDATE ORDER_LINE SET OL_DELIVERY_D = ? WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID = ?",
-       "PREPARE update_customer (int, int, int) AS UPDATE CUSTOMER SET C_BALANCE = C_BALANCE + ?, C_DELIVERY_CNT = C_DELIVERY_CNT + 1 WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?"});
-  // clang-format(on)
+  // clang-format off
+  static constexpr auto PREPARED_STATEMENTS = std::to_array({
+      "PREPARE delivery_select_min_no_o_id (int, int) AS SELECT MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = ? AND NO_D_ID = ?",
+      "PREPARE delivery_delete_new_order (int, int, int) AS DELETE FROM NEW_ORDER WHERE NO_W_ID = ? AND NO_D_ID = ? AND NO_O_ID = ?",
+      "PREPARE delivery_select_customer_id (int, int, int) AS SELECT O_C_ID FROM \"ORDER\" WHERE O_W_ID = ? AND O_D_ID = ? AND O_ID = ?",
+      "PREPARE delivery_update_order (int, int, int, int) AS UPDATE \"ORDER\" SET O_CARRIER_ID = ? WHERE O_W_ID = ? AND O_D_ID = ? AND O_ID = ?",
+      "PREPARE delivery_select_sum_ol_amount (int, int, int) AS SELECT SUM(OL_AMOUNT) FROM ORDER_LINE WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID = ?",
+      "PREPARE delivery_update_order_line (int, int, int, int) AS UPDATE ORDER_LINE SET OL_DELIVERY_D = ? WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID = ?",
+      "PREPARE delivery_update_customer (double, int, int, int) AS UPDATE CUSTOMER SET C_BALANCE = C_BALANCE + ?, C_DELIVERY_CNT = C_DELIVERY_CNT + 1 WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?",
+  });
+  // clang-format on
 };
 
 }  // namespace hyrise

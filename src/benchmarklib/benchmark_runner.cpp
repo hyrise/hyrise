@@ -94,8 +94,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   _table_generator->generate_and_store();
 
-  _benchmark_item_runner->on_tables_loaded();
-
   // SQLite data is only loaded if the dedicated result set is not complete, i.e, items exist for which no dedicated
   // result could be loaded.
   if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
@@ -123,6 +121,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _loaded_plugins.emplace_back(plugin_name);
     }
   }
+
+  _benchmark_item_runner->on_tables_loaded();
 }
 
 void BenchmarkRunner::run() {

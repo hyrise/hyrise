@@ -6,7 +6,6 @@
 #include <ctime>
 #include <memory>
 #include <random>
-#include <string>
 #include <tuple>
 
 #include "benchmark_sql_executor.hpp"
@@ -43,18 +42,14 @@ bool TPCCOrderStatus::_on_execute() {
   if (!select_customer_by_name) {
     // Case 1 - Select customer by ID
     std::tie(std::ignore, customer_table) = _sql_executor.execute(
-        std::string{"SELECT C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST FROM CUSTOMER WHERE C_W_ID = "} +
-        std::to_string(w_id) + " AND C_D_ID = " + std::to_string(d_id) +
-        " AND C_ID = " + std::to_string(std::get<int32_t>(customer)));
+        std::format("EXECUTE order_status_select_customer_by_id({}, {}, {})", w_id, d_id, std::get<int32_t>(customer)));
     Assert(customer_table && customer_table->row_count() == 1, "Did not find customer by ID (or found more than one).");
 
     customer_id = std::get<int32_t>(customer);
   } else {
     // Case 2 - Select customer by name
     std::tie(std::ignore, customer_table) = _sql_executor.execute(
-        std::string{"SELECT C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST FROM CUSTOMER WHERE C_W_ID = "} +
-        std::to_string(w_id) + " AND C_D_ID = " + std::to_string(d_id) + " AND C_LAST = '" +
-        std::string{std::get<pmr_string>(customer)} + "' ORDER BY C_FIRST");
+        std::format("EXECUTE order_status_select_customer_by_name({}, {}, '{}')", w_id, d_id, std::get<pmr_string>(customer)));
     Assert(customer_table->row_count() >= 1, "Did not find customer by name.");
 
     // Calculate ceil(n/2)
@@ -65,9 +60,8 @@ bool TPCCOrderStatus::_on_execute() {
   }
 
   // Retrieve order
-  const auto order_select_pair = _sql_executor.execute(
-      std::string{"SELECT O_ID, O_ENTRY_D, O_CARRIER_ID FROM \"ORDER\" WHERE O_W_ID = "} + std::to_string(w_id) +
-      " AND O_D_ID = " + std::to_string(d_id) + " AND O_C_ID = " + std::to_string(customer_id) + " ORDER BY O_ID DESC");
+  const auto order_select_pair =
+      _sql_executor.execute(std::format("EXECUTE order_status_retrieve_order({}, {}, {})", w_id, d_id, customer_id));
   const auto& order_table = order_select_pair.second;
   // Returns multiple orders, we are interested in the latest one
   Assert(order_table && order_table->row_count() >= 1, "Unexpected state of ORDER table.");
@@ -76,9 +70,8 @@ bool TPCCOrderStatus::_on_execute() {
   o_carrier_id = order_table->get_value<int32_t>(ColumnID{2}, 0);
 
   // Retrieve order lines
-  const auto order_line_select_pair = _sql_executor.execute(
-      std::string{"SELECT OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT FROM ORDER_LINE WHERE OL_W_ID = "} +
-      std::to_string(w_id) + " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = " + std::to_string(o_id));
+  const auto order_line_select_pair =
+      _sql_executor.execute(std::format("EXECUTE order_status_retrieve_order_lines({}, {}, {})", w_id, d_id, o_id));
   const auto& order_line_table = order_line_select_pair.second;
   const auto order_line_count = order_line_table->row_count();
   Assert(order_line_table && order_line_count >= 5 && order_line_count <= 15, "Unexpected state of ORDER_LINE table.");
