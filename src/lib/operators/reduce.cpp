@@ -217,6 +217,10 @@ static double false_positive_rate(double m, double n, double k) {
 
 double false_positive_rate_blocked(double filter_size_bits, double n, double k, double B = 512, /* block size in bits */
                                    double epsilon = 0.000001) {
+  if (n == 0.0) {
+    return 0.0;
+  }
+
   double f = 0;
   double c = filter_size_bits / n;
   double lambda = B / c;
