@@ -31,9 +31,9 @@ std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000, 10'000'000};
 std::vector<double> distinctivenesses = {0.01, 0.5, 1.0};
 std::vector<double> overlaps = {0.0, 0.5, 1.0};
 uint8_t hash_functions = 4;  // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
-uint16_t min_runs = 10;
-uint16_t max_runs = 2000;
-int64_t min_time_ns = 30'000'000'000;
+uint16_t min_runs = 12;
+uint16_t max_runs = 102;
+int64_t min_time_ns = 10'000'000'000;
 
 struct BenchmarkResult {
   int32_t vector_size;
@@ -70,7 +70,7 @@ std::pair<std::vector<int32_t>, std::vector<int32_t>> generate_data(const int32_
   std::cout << "Range 1: [" << range_min_1 << ", " << static_cast<int32_t>(range_max_1) << "]\n";
 
   std::mt19937 gen0(4615968);
-  std::mt19937 gen1(7182534);
+  std::mt19937 gen1(4615968);//7182534
   std::uniform_int_distribution<int32_t> dis0(static_cast<int32_t>(range_min_0), static_cast<int32_t>(range_max_0));
   std::uniform_int_distribution<int32_t> dis1(static_cast<int32_t>(range_min_1), static_cast<int32_t>(range_max_1));
 
@@ -157,9 +157,9 @@ void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec, const st
     } else if (hash_function == 1) {
       probe_time = measure_duration([&]() {
         for (const auto& val : probe_vec) {
-          size_t seed = 0;
-          boost::hash_combine(seed, val);
-          if (bloom_filter.probe(static_cast<uint64_t>(seed)))  // Use the generated random number as the hash
+          auto hash = size_t{11400714819323198485ul};
+          boost::hash_combine(hash, val);
+          if (bloom_filter.probe(static_cast<uint64_t>(hash)))  // Use the generated random number as the hash
             ++hits;
         }
       });
