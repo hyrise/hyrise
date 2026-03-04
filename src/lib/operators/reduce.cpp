@@ -9,6 +9,19 @@
 #include "storage/segment_iterate.hpp"
 #include "utils/timer.hpp"
 
+template <typename DataType>
+inline constexpr uint64_t degski ( DataType input ) noexcept {
+    if constexpr (std::is_same_v<DataType, int32_t>) {
+    auto x = static_cast<uint64_t>(input);
+    x = ( ( x >> 32 ) ^ x ) * 0xD6E8FEB86659FD93;
+    x = ( ( x >> 32 ) ^ x ) * 0xD6E8FEB86659FD93;
+    x = ( ( x >> 32 ) ^ x );
+    return x;
+    } else {
+      Fail("Degski hash function only supports int32_t values.");
+    }
+}
+
 namespace hyrise {
 
 inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_size_exponent,
@@ -395,11 +408,7 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
             segment_iterate<DataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
-                auto hash = size_t{11400714819323198485ul};
-                boost::hash_combine(hash, position.value());
-                // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
-
-                resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
+                resolved_partial_bloom_filter.insert(degski(position.value()));
 
                 if constexpr (use_min_max == UseMinMax::Yes) {
                   partial_minimum = std::min(partial_minimum, position.value());
@@ -524,11 +533,7 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
 
             segment_iterate<DataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
-                auto hash = size_t{11400714819323198485ul};
-                boost::hash_combine(hash, position.value());
-                // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
-
-                auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+                auto found = resolved_bloom_filter.probe(degski(position.value()));
 
                 if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
                   const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
@@ -740,11 +745,8 @@ std::shared_ptr<const Table> Reduce::_execute_probe_and_build() {
 
             segment_iterate<DataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
-                auto hash = size_t{11400714819323198485ul};
-                boost::hash_combine(hash, position.value());
-                // std::cout << "Hash: " << hash << " for value " << position.value() << "\n";
-
-                auto found = resolved_bloom_filter.probe(static_cast<uint64_t>(hash));
+                const auto hash = degski(position.value());
+                auto found = resolved_bloom_filter.probe(hash);
 
                 if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
                   const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
@@ -754,7 +756,7 @@ std::shared_ptr<const Table> Reduce::_execute_probe_and_build() {
                 if (found) {
                   matches->emplace_back(chunk_index, position.chunk_offset());
 
-                  resolved_partial_bloom_filter.insert(static_cast<uint64_t>(hash));
+                  resolved_partial_bloom_filter.insert(hash);
 
                   if constexpr (use_min_max == UseMinMax::Yes) {
                     partial_minimum = std::min(partial_minimum, position.value());
