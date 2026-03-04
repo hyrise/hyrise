@@ -25,12 +25,24 @@ inline uint64_t MurmurHash64(int32_t input) {
   return x;
 }
 
+inline uint64_t fmix64 ( int32_t input )
+{
+  auto k = static_cast<uint64_t>(input);
+  k ^= k >> 33;
+  k *= BIG_CONSTANT(0xff51afd7ed558ccd);
+  k ^= k >> 33;
+  k *= BIG_CONSTANT(0xc4ceb9fe1a85ec53);
+  k ^= k >> 33;
+
+  return k;
+}
+
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000, 10'000'000};
 std::vector<double> distinctivenesses = {0.01, 0.5, 1.0};
 std::vector<double> overlaps = {0.0, 0.5, 1.0};
-uint8_t hash_functions = 4;  // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: MurmurHash64
+uint8_t hash_functions = 4;  // 0: std::hash, 1: boost::hash_combine, 2: XXHash, 3: fmix64
 uint16_t min_runs = 12;
 uint16_t max_runs = 102;
 int64_t min_time_ns = 10'000'000'000;
@@ -138,7 +150,7 @@ void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec, const st
     } else if (hash_function == 3) {
       build_time = measure_duration([&]() {
         for (const auto& val : build_vec) {
-          bloom_filter.insert(MurmurHash64(val));
+          bloom_filter.insert(fmix64(val));
         }
       });
     } else {
@@ -174,7 +186,7 @@ void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec, const st
     } else if (hash_function == 3) {
       probe_time = measure_duration([&]() {
         for (const auto& val : probe_vec) {
-          if (bloom_filter.probe(MurmurHash64(val)))
+          if (bloom_filter.probe(fmix64(val)))
             ++hits;
         }
       });
