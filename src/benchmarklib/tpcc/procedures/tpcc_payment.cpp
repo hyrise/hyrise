@@ -143,7 +143,7 @@ bool TPCCPayment::_on_execute() {
   // Insert into history table.
   const auto history_insert_pair =
       _sql_executor.execute(std::format("INSERT INTO HISTORY (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, "
-                                        "H_DATE, H_AMOUNT) VALUES ({}, {}, {}, {}, {}, '{}', '{}', {}",
+                                        "H_DATE, H_AMOUNT) VALUES ({}, {}, {}, {}, {}, '{}', '{}', {})",
                                         c_id, c_d_id, c_w_id, d_id, w_id, w_name + "    " + d_name, h_date, h_amount));
   Assert(history_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");
 
