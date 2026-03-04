@@ -118,8 +118,9 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
   }
 
   auto lqp = prepared_plan->instantiate(parameter_expressions);
+  auto context = prepared_plan->optimization_context ? prepared_plan->optimization_context->deep_copy() : nullptr;
   const auto optimizer = Optimizer::create_default_optimizer();
-  lqp = optimizer->optimize(std::move(lqp));
+  lqp = optimizer->optimize(std::move(lqp), nullptr, std::move(context));
 
   auto pqp = LQPTranslator{}.translate_node(lqp);
 

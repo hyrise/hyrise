@@ -282,14 +282,14 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
 }
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
-    std::shared_ptr<AbstractLQPNode> input,
-    const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
-  return optimize_with_context(std::move(input), rule_durations).first;
+    std::shared_ptr<AbstractLQPNode> input, const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations,
+    std::unique_ptr<OptimizationContext> context) const {
+  return optimize_with_context(std::move(input), rule_durations, std::move(context)).first;
 }
 
 std::pair<std::shared_ptr<AbstractLQPNode>, std::unique_ptr<OptimizationContext>> Optimizer::optimize_with_context(
-    std::shared_ptr<AbstractLQPNode> input,
-    const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
+    std::shared_ptr<AbstractLQPNode> input, const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations,
+    std::unique_ptr<OptimizationContext> context) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
@@ -305,12 +305,14 @@ std::pair<std::shared_ptr<AbstractLQPNode>, std::unique_ptr<OptimizationContext>
     validate_lqp(root_node);
   }
 
-  auto optimization_context = std::make_unique<OptimizationContext>();
-  optimization_context->cost_estimator = _cost_estimator;
+  if (!context) {
+    context = std::make_unique<OptimizationContext>();
+  }
+  context->cost_estimator = _cost_estimator;
 
   for (const auto& rule : _rules) {
     auto rule_timer = Timer{};
-    rule->apply_to_plan(root_node, *optimization_context);
+    rule->apply_to_plan(root_node, *context);
 
     if (rule_durations) {
       rule_durations->emplace_back(rule->name(), rule_timer.lap());
@@ -330,7 +332,7 @@ std::pair<std::shared_ptr<AbstractLQPNode>, std::unique_ptr<OptimizationContext>
   auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
-  return {optimized_node, std::move(optimization_context)};
+  return {optimized_node, std::move(context)};
 }
 
 void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) {

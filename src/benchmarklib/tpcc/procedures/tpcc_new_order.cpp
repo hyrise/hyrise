@@ -137,8 +137,9 @@ bool TPCCNewOrder::_on_execute() {
 
     // Retrieve the STOCK entry. Currently, this is done in the loop and it should be more performant to do a similar
     // `IN (...)` optimization. Not sure how legal that is though.
-    const auto stock_select_pair = _sql_executor.execute(std::format(
-        "EXECUTE new_order_select_stock_with_dist_{:0>2}({}, {})", d_id, order_line.ol_i_id, order_line.ol_supply_w_id));
+    const auto stock_select_pair =
+        _sql_executor.execute(std::format("EXECUTE new_order_select_stock_with_dist_{:0>2}({}, {})", d_id,
+                                          order_line.ol_i_id, order_line.ol_supply_w_id));
     const auto& stock_table = stock_select_pair.second;
     Assert(stock_table && stock_table->row_count() == 1, "Did not find stock entry (or found more than one)");
     const auto s_quantity = *stock_table->get_value<int32_t>(ColumnID{0}, 0);

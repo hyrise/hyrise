@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "cost_estimation/cost_estimator_logical.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
@@ -45,7 +46,8 @@ class Optimizer final {
    */
   std::shared_ptr<AbstractLQPNode> optimize(
       std::shared_ptr<AbstractLQPNode> input,
-      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
+      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr,
+      std::unique_ptr<OptimizationContext> context = nullptr) const;
 
   /**
    * Returns optimized version of @param input LQP and the OptimizationContext used by all transformation rules.
@@ -55,7 +57,8 @@ class Optimizer final {
    */
   std::pair<std::shared_ptr<AbstractLQPNode>, std::unique_ptr<OptimizationContext>> optimize_with_context(
       std::shared_ptr<AbstractLQPNode> input,
-      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
+      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr,
+      std::unique_ptr<OptimizationContext> context = nullptr) const;
 
   static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
 

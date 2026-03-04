@@ -2835,21 +2835,20 @@ TEST_F(SQLTranslatorTest, Execute) {
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE some_prepared_plan ('Hello', 1, 42)");
 
+  stored_table_node_int_string->set_pruned_chunk_ids({ChunkID{0}});
+  stored_table_node_int_float->set_pruned_column_ids({ColumnID{1}});
   // clang-format off
-  const auto execute_subquery_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
-    PredicateNode::make(equals_(42, correlated_parameter), stored_table_node_int_float));
-
-  const auto execute_subquery = lqp_subquery_(execute_subquery_lqp, std::make_pair(ParameterID{1}, int_string_a));
-
   const auto expected_lqp =
-  PredicateNode::make(greater_than_(int_string_a, 1),
-    PredicateNode::make(less_than_(int_string_b, "Hello"),
-      PredicateNode::make(equals_(int_string_a, execute_subquery),
-        stored_table_node_int_string)));
+  JoinNode::make(JoinMode::Semi, equals_(int_string_a, min_(int_float_a)),
+    PredicateNode::make(greater_than_(int_string_a, 1),
+      PredicateNode::make(less_than_(int_string_b, "Hello"), stored_table_node_int_string)),
+    AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+        PredicateNode::make(equals_(42, correlated_parameter), stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  stored_table_node_int_string->set_pruned_chunk_ids({});
+  stored_table_node_int_float->set_pruned_column_ids({});
 }
 
 TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
@@ -2865,7 +2864,9 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
 
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE another_prepared_plan ()");
 
+  stored_table_node_int_float->set_pruned_column_ids({ColumnID{1}});
   EXPECT_LQP_EQ(actual_lqp, prepared_lqp);
+  stored_table_node_int_float->set_pruned_column_ids({});
 }
 
 TEST_F(SQLTranslatorTest, IntLimitsAndUnaryMinus) {
