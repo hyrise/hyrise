@@ -80,7 +80,7 @@ std::pair<std::vector<int32_t>, std::vector<int32_t>> generate_data(const int32_
   std::cout << "Range 1: [" << range_min_1 << ", " << static_cast<int32_t>(range_max_1) << "]\n";
 
   std::mt19937 gen0(4615968);
-  std::mt19937 gen1(4615968);//7182534
+  std::mt19937 gen1(7182534);//7182534
   std::uniform_int_distribution<int32_t> dis0(static_cast<int32_t>(range_min_0), static_cast<int32_t>(range_max_0));
   std::uniform_int_distribution<int32_t> dis1(static_cast<int32_t>(range_min_1), static_cast<int32_t>(range_max_1));
 
