@@ -39,7 +39,9 @@ class TPCCPayment : public AbstractTPCCProcedure {
     // placeholders (e.g. '$1' '$2' '$3') and use '?' instead. This hinders us from reusing inputs.
     "PREPARE payment_update_customer_balance FROM 'UPDATE CUSTOMER SET C_BALANCE = C_BALANCE - ?, C_YTD_PAYMENT = C_YTD_PAYMENT + ?, C_PAYMENT_CNT = C_PAYMENT_CNT + 1 WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?'",
     "PREPARE payment_update_customer_c_data FROM 'UPDATE CUSTOMER SET C_DATA = ? WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?'",
-    "PREPARE payment_insert_history FROM 'INSERT INTO HISTORY (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, H_DATE, H_AMOUNT) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'",
+    // Our parser currently does not support parameters ('?') in the VALUES field of an INSERT statement. As these
+    // statements would not be optimized much anyway, we do not use prepared statements for them.
+    // "PREPARE payment_insert_history FROM 'INSERT INTO HISTORY (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, H_DATE, H_AMOUNT) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'",
   });
   // clang-format on
 };
