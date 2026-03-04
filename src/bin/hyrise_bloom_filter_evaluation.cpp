@@ -25,7 +25,7 @@ inline uint64_t MurmurHash64(int32_t input) {
   return x;
 }
 
-inline uint64_t fmix64_from_i32(int32_t input) {
+inline uint64_t fmix64(int32_t input) {
   uint64_t k = static_cast<uint64_t>(input);
   k ^= k >> 33;
   k *= uint64_t{0xff51afd7ed558ccd};
