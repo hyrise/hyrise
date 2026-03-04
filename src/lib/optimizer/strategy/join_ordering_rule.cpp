@@ -20,14 +20,14 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
-    const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
+    const std::shared_ptr<AbstractLQPNode>& lqp, OptimizationContext& optimization_context) {
   const auto recurse_to_inputs = [&](const auto& node) {
     if (node->left_input()) {
-      node->set_left_input(perform_join_ordering_recursively(node->left_input(), cost_estimator));
+      node->set_left_input(perform_join_ordering_recursively(node->left_input(), optimization_context));
     }
 
     if (node->right_input()) {
-      node->set_right_input(perform_join_ordering_recursively(node->right_input(), cost_estimator));
+      node->set_right_input(perform_join_ordering_recursively(node->right_input(), optimization_context));
     }
   };
 
@@ -44,6 +44,10 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
     return lqp;
   }
 
+  if (join_graph->vertices.size() > 1) {
+    optimization_context.indicate_nontrivial_join_graph();
+  }
+
   /**
    * Setup cardinality and cost estimation caches.
    *
@@ -51,7 +55,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
    * performance. We can enable the corresponding cache policies because join ordering algorithms build plans bottom-up
    * and are constrained to the predicates and vertices in the JoinGraph.
    */
-  const auto caching_cost_estimator = cost_estimator->new_instance();
+  const auto caching_cost_estimator = optimization_context.cost_estimator->new_instance();
   caching_cost_estimator->guarantee_bottom_up_construction(lqp);
   caching_cost_estimator->cardinality_estimator->guarantee_join_graph(*join_graph);
 
@@ -98,9 +102,14 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
   Assert(lqp_root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto.");
 
+  if (!optimization_context.has_nontrivial_join_graphs()) {
+    std::cerr << "skipping JoinOrdering as there are no nontrivial join graphs.\n";
+    return;
+  }
+
   const auto expected_column_order = lqp_root->output_expressions();
 
-  auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), optimization_context.cost_estimator);
+  auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), optimization_context);
 
   // Join ordering might change the output column order, let us fix that.
   if (!expressions_equal(expected_column_order, result_lqp->output_expressions())) {
@@ -108,6 +117,9 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
 
   lqp_root->set_left_input(result_lqp);
+  if (!optimization_context.has_nontrivial_join_graphs()) {
+    std::cerr << "found only trivial join graphs, so there is no need to run JoinOrdering again\n";
+  }
 }
 
 }  // namespace hyrise
