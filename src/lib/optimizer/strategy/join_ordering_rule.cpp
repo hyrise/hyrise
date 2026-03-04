@@ -19,8 +19,8 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
-    const std::shared_ptr<AbstractLQPNode>& lqp, OptimizationContext& optimization_context) {
+std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                                   OptimizationContext& optimization_context) {
   const auto recurse_to_inputs = [&](const auto& node) {
     if (node->left_input()) {
       node->set_left_input(perform_join_ordering_recursively(node->left_input(), optimization_context));

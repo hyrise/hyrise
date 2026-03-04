@@ -36,6 +36,7 @@ struct OptimizationContext {
   }
 
   ContainsJoin contains_join{ContainsJoin::Unchecked};
+
  private:
   bool _is_cacheable{true};  // Indicates whether the optimizer can cache the optimized LQP.
 };
