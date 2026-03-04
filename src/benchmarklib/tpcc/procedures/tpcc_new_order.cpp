@@ -58,7 +58,8 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
 
 bool TPCCNewOrder::_on_execute() {
   // Retrieve W_TAX, the warehouse tax rate.
-  const auto warehouse_select_pair = _sql_executor.execute(std::format("EXECUTE new_order_select_warehouse_tax({})", w_id));
+  const auto warehouse_select_pair =
+      _sql_executor.execute(std::format("EXECUTE new_order_select_warehouse_tax({})", w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
 
@@ -106,14 +107,15 @@ bool TPCCNewOrder::_on_execute() {
   }
 
   // Insert row into NEW_ORDER.
-  const auto new_order_insert_pair =
-      _sql_executor.execute(std::format("EXECUTE new_order_insert_new_order({}, {}, {})", o_id, d_id, w_id));
+  const auto new_order_insert_pair = _sql_executor.execute(
+      std::format("INSERT INTO NEW_ORDER (NO_O_ID, NO_D_ID, NO_W_ID) VALUES ({}, {}, {})", o_id, d_id, w_id));
   Assert(new_order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");
 
   // Insert row into ORDER.
   const auto order_insert_pair =
-      _sql_executor.execute(std::format("EXECUTE new_order_insert_order({}, {}, {}, {}, {}, {}, {})", o_id, d_id, w_id, c_id,
-                                        o_entry_d, ol_cnt, o_all_local ? "1" : "0"));
+      _sql_executor.execute(std::format("INSERT INTO \"ORDER\" (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, "
+                                        "O_OL_CNT, O_ALL_LOCAL) VALUES ({}, {}, {}, {}, {}, NULL, {}, {})",
+                                        o_id, d_id, w_id, c_id, o_entry_d, ol_cnt, o_all_local ? "1" : "0"));
   Assert(order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");
 
   // Iterate over order lines
@@ -121,7 +123,8 @@ bool TPCCNewOrder::_on_execute() {
   for (const auto& order_line : order_lines) {
     ++order_line_idx;  // 1-indexed
 
-    const auto item_select_pair = _sql_executor.execute(std::format("EXECUTE new_order_select_item({})", order_line.ol_i_id));
+    const auto item_select_pair =
+        _sql_executor.execute(std::format("EXECUTE new_order_select_item({})", order_line.ol_i_id));
     const auto& item_table = item_select_pair.second;
     if (item_table->row_count() == 0) {
       // A simulated error, roll back the transaction and return. These transactions are counted towards the number of
@@ -158,8 +161,8 @@ bool TPCCNewOrder::_on_execute() {
 
     // Update the STOCK entry
     const auto stock_update_pair = _sql_executor.execute(
-        std::format("EXECUTE new_order_update_stock({}, {}, {}, {}, {}, {})", new_s_quantity, new_s_ytd, new_s_order_cnt,
-                    new_s_remote_cnt, order_line.ol_i_id, order_line.ol_supply_w_id));
+        std::format("EXECUTE new_order_update_stock({}, {}, {}, {}, {}, {})", new_s_quantity, new_s_ytd,
+                    new_s_order_cnt, new_s_remote_cnt, order_line.ol_i_id, order_line.ol_supply_w_id));
     if (stock_update_pair.first != SQLPipelineStatus::Success) {
       return false;
     }
@@ -171,8 +174,10 @@ bool TPCCNewOrder::_on_execute() {
     // Note: This can be made faster if we interpret "For each O_OL_CNT item on the order" less strictly and
     //       allow for a single insert at the end.
     const auto order_line_insert_pair = _sql_executor.execute(std::format(
-        "EXECUTE new_order_insert_order_line({}, {}, {}, {}, {}, {}, {}, {}, '{}')", o_id, d_id, w_id, order_line_idx,
-        order_line.ol_i_id, order_line.ol_supply_w_id, order_line.ol_quantity, ol_amount, s_dist));
+        "INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, "
+        "OL_DELIVERY_D, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUES ({}, {}, {}, {}, {}, {}, NULL, {}, {}, '{}')",
+        o_id, d_id, w_id, order_line_idx, order_line.ol_i_id, order_line.ol_supply_w_id, order_line.ol_quantity,
+        ol_amount, s_dist));
     Assert(order_line_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");
   }
 

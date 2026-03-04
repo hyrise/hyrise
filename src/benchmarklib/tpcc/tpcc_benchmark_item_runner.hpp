@@ -19,6 +19,7 @@ class TPCCBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   const std::vector<int>& weights() const override;
 
   void on_tables_loaded() override;
+
  protected:
   bool _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
 

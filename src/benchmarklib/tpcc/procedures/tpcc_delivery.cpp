@@ -23,7 +23,6 @@ TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_e
 }
 
 bool TPCCDelivery::_on_execute() {
-
   for (auto d_id = 1; d_id <= 10; ++d_id) {
     // TODO(anyone): This could be optimized by querying only once and grouping by NO_D_ID
     const auto new_order_select_pair =
@@ -52,8 +51,8 @@ bool TPCCDelivery::_on_execute() {
     const auto o_c_id = *order_table->get_value<int32_t>(ColumnID{0}, 0);
 
     // Update ORDER
-    const auto order_update_pair =
-        _sql_executor.execute(std::format("EXECUTE delivery_update_order({}, {}, {}, {})", o_carrier_id, w_id, d_id, no_o_id));
+    const auto order_update_pair = _sql_executor.execute(
+        std::format("EXECUTE delivery_update_order({}, {}, {}, {})", o_carrier_id, w_id, d_id, no_o_id));
     if (order_update_pair.first != SQLPipelineStatus::Success) {
       return false;
     }
@@ -72,8 +71,8 @@ bool TPCCDelivery::_on_execute() {
            "We have already 'locked' the order ID when we deleted it from NEW_ORDER. No conflict should be possible.");
 
     // Update balance and delivery count for customer
-    const auto customer_update_pair =
-        _sql_executor.execute(std::format("EXECUTE delivery_update_customer({}, {}, {}, {})", amount, w_id, d_id, o_c_id));
+    const auto customer_update_pair = _sql_executor.execute(
+        std::format("EXECUTE delivery_update_customer({}, {}, {}, {})", amount, w_id, d_id, o_c_id));
     if (customer_update_pair.first != SQLPipelineStatus::Success) {
       return false;
     }

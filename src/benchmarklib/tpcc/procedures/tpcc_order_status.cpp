@@ -48,8 +48,8 @@ bool TPCCOrderStatus::_on_execute() {
     customer_id = std::get<int32_t>(customer);
   } else {
     // Case 2 - Select customer by name
-    std::tie(std::ignore, customer_table) = _sql_executor.execute(
-        std::format("EXECUTE order_status_select_customer_by_name({}, {}, '{}')", w_id, d_id, std::get<pmr_string>(customer)));
+    std::tie(std::ignore, customer_table) = _sql_executor.execute(std::format(
+        "EXECUTE order_status_select_customer_by_name({}, {}, '{}')", w_id, d_id, std::get<pmr_string>(customer)));
     Assert(customer_table->row_count() >= 1, "Did not find customer by name.");
 
     // Calculate ceil(n/2)
