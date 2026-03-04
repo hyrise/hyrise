@@ -83,7 +83,7 @@ bool TPCCPayment::_on_execute() {
 
   // Update district YTD
   const auto district_update_pair = _sql_executor.execute(
-      std::format("EXECUTE payment_update_dsitrict_ytd({}, {}, {})", d_ytd + h_amount, w_id, d_id));
+      std::format("EXECUTE payment_update_district_ytd({}, {}, {})", d_ytd + h_amount, w_id, d_id));
   if (district_update_pair.first != SQLPipelineStatus::Success) {
     return false;
   }
