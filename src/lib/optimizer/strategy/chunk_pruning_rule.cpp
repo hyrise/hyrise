@@ -211,7 +211,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
         }
 
         for (auto& argument : predicate->arguments) {
-          // TODO(lukas): We could use placeholders for dynamic pruning here.
+          // TODO(anyone): We could use placeholders for dynamic pruning here.
           if ((argument->type == ExpressionType::LQPSubquery &&
                !static_cast<const LQPSubqueryExpression&>(*argument).is_correlated())) {
             /**

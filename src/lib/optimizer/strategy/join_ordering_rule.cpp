@@ -65,12 +65,13 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(const std::sh
   if (vertex_count == 1) {
     // A JoinGraph with only one vertex is no actual join and needs no ordering.
     result_lqp = lqp;
-  } else if (vertex_count < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
-    result_lqp = DPccp{}(*join_graph, caching_cost_estimator);
-    optimization_context.contains_join = ContainsJoin::FoundSome;
   } else {
-    result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
     optimization_context.contains_join = ContainsJoin::FoundSome;
+    if (vertex_count < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
+      result_lqp = DPccp{}(*join_graph, caching_cost_estimator);
+    } else {
+      result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
+    }
   }
 
   for (const auto& vertex : join_graph->vertices) {
