@@ -25,15 +25,13 @@ inline uint64_t MurmurHash64(int32_t input) {
   return x;
 }
 
-inline uint64_t fmix64 ( int32_t input )
-{
-  auto k = static_cast<uint64_t>(input);
+inline uint64_t fmix64_from_i32(int32_t input) {
+  uint64_t k = static_cast<uint64_t>(input);
   k ^= k >> 33;
-  k *= BIG_CONSTANT(0xff51afd7ed558ccd);
+  k *= uint64_t{0xff51afd7ed558ccd};
   k ^= k >> 33;
-  k *= BIG_CONSTANT(0xc4ceb9fe1a85ec53);
+  k *= uint64_t{0xc4ceb9fe1a85ec53};
   k ^= k >> 33;
-
   return k;
 }
 
