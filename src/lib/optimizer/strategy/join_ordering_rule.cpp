@@ -44,10 +44,6 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
     return lqp;
   }
 
-  if (join_graph->vertices.size() > 1) {
-    optimization_context.indicate_nontrivial_join_graph();
-  }
-
   /**
    * Setup cardinality and cost estimation caches.
    *
@@ -71,8 +67,10 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
     result_lqp = lqp;
   } else if (vertex_count < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
     result_lqp = DPccp{}(*join_graph, caching_cost_estimator);
+    optimization_context.contains_join = ContainsJoin::FoundSome;
   } else {
     result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
+    optimization_context.contains_join = ContainsJoin::FoundSome;
   }
 
   for (const auto& vertex : join_graph->vertices) {
@@ -102,11 +100,18 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
   Assert(lqp_root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto.");
 
-  if (!optimization_context.has_nontrivial_join_graphs()) {
-    std::cerr << "skipping JoinOrdering as there are no nontrivial join graphs.\n";
+  /**
+   * If a previous iteration of this rule did not find any Inner/Cross Joins, then we don't need to rerun the rule.
+   * Other rules have to revert the value to `ContainsJoin::Unchecked` if they add Inner/Cross joins into the LQP.
+   * If this rule is adapted to support other join types, you have to ensure that other rules reset this value if they
+   * add joins of the new type to the LQP. This could be a lot of work for Semi/Anti joins.
+   */
+  if (optimization_context.contains_join == ContainsJoin::FoundNone) {
     return;
   }
 
+  // This value will be overwritten if join graphs are found.
+  optimization_context.contains_join = ContainsJoin::FoundNone;
   const auto expected_column_order = lqp_root->output_expressions();
 
   auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), optimization_context);
@@ -117,9 +122,6 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
 
   lqp_root->set_left_input(result_lqp);
-  if (!optimization_context.has_nontrivial_join_graphs()) {
-    std::cerr << "found only trivial join graphs, so there is no need to run JoinOrdering again\n";
-  }
 }
 
 }  // namespace hyrise
