@@ -28,7 +28,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 std::vector<int32_t> vector_sizes = {10'000, 100'000, 1'000'000, 10'000'000};
 std::vector<double> distinctivenesses = {0.01, 0.5, 1.0};
 std::vector<double> overlaps = {0.0, 0.5, 1.0};
-uint8_t hash_functions = 2;  // 0: std::hash, 1: hash_combine, 2: xxHash, 3: degski
+uint8_t hash_functions = 4;  // 0: std::hash, 1: hash_combine, 2: xxHash, 3: degski
 uint16_t min_runs = 12;
 uint16_t max_runs = 102;
 int64_t min_time_ns = 10'000'000'000;
