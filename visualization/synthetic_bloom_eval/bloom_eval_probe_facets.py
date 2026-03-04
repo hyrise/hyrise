@@ -34,14 +34,13 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     raw_df = pd.read_csv(csv_file)
-    raw_df = raw_df[raw_df["hash_function"] != 0].copy()
     raw_df["filter_rate"] = 1 - (raw_df["hits"] / raw_df["vector_size"])
 
     hash_name_map = {
         0: "std::hash",
-        1: "boost::hash_combine",
+        1: "hash_combine",
         2: "xxHash",
-        3: "degski64",
+        3: "fmix64",
     }
 
     grouping_columns = [
