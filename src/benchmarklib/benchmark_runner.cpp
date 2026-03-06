@@ -165,6 +165,13 @@ void BenchmarkRunner::run() {
         .get_result_table();
   }
 
+  const auto use_reduce = std::getenv("REDUCE");
+  if (use_reduce && std::string{use_reduce} == "true") {
+    std::cout << "Use REDUCER\n";
+  } else {
+    std::cout << "Use SEMI-JOIN\n";
+  }
+
   // Retrieve the items to be executed and prepare the result vector.
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
