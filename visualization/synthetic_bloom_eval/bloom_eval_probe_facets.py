@@ -40,7 +40,7 @@ def main() -> None:
         0: "std::hash",
         1: "hash_combine",
         2: "xxHash",
-        3: "fmix64",
+        3: "degski",
     }
 
     grouping_columns = [
@@ -64,10 +64,23 @@ def main() -> None:
     aggregated["median_probe_time_ms"] = aggregated["median_probe_time_ns"] / 1_000_000
     aggregated["hash_name"] = aggregated["hash_function"].map(hash_name_map)
 
+    filter_size_labels = {
+        18: "32 KiB",
+        23: "1024 KiB",
+    }
+    aggregated["filter_size_label"] = aggregated["filter_size"].map(filter_size_labels)
+    aggregated["filter_size_label"] = aggregated["filter_size_label"].fillna(
+        aggregated["filter_size"].map(lambda value: f"2^{int(value)} bits")
+    )
+
     vector_sizes = sorted(aggregated["vector_size"].unique())
     distinctiveness_values = sorted(aggregated["distinctiveness"].unique())
     hash_ids_present = sorted(aggregated["hash_function"].unique())
     hash_order = [hash_name_map[key] for key in hash_ids_present]
+    filter_size_order = sorted(aggregated["filter_size"].unique())
+    filter_size_col_order = [
+        filter_size_labels.get(value, f"2^{int(value)} bits") for value in filter_size_order
+    ]
     marker_map = {1: "o", 2: "s", 3: "^", 4: "D"}
     k_order = sorted(aggregated["k"].unique())
     palette = dict(zip(hash_order, sns.color_palette("deep", n_colors=len(hash_order))))
@@ -86,7 +99,8 @@ def main() -> None:
             grid = sns.FacetGrid(
                 subset,
                 row="overlap",
-                col="filter_size",
+                col="filter_size_label",
+                col_order=filter_size_col_order,
                 margin_titles=True,
                 height=3.6,
                 aspect=1.35,
@@ -108,7 +122,7 @@ def main() -> None:
                     **kwargs,
                 )
                 for hash_name in hash_order:
-                    hash_subset = data[data["hash_name"] == hash_name].sort_values("filter_rate")
+                    hash_subset = data[data["hash_name"] == hash_name].sort_values("k")
                     if hash_subset.empty:
                         continue
                     plt.plot(
