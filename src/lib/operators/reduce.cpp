@@ -358,7 +358,7 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
       return input_table;
     }
 
-    auto new_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
+    auto new_bloom_filter = std::shared_ptr<BaseBloomFilter>{};  // make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
     std::shared_ptr<MinMaxPredicate<DataType>> new_min_max_predicate;
 
     if constexpr (use_min_max == UseMinMax::Yes) {
@@ -368,6 +368,7 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
     auto worker_count = uint32_t{1};
     if (Hyrise::get().is_multi_threaded()) {
       worker_count = static_cast<uint32_t>(Hyrise::get().topology.num_cpus());
+      new_bloom_filter = make_bloom_filter(_filter_size_exponent, _block_size_exponent, _k);
     }
 
     const auto chunk_count = input_table->chunk_count();
@@ -421,7 +422,12 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
           }
         });
 
-        new_bloom_filter->merge_from(*partial_bloom_filter);
+        if (worker_count == 1) {
+          new_bloom_filter = partial_bloom_filter;
+        } else {
+          new_bloom_filter->merge_from(*partial_bloom_filter);
+        }
+
         if constexpr (use_min_max == UseMinMax::Yes) {
           new_min_max_predicate->merge_from(partial_minimum, partial_maximum);
         }
@@ -533,11 +539,14 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
 
             segment_iterate<DataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
-                auto found = resolved_bloom_filter.probe(degski(position.value()));
+                // auto found = resolved_bloom_filter.probe(degski(position.value()));
+                auto found = false;
 
                 if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
                   const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
-                  found &= diff <= value_difference;
+                  found = diff <= value_difference && resolved_bloom_filter.probe(degski(position.value()));
+                } else {
+                  found = resolved_bloom_filter.probe(degski(position.value()));
                 }
 
                 if (found) {
