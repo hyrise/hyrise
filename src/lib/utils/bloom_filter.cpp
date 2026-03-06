@@ -121,6 +121,7 @@ BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::BlockBloomFilter()
   _integer_filter_view = reinterpret_cast<uint64_t*>(_filter.data());
 }
 
+/*
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 void BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::insert(uint64_t hash) {
   const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
@@ -149,6 +150,7 @@ bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::probe(uint64_t 
 
   return result;
 }
+*/
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 void BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::merge_from(const BaseBloomFilter& other) {
