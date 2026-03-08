@@ -8,6 +8,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include <boost/functional/hash.hpp>
 
@@ -21,6 +22,23 @@ inline constexpr uint64_t degski ( int32_t input ) noexcept {
     x = ( ( x >> 32 ) ^ x ) * 0xD6E8FEB86659FD93;
     x = ( ( x >> 32 ) ^ x );
     return x;
+}
+
+int32_t compute_intersection_count(const std::vector<int32_t>& build_vec, const std::vector<int32_t>& probe_vec) {
+  std::unordered_set<int32_t> build_values;
+  build_values.reserve(build_vec.size());
+  for (const auto value : build_vec) {
+    build_values.emplace(value);
+  }
+
+  auto intersection = int32_t{0};
+  for (const auto value : probe_vec) {
+    if (build_values.contains(value)) {
+      ++intersection;
+    }
+  }
+
+  return intersection;
 }
 
 using namespace hyrise;  // NOLINT(build/namespaces)
@@ -45,6 +63,7 @@ struct BenchmarkResult {
   int64_t probe_time_ns;
   int32_t hits;
   double saturation;
+  int32_t intersection;
   std::string bit_distribution;
 };
 
@@ -96,7 +115,7 @@ auto measure_duration(F&& f) {
 template <uint8_t FilterSize, uint8_t K>
 void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec, const std::vector<int32_t>& probe_vec,
                                  const uint8_t hash_function, const size_t vector_size, double distinctiveness,
-                                 double overlap, const std::string& csv_filename) {
+                                 double overlap, const std::string& csv_filename, int32_t intersection) {
   std::cout << "Evaluation Bloom filter with size: " << std::to_string(FilterSize) << ", K: " << std::to_string(K)
             << ", and Hash: " << std::to_string(hash_function) << "\n";
 
@@ -192,14 +211,15 @@ void run_bloom_filter_evaluation(const std::vector<int32_t>& build_vec, const st
                            probe_time,
                            hits,
                            bloom_filter.saturation(),
+                           intersection,
                            bloom_filter.bit_distribution()};
 
     // Append result to CSV file
     out << result.vector_size << "," << result.distinctiveness << "," << result.overlap << ","
         << static_cast<int>(result.filter_size) << "," << static_cast<int>(result.k) << ","
         << static_cast<int>(result.hash_function) << "," << result.run << "," << result.build_time_ns << ","
-        << result.probe_time_ns << "," << result.hits << "," << result.saturation << "," << result.bit_distribution
-        << "\n";
+        << result.probe_time_ns << "," << result.hits << "," << result.saturation << "," << result.intersection << ","
+        << result.bit_distribution << "\n";
 
     ++run;
   }
@@ -226,19 +246,20 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   out << "vector_size,distinctiveness,overlap,filter_size,k,hash_function,run,build_time_ns,probe_time_ns,hits,"
-         "saturation,bit_distribution\n";
+         "saturation,intersection,bit_distribution\n";
   out.close();
 
 #define RUN_EVALUATION(filter_size, k)                                                                             \
   {                                                                                                                \
     run_bloom_filter_evaluation<filter_size, k>(build_vec, probe_vec, hash_function, vector_size, distinctiveness, \
-                                                overlap, csv_filename);                                            \
+                                                overlap, csv_filename, intersection);                                            \
   }
 
   for (const auto vector_size : vector_sizes) {
     for (const auto distinctiveness : distinctivenesses) {
       for (const auto overlap : overlaps) {
         const auto [build_vec, probe_vec] = generate_data(vector_size, distinctiveness, overlap);
+        const auto intersection = compute_intersection_count(build_vec, probe_vec);
 
         for (uint8_t hash_function = 0; hash_function < hash_functions; ++hash_function) {
           RUN_EVALUATION(18, 1)
