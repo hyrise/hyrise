@@ -7,8 +7,8 @@
 #include <iostream>
 #include <random>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 #include <boost/functional/hash.hpp>
 
@@ -16,12 +16,12 @@
 #include "utils/bloom_filter.hpp"
 #include "xxhash.hpp"
 
-inline constexpr uint64_t degski ( int32_t input ) noexcept {
-    auto x = static_cast<uint64_t>(input);
-    x = ( ( x >> 32 ) ^ x ) * 0xD6E8FEB86659FD93;
-    x = ( ( x >> 32 ) ^ x ) * 0xD6E8FEB86659FD93;
-    x = ( ( x >> 32 ) ^ x );
-    return x;
+inline constexpr uint64_t degski(int32_t input) noexcept {
+  auto x = static_cast<uint64_t>(input);
+  x = ((x >> 32) ^ x) * 0xD6E8FEB86659FD93;
+  x = ((x >> 32) ^ x) * 0xD6E8FEB86659FD93;
+  x = ((x >> 32) ^ x);
+  return x;
 }
 
 int32_t compute_intersection_count(const std::vector<int32_t>& build_vec, const std::vector<int32_t>& probe_vec) {
@@ -87,7 +87,7 @@ std::pair<std::vector<int32_t>, std::vector<int32_t>> generate_data(const int32_
   std::cout << "Range 1: [" << range_min_1 << ", " << static_cast<int32_t>(range_max_1) << "]\n";
 
   std::mt19937 gen0(4615968);
-  std::mt19937 gen1(7182534);//7182534
+  std::mt19937 gen1(7182534);  //7182534
   std::uniform_int_distribution<int32_t> dis0(static_cast<int32_t>(range_min_0), static_cast<int32_t>(range_max_0));
   std::uniform_int_distribution<int32_t> dis1(static_cast<int32_t>(range_min_1), static_cast<int32_t>(range_max_1));
 
@@ -252,7 +252,7 @@ int main(int argc, char* argv[]) {
 #define RUN_EVALUATION(filter_size, k)                                                                             \
   {                                                                                                                \
     run_bloom_filter_evaluation<filter_size, k>(build_vec, probe_vec, hash_function, vector_size, distinctiveness, \
-                                                overlap, csv_filename, intersection);                                            \
+                                                overlap, csv_filename, intersection);                              \
   }
 
   for (const auto vector_size : vector_sizes) {

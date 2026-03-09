@@ -466,7 +466,7 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
     Assert(build_reduce, "Failed to cast build reduce.");
 
     if (build_reduce->_empty_input) {
-      return std::make_shared<const Table>(input_table->column_definitions(), TableType::References);
+      return Table::create_dummy_table(input_table->column_definitions());
     }
 
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
