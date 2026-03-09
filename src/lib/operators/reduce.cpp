@@ -230,11 +230,6 @@ static double false_positive_rate(double m, double n, double k) {
 
 double false_positive_rate_blocked(double filter_size_bits, double n, double k, double B = 512, /* block size in bits */
                                    double epsilon = 0.000001) {
-  if (n == 0.0) {
-    std::cout << "Warning: n is 0 in false_positive_rate_blocked calculation. Returning 0.0 as false positive rate." << std::endl;
-    return 0.0;
-  }
-
   double f = 0;
   double c = filter_size_bits / n;
   double lambda = B / c;
@@ -315,8 +310,13 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
   std::shared_ptr<const Table> input_table = right_input_table();
   auto column_id = _predicate.column_ids.second;
 
+  const auto input_row_count = input_table->row_count();
+  if (input_row_count == 0) {
+    _empty_input = true;
+    return input_table;
+  }
+
   if (_filter_size_exponent == 0) {
-    const auto input_row_count = input_table->row_count();
     // std::cout << "Reduce input row count: " << input_row_count << std::endl;
 
     // const auto max_k = uint8_t{3};
@@ -461,6 +461,14 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
   std::shared_ptr<const Table> output_table;
   auto column_id = _predicate.column_ids.first;
 
+      Assert(_right_input->executed(), "Build Reducer was not executed.");
+    const auto build_reduce = std::dynamic_pointer_cast<const Reduce>(_right_input);
+    Assert(build_reduce, "Failed to cast build reduce.");
+
+    if (build_reduce->_empty_input) {
+      return std::make_shared<const Table>(input_table->column_definitions(), TableType::References);
+    }
+
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
     using DataType = typename decltype(column_data_type)::type;
 
@@ -472,10 +480,6 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
     const auto chunk_count = input_table->chunk_count();
     auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
     output_chunks.resize(chunk_count);
-
-    Assert(_right_input->executed(), "Build Reducer was not executed.");
-    const auto build_reduce = std::dynamic_pointer_cast<const Reduce>(_right_input);
-    Assert(build_reduce, "Failed to cast build reduce.");
 
     _bloom_filter = build_reduce->get_bloom_filter();
     _min_max_predicate = build_reduce->get_min_max_predicate();
