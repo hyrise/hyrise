@@ -62,6 +62,7 @@ class Reduce : public AbstractReadOnlyOperator {
   uint8_t _filter_size_exponent;
   uint8_t _block_size_exponent;
   uint8_t _k;
+  bool _expect_bloom{true};
 };
 
 }  // namespace hyrise

@@ -312,6 +312,10 @@ std::shared_ptr<const Table> Reduce::_on_execute() {
 template <UseMinMax use_min_max>
 std::shared_ptr<const Table> Reduce::_execute_build() {
   std::shared_ptr<const Table> input_table = right_input_table();
+  if (input_table->chunk_count() == ChunkID{0}) {
+    _expect_bloom = false;
+    return input_table;
+  }
   auto column_id = _predicate.column_ids.second;
 
   if (_filter_size_exponent == 0) {
@@ -471,7 +475,8 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
 
     if constexpr (!std::is_same_v<DataType, int32_t>) {
       Fail("Reduce only suppoerts int32_t currently.");
-      return input_table;
+      output_table = input_table;
+      return;
     }
 
     const auto chunk_count = input_table->chunk_count();
@@ -484,6 +489,12 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
 
     _bloom_filter = build_reduce->get_bloom_filter();
     _min_max_predicate = build_reduce->get_min_max_predicate();
+    if (!build_reduce->_expect_bloom || input_table->chunk_count() == ChunkID{0}) {
+      output_chunks.clear();
+      output_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::References,
+                                                  std::move(output_chunks));
+      return;
+    }
 
     auto minimum = DataType{};
     auto maximum = DataType{};
