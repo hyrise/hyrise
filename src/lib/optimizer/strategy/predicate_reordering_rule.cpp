@@ -87,14 +87,7 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
     constexpr auto DO_CACHE = false;
     const auto output_cardinality = cardinality_estimator->estimate_cardinality(predicate, DO_CACHE);
     const auto estimated_cost = cost_estimator->estimate_node_cost(predicate, DO_CACHE) - output_cardinality;
-    
-    auto penalty = Cost{1};
-    if (predicate->type == LQPNodeType::Join) {
-      auto join_node = std::dynamic_pointer_cast<JoinNode>(predicate);
-      if (!join_node->is_semi_reduction()) {
-        penalty = PredicateReorderingRule::JOIN_PENALTY;
-      }
-    }
+    const auto penalty = predicate->type == LQPNodeType::Join ? PredicateReorderingRule::JOIN_PENALTY : Cost{1};
     const auto weighted_cost = (estimated_cost * penalty) + output_cardinality;
     nodes_and_costs.emplace_back(predicate, weighted_cost);
   }

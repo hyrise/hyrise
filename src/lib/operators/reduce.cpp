@@ -10,16 +10,16 @@
 #include "utils/timer.hpp"
 
 template <typename DataType>
-inline constexpr uint64_t degski ( DataType input ) noexcept {
-    if constexpr (std::is_same_v<DataType, int32_t>) {
+inline constexpr uint64_t degski(DataType input) noexcept {
+  if constexpr (std::is_same_v<DataType, int32_t>) {
     auto x = static_cast<uint64_t>(input);
-    x = ( ( x >> 32 ) ^ x ) * 0xD6E8FEB86659FD93;
-    x = ( ( x >> 32 ) ^ x ) * 0xD6E8FEB86659FD93;
-    x = ( ( x >> 32 ) ^ x );
+    x = ((x >> 32) ^ x) * 0xD6E8FEB86659FD93;
+    x = ((x >> 32) ^ x) * 0xD6E8FEB86659FD93;
+    x = ((x >> 32) ^ x);
     return x;
-    } else {
-      Fail("Degski hash function only supports int32_t values.");
-    }
+  } else {
+    Fail("Degski hash function only supports int32_t values.");
+  }
 }
 
 namespace hyrise {
@@ -461,13 +461,13 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
   std::shared_ptr<const Table> output_table;
   auto column_id = _predicate.column_ids.first;
 
-      Assert(_right_input->executed(), "Build Reducer was not executed.");
-    const auto build_reduce = std::dynamic_pointer_cast<const Reduce>(_right_input);
-    Assert(build_reduce, "Failed to cast build reduce.");
+  Assert(_right_input->executed(), "Build Reducer was not executed.");
+  const auto build_reduce = std::dynamic_pointer_cast<const Reduce>(_right_input);
+  Assert(build_reduce, "Failed to cast build reduce.");
 
-    if (build_reduce->_empty_input) {
-      return Table::create_dummy_table(input_table->column_definitions());
-    }
+  if (build_reduce->_empty_input) {
+    return Table::create_dummy_table(input_table->column_definitions());
+  }
 
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
     using DataType = typename decltype(column_data_type)::type;
