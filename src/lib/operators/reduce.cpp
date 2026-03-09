@@ -533,11 +533,13 @@ std::shared_ptr<const Table> Reduce::_execute_probe() {
 
             segment_iterate<DataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
-                auto found = resolved_bloom_filter.probe(degski(position.value()));
+                auto found = bool{};
 
                 if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
                   const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
-                  found &= diff <= value_difference;
+                  found = diff <= value_difference && resolved_bloom_filter.probe(degski(position.value()));
+                } else {
+                  found = resolved_bloom_filter.probe(degski(position.value()));
                 }
 
                 if (found) {
@@ -746,11 +748,13 @@ std::shared_ptr<const Table> Reduce::_execute_probe_and_build() {
             segment_iterate<DataType>(*input_segment, [&](const auto& position) {
               if (!position.is_null()) {
                 const auto hash = degski(position.value());
-                auto found = resolved_bloom_filter.probe(hash);
+                auto found = bool{};
 
                 if constexpr (use_min_max == UseMinMax::Yes && std::is_same_v<DataType, int32_t>) {
                   const auto diff = static_cast<UnsignedDataType>(position.value() - minimum);
-                  found &= diff <= value_difference;
+                  found = diff <= value_difference && resolved_bloom_filter.probe(hash);
+                } else {
+                  found = resolved_bloom_filter.probe(hash);
                 }
 
                 if (found) {
