@@ -122,35 +122,6 @@ BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::BlockBloomFilter()
 }
 
 template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
-void BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::insert(uint64_t hash) {
-  const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
-  for (uint8_t i = 0; i < K; ++i) {
-    const auto bit_index_in_block = (hash >> i * 9) & 511;
-    const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
-    const auto bit_index_in_item = bit_index_in_block & 63;
-    DebugAssert(block_index + block_item_index < _filter.size(), "Calculated index out of range.");
-    _integer_filter_view[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
-  }
-}
-
-template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
-bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::probe(uint64_t hash) const {
-  auto result = true;
-  const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
-
-  for (uint8_t i = 0; i < K; ++i) {
-    const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
-    const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
-    const auto bit_index_in_item = bit_index_in_block & 63;
-
-    result &=
-        static_cast<bool>(_integer_filter_view[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
-  }
-
-  return result;
-}
-
-template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
 void BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::merge_from(const BaseBloomFilter& other) {
   const auto* typed_other = dynamic_cast<const BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>*>(&other);
   if (!typed_other) {
@@ -198,20 +169,6 @@ std::string BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::bit_dist
     }
   }
   return csv_output;
-}
-
-template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
-void BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::_set_bit(uint32_t bit_index) {
-  uint32_t array_index = bit_index >> 6;   // bit_index / 64
-  uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
-  _filter[array_index] |= (1ULL << bit_offset);
-}
-
-template <uint8_t FilterSizeExponent, uint8_t BlockSizeExponent, uint8_t K>
-bool BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::_get_bit(uint32_t bit_index) const {
-  uint32_t array_index = bit_index >> 6;   // bit_index / 64
-  uint32_t bit_offset = bit_index & 0x3F;  // bit_index % 64
-  return (_integer_filter_view[array_index] >> bit_offset) & 1ULL;
 }
 
 template class BlockBloomFilter<18, 9, 1>;

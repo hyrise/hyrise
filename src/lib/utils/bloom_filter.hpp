@@ -68,9 +68,32 @@ class BlockBloomFilter : public BaseBloomFilter {
  public:
   BlockBloomFilter();
 
-  void insert(uint64_t hash);
+  void insert(uint64_t hash) {
+      const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
+  for (uint8_t i = 0; i < K; ++i) {
+    const auto bit_index_in_block = (hash >> i * 9) & 511;
+    const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
+    const auto bit_index_in_item = bit_index_in_block & 63;
+    DebugAssert(block_index + block_item_index < _filter.size(), "Calculated index out of range.");
+    _integer_filter_view[block_index + block_item_index] |= (size_t{1} << bit_index_in_item);
+  }
+  }
 
-  bool probe(uint64_t hash) const;
+  bool probe(uint64_t hash) const {
+    auto result = true;
+  const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
+
+  for (uint8_t i = 0; i < K; ++i) {
+    const auto bit_index_in_block = (hash >> i * 9) & size_t{511};
+    const auto block_item_index = bit_index_in_block >> 6;  // Index of uint64_t in block
+    const auto bit_index_in_item = bit_index_in_block & 63;
+
+    result &=
+        static_cast<bool>(_integer_filter_view[block_index + block_item_index] & (size_t{1} << bit_index_in_item));
+  }
+
+  return result;
+  }
 
   void merge_from(const BaseBloomFilter& other) override final;
 
@@ -79,9 +102,6 @@ class BlockBloomFilter : public BaseBloomFilter {
   std::string bit_distribution() const override final;
 
  protected:
-  void _set_bit(uint32_t bit_index);
-
-  bool _get_bit(uint32_t bit_index) const;
 
   // Compile-time validation
   static_assert(FilterSizeExponent >= 6, "FilterSizeExponent must be at least 6 (minimum 64 bits)");
