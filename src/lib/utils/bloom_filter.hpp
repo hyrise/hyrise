@@ -68,7 +68,7 @@ class BlockBloomFilter : public BaseBloomFilter {
  public:
   BlockBloomFilter();
 
-  void insert(uint64_t hash) {
+  inline void insert(uint64_t hash) {
     const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
     for (uint8_t i = 0; i < K; ++i) {
       const auto bit_index_in_block = (hash >> i * 9) & 511;
@@ -79,7 +79,7 @@ class BlockBloomFilter : public BaseBloomFilter {
     }
   }
 
-  bool probe(uint64_t hash) const {
+  inline bool probe(uint64_t hash) const {
     auto result = true;
     const auto block_index = (hash >> (size_t{64} - bits_required_for_cacheline_offset)) << 3;
 
