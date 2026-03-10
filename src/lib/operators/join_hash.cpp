@@ -15,6 +15,8 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
@@ -23,6 +25,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_performance_data.hpp"
+#include "operators/table_scan.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -34,6 +37,8 @@
 #include "utils/timer.hpp"
 
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
@@ -120,6 +125,25 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinHash does not support these parameters.");
 
+  if (_mode == JoinMode::Semi && _secondary_predicates.empty() && right_input_table()->chunk_count() == ChunkID{1} &&
+      right_input_table()->row_count() == 1) {
+    auto value = AllTypeVariant{};
+    const auto build_column_id = _primary_predicate.column_ids.second;
+    segment_iterate(*right_input_table()->get_chunk(ChunkID{0})->get_segment(build_column_id),
+                    [&](const auto& position) {
+                      value = position.is_null() ? NULL_VALUE : position.value();
+                    });
+
+    if (variant_is_null(value)) {
+      return std::make_shared<const Table>(left_input_table()->column_definitions(), TableType::References);
+    }
+
+    const auto scan_column = PQPColumnExpression::from_table(*left_input_table(), _primary_predicate.column_ids.first);
+    const auto table_scan = std::make_unique<TableScan>(_left_input, equals_(scan_column, value_(value)));
+    table_scan->execute();
+    return table_scan->get_output();
+  }
+
   auto build_input_table = std::shared_ptr<const Table>{};
   auto probe_input_table = std::shared_ptr<const Table>{};
   auto build_column_id = ColumnID{};
@@ -164,7 +188,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     }
   }
 
-  auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
+  const auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
 
   const auto build_column_type = build_input_table->column_data_type(build_column_id);
   const auto probe_column_type = probe_input_table->column_data_type(probe_column_id);
