@@ -4,7 +4,8 @@
 # - Binary Optimization and Layouting Tool (https://github.com/llvm/llvm-project/tree/main/bolt)
 # To use it, first create a cmake build folder and configure cmake. Then run this script from the build folder.
 # You can run the script with -h for a detailed explanation of cli arguments.
-# There is [a comment summarizing the PGO options we evaluated](https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523)
+# There is a comment summarizing the PGO options we evaluated:
+# https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523
 
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, BooleanOptionalAction
 from subprocess import run

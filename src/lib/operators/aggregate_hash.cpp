@@ -601,9 +601,8 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregat
 };
 
 template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
-void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index,
-                                                            const AbstractSegment& abstract_segment,
-                                                            KeysPerChunk<AggregateKey>& keys_per_chunk) {
+void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
+                                       KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
   auto aggregator = WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
