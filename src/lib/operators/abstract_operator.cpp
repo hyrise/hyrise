@@ -286,9 +286,9 @@ bool AbstractOperator::transaction_context_is_set() const {
 }
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
-  DebugAssert(!transaction_context_is_set() || !_transaction_context->expired(),
-              std::format("TransactionContext is expired, but SQL Query Executor should still own it (operator: '{}')",
-                          name()));
+  DebugAssert(
+      !transaction_context_is_set() || !_transaction_context->expired(),
+      std::format("TransactionContext is expired, but SQLQueryExecutor should still own it (operator: '{}')", name()));
   return transaction_context_is_set() ? _transaction_context->lock() : nullptr;
 }
 

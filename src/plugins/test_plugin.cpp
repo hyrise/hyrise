@@ -34,6 +34,9 @@ void TestPlugin::start() {
 void TestPlugin::stop() {
   Hyrise::get().storage_manager.drop_table("DummyTable");
 
+  // We have to drop all tables created by the plugin before unloading it, as the destructors of the tables might
+  // reside in the plugin binary. Leaving those tables and dropping them after removing the plugin can lead to
+  // segfaults.
   for (auto index = size_t{0}; index < _added_tables_count; ++index) {
     Hyrise::get().storage_manager.drop_table(std::format("TableOfTestPlugin_{}", index));
   }

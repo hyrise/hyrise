@@ -12,7 +12,7 @@ namespace {
  * invocations of 'TPCHTableGenerator(scale_factor, 1000).generate();' will profit from cached data in tpch-dbgen
  * @param state.
  */
-void bm_tpch_table_generator(benchmark::State& state) {
+void BM_TPCHTableGenerator(benchmark::State& state) {
   for (auto _ : state) {
     TPCHTableGenerator(float{0.5}, ClusteringConfiguration::None, ChunkOffset{1000}).generate_and_store();
     Hyrise::reset();
@@ -21,6 +21,6 @@ void bm_tpch_table_generator(benchmark::State& state) {
 
 }  // namespace
 
-BENCHMARK(bm_tpch_table_generator);
+BENCHMARK(BM_TPCHTableGenerator);
 
 }  // namespace hyrise

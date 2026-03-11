@@ -149,7 +149,7 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
 }
 
 template <typename AggregateType, typename JoinType>
-void bm_join_aggregate(benchmark::State& state) {
+void BM_Join_Aggregate(benchmark::State& state) {
   auto table_wrapper_left = create_ages_table(TABLE_SIZE);
   table_wrapper_left->never_clear_output();
   table_wrapper_left->execute();
@@ -185,9 +185,9 @@ void bm_join_aggregate(benchmark::State& state) {
 
 namespace hyrise {
 
-BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinSortMerge);
-BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateSort, JoinHash);
-BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateHash, JoinSortMerge);
-BENCHMARK_TEMPLATE(bm_join_aggregate, AggregateHash, JoinHash);
+BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinSortMerge);
+BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinHash);
+BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinSortMerge);
+BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinHash);
 
 }  // namespace hyrise

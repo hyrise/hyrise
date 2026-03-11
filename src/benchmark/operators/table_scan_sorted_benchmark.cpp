@@ -129,7 +129,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   return table_wrapper;
 }
 
-void bm_table_scan_sorted(
+void BM_TableScanSorted(
     benchmark::State& state, const int table_size, const double selectivity, const EncodingType encoding_type,
     const std::string& mode, const bool is_between_scan, const bool is_reference_scan,
     const std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)>& table_creator) {
@@ -212,7 +212,7 @@ void bm_table_scan_sorted(
   }
 }
 
-void register_table_scan_sorted_benchmarks() {
+void registerTableScanSortedBenchmarks() {
   using EncodingAndSupportedDataTypes = std::pair<EncodingType, std::vector<std::string>>;
   const std::map<std::string, EncodingAndSupportedDataTypes> encoding_types{
       {"None", EncodingAndSupportedDataTypes(EncodingType::Unencoded, {"Int", "String"})},
@@ -252,7 +252,7 @@ void register_table_scan_sorted_benchmarks() {
                   std::format("BM_Table{}ScanSorted/{}/{}/{}/{}/{}", is_between_scan ? "Between" : "",
                               is_reference_scan ? "ReferenceTableScan" : "DataTableScan", encoding_name, selectivity,
                               data_type, mode),
-                  bm_table_scan_sorted, ROWS, selectivity, encoding_type, mode, is_between_scan, is_reference_scan,
+                  BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan, is_reference_scan,
                   table_generator);
             }
           }
@@ -269,7 +269,7 @@ void register_table_scan_sorted_benchmarks() {
 class StartUp {
  public:
   StartUp() {
-    register_table_scan_sorted_benchmarks();
+    registerTableScanSortedBenchmarks();
   }
 };
 

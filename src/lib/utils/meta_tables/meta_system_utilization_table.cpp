@@ -144,8 +144,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto active_ticks = static_cast<double>(
       cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE]);
 #else
-
-  Fail("Method not implemented for this platform.");
+  > Fail("Method not implemented for this platform.");
 
 #endif  // __APPLE__
 #endif  // __linux__

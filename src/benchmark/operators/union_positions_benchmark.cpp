@@ -80,7 +80,7 @@ std::shared_ptr<Table> create_reference_table(const std::shared_ptr<Table>& refe
   return table;
 }
 
-void bm_union_positions(::benchmark::State& state) {
+void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
   const auto num_rows = 500000;
   const auto num_columns = 5;
 
@@ -117,7 +117,7 @@ void bm_union_positions(::benchmark::State& state) {
  * Measure what sorting and merging two pos lists would cost - that's the core of the UnionPositions implementation and sets
  * a performance base line for what UnionPositions could achieve in an overhead-free implementation.
  */
-void bm_union_positions_base_line(::benchmark::State& state) {
+void BM_UnionPositionsBaseLine(::benchmark::State& state) {
   auto num_table_rows = 500000;
 
   auto pos_list_left = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
@@ -131,7 +131,7 @@ void bm_union_positions_base_line(::benchmark::State& state) {
     std::ranges::sort(left);
     std::ranges::sort(right);
 
-    RowIDPosList result;
+    auto result = RowIDPosList{};
     result.reserve(std::min(left.size(), right.size()));
     std::ranges::set_union(left, right, std::back_inserter(result));
   }
@@ -141,7 +141,7 @@ void bm_union_positions_base_line(::benchmark::State& state) {
 
 namespace hyrise {
 
-BENCHMARK(bm_union_positions);
+BENCHMARK(BM_UnionPositions);
 
-BENCHMARK(bm_union_positions_base_line);
+BENCHMARK(BM_UnionPositionsBaseLine);
 }  // namespace hyrise

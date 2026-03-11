@@ -38,9 +38,9 @@ std::shared_ptr<Table> generate_custom_table(const size_t row_count, const DataT
   return table_generator->generate_table(column_specifications, row_count);
 }
 
-void bm_run_sort(benchmark::State& state, const size_t row_count = 40'000, const DataType data_type = DataType::Int,
-                 const float null_ratio = 0.0, const bool multi_column_sort = true,
-                 const bool use_reference_segment = false) {
+void BM_RunSort(benchmark::State& state, const size_t row_count = 40'000, const DataType data_type = DataType::Int,
+                const float null_ratio = 0.0, const bool multi_column_sort = true,
+                const bool use_reference_segment = false) {
   micro_benchmark_clear_cache();
 
   const auto input_table = generate_custom_table(row_count, data_type, null_ratio);
@@ -70,45 +70,45 @@ void bm_run_sort(benchmark::State& state, const size_t row_count = 40'000, const
   }
 }
 
-void bm_sort(benchmark::State& state) {
+void BM_Sort(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  bm_run_sort(state, row_count);
+  BM_RunSort(state, row_count);
 }
 
-void bm_sort_two_columns(benchmark::State& state) {
+void BM_SortTwoColumns(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  bm_run_sort(state, row_count, DataType::Int, 0.0f, true);
+  BM_RunSort(state, row_count, DataType::Int, 0.0f, true);
 }
 
-void bm_sort_with_null_values(benchmark::State& state) {
+void BM_SortWithNullValues(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  bm_run_sort(state, row_count, DataType::Int, 0.2f);
+  BM_RunSort(state, row_count, DataType::Int, 0.2f);
 }
 
-void bm_sort_with_reference_segments(benchmark::State& state) {
+void BM_SortWithReferenceSegments(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  bm_run_sort(state, row_count, DataType::Int, 0.0f, false, true);
+  BM_RunSort(state, row_count, DataType::Int, 0.0f, false, true);
 }
 
-void bm_sort_with_reference_segments_two_columns(benchmark::State& state) {
+void BM_SortWithReferenceSegmentsTwoColumns(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  bm_run_sort(state, row_count, DataType::Int, 0.0f, true, true);
+  BM_RunSort(state, row_count, DataType::Int, 0.0f, true, true);
 }
 
-void bm_sort_with_strings(benchmark::State& state) {
+void BM_SortWithStrings(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  bm_run_sort(state, row_count, DataType::String);
+  BM_RunSort(state, row_count, DataType::String);
 }
 
 }  // namespace
 
 namespace hyrise {
 
-BENCHMARK(bm_sort)->RangeMultiplier(100)->Range(100, 1'000'000);
-BENCHMARK(bm_sort_two_columns)->RangeMultiplier(100)->Range(100, 1'000'000);
-BENCHMARK(bm_sort_with_null_values)->RangeMultiplier(100)->Range(100, 1'000'000);
-BENCHMARK(bm_sort_with_reference_segments)->RangeMultiplier(100)->Range(100, 1'000'000);
-BENCHMARK(bm_sort_with_reference_segments_two_columns)->RangeMultiplier(100)->Range(100, 1'000'000);
-BENCHMARK(bm_sort_with_strings)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_Sort)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortTwoColumns)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortWithNullValues)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortWithReferenceSegments)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortWithReferenceSegmentsTwoColumns)->RangeMultiplier(100)->Range(100, 1'000'000);
+BENCHMARK(BM_SortWithStrings)->RangeMultiplier(100)->Range(100, 1'000'000);
 
 }  // namespace hyrise

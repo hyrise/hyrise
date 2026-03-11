@@ -201,7 +201,7 @@ int Console::read() {
     // Save command to history file.
     if (!_history_file.empty()) {
       if (append_history(1, _history_file.c_str()) != 0) {
-        out(std::format("Error appending to history file: '{}'\n", _history_file));
+        out(std::format("Error appending to history file: '{}'.\n", _history_file));
       }
     }
   }

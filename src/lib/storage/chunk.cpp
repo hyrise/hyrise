@@ -65,7 +65,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert(
       (_segments.size() == values.size()),
-      std::format("Number of segments '{}' does not match size of value list '{}'.", _segments.size(), values.size()));
+      std::format("Number of segments ({}) does not match size of value list ({}).", _segments.size(), values.size()));
 
   auto segment_it = _segments.cbegin();
   auto value_it = values.begin();

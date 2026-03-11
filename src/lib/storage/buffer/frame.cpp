@@ -33,7 +33,7 @@ void Frame::set_node_id(const NodeID node_id) {
   }
 
   DebugAssert(Frame::node_id(_state_and_version.load()) == node_id,
-              std::format("Setting NUMA node didnt work: {}", Frame::node_id(_state_and_version.load()).t));
+              std::format("Setting NUMA node did not work: {}", Frame::node_id(_state_and_version.load()).t));
 }
 
 void Frame::mark_dirty() {
@@ -130,7 +130,7 @@ bool Frame::unlock_shared() {
 
 void Frame::unlock_exclusive() {
   DebugAssert(state(_state_and_version.load()) == LOCKED,
-              std::format("Frame must be locked to unlock exclusive. {}", state(_state_and_version.load())));
+              std::format("Frame must be locked to unlock exclusive, instead: {}", state(_state_and_version.load())));
   _state_and_version.store(_update_state_with_incremented_version(_state_and_version.load(), UNLOCKED),
                            std::memory_order_release);
 }

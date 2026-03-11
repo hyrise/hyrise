@@ -31,7 +31,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that compiles the given SQL query.
-  void bm_compile_query(benchmark::State& state) {
+  void BM_CompileQuery(benchmark::State& state) {
     for (auto _ : state) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -41,7 +41,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that only parses the given SQL query.
-  void bm_parse_query(benchmark::State& state) {
+  void BM_ParseQuery(benchmark::State& state) {
     for (auto _ : state) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -49,7 +49,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that only plans the given SQL query.
-  void bm_plan_query(benchmark::State& state) {
+  void BM_PlanQuery(benchmark::State& state) {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     for (auto _ : state) {
@@ -59,7 +59,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
-  void bm_query_plan_cache(benchmark::State& state) {
+  void BM_QueryPlanCache(benchmark::State& state) {
     const auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
 
     pqp_cache->resize(16);
@@ -81,20 +81,20 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
         HAVING COUNT(orderitems.o_orderkey) >= 100;)";
 };
 
-BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& state) {
-  bm_compile_query(state);
+BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) {
+  BM_CompileQuery(st);
 }
 
-BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& state) {
-  bm_parse_query(state);
+BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) {
+  BM_ParseQuery(st);
 }
 
-BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& state) {
-  bm_plan_query(state);
+BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) {
+  BM_PlanQuery(st);
 }
 
-BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& state) {
-  bm_query_plan_cache(state);
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) {
+  BM_QueryPlanCache(st);
 }
 
 }  // namespace hyrise
