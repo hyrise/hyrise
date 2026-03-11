@@ -76,9 +76,8 @@ TEST_F(PreparedPlanTest, InstantiateDuplicatePlaceholders) {
   // clang-format off
   const auto placeholder = placeholder_(ParameterID{0});
 
-  const auto lqp = JoinNode::make(
-    JoinMode::Inner,
-    equals_(a_a, b_x),
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, b_x),
     PredicateNode::make(greater_than_(a_a, placeholder),
       node_a),
     PredicateNode::make(greater_than_(b_x, placeholder),
@@ -90,9 +89,8 @@ TEST_F(PreparedPlanTest, InstantiateDuplicatePlaceholders) {
   const auto actual_lqp = prepared_plan.instantiate({value});
 
   // clang-format off
-  const auto expected_lqp = JoinNode::make(
-    JoinMode::Inner,
-    equals_(a_a, b_x),
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, b_x),
     PredicateNode::make(greater_than_(a_a, value),
       node_a),
     PredicateNode::make(greater_than_(b_x, value),
