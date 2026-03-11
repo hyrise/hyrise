@@ -30,6 +30,7 @@ enum class LQPNodeType {
   DummyTable,
   Except,
   Export,
+  GatherStatistics,
   Import,
   Insert,
   Intersect,

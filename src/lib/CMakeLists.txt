@@ -134,6 +134,8 @@ set(
     logical_query_plan/except_node.hpp
     logical_query_plan/export_node.cpp
     logical_query_plan/export_node.hpp
+    logical_query_plan/gather_statistics_node.cpp
+    logical_query_plan/gather_statistics_node.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
