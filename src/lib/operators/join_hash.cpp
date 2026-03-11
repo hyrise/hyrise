@@ -144,6 +144,62 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     return table_scan->get_output();
   }
 
+  if (_mode == JoinMode::Semi && _secondary_predicates.empty()) {
+    const auto build_column_id = _primary_predicate.column_ids.second;
+    const auto right_input_node = _right_input->lqp_node;
+    if (right_input_node->has_matching_ucc({right_input_node->output_expressions()[build_column_id]}) == std::make_pair(true, true)) {
+      auto output = std::shared_ptr<const Table>{};
+      const auto build_table = right_input_table();
+      resolve_data_type(build_table->column_data_type(build_column_id), [&](const auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        if constexpr (std::is_integral_v<ColumnDataType>) {
+          using UnsignedDataType = std::make_unsigned_t<ColumnDataType>;
+          auto min = std::numeric_limits<ColumnDataType>::max();
+          auto max = std::numeric_limits<ColumnDataType>::min();
+          auto value_count = build_table->row_count();
+          const auto chunk_count = build_table->chunk_count();
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto chunk = build_table->get_chunk(chunk_id);
+            Assert(chunk, "Physically deleted chunk should not reach this point.");
+
+            segment_with_iterators<ColumnDataType>(*build_table->get_chunk(chunk_id)->get_segment(build_column_id),
+                                                   [&](auto it, const auto& end) {
+                                                     for (; it != end; ++it) {
+                                                       if (it->is_null()) {
+                                                         --value_count;
+                                                         continue;
+                                                       }
+
+                                                       min = std::min(min, it->value());
+                                                       max = std::max(max, it->value());
+
+                                                       if (static_cast<UnsignedDataType>(max - min) >= value_count) {
+                                                         break;
+                                                       }
+                                                     }
+                                                   });
+            if (static_cast<UnsignedDataType>(max - min) >= value_count) {
+              break;
+            }
+          }
+
+          if (static_cast<UnsignedDataType>(max - min + 1) == value_count) {
+            const auto scan_column =
+                PQPColumnExpression::from_table(*left_input_table(), _primary_predicate.column_ids.first);
+            const auto table_scan =
+                std::make_unique<TableScan>(_left_input, between_inclusive_(scan_column, value_(min), value_(max)));
+            table_scan->execute();
+            output = table_scan->get_output();
+          }
+        }
+      });
+
+      if (output) {
+        return output;
+      }
+    }
+  }
+
   auto build_input_table = std::shared_ptr<const Table>{};
   auto probe_input_table = std::shared_ptr<const Table>{};
   auto build_column_id = ColumnID{};
