@@ -55,6 +55,11 @@ class BaseAttributeStatistics {
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
+  /*
+   * Returns the DataType of the statistic. This can't be a member in this class, as this class has to remain pure
+   * virtual (no members and just virtual functions), so other classes (e.g. AttributeStatistics) can extend it and
+   * another class. Extending multiple classes that are not pure virutal is discouraged.
+   */
   virtual DataType data_type() const = 0;
 };
 

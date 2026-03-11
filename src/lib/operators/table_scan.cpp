@@ -7,7 +7,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -70,13 +69,8 @@ const std::string& TableScan::name() const {
 std::string TableScan::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
 
-  auto stream = std::stringstream{};
-
-  stream << AbstractOperator::description(description_mode) << separator;
-  stream << std::format("Impl: {}", _impl_description) << separator;
-  stream << _predicate->as_column_name();
-
-  return stream.str();
+  return std::format("{1}{0}Impl: {2}{0}{3}", separator, AbstractOperator::description(description_mode),
+                     _impl_description, _predicate->as_column_name());
 }
 
 void TableScan::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {

@@ -46,6 +46,8 @@ class AbstractPointAccessSegmentIterator;
 template <typename Derived, typename Value>
 class AbstractSegmentIterator
     : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {
+  // The constructor of a CRTP has to be private, and the derived class has to be a friend so only it can construct
+  // the object. AbstractPointAccessSegmentIterator is also a friend because it extends this CRTP.
   AbstractSegmentIterator() = default;
   friend Derived;
   friend AbstractPointAccessSegmentIterator<Derived, Value, AbstractPosList::PosListIterator<>>;

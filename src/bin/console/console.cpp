@@ -374,13 +374,13 @@ void Console::load_history(const std::string& history_file) {
   if (!file.good()) {
     out(std::format("Creating history file: '{}'\n", _history_file));
     if (write_history(_history_file.c_str()) != 0) {
-      out(std::format("Error creating history file: '{}'\n", _history_file));
+      out(std::format("Error creating history file: '{}'.\n", _history_file));
       return;
     }
   }
 
   if (read_history(_history_file.c_str()) != 0) {
-    out(std::format("Error reading history file: '{}'\n", _history_file));
+    out(std::format("Error reading history file: '{}'.\n", _history_file));
   }
 }
 
@@ -500,8 +500,8 @@ int Console::_generate_tpcc(const std::string& args) {
     // NOLINTBEGIN(whitespace/line_length,whitespace/parens)
     // clang-format off
     out(            "Usage: ");
-    out(            "  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");
-    out(std::format("                                              Chunk size is {} by default. \n", Chunk::DEFAULT_SIZE.t));
+    out(            "  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses.\n");
+    out(std::format("                                              Chunk size is {} by default.\n", Chunk::DEFAULT_SIZE.t));
     // clang-format on
     // NOLINTEND(whitespace/line_length,whitespace/parens)
     return ReturnCode::Error;
@@ -528,8 +528,8 @@ int Console::_generate_tpch(const std::string& args) {
     // NOLINTBEGIN(whitespace/line_length,whitespace/parens)
     // clang-format off
     out(            "Usage: ");
-    out(            "  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out(std::format("                                            Chunk size is {} by default. \n", Chunk::DEFAULT_SIZE.t));
+    out(            "  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor.\n");
+    out(std::format("                                            Chunk size is {} by default.\n", Chunk::DEFAULT_SIZE.t));
     // clang-format on
     // NOLINTEND(whitespace/line_length,whitespace/parens)
     return ReturnCode::Error;
@@ -554,8 +554,8 @@ int Console::_generate_tpcds(const std::string& args) {
 
   if (arguments.empty() || arguments.size() > 2) {
     out("Usage: ");
-    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
-    out(std::format("                                             Chunk size is {} by default. \n",
+    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor.\n");
+    out(std::format("                                             Chunk size is {} by default.\n",
                     Chunk::DEFAULT_SIZE.t));
     return ReturnCode::Error;
   }
@@ -579,8 +579,8 @@ int Console::_generate_ssb(const std::string& args) {
 
   if (arguments.empty() || arguments.size() > 2) {
     out("Usage: ");
-    out("  generate_ssb SCALE_FACTOR [CHUNK_SIZE]   Generate SSB tables with the specified scale factor. \n");
-    out(std::format("                                           Chunk size is {} by default. \n",
+    out("  generate_ssb SCALE_FACTOR [CHUNK_SIZE]   Generate SSB tables with the specified scale factor.\n");
+    out(std::format("                                           Chunk size is {} by default.\n",
                     Chunk::DEFAULT_SIZE.t));
     return ReturnCode::Error;
   }
@@ -598,7 +598,7 @@ int Console::_generate_ssb(const std::string& args) {
   const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
 
   if (!std::filesystem::exists(ssb_dbgen_path / "dbgen")) {
-    out(std::format("SSB dbgen not found at '{}'\n", ssb_dbgen_path.string()));
+    out(std::format("SSB dbgen not found at '{}'.\n", ssb_dbgen_path.string()));
     return ReturnCode::Error;
   }
 
@@ -625,7 +625,7 @@ int Console::_load_table(const std::string& args) {
   const auto filepath = std::filesystem::path{arguments.at(0)};
   const auto tablename = arguments.size() >= 2 ? arguments.at(1) : std::string{filepath.stem()};
 
-  out(std::format("Loading '{}' into table '{}'\n", filepath.string(), tablename));
+  out(std::format("Loading '{}' into table '{}'.\n", filepath.string(), tablename));
 
   if (Hyrise::get().storage_manager.has_table(tablename)) {
     out(std::format("Table '{}' already existed. Replacing it.\n", tablename));
@@ -643,7 +643,7 @@ int Console::_load_table(const std::string& args) {
 
   const auto encoding_type = magic_enum::enum_cast<EncodingType>(encoding);
   if (!encoding_type) {
-    out(std::format("Error: Invalid encoding type: '{}', try one of these: {}\n", encoding, all_encoding_options()));
+    out(std::format("Error: Invalid encoding type: '{}', try one of these: {}.\n", encoding, all_encoding_options()));
     return ReturnCode::Error;
   }
 
@@ -652,7 +652,7 @@ int Console::_load_table(const std::string& args) {
   auto supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     if (!encoding_supports_data_type(*encoding_type, table->column_data_type(column_id))) {
-      out(std::format("Encoding '{}' not supported for column '{}', table left unencoded\n", encoding,
+      out(std::format("Encoding '{}' not supported for column '{}', table left unencoded.\n", encoding,
                       table->column_name(column_id)));
       supported = false;
     }
@@ -690,13 +690,13 @@ int Console::_export_table(const std::string& args) {
   auto table_operator = std::shared_ptr<AbstractOperator>{};
   if (MetaTableManager::is_meta_table_name(tablename)) {
     if (!meta_table_manager.has_table(tablename)) {
-      out("Error: MetaTable does not exist in MetaTableManager\n");
+      out("Error: MetaTable does not exist in MetaTableManager.\n");
       return ReturnCode::Error;
     }
     table_operator = std::make_shared<TableWrapper>(meta_table_manager.generate_table(tablename));
   } else {
     if (!storage_manager.has_table(tablename)) {
-      out("Error: Table does not exist in StorageManager\n");
+      out("Error: Table does not exist in StorageManager.\n");
       return ReturnCode::Error;
     }
     table_operator = std::make_shared<GetTable>(tablename);
@@ -729,7 +729,7 @@ int Console::_print_table(const std::string& args) {
 
   const auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
-    out("Error: Table does not exist in StorageManager\n");
+    out("Error: Table does not exist in StorageManager.\n");
     return ReturnCode::Error;
   }
 
@@ -874,9 +874,8 @@ int Console::_visualize(const std::string& input) {
     ret = system(std::format("{}planviz/is_iterm2.sh", scripts_dir).c_str());
   }
   if (ret != 0) {
-    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
-    msg += std::format("{}\n", img_filename);
-    out(msg);
+    out(std::format("Currently, only iTerm2 can print the visualization inline. You can find the plan at {}.\n",
+                    img_filename));
 
     return ReturnCode::Ok;
   }
@@ -921,7 +920,7 @@ int Console::_change_runtime_setting(const std::string& input) {
     return 0;
   }
 
-  out("Error: Unknown property\n");
+  out("Error: Unknown property.\n");
   return 1;
 }
 

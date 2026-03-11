@@ -19,7 +19,9 @@ class BenchmarkRunner;
 
 // This should be the only singleton in the src/lib world. It provides a unified way of accessing components like the
 // storage manager, the transaction manager, and more. Encapsulating this in one class avoids the static initialization
-// order fiasco, which would otherwise make the initialization/destruction order hard to control.
+// order fiasco, which would otherwise make the initialization/destruction order hard to control. One should never
+// store references to the fields of this singleton, as these might be invalidated if `reset()` is called. Instead,
+// always call `Hyrise::get()` to access fields in this singleton.
 class Hyrise : public Singleton<Hyrise> {
  public:
   // Resets the Hyrise state by deleting its members (e.g., StorageManager) and

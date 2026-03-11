@@ -23,7 +23,7 @@ class NullValueRatioStatistics : public AbstractStatisticsObject,
 
   std::shared_ptr<const AbstractStatisticsObject> pruned(
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2) const override;
+      const std::optional<AllTypeVariant>& variant_value2) const override final;
 
   Selectivity ratio{0};
 };
