@@ -125,31 +125,26 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinHash does not support these parameters.");
 
-  if (_mode == JoinMode::Semi && _secondary_predicates.empty() && right_input_table()->chunk_count() == ChunkID{1} &&
-      right_input_table()->row_count() == 1) {
-    auto value = AllTypeVariant{};
-    const auto build_column_id = _primary_predicate.column_ids.second;
-    segment_iterate(*right_input_table()->get_chunk(ChunkID{0})->get_segment(build_column_id),
-                    [&](const auto& position) {
-                      value = position.is_null() ? NULL_VALUE : position.value();
-                    });
-
-    if (variant_is_null(value)) {
-      return std::make_shared<const Table>(left_input_table()->column_definitions(), TableType::References);
-    }
-
-    const auto scan_column = PQPColumnExpression::from_table(*left_input_table(), _primary_predicate.column_ids.first);
-    const auto table_scan = std::make_unique<TableScan>(_left_input, equals_(scan_column, value_(value)));
-    table_scan->execute();
-    return table_scan->get_output();
-  }
-
   if (_mode == JoinMode::Semi && _secondary_predicates.empty()) {
+    auto predicate = std::shared_ptr<AbstractExpression>{};
+    const auto scan_column = PQPColumnExpression::from_table(*left_input_table(), _primary_predicate.column_ids.first);
     const auto build_column_id = _primary_predicate.column_ids.second;
     const auto right_input_node = _right_input->lqp_node;
-    if (right_input_node->has_matching_ucc({right_input_node->output_expressions()[build_column_id]}) == std::make_pair(true, true)) {
-      auto output = std::shared_ptr<const Table>{};
-      const auto build_table = right_input_table();
+    const auto build_table = right_input_table();
+
+    if (build_table->chunk_count() == ChunkID{1} && build_table->row_count() == 1) {
+      auto value = AllTypeVariant{};
+      segment_iterate(*build_table->get_chunk(ChunkID{0})->get_segment(build_column_id), [&](const auto& position) {
+        value = position.is_null() ? NULL_VALUE : position.value();
+      });
+
+      if (variant_is_null(value)) {
+        return std::make_shared<const Table>(left_input_table()->column_definitions(), TableType::References);
+      }
+      predicate = equals_(scan_column, value_(value));
+
+    } else if (right_input_node->has_matching_ucc({right_input_node->output_expressions()[build_column_id]}) ==
+               std::make_pair(true, true)) {
       resolve_data_type(build_table->column_data_type(build_column_id), [&](const auto type) {
         using ColumnDataType = typename decltype(type)::type;
         if constexpr (std::is_integral_v<ColumnDataType>) {
@@ -184,19 +179,16 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           }
 
           if (static_cast<UnsignedDataType>(max - min + 1) == value_count) {
-            const auto scan_column =
-                PQPColumnExpression::from_table(*left_input_table(), _primary_predicate.column_ids.first);
-            const auto table_scan =
-                std::make_unique<TableScan>(_left_input, between_inclusive_(scan_column, value_(min), value_(max)));
-            table_scan->execute();
-            output = table_scan->get_output();
+            predicate = between_inclusive_(scan_column, value_(min), value_(max));
           }
         }
       });
+    }
 
-      if (output) {
-        return output;
-      }
+    if (predicate) {
+      const auto table_scan = std::make_unique<TableScan>(_left_input, predicate);
+      table_scan->execute();
+      return table_scan->get_output();
     }
   }
 
