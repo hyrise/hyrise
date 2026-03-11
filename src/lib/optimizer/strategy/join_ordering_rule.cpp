@@ -66,7 +66,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(const std::sh
     // A JoinGraph with only one vertex is no actual join and needs no ordering.
     result_lqp = lqp;
   } else {
-    optimization_context.contains_join = ContainsJoin::FoundSome;
+    optimization_context.contains_join = OptimizationContext::ContainsJoin::Yes;
     if (vertex_count < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
       result_lqp = DPccp{}(*join_graph, caching_cost_estimator);
     } else {
@@ -103,16 +103,16 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
   /**
    * If a previous iteration of this rule did not find any Inner/Cross Joins, then we don't need to rerun the rule.
-   * Other rules have to revert the value to `ContainsJoin::Unchecked` if they add Inner/Cross joins into the LQP.
+   * Other rules have to revert the value to `ContainsJoin::Unknown` if they add Inner/Cross joins into the LQP.
    * If this rule is adapted to support other join types, you have to ensure that other rules reset this value if they
    * add joins of the new type to the LQP. This could be a lot of work for Semi/Anti joins.
    */
-  if (optimization_context.contains_join == ContainsJoin::FoundNone) {
+  if (optimization_context.contains_join == OptimizationContext::ContainsJoin::No) {
     return;
   }
 
   // This value will be overwritten if join graphs are found.
-  optimization_context.contains_join = ContainsJoin::FoundNone;
+  optimization_context.contains_join = OptimizationContext::ContainsJoin::No;
   const auto expected_column_order = lqp_root->output_expressions();
 
   auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), optimization_context);
