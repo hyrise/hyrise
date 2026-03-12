@@ -17,8 +17,8 @@
 #include "utils/load_table.hpp"
 
 namespace {
-using namespace hyrise;                 // NOLINT(build/namespaces)
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;                 // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
                               ColumnID left_column_id, const PredicateCondition predicate_condition,

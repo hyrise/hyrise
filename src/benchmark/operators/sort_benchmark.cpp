@@ -20,7 +20,7 @@
 #include "types.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 std::shared_ptr<Table> generate_custom_table(const size_t row_count, const DataType data_type = DataType::Int,
                                              const float null_ratio = 0.0) {

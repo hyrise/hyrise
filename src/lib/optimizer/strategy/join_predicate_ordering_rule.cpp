@@ -19,7 +19,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 void reorder_join_predicates_recursively(const std::shared_ptr<AbstractLQPNode>& node,
                                          const std::shared_ptr<CardinalityEstimator>& cardinality_estimator,

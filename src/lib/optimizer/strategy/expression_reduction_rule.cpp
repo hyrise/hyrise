@@ -32,7 +32,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 std::string ExpressionReductionRule::name() const {
   static const auto name = std::string{"ExpressionReductionRule"};

@@ -20,7 +20,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 std::shared_ptr<std::vector<ChunkID>> shared_chunk_id_vector(std::vector<ChunkID>&& chunk_vector) {
   return std::make_shared<std::vector<ChunkID>>(chunk_vector);

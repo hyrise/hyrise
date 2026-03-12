@@ -11,7 +11,7 @@
 #include "operators/table_wrapper.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
                                const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
@@ -27,7 +27,7 @@ void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<co
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& state) {
   micro_benchmark_clear_cache();

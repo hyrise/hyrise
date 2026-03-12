@@ -18,7 +18,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 Cost expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
   auto multiplier = Cost{0};

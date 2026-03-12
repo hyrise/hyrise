@@ -29,7 +29,7 @@
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the

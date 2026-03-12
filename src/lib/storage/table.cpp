@@ -41,7 +41,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 // Checks if the two vectors have common elements, e.g., lhs = [0, 2] and rhs = [2, 1, 3]. We expect very short
 // vectors, so we use a simple but quadratic solution. For larger vectors, we could create sets and check set

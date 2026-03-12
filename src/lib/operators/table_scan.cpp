@@ -47,7 +47,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::shared_ptr<AbstractExpression>& predicate)

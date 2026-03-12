@@ -88,8 +88,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;                         // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 const auto hsql_arithmetic_operators = std::unordered_map<hsql::OperatorType, ArithmeticOperator>{
     {hsql::kOpPlus, ArithmeticOperator::Addition},           {hsql::kOpMinus, ArithmeticOperator::Subtraction},

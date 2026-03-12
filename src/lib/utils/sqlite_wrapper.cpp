@@ -23,7 +23,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 /*
  * Creates columns in given Hyrise table according to an sqlite intermediate statement (one result row).

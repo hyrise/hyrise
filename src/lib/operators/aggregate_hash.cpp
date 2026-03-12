@@ -46,7 +46,7 @@
 #include "utils/timer.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 /**
  * The following template functions write the aggregated values for the different aggregate functions. They are separate

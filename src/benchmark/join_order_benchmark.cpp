@@ -33,7 +33,7 @@
  * found running the Join Order Benchmark" - 2.1 The IMDB data set, Fig. 2, p. 645.)
  */
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 namespace {
 void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {

@@ -13,8 +13,8 @@
 
 namespace hyrise {
 
-using namespace std::string_literals;   // NOLINT(build/namespaces)
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace std::string_literals;   // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 class SQLIdentifierResolverTest : public BaseTest {
  public:

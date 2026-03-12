@@ -20,7 +20,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
                                 const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,

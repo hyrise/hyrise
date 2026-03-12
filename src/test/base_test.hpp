@@ -30,7 +30,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces/header/namespace/nonliterals)
 
 class AbstractLQPNode;
 

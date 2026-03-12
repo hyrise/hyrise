@@ -22,7 +22,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 /**
  * Projection mostly forwards its computations to the ExpressionEvaluator, so this the actual expression evaluation is

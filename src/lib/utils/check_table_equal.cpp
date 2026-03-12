@@ -35,7 +35,7 @@ static constexpr auto EPSILON = 0.0001;
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 constexpr int HEADER_SIZE = 3;
 

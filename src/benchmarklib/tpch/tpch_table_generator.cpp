@@ -33,7 +33,7 @@ extern const seed_t seed[];    // NOLINT(hicpp-avoid-c-arrays,cppcoreguidelines-
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 // NOLINTBEGIN(whitespace/line_length)
 // clang-format off

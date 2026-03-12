@@ -40,7 +40,7 @@
 #include "utils/plugin_manager.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 void encode_table(const std::shared_ptr<Table>& table, const SegmentEncodingSpec& encoding_spec) {
   auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), SegmentEncodingSpec{EncodingType::Unencoded}};

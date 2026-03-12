@@ -24,7 +24,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 template <typename T>
 void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment,

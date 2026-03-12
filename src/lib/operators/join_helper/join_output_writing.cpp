@@ -25,7 +25,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
@@ -283,7 +283,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
         // `pos_lists_left` may be empty when `output_column_order` is `RightOnly`.
         if (output_column_order != OutputColumnOrder::RightOnly) {
           std::copy(pos_lists_left[partition_id + 1].begin(), pos_lists_left[partition_id + 1].end(),
-                  std::back_inserter(*left_side_pos_list));
+                    std::back_inserter(*left_side_pos_list));
           pos_lists_left[partition_id + 1] = {};
         }
 

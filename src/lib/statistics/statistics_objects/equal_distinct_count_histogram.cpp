@@ -20,7 +20,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 // Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
 // defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing

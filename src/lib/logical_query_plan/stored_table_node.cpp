@@ -29,7 +29,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 template <typename ColumnIDs>
 bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<ColumnID>& columns) {

@@ -19,7 +19,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 size_t get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset) {
   return pattern.find_first_of("_%", offset);

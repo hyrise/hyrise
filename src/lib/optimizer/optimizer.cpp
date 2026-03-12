@@ -43,7 +43,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 using LQPNodesByLQP = std::unordered_map<std::shared_ptr<const AbstractLQPNode>,
                                          std::unordered_set<std::shared_ptr<const AbstractLQPNode>>>;

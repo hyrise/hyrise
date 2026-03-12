@@ -28,7 +28,7 @@
  *     - https://www.cs.umb.edu/~poneil/StarSchemaB.PDF
  */
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Star Schema Benchmark");
