@@ -125,73 +125,6 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinHash does not support these parameters.");
 
-  if (_mode == JoinMode::Semi && _secondary_predicates.empty()) {
-    auto predicate = std::shared_ptr<AbstractExpression>{};
-    const auto scan_column = PQPColumnExpression::from_table(*left_input_table(), _primary_predicate.column_ids.first);
-    const auto build_column_id = _primary_predicate.column_ids.second;
-    const auto right_input_node = _right_input->lqp_node;
-    const auto build_table = right_input_table();
-
-    if (build_table->chunk_count() == ChunkID{1} && build_table->row_count() == 1) {
-      auto value = AllTypeVariant{};
-      segment_iterate(*build_table->get_chunk(ChunkID{0})->get_segment(build_column_id), [&](const auto& position) {
-        value = position.is_null() ? NULL_VALUE : position.value();
-      });
-
-      if (variant_is_null(value)) {
-        return std::make_shared<const Table>(left_input_table()->column_definitions(), TableType::References);
-      }
-      predicate = equals_(scan_column, value_(value));
-
-    } else if (right_input_node->has_matching_ucc({right_input_node->output_expressions()[build_column_id]}) ==
-               std::make_pair(true, true)) {
-      resolve_data_type(build_table->column_data_type(build_column_id), [&](const auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-        if constexpr (std::is_integral_v<ColumnDataType>) {
-          using UnsignedDataType = std::make_unsigned_t<ColumnDataType>;
-          auto min = std::numeric_limits<ColumnDataType>::max();
-          auto max = std::numeric_limits<ColumnDataType>::min();
-          auto value_count = build_table->row_count();
-          const auto chunk_count = build_table->chunk_count();
-          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-            const auto chunk = build_table->get_chunk(chunk_id);
-            Assert(chunk, "Physically deleted chunk should not reach this point.");
-
-            segment_with_iterators<ColumnDataType>(*build_table->get_chunk(chunk_id)->get_segment(build_column_id),
-                                                   [&](auto it, const auto& end) {
-                                                     for (; it != end; ++it) {
-                                                       if (it->is_null()) {
-                                                         --value_count;
-                                                         continue;
-                                                       }
-
-                                                       min = std::min(min, it->value());
-                                                       max = std::max(max, it->value());
-
-                                                       if (static_cast<UnsignedDataType>(max - min) >= value_count) {
-                                                         break;
-                                                       }
-                                                     }
-                                                   });
-            if (static_cast<UnsignedDataType>(max - min) >= value_count) {
-              break;
-            }
-          }
-
-          if (static_cast<UnsignedDataType>(max - min + 1) == value_count) {
-            predicate = between_inclusive_(scan_column, value_(min), value_(max));
-          }
-        }
-      });
-    }
-
-    if (predicate) {
-      const auto table_scan = std::make_unique<TableScan>(_left_input, predicate);
-      table_scan->execute();
-      return table_scan->get_output();
-    }
-  }
-
   auto build_input_table = std::shared_ptr<const Table>{};
   auto probe_input_table = std::shared_ptr<const Table>{};
   auto build_column_id = ColumnID{};
@@ -405,15 +338,30 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     auto build_side_bloom_filter = BloomFilter{};
     auto probe_side_bloom_filter = BloomFilter{};
 
+    auto build_min = std::optional<BuildColumnType>{};
+    auto build_max = std::optional<BuildColumnType>{};
+    auto build_continuous = false;
+    auto build_row_count = uint64_t{0};
+
     const auto materialize_build_side = [&](const auto& input_bloom_filter) {
       if (keep_nulls_build_column) {
-        materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
+        auto container = materialize_input<BuildColumnType, HashedType, true, true>(
             _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
             input_bloom_filter);
+        materialized_build_column = std::move(container.container);
+        build_min = container.min;
+        build_max = container.max;
+        build_continuous = container.is_continuous;
+        build_row_count = container.row_count;
       } else {
-        materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
+        auto container = materialize_input<BuildColumnType, HashedType, false, true>(
             _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
             input_bloom_filter);
+        materialized_build_column = std::move(container.container);
+        build_min = container.min;
+        build_max = container.max;
+        build_continuous = container.is_continuous;
+        build_row_count = container.row_count;
       }
     };
 
@@ -434,14 +382,18 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     };
 
     auto timer_materialization = Timer{};
+    auto perform_scan = false;
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
       // When materializing the first side (here: the build side), we do not yet have a Bloom filter. To keep the number
       // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
       // Bloom filter that returns true for every probe.
       materialize_build_side(ALL_TRUE_BLOOM_FILTER);
       _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
-      materialize_probe_side(build_side_bloom_filter);
-      _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      perform_scan = _secondary_predicates.empty() && _mode == JoinMode::Semi && (build_continuous || build_row_count <= 1);
+      if (!perform_scan) {
+        materialize_probe_side(build_side_bloom_filter);
+        _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      }
     } else {
       // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
       // build side. Consequently, the Bloom filter later passed into build() will have no effect as it has already
@@ -467,7 +419,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
      *    within partition_by_radix.
      */
-    if (_radix_bits > 0) {
+    if (_radix_bits > 0 && !perform_scan) {
       auto timer_clustering = Timer{};
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
@@ -519,6 +471,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
+    if (!perform_scan) {
     auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
@@ -566,6 +519,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     radix_build_column.clear();
+  }
 
     /**
      * 4. Probe step
@@ -573,7 +527,28 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     auto build_side_pos_lists = std::vector<RowIDPosList>{};
     auto probe_side_pos_lists = std::vector<RowIDPosList>{};
 
+
     auto timer_probing = Timer{};
+    if (perform_scan) {
+      if (!build_min) {
+        // Build side either empty or only NULL.
+        return std::make_shared<const Table>(_probe_input_table->column_definitions(), TableType::References);
+      }
+      Assert(build_min && build_max, "Expected min/max value.");
+      Assert(build_row_count > 1 || *build_min == *build_max, "Unexpected values.");
+      const auto scan_column = PQPColumnExpression::from_table(*_probe_input_table, _column_ids.second);
+      auto predicate = std::shared_ptr<AbstractExpression>{};
+      if (build_row_count == 1) {
+        predicate =  equals_(scan_column, value_(*build_min));
+      } else {
+        predicate = between_inclusive_(scan_column, value_(*build_min), value_(*build_max));
+      }
+      const auto table_scan = std::make_unique<TableScan>(_join_hash.left_input(), predicate);
+      table_scan->execute();
+      _performance_data.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
+      return table_scan->get_output();
+    }
+
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,

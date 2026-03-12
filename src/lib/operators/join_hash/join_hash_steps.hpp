@@ -85,6 +85,15 @@ struct Partition {
 template <typename T>
 using RadixContainer = std::vector<Partition<T>>;
 
+template <typename T>
+struct RadixContainerWithStats {
+  RadixContainer<T> container;
+  std::optional<T> min;
+  std::optional<T> max;
+  bool is_continuous{false};
+  uint64_t row_count{0};
+};
+
 // Stores the mapping from HashedType to positions. Conceptually, this is similar to an (unordered_)multimap, but it has
 // some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
 // hashmap (think map<HashedType, PosList>), we store an offset - thus OffsetHashTable. This keeps the hashmap small and
@@ -271,11 +280,11 @@ static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 //                             encountered in the input column
 // @param input_bloom_filter   Optional: Materialization is skipped for each value where the corresponding slot in the
 //                             Bloom filter is false
-template <typename T, typename HashedType, bool keep_null_values>
-RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                    BloomFilter& output_bloom_filter,
-                                    const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+template <typename T, typename HashedType, bool keep_null_values, bool collect_statistics>
+RadixContainerWithStats<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+                                             std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                             BloomFilter& output_bloom_filter,
+                                             const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
@@ -295,6 +304,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
   auto output_bloom_filter_mutex = std::mutex{};
 
+  auto min = T{};
+  auto max = T{};
+  auto row_count = uint64_t{0};
+  if constexpr (std::is_integral_v<T> && collect_statistics) {
+    min = std::numeric_limits<T>::max();
+    max = std::numeric_limits<T>::min();
+  }
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
   // Create histograms per chunk
@@ -317,6 +333,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         // We cannot write to BloomFilter concurrently, so we build a local one first.
         local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
         used_output_bloom_filter = local_output_bloom_filter;
+      }
+
+      auto local_min = T{};
+      auto local_max = T{};
+      if constexpr (std::is_integral_v<T> && collect_statistics) {
+        local_min = std::numeric_limits<T>::max();
+        local_max = std::numeric_limits<T>::min();
       }
 
       // Skip chunks that were physically deleted.
@@ -361,7 +384,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
             // joins an information loss is possible when joining with longs that cannot be losslessly converted to
             // double. See #1550 for details.
-            const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
+            const auto& position_value = value.value();
+            const Hash hashed_value = hash_function(static_cast<HashedType>(position_value));
+
+            if constexpr (std::is_integral_v<T> && collect_statistics) {
+              local_min = std::min(local_min, position_value);
+              local_max = std::max(local_max, position_value);
+            }
 
             auto skip = false;
             if (!value.is_null() && !input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !keep_null_values) {
@@ -420,6 +449,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         // Merge the local_output_bloom_filter into output_bloom_filter
         const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
         output_bloom_filter |= local_output_bloom_filter;
+        min = std::min(local_min, min);
+        max = std::max(local_max, max);
+        row_count += num_rows;
+      } else {
+        min = std::min(local_min, min);
+        max = std::max(local_max, max);
+        row_count += num_rows;
       }
     };
     if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
@@ -430,7 +466,22 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  return radix_container;
+  auto is_continuous = false;
+  if constexpr (std::is_integral_v<T> && collect_statistics) {
+    is_continuous = static_cast<std::make_unsigned_t<T>>(max - min + 1) == row_count;
+  }
+
+  return {.container = std::move(radix_container), .min = min, .max = max, .is_continuous = is_continuous, .row_count = row_count};
+}
+
+template <typename T, typename HashedType, bool keep_null_values>
+RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                    BloomFilter& output_bloom_filter,
+                                    const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+  return materialize_input<T, HashedType, keep_null_values, false>(in_table, column_id, histograms, radix_bits,
+                                                                   output_bloom_filter, input_bloom_filter)
+      .container;
 }
 
 /*
