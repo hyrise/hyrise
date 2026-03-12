@@ -19,7 +19,9 @@
 namespace hyrise {
 
 TPCCBenchmarkItemRunner::TPCCBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, int num_warehouses)
-    : AbstractBenchmarkItemRunner(config), _num_warehouses(num_warehouses) {
+    : AbstractBenchmarkItemRunner(config), _num_warehouses(num_warehouses) {}
+
+void TPCCBenchmarkItemRunner::on_tables_loaded() {
   using arr_span = std::span<const char* const>;
   const auto all_statements = {arr_span(TPCCDelivery::PREPARED_STATEMENTS), arr_span(TPCCNewOrder::PREPARED_STATEMENTS),
                                arr_span(TPCCOrderStatus::PREPARED_STATEMENTS),
