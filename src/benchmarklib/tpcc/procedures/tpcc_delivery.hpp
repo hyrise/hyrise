@@ -23,7 +23,6 @@ class TPCCDelivery : public AbstractTPCCProcedure {
   int32_t ol_delivery_d;  // Current datetime
 
   // clang-format off
-  // NOLINTBEGIN(whitespace/line_length)
   static constexpr auto PREPARED_STATEMENTS = std::to_array({
       "PREPARE delivery_select_min_no_o_id FROM 'SELECT MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = ? AND NO_D_ID = ?'",  // NOLINT(whitespace/line_length)
       "PREPARE delivery_delete_new_order FROM 'DELETE FROM NEW_ORDER WHERE NO_W_ID = ? AND NO_D_ID = ? AND NO_O_ID = ?'",  // NOLINT(whitespace/line_length)
@@ -33,7 +32,6 @@ class TPCCDelivery : public AbstractTPCCProcedure {
       "PREPARE delivery_update_order_line FROM 'UPDATE ORDER_LINE SET OL_DELIVERY_D = ? WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID = ?'",  // NOLINT(whitespace/line_length)
       "PREPARE delivery_update_customer FROM 'UPDATE CUSTOMER SET C_BALANCE = C_BALANCE + ?, C_DELIVERY_CNT = C_DELIVERY_CNT + 1 WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?'",  // NOLINT(whitespace/line_length)
   });
-  // NOLINTEND(whitespace/line_length)
   // clang-format on
 };
 

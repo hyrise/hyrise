@@ -42,7 +42,6 @@ class TPCCNewOrder : public AbstractTPCCProcedure {
   int32_t o_id{-1};  // Order ID, initialized with invalid value
 
   // clang-format off
-  // NOLINTBEGIN(whitespace/line_length)
   static constexpr auto PREPARED_STATEMENTS = std::to_array({
       "PREPARE new_order_select_warehouse_tax FROM 'SELECT W_TAX FROM WAREHOUSE WHERE W_ID = ?'",  // NOLINT(whitespace/line_length)
       "PREPARE new_order_select_district_next_order FROM 'SELECT D_TAX, D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = ? AND D_ID = ?'",  // NOLINT(whitespace/line_length)
@@ -66,7 +65,6 @@ class TPCCNewOrder : public AbstractTPCCProcedure {
       "PREPARE new_order_update_stock FROM 'UPDATE STOCK SET S_QUANTITY = ?, S_YTD = ?, S_ORDER_CNT = ?, S_REMOTE_CNT = ? WHERE S_I_ID = ? AND S_W_ID = ?'",  // NOLINT(whitespace/line_length)
       // "PREPARE new_order_insert_order_line FROM 'INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_DELIVERY_D, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)'",  // NOLINT(whitespace/line_length)
   });
-  // NOLINTEND(whitespace/line_length)
   // clang-format on
 };
 
