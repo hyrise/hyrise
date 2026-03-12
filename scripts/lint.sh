@@ -7,7 +7,6 @@ exitcode=0
 #  - runtime/references: We prefer references to pointers in most cases.
 #  - build/(c++11|c++17): cpplint complains about headers that are "unapproved" by Google devs (see https://github.com/google/styleguide/issues/194).
 #  - readability/nolint: cpplint complains about excluded clang-tidy categories, which we widely use.
-#  - readability/inheritance: cpplint complains about "override final" as being redundant, but it is not.
 #  - whitespace/braces: Does not work with {} initialization (see https://github.com/cpplint/cpplint/issues/204#issuecomment-1146769949).
 #  - build/include_subdir: Does not work well with our structure of using lib, test, and third_party directories.
 #  - whitespace/indent_namespace: Has a lot of false positives, see https://github.com/cpplint/cpplint/issues/401

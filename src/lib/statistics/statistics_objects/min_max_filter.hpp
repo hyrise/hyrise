@@ -46,7 +46,7 @@ class MinMaxFilter : public AbstractStatisticsObject, public std::enable_shared_
 
   std::shared_ptr<const AbstractStatisticsObject> pruned(
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2) const override final;
+      const std::optional<AllTypeVariant>& variant_value2) const final;
 
   bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
