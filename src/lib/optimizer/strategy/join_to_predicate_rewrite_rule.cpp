@@ -95,8 +95,7 @@ void gather_rewrite_info(
     for (const auto& predicate_operand : candidate_expression->arguments) {
       if (predicate_operand->type == ExpressionType::LQPColumn) {
         candidate_column_expression = predicate_operand;
-      } else if (predicate_operand->type == ExpressionType::Value ||
-                 predicate_operand->type == ExpressionType::Placeholder) {
+      } else if (predicate_operand->type == ExpressionType::Value) {
         candidate_value_expression = predicate_operand;
       }
     }
