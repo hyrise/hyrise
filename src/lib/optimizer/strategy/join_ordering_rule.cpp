@@ -19,15 +19,15 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                                   OptimizationContext& optimization_context) {
+std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
+    const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   const auto recurse_to_inputs = [&](const auto& node) {
     if (node->left_input()) {
-      node->set_left_input(perform_join_ordering_recursively(node->left_input(), optimization_context));
+      node->set_left_input(perform_join_ordering_recursively(node->left_input(), cost_estimator));
     }
 
     if (node->right_input()) {
-      node->set_right_input(perform_join_ordering_recursively(node->right_input(), optimization_context));
+      node->set_right_input(perform_join_ordering_recursively(node->right_input(), cost_estimator));
     }
   };
 
@@ -51,7 +51,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(const std::sh
    * performance. We can enable the corresponding cache policies because join ordering algorithms build plans bottom-up
    * and are constrained to the predicates and vertices in the JoinGraph.
    */
-  const auto caching_cost_estimator = optimization_context.cost_estimator->new_instance();
+  const auto caching_cost_estimator = cost_estimator->new_instance();
   caching_cost_estimator->guarantee_bottom_up_construction(lqp);
   caching_cost_estimator->cardinality_estimator->guarantee_join_graph(*join_graph);
 
@@ -65,13 +65,10 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(const std::sh
   if (vertex_count == 1) {
     // A JoinGraph with only one vertex is no actual join and needs no ordering.
     result_lqp = lqp;
+  } else if (vertex_count < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
+    result_lqp = DPccp{}(*join_graph, caching_cost_estimator);
   } else {
-    optimization_context.contains_join = OptimizationContext::ContainsJoin::Yes;
-    if (vertex_count < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
-      result_lqp = DPccp{}(*join_graph, caching_cost_estimator);
-    } else {
-      result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
-    }
+    result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
   }
 
   for (const auto& vertex : join_graph->vertices) {
@@ -101,21 +98,9 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
   Assert(lqp_root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto.");
 
-  /**
-   * If a previous iteration of this rule did not find any Inner/Cross Joins, then we don't need to rerun the rule.
-   * Other rules have to revert the value to `ContainsJoin::Unknown` if they add Inner/Cross joins into the LQP.
-   * If this rule is adapted to support other join types, you have to ensure that other rules reset this value if they
-   * add joins of the new type to the LQP. This could be a lot of work for Semi/Anti joins.
-   */
-  if (optimization_context.contains_join == OptimizationContext::ContainsJoin::No) {
-    return;
-  }
-
-  // This value will be overwritten if join graphs are found.
-  optimization_context.contains_join = OptimizationContext::ContainsJoin::No;
   const auto expected_column_order = lqp_root->output_expressions();
 
-  auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), optimization_context);
+  auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), optimization_context.cost_estimator);
 
   // Join ordering might change the output column order, let us fix that.
   if (!expressions_equal(expected_column_order, result_lqp->output_expressions())) {

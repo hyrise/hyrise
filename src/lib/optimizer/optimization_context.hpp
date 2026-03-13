@@ -15,12 +15,6 @@ namespace hyrise {
  * optimized LQP.
  */
 struct OptimizationContext {
-  enum class ContainsJoin : uint8_t {
-    Unknown,
-    No,
-    Yes,
-  };
-
   void set_not_cacheable() {
     _is_cacheable = false;
   }
@@ -34,8 +28,6 @@ struct OptimizationContext {
   std::unique_ptr<OptimizationContext> deep_copy() const {
     return std::make_unique<OptimizationContext>(*this);
   }
-
-  ContainsJoin contains_join{ContainsJoin::Unknown};
 
  private:
   bool _is_cacheable{true};  // Indicates whether the optimizer can cache the optimized LQP.
