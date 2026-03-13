@@ -572,8 +572,8 @@ union TemporaryRadixBucket {
   std::array<PartitionedElement<T>, ELEMENTS_PER_STORE> elements;
 
   struct {
-    std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1>
-        elements;  // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers.
+    std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1> elements;
+    // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers.
     uint32_t count;
     uint64_t output_idx;
   } with_indices;
