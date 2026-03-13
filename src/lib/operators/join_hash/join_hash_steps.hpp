@@ -525,30 +525,43 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 }
 
 // This is the cacheline size for most of the systems Hyrise usually runs on. If a system has larger cachelines (e.g.
-// Apple's M processors or IBM Power), using the default value will still run fine. Our implementation assumes that
-// this is a power of two.
+// Apple's M processors or IBM Power), using the default value will still run fine.
 constexpr auto BYTES_PER_CACHELINE = size_t{64};
-// This is a tunable parameter. Increasing it causes more cache usage during radix partioning, but less TLB pressure.
-// Tuning it too high might invalidate the gains from `reduce_tlb_pressure`.
+static_assert(std::popcount(BYTES_PER_CACHELINE) == 1,
+              "BYTES_PER_CACHELINE is assumed to be a power of two when computing CACHELINES_PER_STORE");
+// This is a tunable parameter. Increasing it causes more memory usage (and thereby cache usage) during radix
+// partioning, but less TLB pressure. Tuning it too high might invalidate the gains from `reduce_tlb_pressure`.
 constexpr auto MIN_CACHELINES_PER_STORE = size_t{1};
 
-// TemporaryRadixBucket is one "chunk" of data that can be copied to one specific partition once full. It is
-// implemented as a union so the number of items contained and the output position can be stored here while the bucket
-// is not full (called a micro row layout). This way they don't have to be fetched from some other location. The
-// alter is to store the indices in a separate array (called micro column layout), which is desirable when this
-// separate array is small and fits in caches. Since this struct should only be used if the number of radix partitions
-// is high, we opt for a micro row layout.
+// TemporaryRadixBucket implements a software buffer, one "chunk" of data that can be copied to one specific partition
+// once full. We use it when the number of radix partitions is high to buffer tuples. Once this data structure is full,
+// all tuples are written to the output location as one. This reduces the number of TLB-misses. It is implemented as a
+// micro row layout, where the output position is stored in the last item slot while the bucket is not full. This way
+// the output position does not have to be fetched from some other location. An alternative is to store the indices in
+// a separate array, a micro column layout, which is desirable when this separate array is small and fits in caches.
+// Since this struct should only be used if the number of radix partitions is high, we opt for a micro row layout.
+// Software buffers and micro layouts are explained in the paper "On the Surprising Difficulty of Simple Things: the
+// Case of Radix Partitioning" by Schuhknecht et al. (https://doi.org/10.14778/2777598.2777602)
 template <typename T>
   requires std::is_trivially_copy_assignable_v<T>
 union TemporaryRadixBucket {
+  static_assert(sizeof(T) >= 4,
+                "This struct should only be used with Hyrise data types not less than 4 bytes. This is because indices "
+                "have to fit in the last item slot.");
   static constexpr auto BYTES_PER_ELEMENT = sizeof(PartitionedElement<T>);
   // We want the size of this container to be a multiple of the element size (so we don't copy uninitialized bytes) and
   // the cacheline size (so we can use aligned vector instructions to copy). Additionally, we want the size of this
-  // container to be at least MIN_CACHELINES_PER_STORE cachelines large. If BYTES_PER_ELEMENT is not a power of two,
-  // we have to extract the part that is not a power of 2 and use it as a factor. For all types in Hyrise, this is
-  // either 1 (8 byte values like long) or 3 (4 byte values like int).
-  static constexpr auto CACHELINES_PER_STORE_FACTOR = BYTES_PER_ELEMENT >>
-                                                      static_cast<uint64_t>(std::countr_zero(BYTES_PER_ELEMENT));
+  // container to be at least MIN_CACHELINES_PER_STORE cachelines large. The cacheline size is a high power of two. To
+  // compute the lowest common multiple (LCM) of the element size and the cacheline size, we first compute the greatest
+  // common divisor (GCD). This is always a power of two, and we compute the power as the minimum of the trailing
+  // zeros of the element size and cacheline size. The LCM would now be the element size times the cacheline size
+  // divided by the power of two. We compute the number of cachelines of this LCM, which is the element size divided
+  // by the power of two. The division is implemented as a right shift. The result is 1 if sizeof(T) is 8 (as
+  // sizeof(PartitionedElement<T>) is 16, which is a power of two) and 3 if sizeof(T) is 4 (as
+  // sizeof(PartitionedElement<T>) is 12).
+  static constexpr auto CACHELINES_PER_STORE_FACTOR =
+      BYTES_PER_ELEMENT >>
+      static_cast<uint64_t>(std::min(std::countr_zero(BYTES_PER_ELEMENT), std::countr_zero(BYTES_PER_CACHELINE)));
   // CACHELINES_PER_STORE is a multiple of CACHELINES_PER_STORE_FACTOR that is at least MIN_CACHELINES_PER_STORE.
   static constexpr auto CACHELINES_PER_STORE =
       ((MIN_CACHELINES_PER_STORE + CACHELINES_PER_STORE_FACTOR - 1) / CACHELINES_PER_STORE_FACTOR) *
@@ -559,8 +572,8 @@ union TemporaryRadixBucket {
   std::array<PartitionedElement<T>, ELEMENTS_PER_STORE> elements;
 
   struct {
-    std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1> elements;
-    // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers.
+    std::array<PartitionedElement<T>, ELEMENTS_PER_STORE - 1>
+        elements;  // Every column type T is at least 4 bytes and its RowID is at least 8, so we have space for these two numbers.
     uint32_t count;
     uint64_t output_idx;
   } with_indices;
@@ -587,9 +600,10 @@ struct TemporaryRadixContainer {
 
 // `reduce_tlb_pressure` enables a software buffers in partition_by_radix, where partitions are written in chunks of
 // elements. You should consider enabling it if the number of radix buckets is larger than the size of your TLB. See
-// On the Surprising Difficulty of Simple Things: the Case of Radix Partitioning by Schuhknecht et al. for a detailed
-// performance evaluation A good rule of thumb seems to be starting at about 7 radix bits. This setting will be ignored
-// if T is not trivially copy assignable, as we have to copy the elements bitwise when doing chunked copy.
+// "On the Surprising Difficulty of Simple Things: the Case of Radix Partitioning" by Schuhknecht et al.
+// (https://doi.org/10.14778/2777598.2777602) for a detailed performance evaluation. A good rule of thumb seems to be
+// starting at about 7 radix bits. This setting will be ignored if T is not trivially copy assignable, as we have to
+// copy the elements bitwise when doing chunked copy.
 // Variants:
 // - N: Never prefetch
 // - A: Only prefetch the element if it is completely on a new cacheline
