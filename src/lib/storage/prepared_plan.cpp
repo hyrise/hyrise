@@ -6,7 +6,6 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -70,14 +69,12 @@ void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
 namespace hyrise {
 
 PreparedPlan::PreparedPlan(const std::shared_ptr<AbstractLQPNode>& init_lqp,
-                           const std::vector<ParameterID>& init_parameter_ids,
-                           std::unique_ptr<OptimizationContext>&& init_optimization_context)
-    : lqp(init_lqp), parameter_ids(init_parameter_ids), optimization_context(std::move(init_optimization_context)) {}
+                           const std::vector<ParameterID>& init_parameter_ids)
+    : lqp(init_lqp), parameter_ids(init_parameter_ids) {}
 
 std::shared_ptr<PreparedPlan> PreparedPlan::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
-  auto optimization_context_copy = optimization_context ? optimization_context->deep_copy() : nullptr;
-  return std::make_shared<PreparedPlan>(lqp_copy, parameter_ids, std::move(optimization_context_copy));
+  return std::make_shared<PreparedPlan>(lqp_copy, parameter_ids);
 }
 
 size_t PreparedPlan::hash() const {
