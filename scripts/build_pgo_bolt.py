@@ -3,9 +3,10 @@
 # - Profile Guided Optimizations (PGO; https://clang.llvm.org/docs/UsersManual.html#profile-guided-optimization)
 # - Binary Optimization and Layouting Tool (BOLT; https://github.com/llvm/llvm-project/tree/main/bolt)
 # To use it, first create a cmake build folder and configure cmake for a release build. Then run this script from the
-# build folder. The script takes care of adapting the cmake parameters for PGO/BOLT and reverts its changes even when
-# crashing. You can run the script with -h for a detailed explanation of cli arguments. There is a Github comment
-# summarizing the PGO options we evaluated: https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523
+# build folder. The script takes care of adapting the cmake parameters for PGO/BOLT and reverts its changes after
+# it is finished, even when it crashed. You can run the script with -h for a detailed explanation of cli arguments.
+# There is a Github comment summarizing the PGO options we evaluated:
+# https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523
 
 from argparse import (
     ArgumentParser,
@@ -227,7 +228,7 @@ def main():
             export_profile()
         else:
             if not args.import_profile and args.bolt:
-                # If we know that we have previously build the library during benchmarks and we want to optimize with
+                # If we know that we have previously built the library during benchmarks and we want to optimize with
                 # BOLT, then we can reuse the benchmark library and just apply BOLT on that. This works with and
                 # without PGO. If PGO was active, then BOLT already instrumented the PGO optimized binary during
                 # benchmarks, which means that we can reuse the already optimized binary here and optimize it with BOLT.
