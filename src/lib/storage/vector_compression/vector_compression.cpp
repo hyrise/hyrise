@@ -15,7 +15,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 /**
  * @brief Mapping of vector compression types to compressors

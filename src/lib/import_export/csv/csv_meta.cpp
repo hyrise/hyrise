@@ -12,7 +12,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 void assign_if_exists(char& value, const nlohmann::json& json_object, const std::string& key) {
   if (json_object.contains(key)) {

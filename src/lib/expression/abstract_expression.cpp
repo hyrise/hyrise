@@ -17,7 +17,7 @@
 
 namespace hyrise {
 
-using namespace std::string_literals;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace std::string_literals;
 
 AbstractExpression::AbstractExpression(const ExpressionType init_type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)

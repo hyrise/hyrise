@@ -33,7 +33,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 template <typename T>
 pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {

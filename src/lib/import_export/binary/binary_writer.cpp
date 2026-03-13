@@ -32,7 +32,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 // Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>

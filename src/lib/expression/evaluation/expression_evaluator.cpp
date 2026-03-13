@@ -60,8 +60,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces/source/namespace/nonliterals)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 template <typename Functor>
 void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {

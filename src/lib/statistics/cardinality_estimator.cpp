@@ -57,7 +57,7 @@
 #include "utils/assert.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
@@ -123,7 +123,7 @@ std::shared_ptr<TableStatistics> prune_column_statistics(
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace expression_functional;
 
 CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_type) : _data_type(init_data_type) {}
 

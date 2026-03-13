@@ -38,8 +38,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces/source/namespace/nonliterals)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 using NodeExpressionsDifferenceType =
     typename std::iterator_traits<decltype(AggregateNode::node_expressions)::iterator>::difference_type;

@@ -20,7 +20,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 template <bool is_single_chunk>
 void commit_with_pos_list(const std::shared_ptr<const Table>& referenced_table, const AbstractPosList& pos_list,

@@ -64,7 +64,7 @@ extern "C" {
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 using tpcds_key_t = int32_t;
 

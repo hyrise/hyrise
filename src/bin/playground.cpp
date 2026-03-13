@@ -2,7 +2,7 @@
 
 #include "types.hpp"
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 int main() {
   const auto world = pmr_string{"world"};

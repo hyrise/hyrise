@@ -32,7 +32,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace expression_functional;
 
 class SubqueryToJoinRuleTest : public StrategyBaseTest {
  public:

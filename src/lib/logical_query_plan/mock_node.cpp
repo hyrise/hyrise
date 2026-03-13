@@ -27,7 +27,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 bool contains_column(const std::vector<ColumnID>& column_ids, const ColumnID search_column_id) {
   return std::ranges::find(column_ids, search_column_id) != column_ids.cend();

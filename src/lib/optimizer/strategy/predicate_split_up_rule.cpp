@@ -22,7 +22,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
   // Optimization: The ExpressionReductionRule transforms `x NOT LIKE 'foo%'` into `x < 'foo' OR x >= 'fop'`. For this

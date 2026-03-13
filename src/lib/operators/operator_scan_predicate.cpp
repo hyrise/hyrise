@@ -25,8 +25,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces/source/namespace/nonliterals)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {

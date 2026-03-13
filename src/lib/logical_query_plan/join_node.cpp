@@ -26,7 +26,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace expression_functional;
 
 JoinNode::JoinNode(const JoinMode init_join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(init_join_mode) {
   Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");

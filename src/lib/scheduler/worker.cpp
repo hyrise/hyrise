@@ -23,7 +23,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 /**
  * On worker threads, this references the worker running on this thread, on all other threads, this is empty.

@@ -17,7 +17,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 std::vector<ColumnID> column_ids_by_name(const std::shared_ptr<Table>& table, const std::vector<std::string>& columns) {
   Assert(table, "Expected table to resolve ColumnIDs.");

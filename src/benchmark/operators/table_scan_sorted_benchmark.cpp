@@ -31,8 +31,8 @@
 #include "utils/load_table.hpp"
 
 namespace {
-using namespace hyrise;                 // NOLINT(build/namespaces/source/namespace/nonliterals)
-using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
+using namespace expression_functional;
 
 constexpr auto ROWS = 1'000'000;
 constexpr auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;

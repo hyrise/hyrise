@@ -32,8 +32,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces/source/namespace/nonliterals)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr<AbstractLQPNode>& lhs,
                                   const std::shared_ptr<AbstractLQPNode>& rhs) {

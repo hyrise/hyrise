@@ -21,7 +21,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace expression_functional;
 
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:

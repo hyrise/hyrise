@@ -32,7 +32,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 bool has_print_mvcc_flag(const PrintFlags flags) {
   return (static_cast<uint8_t>(PrintFlags::Mvcc) & static_cast<uint8_t>(flags)) != 0;

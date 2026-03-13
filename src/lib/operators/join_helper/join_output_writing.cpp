@@ -25,7 +25,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;

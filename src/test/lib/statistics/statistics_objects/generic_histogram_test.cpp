@@ -22,7 +22,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 struct Predicate {
   PredicateCondition predicate_condition;

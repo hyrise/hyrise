@@ -17,8 +17,8 @@
 
 namespace hyrise {
 
-using namespace std::string_literals;   // NOLINT(build/namespaces/source/namespace/nonliterals)
-using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace std::string_literals;
+using namespace expression_functional;
 
 class LQPSubqueryExpressionTest : public BaseTest {
  public:

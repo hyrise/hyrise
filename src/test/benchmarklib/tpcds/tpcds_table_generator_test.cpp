@@ -16,7 +16,7 @@
 #include "utils/load_table.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 std::shared_ptr<Table> load_csv(const std::string& file_name) {
   return CsvParser::parse(

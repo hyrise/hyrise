@@ -29,7 +29,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 cxxopts::Options get_server_cli_options() {
   auto cli_options = cxxopts::Options{"./hyriseServer", "Starts Hyrise server in order to accept network requests."};

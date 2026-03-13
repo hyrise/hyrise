@@ -17,7 +17,7 @@
 #include "utils/assert.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 constexpr auto NUMBER_OF_CHUNKS = size_t{50};
 
 // These numbers were arbitrarily chosen to form a representative group of JoinBenchmarks

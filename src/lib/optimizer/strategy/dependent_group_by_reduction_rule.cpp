@@ -22,8 +22,8 @@
 
 namespace {
 
-using namespace hyrise;                 // NOLINT(build/namespaces/source/namespace/nonliterals)
-using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
+using namespace expression_functional;
 
 /**
  * This function reduces the group-by columns of @param aggregate_node for a given functional dependency (@param fd).

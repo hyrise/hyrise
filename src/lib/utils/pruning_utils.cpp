@@ -30,7 +30,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 // Check whether any of the statistics objects available for this Segment identify the predicate as prunable.
 bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const PredicateCondition predicate_condition,
@@ -103,7 +103,7 @@ std::vector<T> pruned_items_mapping(const size_t initial_item_count, const std::
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace expression_functional;
 
 std::set<ChunkID> compute_chunk_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
                                              const std::shared_ptr<StoredTableNode>& stored_table_node) {

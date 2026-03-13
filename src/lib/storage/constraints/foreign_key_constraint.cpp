@@ -16,7 +16,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 // ForeignKeyConstraints with swapped columns are equivalent. To ensure they are represented the same way, we determine
 // the permutation that sorts `foreign_key_columns` and apply it to `foreign_key_columns` and `primary_key_columns`.

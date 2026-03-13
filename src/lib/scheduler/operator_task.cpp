@@ -18,7 +18,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
 
 /**
  * Create tasks recursively. Called by `make_tasks_from_operator`.

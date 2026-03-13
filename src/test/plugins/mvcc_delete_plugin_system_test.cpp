@@ -31,8 +31,8 @@
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
 
-using namespace hyrise;                         // NOLINT(build/namespaces/source/namespace/nonliterals)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces/source/namespace/nonliterals)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 class MvccDeletePluginSystemTest : public BaseTest {
  public:
