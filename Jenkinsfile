@@ -230,7 +230,7 @@ try {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 5))"
+                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 4))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
@@ -286,7 +286,7 @@ try {
           }, clangRelWithDebInfoThreadSanitizer: {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 5))"
+                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
                 // We exclude tests matching NodeQueueSchedulerSemaphoreIncrements* as those tests were stuck with TSAN.
                 // We have seen runtimes of over 20h. The (much larger) tests running in Release mode did not show any
@@ -326,7 +326,7 @@ try {
             stage('bolt') {
               sh "mkdir cmake-build-bolt"
               sh "cd cmake-build-bolt && cmake ${release} ${clang} ${unity} ${ninja} .."
-              sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -t 120 -n \$(( \$(nproc) / 10)) --ci"
+              sh "cd cmake-build-bolt && python3 ../scripts/build_pgo_bolt.py -t 30 -n \$(( \$(nproc) / 5)) --ci"
               sh "cd cmake-build-bolt && ./hyriseTest"
             }
           }
