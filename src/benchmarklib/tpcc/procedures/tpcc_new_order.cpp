@@ -176,7 +176,7 @@ bool TPCCNewOrder::_on_execute() {
     //       allow for a single insert at the end.
     const auto order_line_insert_pair = _sql_executor.execute(std::format(
         "INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, "
-        "OL_DELIVERY_D, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUES ({}, {}, {}, {}, {}, {}, NULL, {}, {}, '{}')",
+        "OL_DELIVERY_D, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUES ({}, {}, {}, {}, {}, {}, NULL, {}, {:f}, '{}')",
         o_id, d_id, w_id, order_line_idx, order_line.ol_i_id, order_line.ol_supply_w_id, order_line.ol_quantity,
         ol_amount, s_dist));
     Assert(order_line_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");

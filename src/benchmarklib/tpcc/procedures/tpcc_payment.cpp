@@ -68,7 +68,7 @@ bool TPCCPayment::_on_execute() {
 
   // Update warehouse YTD
   std::tie(pipeline_status, std::ignore) =
-      _sql_executor.execute(std::format("EXECUTE payment_update_warehouse_ytd({}, {})", w_ytd + h_amount, w_id));
+      _sql_executor.execute(std::format("EXECUTE payment_update_warehouse_ytd({:f}, {})", w_ytd + h_amount, w_id));
   if (pipeline_status != SQLPipelineStatus::Success) {
     return false;
   }
@@ -115,8 +115,8 @@ bool TPCCPayment::_on_execute() {
   // There is a possible optimization here if we take `customer_table` as an input to an UPDATE operator, but that
   // would be outside of the SQL realm. Also, it would it make it impossible to run _execute_sql via the network
   // layer later on.
-  const auto customer_update_balance_pair = _sql_executor.execute(
-      std::format("EXECUTE payment_update_customer_balance({0}, {0}, {1}, {2}, {3})", h_amount, w_id, c_d_id, c_id));
+  const auto customer_update_balance_pair = _sql_executor.execute(std::format(
+      "EXECUTE payment_update_customer_balance({0:f}, {0:f}, {1}, {2}, {3})", h_amount, w_id, c_d_id, c_id));
   if (customer_update_balance_pair.first != SQLPipelineStatus::Success) {
     return false;
   }
@@ -143,7 +143,7 @@ bool TPCCPayment::_on_execute() {
   // Insert into history table.
   const auto history_insert_pair =
       _sql_executor.execute(std::format("INSERT INTO HISTORY (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, "
-                                        "H_DATE, H_AMOUNT) VALUES ({}, {}, {}, {}, {}, '{}', '{}', {})",
+                                        "H_DATE, H_AMOUNT) VALUES ({}, {}, {}, {}, {}, '{}', '{}', {:f})",
                                         c_id, c_d_id, c_w_id, d_id, w_id, w_name + "    " + d_name, h_date, h_amount));
   Assert(history_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");
 

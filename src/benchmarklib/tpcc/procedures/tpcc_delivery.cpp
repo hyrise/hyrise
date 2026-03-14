@@ -72,7 +72,7 @@ bool TPCCDelivery::_on_execute() {
 
     // Update balance and delivery count for customer
     const auto customer_update_pair = _sql_executor.execute(
-        std::format("EXECUTE delivery_update_customer({}, {}, {}, {})", amount, w_id, d_id, o_c_id));
+        std::format("EXECUTE delivery_update_customer({:f}, {}, {}, {})", amount, w_id, d_id, o_c_id));
     if (customer_update_pair.first != SQLPipelineStatus::Success) {
       return false;
     }
