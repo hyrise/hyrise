@@ -171,6 +171,7 @@ std::string BlockBloomFilter<FilterSizeExponent, BlockSizeExponent, K>::bit_dist
   return csv_output;
 }
 
+template class BloomFilter<23, 2>;
 template class BlockBloomFilter<18, 9, 1>;
 template class BlockBloomFilter<18, 9, 2>;
 template class BlockBloomFilter<18, 9, 3>;

@@ -178,6 +178,15 @@ void resolve_bloom_filter_type(BaseBloomFilter& base_bloom_filter, const Functor
     } break;
     case 23: {
       switch (base_bloom_filter.block_size_exponent()) {
+        case 0: {
+          switch (base_bloom_filter.k()) {
+            case 2:
+              functor(static_cast<BloomFilter<23, 2>&>(base_bloom_filter));
+              break;
+            default:
+              fail_unsupported();
+          }
+        } break;
         case 9: {
           switch (base_bloom_filter.k()) {
             case 1:

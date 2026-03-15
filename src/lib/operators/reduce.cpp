@@ -27,10 +27,10 @@ namespace hyrise {
 inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_size_exponent,
                                                           const uint8_t block_size_exponent, const uint8_t k) {
   switch (block_size_exponent) {
-    // case 0: {
-    //   switch (filter_size_exponent) {
-    //     case 18:
-    //       switch (k) {
+    case 0:
+      switch (filter_size_exponent) {
+        // case 18:
+          // switch (k) {
     //         case 1:
     //           return std::make_shared<BloomFilter<18, 1>>();
     //         case 2:
@@ -39,26 +39,7 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
     //           break;
     //       }
     //       break;
-    //     case 19:
-    //       switch (k) {
-    //         case 1:
-    //           return std::make_shared<BloomFilter<19, 1>>();
-    //         case 2:
-    //           return std::make_shared<BloomFilter<19, 2>>();
-    //         default:
-    //           break;
-    //       }
-    //       break;
-    //     case 20:
-    //       switch (k) {
-    //         case 1:
-    //           return std::make_shared<BloomFilter<20, 1>>();
-    //         case 2:
-    //           return std::make_shared<BloomFilter<20, 2>>();
-    //         default:
-    //           break;
-    //       }
-    //       break;
+
     //     case 21:
     //       switch (k) {
     //         case 1:
@@ -69,79 +50,22 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
     //           break;
     //       }
     //       break;
-    //     case 23:
-    //       switch (k) {
+        case 23:
+          switch (k) {
     //         case 1:
     //           return std::make_shared<BloomFilter<23, 1>>();
-    //         case 2:
-    //           return std::make_shared<BloomFilter<23, 2>>();
-    //         default:
-    //           break;
-    //       }
-    //       break;
-    //     default:
-    //       break;
-    //   }
-    //   break;
-    // }
-    // case 8: {
-    //   switch (filter_size_exponent) {
-    //     case 18:
-    //       switch (k) {
-    //         case 1:
-    //           return std::make_shared<BlockBloomFilter<18, 8, 1>>();
-    //         case 2:
-    //           return std::make_shared<BlockBloomFilter<18, 8, 2>>();
-    //         default:
-    //           break;
-    //       }
-    //       break;
-    //     case 19:
-    //       switch (k) {
-    //         case 1:
-    //           return std::make_shared<BlockBloomFilter<19, 8, 1>>();
-    //         case 2:
-    //           return std::make_shared<BlockBloomFilter<19, 8, 2>>();
-    //         default:
-    //           break;
-    //       }
-    //       break;
-    //     case 20:
-    //       switch (k) {
-    //         case 1:
-    //           return std::make_shared<BlockBloomFilter<20, 8, 1>>();
-    //         case 2:
-    //           return std::make_shared<BlockBloomFilter<20, 8, 2>>();
-    //         default:
-    //           break;
-    //       }
-    //       break;
-    //     case 21:
-    //       switch (k) {
-    //         case 1:
-    //           return std::make_shared<BlockBloomFilter<21, 8, 1>>();
-    //         case 2:
-    //           return std::make_shared<BlockBloomFilter<21, 8, 2>>();
-    //         default:
-    //           break;
-    //       }
-    //       break;
-    //     case 23:
-    //       switch (k) {
-    //         case 1:
-    //           return std::make_shared<BlockBloomFilter<23, 8, 1>>();
-    //         case 2:
-    //           return std::make_shared<BlockBloomFilter<23, 8, 2>>();
-    //         default:
-    //           break;
-    //       }
-    //       break;
-    //     default:
-    //       break;
-    //   }
-    //   break;
-    // }
-    case 9: {
+            case 2:
+              return std::make_shared<BloomFilter<23, 2>>();
+            default:
+              break;
+          }
+          break;
+      default:
+        break;
+    }
+    break;
+  
+    case 9:
       switch (filter_size_exponent) {
         case 18:
           switch (k) {
@@ -213,7 +137,6 @@ inline std::shared_ptr<BaseBloomFilter> make_bloom_filter(const uint8_t filter_s
           break;
       }
       break;
-    }
     default:
       break;
   }
