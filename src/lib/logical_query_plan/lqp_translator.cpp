@@ -437,9 +437,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   if (join_node->is_semi_reduction()) {
     const auto build_reducer = std::make_shared<Reduce>(left_input_operator, right_input_operator,
-                                                        primary_join_predicate, ReduceMode::Build, UseMinMax::No, 23, 0);
+                                                        primary_join_predicate, ReduceMode::Build, UseMinMax::No, 23);
     return std::make_shared<Reduce>(left_input_operator, build_reducer, primary_join_predicate, ReduceMode::Probe,
-                                    UseMinMax::No, 23, 0);
+                                    UseMinMax::No, 23);
   }
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};
