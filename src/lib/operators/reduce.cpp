@@ -270,8 +270,6 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
 
     // std::cout << "Selected exponent: " << static_cast<int>(_filter_size_exponent) << ", k: " << static_cast<int>(_k)
     //           << std::endl;
-  } else {
-    Fail("Selector not used");
   }
 
   resolve_data_type(input_table->column_data_type(column_id), [&](const auto column_data_type) {
