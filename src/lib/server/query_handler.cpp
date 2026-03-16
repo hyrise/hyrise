@@ -13,6 +13,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
@@ -78,20 +79,27 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
     Hyrise::get().storage_manager.drop_prepared_plan(statement_name);
   }
 
-  auto pipeline = SQLPipelineBuilder{query}.create_pipeline();
-  const auto& lqps = pipeline.get_unoptimized_logical_plans();
+  auto pipeline = std::optional{SQLPipelineBuilder{query}.create_pipeline()};
+  const auto& lqps = pipeline->get_unoptimized_logical_plans();
 
   // The PostgreSQL communication protocol does not allow more than one prepared statement within the parse message.
   // See note at: https://www.postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   AssertInput(lqps.size() == 1, "Only a single statement allowed in prepared statement.");
 
-  const auto& translation_infos = pipeline.get_sql_translation_infos();
+  const auto& translation_infos = pipeline->get_sql_translation_infos();
 
-  const auto& lqp = lqps[0];
-  const auto& translation_info = translation_infos[0].get();
+  auto lqp = lqps[0];
+  const auto translation_info = translation_infos[0].get();
+
+  // We have to destroy the pipeline object here, so all other references to the lqp are dropped.
+  pipeline.reset();
+
+  const auto optimizer = Optimizer::create_default_optimizer();
+  auto [optimized_lqp, optimization_context] = optimizer->optimize_with_context(std::move(lqp));
 
   auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
-  const auto prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids_of_value_placeholders);
+  const auto prepared_plan = std::make_shared<PreparedPlan>(optimized_lqp, parameter_ids_of_value_placeholders,
+                                                            std::move(optimization_context));
 
   Hyrise::get().storage_manager.add_prepared_plan(statement_name, prepared_plan);
 }
@@ -110,8 +118,9 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
   }
 
   auto lqp = prepared_plan->instantiate(parameter_expressions);
+  auto context = prepared_plan->optimization_context ? prepared_plan->optimization_context->deep_copy() : nullptr;
   const auto optimizer = Optimizer::create_default_optimizer();
-  lqp = optimizer->optimize(std::move(lqp));
+  lqp = optimizer->optimize(std::move(lqp), nullptr, std::move(context));
 
   auto pqp = LQPTranslator{}.translate_node(lqp);
 
