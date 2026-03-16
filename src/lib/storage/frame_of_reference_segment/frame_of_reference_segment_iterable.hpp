@@ -247,10 +247,8 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     NonNullPointAccessIterator(const pmr_vector<T>* block_minima, OffsetValueDecompressor offset_value_decompressor,
                                PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<NonNullPointAccessIterator<OffsetValueDecompressor, PosListIteratorType>,
-                                             NonNullSegmentPosition<T>, PosListIteratorType>{std::move(
-                                                                                                 position_filter_begin),
-                                                                                             std::move(
-                                                                                                 position_filter_it)},
+                                             NonNullSegmentPosition<T>, PosListIteratorType>{
+              std::move(position_filter_begin), std::move(position_filter_it)},
           _block_minima{block_minima},
           _offset_value_decompressor{std::move(offset_value_decompressor)} {}
 

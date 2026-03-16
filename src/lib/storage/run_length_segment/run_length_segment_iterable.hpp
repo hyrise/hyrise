@@ -225,9 +225,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                                  const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
                                  const PosListIteratorType position_filter_begin,
                                  PosListIteratorType&& position_filter_it)
-        : AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
-                                             PosListIteratorType>{std::move(position_filter_begin),
-                                                                  std::move(position_filter_it)},
+        : AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>, PosListIteratorType>{
+              std::move(position_filter_begin), std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
