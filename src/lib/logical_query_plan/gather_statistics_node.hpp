@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace hyrise {
 

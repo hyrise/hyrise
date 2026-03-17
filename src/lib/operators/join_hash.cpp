@@ -389,7 +389,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       // Bloom filter that returns true for every probe.
       materialize_build_side(ALL_TRUE_BLOOM_FILTER);
       _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
-      perform_scan = _secondary_predicates.empty() && _mode == JoinMode::Semi && (build_continuous || build_row_count <= 1);
+      perform_scan =
+          _secondary_predicates.empty() && _mode == JoinMode::Semi && (build_continuous || build_row_count <= 1);
       if (!perform_scan) {
         materialize_probe_side(build_side_bloom_filter);
         _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
@@ -472,61 +473,60 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    probe step.
      */
     if (!perform_scan) {
-    auto timer_hash_map_building = Timer{};
-    if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
-                                                       _radix_bits, probe_side_bloom_filter);
-    } else {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter);
-    }
-    _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
+      auto timer_hash_map_building = Timer{};
+      if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
+        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
+                                                         _radix_bits, probe_side_bloom_filter);
+      } else {
+        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions,
+                                                         _radix_bits, probe_side_bloom_filter);
+      }
+      _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
-    // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
-    // less values stored than in the initial input table.
-    for (const auto& hash_table : hash_tables) {
-      if (!hash_table) {
-        continue;
+      // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
+      // less values stored than in the initial input table.
+      for (const auto& hash_table : hash_tables) {
+        if (!hash_table) {
+          continue;
+        }
+
+        _performance_data.hash_tables_distinct_value_count += hash_table->distinct_value_count();
+        const auto position_count = hash_table->position_count();
+        if (position_count) {
+          // Update or set hash_tables_position_count if hash table stores positions.
+          _performance_data.hash_tables_position_count =
+              _performance_data.hash_tables_position_count.value_or(0) + *position_count;
+        }
       }
 
-      _performance_data.hash_tables_distinct_value_count += hash_table->distinct_value_count();
-      const auto position_count = hash_table->position_count();
-      if (position_count) {
-        // Update or set hash_tables_position_count if hash table stores positions.
-        _performance_data.hash_tables_position_count =
-            _performance_data.hash_tables_position_count.value_or(0) + *position_count;
-      }
-    }
-
-    /**
+      /**
      * Short cut for AntiNullAsTrue:
      *   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted anyway (as
      *   long as JoinHash/AntiNullAsTrue doesn't support secondary predicates). Doing this early out right here is
      *   hacky, but during probing we assume NULL values on the build side do not matter, so we'd have no chance
      *   detecting a NULL value on the build side there.
      */
-    if (_mode == JoinMode::AntiNullAsTrue) {
-      for (const auto& build_side_partition : radix_build_column) {
-        for (const auto null_value : build_side_partition.null_values) {
-          if (null_value) {
-            auto timer_output_writing = Timer{};
-            const auto result = _join_hash._build_output_table({});
-            _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
-            return result;
+      if (_mode == JoinMode::AntiNullAsTrue) {
+        for (const auto& build_side_partition : radix_build_column) {
+          for (const auto null_value : build_side_partition.null_values) {
+            if (null_value) {
+              auto timer_output_writing = Timer{};
+              const auto result = _join_hash._build_output_table({});
+              _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+              return result;
+            }
           }
         }
       }
-    }
 
-    radix_build_column.clear();
-  }
+      radix_build_column.clear();
+    }
 
     /**
      * 4. Probe step
      */
     auto build_side_pos_lists = std::vector<RowIDPosList>{};
     auto probe_side_pos_lists = std::vector<RowIDPosList>{};
-
 
     auto timer_probing = Timer{};
     if (perform_scan) {
@@ -539,7 +539,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       const auto scan_column = PQPColumnExpression::from_table(*_probe_input_table, _column_ids.second);
       auto predicate = std::shared_ptr<AbstractExpression>{};
       if (build_row_count == 1) {
-        predicate =  equals_(scan_column, value_(*build_min));
+        predicate = equals_(scan_column, value_(*build_min));
       } else {
         predicate = between_inclusive_(scan_column, value_(*build_min), value_(*build_max));
       }

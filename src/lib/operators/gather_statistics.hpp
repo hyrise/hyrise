@@ -6,21 +6,25 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "expression/abstract_expression.hpp"
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 
 namespace hyrise {
 
-class GatherStatistics : public AbstractReadOnlyOperator {
+class BaseRadixContainerWithStats;
+class BloomFilter;
+
+class Build : public AbstractReadOnlyOperator {
  public:
-  GatherStatistics(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID column_id);
+  Build(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID column_id);
 
   const std::string& name() const override;
 
   ColumnID column_id() const;
-  AllTypeVariant min_value() const;
-  AllTypeVariant max_value() const;
-  bool is_continuous() const;
+  DataType data_type() const;
+  const BaseRadixContainerWithStats& radix_container() const;
+  const BloomFilter& bloom_filter() const;
+  size_t radix_bits() const;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -32,11 +36,11 @@ class GatherStatistics : public AbstractReadOnlyOperator {
 
   void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) override;
 
- private:
-  AllTypeVariant _min_value{NULL_VALUE};
-  AllTypeVariant _max_value{NULL_VALUE};
-  bool _is_continuous{false};
   ColumnID _column_id;
+  DataType _data_type;
+  BaseRadixContainerWithStats _radix_container;
+  BloomFilter _bloom_filter;
+  std::optional<size_t> _radix_bits;
 };
 
 }  // namespace hyrise

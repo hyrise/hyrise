@@ -1,10 +1,10 @@
 #include "gather_statistics_node.hpp"
 
-#include <memory>
-#include <vector>
 #include <cstddef>
-#include <string>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -14,9 +14,8 @@
 
 namespace hyrise {
 
-
 GatherStatisticsNode::GatherStatisticsNode(const std::shared_ptr<AbstractExpression>& init_expression)
-      : AbstractLQPNode(LQPNodeType::GatherStatistics, {init_expression}) {}
+    : AbstractLQPNode(LQPNodeType::GatherStatistics, {init_expression}) {}
 
 std::string GatherStatisticsNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
@@ -44,8 +43,8 @@ std::shared_ptr<AbstractLQPNode> GatherStatisticsNode::_on_shallow_copy(LQPNodeM
 
 bool GatherStatisticsNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& gather_statistics_node = static_cast<const GatherStatisticsNode&>(rhs);
-  const auto equal =
-      expression_equal_to_expression_in_different_lqp(*expression(), *gather_statistics_node.expression(), node_mapping);
+  const auto equal = expression_equal_to_expression_in_different_lqp(
+      *expression(), *gather_statistics_node.expression(), node_mapping);
 
   return equal;
 }

@@ -29,12 +29,12 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/gather_statistics_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/gather_statistics_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -402,10 +402,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       output_table_statistics = estimate_window_node(window_node, left_input_table_statistics);
     } break;
 
-  case LQPNodeType::GatherStatistics: {
+    case LQPNodeType::GatherStatistics: {
       const auto& gather_statistics_node = static_cast<const GatherStatisticsNode&>(*lqp);
       output_table_statistics = estimate_gather_statistics_node(gather_statistics_node, left_input_table_statistics);
-  } break;
+    } break;
 
     // Currently, there is no actual estimation being done and we always apply the worst case.
     case LQPNodeType::Intersect:
@@ -967,7 +967,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
   return input_table_statistics;
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_gather_statistics_node(const GatherStatisticsNode& gather_statistics_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_gather_statistics_node(
+    const GatherStatisticsNode& gather_statistics_node,
+    const std::shared_ptr<TableStatistics>& input_table_statistics) {
   return input_table_statistics;
 }
 

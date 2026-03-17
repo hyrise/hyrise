@@ -85,8 +85,19 @@ struct Partition {
 template <typename T>
 using RadixContainer = std::vector<Partition<T>>;
 
+class BaseRadixContainerWithStats {};
+
 template <typename T>
-struct RadixContainerWithStats {
+class RadixContainerWithStats : public BaseRadixContainerWithStats {
+ public:
+  explicit RadixContainerWithStats(RadixContainer<T>&& init_container, const T init_min, const T init_max,
+                                   const bool init_is_continuous, const uint64_t init_row_count)
+      : container{std::move(init_container)},
+        min{init_min},
+        max{init_max},
+        is_continuous{init_is_continuous},
+        row_count{init_row_count} {};
+
   RadixContainer<T> container;
   std::optional<T> min;
   std::optional<T> max;
@@ -471,7 +482,7 @@ RadixContainerWithStats<T> materialize_input(const std::shared_ptr<const Table>&
     is_continuous = static_cast<std::make_unsigned_t<T>>(max - min + 1) == row_count;
   }
 
-  return {.container = std::move(radix_container), .min = min, .max = max, .is_continuous = is_continuous, .row_count = row_count};
+  return {std::move(radix_container), min, max, is_continuous, row_count};
 }
 
 template <typename T, typename HashedType, bool keep_null_values>
