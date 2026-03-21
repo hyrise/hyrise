@@ -35,6 +35,7 @@ def main() -> None:
 
     raw_df = pd.read_csv(csv_file)
     raw_df["filter_rate"] = 1 - (raw_df["hits"] / raw_df["vector_size"])
+    has_intersection = "intersection" in raw_df.columns
 
     hash_name_map = {
         0: "std::hash",
@@ -58,11 +59,14 @@ def main() -> None:
         .agg(
             median_probe_time_ns=("probe_time_ns", "median"),
             filter_rate=("filter_rate", "first"),
+            **({"intersection": ("intersection", "first")} if has_intersection else {}),
         )
     )
 
     aggregated["median_probe_time_ms"] = aggregated["median_probe_time_ns"] / 1_000_000
     aggregated["hash_name"] = aggregated["hash_function"].map(hash_name_map)
+    if has_intersection:
+        aggregated["max_filter_rate"] = 1 - (aggregated["intersection"] / aggregated["vector_size"])
 
     filter_size_labels = {
         18: "32 KiB",
@@ -107,6 +111,7 @@ def main() -> None:
             )
 
             def scatterplot_with_lines(data, **kwargs):
+                ax = plt.gca()
                 sns.scatterplot(
                     data=data,
                     x="filter_rate",
@@ -121,11 +126,20 @@ def main() -> None:
                     legend=False,
                     **kwargs,
                 )
+                if has_intersection:
+                    for max_filter_rate in sorted(data["max_filter_rate"].dropna().unique()):
+                        ax.axvline(
+                            max_filter_rate,
+                            color="#444444",
+                            linestyle="--",
+                            linewidth=1.1,
+                            alpha=0.9,
+                        )
                 for hash_name in hash_order:
                     hash_subset = data[data["hash_name"] == hash_name].sort_values("k")
                     if hash_subset.empty:
                         continue
-                    plt.plot(
+                    ax.plot(
                         hash_subset["filter_rate"],
                         hash_subset["median_probe_time_ms"],
                         color=palette[hash_name],
@@ -152,12 +166,24 @@ def main() -> None:
                 )
                 for k_value in k_order
             ]
+            reference_handles = []
+            if has_intersection:
+                reference_handles.append(
+                    Line2D(
+                        [0],
+                        [0],
+                        color="#444444",
+                        linestyle="--",
+                        linewidth=1.1,
+                        label="Max filter rate",
+                    )
+                )
             grid.fig.subplots_adjust(right=0.76)
             legend_ax = grid.fig.add_axes([0.82, 0.18, 0.17, 0.64])
             legend_ax.axis("off")
             legend_ax.legend(
-                handles=hash_handles + k_handles,
-                labels=[handle.get_label() for handle in hash_handles + k_handles],
+                handles=hash_handles + k_handles + reference_handles,
+                labels=[handle.get_label() for handle in hash_handles + k_handles + reference_handles],
                 title="Hash Function / k",
                 loc="center",
                 frameon=True,

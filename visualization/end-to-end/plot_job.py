@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 
 def _load_latencies_per_query(json_path: Path) -> dict[str, float]:
@@ -40,13 +41,22 @@ def _common_sorted_queries(base: dict[str, float], reduce: dict[str, float]) -> 
 	return queries
 
 
-def _plot_subplot(ax: plt.Axes, base_json: Path, reduce_json: Path, title: str) -> None:
+def _decimal_tick_formatter(value: float, _: object) -> str:
+	if abs(value) < 1e-12:
+		return "0"
+	if value >= 1.0:
+		return f"{value:.0f}" if abs(value - round(value)) < 1e-12 else f"{value:g}"
+	return f"{value:g}"
+
+
+def _collect_subplot_data(base_json: Path, reduce_json: Path) -> tuple[list[float], list[float]]:
 	base_latencies = _load_latencies_per_query(base_json)
 	reduce_latencies = _load_latencies_per_query(reduce_json)
 	queries = _common_sorted_queries(base_latencies, reduce_latencies)
+	return [base_latencies[query] for query in queries], [reduce_latencies[query] for query in queries]
 
-	x_values = [base_latencies[query] for query in queries]
-	y_values = [reduce_latencies[query] for query in queries]
+
+def _plot_subplot(ax: plt.Axes, x_values: list[float], y_values: list[float], title: str, min_val: float, limit_max: float) -> None:
 
 	improved_x: list[float] = []
 	improved_y: list[float] = []
@@ -73,15 +83,14 @@ def _plot_subplot(ax: plt.Axes, base_json: Path, reduce_json: Path, title: str) 
 	if stable_x:
 		ax.scatter(stable_x, stable_y, s=16, color="#7F7F7F", alpha=0.85, linewidths=0.0, label="Within +/-5%")
 
-	min_val = min(min(x_values), min(y_values), 0.0)
-	max_val = max(max(x_values), max(y_values))
-	limit_max = max_val * 1.18
-
 	ax.plot([min_val, limit_max], [min_val, limit_max], linestyle="--", color="#9C9C9C", linewidth=1.0)
 	ax.set_xscale("symlog", linthresh=0.1)
 	ax.set_yscale("symlog", linthresh=0.1)
 	ax.set_xlim(min_val, limit_max)
 	ax.set_ylim(min_val, limit_max)
+	ax.set_box_aspect(1)
+	ax.xaxis.set_major_formatter(FuncFormatter(_decimal_tick_formatter))
+	ax.yaxis.set_major_formatter(FuncFormatter(_decimal_tick_formatter))
 	ax.grid(True, which="both", linestyle="--", linewidth=0.55, color="#CFCFCF", alpha=0.8)
 	ax.set_title(title, loc="left")
 
@@ -99,20 +108,20 @@ def plot_job_scatter(data_dir: Path) -> Path:
 		}
 	)
 
-	fig, axes = plt.subplots(2, 1, figsize=(4.8, 6.0), dpi=200, sharex=True, sharey=True)
+	subplot_configs = [
+		(data_dir / "master_joinorder_st.json", data_dir / "reduce_joinorder_st.json", "(a) ST"),
+		(data_dir / "master_joinorder_mt.json", data_dir / "reduce_joinorder_mt.json", "(b) MT"),
+	]
 
-	_plot_subplot(
-		axes[0],
-		data_dir / "master_joinorder_st.json",
-		data_dir / "reduce_joinorder_st.json",
-		"(a) ST",
-	)
-	_plot_subplot(
-		axes[1],
-		data_dir / "master_joinorder_mt.json",
-		data_dir / "reduce_joinorder_mt.json",
-		"(b) MT",
-	)
+	subplot_data = [(_collect_subplot_data(base_json, reduce_json), title) for base_json, reduce_json, title in subplot_configs]
+	all_values = [value for (x_values, y_values), _ in subplot_data for value in (x_values + y_values)]
+	min_val = min(min(all_values), 0.0)
+	limit_max = max(all_values) * 1.18
+
+	fig, axes = plt.subplots(2, 1, figsize=(4.8, 9.0), dpi=200, sharex=True, sharey=True)
+
+	for ax, ((x_values, y_values), title) in zip(axes, subplot_data):
+		_plot_subplot(ax, x_values, y_values, title, min_val, limit_max)
 
 	axes[0].set_ylabel("Latency w/ Reduce [s]")
 	axes[1].set_ylabel("Latency w/ Reduce [s]")
