@@ -47,10 +47,12 @@ template <typename Derived, typename Value>
 class AbstractSegmentIterator
     : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {
   // The constructor of a CRTP has to be private, and the derived class has to be a friend so only it can construct
-  // the object. AbstractPointAccessSegmentIterator is also a friend because it extends this CRTP.
+  // the object. All instanciations of AbstractPointAccessSegmentIterator are also a friend, as the
+  // AbstractPointAccessSegmentIterator is also a CRTP that extends this CRTP
   AbstractSegmentIterator() = default;
   friend Derived;
-  friend AbstractPointAccessSegmentIterator<Derived, Value, AbstractPosList::PosListIterator<>>;
+  template <typename PointAccessDerived, typename PointAccessValue, typename PosListIteratorType>
+  friend class AbstractPointAccessSegmentIterator;
 };
 
 /**
@@ -72,12 +74,19 @@ struct ChunkOffsetMapping {
  * are returned.
  */
 
-template <typename Derived, typename Value, typename PosListIteratorType>
-class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derived, Value> {
- public:
+// The first two typenames cannot be `Derived` and `Value`, as these would shadow the corresponding values of the
+// AbstractSegmentIterator in the friend declaration above. It does not seem possible to change them there, so they
+// have to be adapted here.
+template <typename PointAccessDerived, typename PointAccessValue, typename PosListIteratorType>
+class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<PointAccessDerived, PointAccessValue> {
+ private:
+  // The constructor of a CRTP has to be private, and the derived class has to be a friend so only it can construct
+  // the object.
   explicit AbstractPointAccessSegmentIterator(PosListIteratorType position_filter_begin,
                                               PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
+
+  friend PointAccessDerived;
 
  protected:
   ChunkOffsetMapping _chunk_offsets() const {
