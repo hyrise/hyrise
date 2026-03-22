@@ -10,8 +10,8 @@ exitcode=0
 #  - whitespace/braces: Does not work with {} initialization (see https://github.com/cpplint/cpplint/issues/204#issuecomment-1146769949).
 #  - build/include_subdir: Does not work well with our structure of using lib, test, and third_party directories.
 #  - whitespace/indent_namespace: Has a lot of false positives, see https://github.com/cpplint/cpplint/issues/401
-#  - build/namespaces/source/namespace/nonliterals: We use `using namespace hyrise` a lot in anonymous namespaces.
-find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-runtime/references,-build/c++11,-build/c++17,-readability/nolint,-readability/inheritance,-whitespace/braces,-build/include_subdir,-whitespace/indent_namespace,-build/namespaces/source/namespace/nonliterals --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
+#  - build/namespaces/{source,header}/namespace/nonliterals: We use `using namespace hyrise` a lot in anonymous namespaces.
+find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-runtime/references,-build/c++11,-build/c++17,-readability/nolint,-readability/inheritance,-whitespace/braces,-build/include_subdir,-whitespace/indent_namespace,-build/namespaces/source/namespace/nonliterals,-build/namespaces/header/namespace/nonliterals --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
 let "exitcode |= $?"
 #                             /------------------ runs in parallel -------------------\
 # Conceptual: find | parallel python cpplint \| grep -v \| test \${PIPESTATUS[0]} -eq 0
