@@ -56,8 +56,8 @@ The original value is used to detect hash collisions.
 */
 template <typename T>
 struct PartitionedElement {
-  T value;
   RowID row_id;
+  T value;
 };
 
 // A partition is a part of a materialized join column, either on the build or the probe side. The partitions of one
@@ -383,9 +383,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
               values from different inputs (important for Multi Joins).
               */
               if constexpr (is_reference_segment_iterable_v<IterableType>) {
-                *elements_iter = PartitionedElement<T>{value.value(), RowID{chunk_id, reference_chunk_offset}};
+                *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
               } else {
-                *elements_iter = PartitionedElement<T>{value.value(), RowID{chunk_id, value.chunk_offset()}};
+                *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
               }
               ++elements_iter;
 

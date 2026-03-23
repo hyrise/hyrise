@@ -14,7 +14,7 @@ template <typename T>
 RadixContainer<T> generate_container(uint32_t num_elements) {
   auto elements = uninitialized_vector<PartitionedElement<T>>(num_elements);
   for (auto value = T{0}; value < num_elements; ++value) {
-    elements[value] = PartitionedElement<T>{.value = value, .row_id = RowID(ChunkID{value}, ChunkOffset{value})};
+    elements[value] = PartitionedElement<T>{.row_id = RowID(ChunkID{value}, ChunkOffset{value}), .value = value};
   }
 
   auto partition = Partition<T>{.elements = std::move(elements), .null_values = std::vector<bool>{}};
