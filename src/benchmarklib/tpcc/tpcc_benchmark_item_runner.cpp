@@ -22,11 +22,11 @@ TPCCBenchmarkItemRunner::TPCCBenchmarkItemRunner(const std::shared_ptr<Benchmark
     : AbstractBenchmarkItemRunner(config), _num_warehouses(num_warehouses) {}
 
 void TPCCBenchmarkItemRunner::on_tables_loaded() {
-  using arr_span = std::span<const char* const>;
-  const auto all_statements = {arr_span(TPCCDelivery::PREPARED_STATEMENTS), arr_span(TPCCNewOrder::PREPARED_STATEMENTS),
-                               arr_span(TPCCOrderStatus::PREPARED_STATEMENTS),
-                               arr_span(TPCCPayment::PREPARED_STATEMENTS),
-                               arr_span(TPCCStockLevel::PREPARED_STATEMENTS)};
+  using string_span = std::span<const char* const>;
+  const auto all_statements = {
+      string_span(TPCCDelivery::PREPARED_STATEMENTS), string_span(TPCCNewOrder::PREPARED_STATEMENTS),
+      string_span(TPCCOrderStatus::PREPARED_STATEMENTS), string_span(TPCCPayment::PREPARED_STATEMENTS),
+      string_span(TPCCStockLevel::PREPARED_STATEMENTS)};
   for (const auto statements : all_statements) {
     for (const auto* const sql : statements) {
       const auto [status, table] = SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
