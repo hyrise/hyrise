@@ -29,7 +29,7 @@ std::vector<std::vector<size_t>> compute_histogram(const RadixContainer<T>& cont
   constexpr auto HASH = std::hash<T>{};
   const auto mask = (size_t{1} << radix_bits) - 1;
 
-  for (const auto& [value, row_id] : container[0].elements) {
+  for (const auto& [row_id, value] : container[0].elements) {
     ++histograms[0][mask & HASH(value)];
   }
 
