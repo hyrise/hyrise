@@ -68,6 +68,7 @@ args = parser.parse_args()
 assert not (
     args.export_profile and args.import_profile
 ), "You cannot export and import at the same time. This would result in no benchmarks and no library built."
+assert args.pgo or args.bolt, "You should either specify --pgo or --bolt for any optimization."
 
 build_folder = getcwd()
 benchmarks = [
