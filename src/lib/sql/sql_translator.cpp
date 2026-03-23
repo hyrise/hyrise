@@ -1839,10 +1839,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   AssertInput(_use_mvcc == (lqp_is_validated(prepared_plan->lqp) ? UseMvcc::Yes : UseMvcc::No),
               "Mismatch between validation of Prepared statement and query it is used in.");
 
-  auto lqp = prepared_plan->instantiate(parameters);
-  auto context = prepared_plan->optimization_context ? prepared_plan->optimization_context->deep_copy() : nullptr;
-  const auto optimizer = Optimizer::create_default_optimizer();
-  return optimizer->optimize(std::move(lqp), nullptr, std::move(context));
+  return prepared_plan->instantiate(parameters);
 }
 
 // NOLINTNEXTLINE: while this particular method could be made static, others cannot.
