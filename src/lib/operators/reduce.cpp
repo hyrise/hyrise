@@ -262,6 +262,9 @@ std::shared_ptr<const Table> Reduce::_execute_build() {
     _filter_size_exponent = l1_exponent;
     if (false_positive_rate_blocked(l1_size_bits, static_cast<double>(input_row_count), _k) > max_false_positive_rate) {
       _filter_size_exponent = l2_exponent;
+      std::cout << "Selected L2 sized bloom filter.\n";
+    } else {
+      std::cout << "Selected L1 sized bloom filter.\n";
     }
     // const auto expected_false_positive_rate = false_positive_rate_blocked(l2_size_bits, static_cast<double>(input_row_count), _k);
     // if (expected_false_positive_rate > max_false_positive_rate) {
