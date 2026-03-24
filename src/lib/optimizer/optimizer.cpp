@@ -275,6 +275,51 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   return optimizer;
 }
 
+std::shared_ptr<Optimizer> Optimizer::create_execute_statement_optimizer() {
+  auto optimizer = std::make_shared<Optimizer>();
+
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+
+  // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
+  // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>(false));
+
+  // The JoinOrderingRule cannot proceed past semi-/anti-joins. These may be part of the initial query plan (in which
+  // case we are out of luck and the join ordering will be sub-optimal) but many of them are also introduced by the
+  // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
+  optimizer->add_rule(std::make_unique<JoinOrderingRule>());
+
+  // This rule might have more useful insights if the placeholders have been replaced.
+  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
+  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
+  // StoredTableNode as possible where the ChunkPruningRule can work with them.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  // Order join predicates (again) by their selectivity. Do that after predicate placement and chunk pruning because
+  // both can impact the join predicates' selectivities.
+  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
+
+  // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired.
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+  // Before the IN predicate is rewritten, it should have been moved to a good position. Also, while the IN predicate
+  // might become a join, it is semantically more similar to a predicate. If we run this rule too early, it might
+  // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
+  // joins and would not recognize such a rewritten predicate. This rule is currently rerun, as we do not know the type
+  // of placeholders and therefore skip rewriting IN expressions with placeholders in the original lqp.
+  optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
+
+  optimizer->add_rule(std::make_unique<IndexScanRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
+
+  return optimizer;
+}
+
 Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
 
 void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {

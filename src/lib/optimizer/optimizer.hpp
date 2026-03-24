@@ -31,6 +31,9 @@ class AbstractLQPNode;
 class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
+  // This optimizer only uses a fraction of the rules and should only be used on the lqp of a prepared statement, which
+  // has already been optimized by the default optimizer when it was prepared.
+  static std::shared_ptr<Optimizer> create_execute_statement_optimizer();
 
   explicit Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
                          std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>()));

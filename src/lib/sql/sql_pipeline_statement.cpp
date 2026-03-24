@@ -82,6 +82,10 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
          "SQLPipelineStatement must hold exactly one statement. "
          "Use SQLPipeline when you have multiple statements.");
 
+  if (_parsed_sql_statement->getStatements()[0]->isType(hsql::kStmtExecute)) {
+    _optimizer = Optimizer::create_execute_statement_optimizer();
+  }
+
   return _parsed_sql_statement;
 }
 
