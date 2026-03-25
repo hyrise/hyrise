@@ -15,26 +15,35 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
-RadixContainer<T> generate_container(int32_t num_elements) {
-  auto elements = uninitialized_vector<PartitionedElement<T>>(num_elements);
-  for (auto value = T{0}; value < num_elements; ++value) {
-    elements[value] = PartitionedElement<T>{.row_id = RowID(ChunkID{static_cast<uint32_t>(value)}, ChunkOffset{static_cast<uint32_t>(value)}), .value = value};
+RadixContainer<T> generate_containers(int32_t num_elements) {
+  const auto chunk_count = static_cast<uint32_t>(std::ceil(num_elements / Chunk::DEFAULT_SIZE));
+  auto radix_container = RadixContainer<T>{};
+
+  for (auto chunk_id = size_t{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto elements_per_chunk = static_cast<size_t>(num_elements / chunk_count);
+    auto elements = uninitialized_vector<PartitionedElement<T>>(elements_per_chunk);
+    for (auto value = T{0}; value < static_cast<int32_t>(elements_per_chunk); ++value) {
+      elements[value] = PartitionedElement<T>{.row_id = RowID(ChunkID{static_cast<uint32_t>(value)}, ChunkOffset{static_cast<uint32_t>(value)}), .value = value % 3};
+    }
+
+    auto partition = Partition<T>{.elements = std::move(elements), .null_values = std::vector<bool>{}};
+    radix_container.push_back(std::move(partition));
   }
 
-  auto partition = Partition<T>{.elements = std::move(elements), .null_values = std::vector<bool>{}};
-  auto radix_container = RadixContainer<T>{std::move(partition)};
   return radix_container;
 }
 
 template <typename T>
-std::vector<std::vector<size_t>> compute_histogram(const RadixContainer<T>& container, uint32_t radix_bits) {
-  auto histograms = std::vector(1, std::vector(size_t{1} << radix_bits, size_t{0}));
+std::vector<std::vector<size_t>> compute_histograms(const RadixContainer<T>& container, uint32_t radix_bits) {
+  auto histograms = std::vector(container.size(), std::vector(size_t{1} << radix_bits, size_t{0}));
 
   constexpr auto HASH = std::hash<T>{};
   const auto mask = (size_t{1} << radix_bits) - 1;
 
-  for (const auto& [row_id, value] : container[0].elements) {
-    ++histograms[0][mask & HASH(value)];
+  for (auto chunk_id = size_t{0}; chunk_id < container.size(); ++chunk_id) {
+    for (const auto& [row_id, value] : container[chunk_id].elements) {
+      ++histograms[chunk_id][mask & HASH(value)];
+    }
   }
 
   return histograms;
@@ -45,20 +54,26 @@ void BM_Radix_Partitioning(benchmark::State& state) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   const auto num_elements_per_partition = state.range(0);
   const auto radix_bits = static_cast<uint64_t>(state.range(1));
-  const auto input = generate_container<int32_t>(num_elements_per_partition * (1ull << radix_bits));
-  const auto histogram = compute_histogram<int32_t>(input, radix_bits);
-  //for (auto bin : histogram[0]) {
-  //      std::cout << " \t " << bin << "\t";
-  //}
+  const auto partition_count = uint32_t{1} << radix_bits;
+  const auto row_count = num_elements_per_partition * partition_count;
+  const auto input = generate_containers<int32_t>(row_count);
+  const auto histograms = compute_histograms<int32_t>(input, radix_bits);
+
+  // for (const auto& histogram : histograms) {
+  //   for (auto bin : histogram) {
+  //     std::cout << " \t " << bin << "\t";
+  //   }
+  //   std::cout << "\n";
+  // }
   //std::cout << "\n\n";
   //std::cout << std::format("num: {}, radixbits: {}, \n", num_elements_per_partition, radix_bits);
   for (auto _ : state) {
-    //partition_by_radix<int32_t, size_t, false, true, variant, locality>(input, histogram, radix_bits);
-    auto t = partition_by_radix<int32_t, size_t, false, true, variant, locality>(input, histogram, radix_bits);
-    for (auto part : t) {
-        std::cout << "element counts: " << part.elements.size() << "\n";
-    }
-    break;
+    partition_by_radix<int32_t, size_t, false, true, variant, locality>(input, histograms, radix_bits);
+    // auto t = partition_by_radix<int32_t, size_t, false, true, variant, locality>(input, histograms, radix_bits);
+    // for (auto part : t) {
+    //     std::cout << "element counts: " << part.elements.size() << "\n";
+    // }
+    // break;
   }
   Hyrise::get().scheduler()->finish();
 }
