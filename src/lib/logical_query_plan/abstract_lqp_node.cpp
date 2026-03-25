@@ -529,7 +529,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
 
   const auto output_lqp_to_stream = [&](const auto& root) {
     const auto get_inputs_fn = [](const auto& node2) {
-      std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
+      auto inputs = std::vector<std::shared_ptr<const AbstractLQPNode>>{};
       if (node2->left_input()) {
         inputs.emplace_back(node2->left_input());
       }
@@ -538,7 +538,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
         inputs.emplace_back(node2->right_input());
       }
 
-      return inputs;
+      return std::move(inputs);
     };
 
     const auto node_print_fn = [](const auto& node2, auto& stream2) {

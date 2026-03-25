@@ -376,20 +376,6 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<co
     return;
   }
 
-  const auto column_expression_for_join_input = [&](const auto& input_node) {
-    // The join predicate may be swapped, so get the proper operand.
-    auto column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->left_operand());
-    if (!column_candidate || !expression_evaluable_on_lqp(column_candidate, *input_node)) {
-      column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->right_operand());
-    }
-    // We do not have to find an LQPColumnExpression in the join predicates at all, e.g., when joining on substrings:
-    // SELECT * FROM orders, lineitem WHERE EXTRACT(YEAR FROM o_orderdate) = EXTRACT(YEAR FROM l_shipdate).
-    // Thus, column_candidate might be a nullptr.
-    Assert(!column_candidate || expression_evaluable_on_lqp(column_candidate, *input_node),
-           "Join predicate should belong to an input");
-    return column_candidate;
-  };
-
   // We only care about semi (right input is candidate) and inner (both are potential candidates) joins.
   switch (join_node.join_mode) {
     case JoinMode::Inner: {
@@ -421,7 +407,15 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<co
     case JoinMode::Semi: {
       // We want to check only the right hand side here, as this is the one that will be removed in the end.
       const auto subtree_root = join_node.right_input();
-      const auto column_candidate = column_expression_for_join_input(subtree_root);
+      auto column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->left_operand());
+      if (!column_candidate || !expression_evaluable_on_lqp(column_candidate, *subtree_root)) {
+        column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->right_operand());
+      }
+      // We do not have to find an LQPColumnExpression in the join predicates at all, e.g., when joining on substrings:
+      // SELECT * FROM orders, lineitem WHERE EXTRACT(YEAR FROM o_orderdate) = EXTRACT(YEAR FROM l_shipdate).
+      // Thus, column_candidate might be a nullptr.
+      Assert(!column_candidate || expression_evaluable_on_lqp(column_candidate, *subtree_root),
+             "Join predicate should belong to an input.");
       _ucc_candidates_from_removable_join_input(subtree_root, column_candidate, ucc_candidates);
       return;
     }

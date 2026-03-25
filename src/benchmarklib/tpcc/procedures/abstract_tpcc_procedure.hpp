@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <random>
 
 #include "benchmark_sql_executor.hpp"

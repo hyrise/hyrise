@@ -58,39 +58,47 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
 
 std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                        const std::shared_ptr<const AbstractLQPNode>& rhs) {
+  auto result = std::optional<LQPMismatch>{};
   if (!lhs && !rhs) {
-    return std::nullopt;
+    return result;
   }
 
   if (!(lhs && rhs) || lhs->type != rhs->type) {
-    return LQPMismatch(lhs, rhs);
+    result = LQPMismatch(lhs, rhs);
+    return result;
   }
 
   auto mismatch_left = lqp_find_structure_mismatch(lhs->left_input(), rhs->left_input());
   if (mismatch_left) {
-    return mismatch_left;
+    result = mismatch_left;
+    return result;
   }
 
-  return lqp_find_structure_mismatch(lhs->right_input(), rhs->right_input());
+  result = lqp_find_structure_mismatch(lhs->right_input(), rhs->right_input());
+  return result;
 }
 
 std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& node_mapping,
                                                           const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                           const std::shared_ptr<const AbstractLQPNode>& rhs) {
+  auto result = std::optional<LQPMismatch>{};
   if (!lhs && !rhs) {
-    return std::nullopt;
+    return result;
   }
 
   if (!lhs->shallow_equals(*rhs, node_mapping)) {
-    return LQPMismatch(lhs, rhs);
+    result = LQPMismatch(lhs, rhs);
+    return result;
   }
 
   auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
   if (mismatch_left) {
-    return mismatch_left;
+    result = mismatch_left;
+    return result;
   }
 
-  return lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
+  result = lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
+  return result;
 }
 
 void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& root_nodes,
@@ -171,26 +179,27 @@ SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shar
 
 LQPNodeMapping lqp_create_node_mapping(const std::shared_ptr<AbstractLQPNode>& lhs,
                                        const std::shared_ptr<AbstractLQPNode>& rhs) {
-  LQPNodeMapping mapping;
+  auto mapping = LQPNodeMapping{};
   lqp_create_node_mapping_impl(mapping, lhs, rhs);
   return mapping;
 }
 
 std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                      const std::shared_ptr<const AbstractLQPNode>& rhs) {
-  // Check for type/structural mismatched
+  // Check for type/structural mismatched.
   auto mismatch = lqp_find_structure_mismatch(lhs, rhs);
   if (mismatch) {
     return mismatch;
   }
 
   // For lqp_create_node_mapping() we need mutable pointers - but won't use them to manipulate, promised.
-  // It's just that NodeMapping has takes a mutable ptr in as the value type
+  // It's just that NodeMapping has takes a mutable ptr in as the value type.
   const auto mutable_lhs = std::const_pointer_cast<AbstractLQPNode>(lhs);
   const auto mutable_rhs = std::const_pointer_cast<AbstractLQPNode>(rhs);
   const auto node_mapping = lqp_create_node_mapping(mutable_lhs, mutable_rhs);
 
-  return lqp_find_subplan_mismatch_impl(node_mapping, lhs, rhs);
+  mismatch = lqp_find_subplan_mismatch_impl(node_mapping, lhs, rhs);
+  return mismatch;
 }
 
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
@@ -362,8 +371,9 @@ namespace {
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
     const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
     const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
+  auto result = std::shared_ptr<AbstractExpression>{};
   if (end && begin == *end) {
-    return nullptr;
+    return result;
   }
 
   switch (begin->type) {
@@ -373,10 +383,12 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
       auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
       auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
       if (left_input_expression) {
-        return left_input_expression;
+        result = left_input_expression;
+        return result;
       }
 
-      return expression;
+      result = expression;
+      return result;
     }
 
     case LQPNodeType::Union: {
@@ -386,20 +398,23 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
           lqp_subplan_to_boolean_expression_impl(begin->right_input(), end, std::nullopt);
       if (left_input_expression && right_input_expression) {
         const auto or_expression = or_(left_input_expression, right_input_expression);
-        return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
+        result = subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
+        return result;
       }
 
-      return nullptr;
+      return result;
     }
 
     case LQPNodeType::Projection:
     case LQPNodeType::Sort:
     case LQPNodeType::Validate:
-    case LQPNodeType::Limit:
-      return lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, subsequent_expression);
+    case LQPNodeType::Limit: {
+      result = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, subsequent_expression);
+      return result;
+    }
 
     default:
-      return nullptr;
+      return result;
   }
 }
 }  // namespace
@@ -525,7 +540,8 @@ UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations
         })) {
       // If this match is genuine, we can stop here.
       if (ucc->is_genuine()) {
-        return ucc;
+        matching_ucc = ucc;
+        return matching_ucc;
       }
 
       // We found a matching UCC, but continue looking for a genuine one.

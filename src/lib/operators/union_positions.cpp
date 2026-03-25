@@ -96,9 +96,10 @@ const std::string& UnionPositions::name() const {
 }
 
 std::shared_ptr<const Table> UnionPositions::_on_execute() {
-  auto early_result = _prepare_operator();
-  if (early_result) {
-    return early_result;
+  auto out_table = std::shared_ptr<const Table>{};
+  out_table = _prepare_operator();
+  if (out_table) {
+    return out_table;
   }
 
   const auto& left_in_table = *left_input_table();
@@ -154,7 +155,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto num_rows_left = virtual_pos_list_left.size();
   const auto num_rows_right = virtual_pos_list_right.size();
 
-  auto out_table = std::make_shared<Table>(left_in_table.column_definitions(), TableType::References);
+  out_table = std::make_shared<Table>(left_in_table.column_definitions(), TableType::References);
 
   auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>(reference_matrix_left.size());
   std::ranges::generate(pos_lists, [&] {

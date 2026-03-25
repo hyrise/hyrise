@@ -193,7 +193,7 @@ std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>
 
 template <typename Target>
 std::optional<Target> lossless_variant_cast(const AllTypeVariant& variant) {
-  std::optional<Target> result;
+  auto result = std::optional<Target>{};
 
   const auto source_data_type = data_type_from_all_type_variant(variant);
 
@@ -201,14 +201,15 @@ std::optional<Target> lossless_variant_cast(const AllTypeVariant& variant) {
   // doesn't resolve NULL)
   if constexpr (std::is_same_v<Target, NullValue>) {
     if (source_data_type == DataType::Null) {
-      return NullValue{};
+      result = NullValue{};
+      return result;
     }
   }
 
   // Safe casting between NULL and non-NULL type is not possible. (Cannot be handled below as resolve_data_type()
   // doesn't resolve NULL)
   if ((source_data_type == DataType::Null) != std::is_same_v<Target, NullValue>) {
-    return std::nullopt;
+    return result;
   }
 
   resolve_data_type(data_type_from_all_type_variant(variant), [&](auto source_data_type_t) {

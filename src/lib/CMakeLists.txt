@@ -683,7 +683,6 @@ set(
     LIBRARIES
     compact_vector
     lz4
-    magic_enum
     sqlparser
     uninitialized_vector
     libzstd_static
@@ -738,6 +737,7 @@ target_link_libraries_system(
     ${BOOST_LIBS}
     concurrentqueue
     cxxopts
+    magic_enum
     nlohmann_json::nlohmann_json
     sparse_map
     SQLite::SQLite3

@@ -423,7 +423,10 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
     if (op->right_input()) {
       children.emplace_back(op->right_input());
     }
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wnrvo"
     return children;
+    #pragma clang diagnostic pop
   };
 
   const auto node_print_fn = [&](const auto& op, auto& fn_stream) {
