@@ -74,6 +74,37 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
+template RadixContainer<int32_t> partition_by_radix<int32_t, size_t, false, true, 'A', 0>(
+    const RadixContainer<int>& radix_container,
+    const std::vector<std::vector<size_t>>& histograms,
+    const size_t radix_bits,
+    const BloomFilter& input_bloom_filter
+);
+template RadixContainer<int32_t> partition_by_radix<int32_t, size_t, false, true, 'B', 0>(
+    const RadixContainer<int>& radix_container,
+    const std::vector<std::vector<size_t>>& histograms,
+    const size_t radix_bits,
+    const BloomFilter& input_bloom_filter
+);
+template RadixContainer<int32_t> partition_by_radix<int32_t, size_t, false, true, 'C', 0>(
+    const RadixContainer<int>& radix_container,
+    const std::vector<std::vector<size_t>>& histograms,
+    const size_t radix_bits,
+    const BloomFilter& input_bloom_filter
+);
+template RadixContainer<int32_t> partition_by_radix<int32_t, size_t, false, true, 'D', 0>(
+    const RadixContainer<int>& radix_container,
+    const std::vector<std::vector<size_t>>& histograms,
+    const size_t radix_bits,
+    const BloomFilter& input_bloom_filter
+);
+template RadixContainer<int32_t> partition_by_radix<int32_t, size_t, false, true, 'N', -1>(
+    const RadixContainer<int>& radix_container,
+    const std::vector<std::vector<size_t>>& histograms,
+    const size_t radix_bits,
+    const BloomFilter& input_bloom_filter
+); 
+
 size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size) {
   /*
     The number of radix bits is used to determine the number of build partitions. The idea is to size the partitions in
