@@ -23,7 +23,7 @@ RadixContainer<T> generate_containers(int32_t num_elements) {
     const auto elements_per_chunk = static_cast<size_t>(num_elements / chunk_count);
     auto elements = uninitialized_vector<PartitionedElement<T>>(elements_per_chunk);
     for (auto value = T{0}; value < static_cast<int32_t>(elements_per_chunk); ++value) {
-      elements[value] = PartitionedElement<T>{.row_id = RowID(ChunkID{static_cast<uint32_t>(value)}, ChunkOffset{static_cast<uint32_t>(value)}), .value = value % 3};
+      elements[value] = PartitionedElement<T>{.row_id = RowID(ChunkID{static_cast<uint32_t>(value)}, ChunkOffset{static_cast<uint32_t>(value)}), .value = value};
     }
 
     auto partition = Partition<T>{.elements = std::move(elements), .null_values = std::vector<bool>{}};
