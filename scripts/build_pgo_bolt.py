@@ -141,7 +141,7 @@ def build(
 # just use the old compilation output, which is significantly faster than rebuilding the binary. If a source file
 # changed, then this will trigger a full rebuild of libhyrise. So this function should only be called by this script,
 # if it can be sure that itself build the proper library and no input files changed.
-def build_just_bolt(*targets):
+def build_with_bolt_from_previous_build(*targets):
     run_in_build_folder("mv lib/libhyrise_impl.so.old lib/libhyrise_impl.so")
     run_in_build_folder(f"{args.build_system} {" ".join(targets)} -j {args.num_cores}")
     run_in_build_folder("mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old")
@@ -210,7 +210,7 @@ def ci_main():
     profile(pgo_instrumented=True)
     build(*ci_benchmarks, pgo_optimize=True, bolt_instrument=True)
     profile(bolt_instrumented=True)
-    build_just_bolt("hyriseTest")
+    build_with_bolt_from_previous_build("hyriseTest")
 
 
 def main():
@@ -233,7 +233,7 @@ def main():
                 # BOLT, then we can reuse the benchmark library and just apply BOLT on that. This works with and
                 # without PGO. If PGO was active, then BOLT already instrumented the PGO optimized binary during
                 # benchmarks, which means that we can reuse the already optimized binary here and optimize it with BOLT.
-                build_just_bolt()
+                build_with_bolt_from_previous_build()
             else:
                 build(bolt_optimize=args.bolt, pgo_optimize=args.pgo)
     finally:
