@@ -615,6 +615,7 @@ template <typename T, typename HashedType, bool keep_null_values, bool reduce_tl
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      const std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+  std::cout << "Method starts.\n";
   if (radix_container.empty()) {
     return radix_container;
   }
@@ -670,6 +671,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     const auto& elements = input_partition.elements;
     const auto elements_count = elements.size();
     if constexpr (std::is_trivially_copy_assignable_v<T> && reduce_tlb_pressure) {
+      std::cout << "Fancy Partitioning starts.\n";
       const auto perform_partition = [&, input_partition_idx, elements_count]() {
         using TMP = TemporaryRadixContainer<T, keep_null_values>;
         auto tmp = TMP(output_partition_count);
@@ -807,6 +809,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
       }
     } else {
+      std::cout << "Simple Partitioning starts.\n";
       // Just do the partitioning without cache tricks.
       const auto perform_partition = [&, input_partition_idx, elements_count]() {
         for (auto input_idx = size_t{0}; input_idx < elements_count; ++input_idx) {
@@ -846,6 +849,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   jobs.clear();
+  std::cout << "Partitioning done. Writing nulls\n";
 
   // Compress null_values_as_char into partition.null_values
   if constexpr (keep_null_values) {
@@ -860,6 +864,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
+  std::cout << "Writing nulls done\n";
 
   return output;
 }

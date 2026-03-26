@@ -66,8 +66,9 @@ void BM_Radix_Partitioning(benchmark::State& state) {
   const auto histograms = compute_histograms<int32_t>(input, radix_bits);
 
   // for (const auto& histogram : histograms) {
+  //   std::cout << "\nhistogram\n";
   //   for (auto bin : histogram) {
-  //     std::cout << " \t " << bin << "\t";
+  //     std::cout << " " << bin;
   //   }
   //   std::cout << "\n";
   // }
@@ -77,7 +78,7 @@ void BM_Radix_Partitioning(benchmark::State& state) {
     partition_by_radix<int32_t, size_t, false, true, variant, locality>(input, histograms, radix_bits);
     // auto t = partition_by_radix<int32_t, size_t, false, true, variant, locality>(input, histograms, radix_bits);
     // for (auto part : t) {
-    //     std::cout << "element counts: " << part.elements.size() << "\n";
+    //   std::cout << "element counts: " << part.elements.size() << "\n";
     // }
     // break;
   }
@@ -102,3 +103,4 @@ BENCHMARK_TEMPLATE(BM_Radix_Partitioning, 'N', -1)
     ->ArgsProduct({benchmark::CreateRange(1 << 15, 1 << 17, 2), benchmark::CreateDenseRange(7, 15, 1)});
 
 }  // namespace hyrise
+
