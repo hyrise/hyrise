@@ -26,6 +26,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -508,23 +509,30 @@ std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
   return column_expressions;
 }
 
-bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
-                                                 const ExpressionUnorderedSet& expressions) {
+UniqueColumnCombinations::const_iterator find_ucc(const UniqueColumnCombinations& unique_column_combinations,
+                                                  const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
-  // Look for a unique column combination that is based on a subset of the given expressions.
-  for (const auto& ucc : unique_column_combinations) {
-    if (ucc.expressions.size() <= expressions.size() &&
-        std::ranges::all_of(ucc.expressions, [&](const auto& ucc_expression) {
+  // Look for a unique column combination that is based on a subset of the given expressions. We do not guarantee the
+  // UCC to be minimal, but we prefer genuine UCCs.
+  auto matching_ucc = unique_column_combinations.cend();
+  for (auto ucc = unique_column_combinations.cbegin(); ucc != unique_column_combinations.cend(); ++ucc) {
+    // If all of the expressions in the UCC are contained in the given expressions, we found a match.
+    if (ucc->expressions.size() <= expressions.size() &&
+        std::ranges::all_of(ucc->expressions, [&](const auto& ucc_expression) {
           return expressions.contains(ucc_expression);
         })) {
-      // Found a matching UCC.
-      return true;
+      // If this match is genuine, we can stop here.
+      if (ucc->is_genuine()) {
+        return ucc;
+      }
+
+      // We found a matching UCC, but continue looking for a genuine one.
+      matching_ucc = ucc;
     }
   }
-  // Did not find a UCC for the given expressions.
-  return false;
+  return matching_ucc;
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
@@ -570,7 +578,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                        return (fd.determinants == determinants) && (fd.dependents == dependents);
                                      }),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(std::move(determinants), std::move(dependents));
+    fds.emplace(std::move(determinants), std::move(dependents), ucc.is_genuine());
   }
   return fds;
 }

@@ -25,7 +25,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * (1) Forwards left input node's unique column combinations if its expressions are a subset of the group-by
+   * (1) Forwards left input node's unique column combinations if their expressions are a subset of the group-by
    *     expressions.
    * (2) Creates a new unique column combination from the group-by expressions if not already existing.
    */

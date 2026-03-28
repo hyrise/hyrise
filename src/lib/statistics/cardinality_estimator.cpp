@@ -883,6 +883,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
           case PredicateCondition::NotIn:
           case PredicateCondition::Like:
           case PredicateCondition::NotLike:
+          case PredicateCondition::LikeInsensitive:
+          case PredicateCondition::NotLikeInsensitive:
             return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
 
           case PredicateCondition::IsNull:
@@ -1112,6 +1114,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           case PredicateCondition::NotIn:
           case PredicateCondition::Like:
           case PredicateCondition::NotLike:
+          case PredicateCondition::LikeInsensitive:
+          case PredicateCondition::NotLikeInsensitive:
             // Lacking better options, assume a "magic" selectivity for >, >=, <, <=, ... Any number would be equally
             // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
             selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
@@ -1145,6 +1149,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           // Lacking better options, assume a "magic" selectivity for NOT LIKE. Any number would be equally
           // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
           selectivity = PLACEHOLDER_SELECTIVITY_HIGH;
+          return;
+        }
+        if (predicate.predicate_condition == PredicateCondition::LikeInsensitive ||
+            predicate.predicate_condition == PredicateCondition::NotLikeInsensitive) {
+          // A placeholder selectivity between low and high because case-insensitive matching can produce more results
+          // than a case-sensitive predicate. However, we do not have any experiments, yet.
+          selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
           return;
         }
 

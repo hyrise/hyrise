@@ -779,6 +779,10 @@ TEST_F(SQLTranslatorTest, WhereWithLike) {
       sql_to_lqp_helper("SELECT * FROM int_string WHERE b NOT LIKE '%test1%';");
   const auto [actual_lqp_c, translation_info_c] =
       sql_to_lqp_helper("SELECT * FROM int_string WHERE b NOT LIKE CONCAT('%test1', '%');");
+  const auto [actual_lqp_d, translation_info_d] =
+      sql_to_lqp_helper("SELECT * FROM int_string WHERE b ILIKE '%test1%';");
+  const auto [actual_lqp_e, translation_info_e] =
+      sql_to_lqp_helper("SELECT * FROM int_string WHERE NOT b ILIKE '%test1%';");
 
   // clang-format off
   const auto expected_lqp_a = PredicateNode::make(like_(int_string_b, "%test1%"), stored_table_node_int_string);
@@ -786,11 +790,15 @@ TEST_F(SQLTranslatorTest, WhereWithLike) {
   const auto expected_lqp_c =
   PredicateNode::make(not_like_(int_string_b, concat_("%test1", "%")),
       stored_table_node_int_string);
+  const auto expected_lqp_d = PredicateNode::make(ilike_(int_string_b, "%test1%"), stored_table_node_int_string);
+  const auto expected_lqp_e = PredicateNode::make(not_ilike_(int_string_b, "%test1%"), stored_table_node_int_string);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
   EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
+  EXPECT_LQP_EQ(actual_lqp_d, expected_lqp_d);
+  EXPECT_LQP_EQ(actual_lqp_e, expected_lqp_e);
 }
 
 TEST_F(SQLTranslatorTest, WhereWithLogical) {
