@@ -107,6 +107,7 @@ do
       echo "Running $benchmark for $commit... (single-threaded)"
       # Warming up does not make sense/much of a difference for TPCC.
       ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+      ( "${build_folder}"/"$benchmark" -o --pipeline_metrics "${build_folder}/benchmark_all_results/${benchmark}_${commit}_metrics_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_metrics_st.log"
     else
       echo "Running $benchmark for $commit... (single-threaded)"
       ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
