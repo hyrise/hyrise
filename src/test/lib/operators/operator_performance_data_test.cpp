@@ -387,8 +387,8 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   performance_data.set_step_runtime(JoinHash::OperatorSteps::BuildSideMaterializing, std::chrono::nanoseconds{17});
   performance_data.set_step_runtime(JoinHash::OperatorSteps::Probing, std::chrono::nanoseconds{17});
   performance_data.has_output = true;
-  performance_data.output_row_count = 1u;
-  performance_data.output_chunk_count = 1u;
+  performance_data.output_row_count = 1;
+  performance_data.output_chunk_count = 1;
 
   if constexpr (HYRISE_DEBUG) {
     performance_data.walltime = std::chrono::nanoseconds{2};
@@ -402,8 +402,8 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   stringstream << performance_data;
   EXPECT_TRUE(
       stringstream.str().starts_with("Output: 1 row in 1 chunk, 35 ns. Operator step runtimes: BuildSideMaterializing"
-                                     " 17 ns, ProbeSideMaterializing 0 ns, Clustering 0 ns, Building 0 ns, Finalizing"
-                                     " 0 ns, Probing 17 ns, OutputWriting 0 ns."));
+                                     " 17 ns, ProbeSideMaterializing 0 ns, Clustering 0 ns, Building 0 ns, Probing"
+                                     " 17 ns, OutputWriting 0 ns."));
 }
 
 TEST_F(OperatorPerformanceDataTest, OutputToStream) {
@@ -416,15 +416,15 @@ TEST_F(OperatorPerformanceDataTest, OutputToStream) {
   {
     auto stream = std::stringstream{};
     performance_data.has_output = true;
-    performance_data.output_row_count = 2u;
-    performance_data.output_chunk_count = 1u;
+    performance_data.output_row_count = 2;
+    performance_data.output_chunk_count = 1;
     performance_data.walltime = std::chrono::nanoseconds{999};
     stream << performance_data;
     EXPECT_EQ(stream.str(), "Output: 2 rows in 1 chunk, 999 ns.");
 
     // Switch chunk/rows to test for plural.
-    performance_data.output_row_count = 1u;
-    performance_data.output_chunk_count = 2u;
+    performance_data.output_row_count = 1;
+    performance_data.output_chunk_count = 2;
     stream.str("");
     stream << performance_data;
     EXPECT_EQ(stream.str(), "Output: 1 row in 2 chunks, 999 ns.");

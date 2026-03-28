@@ -444,9 +444,8 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
-  // Create a large number of tasks to avoid early out (factor must be adapted when the max. number of groups is
-  // changed, see NodeQueueScheduler::NUM_GROUPS_MAX_FACTOR).
-  const auto task_count = WORKER_COUNT * 20;
+  // Create a large number of tasks to avoid early out.
+  const auto task_count = WORKER_COUNT * 50;
   auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks_1.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
@@ -457,9 +456,10 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
   EXPECT_TRUE(num_groups_without_load);
 
-  // Create load on queue.
+  // Create load on queue. Schedule jobs that are blocked on `block_jobs`.
   volatile auto block_jobs = std::atomic_bool{true};
   auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks_2.reserve(task_count);
   for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_2.push_back(std::make_shared<JobTask>([&]() {
       while (block_jobs) {
@@ -475,7 +475,7 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   // We should receive a larger group count when the queue load is low.
   EXPECT_GT(*num_groups_without_load, *num_groups_with_load);
 
-  // Shutdown. Finish scheduled jobs.
+  // Shutdown. Unblock scheduled jobs.
   block_jobs = false;
   node_queue_scheduler->wait_for_tasks(tasks_2);
 }

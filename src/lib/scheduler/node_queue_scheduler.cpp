@@ -47,7 +47,7 @@ constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 constexpr auto MIN_GROUP_COUNT = size_t{8};
 
 // This factor is used to determine at which queue load we use the maximum number of groups.
-const auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{4};
+constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{4};
 
 }  // namespace
 
@@ -76,10 +76,11 @@ void NodeQueueScheduler::begin() {
 
   // For task lists with few tasks, we do not determine the number of groups to avoid grouping overheads. Assuming
   // NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group task lists with less than 25 tasks (2 * 128 * 0.1).
-  _min_task_count_for_regrouping =
-      std::max(size_t{2 * MIN_GROUP_COUNT}, static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
+  _min_task_count_for_regrouping = min_queue_load_for_min_group_count
+      std::max(size_t{2 * MIN_GROUP_COUNT},
+               static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
 
-  // For every task list of at least this size, we use the max value for grouping. For 64 workers, a queue load of 640
+  // For every task list of  size >= `_regrouping_upper_limit`, we use the max value for grouping. For 64 workers, a queue load of 640
   // (i.e., ~640 normal priority tasks) is enough to use the minimum number of groups.
   _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
@@ -400,4 +401,3 @@ const std::atomic_int64_t& NodeQueueScheduler::active_worker_count() const {
 }
 
 }  // namespace hyrise
-

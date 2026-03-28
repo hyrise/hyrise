@@ -295,10 +295,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    if (!chunk_in) {
-      // Skip chunks that were physically deleted.
-      continue;
-    }
+    Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto num_rows = chunk_in->size();
 
@@ -322,7 +319,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto elements_iter = elements.begin();
       [[maybe_unused]] auto null_values_iter = null_values.begin();
 
-      // Prepare histogram
+      // Prepare histogram.
       auto histogram = std::vector<size_t>(num_radix_partitions);
 
       auto reference_chunk_offset = ChunkOffset{0};
