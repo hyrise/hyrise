@@ -1,5 +1,4 @@
 #include <chrono>
-#include <mdspan>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -461,18 +460,6 @@ TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
   EXPECT_EQ(node_queue_scheduler->active_worker_count(), 1);
   auto empty_task = std::make_shared<JobTask>([&]() {});
   EXPECT_THROW(worker->execute_next(empty_task), std::logic_error);
-}
-
-TEST_F(SchedulerTest, TemporaryMDSPANTestPleaseRemoveMe17) {
-  auto v = std::vector<size_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-
-  auto span = std::mdspan<size_t, std::dextents<size_t, 2>>{v.data(), 2, 4};
-
-  EXPECT_EQ((span[0, 1]), 1);
-  EXPECT_EQ((span[0, 3]), 3);
-  EXPECT_EQ((span[1, 0]), 4);
-  EXPECT_EQ((span[2, 0]), 8);
-  EXPECT_EQ((span[3, 3]), 15);
 }
 
 }  // namespace hyrise
