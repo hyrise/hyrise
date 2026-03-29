@@ -1284,6 +1284,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto entireposlist_indexes = std::vector<ColumnID>{};
   entireposlist_indexes.reserve(_aggregates.size());
 
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(reference_segment_indexes.begin(), reference_segment_indexes.end(), ColumnID{0});
   auto output_column_id = ColumnID{static_cast<ColumnID::base_type>(_groupby_column_ids.size())};
   for (const auto& aggregate : _aggregates) {
