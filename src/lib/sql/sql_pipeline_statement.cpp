@@ -82,10 +82,6 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
          "SQLPipelineStatement must hold exactly one statement. "
          "Use SQLPipeline when you have multiple statements.");
 
-  if (_parsed_sql_statement->getStatements()[0]->isType(hsql::kStmtExecute)) {
-    _optimizer = Optimizer::create_execute_statement_optimizer();
-  }
-
   return _parsed_sql_statement;
 }
 
@@ -145,6 +141,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   auto unoptimized_lqp = get_unoptimized_logical_plan();
+
+  if (_parsed_sql_statement->getStatements()[0]->isType(hsql::kStmtExecute)) {
+    _optimizer = Optimizer::create_execute_statement_optimizer();
+  }
 
   const auto started = std::chrono::steady_clock::now();
 
