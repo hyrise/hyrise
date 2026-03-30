@@ -296,12 +296,12 @@ std::shared_ptr<Optimizer> Optimizer::create_execute_statement_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
-  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
-
   // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   // Order join predicates (again) by their selectivity. Do that after predicate placement and chunk pruning because
   // both can impact the join predicates' selectivities.
