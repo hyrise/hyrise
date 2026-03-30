@@ -27,6 +27,8 @@
 #include "type_comparison.hpp"
 #include "types.hpp"
 
+#include "utils/task_utils.hpp"
+
 /*
   This file includes the functions that cover the main steps of our hash join implementation
   (e.g., build() and probe()). These free functions are put into this header file to separate
@@ -300,24 +302,17 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(chunk_count);
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk_in = in_table->get_chunk(chunk_id);
-    if (!chunk_in) {
-      continue;
+  const auto [group_count, jobs] = group_chunks_for_scheduling(in_table, [&, chunk_in, chunk_id, num_rows](size_t group_id, std::vector<std::pair<ChunkID, std::vector<ChunkID> chunk_ids) {
+    auto local_output_bloom_filter = BloomFilter{};
+    std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
+    if (Hyrise::get().is_multi_threaded()) {
+      // We cannot write to BloomFilter concurrently, so we build a local one first.
+      local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
+      used_output_bloom_filter = local_output_bloom_filter;
     }
 
-    const auto num_rows = chunk_in->size();
-
-    const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
-      auto local_output_bloom_filter = BloomFilter{};
-      std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
-      if (Hyrise::get().is_multi_threaded()) {
-        // We cannot write to BloomFilter concurrently, so we build a local one first.
-        local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
-        used_output_bloom_filter = local_output_bloom_filter;
-      }
+    for (const auto chunk_id : chunks_ids) {
+      const auto chunk_in = in_table->get_chunk(chunk_id);
 
       // Skip chunks that were physically deleted.
       if (!chunk_in) {
@@ -407,21 +402,145 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
           ++iter;
         }
-      });
-
-      // elements was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize the
-      // vector to the number of values actually written.
-      elements.resize(std::distance(elements.begin(), elements_iter));
-      null_values.resize(std::distance(null_values.begin(), null_values_iter));
-
-      histograms[chunk_id] = std::move(histogram);
-
-      if (Hyrise::get().is_multi_threaded()) {
-        // Merge the local_output_bloom_filter into output_bloom_filter
-        const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
-        output_bloom_filter |= local_output_bloom_filter;
       }
-    };
+    }
+
+    // elements was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize the
+    // vector to the number of values actually written.
+    elements.resize(std::distance(elements.begin(), elements_iter));
+    null_values.resize(std::distance(null_values.begin(), null_values_iter));
+
+    histograms[chunk_id] = std::move(histogram);
+
+    if (Hyrise::get().is_multi_threaded()) {
+      // Merge the local_output_bloom_filter into output_bloom_filter
+      const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
+      output_bloom_filter |= local_output_bloom_filter;
+    }
+  });
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(chunk_count);
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk_in = in_table->get_chunk(chunk_id);
+    if (!chunk_in) {
+      continue;
+    }
+
+    const auto num_rows = chunk_in->size();
+
+    // const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
+    //   auto local_output_bloom_filter = BloomFilter{};
+    //   std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
+    //   if (Hyrise::get().is_multi_threaded()) {
+    //     // We cannot write to BloomFilter concurrently, so we build a local one first.
+    //     local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
+    //     used_output_bloom_filter = local_output_bloom_filter;
+    //   }
+
+    //   // Skip chunks that were physically deleted.
+    //   if (!chunk_in) {
+    //     return;
+    //   }
+
+    //   auto& elements = radix_container[chunk_id].elements;
+    //   auto& null_values = radix_container[chunk_id].null_values;
+
+    //   elements.resize(num_rows);
+    //   if constexpr (keep_null_values) {
+    //     null_values.resize(num_rows);
+    //   }
+
+    //   auto elements_iter = elements.begin();
+    //   [[maybe_unused]] auto null_values_iter = null_values.begin();
+
+    //   // prepare histogram
+    //   auto histogram = std::vector<size_t>(num_radix_partitions);
+
+    //   auto reference_chunk_offset = ChunkOffset{0};
+
+    //   const auto segment = chunk_in->get_segment(column_id);
+    //   segment_with_iterators<T>(*segment, [&](auto iter, auto end) {
+    //     using IterableType = typename decltype(iter)::IterableType;
+
+    //     if (dynamic_cast<ValueSegment<T>*>(&*segment)) {
+    //       // The last chunk might have changed its size since we allocated elements. This would be due to concurrent
+    //       // inserts into that chunk. In any case, those inserts will not be visible to our current transaction, so we
+    //       // can ignore them.
+    //       const auto inserted_rows = (end - iter) - num_rows;
+    //       end -= inserted_rows;
+    //     } else {
+    //       Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed.");
+    //     }
+
+    //     while (iter != end) {
+    //       const auto& value = *iter;
+
+    //       if (!value.is_null() || keep_null_values) {
+    //         // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
+    //         // joins an information loss is possible when joining with longs that cannot be losslessly converted to
+    //         // double. See #1550 for details.
+    //         const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
+
+    //         auto skip = false;
+    //         if (!value.is_null() && !input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !keep_null_values) {
+    //           // Value in not present in input bloom filter and can be skipped
+    //           skip = true;
+    //         }
+
+    //         if (!skip) {
+    //           // Fill the corresponding slot in the bloom filter
+    //           used_output_bloom_filter.get()[hashed_value & BLOOM_FILTER_MASK] = true;
+
+    //           /*
+    //           For ReferenceSegments we do not use the RowIDs from the referenced tables.
+    //           Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
+    //           values from different inputs (important for Multi Joins).
+    //           */
+    //           if constexpr (is_reference_segment_iterable_v<IterableType>) {
+    //             *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
+    //           } else {
+    //             *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
+    //           }
+    //           ++elements_iter;
+
+    //           // In case we care about NULL values, store the NULL flag
+    //           if constexpr (keep_null_values) {
+    //             if (value.is_null()) {
+    //               *null_values_iter = true;
+    //             }
+    //             ++null_values_iter;
+    //           }
+
+    //           if (radix_bits > 0) {
+    //             const Hash radix = hashed_value & radix_mask;
+    //             ++histogram[radix];
+    //           }
+    //         }
+    //       }
+
+    //       // reference_chunk_offset is only used for ReferenceSegments
+    //       if constexpr (is_reference_segment_iterable_v<IterableType>) {
+    //         ++reference_chunk_offset;
+    //       }
+
+    //       ++iter;
+    //     }
+    //   });
+
+    //   // elements was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize the
+    //   // vector to the number of values actually written.
+    //   elements.resize(std::distance(elements.begin(), elements_iter));
+    //   null_values.resize(std::distance(null_values.begin(), null_values_iter));
+
+    //   histograms[chunk_id] = std::move(histogram);
+
+    //   if (Hyrise::get().is_multi_threaded()) {
+    //     // Merge the local_output_bloom_filter into output_bloom_filter
+    //     const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
+    //     output_bloom_filter |= local_output_bloom_filter;
+    //   }
+    // };
     if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
       materialize();
     } else {
