@@ -17,6 +17,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_access_counter.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

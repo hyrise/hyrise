@@ -52,7 +52,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
             << (data_preparation_cores == 1 ? " core" : " cores") << '\n';
 
   const auto clients = parse_result["clients"].as<uint32_t>();
-  std::cout << std::format("- {} simulated", clients);
+  std::cout << std::format("- {} simulated ", clients);
   std::cout << (clients == 1 ? "client is " : "clients are ") << "scheduling items";
   std::cout << (clients > 1 ? " in parallel" : "") << '\n';
 
