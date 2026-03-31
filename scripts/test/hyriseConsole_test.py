@@ -148,7 +148,7 @@ def main():
 
     # Test meta table modification.
     console.sendline("insert into meta_settings values ('foo', 'bar', 'baz')")
-    console.expect("Invalid input error: Cannot insert into meta_settings")
+    console.expect("Invalid input error: Cannot insert into 'meta_settings'")
     console.sendline("select * from meta_plugins")
     console.expect("0 rows total")
     console.sendline("insert into meta_plugins values ('" + build_dir + "/lib/libhyriseTestPlugin" + lib_suffix + "')")
