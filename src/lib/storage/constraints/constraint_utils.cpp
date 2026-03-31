@@ -72,12 +72,13 @@ void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
                                                               std::move(primary_key_column_ids), primary_key_table});
 }
 
-void functional_dependency(const std::shared_ptr<Table>& table, std::set<std::string>& lhs,
-                           std::set<std::string>& rhs) {
-  auto dependent_column_ids = column_ids_by_name(table, lhs);
-  auto determined_column_ids = column_ids_by_name(table, rhs);
+void functional_dependency(const std::shared_ptr<Table>& table, const std::set<std::string>& lhs,
+                           const std::set<std::string>& rhs) {
+  auto determinant_column_ids = column_ids_by_name(table, lhs);
+  auto dependent_column_ids = column_ids_by_name(table, rhs);
+  
   table->add_soft_constraint(
-      TableFunctionalDependencyConstraint{std::move(dependent_column_ids), std::move(determined_column_ids)});
+      TableFunctionalDependencyConstraint{std::move(determinant_column_ids), std::move(dependent_column_ids)});
 }
 
 void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std::string>& ordering_columns,

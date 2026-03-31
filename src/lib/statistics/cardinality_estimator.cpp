@@ -221,19 +221,66 @@ void CardinalityEstimator::assert_required_statistics(const ColumnID column_id,
 }
 
 std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() {
-  auto new_instance_with_optimizations = std::getenv("NEW_INSTANCE_OPTIMIZED");
+  auto estimator = std::make_shared<CardinalityEstimator>();
 
-  if ((new_instance_with_optimizations != nullptr) && std::string{new_instance_with_optimizations} == "ON") {
-    std::cout << "new instance with optimizations created.\n";
-    return CardinalityEstimator::new_instance_with_optimizations();
+  auto instance_optimized = std::getenv("NEW_INSTANCE_OPTIMIZED");
+  if ((instance_optimized != nullptr) && std::string{instance_optimized} == "ON") {
+    estimator->with_optimizations = true;
+  } else {
+    estimator->with_optimizations = false;
+    return estimator; 
   }
 
-  return std::make_shared<CardinalityEstimator>();
+  auto ind_ucc_join = std::getenv("IND_UCC_JOIN");
+  if ((ind_ucc_join != nullptr) && std::string{ind_ucc_join} == "1") {
+    estimator->ind_ucc_join_optimization = true;
+  }
+  auto od_predicate = std::getenv("OD_PREDICATE");
+  if ((od_predicate != nullptr) && std::string{od_predicate} == "1") {
+    estimator->od_predicate_optimization = true;
+  }
+  auto ucc_predicate = std::getenv("UCC_PREDICATE");
+  if ((ucc_predicate != nullptr) && std::string{ucc_predicate} == "1") {
+    estimator->ucc_predicate_optimization = true;
+  }
+  auto fd_predicate = std::getenv("FD_PREDICATE");
+  if ((fd_predicate != nullptr) && std::string{fd_predicate} == "1") {
+    estimator->fd_predicate_optimization = true;
+  }
+  auto ucc_fd_aggregate = std::getenv("UCC_FD_AGGREGATE");
+  if ((ucc_fd_aggregate != nullptr) && std::string{ucc_fd_aggregate} == "1") {
+    estimator->ucc_fd_aggregate_optimization = true;
+  }
+  return estimator;
 }
 
 std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance_with_optimizations() {
   auto estimator = std::make_shared<CardinalityEstimator>();
-  estimator->with_optimizations = true;
+  auto ind_ucc_join = std::getenv("IND_UCC_JOIN");
+  if ((ind_ucc_join != nullptr) && std::string{ind_ucc_join} == "1") {
+    estimator->ind_ucc_join_optimization = true;
+  }
+  auto od_predicate = std::getenv("OD_PREDICATE");
+  if ((od_predicate != nullptr) && std::string{od_predicate} == "1") {
+    estimator->od_predicate_optimization = true;
+  }
+  auto ucc_predicate = std::getenv("UCC_PREDICATE");
+  if ((ucc_predicate != nullptr) && std::string{ucc_predicate} == "1") {
+    estimator->ucc_predicate_optimization = true;
+  }
+  auto fd_predicate = std::getenv("FD_PREDICATE");
+  if ((fd_predicate != nullptr) && std::string{fd_predicate} == "1") {
+    estimator->fd_predicate_optimization = true;
+  }
+  auto ucc_fd_aggregate = std::getenv("UCC_FD_AGGREGATE");
+  if ((ucc_fd_aggregate != nullptr) && std::string{ucc_fd_aggregate} == "1") {
+    estimator->ucc_fd_aggregate_optimization = true;
+  }
+
+  auto instance_optimized = std::getenv("NEW_INSTANCE_OPTIMIZED");
+  if ((instance_optimized != nullptr) && std::string{instance_optimized} == "ON") {
+    estimator->with_optimizations = true;
+  }
   return estimator;
 }
 
@@ -246,7 +293,7 @@ std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance_without
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
-  lqp->set_is_data_dependency_optmized(false); 
+  lqp->set_is_data_dependency_optmized(false);
 
   return estimate_statistics(lqp, cacheable, statistics_cache).table_statistics->row_count;
 }
@@ -254,7 +301,7 @@ Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<con
 EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                                     const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
-  lqp->set_is_data_dependency_optmized(false); 
+  lqp->set_is_data_dependency_optmized(false);
   return estimate_statistics(lqp, cacheable, statistics_cache);
 }
 
@@ -320,7 +367,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
   /**
    * 2. Cache lookup failed - perform an actual cardinality estimation.
    */
-  std::cout << "acutal estimation performed" << std::endl; 
+  // std::cout << "acutal estimation performed" << std::endl;
   auto output_table_statistics = std::shared_ptr<TableStatistics>{};
   auto output_equivalence_classes = ExpressionUnorderedSet{};
   auto join_equivalence_classes = ExpressionUnorderedSet{};
@@ -349,7 +396,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
 
   // join_equivalence_classes.insert(left_join_equivalence_classes.begin(), left_join_equivalence_classes.end());
   // join_equivalence_classes.insert(right_join_equivalence_classes.begin(), right_join_equivalence_classes.end());
-
+  auto start = std::chrono::steady_clock::now();
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<const AggregateNode&>(*lqp);
@@ -370,8 +417,8 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
       // for (const auto& expr : join_node.output_expressions()) {
       //   std::cout << "JOIN NODE output expression: " << expr->description() << std::endl;
       // }
-      std::cout << "OUTPUT table statistics size: " << output_table_statistics->column_statistics.size() << std::endl;
-      std::cout << "OUTPUT table statistics row count: " << output_table_statistics->row_count << std::endl;
+      // std::cout << "OUTPUT table statistics size: " << output_table_statistics->column_statistics.size() << std::endl;
+      // std::cout << "OUTPUT table statistics row count: " << output_table_statistics->row_count << std::endl;
       DebugAssert(output_table_statistics->column_statistics.size() == join_node.output_expressions().size(),
                   "JoinNode output expressions and estimated statistics do not match in size.");
 
@@ -457,15 +504,35 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
                    static_cast<size_t>(stored_table->column_count()),
                "Statistics in StoredTableNode should have same number of columns as original table");
         Assert(stored_table_node.table_statistics->row_count >= 0, "Tables can't have negative row counts");
-        table_statistics = stored_table_node.table_statistics;
+        // table_statistics = stored_table_node.table_statistics;
+        // if (with_optimizations) {
+        //   // std::cout << "Using second statistics for table: " << stored_table_node.table_name << std::endl;
+        //   auto max_diff = std::getenv("MAXDIFF");
+        //   if(max_diff != nullptr && std::string(max_diff) == "1"){
+        //     std::cout << "Using maxdiff statistics for table: " << stored_table_node.table_name << std::endl;
+
+        //     table_statistics = stored_table->second_table_statistics();
+        //   } else {
+        //     table_statistics = stored_table->table_statistics();
+        //   }
+        // } else {
+        table_statistics = stored_table->table_statistics();
+        // }
       } else {
         // std::cout << "using stored_table statistics for table: " << stored_table_node.table_name << std::endl;
-        if (with_optimizations) {
-          // std::cout << "Using second statistics for table: " << stored_table_node.table_name << std::endl;
-          table_statistics = stored_table->table_statistics();
-        } else {
-          table_statistics = stored_table->table_statistics();
-        }
+        // if (with_optimizations) {
+        //   // std::cout << "Using second statistics for table: " << stored_table_node.table_name << std::endl;
+        //   auto max_diff = std::getenv("MAXDIFF");
+        //   if(max_diff != nullptr && std::string(max_diff) == "1"){
+        //     std::cout << "Using maxdiff statistics for table: " << stored_table_node.table_name << std::endl;
+
+        //     table_statistics = stored_table->second_table_statistics();
+        //   } else {
+        //     table_statistics = stored_table->table_statistics();
+        //   }
+        // } else {
+        table_statistics = stored_table->table_statistics();
+        // }
       }
       _populate_required_column_expressions();
       do_not_prune_unused_statistics();
@@ -477,6 +544,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
       const auto& validate_node = static_cast<const ValidateNode&>(*lqp);
       output_table_statistics = estimate_validate_node(validate_node, left_input_table_statistics);
       join_equivalence_classes = left_join_equivalence_classes;
+      output_equivalence_classes = left_equivalence_classes;
     } break;
 
     case LQPNodeType::Union: {
@@ -518,6 +586,10 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
       Fail("Cardinality of a node of this type should never be requested.");
   }
 
+  auto end = std::chrono::steady_clock::now();
+
+  lqp->set_optimization_time(end - start);
+
   /**
    * 3. Store output_table_statistics in cache.
    */
@@ -529,7 +601,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_statistics(const std::s
   if (cardinality_estimation_cache.statistics_by_lqp && cacheable) {
     cardinality_estimation_cache.statistics_by_lqp->emplace(
         lqp, EstimationStatisticsState{.table_statistics = output_table_statistics,
-                                       .equivalence_classes = left_equivalence_classes,
+                                       .equivalence_classes = output_equivalence_classes,
                                        .join_equivalence_classes = join_equivalence_classes});
   }
 
@@ -757,12 +829,13 @@ Cardinality CardinalityEstimator::estimate_output_cardinality(
     }
   }
 
-  if (with_optimizations) {
+  if (ucc_fd_aggregate_optimization) {
     // --- Preparation --
     // Gather group-by columns.
     if (group_by_columns.size() > 0) {
       const auto [has_matching_ucc, ucc_cacheable] = aggregate_node.left_input()->has_matching_ucc(group_by_columns);
       if (has_matching_ucc) {
+        aggregate_node.set_is_data_dependency_optmized(true);
         std::cout << "Found matching UCC for aggregate node.\n";
         // Since we have a UCC, the estimated row count is simply the input's row count.
         return input_table_statistics->row_count;
@@ -775,7 +848,8 @@ Cardinality CardinalityEstimator::estimate_output_cardinality(
     const auto input_column_id = find_expression_idx(expression, input_expressions);
     if (input_column_id) {
       if (filtered_dependent_columns.contains(output_expressions[expression_idx])) {
-        std::cout << "would be filtered: " << output_expressions[expression_idx]->as_column_name() << "\n";
+        aggregate_node.set_is_data_dependency_optmized(true);
+        // std::cout << "would be filtered: " << output_expressions[expression_idx]->as_column_name() << "\n";
         continue;
       }
       const auto base_attribute_statistics = input_table_statistics->column_statistics[*input_column_id];
@@ -798,8 +872,8 @@ Cardinality CardinalityEstimator::estimate_output_cardinality(
 
   // AggregateNodes without GROUP BY columns always return a single row.
 
-  auto cardinality = 0.0;
-  if (with_optimizations) {
+  auto cardinality = 1.0;
+  if (ucc_fd_aggregate_optimization) {
     cardinality = aggregate_node.aggregate_expressions_begin_idx == 0
                       ? Cardinality{1}
                       : std::min(estimated_row_count, input_table_statistics->row_count);
@@ -822,10 +896,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
   const auto& input_expressions = aggregate_node.left_input()->output_expressions();
   auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{output_expression_count};
 
-  const auto estimated_cardinality = estimate_output_cardinality(aggregate_node, input_table_statistics);
+  const auto estimated_cardinality = ucc_fd_aggregate_optimization
+                                         ? estimate_output_cardinality(aggregate_node, input_table_statistics)
+                                         : input_table_statistics->row_count;
 
-  const auto selectivity = static_cast<Selectivity>(static_cast<double>(estimated_cardinality) /
-                                                    static_cast<double>(input_table_statistics->row_count));
+  const auto selectivity = input_table_statistics->row_count == 0
+                               ? 1.0
+                               : static_cast<Selectivity>(static_cast<double>(estimated_cardinality) /
+                                                          static_cast<double>(input_table_statistics->row_count));
 
   for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
     const auto& expression = *output_expressions[expression_idx];
@@ -894,9 +972,12 @@ EstimationStatisticsState CardinalityEstimator::estimate_predicate_node(
 
       auto output_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 
+      auto equivalence_classes = left_statistics.equivalence_classes;
+      equivalence_classes.insert(right_statistics.equivalence_classes.begin(),
+                                 right_statistics.equivalence_classes.end());
       return EstimationStatisticsState{
           .table_statistics = output_table_statistics,
-          .equivalence_classes = ExpressionUnorderedSet{},
+          .equivalence_classes = std::move(equivalence_classes),
           .join_equivalence_classes = input_estimation_statistics.join_equivalence_classes};
     }
 
@@ -1185,15 +1266,20 @@ CardinalityEstimator::HasIndResult CardinalityEstimator::has_ind(const JoinNode&
   // auto has_matching_ind = original_right_table->has_matching_ind({first_column_expression}, {second_column_expression});
   // auto ind_flipped = original_left_table->has_matching_ind({second_column_expression}, {first_column_expression});
 
+  // join_node.left_input()->has_matching_ucc({first_column_expression}).first;
+  // join_node.right_input()->has_matching_ucc({second_column_expression}).first;
+
   if (original_right_table->has_matching_ind({first_column_expression}, {second_column_expression})) {
     return {.ind_exists = true,
             .is_flipped = false,
-            .ucc_exists = original_right_table->has_matching_ucc({second_column_expression}).first};
+            // .ucc_exists = original_right_table->has_matching_ucc({second_column_expression}).first
+            .ucc_exists = join_node.right_input()->has_matching_ucc({second_column_expression}).first};
   }
   if (original_left_table->has_matching_ind({second_column_expression}, {first_column_expression})) {
     return {.ind_exists = true,
             .is_flipped = true,
-            .ucc_exists = original_left_table->has_matching_ucc({first_column_expression}).first};
+            // .ucc_exists = original_left_table->has_matching_ucc({first_column_expression}).first
+            .ucc_exists = join_node.left_input()->has_matching_ucc({first_column_expression}).first};
   }
   return {.ind_exists = false, .is_flipped = false, .ucc_exists = false};
 }
@@ -1318,7 +1404,9 @@ Selectivity CardinalityEstimator::estimate_scaling_factor_join(
     if (estimate_proportion_referenced) {
       DebugAssert(is_flipped, "Otherwise this estimation does not make sense.");
       if (is_flipped) {
-        auto currently_referenced = estimate_referenced_tuples(*right_current_histogram, *left_current_histogram);  //  right_distinct_count_original / right_original_histogram->total_count();
+        auto currently_referenced = estimate_referenced_tuples(
+            *right_current_histogram,
+            *left_current_histogram);  //  right_distinct_count_original / right_original_histogram->total_count();
         scaling_factor = currently_referenced / left_distinct_count_original;
       } else {
         auto density_left = left_distinct_count_original / left_orginal_histogram->total_count();
@@ -1344,7 +1432,7 @@ Selectivity CardinalityEstimator::estimate_scaling_factor_join(
     }
   });
 
-  return scaling_factor;
+  return std::min(1.0, scaling_factor);
 }
 
 EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNode& join_node,
@@ -1424,7 +1512,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
   const auto combine_statistics_with_scaling = [&](const auto& unchanged_statistics, const auto& scaled_statistics,
                                                    const auto flip, const auto outer_scaling_factor) {
     DebugAssert(outer_scaling_factor <= 1.0, "Scaling factor should be <= 1.0");
-    DebugAssert(with_optimizations, "Why are we using outer scaling factor without optimizations?");
+    DebugAssert(ind_ucc_join_optimization, "Why are we using outer scaling factor without optimizations?");
     // std::cout << "combine_statistics_with_scaling" << "\n";
     const auto column_count =
         unchanged_statistics->column_statistics.size() + scaled_statistics->column_statistics.size();
@@ -1451,7 +1539,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
     }
 
     return std::make_shared<TableStatistics>(std::move(output_column_statistics),
-                                             flip ? scaled_statistics->row_count * outer_scaling_factor
+                                             flip ? scaled_statistics->row_count * outer_scaling_factor * scaling_factor
                                                   : unchanged_statistics->row_count * outer_scaling_factor);
   };
 
@@ -1461,7 +1549,10 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
   output_join_equivalence_classes.insert(right_state.join_equivalence_classes.begin(),
                                          right_state.join_equivalence_classes.end());
 
-  auto has_ind_result = has_ind(join_node);
+  CardinalityEstimator::HasIndResult has_ind_result{};
+  if (ind_ucc_join_optimization) {
+    has_ind_result = has_ind(join_node);
+  }
 
   if (has_ind_result.ind_exists && has_ind_result.ucc_exists) {
     output_join_equivalence_classes.insert(join_node.join_predicates().begin(), join_node.join_predicates().end());
@@ -1469,12 +1560,12 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
 
   // TODO CHECK WITH TPC-H Q2
 
-  if (with_optimizations) {
+  if (ind_ucc_join_optimization) {
     if ((left_state.join_equivalence_classes.contains(join_node.join_predicates()[0]) ||
          right_state.join_equivalence_classes.contains(join_node.join_predicates()[0]))) {
-      join_node.set_is_data_dependency_optmized(true); 
+      join_node.set_is_data_dependency_optmized(true);
 
-      std::cout << "Join already executed. probably inner join after semi join" << "\n";
+      // std::cout << "Join already executed. probably inner join after semi join" << "\n";
       if (join_node.join_mode == JoinMode::Semi) {
         return {.table_statistics = left_input_table_statistics,
                 .equivalence_classes = ExpressionUnorderedSet{},
@@ -1493,7 +1584,6 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
       //
 
       if (has_ind_result.is_flipped) {
-
         return {.table_statistics = combine_statistics(right_input_table_statistics, left_input_table_statistics, true),
                 .equivalence_classes = ExpressionUnorderedSet{},
                 .join_equivalence_classes = output_join_equivalence_classes};
@@ -1501,7 +1591,6 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
       DebugAssert(!has_ind_result.is_flipped && join_node.join_mode == JoinMode::Inner,
                   "Expected is_flipped to be false here.");
       DebugAssert(has_ind_result.ind_exists, "Expected ind to exist here.");
-      
 
       return {.table_statistics = combine_statistics(left_input_table_statistics, right_input_table_statistics, false),
               .equivalence_classes = ExpressionUnorderedSet{},
@@ -1509,11 +1598,11 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
     }
   }
   if (primary_operator_join_predicate) {
-    std::cout << "Estimating join for primary predicate: "
-              << join_node.join_predicates()[0]->description(AbstractExpression::DescriptionMode::ColumnName) << "\n";
-    std::cout << "with_optimizations: " << with_optimizations << "\n";
-    std::cout << "right_equivalence_classes size: " << right_state.join_equivalence_classes.size() << "\n";
-    std::cout << "left_equivalence_classes size: " << left_state.join_equivalence_classes.size() << "\n";
+    // std::cout << "Estimating join for primary predicate: "
+    //           << join_node.join_predicates()[0]->description(AbstractExpression::DescriptionMode::ColumnName) << "\n";
+    // std::cout << "with_optimizations: " << with_optimizations << "\n";
+    // std::cout << "right_equivalence_classes size: " << right_state.join_equivalence_classes.size() << "\n";
+    // std::cout << "left_equivalence_classes size: " << left_state.join_equivalence_classes.size() << "\n";
 
     auto left_column_id = primary_operator_join_predicate->column_ids.first;
     auto right_column_id = primary_operator_join_predicate->column_ids.second;
@@ -1555,16 +1644,16 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
 
     // ind_flipped = original_left_table->has_matching_ind({second_column_expression}, {first_column_expression});
 
-    const auto* const direction = (has_ind_result.is_flipped ? "<-" : "->");
-    const auto* const ind_string = has_ind_result.ind_exists ? direction : "NO IND";
+    // const auto* const direction = (has_ind_result.is_flipped ? "<-" : "->");
+    // const auto* const ind_string = has_ind_result.ind_exists ? direction : "NO IND";
 
-    if (first_column_expression && second_column_expression) {
-      std::cout << "Joining : " << first_column_expression->description(AbstractExpression::DescriptionMode::Detailed)
-                << primary_operator_join_predicate->predicate_condition
-                << second_column_expression->description(AbstractExpression::DescriptionMode::Detailed)
-                << " matching ind: " << ind_string << std::endl;
-      std::cout << "with_optimizations: " << with_optimizations << std::endl;
-    }
+    // if (first_column_expression && second_column_expression) {
+    //   std::cout << "Joining : " << first_column_expression->description(AbstractExpression::DescriptionMode::Detailed)
+    //             << primary_operator_join_predicate->predicate_condition
+    //             << second_column_expression->description(AbstractExpression::DescriptionMode::Detailed)
+    //             << " matching ind: " << ind_string << std::endl;
+    //   std::cout << "with_optimizations: " << with_optimizations << std::endl;
+    // }
 
     // original_left_table->has_matching_ind(const std::vector<std::shared_ptr<AbstractExpression>> &foreign_key_expressions, const std::vector<std::shared_ptr<AbstractExpression>> &key_expressions)
 
@@ -1590,11 +1679,11 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
         switch (primary_operator_join_predicate->predicate_condition) {
           case PredicateCondition::Equals: {
             // short cut
-            if (with_optimizations) {
+            if (ind_ucc_join_optimization) {
               if (join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key})) {
                 if (join_node.right_input()->has_matching_ucc({right_input_join_key}).first) {
-                  std::cout << "Hitting shortcut for inner join with ind and ucc" << std::endl;
-                  join_node.set_is_data_dependency_optmized(true); 
+                  // std::cout << "Hitting shortcut for inner join with ind and ucc" << std::endl;
+                  join_node.set_is_data_dependency_optmized(true);
 
                   return {.table_statistics =
                               combine_statistics(left_input_table_statistics, right_input_table_statistics, false),
@@ -1604,8 +1693,8 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
               }
               if (join_node.left_input()->has_matching_ind({right_input_join_key}, {left_input_join_key})) {
                 if (join_node.left_input()->has_matching_ucc({left_input_join_key}).first) {
-                  std::cout << "Hitting flipped shortcut for inner join with ind and ucc" << std::endl;
-                  join_node.set_is_data_dependency_optmized(false); 
+                  // std::cout << "Hitting flipped shortcut for inner join with ind and ucc" << std::endl;
+                  join_node.set_is_data_dependency_optmized(true);
 
                   return {.table_statistics =
                               combine_statistics(right_input_table_statistics, left_input_table_statistics, true),
@@ -1614,19 +1703,19 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
                 }
               }
             }
-            std::cout << "Inner JOIN on " << join_node.join_predicates().at(0)->description()
-                      << "with_ind: " << ind_string << std::endl;
+            // std::cout << "Inner JOIN on " << join_node.join_predicates().at(0)->description()
+            //           << "with_ind: " << ind_string << std::endl;
 
-            std::cout << "has_ind_result.ucc_exists: " << has_ind_result.ucc_exists << std::endl;
+            // std::cout << "has_ind_result.ucc_exists: " << has_ind_result.ucc_exists << std::endl;
             auto scaling_factor = -1.0;
 
-            if (with_optimizations && (has_ind_result.ind_exists && has_ind_result.ucc_exists)) {
-              std::cout << "UCC in dimension table. Trying data dependency cardinality estimation" << std::endl;
+            if (ind_ucc_join_optimization && (has_ind_result.ind_exists && has_ind_result.ucc_exists)) {
+              // std::cout << "UCC in dimension table. Trying data dependency cardinality estimation" << std::endl;
               scaling_factor = estimate_scaling_factor_join(join_node, left_input_table_statistics,
                                                             right_input_table_statistics, has_ind_result.is_flipped);
-              std::cout << "Estimated scaling factor: " << scaling_factor << std::endl;
+              // std::cout << "Estimated scaling factor: " << scaling_factor << std::endl;
               if (scaling_factor > 0.0 && scaling_factor <= 1.0) {
-                std::cout << "Actually estimating inner join with INDs and UCC: " << scaling_factor << std::endl;
+                // std::cout << "Actually estimating inner join with INDs and UCC: " << scaling_factor << std::endl;
 
                 std::shared_ptr<TableStatistics> output_table_statistics = nullptr;
 
@@ -1643,7 +1732,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
                 //     combine_statistics_with_scaling(left_input_table_statistics, right_input_table_statistics,
                 //                                     has_ind_result.is_flipped, scaling_factor);
                 //std::cout << "Finished estimating inner join with INDs and UCC" << std::endl;
-                join_node.set_is_data_dependency_optmized(true); 
+                join_node.set_is_data_dependency_optmized(true);
 
                 return {.table_statistics = output_table_statistics,
                         .equivalence_classes = ExpressionUnorderedSet{},
@@ -1651,7 +1740,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
               }
             }
 
-            std::cout << "Falling back to normal inner equi join estimation" << std::endl;
+            // std::cout << "Falling back to normal inner equi join estimation" << std::endl;
             auto output_table_statistics = estimate_inner_equi_join(
                 primary_operator_join_predicate->column_ids.first, primary_operator_join_predicate->column_ids.second,
                 *left_input_table_statistics, *right_input_table_statistics);
@@ -1693,13 +1782,13 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
         Fail("Cross join is not a predicated join.");
 
       case JoinMode::Semi:
-        if (with_optimizations) {
+        if (ind_ucc_join_optimization) {
           // shortcut if actual node has ind. that means, it is unfiltered
           if (primary_operator_join_predicate->predicate_condition == PredicateCondition::Equals &&
               join_node.right_input()->has_matching_ind({left_input_join_key}, {right_input_join_key})) {
             if (join_node.right_input()->has_matching_ucc({right_input_join_key}).first) {
-              std::cout << "Hitting shortcut for semi join with ind and ucc" << std::endl;
-              join_node.set_is_data_dependency_optmized(true); 
+              // std::cout << "Hitting shortcut for semi join with ind and ucc" << std::endl;
+              join_node.set_is_data_dependency_optmized(true);
 
               return {.table_statistics = left_input_table_statistics,
                       .equivalence_classes = ExpressionUnorderedSet{},
@@ -1708,7 +1797,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
           }
         }
 
-        if (with_optimizations && (has_ind_result.ind_exists && has_ind_result.ucc_exists)) {
+        if (ind_ucc_join_optimization && (has_ind_result.ind_exists && has_ind_result.ucc_exists)) {
           auto scaling_factor = -1.0;
 
           scaling_factor =
@@ -1716,9 +1805,9 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
                                            has_ind_result.is_flipped, has_ind_result.is_flipped);
 
           if (scaling_factor > 0.0 && scaling_factor <= 1.0) {
-            join_node.set_is_data_dependency_optmized(true); 
+            join_node.set_is_data_dependency_optmized(true);
 
-            std::cout << "Actually estimating semi join with INDs and UCC: " << scaling_factor << std::endl;
+            // std::cout << "Actually estimating semi join with INDs and UCC: " << scaling_factor << std::endl;
             const auto column_count = left_input_table_statistics->column_statistics.size();
             auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(column_count);
 
@@ -1729,6 +1818,8 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
 
               column_statistics[column_id] =
                   left_input_table_statistics->column_statistics[column_id]->scaled(scaling_factor);
+
+              // std::cout << " - scaled row count: " << *column_statistics[column_id] <<  "table_row_count : " << left_input_table_statistics->row_count * scaling_factor <<  std::endl;
             }
             return {.table_statistics = std::make_shared<TableStatistics>(
                         std::move(column_statistics), left_input_table_statistics->row_count * scaling_factor),
@@ -1745,7 +1836,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
         //                                                       right_input_table_statistics, has_ind_result.is_flipped);
         //   std::cout << "Estimated scaling factor: " << sscaling_factor << std::endl;
         // }
-        std::cout << "Estimating semi join normally" << std::endl;
+        // std::cout << "Estimating semi join normally" << std::endl;
         return {.table_statistics = estimate_semi_join(primary_operator_join_predicate->column_ids.first,
                                                        primary_operator_join_predicate->column_ids.second,
                                                        *left_input_table_statistics, *right_input_table_statistics),
@@ -1761,7 +1852,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
   }
 
   // TODO(anybody): For now, estimate a selectivity of one, see #1830.
-  std::cout << "Falling back to cross join estimation for non-equi or non-primary predicate." << "\n";
+  // std::cout << "Falling back to cross join estimation for non-equi or non-primary predicate." << "\n";
   return {.table_statistics = estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics),
           .equivalence_classes = ExpressionUnorderedSet{},
           .join_equivalence_classes = ExpressionUnorderedSet{}};
@@ -1818,9 +1909,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
     // std::cout << "LIMIT NODE - input_table_statistics row count: " << input_table_statistics->column_statistics.size()
     //           << std::endl;
     // std::cout << "OUTPUT EXPRESSIONS SIZE: " << limit_node.output_expressions().size() << std::endl;
-    for (const auto& expr : limit_node.output_expressions()) {
-      std::cout << "LIMIT NODE - output expression: " << expr->description() << std::endl;
-    }
+    // for (const auto& expr : limit_node.output_expressions()) {
+    //   std::cout << "LIMIT NODE - output expression: " << expr->description() << std::endl;
+    // }
 
     // std::cout << "LEFT_NODE_OUTPUT_EXPRESSIONS: " << limit_node.left_input()->output_expressions().size() << std::endl;
     // for (const auto& expr : limit_node.left_input()->output_expressions()) {
@@ -1850,6 +1941,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
   auto input_table_statistics = estimation_statistics_state.table_statistics;
 
   auto selectivity = Selectivity{1};
+  auto inner_scaling_factor = Selectivity{1.0};
   auto lower = HistogramCountType{-1};
   auto upper = HistogramCountType{-1};
 
@@ -1933,6 +2025,29 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
           // TODO(anyone): CardinalityEstimator cannot handle non-equi column-to-column scans right now.
           selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
+        }
+
+        if (fd_predicate_optimization) {
+          std::cout << "Estimating ColumnVsColumn predicate between column " << left_column_id << " and column "
+                    << *right_column_id << "\n";
+          if (lqp_node.output_expressions().at(left_column_id)->as_column_name() == "movie_id") {
+            std::cout << "movie_id column";
+            if (lqp_node.output_expressions().at(*right_column_id)->as_column_name() == "movie_id") {
+              std::cout << "movie_id column on the right side as well\n";
+            }
+            const auto left_expr = lqp_node.left_input()->output_expressions().at(left_column_id);
+            const auto right_expr = lqp_node.right_input()->output_expressions().at(*right_column_id);
+
+            auto expr_unordered_set = ExpressionUnorderedSet{left_expr};
+            auto right_expr_unordered_set = ExpressionUnorderedSet{right_expr};
+            std::cout << "Has matching FD: " << lqp_node.has_matching_fd(expr_unordered_set, right_expr_unordered_set)
+                      << "\n";
+            std::cout << estimation_statistics_state.join_equivalence_classes.size() << "\n";
+            // std::cout << "Has matching FD in equivalence classes: "
+            //           << lqp_node.has_matching_fd(estimation_statistics_state.join_equivalence_classes,
+            //                                       expr_unordered_set)
+            //           << "\n";
+          }
         }
 
         const auto right_input_column_statistics = std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(
@@ -2024,6 +2139,52 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
           return;
         }
 
+        // Shortcut for functional dependency
+        auto filtered_expression = lqp_node.left_input()->output_expressions().at(left_column_id);
+
+        if (fd_predicate_optimization && predicate.predicate_condition == PredicateCondition::Equals &&
+            estimation_statistics_state.equivalence_classes.size() > 0) {
+          ExpressionUnorderedSet filtered_expression_set{filtered_expression};
+          // std::cout << "Checking if already filtered column: ";
+          // for (const auto& expr : estimation_statistics_state.equivalence_classes) {
+          //   std::cout << expr->as_column_name() << ", ";
+          // }
+          // std::cout << " have a matching fd for " << filtered_expression->description() << "\n";
+          if (lqp_node.left_input()->has_matching_fd(estimation_statistics_state.equivalence_classes,
+                                                     filtered_expression_set)) {
+            lqp_node.set_is_data_dependency_optmized(true);
+
+            // std::cout << filtered_expression->description() << " has matching fd for scaling other columns." << "\n";
+
+            // std::cout << "Has matching fd for scaling other columns: "
+            //           << estimation_statistics_state.equivalence_classes.size() << '\n';
+            selectivity = 1.0;
+            return;
+          }
+          if (lqp_node.left_input()->has_matching_fd(filtered_expression_set,
+                                                     estimation_statistics_state.equivalence_classes)) {
+            lqp_node.set_is_data_dependency_optmized(true);
+
+            // std::cout << "Reverse fd match for scaling other columns: "
+            //           << estimation_statistics_state.equivalence_classes.size() << '\n';
+
+            auto lqp_expression = std::dynamic_pointer_cast<LQPColumnExpression>(
+                lqp_node.left_input()->output_expressions().at(left_column_id));
+            // std::dynamic_pointer_cast<LQPColumnExpression>(join_node.left_input()->output_expressions().at(left_column_id));
+            auto original_column_statistics = get_original_column_statistics(lqp_expression);
+
+            auto attribute_statistics =
+                std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(original_column_statistics);
+            auto original_scan_statistics_object = attribute_statistics->histogram;
+            inner_scaling_factor =
+                original_scan_statistics_object->total_count() / scan_statistics_object->total_count();
+            // std::cout << "Scaling factor from fd optimization: " << inner_scaling_factor << "\n";
+          }
+        }
+        // else {
+        //   std::cout << filtered_column->as_column_name() << " : without optimizations!!!!" << "\n";
+        // }
+
         if (predicate.predicate_condition == PredicateCondition::Like) {
           // Lacking better options, assume a "magic" selectivity for LIKE. Any number would be equally
           // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
@@ -2060,8 +2221,27 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
         // Determine lower and upper bounds for possible optimizations on other columns
         const auto optional_value = lossy_variant_cast<ColumnDataType>(value_variant);
 
-        if (with_optimizations) {
+        if (od_predicate_optimization) {
           if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
+            if (predicate.predicate_condition == PredicateCondition::Equals) {
+              auto value_bin_idx = scan_statistics_object->bin_for_value(optional_value.value());
+              if (value_bin_idx != INVALID_BIN_ID) {
+                lower = 0;
+                for (auto bin_idx = BinID{0}; bin_idx < value_bin_idx; bin_idx++) {
+                  lower += scan_statistics_object->bin_height(bin_idx);
+                }
+                auto value_bin = scan_statistics_object->bin(value_bin_idx);
+                const auto values_per_tuple = value_bin.height / value_bin.distinct_count;
+                auto distinct_values_before =
+                    scan_statistics_object->bin_ratio_less_than(value_bin_idx, optional_value.value()) *
+                    value_bin.distinct_count;
+                lower += distinct_values_before * values_per_tuple;
+                upper = lower + values_per_tuple;
+
+              } else {
+                // std::cout << "Invalid bin ID hit for string column" << "\n";
+              }
+            }
           } else {
             if (!optional_value) {
               std::cout << "No value. Wtf" << "\n";
@@ -2151,19 +2331,17 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
               }
             }
           }
-
-          // auto filtered_column = std::make_shared<LQPColumnExpression>(lqp_node.left_input(), predicate.column_id);
-          if (predicate.predicate_condition == PredicateCondition::Equals) {
-            estimation_statistics_state.equivalence_classes.insert(filtered_column);
-            // std::cout << estimation_statistics_state.equivalence_classes.size() << "\n";
-            if (estimation_statistics_state.equivalence_classes.size() > 1) {
-              // std::cout << "equivalence classes size: " << estimation_statistics_state.equivalence_classes.size() << "\n";
-            }
-          }
         }  // End of with_optimizations
 
-        if (estimation_statistics_state.equivalence_classes.size() > 0 &&
+        if (predicate.predicate_condition == PredicateCondition::Equals) {
+          estimation_statistics_state.equivalence_classes.insert(filtered_column);
+        }
+
+        // std::cout << estimation_statistics_state.equivalence_classes.size() << " equivalence classes after processing predicate " << predicate.predicate_condition
+        //           << " on column " << filtered_column->as_column_name() << "\n";
+        if (ucc_predicate_optimization && estimation_statistics_state.equivalence_classes.size() > 0 &&
             lqp_node.left_input()->has_matching_ucc(estimation_statistics_state.equivalence_classes).first) {
+          lqp_node.set_is_data_dependency_optmized(true);
           selectivity = 1 / input_table_statistics->row_count;
           // std::cout << "Has matching ucc: " << estimation_statistics_state.equivalence_classes.size() << '\n';
           // std::cout << lqp_node.description() << "\n";
@@ -2187,13 +2365,14 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
         }
         const auto column_statistics =
             left_input_column_statistics->sliced(predicate.predicate_condition, value_variant, value2_variant);
-        output_column_statistics[left_column_id] = column_statistics;
+        output_column_statistics[left_column_id] = column_statistics->scaled(inner_scaling_factor);
       }
     }
   });
 
   // Entire chunk matches: simply return the input.
   if (selectivity == Selectivity{1}) {
+    // std::cout << "Selectivity is 1, returning input statistics" << "\n";
     return estimation_statistics_state;
   }
 
@@ -2212,11 +2391,13 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
   //     std::cout << expr->description() << std::endl;
   //   }
   // }
-
+  // std::cout << "Filtered column: " << filtered_column->description() << "\n";
+  // std::cout << "lower: " << lower << " upper: " << upper << "\n";
   // Scale the other columns' AttributeStatistics (those that we didn't write to above) with the selectivity
   for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
+    // std::cout << "Processing column id: " << column_id << "\n";
     if (!output_column_statistics[column_id]) {
-      if (with_optimizations && lower != -1 && upper != -1) {
+      if (od_predicate_optimization && lower != -1 && upper != -1) {
         // std::cout << "trying ordered " << "\n";
         // Why does this not work for TPC-H 19?
         const auto size = lqp_node.left_input()->output_expressions().size();
@@ -2229,25 +2410,25 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
         // TODO(paulroes): this does not include all cases.
         std::ranges::reverse(fixed_columns);
 
-        if (fixed_columns.size() > 1) {
-          // std::cout << "fixed columns size: " << fixed_columns.size() << " Check OD: ";
-          // for (const auto& col : fixed_columns) {
-          //   // std::cout << col->as_column_name() << ", ";
-          // }
-          // std::cout << "\n";
-        }
-        if (ordered_column && lqp_node.has_matching_od({ordered_column}, {filtered_column})) {
+        if (od_predicate_optimization && ordered_column &&
+            lqp_node.has_matching_od({ordered_column}, {filtered_column})) {
           // std::cout << "hitting ordered" << "\n";
+          lqp_node.set_is_data_dependency_optmized(true);
+
           // std::cout << "scaling column id with bounds: " << column_id << "\n";
           // std::cout << "scaling : " << ordered_column << " based on " << filtered_column << "\n";
           output_column_statistics[column_id] =
               scale_statistics_with_bounds(input_table_statistics, column_id, lower, upper, selectivity);
+
+          // std::cout << "output column statistics after scaling with bounds: " << output_column_statistics[column_id]
+          //           << "\n";
           // std::cout << "input afterwards: " << input_table_statistics->column_statistics[column_id] << "\n";
           // std::cout << "output afterwards: " << output_column_statistics[column_id] << "\n";
 
-        } else if (ordered_column && fixed_columns.size() > 0 &&
+        } else if (od_predicate_optimization && ordered_column && fixed_columns.size() > 0 &&
                    lqp_node.has_matching_od({ordered_column}, fixed_columns)) {
           // std::cout << "hitting ordered with fixed columns: " << fixed_columns.size() << "\n";
+          lqp_node.set_is_data_dependency_optmized(true);
           output_column_statistics[column_id] =
               scale_statistics_with_bounds(input_table_statistics, column_id, lower, upper, selectivity);
         } else {
@@ -2260,16 +2441,10 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
         // if (column_id == 22) {
         //   std::cout << input_table_statistics->column_statistics[column_id] << "\n";
         // }
+        // std::cout << "Scaling column id: " << column_id << " with selectivity: " << selectivity << "\n";
 
-        if(predicate.predicate_condition == PredicateCondition::Equals &&
-           estimation_statistics_state.equivalence_classes.size() > 0 &&
-           lqp_node.left_input()-(estimation_statistics_state.equivalence_classes).first) {
-          output_column_statistics[column_id] =
-              input_table_statistics->column_statistics[column_id]->scaled(1 / input_table_statistics->row_count);
-          // std::cout << "Has matching ucc for scaling other columns: " << estimation_statistics_state.equivalence_classes.size() << '\n';
-        }
-
-        output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+        output_column_statistics[column_id] =
+            input_table_statistics->column_statistics[column_id]->scaled(selectivity * inner_scaling_factor);
       }
     }
   }
@@ -2284,7 +2459,12 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
   // }
   // std::cout << " estimation_statistics_state.equivalence_classes.size() :"
   //           << estimation_statistics_state.equivalence_classes.size() << "\n";
-  const auto row_count = Cardinality{input_table_statistics->row_count * selectivity};
+  // std::cout << "total_selectivity: " << selectivity * inner_scaling_factor << "\n";
+  // std::cout << "input row count: " << input_table_statistics->row_count << "\n";
+  // std::cout << "selectivity: " << selectivity << "\n";
+  // std::cout << "inner scaling factor: " << inner_scaling_factor << "\n";
+  const auto row_count = Cardinality{input_table_statistics->row_count * selectivity * inner_scaling_factor};
+  // std::cout << "estimated row count: " << row_count << "\n";
   return {.table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count),
           .equivalence_classes = estimation_statistics_state.equivalence_classes,
           .join_equivalence_classes = estimation_statistics_state.join_equivalence_classes};
@@ -2509,13 +2689,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
   // TODO(anyone): - Implement join estimation for differing column data types.
   //               - Implement join estimation for string columns.
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
-    std::cout << "Falling back to cross join estimation for inner equi join due to differing data types or string type."
-              << "\n";
-    std::cout << "Left data type: " << static_cast<int>(left_data_type)
-              << ", Right data type: " << static_cast<int>(right_data_type) << "\n";
-    std::cout << left_input_table_statistics;
-    std::cout << right_input_table_statistics;
-    std::cout << left_column_id << ", " << right_column_id << "\n";
+    // std::cout << "Falling back to cross join estimation for inner equi join due to differing data types or string type."
+    //           << "\n";
+    // std::cout << "Left data type: " << static_cast<int>(left_data_type)
+    //           << ", Right data type: " << static_cast<int>(right_data_type) << "\n";
+    // std::cout << left_input_table_statistics;
+    // std::cout << right_input_table_statistics;
+    // std::cout << left_column_id << ", " << right_column_id << "\n";
     return estimate_cross_join(left_input_table_statistics, right_input_table_statistics);
   }
 
@@ -2696,8 +2876,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
   const auto left_selectivity = Selectivity{right_input_table_statistics.row_count};
   const auto right_selectivity = Selectivity{left_input_table_statistics.row_count};
 
-  std::cout << "Estimating cross join with left selectivity: " << left_selectivity
-            << " and right selectivity: " << right_selectivity << "\n";
+  // std::cout << "Estimating cross join with left selectivity: " << left_selectivity
+  //           << " and right selectivity: " << right_selectivity << "\n";
   /**
    * Scale up the input AttributeStatistics with the selectivities specified above and write them to the output
    * TableStatistics.
@@ -2734,6 +2914,8 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_j
    * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
    */
 
+  // std::cout << "Left histogram: " << left_histogram->description() << "\n";
+  // std::cout << "Right histogram: " << right_histogram->description() << "\n";
   auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
   auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
 

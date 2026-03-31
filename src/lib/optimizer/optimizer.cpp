@@ -197,10 +197,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer(bool with_optimiz
   std::shared_ptr<Optimizer> optimizer = nullptr; 
 
   if (with_optimizations_for_data_dependencies) {
-    std::cout << "Creating optimizer with optimizations for data dependencies" << std::endl;
+    // std::cout << "Creating optimizer with optimizations for data dependencies" << std::endl;
     optimizer = std::make_shared<Optimizer>(std::make_shared<CostEstimatorLogical>(CardinalityEstimator::new_instance_with_optimizations()));
   } else {
-    std::cout << "Creating default optimizer" << std::endl;
+    // std::cout << "Creating default optimizer" << std::endl;
     optimizer = std::make_shared<Optimizer>();
   }
 

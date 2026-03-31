@@ -285,10 +285,10 @@ void AbstractTableGenerator::generate_and_store() {
       std::cout << "-  Writing '" << table_name << "' into binary file " << binary_file_path << " " << std::flush;
       auto per_table_timer = Timer{};
       BinaryWriter::write(*table_info.table, binary_file_path);
-      std::cout << "-  Writing '" << table_name << "' into csv file " << binary_file_path << " " << std::flush;
-      binary_file_path.replace_extension(".csv");
-      CsvWriter::write(*table_info.table, binary_file_path);
-      binary_file_path.replace_extension(".bin");
+      // std::cout << "-  Writing '" << table_name << "' into csv file " << binary_file_path << " " << std::flush;
+      // binary_file_path.replace_extension(".csv");
+      // CsvWriter::write(*table_info.table, binary_file_path);
+      // binary_file_path.replace_extension(".bin");
       std::cout << "(" << per_table_timer.lap_formatted() << ")\n" << std::flush;
     }
     metrics.binary_caching_duration = timer.lap();

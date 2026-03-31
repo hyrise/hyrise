@@ -1470,6 +1470,8 @@ void TPCDSTableGenerator::_add_constraints(
   // time_dim - 1 PK.
   primary_key_constraint(time_dim_table, {"t_time_sk"});
 
+  //functional_dependency(const std::shared_ptr<Table> &table, const std::set<std::string> &lhs, const std::set<std::string> &rhs)
+
   // unique_constraint(customer_address_table, {"ca_address_sk"});
   // unique_constraint(customer_address_table, {"ca_address_id"});
   // unique_constraint(web_sales_table, {"ws_ext_list_price","ws_net_paid_inc_ship_tax","ws_net_profit"});

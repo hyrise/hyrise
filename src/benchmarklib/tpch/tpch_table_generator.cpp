@@ -391,8 +391,8 @@ void TPCHTableGenerator::_add_constraints(
   // region - 1 PK.
   primary_key_constraint(region_table, {"r_regionkey"});
 
-  unique_constraint(region_table, {"r_regionkey"});
-  unique_constraint(region_table, {"r_name"});
+  // unique_constraint(region_table, {"r_regionkey"});
+  // unique_constraint(region_table, {"r_name"});
   unique_constraint(region_table, {"r_comment"});
   unique_constraint(part_table, {"p_partkey"});
   unique_constraint(part_table, {"p_name", "p_comment"});
@@ -447,7 +447,7 @@ void TPCHTableGenerator::_add_constraints(
   unique_constraint(orders_table, {"o_custkey", "o_totalprice", "o_clerk"});
   unique_constraint(orders_table, {"o_custkey", "o_orderdate", "o_clerk"});
   unique_constraint(nation_table, {"n_nationkey"});
-  unique_constraint(nation_table, {"n_name"});
+  // unique_constraint(nation_table, {"n_name"});
   unique_constraint(nation_table, {"n_comment"});
   unique_constraint(customer_table, {"c_custkey"});
   unique_constraint(customer_table, {"c_name"});

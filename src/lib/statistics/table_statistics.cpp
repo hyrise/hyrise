@@ -50,12 +50,10 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table,
         const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
         std::shared_ptr<AbstractHistogram<ColumnDataType>> histogram = nullptr;
 
-        if (histogram_type == "maxdiff") {
-          std::cout << "Generating MaxDiff histogram for column " << column_id << "\n";
-          histogram = MaxDiffHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
-        } else {
-          histogram = EqualDistinctCountHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
-        }
+        // if column is pmr_string, we need to special case the histogram generation
+        // std::cout << "Generating MaxDiff histogram for column " << column_id << "\n";
+        histogram = MaxDiffHistogram<ColumnDataType>::from_column(table, column_id, histogram_bin_count);
+
         if (histogram) {
           output_column_statistics->set_statistics_object(histogram);
 

@@ -17,7 +17,7 @@ namespace hyrise {
  */
 class TableFunctionalDependencyConstraint final : public AbstractTableConstraint {
  public:
-  TableFunctionalDependencyConstraint(std::set<ColumnID>&& dependant_columns, std::set<ColumnID>&& determined_columns);
+  TableFunctionalDependencyConstraint(std::set<ColumnID>&& determinant_columns, std::set<ColumnID>&& dependent_columns);
   TableFunctionalDependencyConstraint() = delete;
 
   const std::set<ColumnID>& determinant_columns() const;

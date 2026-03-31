@@ -9,6 +9,7 @@
 #include "benchmark_config.hpp"
 #include "external_dbgen_utils.hpp"
 #include "file_based_table_generator.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/table.hpp"  // IWYU pragma: keep
 #include "types.hpp"
@@ -38,7 +39,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> SSBTableGenerator::generate(
   const auto& generated_tables = FileBasedTableGenerator::generate();
 
   // FileBasedTableGenerator automatically stores a binary file. Remove the CSV data to save some space.
-  remove_csv_tables(_path);
+  // remove_csv_tables(_path);
 
   return generated_tables;
 }
@@ -76,7 +77,7 @@ void SSBTableGenerator::_add_constraints(
   // date - 1 PK.
   primary_key_constraint(date_table, {"d_datekey"});
 
-  unique_constraint(date_table, {"d_datekey"});
+  // unique_constraint(date_table, {"d_datekey"});
 
   unique_constraint(date_table, {"d_date"});
   unique_constraint(date_table, {"d_daynuminyear", "d_yearmonthnum"});
@@ -129,15 +130,95 @@ void SSBTableGenerator::_add_constraints(
   order_constraint(date_table, {"d_date"}, {"d_month"});
   order_constraint(date_table, {"d_daynuminweek"}, {"d_lastdayinweekfl"});
   order_constraint(date_table, {"d_daynuminyear"}, {"d_weeknuminyear"});
-  
-  order_constraint(date_table, {"d_datekey"}, {"d_year", "d_weeknuminyear"} );
+  order_constraint(date_table, {"d_datekey"}, {"d_year", "d_weeknuminyear"});
+
+  //   order_constraint(date_dim_table, {"d_date_sk"}, {"d_year", "d_moy"});
+
+  // order_constraint(date_table, {"d_datekey"}, {"d_year", "d_weeknuminyear"} );
 
   order_constraint(supplier_table, {"s_suppkey"}, {"s_name"});
   order_constraint(supplier_table, {"s_city"}, {"s_nation"});
   order_constraint(customer_table, {"c_city"}, {"c_nation"});
   order_constraint(customer_table, {"c_custkey"}, {"c_name"});
 
-  
+  functional_dependency(supplier_table, {"s_nation"}, {"s_region"});
+  functional_dependency(supplier_table, {"s_city"}, {"s_nation"});
+
+  functional_dependency(date_table, {"d_yearmonthnum"}, {"d_year"});
+  functional_dependency(date_table, {"d_yearmonth"}, {"d_year"});
+
+
+  functional_dependency(customer_table, {"c_custkey"}, {"c_name"});
+  functional_dependency(customer_table, {"c_custkey"}, {"c_address"});
+  functional_dependency(customer_table, {"c_custkey"}, {"c_phone"});
+  functional_dependency(customer_table, {"c_custkey"}, {"c_city"});
+  functional_dependency(customer_table, {"c_custkey"}, {"c_nation"});
+  functional_dependency(customer_table, {"c_custkey"}, {"c_region"});
+  functional_dependency(customer_table, {"c_custkey"}, {"c_mktsegment"});
+  functional_dependency(customer_table, {"c_name"}, {"c_custkey"});
+  functional_dependency(customer_table, {"c_name"}, {"c_address"});
+  functional_dependency(customer_table, {"c_name"}, {"c_phone"});
+  functional_dependency(customer_table, {"c_name"}, {"c_city"});
+  functional_dependency(customer_table, {"c_name"}, {"c_nation"});
+  functional_dependency(customer_table, {"c_name"}, {"c_region"});
+  functional_dependency(customer_table, {"c_name"}, {"c_mktsegment"});
+  functional_dependency(customer_table, {"c_address"}, {"c_custkey"});
+  functional_dependency(customer_table, {"c_address"}, {"c_name"});
+  functional_dependency(customer_table, {"c_address"}, {"c_phone"});
+  functional_dependency(customer_table, {"c_address"}, {"c_city"});
+  functional_dependency(customer_table, {"c_address"}, {"c_nation"});
+  functional_dependency(customer_table, {"c_address"}, {"c_region"});
+  functional_dependency(customer_table, {"c_address"}, {"c_mktsegment"});
+  functional_dependency(customer_table, {"c_phone"}, {"c_custkey"});
+  functional_dependency(customer_table, {"c_phone"}, {"c_name"});
+  functional_dependency(customer_table, {"c_phone"}, {"c_address"});
+  functional_dependency(customer_table, {"c_phone"}, {"c_city"});
+  functional_dependency(customer_table, {"c_phone"}, {"c_nation"});
+  functional_dependency(customer_table, {"c_phone"}, {"c_region"});
+  functional_dependency(customer_table, {"c_phone"}, {"c_mktsegment"});
+  functional_dependency(customer_table, {"c_city"}, {"c_nation"});
+  functional_dependency(customer_table, {"c_city"}, {"c_region"});
+  functional_dependency(customer_table, {"c_nation"}, {"c_region"});
+
+  functional_dependency(part_table, {"p_partkey"}, {"p_name"});
+  functional_dependency(part_table, {"p_partkey"}, {"p_brand1"});
+  functional_dependency(part_table, {"p_partkey"}, {"p_type"});
+  functional_dependency(part_table, {"p_partkey"}, {"p_color"});
+  functional_dependency(part_table, {"p_partkey"}, {"p_size"});
+  functional_dependency(part_table, {"p_partkey"}, {"p_container"});
+  functional_dependency(part_table, {"p_partkey"}, {"p_category"});
+  functional_dependency(part_table, {"p_partkey"}, {"p_mfgr"});
+  functional_dependency(part_table, {"p_brand1"}, {"p_category"});
+  functional_dependency(part_table, {"p_brand1"}, {"p_mfgr"});
+  functional_dependency(part_table, {"p_category"}, {"p_mfgr"});
+
+  functional_dependency(supplier_table, {"s_suppkey"}, {"s_name"});
+  functional_dependency(supplier_table, {"s_suppkey"}, {"s_address"});
+  functional_dependency(supplier_table, {"s_suppkey"}, {"s_phone"});
+  functional_dependency(supplier_table, {"s_suppkey"}, {"s_city"});
+  functional_dependency(supplier_table, {"s_suppkey"}, {"s_nation"});
+  functional_dependency(supplier_table, {"s_suppkey"}, {"s_region"});
+  functional_dependency(supplier_table, {"s_name"}, {"s_suppkey"});
+  functional_dependency(supplier_table, {"s_name"}, {"s_address"});
+  functional_dependency(supplier_table, {"s_name"}, {"s_phone"});
+  functional_dependency(supplier_table, {"s_name"}, {"s_city"});
+  functional_dependency(supplier_table, {"s_name"}, {"s_nation"});
+  functional_dependency(supplier_table, {"s_name"}, {"s_region"});
+  functional_dependency(supplier_table, {"s_address"}, {"s_suppkey"});
+  functional_dependency(supplier_table, {"s_address"}, {"s_name"});
+  functional_dependency(supplier_table, {"s_address"}, {"s_phone"});
+  functional_dependency(supplier_table, {"s_address"}, {"s_city"});
+  functional_dependency(supplier_table, {"s_address"}, {"s_nation"});
+  functional_dependency(supplier_table, {"s_address"}, {"s_region"});
+  functional_dependency(supplier_table, {"s_phone"}, {"s_suppkey"});
+  functional_dependency(supplier_table, {"s_phone"}, {"s_name"});
+  functional_dependency(supplier_table, {"s_phone"}, {"s_address"});
+  functional_dependency(supplier_table, {"s_phone"}, {"s_city"});
+  functional_dependency(supplier_table, {"s_phone"}, {"s_nation"});
+  functional_dependency(supplier_table, {"s_phone"}, {"s_region"});
+  functional_dependency(supplier_table, {"s_city"}, {"s_nation"});
+  functional_dependency(supplier_table, {"s_city"}, {"s_region"});
+  functional_dependency(supplier_table, {"s_nation"}, {"s_region"});
 }
 
 }  // namespace hyrise

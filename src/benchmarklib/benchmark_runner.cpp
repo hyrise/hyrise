@@ -483,6 +483,20 @@ nlohmann::json BenchmarkRunner::_create_report() const {
                                {"operator_cardinality_metrics", nlohmann::json::array()}};
 
             for (const auto& operator_cardinality_metrics : sql_statement_metrics->operator_cardinality_metrics) {
+              auto dd_estimation_times_avg = operator_cardinality_metrics.dd_estimation_times.empty()
+                                                ? std::chrono::nanoseconds{0}
+                                                : std::chrono::nanoseconds{
+                                                      std::accumulate(operator_cardinality_metrics.dd_estimation_times.begin(),
+                                                                      operator_cardinality_metrics.dd_estimation_times.end(),
+                                                                      std::chrono::nanoseconds{0}) /
+                                                      operator_cardinality_metrics.dd_estimation_times.size()};
+              auto default_estimation_times_avg = operator_cardinality_metrics.default_estimation_times.empty()
+                                                        ? std::chrono::nanoseconds{0}
+                                                        : std::chrono::nanoseconds{std::accumulate(
+                                                              operator_cardinality_metrics.default_estimation_times.begin(),
+                                                              operator_cardinality_metrics.default_estimation_times.end(),
+                                                              std::chrono::nanoseconds{0}) /
+                                                              operator_cardinality_metrics.default_estimation_times.size()};
               sql_statement_metrics_json["operator_cardinality_metrics"].push_back(nlohmann::json{
                   {"true_cardinality", operator_cardinality_metrics.true_cardinality},
                   {"estimated_cardinality", operator_cardinality_metrics.estimated_cardinality},
@@ -493,7 +507,10 @@ nlohmann::json BenchmarkRunner::_create_report() const {
                   {"left_input_hash", operator_cardinality_metrics.left_input_hash},
                   {"right_input_hash", operator_cardinality_metrics.right_input_hash},
                   {"predicate_string", operator_cardinality_metrics.predicate_string},
-                  {"is_data_dependency_optimized", operator_cardinality_metrics.is_data_dependency_optimized}});
+                  {"is_data_dependency_optimized", operator_cardinality_metrics.is_data_dependency_optimized},
+                  {"dd_estimation_times_avg",  dd_estimation_times_avg.count()},
+                  {"default_estimation_times_avg", default_estimation_times_avg.count()}
+                });
             }
 
             std::cout << "Join column datasizes: " << sql_statement_metrics->join_column_datatype.size() << std::endl;

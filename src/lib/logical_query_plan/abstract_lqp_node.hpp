@@ -244,6 +244,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool has_matching_ind(const std::vector<std::shared_ptr<AbstractExpression>>& foreign_key_expressions,
                         const std::vector<std::shared_ptr<AbstractExpression>>& key_expressions) const;
 
+  bool has_matching_fd(ExpressionUnorderedSet& lhs, ExpressionUnorderedSet& rhs) const;
+
   /**
    * Perform a deep equality check
    */
@@ -257,10 +259,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   const LQPNodeType type;
 
-  
+  bool is_data_dependency_optimized() const;
+  void set_is_data_dependency_optmized(bool is_optimized) const;
 
-  bool is_data_dependency_optimized() const; 
-  void set_is_data_dependency_optmized(bool is_optimized) const; 
+  std::chrono::nanoseconds optimization_time() const;
+  void set_optimization_time(const std::chrono::nanoseconds optimization_time) const;
 
   /**
    * Expressions used by this node; semantics depend on the actual node type.
@@ -317,7 +320,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
-  mutable bool _is_data_dependency_optimized; 
+  mutable bool _is_data_dependency_optimized;
+  mutable std::chrono::nanoseconds _optimization_time;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);

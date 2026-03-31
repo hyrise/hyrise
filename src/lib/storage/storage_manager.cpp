@@ -1,6 +1,7 @@
 #include "storage_manager.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -42,10 +43,24 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 
   // Create table statistics and chunk pruning statistics for added table.
   if (!table->table_statistics()) {
-    table->set_table_statistics(TableStatistics::from_table(*table, "maxdiff"));
+    // auto max_diff = std::getenv("MAXDIFF");
+    // if(max_diff != nullptr && std::string(max_diff) == "1"){
+    //   table->set_table_statistics(TableStatistics::from_table(*table, "maxdiff"));
+    // } else {
+    //   table->set_table_statistics(TableStatistics::from_table(*table));
+    // }
+
+    table->set_table_statistics(TableStatistics::from_table(*table));
+
+    // table->set_table_statistics(TableStatistics::from_table(*table, "maxdiff"));
   }
   if(!table->second_table_statistics()){
-    table->set_second_table_statistics(TableStatistics::from_table(*table, "maxdiff"));
+    auto max_diff = std::getenv("MAXDIFF");
+    if(max_diff != nullptr && std::string(max_diff) == "1"){
+      table->set_second_table_statistics(TableStatistics::from_table(*table, "maxdiff"));
+    } else {
+      table->set_second_table_statistics(TableStatistics::from_table(*table));
+    }
   }
   generate_chunk_pruning_statistics(table);
 

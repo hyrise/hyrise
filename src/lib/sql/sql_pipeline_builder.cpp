@@ -59,7 +59,7 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
       _data_dependency_optimizer
           ? _data_dependency_optimizer
           : Optimizer::create_default_optimizer(true);
-  std::cout << "initialized sql pipeline with two optimizers" << std::endl;
+  // std::cout << "initialized sql pipeline with two optimizers" << std::endl;
   auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, _pqp_cache, _lqp_cache, data_dependency_optimizer);
   return pipeline;
 }

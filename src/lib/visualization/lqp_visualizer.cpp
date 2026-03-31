@@ -209,19 +209,19 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
     }
 
     // Edge Tooltip: Non-trivial FDs
-    const auto& fds = source_node->non_trivial_functional_dependencies();
-    tooltip_stream << "\n"
-                   << "Functional Dependencies (non-trivial): \n";
-    if (fds.empty()) {
-      tooltip_stream << " <none>";
-    }
+    // const auto& fds = source_node->non_trivial_functional_dependencies();
+    // tooltip_stream << "\n"
+    //                << "Functional Dependencies (non-trivial): \n";
+    // if (fds.empty()) {
+    //   tooltip_stream << " <none>";
+    // }
 
-    auto fd_idx = 1;
-    for (const auto& fd : fds) {
-      tooltip_stream << " (" << fd_idx << ") ";
-      tooltip_stream << fd << "\n";
-      ++fd_idx;
-    }
+    // auto fd_idx = 1;
+    // for (const auto& fd : fds) {
+    //   tooltip_stream << " (" << fd_idx << ") ";
+    //   tooltip_stream << fd << "\n";
+    //   ++fd_idx;
+    // }
   }
 
   auto info = _default_edge;

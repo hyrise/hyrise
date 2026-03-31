@@ -9,9 +9,11 @@
 #include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/optimization_context.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"

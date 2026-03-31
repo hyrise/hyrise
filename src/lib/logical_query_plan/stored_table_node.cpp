@@ -188,6 +188,32 @@ OrderDependencies StoredTableNode::order_dependencies() const {
   return order_dependencies;
 }
 
+
+FunctionalDependencies StoredTableNode::non_trivial_functional_dependencies() const {
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  auto functional_dependencies = FunctionalDependencies{};
+  auto discovered_functional_dependencies = table->soft_functional_dependency_constraints();
+
+  for (const auto& discovered_fd : discovered_functional_dependencies) {
+    auto lhs = get_expressions_for_column_ids(*this, discovered_fd.determinant_columns());
+    auto rhs = get_expressions_for_column_ids(*this, discovered_fd.dependent_columns());
+
+    // std::cout << "getting non trivial FDs for table " << table_name << std::endl;
+
+    DebugAssert(lhs.size() == discovered_fd.determinant_columns().size(), "Unexpected count of column expressions.");
+    DebugAssert(rhs.size() == discovered_fd.dependent_columns().size(), "Unexpected count of column expressions.");
+    
+    // auto functional_dependency = FunctionalDependency(std::move(lhs), std::move(rhs));
+    functional_dependencies.emplace(std::move(lhs), std::move(rhs));
+  }
+  // std::cout << "got non trivial FDs for table " << table_name << ": " << functional_dependencies.size() << std::endl;
+  // for(const auto& fd : functional_dependencies) {
+  //   std::cout << "StoredTableNode FD: " << fd << std::endl;
+  // }
+  return functional_dependencies;
+}
+
+
 InclusionDependencies StoredTableNode::inclusion_dependencies() const {
   auto inclusion_dependencies = InclusionDependencies{};
 

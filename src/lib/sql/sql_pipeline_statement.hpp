@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <utility>
@@ -34,6 +35,8 @@ struct OperatorCardinalityMetrics {
   size_t right_input_hash{0};
   std::string predicate_string;
   bool is_data_dependency_optimized = false;
+  std::vector<std::chrono::nanoseconds> dd_estimation_times {};
+  std::vector<std::chrono::nanoseconds> default_estimation_times {};
 };
 
 struct SQLPipelineStatementMetrics {

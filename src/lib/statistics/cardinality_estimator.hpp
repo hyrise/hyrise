@@ -74,6 +74,12 @@ class CardinalityEstimator {
 
   bool with_optimizations = false;
 
+  bool ind_ucc_join_optimization = false; 
+  bool od_predicate_optimization = false;
+  bool ucc_predicate_optimization = false;
+  bool fd_predicate_optimization = false;
+  bool ucc_fd_aggregate_optimization = false;
+
   /**
    * @return The estimated output row count of @param lqp.
    */
