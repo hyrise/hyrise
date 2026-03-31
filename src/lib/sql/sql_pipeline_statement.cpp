@@ -164,7 +164,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   std::tie(_optimized_logical_plan, _optimization_context) =
       _optimizer->optimize_with_context(std::move(unoptimized_lqp), optimizer_rule_durations);
-  std::cout << "first optimization done" << '\n';
+  // std::cout << "first optimization done" << '\n';
 
   // visit_lqp(_optimized_logical_plan, [&](const std::shared_ptr<const AbstractLQPNode>& lqp) {
   //   _optimizer->estimate_cardinality(const_cast<std::shared_ptr<const AbstractLQPNode>&>(lqp));
@@ -188,7 +188,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   if (lqp_cache && _translation_info.cacheable && _optimization_context->is_cacheable()) {
     lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
-  std::cout << "optimized_logical_plan" << "\n";
+  // std::cout << "optimized_logical_plan" << "\n";
   return _optimized_logical_plan;
 }
 

@@ -1446,7 +1446,7 @@ EstimationStatisticsState CardinalityEstimator::estimate_join_node(const JoinNod
   const auto right_input_table_statistics = right_state.table_statistics;
 
   if (join_node.join_mode == JoinMode::Cross) {
-    std::cout << "Estimating Cross Join" << "\n";
+    // std::cout << "Estimating Cross Join" << "\n";
     return {.table_statistics = estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics),
             .equivalence_classes = ExpressionUnorderedSet{},
             .join_equivalence_classes = ExpressionUnorderedSet{}};
