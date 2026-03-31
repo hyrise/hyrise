@@ -1,3 +1,7 @@
+#include <memory>
+
+#include <boost/algorithm/string/replace.hpp>
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -12,8 +16,14 @@
 #include "optimizer/optimization_context.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
+#include "testing_assert.hpp"
+#include "tpch/tpch_constants.hpp"
+#include "tpch/tpch_queries.hpp"
+#include "tpch/tpch_table_generator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -236,7 +246,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    * This one is important. An LQP can contain the same Subquery multiple times (see the LQP constructed below).
    * We need make sure that each LQP is only optimized once and that all SubqueryExpressions point to the same LQP after
    * optimization.
-   * 
+   *
    * This is not just "nice to have". If we do not do this properly and multiple SubqueryExpressions point to the same LQP
    * then we would potentially break all the other SubqueryExpressions while moving nodes around when optimizing a single
    * one of them.
@@ -415,6 +425,42 @@ TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {
   {
     auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
     EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
+  }
+}
+
+TEST_F(OptimizerTest, OptimizingTPCHTwiceDoesNotChangeLQP) {
+  auto table_generator = TPCHTableGenerator(static_cast<float>(0.01), ClusteringConfiguration::None);
+  table_generator.generate_and_store();
+
+  for (const auto [id, params] : std::to_array<std::pair<size_t, const char* const>>(
+           {{1, "'1998-12-01'"}, {9, "'%%green%%'"}, {13, "'%%pending%%accounts%%'"}, {18, "313"}, {21, "'JORDAN'"}})) {
+    auto sql = std::string{tpch_queries.at(id)};
+    boost::replace_all(sql, "'", "''");
+
+    const auto prepare_optimizer = Optimizer::create_default_optimizer();
+    const auto execute_optimizer = Optimizer::create_execute_statement_optimizer();
+    const auto empty_optimizer = std::make_shared<Optimizer>();
+    const auto full_optimizer = Optimizer::create_default_optimizer();
+
+    const auto prepare_optimized_sql = std::format("PREPARE tpch_query_{}_opt FROM '{}'", id, sql);
+    const auto prepare_sql = std::format("PREPARE tpch_query_{} FROM '{}'", id, sql);
+    const auto execute_optimized_sql = std::format("EXECUTE tpch_query_{}_opt({})", id, params);
+    const auto execute_sql = std::format("EXECUTE tpch_query_{}({})", id, params);
+
+    auto prepare_optimized_plan_pipeline =
+        SQLPipelineStatement(prepare_optimized_sql, nullptr, UseMvcc::No, prepare_optimizer, nullptr, nullptr);
+    auto execute_optimized_plan_pipeline =
+        SQLPipelineStatement(execute_optimized_sql, nullptr, UseMvcc::No, execute_optimizer, nullptr, nullptr);
+    auto prepare_pipeline = SQLPipelineStatement(prepare_sql, nullptr, UseMvcc::No, empty_optimizer, nullptr, nullptr);
+    auto execute_pipeline = SQLPipelineStatement(execute_sql, nullptr, UseMvcc::No, full_optimizer, nullptr, nullptr);
+
+    prepare_optimized_plan_pipeline.get_result_table();
+    prepare_pipeline.get_result_table();
+
+    const auto double_optimized_lqp = execute_optimized_plan_pipeline.get_optimized_logical_plan();
+    const auto single_optimized_lqp = execute_pipeline.get_optimized_logical_plan();
+
+    EXPECT_LQP_EQ(single_optimized_lqp, double_optimized_lqp);
   }
 }
 
