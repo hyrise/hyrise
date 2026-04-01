@@ -660,7 +660,7 @@ int Console::_load_table(const std::string& args) {
   if (supported) {
     out("Encoding \"" + tablename + "\" using " + encoding + "\n");
     auto immutable_chunks = std::vector<ChunkID>{};
-    for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)->is_mutable()) {
         immutable_chunks.emplace_back(chunk_id);
       }

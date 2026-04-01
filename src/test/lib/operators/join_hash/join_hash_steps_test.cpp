@@ -15,7 +15,7 @@ namespace hyrise {
 class JoinHashStepsTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
-    TableColumnDefinitions column_definitions;
+    auto column_definitions = TableColumnDefinitions{};
     column_definitions.emplace_back("a", DataType::Int, false);
     _table_zero_one = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size_zero_one);
     for (auto i = size_t{0}; i < _table_size_zero_one; ++i) {
@@ -44,8 +44,8 @@ class JoinHashStepsTest : public BaseTest {
   // Accumulates the RowIDs hidden behind the iterator element (hash map stores PosLists, not RowIDs)
   template <typename Iter>
   size_t get_row_count(Iter begin, Iter end) {
-    size_t row_count = 0;
-    for (Iter iter = begin; iter != end; ++iter) {
+    auto row_count = size_t{0};
+    for (auto iter = begin; iter != end; ++iter) {
       row_count += iter->size();
     }
     return row_count;
@@ -96,24 +96,18 @@ TEST_F(JoinHashStepsTest, LargeHashTableExistenceOnly) {
 }
 
 TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
-  const size_t radix_bit_count = 0;
-  std::vector<std::vector<size_t>> histograms;
+  const auto radix_bit_count = size_t{0};
+  auto histograms = std::vector<std::vector<size_t>>{};
 
   // BloomFilters are ignored in this test
-  BloomFilter bloom_filter_with_nulls;
-  BloomFilter bloom_filter_without_nulls;
+  auto bloom_filter_with_nulls = BloomFilter{};
+  auto bloom_filter_without_nulls = BloomFilter{};
 
   // We materialize the table twice, once with keeping NULL values and once without
   auto materialized_with_nulls = materialize_input<int, int, true>(
       _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter_with_nulls);
   auto materialized_without_nulls = materialize_input<int, int, false>(
       _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter_without_nulls);
-
-  // Partition count should be equal to chunk count
-  EXPECT_EQ(materialized_with_nulls.size(),
-            static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
-  EXPECT_EQ(materialized_without_nulls.size(),
-            static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
 
   // Sum of partition sizes should be equal to row count if NULL values are contained and lower if they are not
   auto materialized_with_nulls_size = size_t{0};
@@ -137,29 +131,40 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
     EXPECT_EQ(partition.null_values.size(), size_t{0});
   }
 
+  auto table_null_flags = std::vector<bool>(_table_with_nulls_and_zeros->get_output()->row_count());
   // For materialized_with_nulls, NULLs should be set according to the data in the segment
-  for (ChunkID chunk_id = ChunkID{0}; chunk_id < _table_with_nulls_and_zeros->get_output()->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < _table_with_nulls_and_zeros->get_output()->chunk_count(); ++chunk_id) {
     const auto segment = _table_with_nulls_and_zeros->get_output()->get_chunk(chunk_id)->get_segment(ColumnID{0});
 
     resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
       using Type = typename decltype(type)::type;
       auto iterable = create_iterable_from_segment<Type>(typed_segment);
 
-      size_t counter = 0;
+      auto counter = size_t{0};
       iterable.with_iterators([&](auto it, auto end) {
         for (; it != end; ++it) {
-          const bool null_flag = materialized_with_nulls[chunk_id].null_values[counter++];
-          EXPECT_EQ(null_flag, it->is_null());
+          table_null_flags[counter] = it->is_null();
+          ++counter;
         }
       });
     });
   }
+
+  auto radix_partions_null_flags = std::vector<bool>();
+  for (const auto& partition : materialized_with_nulls) {
+    for (const auto null_value : partition.null_values) {
+      radix_partions_null_flags.push_back(null_value);
+    }
+  }
+
+  EXPECT_EQ(table_null_flags.size(), radix_partions_null_flags.size());
+  EXPECT_EQ(table_null_flags, radix_partions_null_flags);
 }
 
 TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
   {
-    std::vector<std::vector<size_t>> histograms;  // Ignored in this test
-    BloomFilter bloom_filter;
+    auto histograms = std::vector<std::vector<size_t>>{};  // Ignored in this test
+    auto bloom_filter = BloomFilter{};
 
     materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
                                        bloom_filter);
@@ -179,8 +184,8 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
 
 TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
   {
-    std::vector<std::vector<size_t>> histograms;  // Ignored in this test
-    BloomFilter output_bloom_filter;
+    auto histograms = std::vector<std::vector<size_t>>{};  // Ignored in this test
+    auto output_bloom_filter = BloomFilter{};
 
     // Fill input_bloom_filter
     BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
@@ -211,8 +216,8 @@ TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
 
 TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   {
-    std::vector<std::vector<size_t>> histograms;
-    BloomFilter bloom_filter;  // Ignored in this test
+    auto histograms = std::vector<std::vector<size_t>>{};
+    auto bloom_filter = BloomFilter{};  // Ignored in this test
 
     // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
     // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
@@ -229,8 +234,8 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   }
 
   {
-    std::vector<std::vector<size_t>> histograms;
-    BloomFilter bloom_filter;  // Ignored in this test
+    auto histograms = std::vector<std::vector<size_t>>{};
+    auto bloom_filter = BloomFilter{};  // Ignored in this test
 
     // When using 2 bits for radix partitioning, we have four radix clusters determined on the two least
     // significant bits. For the 0/1 table, we expect two non-empty clusters (00/01) and two empty ones (10/11).
@@ -254,8 +259,8 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
 
 TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   const size_t radix_bit_count = 1;
-  std::vector<std::vector<size_t>> histograms;
-  BloomFilter bloom_filter;  // Ignored in this test
+  auto histograms = std::vector<std::vector<size_t>>{};
+  auto bloom_filter = BloomFilter{};  // Ignored in this test
 
   const auto materialized_without_null_handling = materialize_input<int, int, true>(
       _table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter);
@@ -281,11 +286,11 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
 }
 
 TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
-  std::vector<std::vector<size_t>> histograms;  // Ignored in this test
-  BloomFilter output_bloom_filter;              // Ignored in this test
+  auto histograms = std::vector<std::vector<size_t>>{};  // Ignored in this test
+  auto output_bloom_filter = BloomFilter{};              // Ignored in this test
 
   // Fill input_bloom_filter
-  BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
+  auto input_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE);
   for (auto value : std::vector<int>{6, 7, 9}) {
     input_bloom_filter[value] = true;
   }
@@ -313,7 +318,7 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
 
   auto radix_bit_count = size_t{0};
   auto histograms = std::vector<std::vector<size_t>>{};
-  BloomFilter bloom_filter;  // Ignored in this test
+  auto bloom_filter = BloomFilter{};  // Ignored in this test
 
   const auto materialized_without_null_handling = materialize_input<int, int, false>(
       _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter);

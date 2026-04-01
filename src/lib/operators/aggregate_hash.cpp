@@ -727,7 +727,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             auto min_key = std::numeric_limits<AggregateKeyEntry>::max();
             auto max_key = uint64_t{0};
 
-            for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};

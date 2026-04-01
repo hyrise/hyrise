@@ -72,7 +72,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     data_table->last_chunk()->set_immutable();
 
     if (sort_mode) {
-      for (ChunkID chunk_id{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
         data_table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, *sort_mode));
       }
     }

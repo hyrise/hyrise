@@ -76,7 +76,7 @@ void ResultSerializer::send_query_response(
   const auto chunk_count = table->chunk_count();
 
   // Iterate over each chunk in result table
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; chunk_id++) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
     const auto chunk = table->get_chunk(chunk_id);
     const auto chunk_size = chunk->size();
 

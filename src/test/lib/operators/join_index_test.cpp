@@ -72,7 +72,7 @@ class OperatorsJoinIndexTest : public BaseTest {
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
-    for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
 
       std::vector<ColumnID> columns{1};
