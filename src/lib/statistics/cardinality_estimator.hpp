@@ -211,6 +211,7 @@ class CardinalityEstimator {
 
   static std::shared_ptr<TableStatistics> estimate_limit_node(
       const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
+
   /** @} */
 
   /**

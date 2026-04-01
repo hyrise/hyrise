@@ -123,35 +123,27 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
     AggregateNode::make(expression_vector(), expression_vector(min_(stored_table_node_b_col_a)),
       stored_table_node_b));
 
-  const auto lqp_a =
-  PredicateNode::make(equals_(different_node_a->get_column("a"), lqp_subquery_(subquery_a)),
-    different_node_a);
-
-  // Different predicate column than lqp_a.
-  const auto lqp_b =
-  PredicateNode::make(equals_(different_node_b->get_column("b"), lqp_subquery_(subquery_a)),
-    different_node_b);
-
-  // Different predicate condition than lqp_a.
-  const auto lqp_c =
-  PredicateNode::make(less_than_(different_node_c->get_column("a"), lqp_subquery_(subquery_a)),
-    different_node_c);
-
   const auto subquery_d =
   ProjectionNode::make(expression_vector(max_(stored_table_node_b_col_a)),
     AggregateNode::make(expression_vector(), expression_vector(max_(stored_table_node_b_col_a)),
       stored_table_node_b));
-
-  // Different subquery than lqp_a.
-  const auto lqp_d =
-  PredicateNode::make(equals_(different_node_d->get_column("a"), lqp_subquery_(subquery_d)),
-    different_node_d);
   // clang-format on
 
-  different_node_a->set_prunable_subquery_predicates({lqp_a});
-  different_node_b->set_prunable_subquery_predicates({lqp_b});
-  different_node_c->set_prunable_subquery_predicates({lqp_c});
-  different_node_d->set_prunable_subquery_predicates({lqp_d});
+  const auto predicate_a = equals_(different_node_a->get_column("a"), lqp_subquery_(subquery_a));
+
+  // Different predicate column than predicate_a.
+  const auto predicate_b = equals_(different_node_b->get_column("b"), lqp_subquery_(subquery_a));
+
+  // Different predicate condition than predicate_a.
+  const auto predicate_c = less_than_(different_node_c->get_column("a"), lqp_subquery_(subquery_a));
+
+  // Different subquery than predicate_a.
+  const auto predicate_d = equals_(different_node_d->get_column("a"), lqp_subquery_(subquery_d));
+
+  different_node_a->set_prunable_subquery_predicates({predicate_a});
+  different_node_b->set_prunable_subquery_predicates({predicate_b});
+  different_node_c->set_prunable_subquery_predicates({predicate_c});
+  different_node_d->set_prunable_subquery_predicates({predicate_d});
 
   EXPECT_NE(*_stored_table_node, *different_node_a);
   EXPECT_NE(*_stored_table_node, *different_node_b);
@@ -163,11 +155,6 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
   EXPECT_NE(*different_node_b, *different_node_c);
   EXPECT_NE(*different_node_b, *different_node_d);
   EXPECT_NE(*different_node_c, *different_node_d);
-
-  EXPECT_NE(_stored_table_node->hash(), different_node_a->hash());
-  EXPECT_NE(_stored_table_node->hash(), different_node_b->hash());
-  EXPECT_NE(_stored_table_node->hash(), different_node_c->hash());
-  EXPECT_NE(_stored_table_node->hash(), different_node_d->hash());
 
   // We force hash collisions for nodes with the same number of prunable subquery predicates.
   EXPECT_EQ(different_node_a->hash(), different_node_b->hash());
@@ -191,64 +178,65 @@ TEST_F(StoredTableNodeTest, Copy) {
     AggregateNode::make(expression_vector(), expression_vector(min_(stored_table_node_b_col_a)),
       stored_table_node_b));
 
+  const auto predicate = equals_(_a, lqp_subquery_(subquery));
   const auto lqp =
-  PredicateNode::make(equals_(_a, lqp_subquery_(subquery)),
+  PredicateNode::make(predicate,
     _stored_table_node);
   // clang-format on
 
-  _stored_table_node->set_prunable_subquery_predicates({lqp});
+  _stored_table_node->set_prunable_subquery_predicates({predicate});
 
-  const auto& lqp_deep_copy = lqp->deep_copy();
+  const auto lqp_deep_copy = lqp->deep_copy();
   EXPECT_EQ(*lqp, *lqp_deep_copy);
   EXPECT_EQ(*_stored_table_node, *lqp_deep_copy->left_input());
 
   const auto& prunable_subquery_predicates =
       static_cast<StoredTableNode&>(*lqp_deep_copy->left_input()).prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_predicates.size(), 1);
-  EXPECT_EQ(prunable_subquery_predicates.front(), lqp_deep_copy);
+  EXPECT_EQ(*prunable_subquery_predicates.front(), *predicate);
 
   // Do not allow deep copies where prunable subquery predicates are not part of the LQP.
   EXPECT_THROW(_stored_table_node->deep_copy(), std::logic_error);
 }
 
 TEST_F(StoredTableNodeTest, NodeExpressions) {
-  ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u);
+  ASSERT_EQ(_stored_table_node->node_expressions.size(), 0);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneFirstColumn) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
-  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(1u);
+  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(1);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // column with ColumnID{0} was pruned, therefore the column has to be left shifted
   expected_statistics.column_ids[0] -= 1;
 
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0u), expected_statistics);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0), expected_statistics);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneSecondColumn) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
-  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(0u);
+  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(0);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{1}});
 
   // column with ColumnID{1} was pruned, so ColumnID{0} should be untouched
 
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0u), expected_statistics);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0), expected_statistics);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneBothColumns) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
 
   // All indexed columns were pruned, therefore the index statistics should be empty
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 0u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 0);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {

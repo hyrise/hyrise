@@ -301,18 +301,20 @@ TEST_F(OperatorsGetTableTest, Copy) {
   const auto projection = std::make_shared<Projection>(
       table_scan_a, expression_vector(pqp_column_(ColumnID{0}, DataType::Float, false, "z")));
 
-  const auto table_scan_b =
-      std::make_shared<TableScan>(get_table_c, equals_(pqp_column_(ColumnID{2}, DataType::Float, false, "c"),
-                                                       pqp_subquery_(projection, DataType::Float, false)));
-  get_table_c->set_prunable_subquery_predicates({table_scan_b});
+  const auto scan_column = pqp_column_(ColumnID{2}, DataType::Float, false, "c");
+  const auto predicate = equals_(scan_column, pqp_subquery_(projection, DataType::Float, true));
+  const auto table_scan_b = std::make_shared<TableScan>(get_table_c, predicate);
+  get_table_c->set_prunable_subquery_predicates({predicate});
 
-  const auto& pqp_copy = table_scan_b->deep_copy();
+  auto operator_mapping = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
+  const auto& pqp_copy = table_scan_b->deep_copy(operator_mapping);
   const auto& get_table_c_copy = std::static_pointer_cast<const GetTable>(pqp_copy->left_input());
   const auto& prunable_subquery_scans = get_table_c_copy->prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
-  EXPECT_EQ(prunable_subquery_scans.front(), pqp_copy);
+  const auto& projection_copy = operator_mapping.at(projection.get());
+  EXPECT_EQ(*prunable_subquery_scans.front(), *equals_(scan_column, pqp_subquery_(projection_copy, DataType::Float, true)));
 
-  // Do not allow deep copies where prunable subquery scans are not part of the PQP.
+  // Do not allow deep copies where prunable subqueries are not part of the PQP.
   EXPECT_THROW(get_table_c->deep_copy(), std::logic_error);
 }
 
@@ -388,20 +390,10 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
-  const auto table_scan =
-      std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                         pqp_subquery_(table_wrapper, DataType::Int, false)));
-  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
-  const auto stored_table_node = StoredTableNode::make("int_int_float");
-  stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
-  stored_table_node->set_pruned_column_ids({ColumnID{1}});
-  const auto predicate_node =
-      PredicateNode::make(not_equals_(stored_table_node->get_column("a"), lqp_subquery_(mock_node)));
 
-  get_table->lqp_node = stored_table_node;
-  table_scan->lqp_node = predicate_node;
-  stored_table_node->set_prunable_subquery_predicates({predicate_node});
-  get_table->set_prunable_subquery_predicates({table_scan});
+  const auto predicate_column = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto predicate = not_equals_(predicate_column, pqp_subquery_(table_wrapper, DataType::Int, false));
+  get_table->set_prunable_subquery_predicates({predicate});
 
   execute_all({table_wrapper, get_table});
 
@@ -421,20 +413,10 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
-  const auto table_scan =
-      std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                         pqp_subquery_(table_wrapper, DataType::Int, false)));
-  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
-  const auto stored_table_node = StoredTableNode::make("int_int_float");
-  stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
-  stored_table_node->set_pruned_column_ids({ColumnID{1}});
-  const auto predicate_node =
-      PredicateNode::make(not_equals_(stored_table_node->get_column("a"), lqp_subquery_(mock_node)));
 
-  get_table->lqp_node = stored_table_node;
-  table_scan->lqp_node = predicate_node;
-  stored_table_node->set_prunable_subquery_predicates({predicate_node});
-  get_table->set_prunable_subquery_predicates({table_scan});
+  const auto predicate_column = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto predicate = not_equals_(predicate_column, pqp_subquery_(table_wrapper, DataType::Int, false));
+  get_table->set_prunable_subquery_predicates({predicate});
 
   EXPECT_THROW(get_table->execute(), std::logic_error);
 }

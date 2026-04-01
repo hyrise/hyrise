@@ -21,6 +21,7 @@ class PQPSubqueryExpression;
 enum class OperatorType {
   Aggregate,
   Alias,
+  Build,
   ChangeMetaTable,
   CreateTable,
   CreatePreparedPlan,
@@ -41,6 +42,7 @@ enum class OperatorType {
   JoinVerification,
   Limit,
   Print,
+  Probe,
   Product,
   Projection,
   Sort,
