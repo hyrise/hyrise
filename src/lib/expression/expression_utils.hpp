@@ -15,6 +15,7 @@ namespace hyrise {
 
 class AbstractLQPNode;
 class LQPColumnExpression;
+class LQPSubqueryExpression;
 class TransactionContext;
 class PQPSubqueryExpression;
 enum class LogicalOperator;
@@ -86,6 +87,9 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
 
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping);
+
+void expression_adapt_to_different_lqp(LQPSubqueryExpression& lqp_subquery_expression,
+                                       const LQPNodeMapping& node_mapping);
 
 /**
  * Create a comma separated string with the AbstractExpression::description(mode) of each expression

@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <boost/container/small_vector.hpp>
-#include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 
@@ -18,6 +17,7 @@
 
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_hash/join_hash_traits.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -85,19 +85,9 @@ struct Partition {
 template <typename T>
 using RadixContainer = std::vector<Partition<T>>;
 
-class BaseRadixContainerWithStats {};
-
 template <typename T>
-class RadixContainerWithStats : public BaseRadixContainerWithStats {
+struct RadixContainerWithStats : public BaseRadixContainerWithStats {
  public:
-  explicit RadixContainerWithStats(RadixContainer<T>&& init_container, const T init_min, const T init_max,
-                                   const bool init_is_continuous, const uint64_t init_row_count)
-      : container{std::move(init_container)},
-        min{init_min},
-        max{init_max},
-        is_continuous{init_is_continuous},
-        row_count{init_row_count} {};
-
   RadixContainer<T> container;
   std::optional<T> min;
   std::optional<T> max;
@@ -271,11 +261,6 @@ class PosHashTable {
 // resources to optimize it at the time.
 static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
-
-// Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
-// needed for merging partial Bloom filters created by different threads. Note that the dynamic_bitset(n, value)
-// constructor does not do what you would expect it to, so try to avoid it.
-using BloomFilter = boost::dynamic_bitset<>;
 
 // ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
 // negation (~x). As the negation is surprisingly expensive, we create a static empty Bloom filter and reference
@@ -482,7 +467,14 @@ RadixContainerWithStats<T> materialize_input(const std::shared_ptr<const Table>&
     is_continuous = static_cast<std::make_unsigned_t<T>>(max - min + 1) == row_count;
   }
 
-  return {std::move(radix_container), min, max, is_continuous, row_count};
+  auto output = RadixContainerWithStats<T>{};
+  output.container = std::move(radix_container);
+  output.min = min;
+  output.max = max;
+  output.is_continuous = is_continuous;
+  output.row_count = row_count;
+
+  return output;
 }
 
 template <typename T, typename HashedType, bool keep_null_values>

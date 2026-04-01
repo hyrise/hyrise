@@ -134,8 +134,6 @@ set(
     logical_query_plan/except_node.hpp
     logical_query_plan/export_node.cpp
     logical_query_plan/export_node.hpp
-    logical_query_plan/gather_statistics_node.cpp
-    logical_query_plan/gather_statistics_node.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
@@ -196,6 +194,8 @@ set(
     operators/aggregate_sort.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
+    operators/build.cpp
+    operators/build.hpp
     operators/change_meta_table.cpp
     operators/change_meta_table.hpp
     operators/delete.cpp
@@ -252,6 +252,8 @@ set(
     operators/pqp_utils.hpp
     operators/print.cpp
     operators/print.hpp
+    operators/probe.cpp
+    operators/probe.hpp
     operators/product.cpp
     operators/product.hpp
     operators/projection.cpp

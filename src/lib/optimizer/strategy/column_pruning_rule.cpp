@@ -83,8 +83,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::StaticTable:
     case LQPNodeType::StoredTable:
     case LQPNodeType::Validate:
-    case LQPNodeType::Mock:
-    case LQPNodeType::GatherStatistics: {
+    case LQPNodeType::Mock: {
       for (const auto& expression : node->node_expressions) {
         locally_required_expressions.emplace(expression);
       }

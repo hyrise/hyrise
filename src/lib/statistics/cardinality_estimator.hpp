@@ -23,7 +23,6 @@ class AttributeStatistics;
 class AbstractLQPNode;
 class AggregateNode;
 class AliasNode;
-class GatherStatisticsNode;
 class JoinNode;
 class LimitNode;
 struct OperatorScanPredicate;
@@ -213,9 +212,6 @@ class CardinalityEstimator {
   static std::shared_ptr<TableStatistics> estimate_limit_node(
       const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
-  static std::shared_ptr<TableStatistics> estimate_gather_statistics_node(
-      const GatherStatisticsNode& gather_statistics_node,
-      const std::shared_ptr<TableStatistics>& input_table_statistics);
   /** @} */
 
   /**

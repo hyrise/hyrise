@@ -151,7 +151,6 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
       case LQPNodeType::Sort:
       case LQPNodeType::Validate:
       case LQPNodeType::Window:
-      case LQPNodeType::GatherStatistics:
         num_expected_inputs = 1;
         break;
 

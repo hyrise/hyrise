@@ -83,24 +83,26 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 }
 
 void StoredTableNode::set_prunable_subquery_predicates(
-    const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes) {
-  DebugAssert(std::ranges::all_of(predicate_nodes,
-                                  [](const auto& node) {
-                                    return node.lock() && node.lock()->type == LQPNodeType::Predicate;
-                                  }),
-              "No PredicateNode set as prunable predicate.");
-  _prunable_subquery_predicates = predicate_nodes;
+    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
+  // DebugAssert(std::ranges::all_of(predicate_nodes,
+  //                                 [](const auto& node) {
+  //                                   return node.lock() && node.lock()->type == LQPNodeType::Predicate;
+  //                                 }),
+  //             "No PredicateNode set as prunable predicate.");
+  _prunable_subquery_predicates = predicates;
 }
 
-std::vector<std::shared_ptr<AbstractLQPNode>> StoredTableNode::prunable_subquery_predicates() const {
-  auto subquery_predicates = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-  subquery_predicates.reserve(_prunable_subquery_predicates.size());
-  for (const auto& subquery_predicate_ref : _prunable_subquery_predicates) {
-    const auto& subquery_predicate = subquery_predicate_ref.lock();
-    Assert(subquery_predicate, "Referenced PredicateNode expired. LQP is invalid.");
-    subquery_predicates.emplace_back(subquery_predicate);
-  }
-  return subquery_predicates;
+const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::prunable_subquery_predicates() const {
+  // auto subquery_predicates = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+  // subquery_predicates.reserve(_prunable_subquery_predicates.size());
+  // for (const auto& subquery_predicate_ref : _prunable_subquery_predicates) {
+  //   const auto& subquery_predicate = subquery_predicate_ref.lock();
+  //   Assert(subquery_predicate, "Referenced PredicateNode expired. LQP is invalid.");
+  //   subquery_predicates.emplace_back(subquery_predicate);
+  // }
+  // return subquery_predicates;
+
+  return _prunable_subquery_predicates;
 }
 
 std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
@@ -295,14 +297,11 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
     return false;
   }
 
-  for (auto predicate_idx = size_t{0}; predicate_idx < subquery_predicate_count; ++predicate_idx) {
-    // We cannot check that the PredicateNodes are equal since this equality check recurses into the inputs und we do
-    // not terminate. We have to compare the predicate expressions.
-    if (!expressions_equal_to_expressions_in_different_lqp(
-            prunable_subquery_predicates[predicate_idx]->node_expressions,
-            rhs_prunable_subquery_predicates[predicate_idx]->node_expressions, node_mapping)) {
-      return false;
-    }
+  // We cannot check that the PredicateNodes are equal since this equality check recurses into the inputs und we do
+  // not terminate. We have to compare the predicate expressions.
+  if (!expressions_equal_to_expressions_in_different_lqp(prunable_subquery_predicates, rhs_prunable_subquery_predicates,
+                                                         node_mapping)) {
+    return false;
   }
 
   return true;
