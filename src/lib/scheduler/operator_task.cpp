@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"

@@ -108,8 +108,8 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-std::set<ChunkID> compute_chunk_exclude_list_without_statistics(const PredicatePruningChain& predicate_pruning_chain,
-                                             const std::shared_ptr<StoredTableNode>& stored_table_node) {
+std::set<ChunkID> compute_chunk_exclude_list_without_statistics(
+    const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node) {
   auto pruned_chunk_ids_by_predicate_node_cache =
       std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
                          boost::hash<StoredTableNodePredicateNodePair>>{};
@@ -121,7 +121,8 @@ std::set<ChunkID> compute_chunk_exclude_list_without_statistics(const PredicateP
 std::set<ChunkID> compute_chunk_exclude_list(
     const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node,
     std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node, const bool prune_statistics) {
+                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node,
+    const bool prune_statistics) {
   auto excluded_chunk_ids = std::set<ChunkID>{};
   for (const auto& predicate_node : predicate_pruning_chain) {
     // Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
