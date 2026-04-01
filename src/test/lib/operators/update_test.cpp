@@ -21,8 +21,8 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class OperatorsUpdateTest : public BaseTest {
  public:
   static void SetUpTestCase() {
-    column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-    column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
+    column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
+    column_b = pqp_column_(ColumnID{1}, DataType::Float, "b");
   }
 
   void SetUp() override {

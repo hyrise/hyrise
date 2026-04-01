@@ -209,8 +209,7 @@ TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
 TEST_F(OperatorsProjectionTest, SetParameters) {
   const auto table_scan_a = create_table_scan(table_wrapper_b, ColumnID{1}, PredicateCondition::GreaterThan, 5);
 
-  const auto subquery_expression =
-      std::make_shared<PQPSubqueryExpression>(table_scan_a, DataType::Int, false, PQPSubqueryExpression::Parameters{});
+  const auto subquery_expression = pqp_subquery_(table_scan_a, DataType::Int);
 
   // Hint: To set parameters, operators are not allowed to have executed.
   //       Therefore, we deep copy table_wrapper_a & subquery_expression to reset their execution state.
