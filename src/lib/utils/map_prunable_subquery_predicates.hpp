@@ -3,12 +3,12 @@
 #include <memory>
 #include <vector>
 
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "expression/abstract_predicate_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/between_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -84,7 +84,7 @@ void map_prunable_subquery_predicates(Mapping& mapping) {
             if constexpr (std::is_same_v<TargetType, AbstractOperator>) {
               // LQP to PQP translation: Create a PQPColumnExpression that points to the original ColumnID.
               adjusted_arguments[argument_id] =
-                  pqp_column_(column_expression.original_column_id, column_expression.data_type(), true,
+                  pqp_column_(column_expression.original_column_id, column_expression.data_type(),
                               column_expression.as_column_name());
             } else {
               // LQP copy: Copy LQPColumnExpression.
@@ -100,7 +100,7 @@ void map_prunable_subquery_predicates(Mapping& mapping) {
           Assert(target_node_it != mapping.end(),
                  "Could not find '" + subquery.lqp->description() + "', mapping is invalid.");
           if constexpr (std::is_same_v<TargetType, AbstractOperator>) {
-            adjusted_arguments[argument_id] = pqp_subquery_(target_node_it->second, subquery.data_type(), true);
+            adjusted_arguments[argument_id] = pqp_subquery_(target_node_it->second, subquery.data_type());
           } else {
             adjusted_arguments[argument_id] = lqp_subquery_(target_node_it->second);
           }
@@ -110,14 +110,16 @@ void map_prunable_subquery_predicates(Mapping& mapping) {
         const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(*predicate);
         const auto predicate_condition = predicate_expression.predicate_condition;
         const auto is_binary_predicate = is_binary_numeric_predicate_condition(predicate_condition);
-        Assert(is_binary_predicate || is_between_predicate_condition(predicate_condition), "Unsupported predicate condition.");
+        Assert(is_binary_predicate || is_between_predicate_condition(predicate_condition),
+               "Unsupported predicate condition.");
         Assert(argument_count == (is_binary_predicate ? 2 : 3), "Wrong number of arguments for predicate.");
         if (is_binary_predicate) {
-          adjusted_predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, adjusted_arguments[0],  adjusted_arguments[1]);
+          adjusted_predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, adjusted_arguments[0],
+                                                                           adjusted_arguments[1]);
 
         } else {
-
-        adjusted_predicate = std::make_shared<BetweenExpression>(predicate_condition, adjusted_arguments[0],  adjusted_arguments[1], adjusted_arguments[2]);
+          adjusted_predicate = std::make_shared<BetweenExpression>(predicate_condition, adjusted_arguments[0],
+                                                                   adjusted_arguments[1], adjusted_arguments[2]);
         }
       }
       mapped_prunable_subquery_predicates.emplace_back(adjusted_predicate);

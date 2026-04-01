@@ -297,12 +297,12 @@ TEST_F(OperatorsGetTableTest, Copy) {
   const auto get_table_c = std::make_shared<GetTable>("int_int_float");
   const auto get_table_d = std::make_shared<GetTable>("int_int_float_aliased");
   const auto table_scan_a =
-      std::make_shared<TableScan>(get_table_d, equals_(pqp_column_(ColumnID{1}, DataType::Int, false, "x"), 10));
-  const auto projection = std::make_shared<Projection>(
-      table_scan_a, expression_vector(pqp_column_(ColumnID{0}, DataType::Float, false, "z")));
+      std::make_shared<TableScan>(get_table_d, equals_(pqp_column_(ColumnID{1}, DataType::Int, "x"), 10));
+  const auto projection =
+      std::make_shared<Projection>(table_scan_a, expression_vector(pqp_column_(ColumnID{0}, DataType::Float, "z")));
 
-  const auto scan_column = pqp_column_(ColumnID{2}, DataType::Float, false, "c");
-  const auto predicate = equals_(scan_column, pqp_subquery_(projection, DataType::Float, true));
+  const auto scan_column = pqp_column_(ColumnID{2}, DataType::Float, "c");
+  const auto predicate = equals_(scan_column, pqp_subquery_(projection, DataType::Float));
   const auto table_scan_b = std::make_shared<TableScan>(get_table_c, predicate);
   get_table_c->set_prunable_subquery_predicates({predicate});
 
@@ -312,7 +312,7 @@ TEST_F(OperatorsGetTableTest, Copy) {
   const auto& prunable_subquery_scans = get_table_c_copy->prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
   const auto& projection_copy = operator_mapping.at(projection.get());
-  EXPECT_EQ(*prunable_subquery_scans.front(), *equals_(scan_column, pqp_subquery_(projection_copy, DataType::Float, true)));
+  EXPECT_EQ(*prunable_subquery_scans.front(), *equals_(scan_column, pqp_subquery_(projection_copy, DataType::Float)));
 
   // Do not allow deep copies where prunable subqueries are not part of the PQP.
   EXPECT_THROW(get_table_c->deep_copy(), std::logic_error);
@@ -391,8 +391,8 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
 
-  const auto predicate_column = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-  const auto predicate = not_equals_(predicate_column, pqp_subquery_(table_wrapper, DataType::Int, false));
+  const auto predicate_column = pqp_column_(ColumnID{0}, DataType::Int, "a");
+  const auto predicate = not_equals_(predicate_column, pqp_subquery_(table_wrapper, DataType::Int));
   get_table->set_prunable_subquery_predicates({predicate});
 
   execute_all({table_wrapper, get_table});
@@ -414,8 +414,8 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
 
-  const auto predicate_column = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-  const auto predicate = not_equals_(predicate_column, pqp_subquery_(table_wrapper, DataType::Int, false));
+  const auto predicate_column = pqp_column_(ColumnID{0}, DataType::Int, "a");
+  const auto predicate = not_equals_(predicate_column, pqp_subquery_(table_wrapper, DataType::Int));
   get_table->set_prunable_subquery_predicates({predicate});
 
   EXPECT_THROW(get_table->execute(), std::logic_error);

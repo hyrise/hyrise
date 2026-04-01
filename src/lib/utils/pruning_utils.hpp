@@ -23,12 +23,13 @@ using StoredTableNodePredicateNodePair = std::pair<std::shared_ptr<StoredTableNo
 std::set<ChunkID> compute_chunk_exclude_list(
     const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node,
     std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate, const bool prune_statistics = true);
+                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate,
+    const bool prune_statistics = true);
 
 // Convenience version when the result cache is not used by the caller for future calls, e.g., when there is only a
 // single PredicatePruningChain.
-std::set<ChunkID> compute_chunk_exclude_list_without_statistics(const PredicatePruningChain& predicate_pruning_chain,
-                                             const std::shared_ptr<StoredTableNode>& stored_table_node);
+std::set<ChunkID> compute_chunk_exclude_list_without_statistics(
+    const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node);
 
 std::shared_ptr<TableStatistics> prune_table_statistics(const TableStatistics& old_statistics,
                                                         OperatorScanPredicate predicate, size_t num_rows_pruned);

@@ -620,14 +620,13 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     const auto column_id = find_expression_idx(*expression, output_expressions);
     if (column_id) {
       expression = std::make_shared<PQPColumnExpression>(*column_id, expression->data_type(),
-                                                         node->is_column_nullable(*column_id),
                                                          output_expressions[*column_id]->as_column_name());
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
     // Resolve COUNT(*)
     if (WindowFunctionExpression::is_count_star(*expression)) {
-      const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
+      const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, "*");
       expression = std::make_shared<WindowFunctionExpression>(WindowFunction::Count, star);
       return ExpressionVisitation::DoNotVisitArguments;
     }
@@ -675,10 +674,8 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       // is undefined and obtaining it will result in a runtime error.
       if (subquery_expression->lqp->output_expressions().size() == 1) {
         const auto subquery_data_type = subquery_expression->data_type();
-        const auto subquery_nullable = subquery_expression->lqp->is_column_nullable(ColumnID{0});
 
-        expression = std::make_shared<PQPSubqueryExpression>(subquery_pqp, subquery_data_type, subquery_nullable,
-                                                             subquery_parameters);
+        expression = std::make_shared<PQPSubqueryExpression>(subquery_pqp, subquery_data_type, subquery_parameters);
       } else {
         expression = std::make_shared<PQPSubqueryExpression>(subquery_pqp, subquery_parameters);
       }

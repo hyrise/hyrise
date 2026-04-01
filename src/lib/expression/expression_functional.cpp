@@ -47,8 +47,8 @@ std::shared_ptr<LQPColumnExpression> lqp_column_(const std::shared_ptr<const Abs
 }
 
 std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type,
-                                                 const bool nullable, const std::string& column_name) {
-  return std::make_shared<PQPColumnExpression>(column_id, data_type, nullable, column_name);
+                                                 const std::string& column_name) {
+  return std::make_shared<PQPColumnExpression>(column_id, data_type, column_name);
 }
 
 std::shared_ptr<WindowFunctionExpression> count_star_(const std::shared_ptr<AbstractLQPNode>& lqp_node) {

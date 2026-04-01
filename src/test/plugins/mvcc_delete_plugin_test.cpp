@@ -24,7 +24,7 @@ namespace hyrise {
 class MvccDeletePluginTest : public BaseTest {
  public:
   static void SetUpTestCase() {
-    _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+    _column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
   }
 
   void SetUp() override {

@@ -20,12 +20,11 @@
 namespace hyrise {
 
 PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp,
-                                             const DataType data_type, const bool nullable,
-                                             const std::vector<std::pair<ParameterID, ColumnID>>& init_parameters)
+                                             const DataType data_type, const Parameters& init_parameters)
     : AbstractExpression(ExpressionType::PQPSubquery, {}),
       pqp(init_pqp),
       parameters(init_parameters),
-      _data_type_info(std::in_place, data_type, nullable) {}
+      _data_type(data_type) {}
 
 PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp,
                                              const Parameters& init_parameters)
@@ -33,18 +32,17 @@ PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOpera
 
 std::shared_ptr<AbstractExpression> PQPSubqueryExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  if (_data_type_info) {
-    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), _data_type_info->data_type,
-                                                   _data_type_info->nullable, parameters);
+  if (_data_type) {
+    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), *_data_type, parameters);
   }
 
   return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), parameters);
 }
 
 DataType PQPSubqueryExpression::data_type() const {
-  Assert(_data_type_info,
+  Assert(_data_type,
          "Cannot determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
-  return _data_type_info->data_type;
+  return *_data_type;
 }
 
 bool PQPSubqueryExpression::is_correlated() const {
@@ -78,8 +76,5 @@ size_t PQPSubqueryExpression::_shallow_hash() const {
 bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   Fail("Nullability 'on lqp' should never be queried from a PQPSelect");
 }
-
-PQPSubqueryExpression::DataTypeInfo::DataTypeInfo(const DataType init_data_type, const bool init_nullable)
-    : data_type(init_data_type), nullable(init_nullable) {}
 
 }  // namespace hyrise
