@@ -27,7 +27,7 @@ class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<AbstractSegment>>;
 using Indexes = pmr_vector<std::shared_ptr<AbstractChunkIndex>>;
-using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
+using ChunkPruningStatistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>;
 
 /**
  * Chunks are horizontal partitions of a table. They stores the table's data segment by segment. Optionally, mostly
@@ -58,7 +58,7 @@ class Chunk : private Noncopyable {
   bool is_mutable() const;
 
   // Atomically replaces the current segment at column_id with the passed segment.
-  void replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment);
+  void replace_segment(const ColumnID column_id, const std::shared_ptr<AbstractSegment>& segment);
 
   // Returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t)).
   ColumnCount column_count() const;
@@ -126,8 +126,8 @@ class Chunk : private Noncopyable {
    * To perform Chunk pruning, a Chunk can be associated with statistics.
    * @{
    */
-  const std::optional<ChunkPruningStatistics>& pruning_statistics() const;
-  void set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics);
+  std::shared_ptr<const ChunkPruningStatistics> pruning_statistics() const;
+  void set_pruning_statistics(const std::shared_ptr<ChunkPruningStatistics>& pruning_statistics);
   /** @} */
 
   /**
@@ -193,7 +193,7 @@ class Chunk : private Noncopyable {
    * Inserts are committed/rolled back, the chunk is immediately marked.
    */
   void mark_as_full();
-  void try_set_immutable();
+  bool try_set_immutable();
 
  private:
   std::vector<std::shared_ptr<const AbstractSegment>> _get_segments_for_ids(
@@ -203,7 +203,7 @@ class Chunk : private Noncopyable {
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
   Indexes _indexes;
-  std::optional<ChunkPruningStatistics> _pruning_statistics;
+  std::shared_ptr<ChunkPruningStatistics> _pruning_statistics;
   std::atomic_bool _is_mutable{true};
   std::atomic_bool _reached_target_size{false};
   std::vector<SortColumnDefinition> _sorted_by;

@@ -26,7 +26,7 @@ TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyCo
   Assert(!_columns.empty(), "Did not expect useless constraint.");
   Assert(key_type != KeyConstraintType::PRIMARY_KEY ||
              (last_validated_on == MAX_COMMIT_ID && last_invalidated_on == MAX_COMMIT_ID),
-         "A key constraint of type PRIMARY_KEY must be schema-given.");
+         "A key constraint of type PRIMARY_KEY must be genuine.");
 }
 
 TableKeyConstraint::TableKeyConstraint(const TableKeyConstraint& other)
@@ -96,14 +96,14 @@ CommitID TableKeyConstraint::last_invalidated_on() const {
 }
 
 void TableKeyConstraint::revalidated_on(const CommitID revalidation_commit_id) const {
-  // Do not revalidate a schema-given constraint as this would make it spurious.
+  // Do not revalidate a genuine constraint as this would make it spurious.
   Assert(can_become_invalid(), "Cannot invalidate UCC that cannot become invalid.");
 
   set_atomic_max(_last_validated_on, revalidation_commit_id);
 }
 
 void TableKeyConstraint::invalidated_on(const CommitID invalidation_commit_id) const {
-  // Do not revalidate a schema-given constraint as this would make it spurious.
+  // Do not revalidate a genuine constraint as this would make it spurious.
   Assert(can_become_invalid(), "Cannot invalidate UCC that cannot become invalid.");
 
   set_atomic_max(_last_invalidated_on, invalidation_commit_id);
