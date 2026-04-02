@@ -44,6 +44,7 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _scale_factor(scale_factor),
       _clustering_configuration(clustering_configuration) {
   _items.resize(22);
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 }
 
