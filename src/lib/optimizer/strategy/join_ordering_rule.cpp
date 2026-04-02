@@ -56,7 +56,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
   caching_cost_estimator->cardinality_estimator->guarantee_join_graph(*join_graph);
 
   /**
-   * Select and call the actual join ordering algorithm. Simple heuristic: Use DpCcp for any query with less than
+   * Select and call the actual join ordering algorithm. Simple heuristic: Use DPccp for any query with less than
    * MIN_VERTICES_FOR_HEURISTIC tables and GreedyOperatorOrdering for everything more complex.
    */
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
@@ -66,7 +66,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
     // A JoinGraph with only one vertex is no actual join and needs no ordering.
     result_lqp = lqp;
   } else if (vertex_count < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
-    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);
+    result_lqp = DPccp{}(*join_graph, caching_cost_estimator);
   } else {
     result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
   }

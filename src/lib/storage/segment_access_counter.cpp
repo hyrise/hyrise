@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "utils/assert.hpp"
@@ -82,7 +82,7 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const Abstrac
 // acts as the transition function.
 SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const AbstractPosList& positions) {
   // There are five possible inputs
-  enum class Input { Zero, One, Positive, NegativeOne, Negative };
+  enum class Input : uint8_t { Zero, One, Positive, NegativeOne, Negative };
 
   // clang-format off
   constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS{{

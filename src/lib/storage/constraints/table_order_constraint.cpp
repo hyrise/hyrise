@@ -23,7 +23,7 @@ TableOrderConstraint::TableOrderConstraint(std::vector<ColumnID>&& ordering_colu
   Assert(!_ordering_columns.empty(), "Constant columns are currently not considered.");
   if constexpr (HYRISE_DEBUG) {
     for (const auto column : _ordering_columns) {
-      Assert(std::find(_ordered_columns.begin(), _ordered_columns.end(), column) == _ordered_columns.end(),
+      Assert(std::ranges::find(_ordered_columns, column) == _ordered_columns.end(),
              "Ordering and ordered columns must be disjoint.");
     }
   }

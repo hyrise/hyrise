@@ -32,7 +32,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
@@ -126,7 +125,7 @@ void AbstractTableGenerator::generate_and_store() {
             auto last_value = std::optional<ColumnDataType>{};
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto& segment = table->get_chunk(chunk_id)->get_segment(sort_column_id);
-              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
+              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto& end) {
                 while (it != end) {
                   if (it->is_null()) {
                     if (last_value) {
@@ -301,9 +300,9 @@ void AbstractTableGenerator::generate_and_store() {
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (auto& table_info_by_name_pair : table_info_by_name) {
+    for (const auto& table_info_by_name_pair : table_info_by_name) {
       const auto& table_name = table_info_by_name_pair.first;
-      auto& table_info = table_info_by_name_pair.second;
+      const auto& table_info = table_info_by_name_pair.second;
 
       const auto add_table = [&]() {
         auto per_table_timer = Timer{};
@@ -458,11 +457,16 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
     const std::string& cache_directory) {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
-  for (const auto& table_file : list_directory(cache_directory)) {
-    const auto table_name = table_file.stem();
+  for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
+    const auto& file_path = table_file.path();
+    if (!table_file.is_regular_file() || file_path.extension() != ".bin") {
+      continue;
+    }
+
+    const auto table_name = file_path.stem();
     auto table_info = BenchmarkTableInfo{};
     table_info.loaded_from_binary = true;
-    table_info.binary_file_path = table_file;
+    table_info.binary_file_path = file_path;
     table_info_by_name[table_name] = std::move(table_info);
   }
 

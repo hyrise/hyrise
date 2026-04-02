@@ -125,8 +125,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         node->right_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     right_input_adapted = right_result.adapted_lqp;
     for (const auto& expression : right_result.required_output_expressions) {
-      const auto find_it =
-          std::find(result.required_output_expressions.cbegin(), result.required_output_expressions.cend(), expression);
+      const auto find_it = std::ranges::find(result.required_output_expressions, expression);
       if (find_it == result.required_output_expressions.cend()) {
         result.required_output_expressions.emplace_back(expression);
       }
@@ -154,8 +153,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         result.join_predicates.insert(result.join_predicates.end(), join_predicates.begin(), join_predicates.end());
         for (const auto& join_predicate : join_predicates) {
           const auto& expression = join_predicate->right_operand();
-          auto find_it = std::find(result.required_output_expressions.begin(), result.required_output_expressions.end(),
-                                   expression);
+          auto find_it = std::ranges::find(result.required_output_expressions, expression);
           if (find_it == result.required_output_expressions.end()) {
             result.required_output_expressions.emplace_back(expression);
           }
@@ -380,7 +378,7 @@ std::pair<bool, size_t> SubqueryToJoinRule::assess_correlated_parameter_usage(
 
         if (const auto parameter_expression =
                 std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
-          if (parameter_mapping.find(parameter_expression->parameter_id) != parameter_mapping.end()) {
+          if (parameter_mapping.contains(parameter_expression->parameter_id)) {
             is_correlated = true;
           }
         }
@@ -496,9 +494,8 @@ std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
   auto original_group_by_expressions =
       ExpressionUnorderedSet(group_by_expressions.cbegin(), group_by_expressions.cend());
 
-  const auto not_found_it = original_group_by_expressions.cend();
   for (const auto& expression : required_output_expressions) {
-    if (original_group_by_expressions.find(expression) == not_found_it) {
+    if (!original_group_by_expressions.contains(expression)) {
       group_by_expressions.emplace_back(expression);
     }
   }
@@ -519,9 +516,8 @@ std::shared_ptr<AliasNode> SubqueryToJoinRule::adapt_alias_node(
   auto aliases = node->aliases;
   auto original_expressions = ExpressionUnorderedSet(expressions.cbegin(), expressions.cend());
 
-  const auto not_found_it = original_expressions.cend();
   for (const auto& expression : required_output_expressions) {
-    if (original_expressions.find(expression) == not_found_it) {
+    if (!original_expressions.contains(expression)) {
       expressions.emplace_back(expression);
       aliases.emplace_back(expression->as_column_name());
     }
@@ -538,9 +534,8 @@ std::shared_ptr<ProjectionNode> SubqueryToJoinRule::adapt_projection_node(
   auto expressions = node->node_expressions;
   auto original_expressions = ExpressionUnorderedSet(expressions.cbegin(), expressions.cend());
 
-  const auto not_found_it = original_expressions.cend();
   for (const auto& expression : required_output_expressions) {
-    if (original_expressions.find(expression) == not_found_it) {
+    if (!original_expressions.contains(expression)) {
       expressions.emplace_back(expression);
     }
   }
@@ -655,12 +650,12 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
       // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the
       // primary join predicate.
       // Check that one exists, but rely on join predicate ordering rule to move it to the front.
-      if (std::find_if(
+      if (std::none_of(
               join_predicates.begin(), join_predicates.end(),
               [](const std::shared_ptr<AbstractExpression>& expression) {
                 return std::static_pointer_cast<AbstractPredicateExpression>(expression)->predicate_condition ==
                        PredicateCondition::Equals;
-              }) == join_predicates.end()) {
+              })) {
         return LQPVisitation::VisitInputs;
       }
 

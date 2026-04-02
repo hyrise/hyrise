@@ -108,15 +108,7 @@ struct RowID {
     return chunk_offset == INVALID_CHUNK_OFFSET;
   }
 
-  // Joins need to use RowIDs as keys for maps.
-  bool operator<(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) < std::tie(other.chunk_id, other.chunk_offset);
-  }
-
-  // Useful when comparing a row ID to NULL_ROW_ID
-  bool operator==(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
-  }
+  auto operator<=>(const RowID&) const = default;
 
   friend std::ostream& operator<<(std::ostream& stream, const RowID& row_id) {
     stream << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
@@ -141,7 +133,7 @@ constexpr CommitID UNSET_COMMIT_ID = CommitID{0};
 // is used for a transaction is 1.
 constexpr CommitID INITIAL_COMMIT_ID = CommitID{1};
 // The last commit id is reserved for uncommitted changes. It is also used to indicate that a `TableKeyConstraint` is
-// schema-given.
+// genuine.
 constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
 
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
@@ -180,6 +172,8 @@ enum class PredicateCondition {
   NotIn,
   Like,
   NotLike,
+  LikeInsensitive,
+  NotLikeInsensitive,
   IsNull,
   IsNotNull
 };

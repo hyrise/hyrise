@@ -74,7 +74,7 @@ bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<Abstrac
 
   auto first_less_than_second = false;
   boost::apply_visitor(
-      [&](const auto first_value) {
+      [&](const auto& first_value) {
         const auto second_value = boost::get<decltype(first_value)>(second_value_expression.value);
         first_less_than_second = first_value < second_value;
       },

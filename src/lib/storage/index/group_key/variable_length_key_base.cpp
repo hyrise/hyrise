@@ -1,6 +1,7 @@
 #include "variable_length_key_base.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -33,7 +34,7 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t other) {
   const auto* const raw_other = reinterpret_cast<VariableLengthKeyWord*>(&other);
   auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(other)), _size);
   for (auto index = CompositeKeyLength{0}; index < operation_width; ++index) {
-    if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+    if constexpr (std::endian::native == std::endian::little) {
       _data[index] |= raw_other[index];
     } else {
       _data[_size - 1 - index] |= raw_other[8 - 1 - index];
@@ -46,10 +47,10 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
   static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
   const auto byte_shift = shift / CHAR_BIT;
   const auto bit_shift = static_cast<CompositeKeyLength>(shift % CHAR_BIT);
-  if (byte_shift >= _size) {
+  if (static_cast<CompositeKeyLength>(byte_shift) >= _size) {
     std::fill(_data, _data + _size, static_cast<VariableLengthKeyWord>(0u));
   } else {
-    if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+    if constexpr (std::endian::native == std::endian::little) {
       // perform shifting
       for (auto index = _size - 1; index > byte_shift - 1; --index) {
         const auto [value, borrow] = shift_left_with_borrow(_data[index - byte_shift], bit_shift);
@@ -104,7 +105,7 @@ bool operator<(const VariableLengthKeyBase& left, const VariableLengthKeyBase& r
     return left._size < right._size;
   }
 
-  if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+  if constexpr (std::endian::native == std::endian::little) {
     // compare right to left since most significant byte is on the right
     // memcmp can not be used since it performs lexical comparison
     // loop overflows after iteration with i == 0, so i becomes greater than left._size
@@ -137,7 +138,7 @@ std::ostream& operator<<(std::ostream& stream, const VariableLengthKeyBase& key)
   stream << std::hex << std::setfill('0');
   const auto* const raw_data = reinterpret_cast<uint8_t*>(key._data);
 
-  if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+  if constexpr (std::endian::native == std::endian::little) {
     for (auto key_id = CompositeKeyLength{1}; key_id <= key._size; ++key_id) {
       stream << std::setw(2) << +raw_data[key._size - key_id];
       if (key_id != key._size) {

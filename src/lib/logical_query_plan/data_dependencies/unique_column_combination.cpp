@@ -12,8 +12,8 @@
 
 namespace hyrise {
 
-UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions)
-    : expressions{std::move(init_expressions)} {
+UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions, bool is_genuine)
+    : expressions{std::move(init_expressions)}, _is_genuine{is_genuine} {
   Assert(!expressions.empty(), "UniqueColumnCombination cannot be empty.");
 }
 
@@ -21,13 +21,22 @@ bool UniqueColumnCombination::operator==(const UniqueColumnCombination& rhs) con
   if (expressions.size() != rhs.expressions.size()) {
     return false;
   }
-  return std::all_of(expressions.cbegin(), expressions.cend(), [&rhs](const auto column_expression) {
+
+  return std::ranges::all_of(expressions, [&rhs](const auto& column_expression) {
     return rhs.expressions.contains(column_expression);
   });
 }
 
 bool UniqueColumnCombination::operator!=(const UniqueColumnCombination& rhs) const {
   return !(rhs == *this);
+}
+
+bool UniqueColumnCombination::is_genuine() const {
+  return _is_genuine;
+}
+
+void UniqueColumnCombination::set_genuine() const {
+  _is_genuine = true;
 }
 
 size_t UniqueColumnCombination::hash() const {

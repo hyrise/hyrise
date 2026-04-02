@@ -421,7 +421,7 @@ class Sort::SortImpl {
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
       std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) {
+                       [comparator](const RowIDValuePair& lhs, const RowIDValuePair& rhs) {
                          return comparator(lhs.second, rhs.second);
                        });
     };
@@ -445,7 +445,7 @@ class Sort::SortImpl {
     auto pos_list = RowIDPosList{};
     pos_list.reserve(_row_id_value_vector.size());
     for (const auto& [row_id, _] : _row_id_value_vector) {
-      pos_list.emplace_back(row_id);
+      pos_list.push_back(row_id);
     }
     temporary_result_writing_time = timer.lap();
     return pos_list;

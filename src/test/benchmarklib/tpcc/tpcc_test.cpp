@@ -222,9 +222,9 @@ TEST_F(TPCCTest, NewOrder) {
   // Generate random NewOrders until we have one without unused item IDs and where both local and remote order lines
   // occur
   while (new_order.order_lines.back().ol_i_id == TPCCNewOrder::UNUSED_ITEM_ID ||
-         std::find_if(new_order.order_lines.begin(), new_order.order_lines.end(), [&](const auto& order_line) {
+         std::none_of(new_order.order_lines.begin(), new_order.order_lines.end(), [&](const auto& order_line) {
            return order_line.ol_supply_w_id != new_order.w_id;
-         }) == new_order.order_lines.end()) {
+         })) {
     new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
   }
 

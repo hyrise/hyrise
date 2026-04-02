@@ -105,9 +105,9 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
     const auto& flat_conjunction = flat_disjunction_and_conjunction[conjunction_idx];
 
     for (auto common_iter = common_conjunctions.begin(); common_iter != common_conjunctions.end();) {
-      if (std::find_if(flat_conjunction.begin(), flat_conjunction.end(), [&](const auto& expression) {
+      if (std::ranges::none_of(flat_conjunction, [&](const auto& expression) {
             return *expression == *(*common_iter);
-          }) == flat_conjunction.end()) {
+          })) {
         common_iter = common_conjunctions.erase(common_iter);
       } else {
         ++common_iter;
@@ -119,9 +119,9 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
   //         flat_disjunction_and_conjunction = [[c], [d, e]]
   for (auto& flat_conjunction : flat_disjunction_and_conjunction) {
     for (auto expression_iter = flat_conjunction.begin(); expression_iter != flat_conjunction.end();) {
-      if (std::find_if(common_conjunctions.begin(), common_conjunctions.end(), [&](const auto& expression) {
+      if (std::ranges::any_of(common_conjunctions, [&](const auto& expression) {
             return *expression == *(*expression_iter);
-          }) != common_conjunctions.end()) {
+          })) {
         expression_iter = flat_conjunction.erase(expression_iter);
       } else {
         ++expression_iter;
@@ -321,14 +321,14 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       return other_argument == avg_argument || (other_argument && *other_argument == *avg_argument);
     };
 
-    auto sum_it = std::find_if(sums.begin(), sums.end(), finder);
-    auto count_it = std::find_if(counts.begin(), counts.end(), finder);
+    auto sum_it = std::ranges::find_if(sums, finder);
+    auto count_it = std::ranges::find_if(counts, finder);
     if (sum_it != sums.end() && count_it != counts.end()) {
       // Found matching SUM and COUNT (either COUNT(a) or COUNT(*) for a non-NULL a) - add it to the replacements list.
       // Notes on casting:
       //  As stated in expression_common_type, the division of integer types will result in an integer result as well.
-      //  Since COUNT results are always of type integer, the calculated average depends on the data type of SUM,
-      //  which can be floating type or integer. To guarantee correct results, we thus cast to type double.
+      //  Since COUNT results are always of type integer, the calculated average depends on the data type of SUM, which
+      //  can be floating type or integer. To guarantee correct results, we thus cast to type double.
       replacements[avg_expression_ptr] = div_(cast_(sum_it->get(), DataType::Double), count_it->get());
     }
   }
@@ -348,11 +348,10 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   {
     // Remove the AVG() expression from the AggregateNode
     auto& expressions = aggregate_node->node_expressions;
-    expressions.erase(std::remove_if(expressions.begin(), expressions.end(),
-                                     [&](const auto& expression) {
-                                       return replacements.find(expression) != replacements.end();
-                                     }),
-                      expressions.end());
+    const auto [erase_begin, erase_end] = std::ranges::remove_if(expressions, [&](const auto& expression) {
+      return replacements.contains(expression);
+    });
+    expressions.erase(erase_begin, erase_end);
   }
 
   // Add a ProjectionNode that calculates AVG(a) as SUM(a)/COUNT(a).

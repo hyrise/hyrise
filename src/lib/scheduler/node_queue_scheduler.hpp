@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <memory>
-#include <thread>
 #include <vector>
 
 #include "abstract_scheduler.hpp"
@@ -35,7 +34,7 @@ namespace hyrise {
  * TaskQueue.
  *
  * Note: currently, TaskQueues are not explicitly allocated on a NUMA node. This means most workers will frequently
- * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1]. 
+ * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1].
  *
  *  [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  *
@@ -51,18 +50,18 @@ class UidAllocator;
 class NodeQueueScheduler final : public AbstractScheduler {
  public:
   NodeQueueScheduler();
-  ~NodeQueueScheduler() final;
+  ~NodeQueueScheduler() override final;
 
   /**
    * Create a TaskQueue on every node and a worker for every core.
    */
-  void begin() final;
+  void begin() override final;
 
-  void finish() final;
+  void finish() override final;
 
-  bool active() const final;
+  bool active() const override final;
 
-  const std::vector<std::shared_ptr<TaskQueue>>& queues() const final;
+  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override final;
 
   const std::vector<std::shared_ptr<Worker>>& workers() const;
 
@@ -74,7 +73,7 @@ class NodeQueueScheduler final : public AbstractScheduler {
    */
   NodeID determine_queue_id(const NodeID preferred_node_id) const;
 
-  void wait_for_all_tasks() final;
+  void wait_for_all_tasks() override final;
 
   const std::atomic_int64_t& active_worker_count() const;
 
@@ -89,9 +88,9 @@ class NodeQueueScheduler final : public AbstractScheduler {
    * @param priority
    */
   void _schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                 SchedulePriority priority = SchedulePriority::Default) final;
+                 SchedulePriority priority = SchedulePriority::Default) override final;
 
-  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override final;
 
  private:
   std::atomic<TaskID::base_type> _task_counter{0};

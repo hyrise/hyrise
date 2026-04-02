@@ -18,6 +18,7 @@
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "optimizer/strategy/abstract_rule.hpp"
 #include "predicate_node.hpp"
 #include "types.hpp"
 #include "update_node.hpp"
@@ -230,7 +231,8 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
 
   const auto output_relation_count = output_relations.size();
   for (auto output_idx = size_t{0}; output_idx < output_relation_count; ++output_idx) {
-    output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
+    output_relations[output_idx] =
+        LQPOutputRelation{.output = outputs[output_idx], .input_side = input_sides[output_idx]};
   }
 
   return output_relations;
@@ -287,17 +289,21 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
+std::pair<bool, bool> AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
   Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
   const auto& unique_column_combinations = this->unique_column_combinations();
   if (unique_column_combinations.empty()) {
-    return false;
+    return {false, false};
   }
 
-  return contains_matching_unique_column_combination(unique_column_combinations, expressions);
+  const auto existing_ucc = find_ucc(unique_column_combinations, expressions);
+  if (existing_ucc == unique_column_combinations.end()) {
+    return {false, false};
+  }
+  return {true, existing_ucc->is_genuine()};
 }
 
 bool AbstractLQPNode::has_matching_od(
@@ -351,7 +357,7 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
     for (const auto& fd : non_trivial_fds) {
-      auto [_, inserted] = fds.insert(fd);
+      const auto [_, inserted] = fds.insert(fd);
       Assert(inserted, "FDs with the same set of determinant expressions should be merged.");
 
       for (const auto& fd_determinant_expression : fd.determinants) {
@@ -360,10 +366,10 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
         Assert(!is_column_nullable(get_column_id(*fd_determinant_expression)),
                "Expected FD's determinant expressions to be non-nullable.");
       }
-      Assert(std::all_of(fd.dependents.cbegin(), fd.dependents.cend(),
-                         [&output_expressions_set](const auto& fd_dependent_expression) {
-                           return output_expressions_set.contains(fd_dependent_expression);
-                         }),
+      Assert(std::ranges::all_of(fd.dependents,
+                                 [&output_expressions_set](const auto& fd_dependent_expression) {
+                                   return output_expressions_set.contains(fd_dependent_expression);
+                                 }),
              "Expected the FD's dependent expressions to be a subset of the node's output expressions.");
     }
   }
@@ -445,7 +451,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
 }
 
 void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
-  const auto iter = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) {
+  const auto iter = std::ranges::find_if(_outputs, [&](const auto& other) {
     /**
      * HACK!
      *  Normally we'd just check `&output == other.lock().get()` here.
@@ -457,7 +463,7 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
      * auto node_b = Node::make(..., node_a)
      *
      * node_b.reset(); // node_b::~AbstractLQPNode() will call `node_a.remove_output_pointer(node_b)`
-     *                 // But we can't lock node_b anymore, since its ref count is already 0
+     *                 // But we cannot lock node_b anymore, since its ref count is already 0.
      */
     return &output == other.lock().get() || other.expired();
   });

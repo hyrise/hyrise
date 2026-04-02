@@ -113,7 +113,7 @@ void FixedStringVector::erase(const FixedStringIterator<false> start, const Fixe
   }
 
   auto iter = _chars.begin();
-  std::advance(iter, _chars.size() - count * _string_length);
+  std::advance(iter, _chars.size() - (count * _string_length));
   _chars.erase(iter, _chars.end());
   _size -= count;
 }

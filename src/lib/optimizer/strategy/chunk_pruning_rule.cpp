@@ -298,8 +298,7 @@ std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::
     }
 
     auto intersection = std::set<ChunkID>{};
-    std::set_intersection(chunk_id_set.begin(), chunk_id_set.end(), current_chunk_id_set.begin(),
-                          current_chunk_id_set.end(), std::inserter(intersection, intersection.end()));
+    std::ranges::set_intersection(chunk_id_set, current_chunk_id_set, std::inserter(intersection, intersection.end()));
     chunk_id_set = std::move(intersection);
   }
 

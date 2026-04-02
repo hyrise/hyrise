@@ -1,4 +1,4 @@
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "base_test.hpp"
 #include "operators/table_scan/sorted_segment_search.hpp"

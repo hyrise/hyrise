@@ -51,6 +51,34 @@ pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
 
 namespace hyrise {
 
+ColumnDataDistribution ColumnDataDistribution::make_uniform_config(const double min, const double max) {
+  auto config = ColumnDataDistribution{};
+  config.min_value = min;
+  config.max_value = max;
+  config.num_different_values = static_cast<int>(std::floor(max - min));
+  return config;
+}
+
+ColumnDataDistribution ColumnDataDistribution::make_pareto_config(const double pareto_scale,
+                                                                  const double pareto_shape) {
+  auto config = ColumnDataDistribution{};
+  config.pareto_scale = pareto_scale;
+  config.pareto_shape = pareto_shape;
+  config.distribution_type = DataDistributionType::Pareto;
+  return config;
+}
+
+ColumnDataDistribution ColumnDataDistribution::make_skewed_normal_config(const double skew_location,
+                                                                         const double skew_scale,
+                                                                         const double skew_shape) {
+  auto config = ColumnDataDistribution{};
+  config.skew_location = skew_location;
+  config.skew_scale = skew_scale;
+  config.skew_shape = skew_shape;
+  config.distribution_type = DataDistributionType::NormalSkewed;
+  return config;
+}
+
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) const {

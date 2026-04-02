@@ -12,6 +12,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 
@@ -28,7 +29,7 @@ class OperatorsGetTableTest : public BaseTest {
         "int_int_float_aliased", load_table("resources/test_data/tbl/int_int_float_aliased.tbl", ChunkOffset{2}));
 
     const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
-    ChunkEncoder::encode_all_chunks(table);
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
     table->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a");
     table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b1");
     table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b2");

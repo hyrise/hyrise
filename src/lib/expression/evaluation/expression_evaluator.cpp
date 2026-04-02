@@ -16,7 +16,7 @@
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 #include <boost/variant/get.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -28,6 +28,7 @@
 #include "expression/cast_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
 #include "expression/evaluation/expression_result.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -40,7 +41,6 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
-#include "like_matcher.hpp"
 #include "lossless_cast.hpp"
 #include "lossy_cast.hpp"
 #include "null_value.hpp"
@@ -330,15 +330,13 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
    * NOTE: This code path is NOT taken for LIKEs in predicates. That is `SELECT * FROM t WHERE a LIKE '%Hello%'` is
    *       handled in the TableScan. This code path is for `SELECT a LIKE 'bla' FROM ...` and alike.
    */
-
-  Assert(expression.predicate_condition == PredicateCondition::Like ||
-             expression.predicate_condition == PredicateCondition::NotLike,
-         "Expected PredicateCondition Like or NotLike.");
+  const auto condition = expression.predicate_condition;
+  Assert(condition == PredicateCondition::Like || condition == PredicateCondition::NotLike ||
+             condition == PredicateCondition::LikeInsensitive || condition == PredicateCondition::NotLikeInsensitive,
+         "Expected PredicateCondition (Not)Like or (Not)LikeInsensitive.");
 
   const auto left_results = evaluate_expression_to_result<pmr_string>(*expression.left_operand());
   const auto right_results = evaluate_expression_to_result<pmr_string>(*expression.right_operand());
-
-  const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
   const auto result_size = _result_size(left_results->size(), right_results->size());
   auto result_values = pmr_vector<ExpressionEvaluator::Bool>(result_size, 0);
@@ -353,25 +351,23 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
   const auto both_are_literals = left_results->is_literal() && right_results->is_literal();
   const auto both_are_series = !left_results->is_literal() && !right_results->is_literal();
   if (both_are_literals || both_are_series) {
-    // E.g., `a LIKE b` - A new matcher for each row and a different value as well
+    // E.g., `a LIKE b` - A new matcher for each row and a different value as well.
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+      LikeMatcher{right_results->values[row_idx], condition}.resolve([&](const auto& matcher) {
         result_values[row_idx] = matcher(left_results->values[row_idx]);
       });
     }
   } else if (!left_results->is_literal() && right_results->is_literal()) {
-    // E.g., `a LIKE '%hello%'` -- A single matcher for all rows
-    const auto like_matcher = LikeMatcher{right_results->values.front()};
-
-    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      like_matcher.resolve(invert_results, [&](const auto& matcher) {
+    // E.g., `a LIKE '%hello%'` - A single matcher for all rows.
+    LikeMatcher{right_results->values.front(), condition}.resolve([&](const auto& matcher) {
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
         result_values[row_idx] = matcher(left_results->values[row_idx]);
-      });
-    }
+      }
+    });
   } else {
-    // E.g., `'hello' LIKE b` -- A new matcher for each row but the value to check is constant
+    // E.g., `'hello' LIKE b` - A new matcher for each row but the value to check is constant.
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+      LikeMatcher{right_results->values[row_idx], condition}.resolve([&](const auto& matcher) {
         result_values[row_idx] = matcher(left_results->values.front());
       });
     }
@@ -617,6 +613,19 @@ bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& 
       return;
     }
 
+    // Filter out trivial cases here, as with_between_comparator assumes that lower and upper bound
+    // are set such that values could match the predicate.
+    if constexpr (std::is_integral_v<DataType>) {
+      const auto difference = *upper_bound - *lower_bound -
+                              !is_lower_inclusive_between(expression.predicate_condition) -
+                              !is_upper_inclusive_between(expression.predicate_condition);
+      // Predicate is always false, just output an empty result.
+      if (difference < 0) {
+        success = true;
+        return;
+      }
+    }
+
     const auto expression_result = evaluate_expression_to_result<DataType>(*operand);
     expression_result->as_view([&](const auto& view) {
       const auto result_size = _chunk ? _chunk->size() : static_cast<ChunkOffset>(view.size());
@@ -625,10 +634,9 @@ bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& 
         result_values.resize(result_size);
       }
 
-      with_between_comparator(expression.predicate_condition, [&](const auto& comparator) {
+      with_between_comparator(expression.predicate_condition, lower_bound, upper_bound, [&](const auto& comparator) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-          const auto value_matches =
-              !view.is_null(chunk_offset) && comparator(view.value(chunk_offset), lower_bound, upper_bound);
+          const auto value_matches = !view.is_null(chunk_offset) && comparator(view.value(chunk_offset));
 
           if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
             result_values[chunk_offset] = static_cast<Bool>(value_matches);
@@ -685,6 +693,8 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
+    case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
       return _evaluate_like_expression(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::IsNull:
@@ -917,8 +927,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
     Assert(datetime_component == DatetimeComponent::Second, "Only SECOND is extracted as Double.");
     return _evaluate_extract_component<double>(from_result, [](const auto& timestamp) {
       const auto& time_of_day = timestamp.time_of_day();
-      return static_cast<double>(time_of_day.seconds()) + static_cast<double>(time_of_day.fractional_seconds()) /
-                                                              static_cast<double>(time_of_day.ticks_per_second());
+      return static_cast<double>(time_of_day.seconds()) + (static_cast<double>(time_of_day.fractional_seconds()) /
+                                                           static_cast<double>(time_of_day.ticks_per_second()));
     });
   }
 
@@ -1215,7 +1225,9 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::In:
         case PredicateCondition::NotIn:
         case PredicateCondition::Like:
-        case PredicateCondition::NotLike: {
+        case PredicateCondition::NotLike:
+        case PredicateCondition::LikeInsensitive:
+        case PredicateCondition::NotLikeInsensitive: {
           // Evaluating (Not)In and (Not)Like to PosLists uses evaluate_expression_to_result() and scans the Series
           // it returns for matches. This is probably slower than a dedicated evaluate-to-PosList implementation
           // for these ExpressionTypes could be. But
@@ -1242,13 +1254,11 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
       switch (logical_expression.logical_operator) {
         case LogicalOperator::And:
-          std::set_intersection(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(),
-                                right_pos_list.end(), std::back_inserter(result_pos_list));
+          std::ranges::set_intersection(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
           break;
 
         case LogicalOperator::Or:
-          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(),
-                         std::back_inserter(result_pos_list));
+          std::ranges::set_union(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
           break;
       }
     } break;
@@ -1472,9 +1482,9 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
   const auto right_size = right.size();
   if (left_size == right_size) {
     auto nulls = pmr_vector<bool>(left_size);
-    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](const auto lhs, const auto rhs) {
-      return lhs || rhs;
-    });
+    for (auto index = size_t{0}; index < left_size; ++index) {
+      nulls[index] = left[index] || right[index];
+    }
     return nulls;
   }
 

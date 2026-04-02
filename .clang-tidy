@@ -37,15 +37,22 @@ Checks: '
          -readability-avoid-const-params-in-decls,
          -readability-function-cognitive-complexity,
          -readability-use-anyofallof,
+         -readability-static-accessed-through-instance,
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
          -bugprone-suspicious-include,
-         -bugprone-unchecked-optional-access
+         -bugprone-unchecked-optional-access,
+         -llvm-header-guard,
+         -boost-use-ranges,
+         -portability-template-virtual-member-function,
+         -modernize-use-constraints
          '
+# TODO(anybody-update): `modernize-use-constraints` is temporarily inactive until clang-tidy 21 is used
+#                       (https://github.com/llvm/llvm-project/pull/152938 landed in LLVM 21)
 
 WarningsAsErrors: '*'
 
-# Explanation of disabled checks:
+# Explanation of inactive checks:
 #   - *-default-arguments*                                      We do use default arguments (and like them).
 #   - google-build-using-namespace                              We use `using namespace` a lot (see anonymous namespaces and expression_functional).
 #   - clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls.
@@ -81,13 +88,18 @@ WarningsAsErrors: '*'
 #   - readability-avoid-const-params-in-decls                   Even though they might not have an effect, we prefer declarations to mirror implementations.
 #   - readability-function-cognitive-complexity                 When appropriate, long functions with a sequential data flow (which is sometimes easier to read) are fine. In many
 #                                                                places, the rule catches functions where the code could be improved, but will likely not be due to a lack of time.
-#   - readability-use-anyofallof                                We prefer `for (auto item : items)` over `std::ranges::all_of()` with a lambda.
+#   - readability-use-anyofallof                                We prefer `for (const auto& item : items)` over `std::ranges::all_of()` with a lambda.
+#   - readability-static-accessed-through-instance              We prefer to access the main Hyrise singleton via `Hyrise::get()`.
 #   - misc-no-recursion                                         Ignore general recommendation to avoid recursion, which we commonly use when working with query plans.
 #   - bugprone-easily-swappable-parameters                      Ignore issues with swappable parameters as we found them to be of no help.
 #   - bugprone-suspicious-include                               Unity builds use `#include`s for cpp files. However, unity builds significantly improve the runtime of clang-tidy,
 #                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for 
 #                                                                these includes as well.
 #   - bugprone-unchecked-optional-access                        Too many false positives (with clang-tidy 14/15). TODO(anyone): Re-evaluate for future clang versions.
+#   - llvm-header-guard                                         We prefer the simpler `#pragma once`. The main arguments (e.g., lacking support in old compilers)
+#                                                               do not matter with our limited set of supported compilers.
+#   - boost-use-ranges                                          As most boost-ranges implementations are now in C++20, we prefer `std::ranges`.
+#   - portability-template-virtual-member-function              We do not mind being incompatible with the MSVC compiler.
 
 
 CheckOptions:
@@ -125,9 +137,9 @@ CheckOptions:
   - { key: readability-identifier-naming.VariableCase, value: lower_case }
 
   # Iff(!) the context is clear, very short parameter/variable names are acceptable. Current exceptions are 'it' for
-  # iterator, 'op' for operator, 'od' for order dependency, or 'fd' for functional dependency.
+  # iterator, '_' for unused variables, 'op' for operator, 'od' for order dependency, or 'fd' for functional dependency.
   - { key: readability-identifier-length.IgnoredParameterNames, value: '^(it|op|od|fd)$' }
-  - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|op|od|fd)$' }
+  - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|op|od|fd|_)$' }
 
   # Boost, nlohmann::json, and SQLParser use umbrella headers which clang-tidy's include cleaner does not (yet) handle
   # well. For now, we ignore all include cleaner issues for these three libraries.

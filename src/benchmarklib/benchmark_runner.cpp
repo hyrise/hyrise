@@ -27,7 +27,7 @@
 #include <boost/variant/apply_visitor.hpp>
 
 #include "cxxopts.hpp"
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
 #include "abstract_benchmark_item_runner.hpp"
@@ -449,7 +449,7 @@ nlohmann::json BenchmarkRunner::_create_report() const {
     const auto& name = _benchmark_item_runner->item_name(item_id);
     const auto& result = _results.at(item_id);
 
-    const auto runs_to_json = [](auto runs) {
+    const auto runs_to_json = [](const auto& runs) {
       auto runs_json = nlohmann::json::array();
       for (const auto& run_result : runs) {
         // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON.
@@ -549,7 +549,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   auto cli_options = cxxopts::Options{benchmark_name};
 
   // Create a comma separated strings with the encoding and compression options.
-  const auto get_first = boost::adaptors::transformed([](const auto it) {
+  const auto get_first = boost::adaptors::transformed([](const auto& it) {
     return it.first;
   });
   const auto compression_strings_option =
@@ -576,7 +576,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("w,warmup", "Number of seconds that each item is run for warm up. Warming up also caches the query plans", cxxopts::value<uint64_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode))
-    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + all_encoding_options(), cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT(whitespace/line_length)
+    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + all_encoding_options(), cxxopts::value<std::string>()->default_value("Automatic"))  // NOLINT(whitespace/line_length)
     ("p,plugins", "Specify plugins to be loaded and execute their pre-/post-benchmark hooks (comma-separated paths to shared libraries w/o whitespaces)", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("chunk_indexes", "Create chunk indexes (separate index per chunk; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
@@ -646,8 +646,7 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       boost::apply_visitor(
-          // table=table needed because of https://stackoverflow.com/questions/46114214/
-          [&, table = table](const auto value) {
+          [&, table](const auto& value) {
             if constexpr (!std::is_same_v<std::decay_t<decltype(value)>, NullValue>) {
               entry[table->column_name(column_id)] = value;
             } else {
@@ -690,7 +689,7 @@ Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& re
   // For the number of executed queries, we cannot simply use `_state.scheduled_runs` because some of the runs might not
   // have finished in time. Thus, we check how many runs were actually reported.
   const auto executed_runs = result.successful_runs.size() + result.unsuccessful_runs.size();
-  if (_state.max_runs > 0 && static_cast<int64_t>(executed_runs) < _state.max_runs) {
+  if (_state.max_runs > 0 && std::cmp_less(executed_runs, _state.max_runs)) {
     return _state.max_duration;
   }
 

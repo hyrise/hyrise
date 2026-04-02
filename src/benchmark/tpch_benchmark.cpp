@@ -6,7 +6,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "cxxopts.hpp"
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "SQLParserResult.h"
 
 #include "benchmark_runner.hpp"

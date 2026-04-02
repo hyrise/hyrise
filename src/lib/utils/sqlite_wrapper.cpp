@@ -30,9 +30,9 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
   auto column_names = std::vector<std::string>(column_count, "");
 
   auto no_result = true;
-  auto return_code = int{};
+  auto return_code = int32_t{0};
   while ((return_code = sqlite3_step(sqlite_statement)) == SQLITE_ROW) {
-    for (auto column_id = int{0}; column_id < column_count; ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < static_cast<ColumnID::base_type>(column_count); ++column_id) {
       if (no_result) {
         column_names[column_id] = sqlite3_column_name(sqlite_statement, column_id);
       }
@@ -77,7 +77,7 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
 
   if (!no_result) {
     auto column_definitions = TableColumnDefinitions{};
-    for (auto column_id = int{0}; column_id < column_count; ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < static_cast<ColumnID::base_type>(column_count); ++column_id) {
       if (column_types[column_id].empty()) {
         // Hyrise does not have explicit NULL columns
         column_types[column_id] = "int";
@@ -100,7 +100,7 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
                                     int column_count) {
   auto row = std::vector<AllTypeVariant>{};
 
-  for (auto column_id = int{0}; column_id < column_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < static_cast<ColumnID::base_type>(column_count); ++column_id) {
     switch (sqlite3_column_type(sqlite_statement, column_id)) {
       case SQLITE_INTEGER: {
         row.emplace_back(sqlite3_column_int(sqlite_statement, column_id));
@@ -185,7 +185,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
   const auto queries_before_select = std::vector<std::string>(queries.begin(), queries.end() - 1);
   const auto& select_query = queries.back();
 
-  auto return_code = int{0};
+  auto return_code = int32_t{0};
   for (const auto& query : queries_before_select) {
     return_code = sqlite3_prepare_v2(db, query.c_str(), -1, &sqlite_statement, nullptr);
 
@@ -311,7 +311,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
         const auto sqlite_column_id = static_cast<int>(column_id) + 1;
         const auto value = (*segment)[chunk_offset];
 
-        auto sqlite3_bind_return_code = int{};
+        auto sqlite3_bind_return_code = int32_t{};
 
         if (variant_is_null(value)) {
           sqlite3_bind_return_code = sqlite3_bind_null(insert_into_statement, sqlite_column_id);

@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
