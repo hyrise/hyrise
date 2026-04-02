@@ -187,7 +187,8 @@ bool Chunk::segments_share_table_and_positions() const {
         const auto segment_pos_list = segment->pos_list();
         auto position_lists_are_equal = true;
         for (auto offset = ChunkOffset{0}; offset < first_pos_list->size(); ++offset) {
-          position_lists_are_equal = position_lists_are_equal && (*first_pos_list)[offset] == (*segment_pos_list)[offset];
+          position_lists_are_equal =
+              position_lists_are_equal && (*first_pos_list)[offset] == (*segment_pos_list)[offset];
         }
         DebugAssert(!position_lists_are_equal, "Expected two different position lists.");
       }

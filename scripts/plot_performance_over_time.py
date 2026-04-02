@@ -74,7 +74,7 @@ default_colors = prop_cycle.by_key()["color"]
 # (is_detailed == False) and once where each benchmark has its own subplot
 for is_detailed in [False, True]:
     # Calculate the size of the output file (in inches) and the number of subplots
-    (figw, figh) = (12, 3 * len(benchmark_names) if is_detailed else 5)
+    figw, figh = (12, 3 * len(benchmark_names) if is_detailed else 5)
     nrows = len(benchmark_names) if is_detailed else 1
 
     # If --metrics was used, add space and a subplot for the system metrics
