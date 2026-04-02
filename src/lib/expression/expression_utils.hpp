@@ -40,7 +40,11 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
                                                      const AbstractExpression& expression_right,
                                                      const LQPNodeMapping& node_mapping);
 
-void map_lqp_subqueries(const AbstractExpression& left_expression, const AbstractExpression& right_expression,
+/**
+ * Utility to add LQPs referenced by LQPSubqueryExpressions from @param expression and their copies from
+ * @param copied_expression to the @param LQPNodeMapping. PQPSubqueryExpressions do this internally in `deep_copy()`.
+ */
+void map_lqp_subqueries(const AbstractExpression& expression, const AbstractExpression& copied_expression,
                         LQPNodeMapping& mapping);
 
 /**

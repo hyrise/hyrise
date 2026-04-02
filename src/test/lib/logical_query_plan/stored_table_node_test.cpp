@@ -113,6 +113,7 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
   const auto different_node_b = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
   const auto different_node_c = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
   const auto different_node_d = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
+  const auto different_node_e = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
 
   const auto stored_table_node_b = StoredTableNode::make("t_b");
   const auto stored_table_node_b_col_a = stored_table_node_b->get_column("a");
@@ -140,11 +141,16 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
   // Different subquery than predicate_a.
   const auto predicate_d = equals_(different_node_d->get_column("a"), lqp_subquery_(subquery_d));
 
+  // Same structure as predicate_a.
+  const auto predicate_e = equals_(different_node_e->get_column("a"), lqp_subquery_(subquery_a->deep_copy()));
+
   different_node_a->set_prunable_subquery_predicates({predicate_a});
   different_node_b->set_prunable_subquery_predicates({predicate_b});
   different_node_c->set_prunable_subquery_predicates({predicate_c});
   different_node_d->set_prunable_subquery_predicates({predicate_d});
+  different_node_e->set_prunable_subquery_predicates({predicate_e});
 
+  EXPECT_EQ(*different_node_a, *different_node_e);
   EXPECT_NE(*_stored_table_node, *different_node_a);
   EXPECT_NE(*_stored_table_node, *different_node_b);
   EXPECT_NE(*_stored_table_node, *different_node_c);
@@ -156,6 +162,7 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
   EXPECT_NE(*different_node_b, *different_node_d);
   EXPECT_NE(*different_node_c, *different_node_d);
 
+  EXPECT_EQ(different_node_a->hash(), different_node_e->hash());
   // We force hash collisions for nodes with the same number of prunable subquery predicates.
   EXPECT_EQ(different_node_a->hash(), different_node_b->hash());
   EXPECT_EQ(different_node_a->hash(), different_node_c->hash());

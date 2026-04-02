@@ -415,23 +415,24 @@ std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expression
   return pqp_subquery_expressions;
 }
 
-void map_lqp_subqueries(const AbstractExpression& left_expression, const AbstractExpression& right_expression,
+void map_lqp_subqueries(const AbstractExpression& expression, const AbstractExpression& copied_expression,
                         LQPNodeMapping& mapping) {
-  DebugAssert(expression_equal_to_expression_in_different_lqp(left_expression, right_expression, mapping),
+  DebugAssert(expression_equal_to_expression_in_different_lqp(expression, copied_expression, mapping),
               "Expressions should be equal.");
 
-  if (left_expression.type == ExpressionType::LQPSubquery) {
-    Assert(right_expression.type == ExpressionType::LQPSubquery, "Expressions are not equal.");
-    const auto& left_subquery = static_cast<const LQPSubqueryExpression&>(left_expression);
-    const auto& right_subquery = static_cast<const LQPSubqueryExpression&>(right_expression);
-    DebugAssert(*left_subquery.lqp == *right_subquery.lqp, "Subquery LQPs are not equal.");
-    mapping.emplace(left_subquery.lqp, right_subquery.lqp);
+  if (expression.type == ExpressionType::LQPSubquery) {
+    Assert(copied_expression.type == ExpressionType::LQPSubquery, "Expressions have incompatible type.");
+    const auto& subquery = static_cast<const LQPSubqueryExpression&>(expression);
+    const auto& copied_subquery = static_cast<const LQPSubqueryExpression&>(copied_expression);
+    DebugAssert(*subquery.lqp == *copied_subquery.lqp, "Subquery LQPy are not equal.");
+    Assert(subquery.is_correlated() == copied_subquery.is_correlated(), "Subqueries are not equal.");
+    mapping.emplace(subquery.lqp, copied_subquery.lqp);
   }
 
-  const auto argument_count = left_expression.arguments.size();
-  Assert(right_expression.arguments.size() == argument_count, "Arguments are not equal.");
+  const auto argument_count = expression.arguments.size();
+  Assert(copied_expression.arguments.size() == argument_count, "Arguments are not equal.");
   for (auto argument_id = size_t{0}; argument_id < argument_count; ++argument_id) {
-    map_lqp_subqueries(*left_expression.arguments[argument_id], *right_expression.arguments[argument_id], mapping);
+    map_lqp_subqueries(*expression.arguments[argument_id], *copied_expression.arguments[argument_id], mapping);
   }
 }
 

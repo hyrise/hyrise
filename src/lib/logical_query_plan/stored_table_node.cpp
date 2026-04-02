@@ -281,22 +281,8 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
 
   // Check equality of prunable subquery predicates. For now, the order of the predicates matters. Though this is a
   // missed opportunity for LQP deduplication, we do not consider this a problem for now.
-  const auto& prunable_subquery_predicates = this->prunable_subquery_predicates();
-  const auto& rhs_prunable_subquery_predicates = stored_table_node.prunable_subquery_predicates();
-  const auto subquery_predicate_count = prunable_subquery_predicates.size();
-
-  if (subquery_predicate_count != rhs_prunable_subquery_predicates.size()) {
-    return false;
-  }
-
-  // We cannot check that the PredicateNodes are equal since this equality check recurses into the inputs und we do
-  // not terminate. We have to compare the predicate expressions.
-  if (!expressions_equal_to_expressions_in_different_lqp(prunable_subquery_predicates, rhs_prunable_subquery_predicates,
-                                                         node_mapping)) {
-    return false;
-  }
-
-  return true;
+  return expressions_equal_to_expressions_in_different_lqp(
+      _prunable_subquery_predicates, stored_table_node._prunable_subquery_predicates, node_mapping);
 }
 
 void StoredTableNode::_set_output_expressions() const {
