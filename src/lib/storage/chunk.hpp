@@ -120,7 +120,7 @@ class Chunk : private Noncopyable {
 
   /**
    * Some operators only check the first segment to obtain positions (e.g. Delete and Validate).
-   * This method checks that all references segments point to the same positions list and the same table.
+   * This method checks that all reference segments point to the same positions list and the same table.
    */
   bool segments_share_table_and_positions() const;
 

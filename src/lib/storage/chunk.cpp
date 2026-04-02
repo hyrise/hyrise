@@ -185,11 +185,11 @@ bool Chunk::segments_share_table_and_positions() const {
     if (first_pos_list != segment->pos_list()) {
       if constexpr (HYRISE_DEBUG) {
         const auto segment_pos_list = segment->pos_list();
-        bool equal = true;
+        auto position_lists_are_equal = true;
         for (auto offset = ChunkOffset{0}; offset < first_pos_list->size(); ++offset) {
-          equal = equal && (*first_pos_list)[offset] == (*segment_pos_list)[offset];
+          position_lists_are_equal = position_lists_are_equal && (*first_pos_list)[offset] == (*segment_pos_list)[offset];
         }
-        DebugAssert(!equal, "Expected two different positions lists.");
+        DebugAssert(!position_lists_are_equal, "Expected two different position lists.");
       }
       return false;
     }
