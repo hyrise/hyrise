@@ -128,25 +128,17 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
 
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping) {
-  visit_expression(expression, [&](auto& sub_expression) {
-    switch (sub_expression->type) {
-      case ExpressionType::LQPColumn: {
-        const auto& lqp_column_expression = static_cast<LQPColumnExpression&>(*sub_expression);
-        sub_expression = expression_adapt_to_different_lqp(lqp_column_expression, node_mapping);
-
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-        // case ExpressionType::LQPSubquery: {
-        //   auto& lqp_subquery_expression = static_cast<LQPSubqueryExpression&>(*sub_expression);
-        //   expression_adapt_to_different_lqp(lqp_subquery_expression, node_mapping);
-
-        //   return ExpressionVisitation::DoNotVisitArguments;
-        // }
-
-      default:
-        return ExpressionVisitation::VisitArguments;
+  visit_expression(expression, [&](auto& expression_ptr) {
+    if (expression_ptr->type != ExpressionType::LQPColumn) {
+      return ExpressionVisitation::VisitArguments;
     }
+
+    const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
+    Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression.");
+
+    expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
+
+    return ExpressionVisitation::DoNotVisitArguments;
   });
 }
 
@@ -159,17 +151,6 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
          "Could not find referenced node (" + node->description() + ") in NodeMapping.");
 
   return std::make_shared<LQPColumnExpression>(node_mapping_iter->second, lqp_column_expression.original_column_id);
-}
-
-void expression_adapt_to_different_lqp(LQPSubqueryExpression& lqp_subquery_expression,
-                                       const LQPNodeMapping& node_mapping) {
-  for (auto& expression : lqp_subquery_expression.arguments) {
-    expression_adapt_to_different_lqp(expression, node_mapping);
-  }
-  const auto node_mapping_iter = node_mapping.find(lqp_subquery_expression.lqp);
-  Assert(node_mapping_iter != node_mapping.end(),
-         "Could not find referenced node (" + lqp_subquery_expression.lqp->description() + ") in NodeMapping.");
-  lqp_subquery_expression.lqp = node_mapping_iter->second;
 }
 
 std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
@@ -432,6 +413,26 @@ std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expression
     });
   }
   return pqp_subquery_expressions;
+}
+
+void map_lqp_subqueries(const AbstractExpression& left_expression, const AbstractExpression& right_expression,
+                        LQPNodeMapping& mapping) {
+  DebugAssert(expression_equal_to_expression_in_different_lqp(left_expression, right_expression, mapping),
+              "Expressions should be equal.");
+
+  if (left_expression.type == ExpressionType::LQPSubquery) {
+    Assert(right_expression.type == ExpressionType::LQPSubquery, "Expressions are not equal.");
+    const auto& left_subquery = static_cast<const LQPSubqueryExpression&>(left_expression);
+    const auto& right_subquery = static_cast<const LQPSubqueryExpression&>(right_expression);
+    DebugAssert(*left_subquery.lqp == *right_subquery.lqp, "Subquery LQPs are not equal.");
+    mapping.emplace(left_subquery.lqp, right_subquery.lqp);
+  }
+
+  const auto argument_count = left_expression.arguments.size();
+  Assert(right_expression.arguments.size() == argument_count, "Arguments are not equal.");
+  for (auto argument_id = size_t{0}; argument_id < argument_count; ++argument_id) {
+    map_lqp_subqueries(*left_expression.arguments[argument_id], *right_expression.arguments[argument_id], mapping);
+  }
 }
 
 std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_expression,

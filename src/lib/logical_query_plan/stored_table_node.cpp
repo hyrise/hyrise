@@ -12,6 +12,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
@@ -84,24 +85,15 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 
 void StoredTableNode::set_prunable_subquery_predicates(
     const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
-  // DebugAssert(std::ranges::all_of(predicate_nodes,
-  //                                 [](const auto& node) {
-  //                                   return node.lock() && node.lock()->type == LQPNodeType::Predicate;
-  //                                 }),
-  //             "No PredicateNode set as prunable predicate.");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& predicate : predicates) {
+      Assert(predicate->type == ExpressionType::Predicate, "Unexpected expression for subquery predicate.");
+    }
+  }
   _prunable_subquery_predicates = predicates;
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::prunable_subquery_predicates() const {
-  // auto subquery_predicates = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-  // subquery_predicates.reserve(_prunable_subquery_predicates.size());
-  // for (const auto& subquery_predicate_ref : _prunable_subquery_predicates) {
-  //   const auto& subquery_predicate = subquery_predicate_ref.lock();
-  //   Assert(subquery_predicate, "Referenced PredicateNode expired. LQP is invalid.");
-  //   subquery_predicates.emplace_back(subquery_predicate);
-  // }
-  // return subquery_predicates;
-
   return _prunable_subquery_predicates;
 }
 

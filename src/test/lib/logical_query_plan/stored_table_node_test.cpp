@@ -189,11 +189,14 @@ TEST_F(StoredTableNodeTest, Copy) {
   const auto lqp_deep_copy = lqp->deep_copy();
   EXPECT_EQ(*lqp, *lqp_deep_copy);
   EXPECT_EQ(*_stored_table_node, *lqp_deep_copy->left_input());
+  const auto& stored_table_node_copy = static_cast<const StoredTableNode&>(*lqp_deep_copy->left_input());
+  const auto& predicate_copy = static_cast<const PredicateNode&>(*lqp_deep_copy).predicate();
+  const auto& subquery_copy = static_cast<const LQPSubqueryExpression&>(*predicate->arguments[1]).lqp;
 
-  const auto& prunable_subquery_predicates =
-      static_cast<StoredTableNode&>(*lqp_deep_copy->left_input()).prunable_subquery_predicates();
+  const auto& prunable_subquery_predicates = stored_table_node_copy.prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_predicates.size(), 1);
-  EXPECT_EQ(*prunable_subquery_predicates.front(), *predicate);
+  const auto expected_predicate = equals_(stored_table_node_copy.get_column("a"), lqp_subquery_(subquery_copy));
+  EXPECT_EQ(*prunable_subquery_predicates.front(), *expected_predicate);
 
   // Do not allow deep copies where prunable subquery predicates are not part of the LQP.
   EXPECT_THROW(_stored_table_node->deep_copy(), std::logic_error);

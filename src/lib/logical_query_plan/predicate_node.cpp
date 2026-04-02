@@ -42,7 +42,9 @@ size_t PredicateNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return std::make_shared<PredicateNode>(expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping));
+  auto copied_predicate = expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping);
+  map_lqp_subqueries(*predicate(), *copied_predicate, node_mapping);
+  return std::make_shared<PredicateNode>(copied_predicate);
 }
 
 bool PredicateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
