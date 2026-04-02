@@ -59,8 +59,28 @@ TEST_F(PredicateNodeTest, Copy) {
   EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node);
 }
 
+TEST_F(PredicateNodeTest, CopyWithSubqueries) {
+  // Make sure that predicates with subqueries are correctly copied and that the subqery LQPs are added to the node
+  // mapping.
+  auto mapping = LQPNodeMapping{};
+  const auto subquery = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+  const auto predicate_node = _predicate_node = PredicateNode::make(equals_(_i, lqp_subquery_(subquery)), _table_node);
+
+  std::cout << __FILE__ << ":" << __LINE__ << "\n";
+  const auto copy = std::static_pointer_cast<PredicateNode>(_predicate_node->deep_copy(mapping));
+  std::cout << __FILE__ << ":" << __LINE__ << "\n";
+  EXPECT_EQ(*copy, *_predicate_node);
+  EXPECT_EQ(mapping.size(), 3);
+  std::cout << __FILE__ << ":" << __LINE__ << "\n";
+  ASSERT_TRUE(mapping.contains(subquery));
+  std::cout << __FILE__ << ":" << __LINE__ << "\n";
+  const auto subquery_copy = mapping.at(subquery);
+  std::cout << __FILE__ << ":" << __LINE__ << "\n";
+  EXPECT_EQ(static_cast<const LQPSubqueryExpression&>(*copy->predicate()->arguments[1]).lqp, subquery_copy);
+}
+
 TEST_F(PredicateNodeTest, NodeExpressions) {
-  ASSERT_EQ(_predicate_node->node_expressions.size(), 1u);
+  ASSERT_EQ(_predicate_node->node_expressions.size(), 1);
   EXPECT_EQ(*_predicate_node->node_expressions.at(0), *equals_(_i, 5));
 }
 

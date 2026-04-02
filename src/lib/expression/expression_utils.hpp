@@ -15,7 +15,6 @@ namespace hyrise {
 
 class AbstractLQPNode;
 class LQPColumnExpression;
-class LQPSubqueryExpression;
 class TransactionContext;
 class PQPSubqueryExpression;
 enum class LogicalOperator;
@@ -40,6 +39,13 @@ bool expressions_equal_to_expressions_in_different_lqp(
 bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& expression_left,
                                                      const AbstractExpression& expression_right,
                                                      const LQPNodeMapping& node_mapping);
+
+/**
+ * Utility to add LQPs referenced by LQPSubqueryExpressions from @param expression and their copies from
+ * @param copied_expression to the @param LQPNodeMapping. PQPSubqueryExpressions do this internally in `deep_copy()`.
+ */
+void map_lqp_subqueries(const AbstractExpression& expression, const AbstractExpression& copied_expression,
+                        LQPNodeMapping& mapping);
 
 /**
  * Utility to AbstractExpression::deep_copy() a vector of expressions.
@@ -87,9 +93,6 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
 
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping);
-
-void expression_adapt_to_different_lqp(LQPSubqueryExpression& lqp_subquery_expression,
-                                       const LQPNodeMapping& node_mapping);
 
 /**
  * Create a comma separated string with the AbstractExpression::description(mode) of each expression

@@ -12,6 +12,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
@@ -84,24 +85,15 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 
 void StoredTableNode::set_prunable_subquery_predicates(
     const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
-  // DebugAssert(std::ranges::all_of(predicate_nodes,
-  //                                 [](const auto& node) {
-  //                                   return node.lock() && node.lock()->type == LQPNodeType::Predicate;
-  //                                 }),
-  //             "No PredicateNode set as prunable predicate.");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& predicate : predicates) {
+      Assert(predicate->type == ExpressionType::Predicate, "Unexpected expression for subquery predicate.");
+    }
+  }
   _prunable_subquery_predicates = predicates;
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::prunable_subquery_predicates() const {
-  // auto subquery_predicates = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-  // subquery_predicates.reserve(_prunable_subquery_predicates.size());
-  // for (const auto& subquery_predicate_ref : _prunable_subquery_predicates) {
-  //   const auto& subquery_predicate = subquery_predicate_ref.lock();
-  //   Assert(subquery_predicate, "Referenced PredicateNode expired. LQP is invalid.");
-  //   subquery_predicates.emplace_back(subquery_predicate);
-  // }
-  // return subquery_predicates;
-
   return _prunable_subquery_predicates;
 }
 
@@ -289,22 +281,8 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
 
   // Check equality of prunable subquery predicates. For now, the order of the predicates matters. Though this is a
   // missed opportunity for LQP deduplication, we do not consider this a problem for now.
-  const auto& prunable_subquery_predicates = this->prunable_subquery_predicates();
-  const auto& rhs_prunable_subquery_predicates = stored_table_node.prunable_subquery_predicates();
-  const auto subquery_predicate_count = prunable_subquery_predicates.size();
-
-  if (subquery_predicate_count != rhs_prunable_subquery_predicates.size()) {
-    return false;
-  }
-
-  // We cannot check that the PredicateNodes are equal since this equality check recurses into the inputs und we do
-  // not terminate. We have to compare the predicate expressions.
-  if (!expressions_equal_to_expressions_in_different_lqp(prunable_subquery_predicates, rhs_prunable_subquery_predicates,
-                                                         node_mapping)) {
-    return false;
-  }
-
-  return true;
+  return expressions_equal_to_expressions_in_different_lqp(
+      _prunable_subquery_predicates, stored_table_node._prunable_subquery_predicates, node_mapping);
 }
 
 void StoredTableNode::_set_output_expressions() const {

@@ -306,16 +306,13 @@ TEST_F(OperatorsGetTableTest, Copy) {
   const auto table_scan_b = std::make_shared<TableScan>(get_table_c, predicate);
   get_table_c->set_prunable_subquery_predicates({predicate});
 
-  auto operator_mapping = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
-  const auto& pqp_copy = table_scan_b->deep_copy(operator_mapping);
-  const auto& get_table_c_copy = std::static_pointer_cast<const GetTable>(pqp_copy->left_input());
+  const auto pqp_copy = table_scan_b->deep_copy();
+  const auto get_table_c_copy = std::static_pointer_cast<const GetTable>(pqp_copy->left_input());
   const auto& prunable_subquery_scans = get_table_c_copy->prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
-  const auto& projection_copy = operator_mapping.at(projection.get());
+  const auto& predicate_copy = static_cast<const TableScan&>(*pqp_copy).predicate();
+  const auto& projection_copy = static_cast<const PQPSubqueryExpression&>(*predicate_copy->arguments[1]).pqp;
   EXPECT_EQ(*prunable_subquery_scans.front(), *equals_(scan_column, pqp_subquery_(projection_copy, DataType::Float)));
-
-  // Do not allow deep copies where prunable subqueries are not part of the PQP.
-  EXPECT_THROW(get_table_c->deep_copy(), std::logic_error);
 }
 
 TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {

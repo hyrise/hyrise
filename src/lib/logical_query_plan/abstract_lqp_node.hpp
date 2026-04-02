@@ -124,7 +124,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *                               to be provided.
    * @return                       A deep copy of the LQP this Node is the root of
    */
-  std::shared_ptr<AbstractLQPNode> deep_copy(LQPNodeMapping input_node_mapping = {}) const;
+  std::shared_ptr<AbstractLQPNode> deep_copy() const;
+  std::shared_ptr<AbstractLQPNode> deep_copy(LQPNodeMapping& input_node_mapping) const;
 
   /**
    * Compare this node with another, without comparing inputs.

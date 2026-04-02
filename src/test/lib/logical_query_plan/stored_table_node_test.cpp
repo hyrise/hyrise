@@ -113,6 +113,7 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
   const auto different_node_b = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
   const auto different_node_c = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
   const auto different_node_d = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
+  const auto different_node_e = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
 
   const auto stored_table_node_b = StoredTableNode::make("t_b");
   const auto stored_table_node_b_col_a = stored_table_node_b->get_column("a");
@@ -140,11 +141,16 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
   // Different subquery than predicate_a.
   const auto predicate_d = equals_(different_node_d->get_column("a"), lqp_subquery_(subquery_d));
 
+  // Same structure as predicate_a.
+  const auto predicate_e = equals_(different_node_e->get_column("a"), lqp_subquery_(subquery_a->deep_copy()));
+
   different_node_a->set_prunable_subquery_predicates({predicate_a});
   different_node_b->set_prunable_subquery_predicates({predicate_b});
   different_node_c->set_prunable_subquery_predicates({predicate_c});
   different_node_d->set_prunable_subquery_predicates({predicate_d});
+  different_node_e->set_prunable_subquery_predicates({predicate_e});
 
+  EXPECT_EQ(*different_node_a, *different_node_e);
   EXPECT_NE(*_stored_table_node, *different_node_a);
   EXPECT_NE(*_stored_table_node, *different_node_b);
   EXPECT_NE(*_stored_table_node, *different_node_c);
@@ -156,6 +162,7 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
   EXPECT_NE(*different_node_b, *different_node_d);
   EXPECT_NE(*different_node_c, *different_node_d);
 
+  EXPECT_EQ(different_node_a->hash(), different_node_e->hash());
   // We force hash collisions for nodes with the same number of prunable subquery predicates.
   EXPECT_EQ(different_node_a->hash(), different_node_b->hash());
   EXPECT_EQ(different_node_a->hash(), different_node_c->hash());
@@ -189,11 +196,14 @@ TEST_F(StoredTableNodeTest, Copy) {
   const auto lqp_deep_copy = lqp->deep_copy();
   EXPECT_EQ(*lqp, *lqp_deep_copy);
   EXPECT_EQ(*_stored_table_node, *lqp_deep_copy->left_input());
+  const auto& stored_table_node_copy = static_cast<const StoredTableNode&>(*lqp_deep_copy->left_input());
+  const auto& predicate_copy = static_cast<const PredicateNode&>(*lqp_deep_copy).predicate();
+  const auto& subquery_copy = static_cast<const LQPSubqueryExpression&>(*predicate->arguments[1]).lqp;
 
-  const auto& prunable_subquery_predicates =
-      static_cast<StoredTableNode&>(*lqp_deep_copy->left_input()).prunable_subquery_predicates();
+  const auto& prunable_subquery_predicates = stored_table_node_copy.prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_predicates.size(), 1);
-  EXPECT_EQ(*prunable_subquery_predicates.front(), *predicate);
+  const auto expected_predicate = equals_(stored_table_node_copy.get_column("a"), lqp_subquery_(subquery_copy));
+  EXPECT_EQ(*prunable_subquery_predicates.front(), *expected_predicate);
 
   // Do not allow deep copies where prunable subquery predicates are not part of the LQP.
   EXPECT_THROW(_stored_table_node->deep_copy(), std::logic_error);
