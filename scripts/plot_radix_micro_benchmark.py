@@ -57,8 +57,6 @@ print(df_long)
 # else:
 #     fig.savefig(f"{args.output}")
 
-# print(df.apply(gmean, axis=0))
-
 g = sns.FacetGrid(df_long, col='radix_bits', col_wrap=5, height=4, aspect=0.8, sharey=False)
 g.map_dataframe(
     lambda data, **kwargs: plt.gca().bar(
@@ -87,3 +85,5 @@ ax.set_ylabel('Normalized Runtime (ns per tuple)')
 sns.despine()
 plt.tight_layout()
 plt.savefig(f"{args.file}_2.pdf")
+
+print(df.apply(gmean, axis=0))
