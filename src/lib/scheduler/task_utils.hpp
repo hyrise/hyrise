@@ -93,7 +93,7 @@ void visit_tasks_upwards(const std::shared_ptr<Task>& task, Visitor visitor) {
  */
 template <typename Functor>
 std::pair<size_t, std::vector<std::shared_ptr<AbstractTask>>> group_chunks_for_scheduling(const std::shared_ptr<const Table>& table, const Functor& functor) {
-  auto group_count = HYRISE_DEBUG ? size_t{table->chunk_count()} : size_t{1};
+  auto group_count = HYRISE_DEBUG ? size_t{std::max(ChunkID{1}, table->chunk_count())} : size_t{1};
   if (const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler())) {
     // We use a group count of twice the number of workers. This allows for some degree of straggler mitigation while
     // still not putting too much pressure on the scheduler.
@@ -101,7 +101,8 @@ std::pair<size_t, std::vector<std::shared_ptr<AbstractTask>>> group_chunks_for_s
     // sequentially.
     group_count = node_queue_scheduler->workers().size() * 2;
   }
-  group_count = std::min(group_count, static_cast<size_t>(table->chunk_count()));
+  group_count = std::min(group_count, static_cast<size_t>(std::max(ChunkID{1}, table->chunk_count())));
+  Assert(group_count > 0, "Lalalalala");
 
   const auto chunk_count = table->chunk_count();
   const auto tasks_per_group = (chunk_count + group_count - 1) / group_count;  // Ceil of divison.
