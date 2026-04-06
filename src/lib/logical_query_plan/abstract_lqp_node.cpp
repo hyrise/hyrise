@@ -452,12 +452,12 @@ bool AbstractLQPNode::has_matching_ind(const std::vector<std::shared_ptr<Abstrac
 }
 
 bool AbstractLQPNode::has_matching_fd(ExpressionUnorderedSet& lhs, ExpressionUnorderedSet& rhs) const {
-  std::cout << "getting FDs for node " << this << std::endl;
+  // std::cout << "getting FDs for node " << this << std::endl;
   const auto& functional_dependencies = this->functional_dependencies();
-  std::cout << "got fds: " << std::endl;
-  for(const auto& fd : functional_dependencies) {
-    std::cout << "FD: " << fd << std::endl;
-  }
+  // std::cout << "got fds: " << std::endl;
+  // for(const auto& fd : functional_dependencies) {
+  //   std::cout << "FD: " << fd << std::endl;
+  // }
   if (functional_dependencies.empty()) {
     return false;
   }
@@ -465,15 +465,15 @@ bool AbstractLQPNode::has_matching_fd(ExpressionUnorderedSet& lhs, ExpressionUno
   auto lhs_copy = lhs;
   auto rhs_copy = rhs;
 
-  std::cout << "Checking if " << *lhs_copy.begin() << " functionally determines "
-            << *rhs_copy.begin() << std::endl;
+  // std::cout << "Checking if " << *lhs_copy.begin() << " functionally determines "
+  //           << *rhs_copy.begin() << std::endl;
 
   const auto to_be_tested_fd = FunctionalDependency{std::move(lhs_copy), std::move(rhs_copy)};
   
-  std::cout << "Testing FD: " << to_be_tested_fd << std::endl;
+  // std::cout << "Testing FD: " << to_be_tested_fd << std::endl;
   
   const auto intersected_fds = intersect_fds(functional_dependencies, {to_be_tested_fd});
-  std::cout << "Found " << intersected_fds.size() << " intersecting FDs." << std::endl;
+  // std::cout << "Found " << intersected_fds.size() << " intersecting FDs." << std::endl;
   return !intersected_fds.empty();
 }
 
