@@ -228,7 +228,7 @@ std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() {
     estimator->with_optimizations = true;
   } else {
     estimator->with_optimizations = false;
-    return estimator; 
+    return estimator;
   }
 
   auto ind_ucc_join = std::getenv("IND_UCC_JOIN");
@@ -2027,27 +2027,79 @@ EstimationStatisticsState CardinalityEstimator::estimate_operator_scan_predicate
           return;
         }
 
-        if (fd_predicate_optimization) {
-          std::cout << "Estimating ColumnVsColumn predicate between column " << left_column_id << " and column "
-                    << *right_column_id << "\n";
-          if (lqp_node.output_expressions().at(left_column_id)->as_column_name() == "movie_id") {
-            std::cout << "movie_id column";
-            if (lqp_node.output_expressions().at(*right_column_id)->as_column_name() == "movie_id") {
-              std::cout << "movie_id column on the right side as well\n";
-            }
-            const auto left_expr = lqp_node.left_input()->output_expressions().at(left_column_id);
-            const auto right_expr = lqp_node.right_input()->output_expressions().at(*right_column_id);
+        if (fd_predicate_optimization && estimation_statistics_state.join_equivalence_classes.size() > 0) {
+          // std::cout << "Estimating ColumnVsColumn predicate between column " << left_column_id << " and column "
+          //           << *right_column_id << "\n";
+          // if (lqp_node.output_expressions().at(left_column_id)->as_column_name() == "movie_id") {
+          //std::cout << "movie_id column";
+          // if (lqp_node.output_expressions().at(*right_column_id)->as_column_name() == "movie_id") {
+          //   std::cout << "movie_id column on the right side as well\n";
+          // }
+          const auto left_expr = lqp_node.output_expressions().at(left_column_id);
+          const auto right_expr = lqp_node.output_expressions().at(*right_column_id);
 
-            auto expr_unordered_set = ExpressionUnorderedSet{left_expr};
-            auto right_expr_unordered_set = ExpressionUnorderedSet{right_expr};
-            std::cout << "Has matching FD: " << lqp_node.has_matching_fd(expr_unordered_set, right_expr_unordered_set)
-                      << "\n";
-            std::cout << estimation_statistics_state.join_equivalence_classes.size() << "\n";
-            // std::cout << "Has matching FD in equivalence classes: "
-            //           << lqp_node.has_matching_fd(estimation_statistics_state.join_equivalence_classes,
-            //                                       expr_unordered_set)
-            //           << "\n";
+          auto expr_unordered_set = ExpressionUnorderedSet{left_expr};
+          auto right_expr_unordered_set = ExpressionUnorderedSet{right_expr};
+          // std::cout << "Has matching FD: " << lqp_node.has_matching_fd(expr_unordered_set, right_expr_unordered_set)
+          //           << "\n";
+          // std::cout << estimation_statistics_state.join_equivalence_classes.size() << "\n";
+
+          // Check if both columns are connected through join equivalence classes
+          // join_equivalence_classes contains full predicates like (a.movie_id = b.movie_id)
+          // We need to build a graph of which columns are equivalent
+          std::unordered_map<std::string, std::vector<std::string>> equivalence_graph;
+          for (const auto& predicate : estimation_statistics_state.join_equivalence_classes) {
+            // Predicates stored are BinaryPredicateExpressions
+            if (const auto* binary_pred = dynamic_cast<const BinaryPredicateExpression*>(predicate.get())) {
+              const auto left_operand_desc =
+                  binary_pred->left_operand()->description(AbstractExpression::DescriptionMode::ColumnName);
+              const auto right_operand_desc =
+                  binary_pred->right_operand()->description(AbstractExpression::DescriptionMode::ColumnName);
+              equivalence_graph[left_operand_desc].push_back(right_operand_desc);
+              equivalence_graph[right_operand_desc].push_back(left_operand_desc);
+            }
           }
+
+          // Check if left_expr and right_expr are connected in the equivalence graph using BFS
+          const auto current_left_desc = left_expr->description(AbstractExpression::DescriptionMode::ColumnName);
+          const auto current_right_desc = right_expr->description(AbstractExpression::DescriptionMode::ColumnName);
+
+          bool columns_are_equivalent = false;
+          if (equivalence_graph.count(current_left_desc) > 0 && equivalence_graph.count(current_right_desc) > 0) {
+            std::unordered_set<std::string> visited;
+            std::vector<std::string> queue{current_left_desc};
+            visited.insert(current_left_desc);
+
+            while (!queue.empty() && !columns_are_equivalent) {
+              const auto current = queue.back();
+              queue.pop_back();
+
+              if (current == current_right_desc) {
+                columns_are_equivalent = true;
+                break;
+              }
+
+              for (const auto& neighbor : equivalence_graph.at(current)) {
+                if (visited.find(neighbor) == visited.end()) {
+                  visited.insert(neighbor);
+                  queue.push_back(neighbor);
+                }
+              }
+            }
+          }
+
+          if (columns_are_equivalent) {
+            lqp_node.set_is_data_dependency_optmized(true);
+            // std::cout << "HIT OPT" << std::endl;
+            selectivity = 1.0;
+            return;
+          }
+
+          // std::cout << "Has matching FD in equivalence classes: "
+          //           << lqp_node.has_matching_fd(estimation_statistics_state.join_equivalence_classes,
+          //                                       expr_unordered_set)
+          //           << "\n";
+          // }
         }
 
         const auto right_input_column_statistics = std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(

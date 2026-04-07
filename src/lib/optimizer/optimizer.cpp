@@ -193,16 +193,16 @@ OptimizerRuleMetrics::OptimizerRuleMetrics(const std::string& init_rule_name,
  * earlier rule. In the future, it might make sense to bring back iterative groups of rules, but we should keep
  * optimization costs reasonable.
  */
-std::shared_ptr<Optimizer> Optimizer::create_default_optimizer(bool with_optimizations_for_data_dependencies) {
-  std::shared_ptr<Optimizer> optimizer = nullptr; 
+std::shared_ptr<Optimizer> Optimizer::create_default_optimizer(bool /*with_optimizations_for_data_dependencies*/) {
+  std::shared_ptr<Optimizer> optimizer = std::make_shared<Optimizer>();
 
-  if (with_optimizations_for_data_dependencies) {
-    // std::cout << "Creating optimizer with optimizations for data dependencies" << std::endl;
-    optimizer = std::make_shared<Optimizer>(std::make_shared<CostEstimatorLogical>(CardinalityEstimator::new_instance_with_optimizations()));
-  } else {
-    // std::cout << "Creating default optimizer" << std::endl;
-    optimizer = std::make_shared<Optimizer>();
-  }
+  // if (with_optimizations_for_data_dependencies) {
+  //   // std::cout << "Creating optimizer with optimizations for data dependencies" << std::endl;
+  //   optimizer = std::make_shared<Optimizer>(std::make_shared<CostEstimatorLogical>(CardinalityEstimator::new_instance_with_optimizations()));
+  // } else {
+  //   // std::cout << "Creating default optimizer" << std::endl;
+  //   optimizer = std::make_shared<Optimizer>();
+  // }
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
