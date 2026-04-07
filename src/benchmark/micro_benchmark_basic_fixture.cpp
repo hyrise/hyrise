@@ -17,10 +17,10 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
 
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
-  _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->generate_table(2ul, row_count, chunk_size));
-  _table_wrapper_b = std::make_shared<TableWrapper>(table_generator->generate_table(2ul, row_count, chunk_size));
+  _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->generate_table(2, row_count, chunk_size));
+  _table_wrapper_b = std::make_shared<TableWrapper>(table_generator->generate_table(2, row_count, chunk_size));
   _table_dict_wrapper = std::make_shared<TableWrapper>(
-      table_generator->generate_table(2ul, row_count, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary}));
+      table_generator->generate_table(2, row_count, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary}));
 
   _table_wrapper_a->never_clear_output();
   _table_wrapper_b->never_clear_output();

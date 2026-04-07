@@ -26,8 +26,7 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
-
-#include "scheduler/task_utils.hpp"
+#include "utils/scheduling_utils.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -295,7 +294,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
 
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
-  const auto [group_count, jobs] = group_chunks_for_scheduling(table, [&](size_t group_id, std::shared_ptr<std::vector<ChunkID>> chunk_ids) {
+  Assert(table->chunk_count() > 0, "Unexpected table with no chunks.");
+
+  const auto [group_count, jobs] = group_chunks_for_scheduling(table, [&](size_t group_id, std::shared_ptr<boost::container::small_vector<ChunkID, 1>> chunk_ids) {
     auto local_output_bloom_filter = BloomFilter{};
     std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
     if (Hyrise::get().is_multi_threaded()) {
@@ -570,7 +571,7 @@ template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits,
                                                            const BloomFilter& input_bloom_filter) {
-  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
   if (radix_container.empty()) {
     return {};
@@ -663,14 +664,14 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
            "value information");
   }
 
-  const std::hash<HashedType> hash_function;
+  const auto hash_function = std::hash<HashedType>{};
 
   const auto input_partition_count = radix_container.size();
   const auto output_partition_count = size_t{1} << radix_bits;
 
-  // currently, we just do one pass
-  const size_t pass = 0;
-  const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
+  // Currently, we just do one pass.
+  const auto pass = size_t{0};
+  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
   // allocate new (shared) output
   auto output = RadixContainer<T>(output_partition_count);
