@@ -294,7 +294,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
 
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
-  Assert(table->chunk_count() > 0, "Unexpected table with no chunks.");
+  if (table->chunk_count() == 0) {
+    // We cannot exit before resizing the input bloom filter.
+    return radix_container;
+  }
 
   const auto [group_count, jobs] = group_chunks_for_scheduling(table, [&](size_t group_id, std::shared_ptr<boost::container::small_vector<ChunkID, 1>> chunk_ids) {
     auto local_output_bloom_filter = BloomFilter{};
