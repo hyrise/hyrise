@@ -299,7 +299,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     return radix_container;
   }
 
-  const auto [group_count, jobs] = group_chunks_for_scheduling(table, [&](size_t group_id, std::shared_ptr<boost::container::small_vector<ChunkID, 1>> chunk_ids) {
+  const auto jobs = group_chunks_for_scheduling(table, [&](size_t group_id, std::shared_ptr<boost::container::small_vector<ChunkID, 1>> chunk_ids) {
     auto local_output_bloom_filter = BloomFilter{};
     std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
     if (Hyrise::get().is_multi_threaded()) {
@@ -425,6 +425,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& table, c
     }
   });
 
+  const auto group_count = jobs.size();
 
   // Create histograms and radix container per group (i.e., a group of chunks). As we need to merge histograms later in
   // the radix partitining phase, we want to lower the merging overhead by grouping while still having a sufficiently
