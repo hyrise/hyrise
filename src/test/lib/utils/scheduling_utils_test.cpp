@@ -1,12 +1,10 @@
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 #include "utils/scheduling_utils.hpp"
-#include "hyrise.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
 
 namespace hyrise {
 
@@ -14,7 +12,7 @@ class SchedulingUtilsTest : public BaseTest {};
 
 TEST_F(SchedulingUtilsTest, NoChunksTableGrouping) {
   const auto empty_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  EXPECT_THROW(group_chunks_for_scheduling(empty_table, [&](auto, auto) {} ), std::logic_error);
+  EXPECT_THROW(group_chunks_for_scheduling(empty_table, [&](auto, auto) {}), std::logic_error);
 }
 
 TEST_F(SchedulingUtilsTest, SingleThreadedGrouping) {
@@ -24,10 +22,10 @@ TEST_F(SchedulingUtilsTest, SingleThreadedGrouping) {
   EXPECT_EQ(table->chunk_count(), CHUNK_COUNT);
 
   if constexpr (HYRISE_DEBUG) {
-    const auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {} );
+    const auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), CHUNK_COUNT);
   } else {
-    const auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {} );
+    const auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {});
     EXPECT_EQ(jobs.size(), 1);
   }
 }
@@ -44,7 +42,9 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
 
   auto sum = std::atomic<size_t>{0};
 
-  const auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) { ++sum; } );
+  const auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {
+    ++sum;
+  });
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   EXPECT_EQ(jobs.size(), THREAD_COUNT);

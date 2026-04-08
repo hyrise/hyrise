@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <boost/container/small_vector.hpp>
@@ -28,7 +30,8 @@ namespace hyrise {
  * scheduled.
  */
 template <typename Functor>
-std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std::shared_ptr<const Table>& table, const Functor& functor) {
+std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std::shared_ptr<const Table>& table,
+                                                                       const Functor& functor) {
   const auto chunk_count = table->chunk_count();
   Assert(chunk_count > 0, "Tables without any chunks must be handled by the caller.");
 
@@ -66,7 +69,6 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
       task_items->reserve(tasks_per_group);
       ++group_id;
     }
-
   }
 
   if (!task_items->empty()) {
@@ -83,4 +85,3 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
 }
 
 }  // namespace hyrise
-

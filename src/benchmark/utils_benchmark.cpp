@@ -18,7 +18,9 @@ static void BM_ChunkGroupingForScheduling(benchmark::State& state) {
 
   auto sum = size_t{0};
   for (auto _ : state) {
-    auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) { ++sum; } );
+    auto jobs = group_chunks_for_scheduling(table, [&](auto, auto) {
+      ++sum;
+    });
     benchmark::DoNotOptimize(jobs);
     benchmark::DoNotOptimize(sum);
   }
