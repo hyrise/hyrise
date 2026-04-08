@@ -221,7 +221,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   join_hash_performance_data.radix_bits = *_radix_bits;
   join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
 
-  return _impl->_on_execute();
+  return _impl->execute();
 }
 
 void JoinHash::_on_cleanup() {
@@ -267,7 +267,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
 
-  std::shared_ptr<const Table> _on_execute() override {
+  std::shared_ptr<const Table> execute() override {
     /**
      * Keep/Discard NULLs from build and probe columns as follows
      *

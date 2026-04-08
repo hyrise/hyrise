@@ -21,10 +21,12 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/pqp_build_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/build.hpp"
 #include "operators/pqp_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/chunk.hpp"
@@ -104,7 +106,8 @@ void GetTable::set_prunable_subquery_predicates(
     const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
   if constexpr (HYRISE_DEBUG) {
     for (const auto& predicate : predicates) {
-      Assert(predicate->type == ExpressionType::Predicate, "Unexpected expression for subquery predicate.");
+      Assert(predicate->type == ExpressionType::Predicate || predicate->type == ExpressionType::PQPBuild,
+             "Unexpected expression for subquery predicate.");
     }
   }
 
@@ -344,57 +347,86 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
   const auto stored_table_node = StoredTableNode::make(_name);
 
   for (const auto& predicate : _prunable_subquery_predicates) {
-    // Create a copy of the predicate that we can modify. Do not create a deep copy of the subquery plan.
-    auto mapping = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
-    visit_expression(predicate, [&](const auto& expression) {
-      if (expression->type != ExpressionType::PQPSubquery) {
-        return ExpressionVisitation::VisitArguments;
-      }
-
-      // Add the subquery plan to the mapping so the predicate deep copy below uses the existing plan instead of
-      // creating a plan copy.
-      const auto& subquery = static_cast<const PQPSubqueryExpression&>(*expression);
-      mapping.emplace(subquery.pqp.get(), subquery.pqp);
-      return ExpressionVisitation::DoNotVisitArguments;
-    });
-    const auto adjusted_predicate = predicate->deep_copy(mapping);
-    const auto& arguments = predicate->arguments;
-    auto& adjusted_arguments = adjusted_predicate->arguments;
-    const auto argument_count = adjusted_predicate->arguments.size();
-
-    // Adjust predicates with the StoredTableNode and the subquery result, if available.
-    for (auto expression_idx = size_t{0}; expression_idx < argument_count; ++expression_idx) {
-      const auto& argument = arguments[expression_idx];
-      Assert(argument->type == ExpressionType::PQPColumn || argument->type == ExpressionType::PQPSubquery,
-             "Unexpected subquery predicate with argument '" + argument->as_column_name() + "'.");
-      auto& adjusted_argument = adjusted_arguments[expression_idx];
-      // Replace any column with the respective column from our StoredTableNode.
-      if (argument->type == ExpressionType::PQPColumn) {
-        adjusted_argument =
-            lqp_column_(stored_table_node, static_cast<const PQPColumnExpression&>(*argument).column_id);
+    auto adjusted_predicate = std::shared_ptr<AbstractExpression>{};
+    if (predicate->type == ExpressionType::PQPBuild) {
+      const auto& build_expression = static_cast<const PQPBuildExpression&>(*predicate);
+      const auto& build = *build_expression.build;
+      if (!build.executed()) {
         continue;
       }
 
-      // It might happen that scheduling the subquery before the GetTable operator would create a cycle. For instance,
-      // this can happen for a query like this: SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table);
-      // The PQP of the query could look like the following:
-      //
-      //     [TableScan] x > SUBQUERY
-      //          |             *
-      //          |             * uncorrelated subquery
-      //          |             *
-      //          |      [AggregateHash] AVG(x)
-      //          |       /
-      //         [GetTable] a_table
-      //
-      // We cannot schedule the AggregateHash operator before the GetTable operator to obtain the subquery result for
-      // pruning: the OperatorTasks wrapping both operators would be in a circular wait for each other. We simply avoid
-      // this circular wait by StoredTableNodes using their prunable_subquery_predicates for equality checks. Thus, the
-      // LQPTranslator creates two GetTable operators rather than deduplicating them. `resolve_uncorrelated_subquery()`
-      // asserts that the subquery has already been executed.
-      const auto& subquery = static_cast<const PQPSubqueryExpression&>(*argument);
-      Assert(!subquery.is_correlated(), "Correlated subqueries should not appear in prunable predicates.");
-      adjusted_argument = value_(resolve_uncorrelated_subquery(subquery.pqp));
+      resolve_data_type(build.build_data_type(), [&](const auto build_data_type_t) {
+        using BuildColumnType = typename decltype(build_data_type_t)::type;
+        resolve_data_type(build.probe_data_type(), [&](const auto probe_data_type_t) {
+          using ProbeColumnType = typename decltype(probe_data_type_t)::type;
+          using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
+
+          const auto& build_statistics =
+              static_cast<const BuildStatistics<BuildColumnType, HashedType>&>(build.build_statistics());
+
+          const auto column = lqp_column_(stored_table_node, build_expression.column_id);
+          if (build_statistics.row_count == 1) {
+            Assert(build_statistics.min == build_statistics.max, "Values should be equal.");
+            adjusted_predicate = equals_(column, value_(build_statistics.min));
+          } else {
+            adjusted_predicate = between_inclusive_(column, value_(build_statistics.min), value_(build_statistics.max));
+          }
+        });
+      });
+
+    } else {
+      // Create a copy of the predicate that we can modify. Do not create a deep copy of the subquery plan.
+      auto mapping = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
+      visit_expression(predicate, [&](const auto& expression) {
+        if (expression->type != ExpressionType::PQPSubquery) {
+          return ExpressionVisitation::VisitArguments;
+        }
+
+        // Add the subquery plan to the mapping so the predicate deep copy below uses the existing plan instead of
+        // creating a plan copy.
+        const auto& subquery = static_cast<const PQPSubqueryExpression&>(*expression);
+        mapping.emplace(subquery.pqp.get(), subquery.pqp);
+        return ExpressionVisitation::DoNotVisitArguments;
+      });
+      adjusted_predicate = predicate->deep_copy(mapping);
+      const auto& arguments = predicate->arguments;
+      auto& adjusted_arguments = adjusted_predicate->arguments;
+      const auto argument_count = adjusted_predicate->arguments.size();
+
+      // Adjust predicates with the StoredTableNode and the subquery result, if available.
+      for (auto expression_idx = size_t{0}; expression_idx < argument_count; ++expression_idx) {
+        const auto& argument = arguments[expression_idx];
+        Assert(argument->type == ExpressionType::PQPColumn || argument->type == ExpressionType::PQPSubquery,
+               "Unexpected subquery predicate with argument '" + argument->as_column_name() + "'.");
+        auto& adjusted_argument = adjusted_arguments[expression_idx];
+        // Replace any column with the respective column from our StoredTableNode.
+        if (argument->type == ExpressionType::PQPColumn) {
+          adjusted_argument =
+              lqp_column_(stored_table_node, static_cast<const PQPColumnExpression&>(*argument).column_id);
+          continue;
+        }
+
+        // It might happen that scheduling the subquery before the GetTable operator would create a cycle. For instance,
+        // this can happen for a query like this: SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table);
+        // The PQP of the query could look like the following:
+        //
+        //     [TableScan] x > SUBQUERY
+        //          |             *
+        //          |             * uncorrelated subquery
+        //          |             *
+        //          |      [AggregateHash] AVG(x)
+        //          |       /
+        //         [GetTable] a_table
+        //
+        // We cannot schedule the AggregateHash operator before the GetTable operator to obtain the subquery result for
+        // pruning: the OperatorTasks wrapping both operators would be in a circular wait for each other. We simply avoid
+        // this circular wait by StoredTableNodes using their prunable_subquery_predicates for equality checks. Thus, the
+        // LQPTranslator creates two GetTable operators rather than deduplicating them. `resolve_uncorrelated_subquery()`
+        // asserts that the subquery has already been executed.
+        const auto& subquery = static_cast<const PQPSubqueryExpression&>(*argument);
+        Assert(!subquery.is_correlated(), "Correlated subqueries should not appear in prunable predicates.");
+        adjusted_argument = value_(resolve_uncorrelated_subquery(subquery.pqp));
+      }
     }
 
     // Add a new PredicateNode to the pruning chain.

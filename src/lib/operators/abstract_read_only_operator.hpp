@@ -15,19 +15,18 @@ class AbstractReadOnlyOperator : public AbstractOperator {
   using AbstractOperator::AbstractOperator;
 
  protected:
-  // This override exists so that all AbstractReadOnlyOperators can ignore the transaction context
-  // Apart from Validate and GetTable, none of the read-only operators needs the transaction context.
+  // This override exists so that all AbstractReadOnlyOperators can ignore the transaction context. Apart from Validate
+  // and GetTable, none of the read-only operators needs the transaction context.
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> /*context*/) override;
 
   virtual std::shared_ptr<const Table> _on_execute() = 0;
 
-  // Some operators need an internal implementation class, mostly in cases where
-  // their execute method depends on a template parameter. An example for this is
-  // found in table_scan.hpp.
+  // Some operators need an internal implementation class, mostly in cases where their execute method depends on a
+  // template parameter. An example for this is found in join_hash.cpp.
   class AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractReadOnlyOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> _on_execute() = 0;
+    virtual std::shared_ptr<const Table> execute() = 0;
   };
 };
 

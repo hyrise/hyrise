@@ -8,9 +8,11 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/pqp_build_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
+#include "operators/build.hpp"
 #include "operators/get_table.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/task_utils.hpp"
@@ -71,13 +73,31 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
     const auto& get_table = static_cast<GetTable&>(*op);
     for (const auto& predicate : get_table.prunable_subquery_predicates()) {
       visit_expression(predicate, [&](const auto& expression) {
-        if (expression->type != ExpressionType::PQPSubquery) {
+        if (expression->type != ExpressionType::PQPSubquery && expression->type != ExpressionType::PQPBuild) {
           return ExpressionVisitation::VisitArguments;
         }
 
+        auto subquery_root = std::shared_ptr<OperatorTask>{};
+        if (expression->type == ExpressionType::PQPSubquery) {
+          const auto& subquery = static_cast<const PQPSubqueryExpression&>(*expression);
+          subquery_root = subquery.pqp->get_or_create_operator_task();
+        } else {
+          const auto& build = static_cast<const PQPBuildExpression&>(*expression);
+          subquery_root = build.build->get_or_create_operator_task();
+          auto is_successor = false;
+          visit_tasks_upwards(task, [&](const auto& successor) {
+            if (successor == subquery_root) {
+              is_successor = true;
+              return TaskUpwardVisitation::DoNotVisitSuccessors;
+            }
+            return TaskUpwardVisitation::VisitSuccessors;
+          });
+          if (is_successor) {
+            return ExpressionVisitation::DoNotVisitArguments;
+          }
+        }
+
         // All tasks have already been created, so we must be able to get the cached task from each operator.
-        const auto& subquery = static_cast<const PQPSubqueryExpression&>(*expression);
-        const auto& subquery_root = subquery.pqp->get_or_create_operator_task();
         Assert(tasks.contains(subquery_root), "Unknown OperatorTask.");
 
         // Cycles in the task graph would lead to deadlocks during execution. This could happen if a table can be pruned

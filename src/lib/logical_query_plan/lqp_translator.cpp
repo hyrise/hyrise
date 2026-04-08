@@ -36,6 +36,7 @@
 #include "null_value.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
+#include "operators/build.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/delete.hpp"
 #include "operators/export.hpp"
@@ -54,6 +55,7 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "operators/probe.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -352,7 +354,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto left_input_operator = _translate_node_recursively(node->left_input());
-  const auto right_input_operator = _translate_node_recursively(node->right_input());
+  auto right_input_operator = _translate_node_recursively(node->right_input());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
@@ -387,7 +389,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
   constexpr auto JOIN_OPERATOR_PREFERENCE_ORDER =
-      hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
+      hana::to_tuple(hana::tuple_t<Probe, JoinHash, JoinSortMerge, JoinNestedLoop>);
 
   boost::hana::for_each(JOIN_OPERATOR_PREFERENCE_ORDER, [&](const auto join_operator_t) {
     using JoinOperator = typename decltype(join_operator_t)::type;
@@ -400,6 +402,37 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     // clang-tidy complains about the move in the loop as it does not recognize the early out above.
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {
+      if constexpr (std::is_same_v<JoinOperator, Probe>) {
+        const auto build = std::make_shared<Build>(right_input_operator, primary_join_predicate.column_ids.second,
+                                                   right_data_type, left_data_type);
+        const auto& join_predicate = join_node->join_predicates().front();
+        for (const auto& expression : join_node->left_input()->output_expressions()) {
+          if (expression->type == ExpressionType::LQPColumn &&
+              (*expression == *join_predicate->arguments[0] || *expression == *join_predicate->arguments[1])) {
+            const auto& column_expression = static_cast<const LQPColumnExpression&>(*expression);
+            const auto& original_node =
+                std::const_pointer_cast<AbstractLQPNode>(column_expression.original_node.lock());
+            if (!original_node || original_node->type != LQPNodeType::StoredTable) {
+              break;
+            }
+
+            auto& get_table =
+                const_cast<GetTable&>(static_cast<const GetTable&>(*(_operator_by_lqp_node.at(original_node))));
+            auto prunable_predicates = get_table.prunable_subquery_predicates();
+            const auto new_predicate = std::make_shared<PQPBuildExpression>(build, column_expression.original_column_id,
+                                                                            column_expression.data_type());
+            const auto has_predicate = std::ranges::find_if(prunable_predicates, [&](const auto& predicate) {
+              return *predicate == *new_predicate;
+            });
+            if (has_predicate == prunable_predicates.end()) {
+              prunable_predicates.emplace_back(new_predicate);
+              get_table.set_prunable_subquery_predicates(prunable_predicates);
+            }
+            right_input_operator = build;
+            break;
+          }
+        }
+      }
       join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }

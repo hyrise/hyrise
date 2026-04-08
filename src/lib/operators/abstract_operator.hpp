@@ -21,6 +21,7 @@ class PQPSubqueryExpression;
 enum class OperatorType {
   Aggregate,
   Alias,
+  Build,
   ChangeMetaTable,
   CreateTable,
   CreatePreparedPlan,
@@ -41,6 +42,7 @@ enum class OperatorType {
   JoinVerification,
   Limit,
   Print,
+  Probe,
   Product,
   Projection,
   Sort,
@@ -104,7 +106,7 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  *      executed on, so the registration happens at execution time in the ExpressionEvaluator.
  *
  * AUTOMATIC CLEARING
- *  Operators clear themselves automatically by calling clear_output when the last consumer deregisters. Note that
+ *  Operators clear themselves automatically by calling clear_output when the last consumer deregisters. Note thatp
  *  top-level operators do not have any consuming operators. Therefore, owning instances, such as
  *  SQLPipelineStatement, have to call clear_output manually or register as consumers themselves.
  *

@@ -94,7 +94,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
         dynamic_cast<OperatorPerformanceData<JoinSortMerge::OperatorSteps>&>(*performance_data));
   });
 
-  return _impl->_on_execute();
+  return _impl->execute();
 }
 
 void JoinSortMerge::_on_cleanup() {
@@ -880,7 +880,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 
  public:
-  std::shared_ptr<const Table> _on_execute() override {
+  std::shared_ptr<const Table> execute() override {
     const auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
     const auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
     auto radix_clusterer = RadixClusterSort<T>(

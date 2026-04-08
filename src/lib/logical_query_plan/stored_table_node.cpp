@@ -87,7 +87,8 @@ void StoredTableNode::set_prunable_subquery_predicates(
     const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
   if constexpr (HYRISE_DEBUG) {
     for (const auto& predicate : predicates) {
-      Assert(predicate->type == ExpressionType::Predicate, "Unexpected expression for subquery predicate.");
+      Assert(predicate->type == ExpressionType::Predicate || predicate->type == ExpressionType::PQPBuild,
+             "Unexpected expression for subquery predicate.");
     }
   }
   _prunable_subquery_predicates = predicates;

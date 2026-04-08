@@ -21,6 +21,7 @@ enum class ExpressionType {
   Cast,
   Case,
   CorrelatedParameter,
+  PQPBuild,
   PQPColumn,
   LQPColumn,
   Exists,
