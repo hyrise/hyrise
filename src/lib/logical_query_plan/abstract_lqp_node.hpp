@@ -302,6 +302,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   void _remove_output_pointer(const AbstractLQPNode& output);
   /** @} */
 
+  // Output pointers can be expired. Usually, we remove output pointers when we untie output nodes from the plan, i.e.,
+  // via `set_input()`. However, some optimizer rules, such as join ordering, create new nodes and only attach subtrees
+  // to the new nodes without untying the former outputs. Thus, output nodes can expire when they are not needed
+  // anymore. Before #2730, we removed expired output nodes when they were destructed, but doing so created concurrency
+  // issues in some settings.
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
 };

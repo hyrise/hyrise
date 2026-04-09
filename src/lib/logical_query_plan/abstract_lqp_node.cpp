@@ -180,6 +180,7 @@ std::vector<LQPInputSide> AbstractLQPNode::get_input_sides() const {
 
   for (const auto& output_weak_ptr : _outputs) {
     const auto output = output_weak_ptr.lock();
+    // Output pointers can be expired. See header for details on `_outputs`.
     if (!output) {
       continue;
     }
@@ -195,6 +196,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
 
   for (const auto& output_weak_ptr : _outputs) {
     const auto output = output_weak_ptr.lock();
+    // Output pointers can be expired. See header for details on `_outputs`.
     if (!output) {
       continue;
     }
@@ -421,7 +423,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto node_mapping_iter = node_mapping.find(shared_from_this());
 
-  // Handle diamond shapes in the LQP; don't copy nodes twice
+  // Handle diamond shapes in the LQP: do not copy nodes twice.
   if (node_mapping_iter != node_mapping.end()) {
     return node_mapping_iter->second;
   }
@@ -435,6 +437,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
 
 void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
   const auto iter = std::ranges::find_if(_outputs, [&](const auto& other) {
+    // Output pointers can be expired. See header for details on `_outputs`. Thus, we just skip expired ones.
     return !other.expired() && &output == other.lock().get();
   });
   DebugAssert(iter != _outputs.end(), "Specified output node is not an output node of this node.");
