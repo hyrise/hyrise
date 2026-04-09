@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <limits>
 #include <memory>
 #include <string>
@@ -91,6 +93,17 @@ TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
   EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'234), 0.0);
   EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 123'456), 2.5);
   EXPECT_DOUBLE_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 1'000'000), 0.0);
+}
+
+TEST_F(GenericHistogramTest, EstimateCardinalityWithScaledAndSlicedHistogram) {
+  const auto histogram = GenericHistogram<int32_t>::with_single_bin(std::numeric_limits<int32_t>::min(),
+                                                                    std::numeric_limits<int32_t>::max(), 1, 1);
+
+  const auto scaled_histogram = std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(histogram->scaled(0.5));
+
+  const auto sliced_histogram = std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(
+      scaled_histogram->sliced(PredicateCondition::NotEquals, 0));
+  EXPECT_GE(sliced_histogram->bin_height(0), 0);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicFloat) {
