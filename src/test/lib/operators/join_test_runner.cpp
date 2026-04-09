@@ -713,11 +713,12 @@ TEST_P(JoinTestRunner, TestJoin) {
     } else {
       std::cout << "No Table produced by the reference join operator\n";
     }
+    // This value might not exist if an error was thrown in the join operator.
     if (table_difference_message) {
       std::cout << "======================== Difference ========================\n";
       std::cout << *table_difference_message;
-      std::cout << "\n============================================================\n";
     }
+    std::cout << "\n============================================================\n";
   };
 
   try {
