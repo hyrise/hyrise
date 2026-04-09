@@ -65,6 +65,17 @@ bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chun
   return !chunk->is_mutable() && snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
 
+bool Validate::_is_entire_chunk_invisible(const std::shared_ptr<const Chunk>& chunk,
+                                        const CommitID snapshot_commit_id) const {
+  DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})),
+              "_is_entire_chunk_invisible cannot be called on reference chunks.");
+
+  const auto& mvcc_data = chunk->mvcc_data();
+  const auto max_end_cid = mvcc_data->max_end_cid.load();
+
+  return !chunk->is_mutable() && snapshot_commit_id > max_end_cid && chunk->invalid_row_count() == chunk->size();
+}
+
 Validate::Validate(const std::shared_ptr<AbstractOperator>& input_operator)
     : AbstractReadOnlyOperator(OperatorType::Validate, input_operator) {}
 
@@ -162,6 +173,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
   // only one table is referenced over all chunks. If, in the future, this is not true anymore, entirely_visible_chunks
   // either needs to be moved into the loop or turn into an `unordered_map<shared_ptr<Table>, vector<bool>>`.
   auto entirely_visible_chunks = std::vector<bool>{};
+  auto entirely_invisible_chunks = std::vector<bool>{};
   auto entirely_visible_chunks_table = std::shared_ptr<const Table>{};  // used only for sanity check
 
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
@@ -206,7 +218,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
           // We can reuse the old PosList since it is entirely visible. Not using the entirely_visible_chunks cache for
           // this shortcut to keep the code short.
           pos_list_out = pos_list_in;
-        } else {
+        } else if (!_is_entire_chunk_invisible(referenced_chunk, snapshot_commit_id)) {
+          // Only look at the MVCC data if there are actually tuples that can be visible.
           auto temp_pos_list = RowIDPosList{};
           temp_pos_list.guarantee_single_chunk();
           for (const auto row_id : *pos_list_in) {
@@ -229,17 +242,24 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
           // While this might introduce a small overhead in the case of many unreferenced chunks, it allows us to avoid
           // a branch in the hot loop.
           entirely_visible_chunks = std::vector<bool>(referenced_table->chunk_count(), false);
+          entirely_invisible_chunks = std::vector<bool>(referenced_table->chunk_count(), false);
           for (auto referenced_table_chunk_id = ChunkID{0}; referenced_table_chunk_id < referenced_table->chunk_count();
                ++referenced_table_chunk_id) {
             const auto referenced_chunk = referenced_table->get_chunk(referenced_table_chunk_id);
             entirely_visible_chunks[referenced_table_chunk_id] =
                 _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id);
+            entirely_invisible_chunks[referenced_table_chunk_id] =
+                _is_entire_chunk_invisible(referenced_chunk, snapshot_commit_id);
           }
         }
 
         for (const auto row_id : *pos_list_in) {
           if (entirely_visible_chunks[row_id.chunk_id]) {
             temp_pos_list.emplace_back(row_id);
+            continue;
+          }
+
+          if (entirely_invisible_chunks[row_id.chunk_id]) {
             continue;
           }
 
@@ -271,7 +291,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       if (_is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
         // Not using the entirely_visible_chunks cache here as for data tables, we only look at chunks once anyway.
         pos_list_out = std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size());
-      } else {
+      } else if (!_is_entire_chunk_invisible(chunk_in, snapshot_commit_id)) {
         const auto mvcc_data = chunk_in->mvcc_data();
         auto temp_pos_list = RowIDPosList{};
         temp_pos_list.reserve(expected_number_of_valid_rows);

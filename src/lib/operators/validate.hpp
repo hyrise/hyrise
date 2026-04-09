@@ -34,9 +34,10 @@ class Validate : public AbstractReadOnlyOperator {
                         const ChunkID chunk_id_end, const TransactionID our_tid, const CommitID snapshot_commit_id,
                         std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const;
 
-  // This is a performance optimization that can only be used if a couple of conditions are met, i.e., if
-  // _can_use_chunk_shortcut is true. Consult _on_execute() for more details on the conditions.
+  // These are performance optimizations that can only be used if a couple of conditions are met, e.g., if
+  // `_can_use_chunk_shortcut` is true. Consult `_on_execute()` for more details on the conditions.
   bool _is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id) const;
+  bool _is_entire_chunk_invisible(const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id) const;
 
   bool _can_use_chunk_shortcut = true;
 
