@@ -42,17 +42,15 @@ size_t PredicateNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  auto copied_predicate = expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping);
+  const auto copied_predicate = expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping);
+  // Make sure that any subqueries in the predicate are added to `node_mapping`.
   map_lqp_subqueries(*predicate(), *copied_predicate, node_mapping);
   return std::make_shared<PredicateNode>(copied_predicate);
 }
 
 bool PredicateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& predicate_node = static_cast<const PredicateNode&>(rhs);
-  const auto equal =
-      expression_equal_to_expression_in_different_lqp(*predicate(), *predicate_node.predicate(), node_mapping);
-
-  return equal;
+  return expression_equal_to_expression_in_different_lqp(*predicate(), *predicate_node.predicate(), node_mapping);
 }
 
 }  // namespace hyrise

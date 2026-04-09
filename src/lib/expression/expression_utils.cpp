@@ -424,8 +424,8 @@ void map_lqp_subqueries(const AbstractExpression& expression, const AbstractExpr
     Assert(copied_expression.type == ExpressionType::LQPSubquery, "Expressions have incompatible type.");
     const auto& subquery = static_cast<const LQPSubqueryExpression&>(expression);
     const auto& copied_subquery = static_cast<const LQPSubqueryExpression&>(copied_expression);
-    DebugAssert(*subquery.lqp == *copied_subquery.lqp, "Subquery LQPy are not equal.");
     Assert(subquery.is_correlated() == copied_subquery.is_correlated(), "Subqueries are not equal.");
+    DebugAssert(*subquery.lqp == *copied_subquery.lqp, "Subquery LQPs are not equal.");
     mapping.emplace(subquery.lqp, copied_subquery.lqp);
   }
 
