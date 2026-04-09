@@ -69,7 +69,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
  endif()
 
 # Starting with GCC 14's libstdc++, std::atomic_load for shared pointers is deprecated (as part of C++20). However, as
-# of LLVM 19, libc++ has not implemented std::atomic<std::shared_ptr> (see P0718R2,
+# of LLVM 22, libc++ has not implemented std::atomic<std::shared_ptr> (see P0718R2,
 # https://en.cppreference.com/w/cpp/compiler_support). As we use libstdc++ when compiling with clang on Linux, we
 # disable deprecation warnings.
 # We only disable this warning on Linux because clang on macOS uses libc++. Once libc++ implements the missing atomics,
