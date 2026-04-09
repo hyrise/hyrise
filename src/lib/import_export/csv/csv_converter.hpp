@@ -39,14 +39,14 @@ class BaseCsvConverter {
    * The operation is in-place and does not create a new string object.
    * Field must be a valid csv field.
    */
-  static void unescape(std::string& field, const ParseConfig& config = {});
-  static std::string unescape_copy(const std::string& field, const ParseConfig& config = {});
+  static void unescape(std::string& field, const CsvParseConfig& config = {});
+  static std::string unescape_copy(const std::string& field, const CsvParseConfig& config = {});
 };
 
 template <typename T>
 class CsvConverter : public BaseCsvConverter {
  public:
-  explicit CsvConverter(ChunkOffset size, const ParseConfig& config = {}, bool is_nullable = false)
+  explicit CsvConverter(ChunkOffset size, const CsvParseConfig& config = {}, bool is_nullable = false)
       : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
   void insert(std::string& value, ChunkOffset position) override {
@@ -55,14 +55,14 @@ class CsvConverter : public BaseCsvConverter {
       return;
     }
 
-    if (boost::to_lower_copy(value) == ParseConfig::NULL_STRING) {
+    if (value == _config.null_string) {
       Assert(_config.null_handling != NullHandling::RejectNullStrings,
-             "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null "
-             "value, or set 'null_handling' to the appropriate strategy in parse config.");
+             "Unquoted NULL found in CSV file. Quote it for string literal, leave field empty for NULL value, or set "
+             "'null_handling' to the appropriate strategy in parse config.");
       if (_config.null_handling == NullHandling::NullStringAsNull) {
         Assert(_is_nullable,
-               "Unquoted null found in CSV file, while the associated column is not nullable. Quote it "
-               "for string literal \"null\" or make the column nullable.");
+               "Unquoted NULL found in CSV file, while the associated column is not nullable. Quote it "
+               "for string literal or make the column nullable.");
         _null_values[position] = true;
         return;
       }
@@ -103,7 +103,7 @@ class CsvConverter : public BaseCsvConverter {
   pmr_vector<T> _parsed_values;
   pmr_vector<bool> _null_values;
   const bool _is_nullable;
-  ParseConfig _config;
+  CsvParseConfig _config;
 };
 
 template <>

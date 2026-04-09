@@ -579,7 +579,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
   return std::make_shared<Import>(import_node->file_name, import_node->table_name, Chunk::DEFAULT_SIZE,
-                                  import_node->file_type, import_node->target_encoding);
+                                  import_node->file_type, import_node->target_encoding, import_node->csv_parse_config);
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
@@ -587,7 +587,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = _translate_node_recursively(node->left_input());
   const auto export_node = std::dynamic_pointer_cast<ExportNode>(node);
-  return std::make_shared<Export>(input_operator, export_node->file_name, export_node->file_type);
+  return std::make_shared<Export>(input_operator, export_node->file_name, export_node->file_type,
+                                  export_node->csv_parse_config);
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.

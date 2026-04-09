@@ -39,21 +39,24 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   // 1. Delete obsolete data with the Delete operator.
   //    Delete doesn't accept empty input data
   if (left_input_table()->row_count() > 0) {
-    _delete = std::make_shared<Delete>(_left_input);
-    _delete->set_transaction_context(context);
-    _delete->execute();
+    const auto delete_operator = std::make_shared<Delete>(_left_input);
+    delete_operator->set_transaction_context(context);
+    delete_operator->execute();
 
-    if (_delete->execute_failed()) {
+    if (delete_operator->execute_failed()) {
       _mark_as_failed();
       return nullptr;
     }
   }
 
-  // 2. Insert new data with the Insert operator.
-  _insert = std::make_shared<Insert>(_table_to_update_name, _right_input);
-  _insert->set_transaction_context(context);
-  _insert->execute();
-  // Insert cannot fail in the MVCC sense, no check necessary
+  // A table must not have an empty chunk, because the Import operator would crash when making the empty chunk
+  // immutable to append to the table. We, therefore, only create the Insert operator if there are rows in the input.
+  if (_right_input->get_output()->row_count() > 0) {
+    const auto insert = std::make_shared<Insert>(_table_to_update_name, _right_input);
+    insert->set_transaction_context(context);
+    insert->execute();
+    // Insert cannot fail in the MVCC sense, no check necessary.
+  }
 
   return nullptr;
 }

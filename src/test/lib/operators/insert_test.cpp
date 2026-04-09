@@ -513,4 +513,15 @@ TEST_F(OperatorsInsertTest, MarkMultipleChunksImmutable) {
   }
 }
 
+TEST_F(OperatorsInsertTest, QueryTableWithoutChunks) {
+  const auto table =
+      Table::create_dummy_table(TableColumnDefinitions{TableColumnDefinition("column", DataType::Int, false)});
+  Hyrise::get().storage_manager.add_table("empty_table", table);
+
+  const auto [status, tables] = SQLPipelineBuilder{"SELECT * FROM empty_table"}.create_pipeline().get_result_tables();
+  EXPECT_EQ(status, SQLPipelineStatus::Success);
+  EXPECT_EQ(tables.size(), 1);
+  EXPECT_TRUE(tables[0]->empty());
+}
+
 }  // namespace hyrise

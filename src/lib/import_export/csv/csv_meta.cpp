@@ -71,8 +71,8 @@ CsvMeta process_csv_meta_file(const std::string& filename) {
 }
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
-  // Apply only parts of the ParseConfig that are provided, use default values otherwise
-  auto config = ParseConfig{};
+  // Apply only parts of the CsvParseConfig that are provided, use default values otherwise
+  auto config = CsvParseConfig{};
   if (json.find("config") != json.end()) {
     Assert(json.at("config").is_object(), "CSV meta file,\"Config\" field has to be a json object.");
     nlohmann::json config_json = json.at("config");
@@ -130,7 +130,7 @@ bool operator==(const CsvMeta& left, const CsvMeta& right) {
   return std::tie(left.config, left.columns) == std::tie(right.config, right.columns);
 }
 
-bool operator==(const ParseConfig& left, const ParseConfig& right) {
+bool operator==(const CsvParseConfig& left, const CsvParseConfig& right) {
   return std::tie(left.delimiter, left.separator, left.quote, left.escape, left.delimiter_escape,
                   left.reject_quoted_nonstrings, left.null_handling, left.rfc_mode) ==
          std::tie(right.delimiter, right.separator, right.quote, right.escape, right.delimiter_escape,
