@@ -219,14 +219,12 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
     auto histograms = std::vector<std::vector<size_t>>{};
     auto bloom_filter = BloomFilter{};  // Ignored in this test
 
-    // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
-    // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
+    // When using 1 bit for radix partitioning, we have two radix clusters determined on the least significant bit. For
+    // the 0/1 table, we should thus cluster the ones and the zeros.
     materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 1, bloom_filter);
-    size_t histogram_offset_sum = 0;
-    EXPECT_EQ(histograms.size(), this->_table_size_zero_one / this->_chunk_size_zero_one);
-    for (const auto& radix_count_per_chunk : histograms) {
-      for (auto count : radix_count_per_chunk) {
-        EXPECT_EQ(count, this->_chunk_size_zero_one / 2);
+    auto histogram_offset_sum = size_t{0};
+    for (const auto& radix_count_per_chunk_group : histograms) {
+      for (auto count : radix_count_per_chunk_group) {
         histogram_offset_sum += count;
       }
     }
@@ -237,28 +235,37 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
     auto histograms = std::vector<std::vector<size_t>>{};
     auto bloom_filter = BloomFilter{};  // Ignored in this test
 
-    // When using 2 bits for radix partitioning, we have four radix clusters determined on the two least
-    // significant bits. For the 0/1 table, we expect two non-empty clusters (00/01) and two empty ones (10/11).
-    // Since the radix clusters are determine by hashing the value, we do not know in which cluster
-    // the values are going to be stored.
-    size_t empty_cluster_count = 0;
+    // When using 2 bits for radix partitioning, we have four radix clusters determined on the two least significant
+    // bits. For the 0/1 table, we expect two non-empty clusters (00/01) and two empty ones (10/11). Since the radix
+    // clusters are determine by hashing the value, we do not know in which cluster the values are going to be stored.
+    auto empty_cluster_count = size_t{0};
+    auto non_empty_cluster_count = size_t{0};
+    auto item_count = size_t{0};
     materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 2, bloom_filter);
-    for (const auto& radix_count_per_chunk : histograms) {
-      for (auto count : radix_count_per_chunk) {
+    for (const auto& radix_count_per_chunk_group : histograms) {
+      for (auto count : radix_count_per_chunk_group) {
         // Again, due to the hashing, we do not know which cluster holds the value
-        // But we know that two buckets have _table_size_zero_one/2 items and two have none items.
-        EXPECT_TRUE(count == this->_chunk_size_zero_one / 2 || count == 0);
+        // But we know that two buckets have items and two have none items.
         if (count == 0) {
           ++empty_cluster_count;
+        } else {
+          ++non_empty_cluster_count;
         }
+        item_count += count;
       }
     }
-    EXPECT_EQ(empty_cluster_count, 2 * this->_table_size_zero_one / this->_chunk_size_zero_one);
+
+    // Due to chunk grouping, the number of histograms can be dependent on the hardware. However, we know we have two
+    // empty and two non-empty items in each histogram.
+    EXPECT_EQ(empty_cluster_count / histograms.size(), 2);
+    EXPECT_EQ(non_empty_cluster_count / histograms.size(), 2);
+
+    EXPECT_EQ(item_count, _table_zero_one->row_count());
   }
 }
 
 TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
-  const size_t radix_bit_count = 1;
+  const auto radix_bit_count = size_t{1};
   auto histograms = std::vector<std::vector<size_t>>{};
   auto bloom_filter = BloomFilter{};  // Ignored in this test
 
@@ -271,7 +278,7 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   const auto radix_cluster_result =
       partition_by_radix<int, int, true>(materialized_without_null_handling, histograms, radix_bit_count);
 
-  // Loaded table does not include int=0 values, so all int=0 values are NULLs
+  // Loaded table does not include int=0 values, so all int=0 values are NULLs.
   for (const auto& partition : radix_cluster_result) {
     for (auto i = size_t{0}; i < partition.elements.size(); ++i) {
       const auto value = partition.elements.at(i).value;
@@ -325,10 +332,10 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
   // We want to test a non-NULL-considering Radix Container, ensure we did it correctly
   EXPECT_EQ(materialized_without_null_handling[0].null_values.size(), 0);
 
-  // Using true as the NULL handing flag should lead to an error,
-  // because we did not create NULL value information during materialization.
-  // Note, the extra parantheses are required for Gtest since otherwise the preprocessor
-  // has problems resolving this code line (see https://stackoverflow.com/a/35957776/1147726)
+  // Using true as the NULL handing flag should lead to an error, because we did not create NULL value information
+  // during materialization.
+  // Note, the extra parantheses are required for Gtest since otherwise the preprocessor has problems resolving this
+  // code line (see https://stackoverflow.com/a/35957776/1147726).
   EXPECT_THROW((partition_by_radix<int, int, true>)(materialized_without_null_handling, histograms, radix_bit_count),
                std::logic_error);
 }
