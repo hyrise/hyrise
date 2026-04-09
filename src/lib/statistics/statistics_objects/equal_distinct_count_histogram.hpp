@@ -57,6 +57,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   BinID bin_for_value(const T& value) const override;
   BinID next_bin_for_value(const T& value) const override;
 
+  static uint16_t determine_bin_count(size_t table_row_count);
+
  private:
   /**
    * We use multiple vectors rather than a vector of structs for ease-of-use with STL library functions.
