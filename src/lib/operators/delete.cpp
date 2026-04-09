@@ -80,7 +80,8 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = _referencing_table->get_chunk(chunk_id);
 
-    Assert(chunk->references_exactly_one_table(), "All segments in _referencing_table must reference the same table.");
+    Assert(chunk->segments_share_table_and_positions(),
+           "All segments in _referencing_table must reference the same table.");
 
     const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
     const auto pos_list = first_segment->pos_list();

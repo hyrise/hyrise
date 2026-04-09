@@ -98,7 +98,7 @@ WarningsAsErrors: '*'
 #   - bugprone-unchecked-optional-access                        Too many false positives (with clang-tidy 14/15). TODO(anyone): Re-evaluate for future clang versions.
 #   - llvm-header-guard                                         We prefer the simpler `#pragma once`. The main arguments (e.g., lacking support in old compilers)
 #                                                               do not matter with our limited set of supported compilers.
-#   - boost-use-ranges                                          As most boost-ranges implementations are now in C++20, we prefer `std::ranges`.
+#   - boost-use-ranges                                          As most boost-ranges implementations are in C++23, we prefer `std::ranges`.
 #   - portability-template-virtual-member-function              We do not mind being incompatible with the MSVC compiler.
 
 
