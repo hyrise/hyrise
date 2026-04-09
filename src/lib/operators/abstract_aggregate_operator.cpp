@@ -55,7 +55,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
     if (groupby_column_idx > 0) {
       description << "," << separator;
     }
-    const size_t group_by_column_id = _groupby_column_ids[groupby_column_idx];
+    const auto group_by_column_id = size_t{_groupby_column_ids[groupby_column_idx]};
     if (lqp_node) {
       description << lqp_node->left_input()->output_expressions()[group_by_column_id]->as_column_name();
     } else {
