@@ -70,6 +70,7 @@
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "logical_query_plan/window_node.hpp"
+#include "optimizer/optimizer.hpp"
 #include "sql/parameter_id_allocator.hpp"
 #include "sql/sql_identifier.hpp"
 #include "sql/sql_identifier_resolver.hpp"
@@ -1804,17 +1805,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(prepare_statement.query, parse_result));
   AssertInput(parse_result.size() == 1, "PREPAREd statement can only contain a single SQL statement.");
 
-  auto prepared_plan_translator = SQLTranslator{_use_mvcc};
+  auto prepared_plan_translator = std::optional{SQLTranslator{_use_mvcc}};
 
-  const auto translation_result = prepared_plan_translator.translate_parser_result(parse_result);
-  Assert(translation_result.translation_info.cacheable,
+  auto translation_result = std::optional{prepared_plan_translator->translate_parser_result(parse_result)};
+  Assert(translation_result->translation_info.cacheable,
          "Non-cacheable LQP nodes can't be part of prepared statements.");
 
-  const auto lqp = translation_result.lqp_nodes.at(0);
+  auto lqp = translation_result->lqp_nodes.at(0);
 
-  const auto parameter_ids = translation_result.translation_info.parameter_ids_of_value_placeholders;
+  const auto parameter_ids = std::move(translation_result->translation_info.parameter_ids_of_value_placeholders);
 
-  const auto lqp_prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids);
+  // We have to destroy the translator and translation objects here, so all other references to the lqp are dropped.
+  prepared_plan_translator.reset();
+  translation_result.reset();
+  const auto optimizer = Optimizer::create_default_optimizer();
+  auto [optimized_lqp, optimization_context] = optimizer->optimize_with_context(std::move(lqp));
+
+  const auto lqp_prepared_plan =
+      std::make_shared<PreparedPlan>(optimized_lqp, parameter_ids, std::move(optimization_context));
 
   return CreatePreparedPlanNode::make(prepare_statement.name, lqp_prepared_plan);
 }

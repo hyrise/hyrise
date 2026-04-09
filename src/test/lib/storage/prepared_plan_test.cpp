@@ -8,6 +8,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "storage/prepared_plan.hpp"
+#include "testing_assert.hpp"
 
 namespace hyrise {
 
@@ -67,6 +68,36 @@ TEST_F(PreparedPlanTest, InstantiateHashEqual) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   EXPECT_EQ(*actual_lqp, *expected_lqp);
   EXPECT_EQ(actual_lqp->hash(), expected_lqp->hash());
+}
+
+TEST_F(PreparedPlanTest, InstantiateDuplicatePlaceholders) {
+  // The optimizer might duplicate parameter nodes, so we need to make sure that we instanciate all of them.
+
+  // clang-format off
+  const auto placeholder = placeholder_(ParameterID{0});
+
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, b_x),
+    PredicateNode::make(greater_than_(a_a, placeholder),
+      node_a),
+    PredicateNode::make(greater_than_(b_x, placeholder),
+      node_b));
+  // clang-format on
+
+  const auto prepared_plan = PreparedPlan{lqp, {ParameterID{0}}};
+  const auto value = value_(42);
+  const auto actual_lqp = prepared_plan.instantiate({value});
+
+  // clang-format off
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, b_x),
+    PredicateNode::make(greater_than_(a_a, value),
+      node_a),
+    PredicateNode::make(greater_than_(b_x, value),
+      node_b));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 }  // namespace hyrise
