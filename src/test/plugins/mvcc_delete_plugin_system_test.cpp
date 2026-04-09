@@ -72,7 +72,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     const auto validate = std::make_shared<Validate>(gt);
 
-    const auto column = pqp_column_(ColumnID{0}, DataType::Int, false, "number");
+    const auto column = pqp_column_(ColumnID{0}, DataType::Int, "number");
     const auto where = std::make_shared<TableScan>(validate, equals_(column, static_cast<int32_t>(_counter)));
 
     const auto update = std::make_shared<Update>(_t_name_test, where, where);
@@ -105,7 +105,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     const auto validate = std::make_shared<Validate>(gt);
     validate->set_transaction_context(transaction_context);
 
-    const auto sum = sum_(pqp_column_(ColumnID{0}, DataType::Int, false, "number"));
+    const auto sum = sum_(pqp_column_(ColumnID{0}, DataType::Int, "number"));
     const auto aggregate_definition =
         std::vector<std::shared_ptr<WindowFunctionExpression>>{std::static_pointer_cast<WindowFunctionExpression>(sum)};
     const auto group_by = std::vector<ColumnID>{};

@@ -712,10 +712,10 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   EXPECT_EQ(aggregate_op->groupby_column_ids().at(0), ColumnID{1});
 
   const auto sum = aggregate_op->aggregates()[0];
-  EXPECT_EQ(*sum, *sum_(pqp_column_(ColumnID{2}, DataType::Float, false, "b + a")));
+  EXPECT_EQ(*sum, *sum_(pqp_column_(ColumnID{2}, DataType::Float, "b + a")));
 
   const auto count = aggregate_op->aggregates()[1];
-  EXPECT_EQ(*count, *count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, false, "*")));
+  EXPECT_EQ(*count, *count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, "*")));
 }
 
 TEST_F(LQPTranslatorTest, JoinAndPredicates) {
@@ -1027,7 +1027,7 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto a_plus_b_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Float, false, "a + b");
+  const auto a_plus_b_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Float, "a + b");
   const auto scan_column_expression =
       std::dynamic_pointer_cast<PQPColumnExpression>(table_scan->predicate()->arguments.at(0));
 
@@ -1067,7 +1067,7 @@ TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
 
   // As subquery columns without an explicit alias get the LQP/PQP address as their name, we need to retrieve it first.
   const auto column_name = subquery_a->as_column_name();
-  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, column_name);
+  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, column_name);
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(subquery_in_temporary_column, 3));
 }
