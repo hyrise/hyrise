@@ -22,7 +22,14 @@ class CsvParserTest : public BaseTest {};
 TEST_F(CsvParserTest, SingleFloatColumn) {
   const auto csv_file = std::string{"resources/test_data/csv/float.csv"};
   const auto table = CsvParser::parse(csv_file, process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION));
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", ChunkOffset{5});
+  const auto expected_table = load_table("resources/test_data/tbl/float.tbl", ChunkOffset{5});
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
+TEST_F(CsvParserTest, SingleLongWithNullColumn) {
+  const auto expected_table = load_table("resources/test_data/tbl/long_with_null.tbl", ChunkOffset{5});
+  const auto csv_file = std::string{"resources/test_data/csv/long_with_null.csv"};
+  const auto table = CsvParser::parse(csv_file, process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION));
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 

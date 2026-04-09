@@ -147,20 +147,26 @@ TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
   ASSERT_ANY_THROW(_projection_node->get_input_side(_mock_node_a));
 }
 
-TEST_F(LogicalQueryPlanTest, SimpleClearOutputs) {
-  _predicate_node_a->set_left_input(_mock_node_a);
+TEST_F(LogicalQueryPlanTest, SetInputUntiesOutput) {
+  const auto union_node = UnionNode::make(SetOperationMode::All);
+  union_node->set_left_input(_mock_node_a);
+  union_node->set_right_input(_mock_node_a);
 
-  ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
-  ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
-  ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
-  ASSERT_TRUE(_predicate_node_a->outputs().empty());
+  const auto outputs = _mock_node_a->outputs();
+  ASSERT_EQ(outputs.size(), 2);
+  EXPECT_EQ(outputs[0], union_node);
+  EXPECT_EQ(outputs[1], union_node);
+  EXPECT_EQ(union_node->left_input(), _mock_node_a);
+  EXPECT_EQ(union_node->right_input(), _mock_node_a);
+  EXPECT_TRUE(union_node->outputs().empty());
 
-  _mock_node_a->clear_outputs();
+  union_node->set_left_input(nullptr);
+  union_node->set_right_input(nullptr);
 
-  ASSERT_TRUE(_mock_node_a->outputs().empty());
-  ASSERT_EQ(_predicate_node_a->left_input(), nullptr);
-  ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
-  ASSERT_TRUE(_predicate_node_a->outputs().empty());
+  EXPECT_TRUE(_mock_node_a->outputs().empty());
+  EXPECT_FALSE(union_node->left_input());
+  EXPECT_FALSE(union_node->right_input());
+  EXPECT_TRUE(union_node->outputs().empty());
 }
 
 TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
@@ -436,17 +442,42 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubqueries) {
 }
 
 TEST_F(LogicalQueryPlanTest, OutputResetOnNodeDelete) {
-  auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
-  auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "y"}});
+  const auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
+  const auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "y"}});
   auto join_node = JoinNode::make(JoinMode::Cross, mock_node_a, mock_node_b);
 
-  EXPECT_EQ(mock_node_a->output_count(), 1u);
-  EXPECT_EQ(mock_node_b->output_count(), 1u);
+  EXPECT_EQ(mock_node_a->output_count(), 1);
+  EXPECT_EQ(mock_node_b->output_count(), 1);
 
   join_node.reset();
 
-  EXPECT_EQ(mock_node_a->output_count(), 0u);
-  EXPECT_EQ(mock_node_b->output_count(), 0u);
+  EXPECT_EQ(mock_node_a->output_count(), 0);
+  EXPECT_EQ(mock_node_b->output_count(), 0);
+}
+
+TEST_F(LogicalQueryPlanTest, IgnoreExpiredOutputs) {
+  const auto input_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
+  auto output_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "y"}});
+  const auto output_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "z"}});
+
+  output_a->set_left_input(input_node);
+  output_b->set_left_input(input_node);
+
+  ASSERT_EQ(input_node->output_count(), 2);
+  EXPECT_EQ(input_node->outputs()[0], output_a);
+  EXPECT_EQ(input_node->outputs()[1], output_b);
+  EXPECT_EQ(input_node->get_input_sides(), (std::vector{LQPInputSide::Left, LQPInputSide::Left}));
+  ASSERT_EQ(input_node->output_relations().size(), 2);
+  EXPECT_EQ(input_node->output_relations()[0], LQPOutputRelation{.output = output_a});
+  EXPECT_EQ(input_node->output_relations()[1], LQPOutputRelation{.output = output_b});
+
+  output_a.reset();
+
+  ASSERT_EQ(input_node->output_count(), 1);
+  EXPECT_EQ(input_node->outputs()[0], output_b);
+  EXPECT_EQ(input_node->get_input_sides(), std::vector{LQPInputSide::Left});
+  ASSERT_EQ(input_node->output_relations().size(), 1);
+  EXPECT_EQ(input_node->output_relations()[0], LQPOutputRelation{.output = output_b});
 }
 
 }  // namespace hyrise

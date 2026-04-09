@@ -113,10 +113,12 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   /**
    * Init the virtual pos lists
    */
+  // NOLINTBEGIN(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   auto virtual_pos_list_left = VirtualPosList(left_in_table.row_count(), 0);
   std::iota(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), 0);
   auto virtual_pos_list_right = VirtualPosList(right_input_table()->row_count(), 0);
   std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0);
+  // NOLINTEND(modernize-use-ranges)
 
   /**
    * Sort the virtual pos lists so that they bring the rows in their respective ReferenceMatrix into order.

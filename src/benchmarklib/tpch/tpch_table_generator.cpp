@@ -142,7 +142,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   Assert(_scale_factor < 1 || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
 
-  const auto cache_directory = std::format("tpch_cached_tables/sf-{}", _scale_factor);
+  const auto cache_directory = std::format("tpch_cached_tables/sf-{}", std::to_string(_scale_factor));
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     return _load_binary_tables_from_path(cache_directory);
   }

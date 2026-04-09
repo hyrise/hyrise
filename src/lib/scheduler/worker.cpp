@@ -44,6 +44,8 @@ Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuI
     : _queue(queue), _id(worker_id), _cpu_id(cpu_id) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
+
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(_random.begin(), _random.end(), 0);
   std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
 }

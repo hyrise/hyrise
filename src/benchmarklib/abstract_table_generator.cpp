@@ -397,6 +397,7 @@ void AbstractTableGenerator::_create_table_indexes(
     const auto& table = table_info_by_name[table_name].table;
 
     auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+    // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
     std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
     for (const auto& index_column_names : indexes) {
       Assert(index_column_names.size() == 1, "Multi-column indexes are currently not supported.");
@@ -475,7 +476,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
       auto& table_info = table_name_info_pair.second;
       table_info.table = BinaryParser::parse(*table_info.binary_file_path);
 
-      std::cout << std::format("-  Loaded table '{}' from cached binary {} ({})", table_name_info_pair.first,
+      std::cout << std::format("-  Loaded table '{}' from cached binary \"{}\" ({})\n", table_name_info_pair.first,
                                table_info.binary_file_path->string(), timer.lap_formatted())
                 << std::flush;
     }));

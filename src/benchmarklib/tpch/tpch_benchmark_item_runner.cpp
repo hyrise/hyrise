@@ -45,6 +45,7 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _scale_factor(scale_factor),
       _clustering_configuration(clustering_configuration) {
   _items.resize(22);
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 }
 
@@ -519,7 +520,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
 
 std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   Assert(item_id < 22, "item_id out of range.");
-  return std::format("TPC-H {:0>2}", item_id.t);
+  return std::format("TPC-H {:0>2}", item_id.t + 1);
 }
 
 std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkItemID item_id,
