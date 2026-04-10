@@ -41,20 +41,23 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
   EXPECT_EQ(table->chunk_count(), CHUNK_COUNT);
 
   auto sum = std::atomic<size_t>{0};
-  auto markers = std::vector<bool>{};
+  auto markers = std::vector<size_t>{};
   const auto jobs = group_chunks_for_scheduling(table, [&](const auto group_id, const auto chunks) {
     ++sum;
-    markers[group_id] = 1;
     EXPECT_EQ(CHUNK_COUNT / THREAD_COUNT, chunks->size());
+
+    // As we resize to the returned group size before spawning the jobs, this write should be safe.
+    markers[group_id] = 17;
   });
 
-  markers.resize(jobs.size());
+  const auto group_count = jobs.size();
+  markers.resize(group_count);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  EXPECT_EQ(jobs.size(), THREAD_COUNT);
-  EXPECT_EQ(jobs.size(), sum);
-  for (const auto marker : markers) {
-    EXPECT_TRUE(marker);
+  EXPECT_EQ(group_count, THREAD_COUNT);
+  EXPECT_EQ(group_count, sum);
+  for (const auto& marker : markers) {
+    EXPECT_EQ(marker, 17);
   }
 
   Hyrise::get().scheduler()->finish();
