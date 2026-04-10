@@ -54,6 +54,7 @@ std::vector<Type> generate_values(const size_t table_size);
 template <>
 std::vector<int32_t> generate_values<int32_t>(const size_t table_size) {
   auto values = std::vector<int32_t>(table_size);
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(values.begin(), values.end(), 0);
   return values;
 }

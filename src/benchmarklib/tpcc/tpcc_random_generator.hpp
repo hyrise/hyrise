@@ -87,6 +87,7 @@ class TPCCRandomGenerator : public RandomGenerator {
 
   std::vector<size_t> permutation(size_t lower, size_t upper) {
     auto values = std::vector<size_t>(upper - lower);
+    // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
     std::iota(values.begin(), values.end(), lower);
     std::shuffle(values.begin(), values.end(), _engine);
     return values;

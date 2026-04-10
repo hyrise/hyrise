@@ -40,9 +40,11 @@ class OperatorsIndexScanTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(int_int_5);
 
     _chunk_ids = std::vector<ChunkID>(int_int_7->chunk_count());
+    // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
     std::iota(_chunk_ids.begin(), _chunk_ids.end(), ChunkID{0});
 
     _chunk_ids_partly_compressed = std::vector<ChunkID>(int_int_5->chunk_count());
+    // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
     std::iota(_chunk_ids_partly_compressed.begin(), _chunk_ids_partly_compressed.end(), ChunkID{0});
 
     _column_id = ColumnID{0};
@@ -185,6 +187,7 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
   ChunkEncoder::encode_all_chunks(table);
 
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
   table->create_partial_hash_index(ColumnID{0}, chunk_ids);
 

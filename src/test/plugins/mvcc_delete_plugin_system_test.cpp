@@ -50,6 +50,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     auto begin_value = 0;
     for (auto chunk_id = ChunkID{0}; chunk_id < INITIAL_CHUNK_COUNT; ++chunk_id) {
       auto values = pmr_vector<int32_t>(CHUNK_SIZE);
+      // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
       std::iota(values.begin(), values.end(), begin_value);
 
       const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values));

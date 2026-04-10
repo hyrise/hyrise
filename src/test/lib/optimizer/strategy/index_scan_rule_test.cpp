@@ -74,6 +74,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
   table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
@@ -104,6 +105,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
   table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
@@ -121,6 +123,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
   table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
@@ -138,6 +141,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
   table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
@@ -157,6 +161,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
   table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
@@ -181,6 +186,7 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
 // scan. The second predicate has a very low selectivity, but does not follow a stored table node.
 TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
   table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
