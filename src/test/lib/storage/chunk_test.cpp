@@ -3,6 +3,7 @@
 #include <exception>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
