@@ -67,14 +67,16 @@ set(
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
+    expression/lqp_reduce_expression.cpp
+    expression/lqp_reduce_expression.hpp
     expression/lqp_subquery_expression.cpp
     expression/lqp_subquery_expression.hpp
     expression/placeholder_expression.cpp
     expression/placeholder_expression.hpp
-    expression/pqp_build_expression.cpp
-    expression/pqp_build_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
+    expression/pqp_reduce_expression.cpp
+    expression/pqp_reduce_expression.hpp
     expression/pqp_subquery_expression.cpp
     expression/pqp_subquery_expression.hpp
     expression/unary_minus_expression.cpp
