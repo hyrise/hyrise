@@ -12,7 +12,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
-#include "expression/abstract_predicate_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"

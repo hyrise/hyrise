@@ -18,7 +18,6 @@
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
