@@ -46,6 +46,7 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
     ++sum;
     EXPECT_EQ(CHUNK_COUNT / THREAD_COUNT, chunks->size());
 
+    ASSERT_FALSE(markers.empty());
     // As we resize to the returned group size before spawning the jobs, this write should be safe.
     markers[group_id] = 17;
   });

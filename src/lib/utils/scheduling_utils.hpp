@@ -61,7 +61,7 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
     task_items->push_back(chunk_id);
 
     if (task_items->size() == tasks_per_group) {
-      jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items, functor]() {
         functor(group_id, std::move(task_items));
       }));
       // task_items = std::make_shared<std::vector<ChunkID>>();
@@ -72,7 +72,7 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
   }
 
   if (!task_items->empty()) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items]() {
+    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items, functor]() {
       functor(group_id, std::move(task_items));
     }));
     ++group_id;
