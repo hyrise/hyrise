@@ -22,7 +22,8 @@ class Build;
 class PQPReduceExpression : public AbstractExpression {
  public:
   // Constructor for single-column PQPSubqueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`.
-  PQPReduceExpression(const std::shared_ptr<AbstractOperator>& init_reducer, const ColumnID init_column_id, const DataType data_type);
+  PQPReduceExpression(const ColumnID init_column_id, const std::shared_ptr<AbstractOperator>& init_reducer,
+                      const DataType data_type);
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;

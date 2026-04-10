@@ -419,8 +419,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
             auto& get_table =
                 const_cast<GetTable&>(static_cast<const GetTable&>(*(_operator_by_lqp_node.at(original_node))));
             auto prunable_predicates = get_table.prunable_subquery_predicates();
-            const auto new_predicate = std::make_shared<PQPBuildExpression>(build, column_expression.original_column_id,
-                                                                            column_expression.data_type());
+            const auto new_predicate =
+                pqp_reduce_(column_expression.original_column_id, build, column_expression.data_type());
             const auto has_predicate = std::ranges::find_if(prunable_predicates, [&](const auto& predicate) {
               return *predicate == *new_predicate;
             });

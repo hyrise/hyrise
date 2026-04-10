@@ -269,8 +269,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::Interval:
       Fail("IntervalExpression should have been resolved by SQLTranslator.");
 
-    case ExpressionType::PQPBuild:
-      Fail("PQPBuildExpression must only occur for subquery pruning.");
+    case ExpressionType::PQPReduce:
+    case ExpressionType::LQPReduce:
+      Fail("Reduce expressions must only occur for subquery pruning.");
   }
 
   // Store the result in the cache.

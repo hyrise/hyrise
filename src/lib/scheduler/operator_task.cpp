@@ -8,7 +8,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/pqp_build_expression.hpp"
+#include "expression/pqp_reduce_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
@@ -73,7 +73,7 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
     const auto& get_table = static_cast<GetTable&>(*op);
     for (const auto& predicate : get_table.prunable_subquery_predicates()) {
       visit_expression(predicate, [&](const auto& expression) {
-        if (expression->type != ExpressionType::PQPSubquery && expression->type != ExpressionType::PQPBuild) {
+        if (expression->type != ExpressionType::PQPSubquery && expression->type != ExpressionType::PQPReduce) {
           return ExpressionVisitation::VisitArguments;
         }
 
@@ -82,8 +82,8 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
           const auto& subquery = static_cast<const PQPSubqueryExpression&>(*expression);
           subquery_root = subquery.pqp->get_or_create_operator_task();
         } else {
-          const auto& build = static_cast<const PQPBuildExpression&>(*expression);
-          subquery_root = build.build->get_or_create_operator_task();
+          const auto& build = static_cast<const PQPReduceExpression&>(*expression);
+          subquery_root = build.reducer->get_or_create_operator_task();
           auto is_successor = false;
           visit_tasks_upwards(task, [&](const auto& successor) {
             if (successor == subquery_root) {

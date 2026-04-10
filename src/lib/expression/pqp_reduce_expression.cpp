@@ -14,27 +14,27 @@
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
-#include "operators/build.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-PQPReduceExpression::PQPReduceExpression(const std::shared_ptr<AbstractOperator>& init_reducer, const ColumnID init_column_id,
-                                       const DataType data_type)
-    : AbstractExpression(ExpressionType::PQPBuild, {}),
+PQPReduceExpression::PQPReduceExpression(const ColumnID init_column_id,
+                                         const std::shared_ptr<AbstractOperator>& init_reducer,
+                                         const DataType data_type)
+    : AbstractExpression(ExpressionType::PQPReduce, {}),
       reducer{init_reducer},
       column_id{init_column_id},
       _data_type{data_type} {}
 
 std::shared_ptr<AbstractExpression> PQPReduceExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<PQPReduceExpression>(reducer->deep_copy(copied_ops), column_id, _data_type);
+  return std::make_shared<PQPReduceExpression>(column_id, reducer->deep_copy(copied_ops), _data_type);
 }
 
 std::string PQPReduceExpression::description(const DescriptionMode /*mode*/) const {
   auto stream = std::stringstream{};
-  stream << "Reduce (PQP, " << build << ")";
+  stream << "Reduce Column #" << column_id << " (" << reducer << ")";
   return stream.str();
 }
 
@@ -54,7 +54,7 @@ bool PQPReduceExpression::_shallow_equals(const AbstractExpression& expression) 
 }
 
 size_t PQPReduceExpression::_shallow_hash() const {
-  size_t hash{0};
+  auto hash = size_t{0};
   boost::hash_combine(hash, column_id);
   boost::hash_combine(hash, _data_type);
   boost::hash_combine(hash, reducer->type());  // TODO(anyone): Not a full hash. Implement and use a hash of/on PQPs?
@@ -62,7 +62,7 @@ size_t PQPReduceExpression::_shallow_hash() const {
 }
 
 bool PQPReduceExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
-  Fail("Nullability 'on lqp' should never be queried from a PQPSelect");
+  Fail("Nullability 'on lqp' should never be queried from a PQPSelect.");
 }
 
 }  // namespace hyrise

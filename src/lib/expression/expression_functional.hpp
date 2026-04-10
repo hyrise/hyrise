@@ -22,9 +22,11 @@
 #include "list_expression.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
+#include "lqp_reduce_expression.hpp"
 #include "lqp_subquery_expression.hpp"
 #include "placeholder_expression.hpp"
 #include "pqp_column_expression.hpp"
+#include "pqp_reduce_expression.hpp"
 #include "pqp_subquery_expression.hpp"
 #include "types.hpp"
 #include "unary_minus_expression.hpp"
@@ -293,6 +295,13 @@ std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const Date
 std::shared_ptr<WindowExpression> window_(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
                                           std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
                                           std::vector<SortMode>&& sort_modes, FrameDescription frame_description);
+
+std::shared_ptr<LQPReduceExpression> lqp_reduce_(const std::shared_ptr<AbstractExpression>& reduced_expression,
+                                                 const std::shared_ptr<AbstractLQPNode>& reducer);
+
+std::shared_ptr<PQPReduceExpression> pqp_reduce_(const ColumnID reduced_column,
+                                                 const std::shared_ptr<AbstractOperator>& reducer,
+                                                 const DataType data_type);
 
 }  // namespace expression_functional
 

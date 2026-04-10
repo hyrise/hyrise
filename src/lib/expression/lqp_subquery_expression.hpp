@@ -44,8 +44,10 @@ class LQPSubqueryExpression : public AbstractExpression {
   const std::vector<ParameterID> parameter_ids;
 
  protected:
+  // We do not implement `_shallow_hash()`, forcing a hash collision for LQPSubqueryExpressions and triggering a full
+  // equality check. Though we often hash entire query plans, we expect most plans to contain only few
+  // LQPSubqueryExpressions. Thus, these hash collisions should be fine.
   bool _shallow_equals(const AbstractExpression& expression) const override;
-  size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*node*/) const override;
 };
 

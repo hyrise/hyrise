@@ -87,11 +87,4 @@ bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression
   return *lqp == *subquery_expression.lqp && parameter_ids == subquery_expression.parameter_ids;
 }
 
-size_t LQPSubqueryExpression::_shallow_hash() const {
-  // Return AbstractExpression::_shallow_hash() (i.e., 0), thus forcing a hash collision for LQPSubqueryExpressions and
-  // triggering a full equality check. Though we often hash entire query plans, we expect most plans to contain only few
-  // LQPSubqueryExpressions. Thus, these hash collisions should be fine.
-  return AbstractExpression::_shallow_hash();
-}
-
 }  // namespace hyrise

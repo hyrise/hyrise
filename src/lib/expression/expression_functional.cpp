@@ -11,8 +11,10 @@
 #include "expression/exists_expression.hpp"
 #include "expression/interval_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_reduce_expression.hpp"
 #include "expression/placeholder_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_reduce_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
@@ -73,6 +75,19 @@ std::shared_ptr<WindowExpression> window_(std::vector<std::shared_ptr<AbstractEx
                                           std::vector<SortMode>&& sort_modes, FrameDescription frame_description) {
   return std::make_shared<WindowExpression>(std::move(partition_by_expressions), std::move(order_by_expressions),
                                             std::move(sort_modes), frame_description);
+}
+
+std::shared_ptr<LQPReduceExpression> lqp_reduce_(const std::shared_ptr<AbstractExpression>& reduced_expression,
+                                                 const std::shared_ptr<AbstractLQPNode>& reducer) {
+  Assert(reduced_expression->type == ExpressionType::LQPColumn, "Invalid argument for LQPReduceExpression.");
+  return std::make_shared<LQPReduceExpression>(std::static_pointer_cast<LQPColumnExpression>(reduced_expression),
+                                               reducer);
+}
+
+std::shared_ptr<PQPReduceExpression> pqp_reduce_(const ColumnID reduced_column,
+                                                 const std::shared_ptr<AbstractOperator>& reducer,
+                                                 const DataType data_type) {
+  return std::make_shared<PQPReduceExpression>(reduced_column, reducer, data_type);
 }
 
 }  // namespace hyrise::expression_functional

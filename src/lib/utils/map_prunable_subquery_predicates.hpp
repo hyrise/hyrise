@@ -9,8 +9,9 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_reduce_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
-#include "expression/pqp_build_expression.hpp"
+#include "expression/pqp_reduce_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/get_table.hpp"
@@ -65,21 +66,25 @@ void map_prunable_subquery_predicates(Mapping& mapping) {
     for (const auto& predicate : prunable_subquery_predicates) {
       auto adjusted_predicate = std::shared_ptr<AbstractExpression>{};
       if constexpr (std::is_same_v<SourceType, const AbstractOperator*>) {
-        // PQP copy: PQPSubqueryExpressions use the mapping internally when provided with `deep_copy()`.
+        // PQP copy: PQP expressions use the mapping internally when provided with `deep_copy()`.
         adjusted_predicate = predicate->deep_copy(mapping);
       } else {
         // In other cases, we want to ensure to use the subquery plan already copied by the original predicate. Thus, we
         // refrain from `deep_copy`ing the [PQP|LQP]SubqueryExpressions in the predicate arguments because they would
         // create a new plan copy.
 
-        if (predicate->type == ExpressionType::PQPBuild) {
-          const auto& build_expression = static_cast<const PQPBuildExpression&>(*predicate);
+        if (predicate->type == ExpressionType::LQPReduce) {
+          const auto& build_expression = static_cast<const LQPReduceExpression&>(*predicate);
           if constexpr (std::is_same_v<TargetType, AbstractOperator>) {
-            // LQP to PQP translation: Use PQP directly.
-            adjusted_predicate = std::make_shared<PQPBuildExpression>(
-                build_expression.build, build_expression.column_id, build_expression.data_type());
+            // LQP to PQP translation: Translate reducer and use ColumnID.
+            adjusted_predicate = pqp_reduce_(build_expression.reduced_column()->original_column_id,
+                                             mapping.at(build_expression.reducer), build_expression.data_type());
           } else {
-            Fail("Unexpected mapping.");
+            // LQP copy: Map column and reducer.
+            const auto& original_column = build_expression.reduced_column();
+            const auto new_column =
+                lqp_column_(mapping.at(original_column->original_node.lock()), original_column->original_column_id);
+            adjusted_predicate = lqp_reduce_(new_column, mapping.at(build_expression.reducer));
           }
         } else {
           const auto argument_count = predicate->arguments.size();

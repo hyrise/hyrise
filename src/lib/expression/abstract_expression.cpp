@@ -50,19 +50,7 @@ bool AbstractExpression::operator==(const AbstractExpression& other) const {
     return true;
   }
 
-  if (type != other.type) {
-    return false;
-  }
-
-  if (!_shallow_equals(other)) {
-    return false;
-  }
-
-  if (!expressions_equal(arguments, other.arguments)) {
-    return false;
-  }
-
-  return true;
+  return type == other.type && _shallow_equals(other) && expressions_equal(arguments, other.arguments);
 }
 
 bool AbstractExpression::operator!=(const AbstractExpression& other) const {

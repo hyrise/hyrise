@@ -21,7 +21,7 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/pqp_build_expression.hpp"
+#include "expression/pqp_reduce_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -106,7 +106,7 @@ void GetTable::set_prunable_subquery_predicates(
     const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
   if constexpr (HYRISE_DEBUG) {
     for (const auto& predicate : predicates) {
-      Assert(predicate->type == ExpressionType::Predicate || predicate->type == ExpressionType::PQPBuild,
+      Assert(predicate->type == ExpressionType::Predicate || predicate->type == ExpressionType::PQPReduce,
              "Unexpected expression for subquery predicate.");
     }
   }
@@ -348,9 +348,10 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
 
   for (const auto& predicate : _prunable_subquery_predicates) {
     auto adjusted_predicate = std::shared_ptr<AbstractExpression>{};
-    if (predicate->type == ExpressionType::PQPBuild) {
-      const auto& build_expression = static_cast<const PQPBuildExpression&>(*predicate);
-      const auto& build = *build_expression.build;
+    if (predicate->type == ExpressionType::PQPReduce) {
+      const auto& build_expression = static_cast<const PQPReduceExpression&>(*predicate);
+      Assert(build_expression.reducer->type() == OperatorType::Build, "Unexpected operator type.");
+      const auto& build = static_cast<const Build&>(*build_expression.reducer);
       if (!build.executed()) {
         continue;
       }
