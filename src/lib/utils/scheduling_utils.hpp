@@ -31,7 +31,7 @@ namespace hyrise {
  */
 template <typename Functor>
 std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std::shared_ptr<const Table>& table,
-                                                                       const Functor& functor) {
+                                                                       const Functor functor) {
   const auto chunk_count = table->chunk_count();
   Assert(chunk_count > 0, "Tables without any chunks must be handled by the caller.");
 

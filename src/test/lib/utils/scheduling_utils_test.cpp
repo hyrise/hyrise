@@ -49,17 +49,17 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
     // As we resize to the returned group size before spawning the jobs, this write should be safe.
     markers[group_id] = 17;
   });
-
   const auto group_count = jobs.size();
   markers.resize(group_count);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-  Hyrise::get().scheduler()->finish();
 
   EXPECT_EQ(group_count, THREAD_COUNT);
   EXPECT_EQ(group_count, sum);
   for (const auto& marker : markers) {
     EXPECT_EQ(marker, 17);
   }
+
+  Hyrise::get().scheduler()->finish();
 }
 
 }  // namespace hyrise
