@@ -19,8 +19,8 @@
 namespace hyrise {
 
 LQPReduceExpression::LQPReduceExpression(const std::shared_ptr<LQPColumnExpression>& reduced_column,
-                                         const std::shared_ptr<AbstractLQPNode>& init_reducer)
-    : AbstractExpression(ExpressionType::LQPReduce, {reduced_column}), reducer{init_reducer} {}
+                                         const std::shared_ptr<AbstractLQPNode>& reducer)
+    : AbstractExpression(ExpressionType::LQPReduce, {reduced_column}), _reducer{reducer} {}
 
 std::shared_ptr<AbstractExpression> LQPReduceExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
@@ -31,7 +31,7 @@ std::shared_ptr<AbstractExpression> LQPReduceExpression::_on_deep_copy(
 
 std::string LQPReduceExpression::description(const DescriptionMode mode) const {
   auto stream = std::stringstream{};
-  stream << "Reduce " << reduced_column()->description(mode) << " (" << reducer << ")";
+  stream << "Reduce " << reduced_column()->description(mode) << " (" << reducer() << ")";
   return stream.str();
 }
 
@@ -43,11 +43,17 @@ std::shared_ptr<LQPColumnExpression> LQPReduceExpression::reduced_column() const
   return std::static_pointer_cast<LQPColumnExpression>(arguments[0]);
 }
 
+std::shared_ptr<AbstractLQPNode> LQPReduceExpression::reducer() const {
+  auto reducer = _reducer.lock();
+  Assert(reducer, "Reducer expired. LQP is invalid.");
+  return reducer;
+}
+
 bool LQPReduceExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPReduceExpression*>(&expression),
               "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& other = static_cast<const LQPReduceExpression&>(expression);
-  return *reducer == *other.reducer;
+  return *reducer() == *other.reducer();
 }
 
 bool LQPReduceExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

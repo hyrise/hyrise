@@ -42,9 +42,8 @@ class ChunkPruningRule : public AbstractRule {
    * Caches intermediate results. Mutable because it needs to be called from the _apply_to_plan_without_subqueries
    * function, which is const.
    */
-  mutable std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                             boost::hash<StoredTableNodePredicateNodePair>>
-      _excluded_chunk_ids_by_predicate_node_cache;
+  mutable std::unordered_map<StoredTableNodePredicatePair, std::set<ChunkID>, boost::hash<StoredTableNodePredicatePair>>
+      _excluded_chunk_ids_by_predicate_cache;
 };
 
 }  // namespace hyrise

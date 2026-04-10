@@ -11,7 +11,7 @@
 
 namespace hyrise {
 
-class Build;
+class AbstractOperator;
 
 /**
  * A PQPReduceExpression represents a subquery (think `a > (SELECT MIN(a) FROM ...`) used as part of an expression in
@@ -22,7 +22,7 @@ class Build;
 class PQPReduceExpression : public AbstractExpression {
  public:
   // Constructor for single-column PQPSubqueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`.
-  PQPReduceExpression(const ColumnID init_column_id, const std::shared_ptr<AbstractOperator>& init_reducer,
+  PQPReduceExpression(const ColumnID init_column_id, const std::shared_ptr<AbstractOperator>& reducer,
                       const DataType data_type);
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
@@ -31,7 +31,8 @@ class PQPReduceExpression : public AbstractExpression {
   std::string description(const DescriptionMode /*mode*/) const override;
   DataType data_type() const override;
 
-  std::shared_ptr<AbstractOperator> reducer;
+  std::shared_ptr<AbstractOperator> reducer() const;
+
   ColumnID column_id;
 
  protected:
@@ -39,6 +40,7 @@ class PQPReduceExpression : public AbstractExpression {
   size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const override;
 
+  std::weak_ptr<AbstractOperator> _reducer;
   DataType _data_type;
 };
 

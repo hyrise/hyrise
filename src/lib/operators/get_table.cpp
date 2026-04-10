@@ -340,8 +340,8 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
   // Create a dummy PredicateNode for each predicate containing a subquery that has already been executed. Because the
   // ChunkPruningRule already took care to add only predicates that are safe to prune with, we can act as if there were
   // no other predicates.
-  auto prunable_predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-  prunable_predicate_nodes.reserve(_prunable_subquery_predicates.size());
+  auto prunable_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+  prunable_predicates.reserve(_prunable_subquery_predicates.size());
   // Create a StoredTableNode without any pruned chunks or prunable predicates.
   const auto stored_table_node = StoredTableNode::make(_name);
 
@@ -349,8 +349,8 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
     auto adjusted_predicate = std::shared_ptr<AbstractExpression>{};
     if (predicate->type == ExpressionType::PQPReduce) {
       const auto& build_expression = static_cast<const PQPReduceExpression&>(*predicate);
-      Assert(build_expression.reducer->type() == OperatorType::Build, "Unexpected operator type.");
-      const auto& build = static_cast<const Build&>(*build_expression.reducer);
+      Assert(build_expression.reducer()->type() == OperatorType::Build, "Unexpected operator type.");
+      const auto& build = static_cast<const Build&>(*build_expression.reducer());
       if (!build.executed()) {
         continue;
       }
@@ -429,15 +429,11 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
       }
     }
 
-    // Add a new PredicateNode to the pruning chain.
-    auto input_node = std::static_pointer_cast<AbstractLQPNode>(stored_table_node);
-    if (!prunable_predicate_nodes.empty()) {
-      input_node = prunable_predicate_nodes.back();
-    }
-    prunable_predicate_nodes.emplace_back(PredicateNode::make(adjusted_predicate, input_node));
+    // Add a new predicate to the pruning chain.
+    prunable_predicates.emplace_back(adjusted_predicate);
   }
 
-  _dynamically_pruned_chunk_ids = compute_chunk_exclude_list(prunable_predicate_nodes, stored_table_node);
+  _dynamically_pruned_chunk_ids = compute_chunk_exclude_list(prunable_predicates, stored_table_node);
   return _dynamically_pruned_chunk_ids;
 }
 

@@ -19,7 +19,6 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/predicate_node.hpp"  // IWYU pragma: keep
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -110,33 +109,33 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 std::set<ChunkID> compute_chunk_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
                                              const std::shared_ptr<StoredTableNode>& stored_table_node) {
-  auto pruned_chunk_ids_by_predicate_node_cache =
-      std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                         boost::hash<StoredTableNodePredicateNodePair>>{};
+  auto pruned_chunk_ids_by_predicate_cache =
+      std::unordered_map<StoredTableNodePredicatePair, std::set<ChunkID>, boost::hash<StoredTableNodePredicatePair>>{};
 
-  return compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node,
-                                    pruned_chunk_ids_by_predicate_node_cache, false);
+  return compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node, pruned_chunk_ids_by_predicate_cache,
+                                    false);
 }
 
 std::set<ChunkID> compute_chunk_exclude_list(
     const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node,
-    std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node,
+    std::unordered_map<StoredTableNodePredicatePair, std::set<ChunkID>, boost::hash<StoredTableNodePredicatePair>>&
+        excluded_chunk_ids_by_predicate,
     const bool prune_statistics) {
   auto excluded_chunk_ids = std::set<ChunkID>{};
-  for (const auto& predicate_node : predicate_pruning_chain) {
-    // Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
-    auto excluded_chunk_ids_iter =
-        excluded_chunk_ids_by_predicate_node.find(std::make_pair(stored_table_node, predicate_node));
+  for (const auto& predicate : predicate_pruning_chain) {
+    if (predicate->type == ExpressionType::LQPReduce) {
+      continue;
+    }
 
-    if (excluded_chunk_ids_iter != excluded_chunk_ids_by_predicate_node.end()) {
-      // Shortcut: The given PredicateNode is part of multiple predicate pruning chains and the set of excluded chunks
+    // Determine the set of chunks that can be excluded for the given predicate.
+    auto excluded_chunk_ids_iter = excluded_chunk_ids_by_predicate.find(std::make_pair(stored_table_node, predicate));
+
+    if (excluded_chunk_ids_iter != excluded_chunk_ids_by_predicate.end()) {
+      // Shortcut: The given predicate is part of multiple predicate pruning chains and the set of excluded chunks
       //           has already been calculated.
       excluded_chunk_ids.insert(excluded_chunk_ids_iter->second.begin(), excluded_chunk_ids_iter->second.end());
       continue;
     }
-
-    auto& predicate = *predicate_node->predicate();
 
     // Hacky:
     // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in
@@ -147,7 +146,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
         std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
     stored_table_node_without_column_pruning->set_pruned_column_ids({});
     const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(
-        predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
+        *predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
 
     // OperatorScanPredicate::from_expression cannot translate predicates that contain subqueries, even though they do
     // not influence other predicates. Thus, we replace subquery expressions by placeholders. Doing so, we can build a
@@ -239,8 +238,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
     }
 
     // Cache result.
-    excluded_chunk_ids_by_predicate_node.emplace(std::make_pair(stored_table_node, predicate_node),
-                                                 current_excluded_chunk_ids);
+    excluded_chunk_ids_by_predicate.emplace(std::make_pair(stored_table_node, predicate), current_excluded_chunk_ids);
     // Add to global excluded list because we collect excluded chunks for the whole predicate pruning chain.
     excluded_chunk_ids.insert(current_excluded_chunk_ids.begin(), current_excluded_chunk_ids.end());
   }

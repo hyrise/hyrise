@@ -44,12 +44,9 @@ bool Probe::supports(const JoinConfiguration& config) {
 }
 
 Probe::Probe(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-             const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
-             const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::Probe, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<JoinHash::PerformanceData>()) {
-  Assert(mode == JoinMode::Semi && secondary_predicates.empty(), "Invalid probe configuration.");
-}
+             const OperatorJoinPredicate& primary_predicate)
+    : AbstractJoinOperator(OperatorType::Probe, left, right, JoinMode::Semi, primary_predicate, {},
+                           std::make_unique<JoinHash::PerformanceData>()) {}
 
 const std::string& Probe::name() const {
   static const auto name = std::string{"Probe"};
@@ -60,8 +57,7 @@ std::shared_ptr<AbstractOperator> Probe::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<Probe>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                 _secondary_predicates);
+  return std::make_shared<Probe>(copied_left_input, copied_right_input, _primary_predicate);
 }
 
 std::shared_ptr<const Table> Probe::_on_execute() {
@@ -140,7 +136,7 @@ std::shared_ptr<const Table> Probe::_on_execute() {
         join_hash_performance_data.set_step_runtime(JoinHash::OperatorSteps::Probing, timer_probing.lap());
 
         radix_probe_column.clear();
-        build.clear_statistics();
+        //build.clear_statistics();
 
         auto timer_output_writing = Timer{};
         const auto create_right_side_pos_lists_by_segment = (left_input_table()->type() == TableType::References);

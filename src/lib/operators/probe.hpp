@@ -16,8 +16,7 @@ class Probe : public AbstractJoinOperator {
   static bool supports(const JoinConfiguration& config);
 
   Probe(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-        const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
-        const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
+        const OperatorJoinPredicate& primary_predicate);
 
   const std::string& name() const override;
 

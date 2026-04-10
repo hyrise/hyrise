@@ -84,7 +84,7 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
           subquery_root = subquery.pqp->get_or_create_operator_task();
         } else {
           const auto& build = static_cast<const PQPReduceExpression&>(*expression);
-          subquery_root = build.reducer->get_or_create_operator_task();
+          subquery_root = build.reducer()->get_or_create_operator_task();
           auto is_successor = false;
           visit_tasks_upwards(task, [&](const auto& successor) {
             if (successor == subquery_root) {

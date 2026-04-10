@@ -24,7 +24,7 @@ class LQPReduceExpression : public AbstractExpression {
  public:
   // Constructor for single-column PQPSubqueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`.
   LQPReduceExpression(const std::shared_ptr<LQPColumnExpression>& reduced_column,
-                      const std::shared_ptr<AbstractLQPNode>& init_reducer);
+                      const std::shared_ptr<AbstractLQPNode>& reducer);
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
@@ -33,14 +33,15 @@ class LQPReduceExpression : public AbstractExpression {
   DataType data_type() const override;
 
   std::shared_ptr<LQPColumnExpression> reduced_column() const;
-
-  std::shared_ptr<AbstractLQPNode> reducer;
+  std::shared_ptr<AbstractLQPNode> reducer() const;
 
  protected:
   // We do not implement `_shallow_hash()`, forcing a hash collision for LQPReduceExpression and triggering a full
   // equality check. In practice, LQPReduceExpressions should not appear in regular plan hashes, anyways.
   bool _shallow_equals(const AbstractExpression& expression) const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const override;
+
+  std::weak_ptr<AbstractLQPNode> _reducer;
 };
 
 }  // namespace hyrise

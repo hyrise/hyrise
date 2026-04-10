@@ -20,26 +20,31 @@
 namespace hyrise {
 
 PQPReduceExpression::PQPReduceExpression(const ColumnID init_column_id,
-                                         const std::shared_ptr<AbstractOperator>& init_reducer,
-                                         const DataType data_type)
+                                         const std::shared_ptr<AbstractOperator>& reducer, const DataType data_type)
     : AbstractExpression(ExpressionType::PQPReduce, {}),
-      reducer{init_reducer},
       column_id{init_column_id},
+      _reducer{reducer},
       _data_type{data_type} {}
 
 std::shared_ptr<AbstractExpression> PQPReduceExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<PQPReduceExpression>(column_id, reducer->deep_copy(copied_ops), _data_type);
+  return std::make_shared<PQPReduceExpression>(column_id, reducer()->deep_copy(copied_ops), _data_type);
 }
 
 std::string PQPReduceExpression::description(const DescriptionMode /*mode*/) const {
   auto stream = std::stringstream{};
-  stream << "Reduce Column #" << column_id << " (" << reducer << ")";
+  stream << "Reduce Column #" << column_id << " (" << reducer() << ")";
   return stream.str();
 }
 
 DataType PQPReduceExpression::data_type() const {
   return _data_type;
+}
+
+std::shared_ptr<AbstractOperator> PQPReduceExpression::reducer() const {
+  auto reducer = _reducer.lock();
+  Assert(reducer, "Reducer expired. PQP is invalid.");
+  return reducer;
 }
 
 bool PQPReduceExpression::_shallow_equals(const AbstractExpression& expression) const {
@@ -50,14 +55,14 @@ bool PQPReduceExpression::_shallow_equals(const AbstractExpression& expression) 
   DebugAssert(dynamic_cast<const PQPReduceExpression*>(&expression),
               "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& other = static_cast<const PQPReduceExpression&>(expression);
-  return reducer == other.reducer && column_id == other.column_id;
+  return column_id == other.column_id && reducer() == other.reducer();
 }
 
 size_t PQPReduceExpression::_shallow_hash() const {
   auto hash = size_t{0};
   boost::hash_combine(hash, column_id);
   boost::hash_combine(hash, _data_type);
-  boost::hash_combine(hash, reducer->type());  // TODO(anyone): Not a full hash. Implement and use a hash of/on PQPs?
+  boost::hash_combine(hash, reducer()->type());  // TODO(anyone): Not a full hash. Implement and use a hash of/on PQPs?
   return hash;
 }
 

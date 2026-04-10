@@ -78,13 +78,13 @@ void map_prunable_subquery_predicates(Mapping& mapping) {
           if constexpr (std::is_same_v<TargetType, AbstractOperator>) {
             // LQP to PQP translation: Translate reducer and use ColumnID.
             adjusted_predicate = pqp_reduce_(build_expression.reduced_column()->original_column_id,
-                                             mapping.at(build_expression.reducer), build_expression.data_type());
+                                             mapping.at(build_expression.reducer()), build_expression.data_type());
           } else {
             // LQP copy: Map column and reducer.
             const auto& original_column = build_expression.reduced_column();
             const auto new_column =
                 lqp_column_(mapping.at(original_column->original_node.lock()), original_column->original_column_id);
-            adjusted_predicate = lqp_reduce_(new_column, mapping.at(build_expression.reducer));
+            adjusted_predicate = lqp_reduce_(new_column, mapping.at(build_expression.reducer()));
           }
         } else {
           const auto argument_count = predicate->arguments.size();

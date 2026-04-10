@@ -67,6 +67,17 @@ bool expressions_equal_to_expressions_in_different_lqp(
 bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& expression_left,
                                                      const AbstractExpression& expression_right,
                                                      const LQPNodeMapping& node_mapping) {
+  if (expression_left.type == ExpressionType::LQPReduce) {
+    if (expression_right.type == ExpressionType::LQPReduce) {
+      return false;
+    }
+    const auto& left_reduce = static_cast<const LQPReduceExpression&>(expression_left);
+    const auto& right_reduce = static_cast<const LQPReduceExpression&>(expression_right);
+
+    return expression_equal_to_expression_in_different_lqp(*left_reduce.reduced_column(),
+                                                           *right_reduce.reduced_column(), node_mapping) &&
+           *left_reduce.reducer() == *right_reduce.reducer();
+  }
   /**
    * Compare expression_left to expression_right by creating a deep copy of expression_left and adapting it to the LQP
    * of expression_right, then perform a normal comparison of two expressions in the same LQP.

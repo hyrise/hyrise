@@ -12,6 +12,7 @@
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
 #include "all_type_variant.hpp"
+#include "build_node.hpp"
 #include "change_meta_table_node.hpp"
 #include "create_prepared_plan_node.hpp"
 #include "create_table_node.hpp"
@@ -66,6 +67,7 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "predicate_node.hpp"
+#include "probe_node.hpp"
 #include "projection_node.hpp"
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
@@ -159,6 +161,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
     case LQPNodeType::Window:             return _translate_window_node(node);
+    case LQPNodeType::Build:              return _translate_build_node(node);
+    case LQPNodeType::Probe:              return _translate_probe_node(node);
 
     // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
@@ -389,7 +393,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
   constexpr auto JOIN_OPERATOR_PREFERENCE_ORDER =
-      hana::to_tuple(hana::tuple_t<Probe, JoinHash, JoinSortMerge, JoinNestedLoop>);
+      hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
 
   boost::hana::for_each(JOIN_OPERATOR_PREFERENCE_ORDER, [&](const auto join_operator_t) {
     using JoinOperator = typename decltype(join_operator_t)::type;
@@ -402,37 +406,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     // clang-tidy complains about the move in the loop as it does not recognize the early out above.
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {
-      if constexpr (std::is_same_v<JoinOperator, Probe>) {
-        const auto build = std::make_shared<Build>(right_input_operator, primary_join_predicate.column_ids.second,
-                                                   right_data_type, left_data_type);
-        const auto& join_predicate = join_node->join_predicates().front();
-        for (const auto& expression : join_node->left_input()->output_expressions()) {
-          if (expression->type == ExpressionType::LQPColumn &&
-              (*expression == *join_predicate->arguments[0] || *expression == *join_predicate->arguments[1])) {
-            const auto& column_expression = static_cast<const LQPColumnExpression&>(*expression);
-            const auto& original_node =
-                std::const_pointer_cast<AbstractLQPNode>(column_expression.original_node.lock());
-            if (!original_node || original_node->type != LQPNodeType::StoredTable) {
-              break;
-            }
-
-            auto& get_table =
-                const_cast<GetTable&>(static_cast<const GetTable&>(*(_operator_by_lqp_node.at(original_node))));
-            auto prunable_predicates = get_table.prunable_subquery_predicates();
-            const auto new_predicate =
-                pqp_reduce_(column_expression.original_column_id, build, column_expression.data_type());
-            const auto has_predicate = std::ranges::find_if(prunable_predicates, [&](const auto& predicate) {
-              return *predicate == *new_predicate;
-            });
-            if (has_predicate == prunable_predicates.end()) {
-              prunable_predicates.emplace_back(new_predicate);
-              get_table.set_prunable_subquery_predicates(prunable_predicates);
-            }
-            right_input_operator = build;
-            break;
-          }
-        }
-      }
       join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
@@ -554,6 +527,28 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
     const std::shared_ptr<AbstractLQPNode>& /* node */) const {
   FailInput("Hyrise does not yet support window functions.");
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_build_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto& build_node = static_cast<const BuildNode&>(*node);
+
+  const auto& input = _translate_node_recursively(node->left_input());
+  const auto& build_column = build_node.build_column();
+  return std::make_shared<Build>(input, node->left_input()->get_column_id(*build_column), build_column->data_type(),
+                                 build_node.probe_data_type);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_probe_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto& probe_node = static_cast<const ProbeNode&>(*node);
+
+  const auto& left_input = _translate_node_recursively(node->left_input());
+  const auto& right_input = _translate_node_recursively(node->right_input());
+  const auto predicate =
+      OperatorJoinPredicate::from_expression(*probe_node.predicate(), *node->left_input(), *node->right_input());
+  Assert(predicate, "Could not translate predicate.");
+  return std::make_shared<Probe>(left_input, right_input, *predicate);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(

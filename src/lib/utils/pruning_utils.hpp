@@ -12,18 +12,18 @@
 
 namespace hyrise {
 
+class AbstractExpression;
 class StoredTableNode;
 class TableStatistics;
 struct OperatorScanPredicate;
-class PredicateNode;
 
-using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
-using StoredTableNodePredicateNodePair = std::pair<std::shared_ptr<StoredTableNode>, std::shared_ptr<PredicateNode>>;
+using PredicatePruningChain = std::vector<std::shared_ptr<AbstractExpression>>;
+using StoredTableNodePredicatePair = std::pair<std::shared_ptr<StoredTableNode>, std::shared_ptr<AbstractExpression>>;
 
 std::set<ChunkID> compute_chunk_exclude_list(
     const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node,
-    std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate,
+    std::unordered_map<StoredTableNodePredicatePair, std::set<ChunkID>, boost::hash<StoredTableNodePredicatePair>>&
+        excluded_chunk_ids_by_predicate,
     const bool prune_statistics = true);
 
 // Convenience version without statistics pruning and result cache.

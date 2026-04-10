@@ -3,7 +3,12 @@
 #include <memory>
 #include <string>
 
+#include <boost/container_hash/hash.hpp>
+
 #include "abstract_lqp_node.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
 
 namespace hyrise {
 

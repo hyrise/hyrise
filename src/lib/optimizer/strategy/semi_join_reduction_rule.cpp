@@ -10,8 +10,10 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/build_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/probe_node.hpp"
 #include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
@@ -33,6 +35,7 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
   // visit_lqp.
   auto semi_join_reductions =
       std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<JoinNode>>>{};
+  auto probes = std::vector<std::pair<std::shared_ptr<JoinNode>, std::shared_ptr<ProbeNode>>>{};
 
   const auto opposite_side = [](const auto side) {
     return side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
@@ -53,9 +56,19 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
     // join_predicates entry.
     for (const auto& join_predicate : join_node->join_predicates()) {
       const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
-      DebugAssert(predicate_expression, "Expected a BinaryPredicateExpression.");
+      Assert(predicate_expression, "Expected a BinaryPredicateExpression.");
       if (predicate_expression->predicate_condition != PredicateCondition::Equals) {
         continue;
+      }
+
+      if (join_node->join_mode == JoinMode::Semi && !join_node->is_semi_reduction() &&
+          join_node->join_predicates().size() == 1) {
+        const auto build_cardinality = estimator->estimate_cardinality(join_node->right_input());
+        const auto probe_cardinality = estimator->estimate_cardinality(join_node->left_input());
+
+        if (2 * build_cardinality < probe_cardinality) {
+          probes.emplace_back(join_node, ProbeNode::make(join_predicate));
+        }
       }
 
       // Since semi join reductions might be beneficial for both sides of the join, we create this helper lambda,
@@ -168,6 +181,27 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
 
   for (const auto& [join_node, side_of_join, semi_join_reduction_node] : semi_join_reductions) {
     lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
+  }
+
+  for (const auto& [join_node, probe_node] : probes) {
+    auto probe_expression = probe_node->predicate()->arguments[0];
+    auto build_expression = probe_node->predicate()->arguments[1];
+    if (!expression_evaluable_on_lqp(probe_expression, *join_node->left_input())) {
+      std::swap(build_expression, probe_expression);
+    }
+
+    const auto is_integer = [](const auto data_type) {
+      return data_type == DataType::Int || data_type == DataType::Long;
+    };
+
+    if (probe_expression->type != ExpressionType::LQPColumn || !is_integer(build_expression->data_type()) ||
+        !is_integer(probe_expression->data_type())) {
+      continue;
+    }
+
+    const auto build = BuildNode::make(build_expression, probe_expression->data_type());
+    lqp_replace_node(join_node, probe_node);
+    lqp_insert_node(probe_node, LQPInputSide::Right, build);
   }
 }
 }  // namespace hyrise
