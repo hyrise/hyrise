@@ -53,14 +53,13 @@ TEST_F(SchedulingUtilsTest, MultiThreadedGrouping) {
   const auto group_count = jobs.size();
   markers.resize(group_count);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->finish();
 
   EXPECT_EQ(group_count, THREAD_COUNT);
   EXPECT_EQ(group_count, sum);
   for (const auto& marker : markers) {
     EXPECT_EQ(marker, 17);
   }
-
-  Hyrise::get().scheduler()->finish();
 }
 
 }  // namespace hyrise
