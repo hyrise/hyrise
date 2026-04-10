@@ -335,8 +335,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
   execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -350,8 +350,8 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
   execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                             pqp_subquery_(subquery_pqp, DataType::Int, false), value_(12345)));
+      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, "a"),
+                                             pqp_subquery_(subquery_pqp, DataType::Int), value_(12345)));
   EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -365,8 +365,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithEmptySubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -378,8 +378,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithInvalidSubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
 
   EXPECT_THROW(scan->create_impl(), std::logic_error);
 }
@@ -390,8 +390,8 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithInvalidSubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                             pqp_subquery_(subquery_pqp, DataType::Int, false), value_(12345)));
+      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, "a"),
+                                             pqp_subquery_(subquery_pqp, DataType::Int), value_(12345)));
 
   EXPECT_THROW(scan->create_impl(), std::logic_error);
 }
@@ -986,10 +986,10 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
    * Test that the correct scanning backend is chosen
    */
 
-  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-  const auto column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
-  const auto column_s = pqp_column_(ColumnID{1}, DataType::String, false, "c");
-  const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
+  const auto column_b = pqp_column_(ColumnID{1}, DataType::Float, "b");
+  const auto column_s = pqp_column_(ColumnID{1}, DataType::String, "c");
+  const auto column_an = pqp_column_(ColumnID{0}, DataType::String, "a");
 
   // clang-format off
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
@@ -1149,7 +1149,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   data_table_wrapper->never_clear_output();
   data_table_wrapper->execute();
 
-  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
 
   // Scan for a >= 100'100
   const auto scan_a = std::make_shared<TableScan>(data_table_wrapper, greater_than_equals_(column_a, 100'100));
