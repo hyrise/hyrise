@@ -614,13 +614,13 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelated) {
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
       std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
-  const auto subquery_a = pqp_subquery_(pqp_a, DataType::Int, false);
+  const auto subquery_a = pqp_subquery_(pqp_a, DataType::Int);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
-  const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true);
+  const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int);
 
   pqp_a->never_clear_output();
   pqp_b->never_clear_output();
@@ -654,7 +654,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedNotPrecalculated) 
   table_scan->execute();
   const auto projection = std::make_shared<Projection>(table_scan, expression_vector(b));
 
-  const auto subquery = pqp_subquery_(projection, DataType::Int, true);
+  const auto subquery = pqp_subquery_(projection, DataType::Int);
 
   EXPECT_THROW(test_expression<int32_t>(table_a, *in_(3, subquery), {0}), std::logic_error);
   EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, subquery), {1}), std::logic_error);
@@ -672,7 +672,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto mul_a = mul_(correlated_parameter_(ParameterID{0}, a), PQPColumnExpression::from_table(*table_a, "a"));
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
-  const auto subquery_a = pqp_subquery_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto subquery_a = pqp_subquery_(pqp_a, DataType::Int, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, subquery_a), {1, 1, 0, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, subquery_a), {0, 1, 1, 0}));
@@ -697,7 +697,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto add_b = add_(correlated_parameter_(ParameterID{0}, a), PQPColumnExpression::from_table(*table_a, "c"));
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
-  const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, subquery_b), {1, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(35, subquery_b), {1, 1, std::nullopt, std::nullopt}));
@@ -726,7 +726,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
 TEST_F(ExpressionEvaluatorToValuesTest, CorrelatedSubqueryPrecalculated) {
   const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
   const auto projection = std::make_shared<Projection>(table_wrapper, expression_vector(a));
-  const auto subquery = pqp_subquery_(projection, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto subquery = pqp_subquery_(projection, DataType::Int, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   // Operators for correlated subqueries must not be reused, and the ExpressionEvaluator creates a copy for each row.
   // Thus, the input PQP must not be executed before.
@@ -743,7 +743,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, CorrelatedSubqueryDiamond) {
   const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
   const auto projection = std::make_shared<Projection>(table_wrapper, expression_vector(a));
   const auto union_all = std::make_shared<UnionAll>(projection, projection);
-  const auto subquery = pqp_subquery_(union_all, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto subquery = pqp_subquery_(union_all, DataType::Int, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   // While executing the subquery LQP, the ExpressionEvaluator must execute each operator once, also for diamonds.
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, subquery), {1, 1, 1, 1}));
@@ -796,10 +796,10 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
   const auto parameter_a = correlated_parameter_(ParameterID{0}, x);
   const auto a_plus_x_projection =
       std::make_shared<Projection>(table_wrapper, expression_vector(add_(parameter_a, x), x));
-  const auto a_plus_x_column = pqp_column_(ColumnID{0}, DataType::Int, false, "");
+  const auto a_plus_x_column = pqp_column_(ColumnID{0}, DataType::Int, "");
   const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(a_plus_x_projection, equals_(a_plus_x_column, 13));
   const auto pqp_subquery_expression =
-      pqp_subquery_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+      pqp_subquery_(a_plus_x_eq_13_scan, DataType::Int, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   const auto exists_expression = exists_(pqp_subquery_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));

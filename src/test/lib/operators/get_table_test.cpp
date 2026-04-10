@@ -307,13 +307,12 @@ TEST_F(OperatorsGetTableTest, Copy) {
   const auto get_table_c = std::make_shared<GetTable>("int_int_float");
   const auto get_table_d = std::make_shared<GetTable>("int_int_float_aliased");
   const auto table_scan_a =
-      std::make_shared<TableScan>(get_table_d, equals_(pqp_column_(ColumnID{1}, DataType::Int, false, "x"), 10));
-  const auto projection = std::make_shared<Projection>(
-      table_scan_a, expression_vector(pqp_column_(ColumnID{0}, DataType::Float, false, "z")));
+      std::make_shared<TableScan>(get_table_d, equals_(pqp_column_(ColumnID{1}, DataType::Int, "x"), 10));
+  const auto projection =
+      std::make_shared<Projection>(table_scan_a, expression_vector(pqp_column_(ColumnID{0}, DataType::Float, "z")));
 
-  const auto table_scan_b =
-      std::make_shared<TableScan>(get_table_c, equals_(pqp_column_(ColumnID{2}, DataType::Float, false, "c"),
-                                                       pqp_subquery_(projection, DataType::Float, false)));
+  const auto table_scan_b = std::make_shared<TableScan>(
+      get_table_c, equals_(pqp_column_(ColumnID{2}, DataType::Float, "c"), pqp_subquery_(projection, DataType::Float)));
   get_table_c->set_prunable_subquery_predicates({table_scan_b});
 
   const auto& pqp_copy = table_scan_b->deep_copy();
@@ -398,9 +397,9 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
-  const auto table_scan =
-      std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                         pqp_subquery_(table_wrapper, DataType::Int, false)));
+  const auto table_scan = std::make_shared<TableScan>(
+      get_table,
+      not_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(table_wrapper, DataType::Int)));
   const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
   const auto stored_table_node = StoredTableNode::make("int_int_float");
   stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
@@ -431,9 +430,9 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
-  const auto table_scan =
-      std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                         pqp_subquery_(table_wrapper, DataType::Int, false)));
+  const auto table_scan = std::make_shared<TableScan>(
+      get_table,
+      not_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(table_wrapper, DataType::Int)));
   const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
   const auto stored_table_node = StoredTableNode::make("int_int_float");
   stored_table_node->set_pruned_chunk_ids({ChunkID{0}});

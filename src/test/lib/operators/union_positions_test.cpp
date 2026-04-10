@@ -33,8 +33,8 @@ class UnionPositionsTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("int_int",
                                             load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
 
-    _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, false, "");
-    _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, false, "");
+    _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, "");
+    _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, "");
   }
 
   std::shared_ptr<Table> _table_10_ints;
@@ -200,7 +200,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
   auto table_scan_a_op =
-      std::make_shared<TableScan>(join, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Int, false, ""), 2));
+      std::make_shared<TableScan>(join, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Int, ""), 2));
   auto table_scan_b_op = std::make_shared<TableScan>(join, less_than_(_float_column_1_non_nullable, 457.0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 

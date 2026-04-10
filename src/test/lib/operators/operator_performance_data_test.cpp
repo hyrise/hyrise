@@ -328,8 +328,7 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStepRuntimes) {
   auto aggregate = std::make_shared<AggregateHash>(
       _table_wrapper,
       std::vector<std::shared_ptr<WindowFunctionExpression>>{
-          min_(pqp_column_(ColumnID{0}, _table->column_data_type(ColumnID{0}), _table->column_is_nullable(ColumnID{0}),
-                           _table->column_name(ColumnID{0})))},
+          min_(pqp_column_(ColumnID{0}, _table->column_data_type(ColumnID{0}), _table->column_name(ColumnID{0})))},
       std::initializer_list<ColumnID>{ColumnID{1}});
 
   aggregate->execute();

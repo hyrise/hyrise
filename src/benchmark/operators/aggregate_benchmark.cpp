@@ -21,7 +21,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& stat
   micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
   const auto groupby_columns = std::vector<ColumnID>{ColumnID{0} /* "a" */};
 
@@ -37,7 +37,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedNoGroupBy)(benc
   micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
   const std::vector<ColumnID> groupby_columns = {};
 
@@ -53,7 +53,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchma
   micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
   const auto groupby_columns = std::vector<ColumnID>{};
 
@@ -77,7 +77,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedOneGroupBy)(ben
   micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
   const auto groupby_columns = std::vector<ColumnID>{ColumnID{1}};
 
@@ -93,7 +93,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchm
   micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
   const auto groupby_columns = std::vector<ColumnID>{ColumnID{1}};
 
@@ -117,7 +117,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortNotSortedMultipleGroupBy
   micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
   const auto groupby_columns = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
 
@@ -133,7 +133,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(b
   micro_benchmark_clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, "b")))};
 
   const auto groupby_columns = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
 
