@@ -183,7 +183,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
 
     // If the segments in this chunk reference a segment, build a poslist for a reference segment.
     if (ref_segment_in) {
-      DebugAssert(chunk_in->references_exactly_one_table(),
+      DebugAssert(chunk_in->segments_share_table_and_positions(),
                   "Input to Validate contains a Chunk referencing more than one table.");
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.

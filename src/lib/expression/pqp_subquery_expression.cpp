@@ -5,7 +5,6 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -14,7 +13,6 @@
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
