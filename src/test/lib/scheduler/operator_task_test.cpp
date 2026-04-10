@@ -291,6 +291,9 @@ TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
   get_table->set_prunable_subquery_predicates({table_scan->predicate()});
 
   EXPECT_THROW(OperatorTask::make_tasks_from_operator(table_scan), std::logic_error);
+
+  // Break cycle so we do not leak memory.
+  get_table->set_prunable_subquery_predicates({});
 }
 
 TEST_F(OperatorTaskTest, SkipOperatorTask) {
