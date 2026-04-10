@@ -31,9 +31,11 @@ namespace hyrise {
  */
 template <typename Functor>
 std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std::shared_ptr<const Table>& table,
-                                                                       const Functor functor) {
+                                                                       Functor&& functor) {
   const auto chunk_count = table->chunk_count();
   Assert(chunk_count > 0, "Tables without any chunks must be handled by the caller.");
+
+  auto owned_functor = std::forward<Functor>(functor);
 
   // If Hyrise is running single-threaded, we do not gain anything for grouping chunks but increase the coordination
   // overhead afterwards. Thus, we use a single large group for all chunks. However, for testing we use one group per
@@ -51,7 +53,8 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(group_count);
 
-  // auto task_items = std::make_shared<std::vector<ChunkID>>();
+  // We use Boost's small_vector with a size of one to ensure that we do not have any unneccessary heap allocations for
+  // transactional workloads (mostly few chunks processed).
   auto task_items = std::make_shared<boost::container::small_vector<ChunkID, 1>>();
   task_items->reserve(tasks_per_group);
   auto group_id = size_t{0};
@@ -61,10 +64,9 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
     task_items->push_back(chunk_id);
 
     if (task_items->size() == tasks_per_group) {
-      jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items, functor]() {
-        functor(group_id, std::move(task_items));
+      jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items, owned_functor]() {
+        owned_functor(group_id, std::move(task_items));
       }));
-      // task_items = std::make_shared<std::vector<ChunkID>>();
       task_items = std::make_shared<boost::container::small_vector<ChunkID, 1>>();
       task_items->reserve(tasks_per_group);
       ++group_id;
@@ -72,8 +74,8 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
   }
 
   if (!task_items->empty()) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items, functor]() {
-      functor(group_id, std::move(task_items));
+    jobs.emplace_back(std::make_shared<JobTask>([&, group_id, task_items, owned_functor]() {
+      owned_functor(group_id, std::move(task_items));
     }));
     ++group_id;
   }
