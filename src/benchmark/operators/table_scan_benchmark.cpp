@@ -23,11 +23,11 @@ using namespace expression_functional;
 void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator>& input,
                               ColumnID left_column_id, const PredicateCondition predicate_condition,
                               const AllParameterVariant& right_parameter) {
-  const auto left_operand = pqp_column_(left_column_id, in->get_output()->column_data_type(left_column_id), "");
+  const auto left_operand = pqp_column_(left_column_id, input->get_output()->column_data_type(left_column_id), "");
   auto right_operand = std::shared_ptr<AbstractExpression>{};
   if (right_parameter.type() == typeid(ColumnID)) {
     const auto right_column_id = boost::get<ColumnID>(right_parameter);
-    right_operand = pqp_column_(right_column_id, in->get_output()->column_data_type(right_column_id), "");
+    right_operand = pqp_column_(right_column_id, input->get_output()->column_data_type(right_column_id), "");
 
   } else {
     right_operand = value_(boost::get<AllTypeVariant>(right_parameter));

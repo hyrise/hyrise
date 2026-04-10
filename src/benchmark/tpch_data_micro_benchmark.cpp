@@ -59,54 +59,26 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     auto lineitem_table = storage_manager.get_table("lineitem");
 
     // Predicates as in TPC-H Q6, ordered by selectivity. Not necessarily the same order as determined by the optimizer
-<<<<<<< HEAD
-    tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
-                                          lineitem_table->column_is_nullable(ColumnID{6}), "");
+    tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}), "");
     tpchq6_discount_predicate = std::make_shared<BetweenExpression>(
         PredicateCondition::BetweenInclusive, tpchq6_discount_operand, value_(0.05), value_(0.70001));
 
-    tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
-                                               lineitem_table->column_is_nullable(ColumnID{10}), "");
+    tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}), "");
     tpchq6_shipdate_less_predicate = std::make_shared<BinaryPredicateExpression>(
         PredicateCondition::LessThan, tpchq6_shipdate_less_operand, value_("1995-01-01"));
 
-    tpchq6_quantity_operand = pqp_column_(ColumnID{4}, lineitem_table->column_data_type(ColumnID{4}),
-                                          lineitem_table->column_is_nullable(ColumnID{4}), "");
+    tpchq6_quantity_operand = pqp_column_(ColumnID{4}, lineitem_table->column_data_type(ColumnID{4}), "");
     tpchq6_quantity_predicate =
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, tpchq6_quantity_operand, value_(24));
 
     // The following two "synthetic" predicates have a selectivity of 1.0
-    lorderkey_operand = pqp_column_(ColumnID{0}, lineitem_table->column_data_type(ColumnID{0}),
-                                    lineitem_table->column_is_nullable(ColumnID{0}), "");
+    lorderkey_operand = pqp_column_(ColumnID{0}, lineitem_table->column_data_type(ColumnID{0}), "");
     int_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
-                                                                lorderkey_operand, value_(-5));
+                                                                 lorderkey_operand, value_(-5));
 
-    lshipinstruct_operand = pqp_column_(ColumnID{13}, lineitem_table->column_data_type(ColumnID{13}),
-                                        lineitem_table->column_is_nullable(ColumnID{13}), "");
+    lshipinstruct_operand = pqp_column_(ColumnID{13}, lineitem_table->column_data_type(ColumnID{13}), "");
     string_predicate =
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, lshipinstruct_operand, value_("a"));
-=======
-    _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}), "");
-    _tpchq6_discount_predicate = std::make_shared<BetweenExpression>(
-        PredicateCondition::BetweenInclusive, _tpchq6_discount_operand, value_(0.05), value_(0.70001));
-
-    _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}), "");
-    _tpchq6_shipdate_less_predicate = std::make_shared<BinaryPredicateExpression>(
-        PredicateCondition::LessThan, _tpchq6_shipdate_less_operand, value_("1995-01-01"));
-
-    _tpchq6_quantity_operand = pqp_column_(ColumnID{4}, lineitem_table->column_data_type(ColumnID{4}), "");
-    _tpchq6_quantity_predicate =
-        std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, _tpchq6_quantity_operand, value_(24));
-
-    // The following two "synthetic" predicates have a selectivity of 1.0
-    _lorderkey_operand = pqp_column_(ColumnID{0}, lineitem_table->column_data_type(ColumnID{0}), "");
-    _int_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
-                                                                 _lorderkey_operand, value_(-5));
-
-    _lshipinstruct_operand = pqp_column_(ColumnID{13}, lineitem_table->column_data_type(ColumnID{13}), "");
-    _string_predicate =
-        std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, _lshipinstruct_operand, value_("a"));
->>>>>>> master
 
     orders_table_node = StoredTableNode::make("orders");
     orders_orderpriority = orders_table_node->get_column("o_orderpriority");
