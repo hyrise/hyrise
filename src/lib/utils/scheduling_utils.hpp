@@ -43,7 +43,7 @@ std::vector<std::shared_ptr<AbstractTask>> group_chunks_for_scheduling(const std
     // For the group count, we use the number of workers, which should allow sufficient parallelization not putting too
     // much pressure on the scheduler. Please note: If the load is high, the scheduler might further internally group
     // tasks and execute them sequentially.
-    group_count = 2 * node_queue_scheduler->workers().size();
+    group_count = node_queue_scheduler->workers().size();
   }
   group_count = std::min(group_count, size_t{chunk_count});
 
