@@ -531,7 +531,7 @@ TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_EQ(stored_table_node_1->prunable_subquery_predicates().size(), 1);
-  EXPECT_EQ(*stored_table_node_1->prunable_subquery_predicates().front(), *predicate);
+  EXPECT_EQ(stored_table_node_1->prunable_subquery_predicates().front(), predicate);
 }
 
 TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {

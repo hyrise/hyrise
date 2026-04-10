@@ -387,18 +387,6 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
-<<<<<<< HEAD
-=======
-  const auto table_scan = std::make_shared<TableScan>(
-      get_table,
-      not_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(table_wrapper, DataType::Int)));
-  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
-  const auto stored_table_node = StoredTableNode::make("int_int_float");
-  stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
-  stored_table_node->set_pruned_column_ids({ColumnID{1}});
-  const auto predicate_node =
-      PredicateNode::make(not_equals_(stored_table_node->get_column("a"), lqp_subquery_(mock_node)));
->>>>>>> master
 
   const auto predicate_column = pqp_column_(ColumnID{0}, DataType::Int, "a");
   const auto predicate = not_equals_(predicate_column, pqp_subquery_(table_wrapper, DataType::Int));
@@ -422,18 +410,6 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
-<<<<<<< HEAD
-=======
-  const auto table_scan = std::make_shared<TableScan>(
-      get_table,
-      not_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(table_wrapper, DataType::Int)));
-  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
-  const auto stored_table_node = StoredTableNode::make("int_int_float");
-  stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
-  stored_table_node->set_pruned_column_ids({ColumnID{1}});
-  const auto predicate_node =
-      PredicateNode::make(not_equals_(stored_table_node->get_column("a"), lqp_subquery_(mock_node)));
->>>>>>> master
 
   const auto predicate_column = pqp_column_(ColumnID{0}, DataType::Int, "a");
   const auto predicate = not_equals_(predicate_column, pqp_subquery_(table_wrapper, DataType::Int));
