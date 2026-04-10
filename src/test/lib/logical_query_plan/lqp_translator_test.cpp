@@ -1185,14 +1185,18 @@ TEST_F(LQPTranslatorTest, TranslatePrunableSubqueries) {
     int_float2_node);
   // clang-format on
 
-  int_float2_node->set_prunable_subquery_predicates({lqp});
+  int_float2_node->set_prunable_subquery_predicates({lqp->predicate()});
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
   const auto& get_table = std::dynamic_pointer_cast<const GetTable>(pqp->left_input());
   ASSERT_TRUE(get_table);
   const auto& prunable_subquery_scans = get_table->prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
-  EXPECT_EQ(prunable_subquery_scans.front(), pqp);
+  const auto predicate = static_cast<const TableScan&>(*pqp).predicate();
+  EXPECT_EQ(*prunable_subquery_scans.front(), *predicate);
+  for (auto arg_id = 0u; arg_id < predicate->arguments.size(); ++arg_id) {
+    EXPECT_EQ(*prunable_subquery_scans.front()->arguments[arg_id], *predicate->arguments[arg_id]);
+  }
   EXPECT_TRUE(int_float2_node->pruned_chunk_ids().empty());
   EXPECT_TRUE(get_table->pruned_chunk_ids().empty());
 }

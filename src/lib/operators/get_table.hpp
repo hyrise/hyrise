@@ -41,8 +41,8 @@ class GetTable : public AbstractReadOnlyOperator {
   // StoredTableNode of the table the predicates are performed on. We attach the translated predicates (i.e.,
   // TableScans) to the GetTable operators so they can use them for pruning during execution ("dynamic pruning"), when
   // the subqueries might have already been executed and the predicate value is known.
-  void set_prunable_subquery_predicates(const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const;
-  std::vector<std::shared_ptr<const AbstractOperator>> prunable_subquery_predicates() const;
+  void set_prunable_subquery_predicates(const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const;
+  const std::vector<std::shared_ptr<AbstractExpression>>& prunable_subquery_predicates() const;
 
  protected:
   std::shared_ptr<AbstractOperator> _on_deep_copy(
@@ -62,7 +62,7 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;
 
-  mutable std::vector<std::weak_ptr<const AbstractOperator>> _prunable_subquery_scans{};
+  mutable std::vector<std::shared_ptr<AbstractExpression>> _prunable_subquery_predicates{};
   std::set<ChunkID> _dynamically_pruned_chunk_ids{};
 };
 

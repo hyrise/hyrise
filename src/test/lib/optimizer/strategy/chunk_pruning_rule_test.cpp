@@ -521,8 +521,9 @@ TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
     AggregateNode::make(expression_vector(), expression_vector(max_(stored_table_node_2_col_a)),
     stored_table_node_2));
 
+  const auto predicate = greater_than_(stored_table_node_1_col_a, lqp_subquery_(subquery));
   _lqp =
-  PredicateNode::make(greater_than_(stored_table_node_1_col_a, lqp_subquery_(subquery)),
+  PredicateNode::make(predicate,
     stored_table_node_1);
   // clang-format on
 
@@ -530,7 +531,7 @@ TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
   EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_EQ(stored_table_node_1->prunable_subquery_predicates().size(), 1);
-  EXPECT_EQ(stored_table_node_1->prunable_subquery_predicates().front(), _lqp);
+  EXPECT_EQ(stored_table_node_1->prunable_subquery_predicates().front(), predicate);
 }
 
 TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {

@@ -7,6 +7,9 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/get_table.hpp"
@@ -67,10 +70,15 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
     }
 
     const auto& get_table = static_cast<GetTable&>(*op);
-    for (const auto& table_scan : get_table.prunable_subquery_predicates()) {
-      for (const auto& subquery : table_scan->uncorrelated_subqueries()) {
+    for (const auto& predicate : get_table.prunable_subquery_predicates()) {
+      visit_expression(predicate, [&](const auto& expression) {
+        if (expression->type != ExpressionType::PQPSubquery) {
+          return ExpressionVisitation::VisitArguments;
+        }
+
         // All tasks have already been created, so we must be able to get the cached task from each operator.
-        const auto& subquery_root = subquery->get_or_create_operator_task();
+        const auto& subquery = static_cast<const PQPSubqueryExpression&>(*expression);
+        const auto& subquery_root = subquery.pqp->get_or_create_operator_task();
         Assert(tasks.contains(subquery_root), "Unknown OperatorTask.");
 
         // Cycles in the task graph would lead to deadlocks during execution. This could happen if a table can be pruned
@@ -81,7 +89,9 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
         // further sanity check should be necessary). However, we still check for cycles after linking all tasks in
         // debug builds.
         subquery_root->set_as_predecessor_of(task);
-      }
+
+        return ExpressionVisitation::DoNotVisitArguments;
+      });
     }
   }
 }

@@ -227,7 +227,12 @@ size_t AbstractLQPNode::output_count() const {
   });
 }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_mapping) const {
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
+  auto node_mapping = LQPNodeMapping{};
+  return deep_copy(node_mapping);
+}
+
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping& node_mapping) const {
   const auto copy = _deep_copy_impl(node_mapping);
 
   // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
