@@ -343,6 +343,8 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Except:
       case LQPNodeType::Mock:
       case LQPNodeType::Window:
+      case LQPNodeType::Build:
+      case LQPNodeType::Probe:
         return LQPVisitation::VisitInputs;
     }
     return LQPVisitation::VisitInputs;

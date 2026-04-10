@@ -111,6 +111,8 @@ set(
     logical_query_plan/aggregate_node.hpp
     logical_query_plan/alias_node.cpp
     logical_query_plan/alias_node.hpp
+    logical_query_plan/build_node.cpp
+    logical_query_plan/build_node.hpp
     logical_query_plan/change_meta_table_node.cpp
     logical_query_plan/change_meta_table_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp
@@ -158,6 +160,8 @@ set(
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
+    logical_query_plan/probe_node.cpp
+    logical_query_plan/probe_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
     logical_query_plan/sort_node.cpp

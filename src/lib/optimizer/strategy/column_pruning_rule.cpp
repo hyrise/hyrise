@@ -15,10 +15,12 @@
 #include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/build_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/probe_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -200,6 +202,19 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Except: {
       Fail("Intersect and Except are not supported yet.");
       // Not sure what needs to happen here. That partially depends on how intersect and except are finally implemented.
+    } break;
+
+    case LQPNodeType::Build:
+      locally_required_expressions.emplace(static_cast<BuildNode&>(*node).build_column());
+      break;
+
+    case LQPNodeType::Probe: {
+      const auto& probe_node = static_cast<ProbeNode&>(*node);
+      const auto& predicate = probe_node.predicate();
+      DebugAssert(predicate->type == ExpressionType::Predicate && predicate->arguments.size() == 2,
+                  "Expected binary predicate for ProbeNode.");
+      locally_required_expressions.emplace(predicate->arguments[0]);
+      locally_required_expressions.emplace(predicate->arguments[1]);
     } break;
 
     // No pruning of the input columns for these nodes as they need them all.

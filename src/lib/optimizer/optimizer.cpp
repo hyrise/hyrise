@@ -140,6 +140,7 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
 
       case LQPNodeType::Aggregate:
       case LQPNodeType::Alias:
+      case LQPNodeType::Build:
       case LQPNodeType::CreateTable:
       case LQPNodeType::Delete:
       case LQPNodeType::Export:
@@ -155,6 +156,7 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
         break;
 
       case LQPNodeType::Join:
+      case LQPNodeType::Probe:
       case LQPNodeType::Update:
       case LQPNodeType::Union:
       case LQPNodeType::Intersect:

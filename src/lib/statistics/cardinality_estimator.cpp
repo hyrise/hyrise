@@ -29,11 +29,13 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/build_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/probe_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -399,6 +401,22 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::Window: {
       const auto& window_node = static_cast<const WindowNode&>(*lqp);
       output_table_statistics = estimate_window_node(window_node, left_input_table_statistics);
+    } break;
+
+    case LQPNodeType::Build:
+      output_table_statistics = left_input_table_statistics;
+      break;
+
+    case LQPNodeType::Probe: {
+      const auto& probe_node = static_cast<const ProbeNode&>(*lqp);
+      const auto predicate = OperatorJoinPredicate::from_expression(*probe_node.predicate(), *probe_node.left_input(),
+                                                                    *probe_node.right_input());
+      if (predicate) {
+        output_table_statistics = estimate_semi_join(predicate->column_ids.first, predicate->column_ids.second,
+                                                     *left_input_table_statistics, *right_input_table_statistics);
+      } else {
+        output_table_statistics = left_input_table_statistics;
+      }
     } break;
 
     // Currently, there is no actual estimation being done and we always apply the worst case.

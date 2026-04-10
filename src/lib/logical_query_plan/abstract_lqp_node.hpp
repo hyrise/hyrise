@@ -20,6 +20,7 @@ namespace hyrise {
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  Build,
   ChangeMetaTable,
   CreateTable,
   CreatePreparedPlan,
@@ -36,6 +37,7 @@ enum class LQPNodeType {
   Join,
   Limit,
   Predicate,
+  Probe,
   Projection,
   Root,
   Sort,
