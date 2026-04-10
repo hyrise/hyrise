@@ -28,7 +28,7 @@
 
 namespace hyrise {
 
-namespace {
+namespace detail {
 
 bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
                     const MvccData& mvcc_data) {
@@ -38,7 +38,7 @@ bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOff
   return Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid);
 }
 
-}  // namespace
+}  // namespace detail
 
 bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
                               const CommitID begin_cid, const CommitID end_cid) {
@@ -59,20 +59,16 @@ bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chun
   DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})),
               "_is_entire_chunk_visible cannot be called on reference chunks.");
 
-  const auto& mvcc_data = chunk->mvcc_data();
-  const auto max_begin_cid = mvcc_data->max_begin_cid.load();
-
+  const auto max_begin_cid = chunk->mvcc_data()->max_begin_cid.load();
   return !chunk->is_mutable() && snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
 
 bool Validate::_is_entire_chunk_invisible(const std::shared_ptr<const Chunk>& chunk,
-                                        const CommitID snapshot_commit_id) const {
+                                          const CommitID snapshot_commit_id) const {
   DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})),
               "_is_entire_chunk_invisible cannot be called on reference chunks.");
 
-  const auto& mvcc_data = chunk->mvcc_data();
-  const auto max_end_cid = mvcc_data->max_end_cid.load();
-
+  const auto max_end_cid = chunk->mvcc_data()->max_end_cid.load();
   return !chunk->is_mutable() && snapshot_commit_id > max_end_cid && chunk->invalid_row_count() == chunk->size();
 }
 
@@ -118,11 +114,16 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   // In some cases, we can identify a chunk as being entirely visible for the current transaction. Simply said,
   // if the youngest row in a chunk is visible, all other rows are older and hence visible, too. This applies if
   // (1) the chunk is immutable, i.e., no new rows can be added while this transaction is being executed,
-  // (2) all rows in the chunk have been committed (i.e., their begin_cid has been set),
-  // (3) the highest begin_cid in the chunk is lower than/equal to the snapshot_cid of the transaction
-  //     (the max_begin_cid is stored in the chunk, not determined by the ValidateOperator),
-  // (4) no rows in the chunk have been invalidated before this transaction was started,
+  // (2) all rows in the chunk have been committed (i.e., their `begin_cid` has been set),
+  // (3) the highest `begin_cid` in the chunk is lower than/equal to the `snapshot_cid` of the transaction
+  //     (the `max_begin_cid` is stored in the chunk, not determined by the ValidateOperator),
+  // (4) no rows in the chunk have been invalidated before this transaction was started, and
   // (5) the current transaction has no in-flight deletes.
+  //
+  // Similarly, we can skip entirely invisible chunks that
+  // (1) are immutable,
+  // (2) contain only invalidated rows (`invalid_row_count` is equal to the chunk size), and
+  // (3) have the latest committed invalidation (`max_end_cid`) before the `snapshot_cid` of the transaction.
   const auto& read_write_operators = transaction_context->read_write_operators();
   for (const auto& read_write_operator : read_write_operators) {
     if (read_write_operator->type() == OperatorType::Delete) {
@@ -151,12 +152,12 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
                            output_chunks, output_mutex);
         }));
 
-        // Prepare next job
+        // Prepare next job.
         job_start_chunk_id = job_end_chunk_id + 1;
         job_row_count = 0;
       }
     }
-    job_end_chunk_id++;
+    ++job_end_chunk_id;
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
@@ -183,7 +184,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
     const auto expected_number_of_valid_rows = chunk_in->size() - chunk_in->invalid_row_count();
 
     auto output_segments = Segments{};
-    std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const RowIDPosList>();
+    auto pos_list_out = std::static_pointer_cast<const AbstractPosList>(std::make_shared<const RowIDPosList>());
 
     const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
 
@@ -223,7 +224,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
           auto temp_pos_list = RowIDPosList{};
           temp_pos_list.guarantee_single_chunk();
           for (const auto row_id : *pos_list_in) {
-            if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            if (detail::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
           }
@@ -266,7 +267,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->mvcc_data();
-          if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+          if (detail::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
             temp_pos_list.emplace_back(row_id);
           }
         }
@@ -274,12 +275,15 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
-      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        const auto reference_segment =
-            std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(column_id));
-        const auto referenced_column_id = reference_segment->referenced_column_id();
-        auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list_out);
-        output_segments.push_back(ref_segment_out);
+      if (!pos_list_out->empty()) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          const auto reference_segment =
+              std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(column_id));
+          const auto referenced_column_id = reference_segment->referenced_column_id();
+          auto ref_segment_out =
+              std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list_out);
+          output_segments.push_back(ref_segment_out);
+        }
       }
 
       // Otherwise we have a non-reference Segment and simply iterate over all rows to build a poslist.
@@ -299,7 +303,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-          if (hyrise::is_row_visible(our_tid, snapshot_commit_id, chunk_offset, *mvcc_data)) {
+          if (detail::is_row_visible(our_tid, snapshot_commit_id, chunk_offset, *mvcc_data)) {
             temp_pos_list.emplace_back(chunk_id, chunk_offset);
           }
         }
@@ -307,14 +311,16 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       }
 
       // Create actual ReferenceSegment objects.
-      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, column_id, pos_list_out);
-        output_segments.push_back(ref_segment_out);
+      if (!pos_list_out->empty()) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, column_id, pos_list_out);
+          output_segments.push_back(ref_segment_out);
+        }
       }
     }
 
     if (!pos_list_out->empty()) {
-      const auto lock = std::lock_guard<std::mutex>{output_mutex};
+      const auto lock = std::lock_guard{output_mutex};
       // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
       // after the validate operator.
       const auto chunk = std::make_shared<Chunk>(output_segments);

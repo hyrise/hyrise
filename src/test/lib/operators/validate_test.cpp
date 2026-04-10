@@ -51,10 +51,14 @@ class OperatorsValidateTest : public BaseTest {
 
   const std::string _table2_name = "table_b";
 
-  static bool forward_is_entire_chunk_visible(std::shared_ptr<Validate> validate,
-                                              const std::shared_ptr<const Chunk>& chunk,
-                                              const CommitID snapshot_commit_id) {
+  static bool is_entire_chunk_visible(std::shared_ptr<Validate> validate, const std::shared_ptr<const Chunk>& chunk,
+                                      const CommitID snapshot_commit_id) {
     return validate->_is_entire_chunk_visible(chunk, snapshot_commit_id);
+  }
+
+  static bool is_entire_chunk_invisible(std::shared_ptr<Validate> validate, const std::shared_ptr<const Chunk>& chunk,
+                                        const CommitID snapshot_commit_id) {
+    return validate->_is_entire_chunk_invisible(chunk, snapshot_commit_id);
   }
 };
 
@@ -150,7 +154,8 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
 
   auto validate = std::make_shared<Validate>(nullptr);
 
-  EXPECT_THROW(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid), std::logic_error);
+  EXPECT_THROW(is_entire_chunk_visible(validate, chunk, snapshot_cid), std::logic_error);
+  EXPECT_THROW(is_entire_chunk_invisible(validate, chunk, snapshot_cid), std::logic_error);
 }
 
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
@@ -162,7 +167,8 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
 
   auto validate = std::make_shared<Validate>(nullptr);
 
-  EXPECT_FALSE(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid));
+  EXPECT_FALSE(is_entire_chunk_visible(validate, chunk, snapshot_cid));
+  EXPECT_FALSE(is_entire_chunk_invisible(validate, chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
@@ -176,7 +182,8 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
 
   auto validate = std::make_shared<Validate>(nullptr);
 
-  EXPECT_FALSE(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid));
+  EXPECT_FALSE(is_entire_chunk_visible(validate, chunk, snapshot_cid));
+  EXPECT_FALSE(is_entire_chunk_invisible(validate, chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
@@ -191,7 +198,8 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
 
   auto validate = std::make_shared<Validate>(nullptr);
 
-  EXPECT_FALSE(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid));
+  EXPECT_FALSE(is_entire_chunk_visible(validate, chunk, snapshot_cid));
+  EXPECT_FALSE(is_entire_chunk_invisible(validate, chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
@@ -204,7 +212,8 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
 
   auto validate = std::make_shared<Validate>(nullptr);
 
-  EXPECT_TRUE(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid));
+  EXPECT_TRUE(is_entire_chunk_visible(validate, chunk, snapshot_cid));
+  EXPECT_FALSE(is_entire_chunk_invisible(validate, chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
@@ -259,7 +268,7 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
     EXPECT_TRUE(sorted_by.empty());
   }
 
-  // Verify that the sorted_by flag is set when it's present in left input. Because Validate can not be executed after
+  // Verify that the sorted_by flag is set when it is present in left input. Because Validate cannot be executed after
   // Sort, we need to load a sorted table.
   const auto sorted_table = load_table("resources/test_data/tbl/int_sorted.tbl", ChunkOffset{2});
   const auto sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst);
