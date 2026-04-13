@@ -399,9 +399,13 @@ void merge_sort(Iterator first, Iterator last) {
 // Recursive merge sort. Creates a typical divide-and-conquer fan out pattern of tasks. We use the text book
 // implementation that recurses until the vector length is 1 to increase the depth of the fan out.
 TEST_F(SchedulerTest, MergeSort) {
-  // Sizes up to 20'000 works for MacOS (debug mode, more for release) with its comparatively small stack size. If this
-  // test fails on a new platform, check the system's stack size and if ITEM_COUNT needs to be reduced.
-  constexpr auto ITEM_COUNT = size_t{5'000};
+  // With #2697, we needed to limit the ITEM_COUNT from 5'000 to 1'000 (for Debug builds) as we otherwise got an "bus
+  // error" on the Mac ARM machine. Running the address sanatizers showed that it is caused by stack overflow, caused by
+  // introducing <format>. We do not consider this an issue as <format> improves the code and we have seen a negative
+  // effect on release builds. In addition, this test aims to penetrate the scheduler more (here via recursion) than
+  // typical operators should.
+  // If this test fails, check the system's stack size and if ITEM_COUNT needs to be adapted.
+  constexpr auto ITEM_COUNT = HYRISE_DEBUG ? size_t{1'000} : size_t{20'000};
   Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
 
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
