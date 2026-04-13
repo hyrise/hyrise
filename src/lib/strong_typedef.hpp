@@ -30,16 +30,16 @@
       t = other;                                                                                          \
       return *this;                                                                                       \
     }                                                                                                     \
-    operator const T&() const {                                                                           \
+    constexpr operator const T&() const {                                                                 \
       return t;                                                                                           \
     }                                                                                                     \
     operator T&() {                                                                                       \
       return t;                                                                                           \
     }                                                                                                     \
-    bool operator==(const D& other) const {                                                               \
+    constexpr bool operator==(const D& other) const {                                                     \
       return t == other.t;                                                                                \
     }                                                                                                     \
-    bool operator<(const D& other) const {                                                                \
+    constexpr bool operator<(const D& other) const {                                                      \
       return t < other.t;                                                                                 \
     }                                                                                                     \
   };                                                                                                      \
@@ -60,13 +60,13 @@
   template <>                                                                                             \
                                                                                                           \
   struct numeric_limits<::hyrise::D> {                                                                    \
-    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> min() {                        \
+    static constexpr typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> min() {              \
       return ::hyrise::D(numeric_limits<T>::min());                                                       \
     }                                                                                                     \
-    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> max() {                        \
+    static constexpr typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> max() {              \
       return ::hyrise::D(numeric_limits<T>::max());                                                       \
     }                                                                                                     \
-    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> lowest() {                     \
+    static constexpr typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> lowest() {           \
       return ::hyrise::D(numeric_limits<T>::lowest());                                                    \
     }                                                                                                     \
   };                                                                                                      \

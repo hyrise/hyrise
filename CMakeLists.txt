@@ -50,7 +50,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
         set(CMAKE_OSX_BREW_TEXT "Homebrew (see https://brew.sh) and ")
     endif()
     if (NOT EXISTS "${BREW_PREFIX}/opt/llvm/bin/clang")
-        set(CMAKE_OSX_INSTALL_TEXT "install ${CMAKE_OSX_BREW_TEXT}the official llvm/clang package using `install_dependencies.sh` or `brew install llvm --with-toolchain` and then ")
+        set(CMAKE_OSX_INSTALL_TEXT "install ${CMAKE_OSX_BREW_TEXT}the official llvm/clang package using `install_dependencies.sh` or `brew install llvm` and then ")
     endif()
     message(WARNING "On macOS, we recommend a recent clang compiler instead of Apple's clang compiler. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang++`.")
 else()
@@ -58,7 +58,7 @@ else()
 endif()
 
 # Starting with GCC 14's libstdc++, std::atomic_load for shared pointers is deprecated (as part of C++20). However, as
-# of LLVM 19, libc++ has not implemented std::atomic<std::shared_ptr> (see P0718R2,
+# of LLVM 22, libc++ has not implemented std::atomic<std::shared_ptr> (see P0718R2,
 # https://en.cppreference.com/w/cpp/compiler_support). As we use libstdc++ when compiling with clang on Linux, we
 # disable deprecation warnings.
 # We only disable this warning on Linux because clang on macOS uses libc++. Once libc++ implements the missing atomics,

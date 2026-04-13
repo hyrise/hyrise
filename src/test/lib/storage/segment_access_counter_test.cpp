@@ -198,4 +198,51 @@ TEST_F(SegmentAccessCounterTest, AccessPattern8) {
   EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
 }
 
+TEST_F(SegmentAccessCounterTest, SelfAssignment) {
+  auto counter = SegmentAccessCounter();
+  counter[SegmentAccessCounter::AccessType::Point] = 10;
+  counter[SegmentAccessCounter::AccessType::Sequential] = 20;
+
+  // Store original values to check after self-assignment.
+  const auto original_point = counter[SegmentAccessCounter::AccessType::Point].load();
+  const auto original_sequential = counter[SegmentAccessCounter::AccessType::Sequential].load();
+
+  // Assign via a reference to avoid -Wself-assign-overloaded.
+  auto& ref = counter;
+  counter = ref;
+
+  EXPECT_EQ(counter[SegmentAccessCounter::AccessType::Point], original_point);
+  EXPECT_EQ(counter[SegmentAccessCounter::AccessType::Sequential], original_sequential);
+}
+
+TEST_F(SegmentAccessCounterTest, InequalityOperator) {
+  const auto zero_counter = SegmentAccessCounter();
+  const auto access_types = {AccessType::Point, AccessType::Sequential, AccessType::Monotonic, AccessType::Random,
+                             AccessType::Dictionary};
+  for (const auto access_type : access_types) {
+    auto modified_counter = zero_counter;
+
+    EXPECT_FALSE(zero_counter != modified_counter);  // Should be equal.
+
+    modified_counter[access_type] = 42;
+
+    EXPECT_TRUE(zero_counter != modified_counter);  // Should be different.
+  }
+}
+
+TEST_F(SegmentAccessCounterTest, EqualityOperator) {
+  const auto zero_counter = SegmentAccessCounter();
+  const auto access_types = {AccessType::Point, AccessType::Sequential, AccessType::Monotonic, AccessType::Random,
+                             AccessType::Dictionary};
+  for (const auto access_type : access_types) {
+    auto modified_counter = zero_counter;
+
+    EXPECT_TRUE(zero_counter == modified_counter);  // Should be equal.
+
+    modified_counter[access_type] = 42;
+
+    EXPECT_FALSE(zero_counter == modified_counter);  // Should be different.
+  }
+}
+
 }  // namespace hyrise

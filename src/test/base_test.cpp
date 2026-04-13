@@ -56,7 +56,7 @@ std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<
   const auto output_table = op->get_output();
   const auto& column_definition = output_table->column_definitions().at(column_id);
 
-  return pqp_column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
+  return pqp_column_(column_id, column_definition.data_type, column_definition.name);
 }
 
 std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOperator>& in, const ColumnID column_id,
