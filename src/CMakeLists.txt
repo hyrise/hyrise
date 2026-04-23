@@ -70,7 +70,6 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
         -Werror
         -Wno-subobject-linkage
         -Wno-unknown-pragmas
-        -Wno-unused-parameter
     )
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

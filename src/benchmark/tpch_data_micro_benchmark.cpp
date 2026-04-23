@@ -29,7 +29,7 @@ class TableWrapper;
 // Defining the base fixture class.
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
-  void SetUp(::benchmark::State& state) override {
+  void SetUp(::benchmark::State& /*state*/) override {
     auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 10.0f;
     const auto benchmark_config = std::make_shared<BenchmarkConfig>();

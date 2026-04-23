@@ -72,6 +72,6 @@ std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
   return std::make_shared<Export>(copied_left_input, _filename, _file_type);
 }
 
-void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise

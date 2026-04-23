@@ -80,7 +80,7 @@ class ColumnMaterializer {
 
       auto materialize_job = [&, chunk_id] {
         const auto& segment = input->get_chunk(chunk_id)->get_segment(column_id);
-        output[chunk_id] = _materialize_segment(segment, chunk_id, null_rows_per_chunk[chunk_id], subsamples[chunk_id]);
+        output[chunk_id] = _materialize_segment(segment, chunk_id, null_rows_per_chunk[chunk_id]);
       };
 
       if (chunk_size > JoinSortMerge::JOB_SPAWN_THRESHOLD) {
@@ -143,7 +143,7 @@ class ColumnMaterializer {
   }
 
   MaterializedSegment<T> _materialize_segment(const std::shared_ptr<AbstractSegment>& segment, const ChunkID chunk_id,
-                                              RowIDPosList& null_rows_output, Subsample<T>& subsample) {
+                                              RowIDPosList& null_rows_output) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment->size());
 

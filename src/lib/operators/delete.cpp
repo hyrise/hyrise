@@ -186,6 +186,6 @@ std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(
   return std::make_shared<Delete>(copied_left_input);
 }
 
-void Delete::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Delete::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise

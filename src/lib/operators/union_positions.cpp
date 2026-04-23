@@ -84,7 +84,7 @@ std::shared_ptr<AbstractOperator> UnionPositions::_on_deep_copy(
   return std::make_shared<UnionPositions>(copied_left_input, copied_right_input);
 }
 
-void UnionPositions::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void UnionPositions::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 void UnionPositions::_on_cleanup() {
   _referenced_tables.clear();

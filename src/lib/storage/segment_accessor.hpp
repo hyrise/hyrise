@@ -131,7 +131,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
 // Accessor for ReferenceSegments that reference only NULL values
 template <typename T>
 class NullAccessor final : public AbstractSegmentAccessor<T> {
-  const std::optional<T> access(ChunkOffset offset) const final {
+  const std::optional<T> access(ChunkOffset /*offset*/) const final {
     return std::nullopt;
   }
 };

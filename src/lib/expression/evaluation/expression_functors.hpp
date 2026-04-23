@@ -19,7 +19,7 @@ bool to_bool(const bool value) {
   return value;
 }
 
-bool to_bool(const NullValue& value) {
+bool to_bool(const NullValue& /*value*/) {
   return false;
 }
 
@@ -30,7 +30,7 @@ T to_value(const V& v) {
 }
 
 template <typename T>
-T to_value(const NullValue& v) {
+T to_value(const NullValue& /*v*/) {
   return T{};
 }
 

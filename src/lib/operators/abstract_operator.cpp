@@ -383,7 +383,7 @@ std::vector<std::shared_ptr<AbstractOperator>> AbstractOperator::uncorrelated_su
   return subquery_pqps;
 }
 
-void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
+void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& /*transaction_context*/) {}
 
 void AbstractOperator::_on_cleanup() {}
 

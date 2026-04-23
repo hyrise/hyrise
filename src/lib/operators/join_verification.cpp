@@ -220,6 +220,6 @@ std::shared_ptr<AbstractOperator> JoinVerification::_on_deep_copy(
                                             _secondary_predicates);
 }
 
-void JoinVerification::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void JoinVerification::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise

@@ -14,17 +14,17 @@ class SimpleTrackingMemoryResource : public MemoryResource {
  public:
   size_t allocated{0};
 
-  void* do_allocate(std::size_t bytes, std::size_t alignment) override {
+  void* do_allocate(std::size_t bytes, std::size_t /*alignment*/) override {
     allocated += bytes;
     return std::malloc(bytes);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
 
-  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
+  void do_deallocate(void* p, std::size_t bytes, std::size_t /*alignment*/) override {
     allocated -= bytes;
     std::free(p);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
 
-  bool do_is_equal(const memory_resource& other) const noexcept override {
+  bool do_is_equal(const memory_resource& /*other*/) const noexcept override {
     Fail("Not implemented.");
   }
 };

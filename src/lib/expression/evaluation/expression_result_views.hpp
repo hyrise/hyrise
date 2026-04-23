@@ -90,7 +90,7 @@ class ExpressionResultNonNullSeries {
     return _values[idx];
   }
 
-  bool is_null(const size_t idx) const {
+  bool is_null(const size_t /*idx*/) const {
     return false;
   }
 

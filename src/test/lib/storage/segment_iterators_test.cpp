@@ -154,7 +154,7 @@ TEST_P(SegmentIteratorsTest, LegacyBidirectionalIteratorCompatible) {
    * Takes an iterator pair and verifies its LegacyBidirectionalIterators compatibility by both post and pre
    * decrementing the iterator.
    */
-  test_all_iterators(table, position_filter, position_filter_multi_chunk, [&](const auto begin, const auto end) {
+  test_all_iterators(table, position_filter, position_filter_multi_chunk, [&](const auto begin, const auto /*end*/) {
     using ColumnDataType = typename decltype(begin)::ValueType;
 
     auto it = begin;  // Make a copy

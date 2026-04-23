@@ -65,7 +65,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
                                     _secondary_predicates);
 }
 
-void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size) {
   /*

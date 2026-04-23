@@ -107,7 +107,7 @@ std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
                                           _secondary_predicates);
 }
 
-void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   Assert(supports({_mode, _primary_predicate.predicate_condition,
