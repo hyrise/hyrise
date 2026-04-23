@@ -83,7 +83,8 @@ template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t /*aggregate_count*/, StandardDeviationSampleData& accumulator) {
+    return [](const ColumnDataType& new_value, const size_t /*aggregate_count*/,
+              StandardDeviationSampleData& accumulator) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
         // Welford's online algorithm
         // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
