@@ -68,6 +68,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
         -Wextra
         -pedantic
         -Werror
+        -Wno-dollar-in-identifier-extension
         -Wno-subobject-linkage
         -Wno-unknown-pragmas
         -Wno-unused-parameter
