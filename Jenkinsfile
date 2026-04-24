@@ -227,15 +227,15 @@ try {
                   Utils.markStageSkippedForConditional("clangDebugUnityODR")
                 }
               }
-            }, clangDebugTidy: {
-              stage("clang-debug:tidy") {
-                if (env.BRANCH_NAME == 'master' || full_ci) {
-                  // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                  sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 2))"
-                } else {
-                  Utils.markStageSkippedForConditional("clangDebugTidy")
-                }
-              }
+            // }, clangDebugTidy: {
+            //   stage("clang-debug:tidy") {
+            //     if (env.BRANCH_NAME == 'master' || full_ci) {
+            //       // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
+            //       sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 2))"
+            //     } else {
+            //       Utils.markStageSkippedForConditional("clangDebugTidy")
+            //     }
+            //   }
             }, clangDebugDisablePrecompileHeaders: {
               stage("clang-debug:disable-precompile-headers") {
                 if (env.BRANCH_NAME == 'master' || full_ci) {
@@ -408,7 +408,7 @@ try {
               }
             }
           }, clangTidili: {
-            stage("clang-debug:tidy") {
+            stage("clang-debug:tidylilililili") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
                 sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 2))"
