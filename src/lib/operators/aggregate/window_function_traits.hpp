@@ -27,60 +27,51 @@ struct WindowFunctionTraits<ColumnType, WindowFunction::CountDistinct> {
 
 // MIN/MAX/ANY on all types
 template <typename ColumnType, WindowFunction window_function>
-struct WindowFunctionTraits<
-    ColumnType, window_function,
-    typename std::enable_if_t<window_function == WindowFunction::Min || window_function == WindowFunction::Max ||
-                                  window_function == WindowFunction::Any,
-                              void>> {
+  requires(window_function == WindowFunction::Min) || (window_function == WindowFunction::Max) ||
+          (window_function == WindowFunction::Any)
+struct WindowFunctionTraits<ColumnType, window_function> {
   using ReturnType = ColumnType;
   static constexpr DataType RESULT_TYPE = data_type_from_type<ColumnType>();
 };
 
 // AVG on arithmetic types
 template <typename ColumnType, WindowFunction window_function>
-struct WindowFunctionTraits<
-    ColumnType, window_function,
-    typename std::enable_if_t<window_function == WindowFunction::Avg && std::is_arithmetic_v<ColumnType>, void>> {
+  requires(window_function == WindowFunction::Avg) && (std::is_arithmetic_v<ColumnType>)
+struct WindowFunctionTraits<ColumnType, window_function> {
   using ReturnType = double;
   static constexpr DataType RESULT_TYPE = DataType::Double;
 };
 
 // SUM on integers
 template <typename ColumnType, WindowFunction window_function>
-struct WindowFunctionTraits<
-    ColumnType, window_function,
-    typename std::enable_if_t<window_function == WindowFunction::Sum && std::is_integral_v<ColumnType>, void>> {
+  requires(window_function == WindowFunction::Sum && std::is_integral_v<ColumnType>)
+struct WindowFunctionTraits<ColumnType, window_function> {
   using ReturnType = int64_t;
   static constexpr DataType RESULT_TYPE = DataType::Long;
 };
 
 // SUM on floating point numbers
 template <typename ColumnType, WindowFunction window_function>
-struct WindowFunctionTraits<
-    ColumnType, window_function,
-    typename std::enable_if_t<window_function == WindowFunction::Sum && std::is_floating_point_v<ColumnType>, void>> {
+  requires(window_function == WindowFunction::Sum && std::is_floating_point_v<ColumnType>)
+struct WindowFunctionTraits<ColumnType, window_function> {
   using ReturnType = double;
   static constexpr DataType RESULT_TYPE = DataType::Double;
 };
 
 // STDDEV_SAMP on arithmetic types
 template <typename ColumnType, WindowFunction window_function>
-struct WindowFunctionTraits<
-    ColumnType, window_function,
-    typename std::enable_if_t<
-        window_function == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<ColumnType>, void>> {
+  requires(window_function == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<ColumnType>)
+struct WindowFunctionTraits<ColumnType, window_function> {
   using ReturnType = double;
   static constexpr DataType RESULT_TYPE = DataType::Double;
 };
 
 // invalid: AVG, SUM or STDDEV_SAMP on non-arithmetic types
 template <typename ColumnType, WindowFunction window_function>
-struct WindowFunctionTraits<
-    ColumnType, window_function,
-    typename std::enable_if_t<!std::is_arithmetic_v<ColumnType> &&
-                                  (window_function == WindowFunction::Avg || window_function == WindowFunction::Sum ||
-                                   window_function == WindowFunction::StandardDeviationSample),
-                              void>> {
+  requires(!std::is_arithmetic_v<ColumnType> &&
+           (window_function == WindowFunction::Avg || window_function == WindowFunction::Sum ||
+            window_function == WindowFunction::StandardDeviationSample))
+struct WindowFunctionTraits<ColumnType, window_function> {
   using ReturnType = ColumnType;
   static constexpr DataType RESULT_TYPE = DataType::Null;
 };

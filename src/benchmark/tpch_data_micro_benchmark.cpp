@@ -74,7 +74,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     // The following two "synthetic" predicates have a selectivity of 1.0
     lorderkey_operand = pqp_column_(ColumnID{0}, lineitem_table->column_data_type(ColumnID{0}), "");
     int_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
-                                                                 lorderkey_operand, value_(-5));
+                                                                lorderkey_operand, value_(-5));
 
     lshipinstruct_operand = pqp_column_(ColumnID{13}, lineitem_table->column_data_type(ColumnID{13}), "");
     string_predicate =
