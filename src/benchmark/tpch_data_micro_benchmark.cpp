@@ -16,7 +16,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "storage/encoding_type.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
@@ -36,8 +35,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
     if (!sm.has_table("lineitem")) {
-      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and "
-                << benchmark_config->encoding_config.default_encoding_spec << " encoding:\n";
+      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and automatic encoding:\n";
       TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, benchmark_config).generate_and_store();
     }
 
@@ -46,29 +44,24 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     auto lineitem_table = sm.get_table("lineitem");
 
     // Predicates as in TPC-H Q6, ordered by selectivity. Not necessarily the same order as determined by the optimizer
-    _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
-                                           lineitem_table->column_is_nullable(ColumnID{6}), "");
+    _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}), "");
     _tpchq6_discount_predicate = std::make_shared<BetweenExpression>(
         PredicateCondition::BetweenInclusive, _tpchq6_discount_operand, value_(0.05), value_(0.70001));
 
-    _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
-                                                lineitem_table->column_is_nullable(ColumnID{10}), "");
+    _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}), "");
     _tpchq6_shipdate_less_predicate = std::make_shared<BinaryPredicateExpression>(
         PredicateCondition::LessThan, _tpchq6_shipdate_less_operand, value_("1995-01-01"));
 
-    _tpchq6_quantity_operand = pqp_column_(ColumnID{4}, lineitem_table->column_data_type(ColumnID{4}),
-                                           lineitem_table->column_is_nullable(ColumnID{4}), "");
+    _tpchq6_quantity_operand = pqp_column_(ColumnID{4}, lineitem_table->column_data_type(ColumnID{4}), "");
     _tpchq6_quantity_predicate =
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, _tpchq6_quantity_operand, value_(24));
 
     // The following two "synthetic" predicates have a selectivity of 1.0
-    _lorderkey_operand = pqp_column_(ColumnID{0}, lineitem_table->column_data_type(ColumnID{0}),
-                                     lineitem_table->column_is_nullable(ColumnID{0}), "");
+    _lorderkey_operand = pqp_column_(ColumnID{0}, lineitem_table->column_data_type(ColumnID{0}), "");
     _int_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
                                                                  _lorderkey_operand, value_(-5));
 
-    _lshipinstruct_operand = pqp_column_(ColumnID{13}, lineitem_table->column_data_type(ColumnID{13}),
-                                         lineitem_table->column_is_nullable(ColumnID{13}), "");
+    _lshipinstruct_operand = pqp_column_(ColumnID{13}, lineitem_table->column_data_type(ColumnID{13}), "");
     _string_predicate =
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, _lshipinstruct_operand, value_("a"));
 
@@ -215,7 +208,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ScanAggregate)(benchmark::State& s
   const auto group_by = std::vector<ColumnID>{l_orderkey_id};
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       count_(pqp_column_(group_by_column, mocked_table_scan_output->column_data_type(group_by_column),
-                         mocked_table_scan_output->column_is_nullable(group_by_column),
                          mocked_table_scan_output->column_name(group_by_column)))};
   for (auto _ : state) {
     const auto aggregate = std::make_shared<AggregateSort>(sorted_lineitem, aggregate_expressions, group_by);

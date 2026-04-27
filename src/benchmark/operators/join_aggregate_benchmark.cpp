@@ -125,8 +125,8 @@ std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = zip_table->get_chunk(chunk_index);
     chunk->set_immutable();
-    chunk->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
-                                       SortColumnDefinition(ColumnID{1}, SortMode::Ascending)});
+    chunk->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst),
+                                       SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst)});
   }
 
   return std::make_shared<TableWrapper>(zip_table);
@@ -141,7 +141,7 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
   for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = ages_table->get_chunk(chunk_index);
     chunk->set_immutable();
-    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   }
 
   return std::make_shared<TableWrapper>(ages_table);
@@ -160,7 +160,7 @@ void BM_Join_Aggregate(benchmark::State& state) {
       OperatorJoinPredicate(std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
   auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-      std::static_pointer_cast<WindowFunctionExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<WindowFunctionExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, "b")))};
 
   const auto groupby = std::vector<ColumnID>{ColumnID{0}, ColumnID{2}};
 

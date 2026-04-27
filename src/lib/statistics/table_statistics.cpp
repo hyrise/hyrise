@@ -13,6 +13,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "storage/table.hpp"
@@ -56,14 +57,13 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
           // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
           // property.
           const auto null_value_ratio =
-              table.row_count() == 0
-                  ? 0.0f
-                  : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
+              table.row_count() == 0 ? 0.0
+                                     : 1.0 - (histogram->total_count() / static_cast<Selectivity>(table.row_count()));
           output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
         } else {
           // Failure to generate a histogram currently only stems from all-null segments.
           // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-          output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
+          output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0));
         }
 
         column_statistics[column_id] = output_column_statistics;
@@ -89,9 +89,14 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_stat
   stream << "TableStatistics {\n  RowCount: " << table_statistics.row_count << ";\n";
 
   for (const auto& column_statistics : table_statistics.column_statistics) {
+    if (const auto& dummy_statistics =
+            std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(column_statistics)) {
+      stream << *dummy_statistics << '\n';
+      continue;
+    }
     resolve_data_type(column_statistics->data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      stream << *std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(column_statistics) << '\n';
+      stream << *std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(column_statistics);
     });
   }
 

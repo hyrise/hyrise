@@ -13,7 +13,7 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -115,14 +115,25 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
 
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator) {
-  const auto& table_key_constraints =
-      std::set<TableKeyConstraint>{table->soft_key_constraints().cbegin(), table->soft_key_constraints().cend()};
+  auto table_key_constraints =
+      std::set<TableKeyConstraint>{table->soft_key_constraints().begin(), table->soft_key_constraints().end()};
+  // We only print key constraints that are marked as valid. Note that this has a different meaning
+  // than "confidently valid". See `TableKeyConstraint::last_validation_result()` for details.
   if (table_key_constraints.empty()) {
     return;
   }
 
-  const auto& last_constraint = *std::prev(table_key_constraints.cend());
+  auto first = true;
   for (const auto& constraint : table_key_constraints) {
+    if (constraint.last_validation_result() == ValidationResultType::INVALID) {
+      continue;
+    }
+
+    if (!first) {
+      stream << separator;
+    }
+    first = false;
+
     stream << magic_enum::enum_name(constraint.key_type()) << "(";
     const auto& columns = constraint.columns();
     Assert(!columns.empty(), "Did not expect useless constraint.");
@@ -134,9 +145,6 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
       }
     }
     stream << ")";
-    if (constraint != last_constraint) {
-      stream << separator;
-    }
   }
 }
 
@@ -160,7 +168,7 @@ void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& 
   };
 
   // Sort by ColumnID.
-  std::sort(expressions_vector.begin(), expressions_vector.end(), [&](const auto& lhs, const auto& rhs) {
+  std::ranges::sort(expressions_vector, [&](const auto& lhs, const auto& rhs) {
     return minimal_column_id(lhs) < minimal_column_id(rhs);
   });
 

@@ -9,9 +9,9 @@
 #include <list>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -31,23 +31,13 @@
 
 namespace hyrise {
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const ChunkOffset chunk_size,
-                                        const std::optional<CsvMeta>& csv_meta) {
-  // If no meta info is given as a parameter, look for a json file
-  auto meta = CsvMeta{};
-  if (csv_meta) {
-    meta = *csv_meta;
-  } else {
-    meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
-  }
-
-  auto escaped_linebreak = std::string(1, meta.config.delimiter_escape) + std::string(1, meta.config.delimiter);
-
-  auto table = _create_table_from_meta(chunk_size, meta);
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const CsvMeta& csv_meta,
+                                        const ChunkOffset chunk_size) {
+  const auto table = _create_table_from_meta(chunk_size, csv_meta);
 
   auto csvfile = std::ifstream{filename};
 
-  // return empty table if input file is empty
+  // Return empty table if input file is empty.
   if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') {
     return table;
   }
@@ -61,7 +51,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   /**
    * Load the whole file(!) into a std::string using the, hopefully, fastest method to do so.
    * TODO(anybody) Maybe use mmap() in the future. The current approach needs to have the entire file in RAM, mmap might
-   *               be cleverer, dunno.
+   *               be cleverer.
    */
   csvfile.seekg(0, std::ios::end);
   const auto csvfile_size = csvfile.tellg();
@@ -69,42 +59,46 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   csvfile.seekg(0);
   csvfile.read(content.data(), csvfile_size);
 
-  // make sure content ends with a delimiter for better row processing later
-  if (content.back() != meta.config.delimiter) {
-    content.push_back(meta.config.delimiter);
+  // The content should end with a delimiter for better row processing later.
+  if (content.back() != csv_meta.config.delimiter) {
+    content.push_back(csv_meta.config.delimiter);
   }
 
   auto content_view = std::string_view{content.c_str(), content.size()};
 
-  // Save chunks in list to avoid memory relocation
+  // Save chunks in list to avoid memory relocation.
   auto segments_by_chunks = std::list<Segments>{};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   auto field_ends = std::vector<size_t>{};
   auto append_chunk_mutex = std::mutex{};
-  while (_find_fields_in_chunk(content_view, *table, field_ends, meta)) {
-    // create empty chunk
+  const auto escaped_linebreak =
+      std::string(1, csv_meta.config.delimiter_escape) + std::string(1, csv_meta.config.delimiter);
+  while (_find_fields_in_chunk(content_view, *table, field_ends, csv_meta)) {
+    // Create empty chunk
     segments_by_chunks.emplace_back();
     auto& segments = segments_by_chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
     auto relevant_content = std::string_view{content_view.substr(0, field_ends.back())};
 
-    // Remove processed part of the csv content
+    // Remove processed part of the CSV content
     content_view = content_view.substr(field_ends.back() + 1);
 
-    // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends, &table, &segments, &meta,
-                                                  &escaped_linebreak, &append_chunk_mutex]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, segments, meta, escaped_linebreak, append_chunk_mutex);
+    // Create and start parsing task to fill chunk
+    tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends = std::move(field_ends), &table,
+                                                  &segments, &csv_meta, &escaped_linebreak, &append_chunk_mutex]() {
+      _parse_into_chunk(relevant_content, field_ends, *table, segments, csv_meta, escaped_linebreak,
+                        append_chunk_mutex);
     }));
     tasks.back()->schedule();
+    field_ends = std::vector<size_t>{};
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(tasks);
 
   for (auto& segments : segments_by_chunks) {
     DebugAssert(!segments.empty(), "Empty chunks shouldn't occur when importing CSV");
-    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), UNSET_COMMIT_ID);
     table->append_chunk(segments, mvcc_data);
     table->last_chunk()->set_immutable();
   }
@@ -149,7 +143,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   auto field_count = uint16_t{1};
   auto in_quotes = false;
   while (rows < table.target_chunk_size()) {
-    // Find either of row separator, column delimiter, quote identifier
+    // Find either of row separator, column delimiter, quote identifier.
     auto pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {
       break;
@@ -157,9 +151,9 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     from = pos + 1;
     const char elem = csv_content[pos];
 
-    // Make sure to "toggle" in_quotes ONLY if the quotes are not part of the string (i.e. escaped)
+    // Make sure to "toggle" in_quotes ONLY if the quotes are not part of the string (i.e., escaped).
     if (elem == meta.config.quote) {
-      bool quote_is_escaped = false;
+      auto quote_is_escaped = false;
       if (meta.config.quote != meta.config.escape) {
         quote_is_escaped = pos != 0 && csv_content[pos - 1] == meta.config.escape;
       }
@@ -168,7 +162,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
       }
     }
 
-    // Determine if delimiter marks end of row or is part of the (string) value
+    // Determine if delimiter marks end of row or is part of the (string) value.
     if (elem == meta.config.delimiter && !in_quotes) {
       Assert(field_count == static_cast<size_t>(table.column_count()),
              "Number of CSV fields does not match number of columns.");
@@ -176,7 +170,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
       field_count = 0;
     }
 
-    // Determine if separator marks end of field or is part of the (string) value
+    // Determine if separator marks end of field or is part of the (string) value.
     if (in_quotes || elem == meta.config.quote) {
       continue;
     }
@@ -191,7 +185,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
                                     const Table& table, Segments& segments, const CsvMeta& meta,
                                     const std::string& escaped_linebreak, std::mutex& append_chunk_mutex) {
-  // For each csv column, create a CsvConverter which builds up a ValueSegment
+  // For each csv column, create a CsvConverter which builds up a ValueSegment.
   const auto column_count = table.column_count();
   const auto row_count = ChunkOffset{static_cast<ChunkOffset::base_type>(field_ends.size() / column_count)};
   auto converters = std::vector<std::unique_ptr<BaseCsvConverter>>{};
@@ -207,7 +201,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
     });
   }
 
-  Assert(field_ends.size() == static_cast<size_t>(row_count) * column_count, "Unexpected number of fields");
+  Assert(field_ends.size() == static_cast<size_t>(row_count) * column_count, "Unexpected number of fields.");
 
   auto start = size_t{0};
   auto row_id = size_t{0};
@@ -222,7 +216,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
         start = end + 1;
 
         if (!meta.config.rfc_mode) {
-          // CSV fields not following RFC 4810 might need some preprocessing
+          // CSV fields not following RFC 4810 might need some preprocessing.
           _sanitize_field(field, meta, escaped_linebreak);
         }
 

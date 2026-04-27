@@ -168,6 +168,8 @@ inline const detail::binary<ArithmeticOperator::Subtraction, ArithmeticExpressio
 inline const detail::binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod_;
 inline const detail::binary<PredicateCondition::Like, BinaryPredicateExpression> like_;
 inline const detail::binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like_;
+inline const detail::binary<PredicateCondition::LikeInsensitive, BinaryPredicateExpression> ilike_;
+inline const detail::binary<PredicateCondition::NotLikeInsensitive, BinaryPredicateExpression> not_ilike_;
 inline const detail::binary<PredicateCondition::Equals, BinaryPredicateExpression> equals_;
 inline const detail::binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals_;
 inline const detail::binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than_;
@@ -200,17 +202,16 @@ std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<Abstr
 
 template <typename... Args>
 std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<AbstractOperator>& pqp,
-                                                     const DataType data_type, const bool nullable,
-                                                     Args&&... parameter_id_column_id_pairs) {
+                                                     const DataType data_type, Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
-    // Correlated subquery
+    // Correlated subquery.
     return std::make_shared<PQPSubqueryExpression>(
-        pqp, data_type, nullable,
-        std::vector<std::pair<ParameterID, ColumnID>>{
+        pqp, data_type,
+        PQPSubqueryExpression::Parameters{
             {std::make_pair(parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
   } else {
-    // Not correlated
-    return std::make_shared<PQPSubqueryExpression>(pqp, data_type, nullable);
+    // Not correlated.
+    return std::make_shared<PQPSubqueryExpression>(pqp, data_type);
   }
 }
 
@@ -267,7 +268,7 @@ std::shared_ptr<PlaceholderExpression> placeholder_(const ParameterID parameter_
 std::shared_ptr<LQPColumnExpression> lqp_column_(const std::shared_ptr<const AbstractLQPNode>& original_node,
                                                  const ColumnID original_column_id);
 std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type,
-                                                 const bool nullable, const std::string& column_name);
+                                                 const std::string& column_name);
 
 template <typename ReferencedExpression>
 std::shared_ptr<CorrelatedParameterExpression> correlated_parameter_(const ParameterID parameter_id,

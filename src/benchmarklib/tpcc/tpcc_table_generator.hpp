@@ -66,7 +66,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   template <typename T>
   void _add_order_line_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                              std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                              std::string name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                               OrderLineCounts order_line_counts,
                               const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function);
 
@@ -104,7 +104,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   std::string name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
@@ -224,13 +224,13 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   std::string name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<T(const std::vector<size_t>&)>& generator_function) {
     const std::function<std::vector<T>(const std::vector<size_t>&)> wrapped_generator_function =
         [generator_function](const std::vector<size_t>& indices) {
           return std::vector<T>({generator_function(indices)});
         };
-    _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
+    _add_column(segments_by_chunk, column_definitions, std::move(name), cardinalities, wrapped_generator_function);
   }
 
   /**
@@ -244,13 +244,13 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    */
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
-                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   std::string name, const std::shared_ptr<std::vector<size_t>>& cardinalities,
                    const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function) {
     const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)> wrapped_generator_function =
         [generator_function](const std::vector<size_t>& indices) {
           return std::vector<std::optional<T>>({generator_function(indices)});
         };
-    _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
+    _add_column(segments_by_chunk, column_definitions, std::move(name), cardinalities, wrapped_generator_function);
   }
 };
 }  // namespace hyrise

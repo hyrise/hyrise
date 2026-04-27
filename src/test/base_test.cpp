@@ -56,7 +56,7 @@ std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<
   const auto output_table = op->get_output();
   const auto& column_definition = output_table->column_definitions().at(column_id);
 
-  return pqp_column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
+  return pqp_column_(column_id, column_definition.data_type, column_definition.name);
 }
 
 std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOperator>& in, const ColumnID column_id,
@@ -134,7 +134,7 @@ ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
 
 void assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
   const auto column_count = chunk->column_count();
-  for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto segment = chunk->get_segment(column_id);
     const auto segment_spec = spec.at(column_id);
 
@@ -205,11 +205,11 @@ std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<con
   auto pos_list = std::make_shared<RowIDPosList>();
   pos_list->reserve(table->row_count());
 
-  for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
 
     const auto chunk_size = chunk->size();
-    for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk_size; ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       pos_list->emplace_back(RowID{chunk_id, chunk_offset});
     }
   }

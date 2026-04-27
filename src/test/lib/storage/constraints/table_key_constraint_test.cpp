@@ -1,6 +1,9 @@
+#include <stdexcept>
+
 #include "base_test.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -175,6 +178,16 @@ TEST_F(TableKeyConstraintTest, OrderIndependence) {
   EXPECT_EQ(key_constraints_a, key_constraints_b);
   EXPECT_EQ(*key_constraints_a.begin(), *key_constraints_b.begin());
   EXPECT_EQ(*std::next(key_constraints_a.begin()), *std::next(key_constraints_b.begin()));
+}
+
+TEST_F(TableKeyConstraintTest, CanBecomeInvalid) {
+  const auto key_constraint_invalid =
+      TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, INITIAL_COMMIT_ID, INITIAL_COMMIT_ID};
+  const auto key_constraint_valid =
+      TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE, MAX_COMMIT_ID, MAX_COMMIT_ID};
+
+  EXPECT_TRUE(key_constraint_invalid.can_become_invalid());
+  EXPECT_FALSE(key_constraint_valid.can_become_invalid());
 }
 
 }  // namespace hyrise

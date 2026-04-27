@@ -62,8 +62,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_item_table() {
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "I_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
         auto data = _random_gen.astring(26, 50);
-        const auto is_original = original_ids.find(indices[0]) != original_ids.end();
-        if (is_original) {
+        if (original_ids.contains(indices[0])) {
           const auto original_string = std::string{"ORIGINAL"};
           const auto start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
           data.replace(start_pos, original_string.length(), original_string);
@@ -186,8 +185,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "S_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
         auto data = _random_gen.astring(26, 50);
-        const auto is_original = original_ids.find(indices[1]) != original_ids.end();
-        if (is_original) {
+        if (original_ids.contains(indices[1])) {
           const auto original_string = std::string{"ORIGINAL"};
           const auto start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
           data.replace(start_pos, original_string.length(), original_string);
@@ -340,7 +338,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
                        });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_CREDIT", cardinalities,
                           [&](const std::vector<size_t>& indices) {
-                            const auto is_original = original_ids.find(indices[2]) != original_ids.end();
+                            const auto is_original = original_ids.contains(indices[2]);
                             return pmr_string{is_original ? "BC" : "GC"};
                           });
   _add_column<float>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
@@ -453,8 +451,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
   auto segments_by_chunk = std::vector<Segments>{};
   auto column_definitions = TableColumnDefinitions{};
 
-  // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the
-  // same permutation
+  // TODO(anyone): Generate a new customer permutation for each district and warehouse. Currently they all have the same
+  // permutation.
   auto customer_permutation = _random_gen.permutation(0, NUM_CUSTOMERS_PER_DISTRICT);
 
   _add_column<int32_t>(segments_by_chunk, column_definitions, "O_ID", cardinalities,
@@ -518,22 +516,22 @@ TPCCTableGenerator::OrderLineCounts TPCCTableGenerator::generate_order_line_coun
 }
 
 /**
- * Generates a column for the 'ORDER_LINE' table. This is used in the specialization of add_column to insert vectors.
- * In contrast to other tables the ORDER_LINE table is NOT defined by saying, there are 10 order_lines per order,
- * but instead there 5 to 15 order_lines per order.
+ * Generates a column for the 'ORDER_LINE' table. This is used in the specialization of add_column to insert vectors. In
+ * contrast to other tables the ORDER_LINE table is NOT defined by saying, there are 10 order_lines per order, but
+ * instead there 5 to 15 order_lines per order.
  */
 template <typename T>
 std::vector<std::optional<T>> TPCCTableGenerator::_generate_inner_order_line_column(
     const std::vector<size_t>& indices, TPCCTableGenerator::OrderLineCounts order_line_counts,
     const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function) {
-  auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
+  const auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
 
   auto values = std::vector<std::optional<T>>{};
   values.reserve(order_line_count);
   for (auto index = size_t{0}; index < order_line_count; index++) {
     auto copied_indices = indices;
     copied_indices.push_back(index);
-    values.push_back(generator_function(copied_indices));
+    values.emplace_back(generator_function(copied_indices));
   }
 
   return values;
@@ -542,18 +540,18 @@ std::vector<std::optional<T>> TPCCTableGenerator::_generate_inner_order_line_col
 template <typename T>
 void TPCCTableGenerator::_add_order_line_column(
     std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions, std::string name,
-    std::shared_ptr<std::vector<size_t>> cardinalities, TPCCTableGenerator::OrderLineCounts order_line_counts,
+    const std::shared_ptr<std::vector<size_t>>& cardinalities, TPCCTableGenerator::OrderLineCounts order_line_counts,
     const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function) {
   const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)> wrapped_generator_function =
       [&](const std::vector<size_t>& indices) {
         return _generate_inner_order_line_column(indices, order_line_counts, generator_function);
       };
-  _add_column<T>(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
+  _add_column<T>(segments_by_chunk, column_definitions, std::move(name), cardinalities, wrapped_generator_function);
 }
 
 std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
     const TPCCTableGenerator::OrderLineCounts& order_line_counts) {
-  auto cardinalities = std::make_shared<std::vector<size_t>>(
+  const auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_num_warehouses, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS_PER_DISTRICT});
 
   /**
@@ -622,7 +620,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
 }
 
 std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
-  auto cardinalities = std::make_shared<std::vector<size_t>>(
+  const auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_num_warehouses, NUM_DISTRICTS_PER_WAREHOUSE, NUM_NEW_ORDERS_PER_DISTRICT});
 
   /**

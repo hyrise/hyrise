@@ -83,7 +83,7 @@ set(
     synthetic_table_generator.hpp
 )
 
-# Configure the regular hyrise library used for tests/server/playground...
+# Configure the regular hyrise library used for tests/server/playground.
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 add_dependencies(hyriseBenchmarkLib jcchDbgen-build) # *-build is auto-generated
 add_dependencies(hyriseBenchmarkLib ssbDbgen-build) # *-build is auto-generated

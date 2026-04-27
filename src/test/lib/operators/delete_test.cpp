@@ -75,11 +75,11 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = transaction_context->commit_id();
   } else {
     transaction_context->rollback(RollbackReason::User);
-    expected_end_cid = MvccData::MAX_COMMIT_ID;
+    expected_end_cid = MAX_COMMIT_ID;
   }
 
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{0}), expected_end_cid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{1}), MAX_COMMIT_ID);
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{2}), expected_end_cid);
 
   auto expected_tid = commit ? transaction_context->transaction_id() : 0u;
@@ -363,11 +363,11 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   const auto expected_end_cid = transaction_context->commit_id();
   EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{1}), expected_end_cid);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{2}), MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{0}), MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{1}), MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{2}), MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{0}), MAX_COMMIT_ID);
   EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{1}), expected_end_cid);
 }
 
@@ -385,7 +385,7 @@ TEST_F(OperatorsDeleteTest, SetMaxEndCID) {
 
   const auto& chunk = _table->get_chunk(ChunkID{0});
   ASSERT_TRUE(chunk->mvcc_data());
-  EXPECT_EQ(chunk->mvcc_data()->max_end_cid.load(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(chunk->mvcc_data()->max_end_cid.load(), MAX_COMMIT_ID);
 
   transaction_context->commit();
 
@@ -441,7 +441,7 @@ TEST_F(OperatorsDeleteTest, DifferentPosLists) {
   const auto& mvcc_data_1 = _table3->get_chunk(ChunkID{0})->mvcc_data();
   EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{1}), expected_end_cid);
-  EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{2}), MAX_COMMIT_ID);
   EXPECT_EQ(mvcc_data_1->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{0})->invalid_row_count(), 2);
 
@@ -455,14 +455,14 @@ TEST_F(OperatorsDeleteTest, DifferentPosLists) {
   const auto& mvcc_data_3 = _table3->get_chunk(ChunkID{2})->mvcc_data();
   EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{1}), expected_end_cid);
-  EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{2}), MAX_COMMIT_ID);
   EXPECT_EQ(mvcc_data_3->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{2})->invalid_row_count(), 2);
 
   const auto& mvcc_data_4 = _table3->get_chunk(ChunkID{3})->mvcc_data();
   EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{0}), expected_end_cid);
-  EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{1}), MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{2}), MAX_COMMIT_ID);
   EXPECT_EQ(mvcc_data_4->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{3})->invalid_row_count(), 1);
 
@@ -476,7 +476,7 @@ TEST_F(OperatorsDeleteTest, DifferentPosLists) {
   const auto& mvcc_data_6 = _table3->get_chunk(ChunkID{5})->mvcc_data();
   EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{1}), expected_end_cid);
-  EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{2}), MAX_COMMIT_ID);
   EXPECT_EQ(mvcc_data_6->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{5})->invalid_row_count(), 2);
 
@@ -487,9 +487,9 @@ TEST_F(OperatorsDeleteTest, DifferentPosLists) {
     const auto chunk_size = chunk->size();
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      EXPECT_EQ(mvcc_data->get_end_cid(chunk_offset), MvccData::MAX_COMMIT_ID);
+      EXPECT_EQ(mvcc_data->get_end_cid(chunk_offset), MAX_COMMIT_ID);
     }
-    EXPECT_EQ(mvcc_data->max_end_cid.load(), MvccData::MAX_COMMIT_ID);
+    EXPECT_EQ(mvcc_data->max_end_cid.load(), MAX_COMMIT_ID);
     EXPECT_EQ(_table3->get_chunk(chunk_id)->invalid_row_count(), 0);
   }
 }

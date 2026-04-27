@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -22,6 +23,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/pruning_utils.hpp"
@@ -148,7 +150,8 @@ std::string ChunkPruningRule::name() const {
   return name;
 }
 
-void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                         OptimizationContext& /*optimization_context*/) const {
   auto predicate_pruning_chains_by_stored_table_node =
       std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicatePruningChain>>{};
 
@@ -295,8 +298,7 @@ std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::
     }
 
     auto intersection = std::set<ChunkID>{};
-    std::set_intersection(chunk_id_set.begin(), chunk_id_set.end(), current_chunk_id_set.begin(),
-                          current_chunk_id_set.end(), std::inserter(intersection, intersection.end()));
+    std::ranges::set_intersection(chunk_id_set, current_chunk_id_set, std::inserter(intersection, intersection.end()));
     chunk_id_set = std::move(intersection);
   }
 

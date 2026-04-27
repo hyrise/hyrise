@@ -40,7 +40,7 @@ static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
         continue;
       }
 
-      for (const auto sort_mode : magic_enum::enum_values<SortMode>()) {
+      for (const auto sort_mode : {SortMode::AscendingNullsFirst, SortMode::DescendingNullsFirst}) {
         pairs.emplace_back(data_type, encoding, sort_mode, true);
         pairs.emplace_back(data_type, encoding, sort_mode, false);
       }

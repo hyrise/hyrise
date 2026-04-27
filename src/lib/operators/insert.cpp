@@ -16,6 +16,7 @@
 #include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "tasks/chunk_compression_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/atomic_max.hpp"
@@ -57,7 +58,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
       }
     }
   } else {
-    segment_with_iterators<T>(*source_abstract_segment, [&](const auto source_begin, const auto /*source_end*/) {
+    segment_with_iterators<T>(*source_abstract_segment, [&](const auto& source_begin, const auto& /*source_end*/) {
       auto source_iter = source_begin + source_begin_offset;
       auto target_iter = target_values.begin() + target_begin_offset;
 
@@ -74,6 +75,20 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
         ++target_iter;
       }
     });
+  }
+}
+
+void deregister_insert(const std::shared_ptr<Table>& table, const ChunkID chunk_id, const std::shared_ptr<Chunk>& chunk,
+                       const std::shared_ptr<MvccData>& mvcc_data) {
+  // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last committing/rolling back
+  // Insert operator inserting into a chunk that reached its target size and. In this case, the Insert operator that
+  // added a new chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
+  // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
+  const auto active_inserts = mvcc_data->deregister_insert();
+  if (active_inserts == 0 && chunk->try_set_immutable()) {
+    // We were the first ones to mark the chunk as immutable. Thus, we have to take care the chunk is encoded. We only
+    // spin off a background task, so the current transaction does not have to wait for the encoding to complete.
+    std::make_shared<ChunkCompressionTask>(table, chunk_id)->schedule();
   }
 }
 
@@ -135,8 +150,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           std::min<size_t>(_target_table->target_chunk_size() - target_chunk->size(), remaining_rows);
 
       _target_chunk_ranges.emplace_back(
-          ChunkRange{target_chunk_id, target_chunk->size(),
-                     static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
+          ChunkRange{.chunk_id = target_chunk_id,
+                     .begin_chunk_offset = target_chunk->size(),
+                     .end_chunk_offset = static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
 
       // Mark new (but still empty) rows as being under modification by current transaction. Do so before resizing the
       // Segments, because the resize of `Chunk::_segments.front()` is what releases the new row count.
@@ -144,8 +160,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         const auto transaction_id = context->transaction_id();
         const auto end_offset = target_chunk->size() + num_rows_for_target_chunk;
         for (auto target_chunk_offset = target_chunk->size(); target_chunk_offset < end_offset; ++target_chunk_offset) {
-          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid begin CID.");
-          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid end CID.");
+          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MAX_COMMIT_ID, "Invalid begin CID.");
+          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MAX_COMMIT_ID, "Invalid end CID.");
           mvcc_data->set_tid(target_chunk_offset, transaction_id, std::memory_order_relaxed);
         }
       }
@@ -153,9 +169,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Make sure the MVCC data is written before the first segment (and, thus, the chunk) is resized.
       std::atomic_thread_fence(std::memory_order_seq_cst);
 
-      // "Grow" data segments: Segments are pre-allocated during construction, we resize() to make default-constructed
-      // cells visible so that they can be written in the next Insert step (note, even though those cells are now
-      // visible before being written to, they are still invisible from an MVCC point of view).
+      // "Grow" data segments: Segments are pre-allocated during construction. We resize() to make default-constructed
+      // cells visible so that they can be written in the next Insert step. Note that those cells are still invisible
+      // from an MVCC point of view until they are actually being written and committed.
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
       // resize that makes the new row count visible to the outside world.
       const auto old_size = target_chunk->size();
@@ -246,21 +262,17 @@ void Insert::_on_commit_records(const CommitID cid) {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
+      // Set the begin CIDs to 0 (from the intial MAX_COMMIT_ID), making the rows visible, and unlock the rows by
+      // setting the TIDs to 0 again.
       mvcc_data->set_begin_cid(chunk_offset, cid, std::memory_order_relaxed);
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
 
     set_atomic_max(mvcc_data->max_begin_cid, cid);
 
-    // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
+    // This fence ensures that changes to the TIDs (which are not sequentially consistent) are visible to other threads.
     std::atomic_thread_fence(std::memory_order_release);
-
-    // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last committing Insert
-    // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new
-    // chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
-    // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
-    mvcc_data->deregister_insert();
-    target_chunk->try_set_immutable();
+    deregister_insert(_target_table, target_chunk_range.chunk_id, target_chunk, mvcc_data);
   }
 }
 
@@ -269,34 +281,18 @@ void Insert::_on_rollback_records() {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
     const auto& mvcc_data = target_chunk->mvcc_data();
 
-    /**
-     * !!! Crucial comment, PLEASE READ AND _UNDERSTAND_ before altering any of the following code !!!
-     *
-     * Set end_cids to 0 (effectively making the rows invisible for everyone) BEFORE setting the begin_cids to 0.
-     *
-     * Otherwise, another transaction/thread might observe a row with begin_cid == 0, end_cid == MAX_COMMIT_ID and a
-     * foreign TID - which is what a visible row that is being deleted by a different transaction looks like. Thus,
-     * the other transaction would consider the row (that is in the process of being rolled back and should have never
-     * been visible) as visible.
-     *
-     * We need to set `begin_cid = 0` so that the ChunkCompressionTask can identify "completed" Chunks.
-     */
-
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->set_end_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
-      mvcc_data->set_begin_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
+      // Just unlock the rows by resetting the TID to 0. For other transactions, this row looks like it was never
+      // inserted (which is basically true).
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
       // Update chunk statistics.
       target_chunk->increase_invalid_row_count(ChunkOffset{1}, std::memory_order_relaxed);
     }
 
-    // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last rolling back Insert
-    // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new
-    // chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
-    // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
-    mvcc_data->deregister_insert();
-    target_chunk->try_set_immutable();
+    const auto record_count = target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
+    target_chunk->increase_invalid_row_count(ChunkOffset{record_count}, std::memory_order_release);
+    deregister_insert(_target_table, target_chunk_range.chunk_id, target_chunk, mvcc_data);
   }
 }
 

@@ -3,7 +3,7 @@
 #include <bit>
 #include <limits>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 namespace hyrise {
 

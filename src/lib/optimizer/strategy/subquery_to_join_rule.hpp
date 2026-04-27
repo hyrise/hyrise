@@ -131,7 +131,8 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 };
 
 }  // namespace hyrise

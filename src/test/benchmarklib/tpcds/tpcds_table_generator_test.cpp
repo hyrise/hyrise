@@ -10,8 +10,9 @@ namespace {
 
 std::shared_ptr<Table> load_csv(const std::string& file_name) {
   return CsvParser::parse(
-      "resources/test_data/csv/tpcds/" + file_name, Chunk::DEFAULT_SIZE,
-      process_csv_meta_file("resources/benchmark/tpcds/tables/" + file_name + CsvMeta::META_FILE_EXTENSION));
+      "resources/test_data/csv/tpcds/" + file_name,
+      process_csv_meta_file("resources/benchmark/tpcds/tables/" + file_name + CsvMeta::META_FILE_EXTENSION),
+      Chunk::DEFAULT_SIZE);
 }
 
 }  // namespace
@@ -69,149 +70,53 @@ TEST_F(TPCDSTableGeneratorTest, TableContentsFirstRows) {
   }
 }
 
-TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCounts) {
-  /**
-   * Check whether all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager. Then,
-   * check whether the row count is correct for all tables.
-   */
-
-  const auto expected_sizes = std::map<std::string, uint64_t>{{"call_center", 6},
-                                                              {"catalog_page", 11718},
-                                                              {"catalog_returns", 144201},
-                                                              {"catalog_sales", 1440060},
-                                                              {"customer", 100000},
-                                                              {"customer_address", 50000},
-                                                              {"customer_demographics", 1920800},
-                                                              {"date_dim", 73049},
-                                                              {"household_demographics", 7200},
-                                                              {"income_band", 20},
-                                                              {"inventory", 11745000},
-                                                              {"item", 18000},
-                                                              {"promotion", 300},
-                                                              {"reason", 35},
-                                                              {"ship_mode", 20},
-                                                              {"store", 12},
-                                                              {"store_returns", 288324},
-                                                              {"store_sales", 2879434},
-                                                              {"time_dim", 86400},
-                                                              {"warehouse", 5},
-                                                              {"web_page", 60},
-                                                              {"web_returns", 71746},
-                                                              {"web_sales", 719620},
-                                                              {"web_site", 30}};
-
+TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCountsAndTableConstraints) {
   EXPECT_EQ(Hyrise::get().storage_manager.tables().size(), 0);
-
-  TPCDSTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
-
-  for (const auto& [name, size] : expected_sizes) {
-    SCOPED_TRACE("checking table " + name);
-    EXPECT_EQ(Hyrise::get().storage_manager.get_table(name)->row_count(), size);
-  }
-}
-
-TEST_F(TPCDSTableGeneratorTest, TableConstraints) {
-  // We do not check the constraints in detail, just verify each table has a PK and the number of FKs as defined in the
-  // specification.
   TPCDSTableGenerator{1, Chunk::DEFAULT_SIZE, 0}.generate_and_store();
 
-  const auto& store_sales_table = Hyrise::get().storage_manager.get_table("store_sales");
-  const auto& store_returns_table = Hyrise::get().storage_manager.get_table("store_returns");
-  const auto& catalog_sales_table = Hyrise::get().storage_manager.get_table("catalog_sales");
-  const auto& catalog_returns_table = Hyrise::get().storage_manager.get_table("catalog_returns");
-  const auto& web_sales_table = Hyrise::get().storage_manager.get_table("web_sales");
-  const auto& web_returns_table = Hyrise::get().storage_manager.get_table("web_returns");
-  const auto& inventory_table = Hyrise::get().storage_manager.get_table("inventory");
+  /**
+   * Check that
+   *    (i) all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager,
+   *   (ii) their row counts are as expected, and
+   *  (iii) they have one primary key and the expected number of foreign keys.
+   */
+  using TableSpec = std::tuple<uint64_t, uint32_t>;  // <row count, number of foreign keys>
+  const auto expected_table_info = std::map<std::string, TableSpec>{{"call_center", {6, 2}},
+                                                                    {"catalog_page", {11718, 2}},
+                                                                    {"catalog_returns", {144201, 17}},
+                                                                    {"catalog_sales", {1440060, 17}},
+                                                                    {"customer", {100000, 6}},
+                                                                    {"customer_address", {50000, 0}},
+                                                                    {"customer_demographics", {1920800, 0}},
+                                                                    {"date_dim", {73049, 0}},
+                                                                    {"household_demographics", {7200, 1}},
+                                                                    {"income_band", {20, 0}},
+                                                                    {"inventory", {11745000, 3}},
+                                                                    {"item", {18000, 0}},
+                                                                    {"promotion", {300, 3}},
+                                                                    {"reason", {35, 0}},
+                                                                    {"ship_mode", {20, 0}},
+                                                                    {"store", {12, 1}},
+                                                                    {"store_returns", {288324, 10}},
+                                                                    {"store_sales", {2879434, 9}},
+                                                                    {"time_dim", {86400, 0}},
+                                                                    {"warehouse", {5, 0}},
+                                                                    {"web_page", {60, 3}},
+                                                                    {"web_returns", {71746, 14}},
+                                                                    {"web_sales", {719620, 17}},
+                                                                    {"web_site", {30, 2}}};
 
-  const auto& store_table = Hyrise::get().storage_manager.get_table("store");
-  const auto& call_center_table = Hyrise::get().storage_manager.get_table("call_center");
-  const auto& catalog_page_table = Hyrise::get().storage_manager.get_table("catalog_page");
-  const auto& web_site_table = Hyrise::get().storage_manager.get_table("web_site");
-  const auto& web_page_table = Hyrise::get().storage_manager.get_table("web_page");
-  const auto& warehouse_table = Hyrise::get().storage_manager.get_table("warehouse");
-  const auto& customer_table = Hyrise::get().storage_manager.get_table("customer");
-  const auto& customer_address_table = Hyrise::get().storage_manager.get_table("customer_address");
-  const auto& customer_demographics_table = Hyrise::get().storage_manager.get_table("customer_demographics");
-  const auto& date_dim_table = Hyrise::get().storage_manager.get_table("date_dim");
-  const auto& household_demographics_table = Hyrise::get().storage_manager.get_table("household_demographics");
-  const auto& item_table = Hyrise::get().storage_manager.get_table("item");
-  const auto& income_band_table = Hyrise::get().storage_manager.get_table("income_band");
-  const auto& promotion_table = Hyrise::get().storage_manager.get_table("promotion");
-  const auto& reason_table = Hyrise::get().storage_manager.get_table("reason");
-  const auto& ship_mode_table = Hyrise::get().storage_manager.get_table("ship_mode");
-  const auto& time_dim_table = Hyrise::get().storage_manager.get_table("time_dim");
+  EXPECT_EQ(Hyrise::get().storage_manager.tables().size(), expected_table_info.size());
+  for (const auto& [name, table_info] : expected_table_info) {
+    SCOPED_TRACE("checking table " + name);
+    const auto table = Hyrise::get().storage_manager.get_table(name);
+    const auto [size, foreign_key_count] = table_info;
+    EXPECT_EQ(table->row_count(), size);
 
-  EXPECT_EQ(store_sales_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(store_sales_table->soft_foreign_key_constraints().size(), 9);
-
-  EXPECT_EQ(store_returns_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(store_returns_table->soft_foreign_key_constraints().size(), 10);
-
-  EXPECT_EQ(catalog_sales_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(catalog_sales_table->soft_foreign_key_constraints().size(), 17);
-
-  EXPECT_EQ(catalog_returns_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(catalog_returns_table->soft_foreign_key_constraints().size(), 17);
-
-  EXPECT_EQ(web_sales_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(web_sales_table->soft_foreign_key_constraints().size(), 17);
-
-  EXPECT_EQ(web_returns_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(web_returns_table->soft_foreign_key_constraints().size(), 14);
-
-  EXPECT_EQ(inventory_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(inventory_table->soft_foreign_key_constraints().size(), 3);
-
-  EXPECT_EQ(store_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(store_table->soft_foreign_key_constraints().size(), 1);
-
-  EXPECT_EQ(call_center_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(call_center_table->soft_foreign_key_constraints().size(), 2);
-
-  EXPECT_EQ(catalog_page_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(catalog_page_table->soft_foreign_key_constraints().size(), 2);
-
-  EXPECT_EQ(web_site_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(web_site_table->soft_foreign_key_constraints().size(), 2);
-
-  EXPECT_EQ(web_page_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(web_page_table->soft_foreign_key_constraints().size(), 3);
-
-  EXPECT_EQ(warehouse_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(warehouse_table->soft_foreign_key_constraints().empty());
-
-  EXPECT_EQ(customer_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(customer_table->soft_foreign_key_constraints().size(), 6);
-
-  EXPECT_EQ(customer_address_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(customer_address_table->soft_foreign_key_constraints().empty());
-
-  EXPECT_EQ(customer_demographics_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(customer_demographics_table->soft_foreign_key_constraints().empty());
-
-  EXPECT_EQ(date_dim_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(date_dim_table->soft_foreign_key_constraints().empty());
-
-  EXPECT_EQ(household_demographics_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(household_demographics_table->soft_foreign_key_constraints().size(), 1);
-
-  EXPECT_EQ(item_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(item_table->soft_foreign_key_constraints().empty());
-
-  EXPECT_EQ(income_band_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(income_band_table->soft_foreign_key_constraints().empty());
-
-  EXPECT_EQ(promotion_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(promotion_table->soft_foreign_key_constraints().size(), 3);
-
-  EXPECT_EQ(reason_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(reason_table->soft_foreign_key_constraints().empty());
-
-  EXPECT_EQ(ship_mode_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(ship_mode_table->soft_foreign_key_constraints().empty());
-
-  EXPECT_EQ(time_dim_table->soft_key_constraints().size(), 1);
-  EXPECT_TRUE(time_dim_table->soft_foreign_key_constraints().empty());
+    // All TPC-DS table have a primary key.
+    EXPECT_EQ(table->soft_key_constraints().size(), 1);
+    EXPECT_EQ(table->soft_foreign_key_constraints().size(), foreign_key_count);
+  }
 }
 
 }  // namespace hyrise

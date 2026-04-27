@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "abstract_read_write_operator.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
-#include "utils/assert.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_write_operator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -62,7 +62,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                    _secondary_predicates, _radix_bits);
+                                    _secondary_predicates);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -501,17 +501,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     auto build_side_pos_lists = std::vector<RowIDPosList>{};
     auto probe_side_pos_lists = std::vector<RowIDPosList>{};
-    const size_t partition_count = radix_probe_column.size();
-    build_side_pos_lists.resize(partition_count);
-    probe_side_pos_lists.resize(partition_count);
-
-    // simple heuristic: half of the rows of the probe side will match
-    const size_t result_rows_per_partition =
-        _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
-    for (auto partition_index = size_t{0}; partition_index < partition_count; ++partition_index) {
-      build_side_pos_lists[partition_index].reserve(result_rows_per_partition);
-      probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
-    }
 
     auto timer_probing = Timer{};
     switch (_mode) {

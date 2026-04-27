@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+#include "magic_enum/magic_enum.hpp"
+
 #include "base_test.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_access_counter.hpp"
@@ -25,14 +27,14 @@ class SegmentAccessCounterTest : public BaseTest {
 };
 
 TEST_F(SegmentAccessCounterTest, ZeroOnConstruction) {
-  SegmentAccessCounter counter;
-  for (auto access_type = 0ul; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
+  auto counter = SegmentAccessCounter{};
+  for (auto access_type = size_t{0}; access_type < magic_enum::enum_count<AccessType>(); ++access_type) {
     EXPECT_EQ(0, counter[static_cast<AccessType>(access_type)]);
   }
 }
 
 TEST_F(SegmentAccessCounterTest, ToString) {
-  SegmentAccessCounter counter;
+  auto counter = SegmentAccessCounter{};
   counter[AccessType::Point] = 1;
   counter[AccessType::Sequential] = 20;
   counter[AccessType::Monotonic] = 300;
@@ -44,7 +46,7 @@ TEST_F(SegmentAccessCounterTest, ToString) {
 }
 
 TEST_F(SegmentAccessCounterTest, CopyConstructor) {
-  SegmentAccessCounter counter1;
+  auto counter1 = SegmentAccessCounter{};
   counter1[AccessType::Point] = 1;
   counter1[AccessType::Sequential] = 20;
   counter1[AccessType::Monotonic] = 300;
@@ -52,22 +54,22 @@ TEST_F(SegmentAccessCounterTest, CopyConstructor) {
   counter1[AccessType::Dictionary] = 50'000;
 
   SegmentAccessCounter counter2{counter1};
-  for (auto access_type = 0ul; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
+  for (auto access_type = size_t{0}; access_type < magic_enum::enum_count<AccessType>(); ++access_type) {
     EXPECT_EQ(counter1[static_cast<AccessType>(access_type)], counter2[static_cast<AccessType>(access_type)]);
   }
 }
 
 TEST_F(SegmentAccessCounterTest, AssignmentOperator) {
-  SegmentAccessCounter counter1;
+  auto counter1 = SegmentAccessCounter{};
   counter1[AccessType::Point] = 1;
   counter1[AccessType::Sequential] = 20;
   counter1[AccessType::Monotonic] = 300;
   counter1[AccessType::Random] = 4'000;
   counter1[AccessType::Dictionary] = 50'000;
 
-  SegmentAccessCounter counter2;
+  auto counter2 = SegmentAccessCounter{};
   counter2 = counter1;
-  for (auto access_type = 0ul; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
+  for (auto access_type = size_t{0}; access_type < magic_enum::enum_count<AccessType>(); ++access_type) {
     EXPECT_EQ(counter1[static_cast<AccessType>(access_type)], counter2[static_cast<AccessType>(access_type)]);
   }
 }
@@ -194,6 +196,53 @@ TEST_F(SegmentAccessCounterTest, AccessPattern8) {
   EXPECT_EQ(_access_pattern(positions), AccessPattern::MonotonicallyDecreasing);
   positions->push_back({ChunkID{0}, ChunkOffset{661}});
   EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
+}
+
+TEST_F(SegmentAccessCounterTest, SelfAssignment) {
+  auto counter = SegmentAccessCounter();
+  counter[SegmentAccessCounter::AccessType::Point] = 10;
+  counter[SegmentAccessCounter::AccessType::Sequential] = 20;
+
+  // Store original values to check after self-assignment.
+  const auto original_point = counter[SegmentAccessCounter::AccessType::Point].load();
+  const auto original_sequential = counter[SegmentAccessCounter::AccessType::Sequential].load();
+
+  // Assign via a reference to avoid -Wself-assign-overloaded.
+  auto& ref = counter;
+  counter = ref;
+
+  EXPECT_EQ(counter[SegmentAccessCounter::AccessType::Point], original_point);
+  EXPECT_EQ(counter[SegmentAccessCounter::AccessType::Sequential], original_sequential);
+}
+
+TEST_F(SegmentAccessCounterTest, InequalityOperator) {
+  const auto zero_counter = SegmentAccessCounter();
+  const auto access_types = {AccessType::Point, AccessType::Sequential, AccessType::Monotonic, AccessType::Random,
+                             AccessType::Dictionary};
+  for (const auto access_type : access_types) {
+    auto modified_counter = zero_counter;
+
+    EXPECT_FALSE(zero_counter != modified_counter);  // Should be equal.
+
+    modified_counter[access_type] = 42;
+
+    EXPECT_TRUE(zero_counter != modified_counter);  // Should be different.
+  }
+}
+
+TEST_F(SegmentAccessCounterTest, EqualityOperator) {
+  const auto zero_counter = SegmentAccessCounter();
+  const auto access_types = {AccessType::Point, AccessType::Sequential, AccessType::Monotonic, AccessType::Random,
+                             AccessType::Dictionary};
+  for (const auto access_type : access_types) {
+    auto modified_counter = zero_counter;
+
+    EXPECT_TRUE(zero_counter == modified_counter);  // Should be equal.
+
+    modified_counter[access_type] = 42;
+
+    EXPECT_FALSE(zero_counter == modified_counter);  // Should be different.
+  }
 }
 
 }  // namespace hyrise

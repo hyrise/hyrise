@@ -1,5 +1,9 @@
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
 
 namespace hyrise {
@@ -10,6 +14,7 @@ class SemiJoinReductionRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     {
+      StrategyBaseTest::SetUp();
       const auto histogram_column_a = GenericHistogram<int32_t>::with_single_bin(1, 50, 40, 40);
       const auto histogram_column_b = GenericHistogram<int32_t>::with_single_bin(10, 15, 40, 5);
       _node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 40,
@@ -64,6 +69,8 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
   expected_reduction->mark_as_semi_reduction(expected_lqp);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 
   // Check whether the added semi join was also marked as a semi reduction.
@@ -95,6 +102,8 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReductionRightSide) {
   expected_reduction->mark_as_semi_reduction(expected_lqp);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -112,6 +121,8 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForOuter) {
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -131,6 +142,8 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForNonEquals) {
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -159,6 +172,8 @@ TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
   expected_reduction->mark_as_semi_reduction(expected_lqp);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -176,6 +191,8 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForNonBeneficial) {
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -205,6 +222,8 @@ TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
   expected_reduction->mark_as_semi_reduction(expected_lqp);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -221,6 +240,8 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForAntiJoin) {
   const auto expected_lqp = _lqp->deep_copy();
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -12,7 +14,9 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -21,6 +25,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class SubqueryToJoinRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     // One size fits all - we only look at cardinalities, anyway.
     const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 100, 10);
     const auto string_histogram = GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 10);
@@ -412,11 +417,11 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowSort) {
 
   // clang-format off
   _lqp =
-  SortNode::make(expression_vector(b_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(b_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     PredicateNode::make(less_than_(b_a, parameter),
       node_b));
   const auto expected_lqp =
-  SortNode::make(expression_vector(b_a), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(b_a), std::vector<SortMode>{SortMode::AscendingNullsFirst},
     node_b);
   // clang-format on
 
@@ -799,6 +804,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedInToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -827,6 +833,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -854,6 +861,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -884,6 +892,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedExistsWithAlias) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -916,6 +925,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedExistsToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -946,6 +956,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -982,6 +993,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1008,6 +1020,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedNotInToAntiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1042,6 +1055,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedInToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1070,6 +1084,7 @@ TEST_F(SubqueryToJoinRuleTest, UncorrelatedComparatorToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1099,6 +1114,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedComparatorToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1133,6 +1149,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1157,7 +1174,9 @@ TEST_F(SubqueryToJoinRuleTest, MultipliedCorrelatedComparatorToSemiJoin) {
         AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
           node_b)));
 
-_apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -1180,7 +1199,9 @@ _apply_rule(_rule, _lqp);
         AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
           node_b)));
 
-_apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -1203,7 +1224,9 @@ _apply_rule(_rule, _lqp);
         AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
           node_b)));
 
-_apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -1226,7 +1249,9 @@ _apply_rule(_rule, _lqp);
         AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
           node_b)));
 
-_apply_rule(_rule, _lqp);
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   // clang-format on
@@ -1261,6 +1286,7 @@ TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredic
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1313,6 +1339,7 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH17) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1354,7 +1381,7 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
 
   _lqp =
   ProjectionNode::make(expression_vector(s_name, s_address),
-    SortNode::make(expression_vector(s_name), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(s_name), std::vector<SortMode>{SortMode::AscendingNullsFirst},
       JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
         PredicateNode::make(in_(s_suppkey, subquery2),
           ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
@@ -1370,7 +1397,7 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(s_name, s_address),
-    SortNode::make(expression_vector(s_name), std::vector<SortMode>{SortMode::Ascending},
+    SortNode::make(expression_vector(s_name), std::vector<SortMode>{SortMode::AscendingNullsFirst},
       JoinNode::make(JoinMode::Inner, equals_(s_nationkey, n_nationkey),
         JoinNode::make(JoinMode::Semi, equals_(s_suppkey, ps_suppkey),
           ProjectionNode::make(expression_vector(s_suppkey, s_name, s_address, s_nationkey),
@@ -1396,6 +1423,7 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1424,6 +1452,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteOfOr) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1440,6 +1469,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteConstantIn) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1463,6 +1493,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteUncorrelatedExists) {
 
     _apply_rule(_rule, _lqp);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -1489,6 +1520,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteCorrelatedNotIn) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1514,6 +1546,7 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -1552,6 +1585,7 @@ TEST_F(SubqueryToJoinRuleTest, ComplexArithmeticExpression) {
   // clang-format on
 
   _apply_rule(_rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

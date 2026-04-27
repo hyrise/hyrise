@@ -66,7 +66,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
     const auto chunk_size = chunk->size();
     for (auto index = ChunkOffset{0}; index < chunk_size; ++index) {
       mvcc_data->set_begin_cid(index, CommitID{0});
-      mvcc_data->set_end_cid(index, MvccData::MAX_COMMIT_ID);
+      mvcc_data->set_end_cid(index, MAX_COMMIT_ID);
     }
   }
 }
@@ -259,10 +259,10 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
     EXPECT_TRUE(sorted_by.empty());
   }
 
-  // Verify that the sorted_by flag is set when it's present in left input.
-  // Since Validate can not be executed after Sort, we need to load a sorted table.
+  // Verify that the sorted_by flag is set when it's present in left input. Because Validate can not be executed after
+  // Sort, we need to load a sorted table.
   const auto sorted_table = load_table("resources/test_data/tbl/int_sorted.tbl", ChunkOffset{2});
-  const auto sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
+  const auto sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst);
   const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = sorted_table->get_chunk(chunk_id);

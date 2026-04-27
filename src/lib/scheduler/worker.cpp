@@ -44,6 +44,8 @@ Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuI
     : _queue(queue), _id(worker_id), _cpu_id(cpu_id) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
+
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(_random.begin(), _random.end(), 0);
   std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
 }
@@ -131,7 +133,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
 }
 
 void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
-  DebugAssert(&*get_this_thread_worker() == this,
+  DebugAssert(get_this_thread_worker() && &*get_this_thread_worker() == this,
               "execute_next must be called from the same thread that the worker works in.");
   if (!_next_task) {
     const auto successfully_enqueued = task->try_mark_as_enqueued();
@@ -194,7 +196,6 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
       // executed, too. Anecdotal evidence says that this is a good idea. For some reason, this keeps the memory
       // consumption of TPC-H Q6 low even if the scheduler is overcommitted. Because generating random numbers is
       // somewhat expensive, we keep a list of random numbers and reuse them.
-      // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
       _next_random = (_next_random + 1) % _random.size();
       if (_random[_next_random] <= 20) {
         return false;

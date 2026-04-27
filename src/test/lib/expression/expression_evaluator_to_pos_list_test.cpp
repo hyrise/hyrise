@@ -97,8 +97,10 @@ TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithoutNulls) {
 
   EXPECT_TRUE(
       test_expression(table_a, ChunkID{0}, *like_(s1, "%a%"), {ChunkOffset{0}, ChunkOffset{2}, ChunkOffset{3}}));
-
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *not_like_(s1, "%a%"), {ChunkOffset{1}}));
+  EXPECT_TRUE(
+      test_expression(table_a, ChunkID{0}, *ilike_(s1, "%A%"), {ChunkOffset{0}, ChunkOffset{2}, ChunkOffset{3}}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *not_ilike_(s1, "%A%"), {ChunkOffset{1}}));
 }
 
 TEST_F(ExpressionEvaluatorToPosListTest, PredicatesWithOnlyLiterals) {
@@ -190,7 +192,7 @@ TEST_F(ExpressionEvaluatorToPosListTest, ExistsCorrelated) {
   table_wrapper->never_clear_output();
   const auto table_scan =
       std::make_shared<TableScan>(table_wrapper, equals_(d, correlated_parameter_(ParameterID{0}, x)));
-  const auto subquery = pqp_subquery_(table_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto subquery = pqp_subquery_(table_scan, DataType::Int, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(subquery), {}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *exists_(subquery), {ChunkOffset{1}}));
@@ -205,12 +207,12 @@ TEST_F(ExpressionEvaluatorToPosListTest, ExistsCorrelated) {
 
 TEST_F(ExpressionEvaluatorToPosListTest, ExistsUncorrelated) {
   const auto table_wrapper_all = std::make_shared<TableWrapper>(Projection::dummy_table());
-  const auto subquery_returning_all = pqp_subquery_(table_wrapper_all, DataType::Int, false);
+  const auto subquery_returning_all = pqp_subquery_(table_wrapper_all, DataType::Int);
 
   const auto empty_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
   const auto table_wrapper_empty = std::make_shared<TableWrapper>(empty_table);
-  const auto subquery_returning_none = pqp_subquery_(table_wrapper_empty, DataType::Int, false);
+  const auto subquery_returning_none = pqp_subquery_(table_wrapper_empty, DataType::Int);
 
   execute_all({table_wrapper_all, table_wrapper_empty});
 

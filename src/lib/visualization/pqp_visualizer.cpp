@@ -54,18 +54,17 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 
     auto sorted_duration_by_operator_name = std::vector<std::pair<std::string, std::chrono::nanoseconds>>{
         _duration_by_operator_name.begin(), _duration_by_operator_name.end()};
-    std::sort(sorted_duration_by_operator_name.begin(), sorted_duration_by_operator_name.end(),
-              [](const auto& lhs, const auto& rhs) {
-                return lhs.second > rhs.second;
-              });
+    std::ranges::sort(sorted_duration_by_operator_name, [](const auto& lhs, const auto& rhs) {
+      return lhs.second > rhs.second;
+    });
 
-    // Print first column (operator name)
+    // Print first column (operator name).
     for (const auto& [operator_name, _] : sorted_duration_by_operator_name) {
       operator_breakdown_stream << " " << operator_name << " \\r";
     }
     operator_breakdown_stream << "total\\r";
 
-    // Print second column (operator duration) and track total duration
+    // Print second column (operator duration) and track total duration.
     operator_breakdown_stream << "|";
     auto total_nanoseconds = std::chrono::nanoseconds{};
     for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {
@@ -96,7 +95,7 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op,
                                    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
-  if (visualized_ops.find(op) != visualized_ops.end()) {
+  if (visualized_ops.contains(op)) {
     return;
   }
   visualized_ops.insert(op);

@@ -397,9 +397,9 @@ TEST_F(BinaryParserTest, SortColumnDefinitions) {
 
   // Set sorted by information
   const auto chunk_0_sorted_columns = std::vector<SortColumnDefinition>{
-      SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
+      SortColumnDefinition{ColumnID{0}}, SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}};
   const auto chunk_1_sorted_columns =
-      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::Descending}};
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}, SortMode::DescendingNullsFirst}};
   expected_table->get_chunk(ChunkID{0})->set_individually_sorted_by(chunk_0_sorted_columns);
   expected_table->get_chunk(ChunkID{1})->set_individually_sorted_by(chunk_1_sorted_columns);
 

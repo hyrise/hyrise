@@ -83,7 +83,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
     const auto n_seed = get_int(rng_seed_string.data());
     const auto skip = INT_MAX / MAX_COLUMN;
     for (auto index = 0; index < MAX_COLUMN; ++index) {
-      const auto seed = n_seed + skip * index;
+      const auto seed = n_seed + (skip * index);
       Streams[index].nInitialSeed = seed;
       Streams[index].nSeed = seed;
       Streams[index].nUsed = 0;
@@ -99,7 +99,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   auto distributions_value = std::string{"resources/benchmark/tpcds/tpcds.idx"};
   set_str(distributions_string.data(), distributions_value.data());
 
-  for (auto table_id = int{0}; table_id <= MAX_TABLE; ++table_id) {
+  for (auto table_id = int32_t{0}; table_id <= MAX_TABLE; ++table_id) {
     resetSeeds(table_id);
     RNGReset(table_id);
   }
@@ -194,20 +194,25 @@ std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
 }
 
 std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
-  return nullCheck(column_id) != 0 ? std::nullopt
-         : address.street_name2 == nullptr
-             ? std::optional{pmr_string{address.street_name1}}
-             : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
+  if (nullCheck(column_id) != 0) {
+    return std::nullopt;
+  }
+
+  if (!address.street_name2) {
+    return pmr_string{address.street_name1};
+  }
+
+  return pmr_string{address.street_name1} + " " + address.street_name2;
 }
 
-// mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
-// ds_key_t -> tpcds_key_t
-// int -> int32_t
-// char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
-// decimal, float -> float
-// ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
+// Mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
+//   ds_key_t -> tpcds_key_t
+//   int -> int32_t
+//   char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
+//   decimal, float -> float
+//   ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
 
-// in tpcds most columns are nullable, so we pass std::optional<?> as type
+// In TPC-DS, most columns are nullable, so we pass std::optional<?> as type.
 
 // clang-format off
 const auto call_center_column_types = boost::hana::tuple<     tpcds_key_t         , pmr_string          , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT
@@ -501,10 +506,10 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     //                                     &catalog_returns, &was_returned);
     {
       mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + catalog_sale_index, 0);
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
-        auto was_returned = int{0};
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+        auto was_returned = int32_t{0};
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
         if (catalog_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -926,10 +931,10 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     {
       mk_w_store_sales_master(&store_sales, store_sales_first + store_sale, 0);
 
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
-        auto was_returned = int{0};
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+        auto was_returned = int32_t{0};
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
         if (store_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -1085,9 +1090,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     {
       mk_w_web_sales_master(&web_sales, web_sales_first + web_sales_index, 0);
 
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
         auto was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 

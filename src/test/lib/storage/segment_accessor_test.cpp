@@ -118,7 +118,7 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
 
 TEST_F(SegmentAccessorTest, TestSegmentAccessCounterIncrementing) {
   const auto& access_counter = val_seg_int->access_counter;
-  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 0ul);
+  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 0);
 
   // Create segment accessor in a new scope to ensure its destructor, which writes the access counters, is called.
   {
@@ -129,7 +129,7 @@ TEST_F(SegmentAccessorTest, TestSegmentAccessCounterIncrementing) {
     EXPECT_EQ(val_seg_int_base_accessor->access(ChunkOffset{2}), 3);
   }
 
-  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 3ul);
+  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 3);
 }
 
 }  // namespace hyrise

@@ -35,15 +35,14 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
 
-    const bool descending = sort_mode == SortMode::Descending;
+    const bool descending = sort_mode == SortMode::DescendingNullsFirst;
     const int number_of_nulls = nullable && sort_mode ? 3 : 0;
 
     auto column_definitions = TableColumnDefinitions{{"a", data_type, nullable}, {"b", DataType::Int, nullable}};
 
     const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{6});
 
-    // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
-    resolve_data_type(data_type, [&, nullable = nullable, sort_mode = sort_mode](const auto type) {
+    resolve_data_type(data_type, [&, nullable, sort_mode](const auto type) {
       using Type = typename decltype(type)::type;
       if (nullable) {
         for (int i = 0; i < number_of_nulls; ++i) {
@@ -103,11 +102,11 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                           PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
-    const bool ascending = sort_mode == SortMode::Ascending;
-    const bool descending = sort_mode == SortMode::Descending;
+    const bool ascending = sort_mode == SortMode::AscendingNullsFirst;
+    const bool descending = sort_mode == SortMode::DescendingNullsFirst;
     const int number_of_nulls = nullable && sort_mode ? 3 : 0;
     std::ignore = encoding;
-    resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
+    resolve_data_type(data_type, [&, nullable](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       for (const auto& [left, right, expected_with_null] : tests) {

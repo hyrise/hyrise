@@ -16,7 +16,7 @@
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 #include <boost/variant/get.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -28,6 +28,7 @@
 #include "expression/cast_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
 #include "expression/evaluation/expression_result.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -40,7 +41,7 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
-#include "like_matcher.hpp"
+#include "lossless_cast.hpp"
 #include "lossy_cast.hpp"
 #include "null_value.hpp"
 #include "operators/abstract_operator.hpp"
@@ -51,6 +52,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
@@ -297,9 +299,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
   Fail("Invalid arithmetic operator.");
 }
 
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
+// No idea why clang-tidy thinks this could be static (and only picked this method). In the end, we call
+// `evaluate_expression_to_result` here twice, which uses the internal cache.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_binary_predicate_expression(
     const BinaryPredicateExpression& expression) {
   auto result = std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>{};
 
@@ -321,28 +324,19 @@ ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::
   return result;
 }
 
-template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_predicate_expression(
-    const BinaryPredicateExpression& /*expression*/) {
-  Fail("Can only evaluate predicates to bool.");
-}
-
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const BinaryPredicateExpression& expression) {
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_like_expression(
+    const BinaryPredicateExpression& expression) {
   /**
    * NOTE: This code path is NOT taken for LIKEs in predicates. That is `SELECT * FROM t WHERE a LIKE '%Hello%'` is
    *       handled in the TableScan. This code path is for `SELECT a LIKE 'bla' FROM ...` and alike.
    */
-
-  Assert(expression.predicate_condition == PredicateCondition::Like ||
-             expression.predicate_condition == PredicateCondition::NotLike,
-         "Expected PredicateCondition Like or NotLike.");
+  const auto condition = expression.predicate_condition;
+  Assert(condition == PredicateCondition::Like || condition == PredicateCondition::NotLike ||
+             condition == PredicateCondition::LikeInsensitive || condition == PredicateCondition::NotLikeInsensitive,
+         "Expected PredicateCondition (Not)Like or (Not)LikeInsensitive.");
 
   const auto left_results = evaluate_expression_to_result<pmr_string>(*expression.left_operand());
   const auto right_results = evaluate_expression_to_result<pmr_string>(*expression.right_operand());
-
-  const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
   const auto result_size = _result_size(left_results->size(), right_results->size());
   auto result_values = pmr_vector<ExpressionEvaluator::Bool>(result_size, 0);
@@ -357,25 +351,23 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
   const auto both_are_literals = left_results->is_literal() && right_results->is_literal();
   const auto both_are_series = !left_results->is_literal() && !right_results->is_literal();
   if (both_are_literals || both_are_series) {
-    // E.g., `a LIKE b` - A new matcher for each row and a different value as well
+    // E.g., `a LIKE b` - A new matcher for each row and a different value as well.
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+      LikeMatcher{right_results->values[row_idx], condition}.resolve([&](const auto& matcher) {
         result_values[row_idx] = matcher(left_results->values[row_idx]);
       });
     }
   } else if (!left_results->is_literal() && right_results->is_literal()) {
-    // E.g., `a LIKE '%hello%'` -- A single matcher for all rows
-    const auto like_matcher = LikeMatcher{right_results->values.front()};
-
-    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      like_matcher.resolve(invert_results, [&](const auto& matcher) {
+    // E.g., `a LIKE '%hello%'` - A single matcher for all rows.
+    LikeMatcher{right_results->values.front(), condition}.resolve([&](const auto& matcher) {
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
         result_values[row_idx] = matcher(left_results->values[row_idx]);
-      });
-    }
+      }
+    });
   } else {
-    // E.g., `'hello' LIKE b` -- A new matcher for each row but the value to check is constant
+    // E.g., `'hello' LIKE b` - A new matcher for each row but the value to check is constant.
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+      LikeMatcher{right_results->values[row_idx], condition}.resolve([&](const auto& matcher) {
         result_values[row_idx] = matcher(left_results->values.front());
       });
     }
@@ -387,15 +379,8 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
                                                                        std::move(result_nulls));
 }
 
-template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_like_expression(
-    const BinaryPredicateExpression& /*expression*/) {
-  Fail("Can only evaluate predicates to bool.");
-}
-
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(const IsNullExpression& expression) {
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_is_null_expression(
+    const IsNullExpression& expression) {
   auto result_values = pmr_vector<ExpressionEvaluator::Bool>{};
 
   _resolve_to_expression_result_view(*expression.operand(), [&](const auto& view) {
@@ -416,15 +401,8 @@ ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(con
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
 }
 
-template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_is_null_expression(
-    const IsNullExpression& /*expression*/) {
-  Fail("Can only evaluate predicates to bool.");
-}
-
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const InExpression& in_expression) {
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_in_expression(
+    const InExpression& in_expression) {
   const auto& left_expression = *in_expression.operand();
   const auto& right_expression = *in_expression.set();
 
@@ -601,7 +579,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
      * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_subquery>)`.
      */
 
-    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*std::make_shared<InExpression>(
+    return _evaluate_in_expression(*std::make_shared<InExpression>(
         in_expression.predicate_condition, in_expression.operand(), list_(in_expression.set())));
   }
 
@@ -610,9 +588,71 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 }
 
 template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_in_expression(
-    const InExpression& /*in_expression*/) {
-  Fail("InExpression supports only bool as result.");
+bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& expression, Result& result_values) {
+  const auto& operand = expression.operand();
+  const auto& lower_expression = expression.lower_bound();
+  const auto& upper_expression = expression.upper_bound();
+
+  // Make sure the operand is not a single NULL value and both upper and lower bounds are non-NULL ValueExpressions.
+  if (operand->data_type() == DataType::Null || lower_expression->type != ExpressionType::Value ||
+      lower_expression->data_type() == DataType::Null || upper_expression->type != ExpressionType::Value ||
+      upper_expression->data_type() == DataType::Null) {
+    return false;
+  }
+
+  auto success = false;
+  resolve_data_type(operand->data_type(), [&](const auto data_type) {
+    using DataType = typename decltype(data_type)::type;
+    const auto lower_bound =
+        lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*lower_expression).value);
+    const auto upper_bound =
+        lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*upper_expression).value);
+
+    // Do not handle tricky cases with lossy conversions here (e.g., `1 BETWEEN 1.1 and 2.0`).
+    if (!lower_bound || !upper_bound) {
+      return;
+    }
+
+    // Filter out trivial cases here, as with_between_comparator assumes that lower and upper bound
+    // are set such that values could match the predicate.
+    if constexpr (std::is_integral_v<DataType>) {
+      const auto difference = *upper_bound - *lower_bound -
+                              !is_lower_inclusive_between(expression.predicate_condition) -
+                              !is_upper_inclusive_between(expression.predicate_condition);
+      // Predicate is always false, just output an empty result.
+      if (difference < 0) {
+        success = true;
+        return;
+      }
+    }
+
+    const auto expression_result = evaluate_expression_to_result<DataType>(*operand);
+    expression_result->as_view([&](const auto& view) {
+      const auto result_size = _chunk ? _chunk->size() : static_cast<ChunkOffset>(view.size());
+
+      if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
+        result_values.resize(result_size);
+      }
+
+      with_between_comparator(expression.predicate_condition, lower_bound, upper_bound, [&](const auto& comparator) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+          const auto value_matches = !view.is_null(chunk_offset) && comparator(view.value(chunk_offset));
+
+          if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
+            result_values[chunk_offset] = static_cast<Bool>(value_matches);
+          } else {
+            if (value_matches) {
+              result_values.emplace_back(_chunk_id, chunk_offset);
+            }
+          }
+        }
+      });
+    });
+
+    success = true;
+  });
+
+  return success;
 }
 
 template <>
@@ -631,29 +671,35 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     case PredicateCondition::GreaterThan:
     case PredicateCondition::NotEquals:
     case PredicateCondition::LessThan:
-      return _evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
-          static_cast<const BinaryPredicateExpression&>(predicate_expression));
+      return _evaluate_binary_predicate_expression(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::BetweenInclusive:
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:
-    case PredicateCondition::BetweenExclusive:
-      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
-          *rewrite_between_expression(predicate_expression));
+    case PredicateCondition::BetweenExclusive: {
+      const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
+      auto result_values = pmr_vector<Bool>{};
+      // Simple BETWEEN predicates with a literal as lower and upper bound can be evaluated easily. More complex
+      // structures are handled as two individual less and greater predicates.
+      if (_evaluate_between_expression(between_expression, result_values)) {
+        return std::make_shared<ExpressionResult<Bool>>(std::move(result_values));
+      }
+      return evaluate_expression_to_result<Bool>(*rewrite_between_expression(predicate_expression));
+    }
 
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
-      return _evaluate_in_expression<ExpressionEvaluator::Bool>(static_cast<const InExpression&>(predicate_expression));
+      return _evaluate_in_expression(static_cast<const InExpression&>(predicate_expression));
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      return _evaluate_like_expression<ExpressionEvaluator::Bool>(
-          static_cast<const BinaryPredicateExpression&>(predicate_expression));
+    case PredicateCondition::LikeInsensitive:
+    case PredicateCondition::NotLikeInsensitive:
+      return _evaluate_like_expression(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
-      return _evaluate_is_null_expression<ExpressionEvaluator::Bool>(
-          static_cast<const IsNullExpression&>(predicate_expression));
+      return _evaluate_is_null_expression(static_cast<const IsNullExpression&>(predicate_expression));
   }
   Fail("Invalid enum value.");
 }
@@ -881,8 +927,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
     Assert(datetime_component == DatetimeComponent::Second, "Only SECOND is extracted as Double.");
     return _evaluate_extract_component<double>(from_result, [](const auto& timestamp) {
       const auto& time_of_day = timestamp.time_of_day();
-      return static_cast<double>(time_of_day.seconds()) + static_cast<double>(time_of_day.fractional_seconds()) /
-                                                              static_cast<double>(time_of_day.ticks_per_second());
+      return static_cast<double>(time_of_day.seconds()) + (static_cast<double>(time_of_day.fractional_seconds()) /
+                                                           static_cast<double>(time_of_day.ticks_per_second()));
     });
   }
 
@@ -1092,6 +1138,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
    */
 
   auto result_pos_list = RowIDPosList{};
+  const auto row_count = static_cast<ChunkOffset>(_output_row_count);
 
   switch (expression.type) {
     case ExpressionType::Predicate: {
@@ -1124,8 +1171,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
               if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                      RightDataType>::value) {
-                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                     ++chunk_offset) {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                   if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) {
                     continue;
                   }
@@ -1146,8 +1192,14 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::BetweenInclusive:
         case PredicateCondition::BetweenLowerExclusive:
         case PredicateCondition::BetweenUpperExclusive:
-        case PredicateCondition::BetweenExclusive:
-          return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
+        case PredicateCondition::BetweenExclusive: {
+          const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
+          // Simple BETWEEN predicates with a literal as lower and upper bound can be evaluated easily. More complex
+          // structures are handled as two individual less and greater predicates.
+          if (!_evaluate_between_expression(between_expression, result_pos_list)) {
+            result_pos_list = evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
+          }
+        } break;
 
         case PredicateCondition::IsNull:
         case PredicateCondition::IsNotNull: {
@@ -1155,15 +1207,13 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                   ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                 if (result.is_null(chunk_offset)) {
                   result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
               }
             } else {  // PredicateCondition::IsNotNull
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                   ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) {
                   result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
@@ -1175,7 +1225,9 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::In:
         case PredicateCondition::NotIn:
         case PredicateCondition::Like:
-        case PredicateCondition::NotLike: {
+        case PredicateCondition::NotLike:
+        case PredicateCondition::LikeInsensitive:
+        case PredicateCondition::NotLikeInsensitive: {
           // Evaluating (Not)In and (Not)Like to PosLists uses evaluate_expression_to_result() and scans the Series
           // it returns for matches. This is probably slower than a dedicated evaluate-to-PosList implementation
           // for these ExpressionTypes could be. But
@@ -1184,8 +1236,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
           // b) Like/In are on the slower end anyway
           const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
           result->as_view([&](const auto& result_view) {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                 ++chunk_offset) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
                 result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
@@ -1203,13 +1254,11 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
       switch (logical_expression.logical_operator) {
         case LogicalOperator::And:
-          std::set_intersection(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(),
-                                right_pos_list.end(), std::back_inserter(result_pos_list));
+          std::ranges::set_intersection(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
           break;
 
         case LogicalOperator::Or:
-          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(),
-                         std::back_inserter(result_pos_list));
+          std::ranges::set_union(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
           break;
       }
     } break;
@@ -1433,9 +1482,9 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
   const auto right_size = right.size();
   if (left_size == right_size) {
     auto nulls = pmr_vector<bool>(left_size);
-    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](const auto lhs, const auto rhs) {
-      return lhs || rhs;
-    });
+    for (auto index = size_t{0}; index < left_size; ++index) {
+      nulls[index] = left[index] || right[index];
+    }
     return nulls;
   }
 

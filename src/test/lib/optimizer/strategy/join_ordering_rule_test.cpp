@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -6,6 +8,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "strategy_base_test.hpp"
 
@@ -20,8 +23,8 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class JoinOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     rule = std::make_shared<JoinOrderingRule>();
-
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
     const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 50, 20, 10);
@@ -73,6 +76,7 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
       node_a));
   // clang-format on
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

@@ -66,17 +66,17 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
         // no match
         EXPECT_EQ(index->upper_bound({*search_value}), index->lower_bound({*search_value}));
       }
-
-      const auto begin = distinct_values.begin();
-      const auto rbegin = distinct_values.rbegin();
-
-      Assert(*begin && *rbegin, "Optional has no value.");
-      int32_t min = **begin;
-      int32_t max = **rbegin;
-
-      EXPECT_EQ(index->upper_bound({min - 1}), index->cbegin());
-      EXPECT_EQ(index->upper_bound({max + 1}), index->cend());
     }
+
+    const auto begin = distinct_values.begin();
+    const auto rbegin = distinct_values.rbegin();
+
+    Assert(*begin && *rbegin, "Optional has no value.");
+    auto min = **begin;
+    auto max = **rbegin;
+
+    EXPECT_EQ(index->lower_bound({min}), index->cbegin());
+    EXPECT_EQ(index->upper_bound({max}), index->cend());
   }
 
   // 0, 1, -1, the maximum int32_t value, the minimum int32_t value and 20 randomly generated int32_t values
@@ -246,7 +246,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
 TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfInts) {
   const auto test_size = 1'000u;
   auto values = std::vector<std::optional<int32_t>>{};
-  values.reserve(test_size);
+  values.resize(test_size);
 
   for (auto value_index = 0u; value_index < test_size; ++value_index) {
     values[value_index] = _indexed_value_pool[value_index % _indexed_value_pool.size()];

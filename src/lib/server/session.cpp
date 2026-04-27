@@ -19,8 +19,8 @@
 
 namespace hyrise {
 
-Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info)
-    : _socket(std::make_shared<Socket>(io_service)),
+Session::Session(boost::asio::io_context& io_context, const SendExecutionInfo send_execution_info)
+    : _socket(std::make_shared<Socket>(io_context)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
       _send_execution_info(send_execution_info) {}
 

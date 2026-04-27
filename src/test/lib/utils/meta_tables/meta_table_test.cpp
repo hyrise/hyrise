@@ -117,7 +117,7 @@ TEST_P(MultiMetaTablesTest, IsImmutable) {
 }
 
 TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
-  std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
+  auto suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
 
   const auto meta_table = generate_meta_table(GetParam());
@@ -129,7 +129,7 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
 }
 
 TEST_P(MultiMetaTablesTest, IsDynamic) {
-  std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
+  auto suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
 
   {
@@ -144,7 +144,7 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
     Hyrise::get()
         .storage_manager.get_table("int_int")
         ->get_chunk(ChunkID{0})
-        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst));
   }
 
   {

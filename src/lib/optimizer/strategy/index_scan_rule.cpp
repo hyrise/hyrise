@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "all_parameter_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -11,6 +12,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "types.hpp"
@@ -21,13 +23,14 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Only if we expect num_output_rows <= num_input_rows * selectivity_threshold, the ScanType can be set to IndexScan.
-// This threshold is kind of arbitrarily chosen, but the following paper suggests something similar: "Access Path
-// Selection in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?"
-constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
+// This threshold is kind of arbitrarily chosen, but Kester et al. suggest something similar in "Access Path Selection
+// in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?" (doi.org/10.1145/3035918.3064049).
+constexpr auto INDEX_SCAN_SELECTIVITY_THRESHOLD = Cardinality{0.01};
 
 // Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan. The threshold is taken
-// from: "Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance."
-constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
+// from "Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance."
+// (https://www.adms-conf.org/faust_adms12.pdf)
+constexpr auto INDEX_SCAN_ROW_COUNT_THRESHOLD = Cardinality{1000};
 
 bool is_single_column_index(const TableIndexStatistics& index_statistics) {
   return index_statistics.column_ids.size() == 1;
@@ -48,7 +51,7 @@ bool is_index_scan_applicable(const TableIndexStatistics& index_statistics,
 
   const auto& operator_predicate = (*operator_predicates)[0];
 
-  // Currently, we do not support two-column predicates
+  // Currently, we do not support two-column predicates.
   if (is_column_id(operator_predicate.value)) {
     return false;
   }
@@ -71,7 +74,7 @@ bool is_index_scan_applicable(const TableIndexStatistics& index_statistics,
   }
 
   const auto row_count_predicate = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
-  const float selectivity = row_count_predicate / row_count_table;
+  const auto selectivity = row_count_predicate / row_count_table;
 
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }
@@ -85,8 +88,9 @@ std::string IndexScanRule::name() const {
   return name;
 }
 
-void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set.");
+void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                      OptimizationContext& optimization_context) const {
+  DebugAssert(optimization_context.cost_estimator, "IndexScanRule requires cost estimator to be set.");
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& node) {
@@ -99,7 +103,7 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
 
         const auto& indexes_statistics = stored_table_node->table_indexes_statistics();
         for (const auto& index_statistics : indexes_statistics) {
-          if (is_index_scan_applicable(index_statistics, predicate_node, cost_estimator)) {
+          if (is_index_scan_applicable(index_statistics, predicate_node, optimization_context.cost_estimator)) {
             predicate_node->scan_type = ScanType::IndexScan;
           }
         }

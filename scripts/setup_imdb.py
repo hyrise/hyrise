@@ -6,6 +6,7 @@
 
 import hashlib
 import os
+import shutil
 import sys
 import urllib.request
 import zipfile
@@ -16,9 +17,7 @@ def clean_up(including_table_dir=False):
         os.remove(FILE_NAME)
 
     if including_table_dir and os.path.exists(table_dir):
-        for file in os.listdir(table_dir):
-            os.remove("./%s/%s" % (table_dir, file))
-        os.rmdir(table_dir)
+        shutil.rmtree(table_dir)
 
 
 def is_setup():
@@ -37,7 +36,7 @@ table_dir = sys.argv[1]
 
 # This file contains the IMDB dataset and is based on the specifications of the
 # original JOB repository: https://github.com/gregrahn/join-order-benchmark
-LOCATION = "https://bit.ly/hyriseimdbdataset"
+LOCATION = "https://my.hidrive.com/api/sharelink/download?id=XjvdJFZAN"
 FILE_NAME = "imdb_data.zip"
 TABLE_NAMES = [
     "aka_name",
@@ -76,9 +75,7 @@ url = urllib.request.urlopen(LOCATION)
 
 meta = url.info()
 
-if "X-Dropbox-Content-Length" in meta:
-    file_size = int(meta["X-Dropbox-Content-Length"])
-elif "Content-Length" in meta:
+if "Content-Length" in meta:
     file_size = int(meta["Content-Length"])
 else:
     print("- Aborting. Could not retrieve the imdb dataset's file size.")
@@ -115,8 +112,8 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-if hash_dl != "24bb992f97dad7b83fd4009e312ddd40":
-    print("  Aborting. MD5 checksum mismatch. Cleaning up.")
+if hash_dl != "7c2e84c64126897267d1cf745d47bc9b":
+    print("- Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
 
@@ -131,6 +128,11 @@ except Exception:
     print("- Aborting. Something went wrong during unzipping. Cleaning up.")
     clean_up(including_table_dir=True)
     sys.exit(3)
+
+if not is_setup():
+    print("- Aborting. Unzipping did not result in a correct imdb_data setup. Cleaning up.")
+    clean_up(including_table_dir=True)
+    sys.exit(4)
 
 print("- Deleting the archive file.")
 clean_up()

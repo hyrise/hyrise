@@ -6,7 +6,7 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -55,14 +55,14 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         }
 
         auto distinct_value_count = NULL_VALUE;
-        const auto& pruning_statistics = chunk->pruning_statistics();
+        const auto pruning_statistics = chunk->pruning_statistics();
         if (pruning_statistics) {
           Assert(pruning_statistics->size() > column_id, "Malformed pruning statistics.");
           resolve_data_type(data_type, [&](auto type) {
             using ColumnDataType = typename decltype(type)::type;
 
-            if (const auto attribute_statistics =
-                    std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>((*pruning_statistics)[column_id])) {
+            if (const auto attribute_statistics = std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(
+                    (*pruning_statistics)[column_id])) {
               const auto& distinct_value_count_object = attribute_statistics->distinct_value_count;
               if (distinct_value_count_object) {
                 distinct_value_count = static_cast<int64_t>(distinct_value_count_object->count);
@@ -108,7 +108,7 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
 
     auto distinct_values = std::unordered_set<ColumnDataType>{};
     auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
-    iterable.with_iterators([&](auto it, const auto end) {
+    iterable.with_iterators([&](auto it, const auto& end) {
       for (; it != end; ++it) {
         const auto segment_item = *it;
         if (!segment_item.is_null()) {

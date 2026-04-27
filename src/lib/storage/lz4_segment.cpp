@@ -2,6 +2,7 @@
 
 #include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -145,7 +146,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
     return std::vector<pmr_string>(size());
   }
 
-  const auto decompressed_size = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
+  const auto decompressed_size = ((_lz4_blocks.size() - 1) * _block_size) + _last_block_size;
   auto decompressed_data = std::vector<char>(decompressed_size);
   using DecompressedDataDifferenceType =
       typename std::iterator_traits<decltype(decompressed_data)::iterator>::difference_type;
@@ -194,7 +195,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
   const auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
-  auto decompressed_result = int{0};
+  auto decompressed_result = int32_t{0};
   if (_dictionary.empty()) {
     /**
      * If the dictionary is empty, we either have only a single block or had not enough data for a dictionary.
@@ -220,7 +221,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
   }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
-  DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
+  DebugAssert(std::cmp_equal(decompressed_result, decompressed_block_size),
               "Decompressed LZ4 block has different size than the initial source data.");
 }
 
@@ -252,7 +253,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   const auto& compressed_block = _lz4_blocks.at(block_index);
   const auto compressed_block_size = compressed_block.size();
 
-  auto decompressed_result = int{0};
+  auto decompressed_result = int32_t{0};
   if (_dictionary.empty()) {
     /**
      * If the dictionary is empty, we either have only a single block or had not enough data for a dictionary.
@@ -276,7 +277,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
-  DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
+  DebugAssert(std::cmp_equal(decompressed_result, decompressed_block_size),
               "Decompressed LZ4 block has different size than the initial source data.");
 }
 
@@ -436,21 +437,21 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
+std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_memory_resource(MemoryResource& memory_resource) const {
+  auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{&memory_resource};
   for (const auto& block : _lz4_blocks) {
-    auto block_copy = pmr_vector<char>{block, alloc};
+    auto block_copy = pmr_vector<char>{block, &memory_resource};
     new_lz4_blocks.emplace_back(std::move(block_copy));
   }
 
   auto new_null_values =
-      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, alloc}} : std::nullopt;
-  auto new_dictionary = pmr_vector<char>{_dictionary, alloc};
+      _null_values ? std::optional<pmr_vector<bool>>{pmr_vector<bool>{*_null_values, &memory_resource}} : std::nullopt;
+  auto new_dictionary = pmr_vector<char>{_dictionary, &memory_resource};
 
   auto copy = std::shared_ptr<LZ4Segment<T>>{};
 
   if (_string_offsets) {
-    auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_allocator(alloc) : nullptr;
+    auto new_string_offsets = _string_offsets ? _string_offsets->copy_using_memory_resource(memory_resource) : nullptr;
     copy = std::make_shared<LZ4Segment<T>>(std::move(new_lz4_blocks), std::move(new_null_values),
                                            std::move(new_dictionary), std::move(new_string_offsets), _block_size,
                                            _last_block_size, _compressed_size, _num_elements);

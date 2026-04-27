@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
 #include "server_types.hpp"
@@ -54,7 +54,7 @@ class Server {
   void _start_session(const std::shared_ptr<Session>& new_session, const boost::system::error_code& error);
 
   std::atomic_uint64_t _num_running_sessions{0};
-  boost::asio::io_service _io_service;
+  boost::asio::io_context _io_context;
   boost::asio::ip::tcp::acceptor _acceptor;
   const SendExecutionInfo _send_execution_info;
   std::atomic_bool _is_initialized{false};

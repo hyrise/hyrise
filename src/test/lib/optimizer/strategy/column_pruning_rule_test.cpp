@@ -1,3 +1,6 @@
+#include <memory>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
@@ -23,6 +26,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class ColumnPruningRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     node_abc = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_uvw = MockNode::make(
@@ -58,7 +62,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
     PredicateNode::make(greater_than_(5, c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, a),
         node_abc,
-        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::Ascending},
+        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::AscendingNullsFirst},
           node_uvw))))->deep_copy();
   // clang-format on
 
@@ -72,12 +76,13 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
     PredicateNode::make(greater_than_(5, pruned_c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, pruned_a),
         pruned_node_abc,
-        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::Ascending},
+        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::AscendingNullsFirst},
           node_uvw))));
   // clang-format on
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -112,6 +117,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
 
     _apply_rule(rule, _lqp);
 
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -143,6 +149,7 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -168,6 +175,7 @@ TEST_F(ColumnPruningRuleTest, ProjectionDoesNotRecompute) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
@@ -208,8 +216,8 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
-
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -233,6 +241,7 @@ TEST_F(ColumnPruningRuleTest, SimpleAggregate) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -256,6 +265,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -279,6 +289,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStarAndSum) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -303,6 +314,7 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
 
   _apply_rule(rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -323,6 +335,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -338,6 +351,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -353,6 +367,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneDeleteInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -368,6 +383,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneExportInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -388,6 +404,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
 
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -395,8 +412,8 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
   // Do not prune away the window function argument, the PARTITION BY columns, and the ORDER BY columns.
   auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                             FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window = window_(expression_vector(a), expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
-                              std::move(frame_description));
+  const auto window = window_(expression_vector(a), expression_vector(b),
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame_description));
 
   // clang-format off
   _lqp =
@@ -405,6 +422,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
   // clang-format on
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -412,8 +430,8 @@ TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
   // Do not prune away the window the PARTITION BY columns and the ORDER BY columns, but prune additional columns.
   auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
                                             FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window = window_(expression_vector(a), expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
-                              std::move(frame_description));
+  const auto window = window_(expression_vector(a), expression_vector(b),
+                              std::vector<SortMode>{SortMode::AscendingNullsFirst}, std::move(frame_description));
 
   // clang-format off
   _lqp =
@@ -422,6 +440,7 @@ TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
   // clang-format on
 
   _apply_rule(rule, _lqp);
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_EQ(node_abc->pruned_column_ids(), std::vector<ColumnID>{ColumnID{2}});
 }
 
@@ -445,6 +464,7 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
       _lqp = ProjectionNode::make(projections, join_node);
 
       _apply_rule(rule, _lqp);
+      EXPECT_TRUE(_optimization_context.is_cacheable());
 
       SCOPED_TRACE("With JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
       EXPECT_TRUE(join_node->prunable_input_side());

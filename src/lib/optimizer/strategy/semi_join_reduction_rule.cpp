@@ -5,13 +5,15 @@
 #include <tuple>
 #include <vector>
 
+#include "abstract_rule.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "optimizer/optimization_context.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -22,7 +24,8 @@ std::string SemiJoinReductionRule::name() const {
   return name;
 }
 
-void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                                              OptimizationContext& optimization_context) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto.");
 
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
@@ -35,8 +38,8 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
     return side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   };
 
-  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction();
+  const auto estimator = optimization_context.cost_estimator->cardinality_estimator->new_instance();
+  estimator->guarantee_bottom_up_construction(lqp_root);
 
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type != LQPNodeType::Join) {

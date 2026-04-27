@@ -1,3 +1,4 @@
+#include <memory>
 #include <numeric>
 
 #include "expression/expression_functional.hpp"
@@ -14,6 +15,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/join_predicate_ordering_rule.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
 #include "utils/load_table.hpp"
 
@@ -22,6 +24,7 @@ namespace hyrise {
 class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     _rule = std::make_shared<JoinPredicateOrderingRule>();
 
     node_a = create_mock_node_with_statistics(
@@ -62,6 +65,8 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
     const auto input_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x));
     _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
     _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -69,6 +74,8 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
     const auto input_join_predicates = expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z));
     _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
     _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -76,6 +83,8 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
     const auto input_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z));
     _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
     _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
@@ -94,6 +103,8 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
 
     _lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
     _apply_rule(_rule, _lqp);
+
+    EXPECT_TRUE(_optimization_context.is_cacheable());
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
@@ -120,6 +131,8 @@ TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
   _lqp = JoinNode::make(JoinMode::Semi, input_join_predicates, node_a, node_b);
 
   _apply_rule(_rule, _lqp);
+
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

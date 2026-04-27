@@ -94,13 +94,13 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   std::shared_ptr<TableWrapper> get_int_sorted_op() {
     return load_and_encode_table(
         "resources/test_data/tbl/int_sorted.tbl", ChunkOffset{4},
-        std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
+        std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::AscendingNullsFirst)});
   }
 
   std::shared_ptr<TableWrapper> get_int_only_null_op() {
     return load_and_encode_table(
         "resources/test_data/tbl/int_only_null.tbl", ChunkOffset{4},
-        std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
+        std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::AscendingNullsFirst)});
   }
 
   std::shared_ptr<TableWrapper> get_int_string_op() {
@@ -245,7 +245,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       const auto& actual_sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
       ASSERT_TRUE(!actual_sorted_by.empty());
       const auto expected_sorted_by =
-          std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+          std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)};
       EXPECT_EQ(actual_sorted_by, expected_sorted_by);
     }
   }
@@ -335,8 +335,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
   execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -350,8 +350,8 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
   execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                             pqp_subquery_(subquery_pqp, DataType::Int, false), value_(12345)));
+      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, "a"),
+                                             pqp_subquery_(subquery_pqp, DataType::Int), value_(12345)));
   EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -365,8 +365,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithEmptySubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -378,8 +378,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithInvalidSubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+      get_int_float_op(),
+      greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, "a"), pqp_subquery_(subquery_pqp, DataType::Int)));
 
   EXPECT_THROW(scan->create_impl(), std::logic_error);
 }
@@ -390,8 +390,8 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithInvalidSubquery) {
   subquery_pqp->execute();
 
   const auto scan = std::make_shared<TableScan>(
-      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                             pqp_subquery_(subquery_pqp, DataType::Int, false), value_(12345)));
+      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, "a"),
+                                             pqp_subquery_(subquery_pqp, DataType::Int), value_(12345)));
 
   EXPECT_THROW(scan->create_impl(), std::logic_error);
 }
@@ -680,7 +680,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_2.tbl", ChunkOffset{4});
-  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst));
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -695,7 +696,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_2.tbl", ChunkOffset{4});
-  table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Descending));
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsFirst));
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -704,6 +706,38 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegm
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {1, 2}},
                                                                                {PredicateCondition::IsNotNull, {3, 4}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegmentsNullsLast) {
+  const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_nulls_last_2.tbl", ChunkOffset{4});
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsLast));
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {3, 4}},
+                                                                               {PredicateCondition::IsNotNull, {1, 2}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegmentsNullsLast) {
+  const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_nulls_last_2.tbl", ChunkOffset{4});
+  table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsLast));
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {3, 4}},
+                                                                               {PredicateCondition::IsNotNull, {1, 2}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -952,10 +986,10 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
    * Test that the correct scanning backend is chosen
    */
 
-  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-  const auto column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
-  const auto column_s = pqp_column_(ColumnID{1}, DataType::String, false, "c");
-  const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
+  const auto column_b = pqp_column_(ColumnID{1}, DataType::Float, "b");
+  const auto column_s = pqp_column_(ColumnID{1}, DataType::String, "c");
+  const auto column_an = pqp_column_(ColumnID{0}, DataType::String, "a");
 
   // clang-format off
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
@@ -1115,7 +1149,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   data_table_wrapper->never_clear_output();
   data_table_wrapper->execute();
 
-  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
 
   // Scan for a >= 100'100
   const auto scan_a = std::make_shared<TableScan>(data_table_wrapper, greater_than_equals_(column_a, 100'100));
@@ -1169,7 +1203,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagDataSegments) {
   EXPECT_TRUE(ref_segment->pos_list()->references_single_chunk());
 
   const auto expected_sorted_by =
-      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)};
   EXPECT_EQ(result_chunk_sorted->individually_sorted_by(), expected_sorted_by);
 }
 
@@ -1198,8 +1232,10 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
 
   ref_table->get_chunk(ChunkID{0})->set_immutable();
   ref_table->get_chunk(ChunkID{1})->set_immutable();
-  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-  ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
+  ref_table->get_chunk(ChunkID{1})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
@@ -1215,7 +1251,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
     EXPECT_TRUE(ref_segment->pos_list()->references_single_chunk());
 
     const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
-    ASSERT_EQ(chunk_sorted_by, std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)});
+    ASSERT_EQ(chunk_sorted_by, std::vector{SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst)});
   }
 }
 
@@ -1242,8 +1278,10 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
 
   ref_table->get_chunk(ChunkID{0})->set_immutable();
   ref_table->get_chunk(ChunkID{1})->set_immutable();
-  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-  ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
+  ref_table->get_chunk(ChunkID{1})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
@@ -1264,7 +1302,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
     const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(ChunkID{1});
     const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
     ASSERT_EQ(chunk_sorted_by.size(), 1);
-    ASSERT_EQ(chunk_sorted_by.at(0), SortColumnDefinition(ColumnID(0), SortMode::Ascending));
+    ASSERT_EQ(chunk_sorted_by.at(0), SortColumnDefinition(ColumnID(0), SortMode::AscendingNullsFirst));
   }
 }
 
@@ -1288,7 +1326,8 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   ref_table->append_chunk({segment});
 
   ref_table->get_chunk(ChunkID{0})->set_immutable();
-  ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  ref_table->get_chunk(ChunkID{0})
+      ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 

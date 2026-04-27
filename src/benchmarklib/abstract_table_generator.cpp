@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "nlohmann/json.hpp"
@@ -31,7 +32,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
@@ -71,7 +71,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Mark all chunks of the table as immutable.
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
-    auto& table = table_info_by_name[table_name].table;
+    auto& table = table_info.table;
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
@@ -91,7 +91,7 @@ void AbstractTableGenerator::generate_and_store() {
       // necessary to avoid loading sorted binary data (created with a clustering configuration) in a run that is
       // supposed to be unclustered.
       for (auto& [table_name, table_info] : table_info_by_name) {
-        auto& table = table_info_by_name[table_name].table;
+        auto& table = table_info.table;
         const auto chunk_count = table->chunk_count();
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           const auto& chunk = table->get_chunk(chunk_id);
@@ -113,7 +113,7 @@ void AbstractTableGenerator::generate_and_store() {
 
         const auto sort_table = [&]() {
           auto& table = table_info_by_name[table_name].table;
-          const auto sort_mode = SortMode::Ascending;  // currently fixed to ascending
+          const auto sort_mode = SortMode::AscendingNullsFirst;  // Currently fixed to ascending and NULLs first.
           const auto sort_column_id = table->column_id_by_name(column_name);
           const auto chunk_count = table->chunk_count();
 
@@ -125,7 +125,7 @@ void AbstractTableGenerator::generate_and_store() {
             auto last_value = std::optional<ColumnDataType>{};
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto& segment = table->get_chunk(chunk_id)->get_segment(sort_column_id);
-              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
+              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto& end) {
                 while (it != end) {
                   if (it->is_null()) {
                     if (last_value) {
@@ -300,9 +300,9 @@ void AbstractTableGenerator::generate_and_store() {
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (auto& table_info_by_name_pair : table_info_by_name) {
+    for (const auto& table_info_by_name_pair : table_info_by_name) {
       const auto& table_name = table_info_by_name_pair.first;
-      auto& table_info = table_info_by_name_pair.second;
+      const auto& table_info = table_info_by_name_pair.second;
 
       const auto add_table = [&]() {
         auto per_table_timer = Timer{};
@@ -401,6 +401,7 @@ void AbstractTableGenerator::_create_table_indexes(
     const auto& table = table_info_by_name[table_name].table;
 
     auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+    // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
     std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
     for (const auto& index_column_names : indexes) {
       Assert(index_column_names.size() == 1, "Multi-column indexes are currently not supported.");
@@ -457,20 +458,36 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
     const std::string& cache_directory) {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
-  for (const auto& table_file : list_directory(cache_directory)) {
-    const auto table_name = table_file.stem();
-    std::cout << "-  Loading table '" << table_name.string() << "' from cached binary " << table_file.relative_path();
+  for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
+    const auto& file_path = table_file.path();
+    if (!table_file.is_regular_file() || file_path.extension() != ".bin") {
+      continue;
+    }
 
-    auto timer = Timer{};
+    const auto table_name = file_path.stem();
     auto table_info = BenchmarkTableInfo{};
-    table_info.table = BinaryParser::parse(table_file);
     table_info.loaded_from_binary = true;
-    table_info.binary_file_path = table_file;
-    table_info_by_name[table_name] = table_info;
-
-    std::cout << " (" << timer.lap_formatted() << ")\n";
+    table_info.binary_file_path = file_path;
+    table_info_by_name[table_name] = std::move(table_info);
   }
 
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(table_info_by_name.size());
+
+  for (auto& table_name_info_pair : table_info_by_name) {
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      auto timer = Timer{};
+      auto& table_info = table_name_info_pair.second;
+      table_info.table = BinaryParser::parse(*table_info.binary_file_path);
+
+      auto message = std::stringstream{};
+      message << "-  Loaded table '" << table_name_info_pair.first << "' from cached binary "
+              << *table_info.binary_file_path << " (" << timer.lap_formatted() << ")\n";
+      std::cout << message.str() << std::flush;
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   return table_info_by_name;
 }
 

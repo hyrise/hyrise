@@ -12,6 +12,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "abstract_rule.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -39,10 +40,8 @@ struct StoredTableNodeSharedPtrHash final {
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrEqual final {
   bool operator()(const std::shared_ptr<StoredTableNode>& lhs, const std::shared_ptr<StoredTableNode>& rhs) const {
-    DebugAssert(std::is_sorted(lhs->pruned_chunk_ids().cbegin(), lhs->pruned_chunk_ids().cend()),
-                "Expected sorted vector of ChunkIDs");
-    DebugAssert(std::is_sorted(rhs->pruned_chunk_ids().cbegin(), rhs->pruned_chunk_ids().cend()),
-                "Expected sorted vector of ChunkIDs");
+    DebugAssert(std::ranges::is_sorted(lhs->pruned_chunk_ids()), "Expected sorted left vector of ChunkIDs.");
+    DebugAssert(std::ranges::is_sorted(rhs->pruned_chunk_ids()), "Expected sorted right vector of ChunkIDs.");
     return lhs == rhs || (lhs->table_name == rhs->table_name && lhs->pruned_chunk_ids() == rhs->pruned_chunk_ids());
   }
 };
@@ -57,9 +56,9 @@ ColumnPruningAgnosticMultiSet collect_stored_table_nodes(const std::vector<std::
   // share the same table name and the same pruned ChunkIDs.
   for (const auto& lqp : lqps) {
     const auto nodes = lqp_find_nodes_by_type(lqp, LQPNodeType::StoredTable);
-    std::for_each(nodes.begin(), nodes.end(), [&](const auto& node) {
+    for (const auto& node : nodes) {
       grouped_stored_table_nodes.insert(std::static_pointer_cast<StoredTableNode>(node));
-    });
+    }
   }
   return grouped_stored_table_nodes;
 }
@@ -111,7 +110,8 @@ std::string StoredTableColumnAlignmentRule::name() const {
  * The default implementation of this function optimizes a given LQP and all of its subquery LQPs individually.
  * However, as we do not want to align StoredTableNodes per plan but across all plans, we override it accordingly.
  */
-void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node) const {
+void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node,
+                                                   OptimizationContext& /*optimization_context*/) const {
   // (1) Collect all plans
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>();
   lqps.emplace_back(std::static_pointer_cast<AbstractLQPNode>(root_node));
@@ -128,7 +128,7 @@ void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<Logical
 }
 
 void StoredTableColumnAlignmentRule::_apply_to_plan_without_subqueries(
-    const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/) const {
+    const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/, OptimizationContext& /*optimization_context*/) const {
   Fail("Did not expect this function to be called.");
 }
 

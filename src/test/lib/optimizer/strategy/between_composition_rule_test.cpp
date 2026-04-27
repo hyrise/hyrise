@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -9,6 +10,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "statistics/table_statistics.hpp"
 #include "strategy_base_test.hpp"
@@ -21,6 +23,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class BetweenCompositionRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
+    StrategyBaseTest::SetUp();
     _rule = std::make_shared<BetweenCompositionRule>();
 
     _node_a =
@@ -58,6 +61,7 @@ TEST_F(BetweenCompositionRuleTest, ColumnExpressionLeft) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -75,6 +79,7 @@ TEST_F(BetweenCompositionRuleTest, ColumnExpressionRight) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -93,6 +98,7 @@ TEST_F(BetweenCompositionRuleTest, NoColumnRange) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -110,6 +116,7 @@ TEST_F(BetweenCompositionRuleTest, EmptyColumnRange) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -124,6 +131,7 @@ TEST_F(BetweenCompositionRuleTest, NoPullPastOrExpression) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -141,6 +149,7 @@ TEST_F(BetweenCompositionRuleTest, PredicateChain) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -160,6 +169,7 @@ TEST_F(BetweenCompositionRuleTest, LongPredicateChain) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -177,6 +187,7 @@ TEST_F(BetweenCompositionRuleTest, LeftExclusive) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -194,6 +205,7 @@ TEST_F(BetweenCompositionRuleTest, RightExclusive) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -211,6 +223,7 @@ TEST_F(BetweenCompositionRuleTest, BothExclusive) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -233,6 +246,7 @@ TEST_F(BetweenCompositionRuleTest, TwoChains) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -249,6 +263,7 @@ TEST_F(BetweenCompositionRuleTest, NoPullPastAggregate) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -267,6 +282,7 @@ TEST_F(BetweenCompositionRuleTest, NoPullPastJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -293,6 +309,7 @@ TEST_F(BetweenCompositionRuleTest, TwoChainsBeforeJoin) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -307,6 +324,7 @@ TEST_F(BetweenCompositionRuleTest, TwoColumnsNoMatch) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -326,6 +344,7 @@ TEST_F(BetweenCompositionRuleTest, FindOptimalInclusiveBetween) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -345,6 +364,7 @@ TEST_F(BetweenCompositionRuleTest, FindOptimalExclusiveBetween) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -364,6 +384,7 @@ TEST_F(BetweenCompositionRuleTest, KeepRemainingPredicates) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -388,6 +409,7 @@ TEST_F(BetweenCompositionRuleTest, MultipleBetweensVariousLocations) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -407,6 +429,7 @@ TEST_F(BetweenCompositionRuleTest, NonBoundaryPredicate) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -429,6 +452,7 @@ TEST_F(BetweenCompositionRuleTest, NoPullPastDiamondPredicate) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -445,6 +469,7 @@ TEST_F(BetweenCompositionRuleTest, HandleMultipleEqualExpressions) {
 
   _apply_rule(_rule, _lqp);
 
+  EXPECT_TRUE(_optimization_context.is_cacheable());
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 

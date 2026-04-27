@@ -28,7 +28,7 @@
 #include <readline/history.h>   // NOLINT(build/include_order): cpplint considers readline headers as C system headers.
 #include <readline/readline.h>  // NOLINT(build/include_order)
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
@@ -123,7 +123,8 @@ std::vector<std::string> tokenize(std::string input) {
   const auto both_are_spaces = [](char left, char right) {
     return (left == right) && (left == ' ');
   };
-  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
+  const auto unique_range = std::ranges::unique(input, both_are_spaces);
+  input.erase(unique_range.begin(), unique_range.end());
 
   auto tokens = std::vector<std::string>{};
   boost::algorithm::split(tokens, input, boost::is_space());
@@ -140,17 +141,15 @@ Console::Console()
       _out(std::cout.rdbuf()),
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
-      _pagination_active(false),
-      _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
-      _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
+      _pagination_active(false) {
   // Init readline basics, tells readline to use our custom command completion function.
   rl_attempted_completion_function = &Console::_command_completion;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
   // Set Hyrise caches.
-  Hyrise::get().default_pqp_cache = _pqp_cache;
-  Hyrise::get().default_lqp_cache = _lqp_cache;
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   // Use scheduler.
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
@@ -179,6 +178,7 @@ Console::Console()
 
 Console::~Console() {
   _rollback();
+  Hyrise::get().scheduler()->finish();
 
   out("Bye.\n");
 
@@ -279,7 +279,8 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   const auto both_are_spaces = [](char left, char right) {
     return (left == right) && (left == ' ');
   };
-  args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
+  const auto unique_range = std::ranges::unique(args, both_are_spaces);
+  args.erase(unique_range.begin(), unique_range.end());
 
   return static_cast<int>(func(args));
 }
@@ -353,7 +354,7 @@ Console::RegisteredCommands Console::commands() {
 }
 
 void Console::set_prompt(const std::string& prompt) {
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     _prompt = ANSI_COLOR_RED_RL "(debug)" ANSI_COLOR_RESET_RL + prompt;
   } else {
     _prompt = ANSI_COLOR_GREEN_RL "(release)" ANSI_COLOR_RESET_RL + prompt;
@@ -396,8 +397,8 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  auto size_y = int{0};
-  auto size_x = int{0};
+  auto size_y = int32_t{0};
+  auto size_x = int32_t{0};
   rl_get_screen_size(&size_y, &size_x);
 
   auto stream = std::stringstream{};
@@ -488,7 +489,7 @@ int Console::_help(const std::string& /*args*/) {
   out("  setting [property] [value]                - Change a runtime setting\n");
   out("           scheduler (on|off)               - Turn the scheduler on (default) or off\n");
   out("           binary_caching (on|off)          - Use cached binary tables for benchmarks (default) or not\n");
-  out("  reset                                     - Clear all stored tables and cached query plans\n\n");
+  out("  reset                                     - Clear all stored tables and cached query plans and restore the default settings\n\n");  // NOLINT(whitespace/line_length)
   // clang-format on
 
   return ReturnCode::Ok;
@@ -765,7 +766,7 @@ int Console::_visualize(const std::string& input) {
   }
 
   // Determine the plan type to visualize.
-  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
+  enum class PlanType : uint8_t { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
   if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||
@@ -1027,8 +1028,8 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  _lqp_cache->clear();
-  _pqp_cache->clear();
+  Hyrise::get().default_lqp_cache->clear();
+  Hyrise::get().default_pqp_cache->clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 
@@ -1037,12 +1038,14 @@ int Console::_unload_plugin(const std::string& input) {
 
 int Console::_reset() {
   _rollback();
-  _lqp_cache->clear();
-  _pqp_cache->clear();
 
   Hyrise::reset();
-  Hyrise::get().default_pqp_cache = _pqp_cache;
-  Hyrise::get().default_lqp_cache = _lqp_cache;
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  // Restore default settings.
+  _binary_caching = true;
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   return ReturnCode::Ok;
 }
@@ -1182,7 +1185,7 @@ int main(int argc, char** argv) {
     console.out("Type 'help' for more information.\n\n");
 
     console.out("Hyrise is running a ");
-    if (HYRISE_DEBUG) {
+    if constexpr (HYRISE_DEBUG) {
       console.out(ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET);
     } else {
       console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);

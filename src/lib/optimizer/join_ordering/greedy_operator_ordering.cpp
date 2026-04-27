@@ -11,7 +11,7 @@
 #include "join_graph.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/join_ordering/join_graph_edge.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -81,7 +81,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
     /**
      * 2.1 Find the edge with the lowest cardinality and remove it from "remaining_edge_indices"
      */
-    std::sort(remaining_edge_indices.begin(), remaining_edge_indices.end(), [&](const auto& lhs, const auto& rhs) {
+    std::ranges::sort(remaining_edge_indices, [&](const auto& lhs, const auto& rhs) {
       return plan_by_edge[lhs].second > plan_by_edge[rhs].second;
     });
 

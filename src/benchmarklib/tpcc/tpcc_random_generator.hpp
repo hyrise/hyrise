@@ -42,8 +42,8 @@ class TPCCRandomGenerator : public RandomGenerator {
 
   /**
    * Generates a random last name based on a set of syllables.
-   * @param i   a number, if less than 1000, each digit represents a syllable for i's greater than 1000 we calculate a
-   *            non-uniform random number below 1000
+   * @param i   given input i, a string is created in which each digit of i represents a syllable; if input i is larger
+   *            than 999, use first create non-uniform random number between 255 and 1000
    * @return    a string representing the last name
    */
   std::string last_name(size_t i) {
@@ -104,7 +104,7 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
  protected:
-  // Holds the constant C (see 2.1.6) for a given A. Is concurrently accessed.
+  // Holds the constant C (see 2.1.6) for a given A. Is accessed concurrently.
   tbb::concurrent_unordered_map<size_t, size_t> _nurand_constants_c;
 };
 }  // namespace hyrise

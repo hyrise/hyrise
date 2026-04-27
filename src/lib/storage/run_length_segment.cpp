@@ -59,11 +59,11 @@ ChunkOffset RunLengthSegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> RunLengthSegment<T>::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_values = std::make_shared<pmr_vector<T>>(*_values, alloc);
-  auto new_null_values = std::make_shared<pmr_vector<bool>>(*_null_values, alloc);
-  auto new_end_positions = std::make_shared<pmr_vector<ChunkOffset>>(*_end_positions, alloc);
+std::shared_ptr<AbstractSegment> RunLengthSegment<T>::copy_using_memory_resource(
+    MemoryResource& memory_resource) const {
+  auto new_values = std::make_shared<pmr_vector<T>>(*_values, &memory_resource);
+  auto new_null_values = std::make_shared<pmr_vector<bool>>(*_null_values, &memory_resource);
+  auto new_end_positions = std::make_shared<pmr_vector<ChunkOffset>>(*_end_positions, &memory_resource);
 
   auto copy = std::make_shared<RunLengthSegment<T>>(new_values, new_null_values, new_end_positions);
 
@@ -75,13 +75,13 @@ std::shared_ptr<AbstractSegment> RunLengthSegment<T>::copy_using_allocator(
 template <typename T>
 size_t RunLengthSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
   const auto common_elements_size =
-      sizeof(*this) + _null_values->capacity() / CHAR_BIT +
-      _end_positions->capacity() * sizeof(typename decltype(_end_positions)::element_type::value_type);
+      sizeof(*this) + (_null_values->capacity() / CHAR_BIT) +
+      (_end_positions->capacity() * sizeof(typename decltype(_end_positions)::element_type::value_type));
 
   if constexpr (std::is_same_v<T, pmr_string>) {
     return common_elements_size + string_vector_memory_usage(*_values, mode);
   }
-  return common_elements_size + _values->capacity() * sizeof(typename decltype(_values)::element_type::value_type);
+  return common_elements_size + (_values->capacity() * sizeof(typename decltype(_values)::element_type::value_type));
 }
 
 template <typename T>

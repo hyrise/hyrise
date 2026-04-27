@@ -38,11 +38,11 @@ void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
   for (const auto& [column_id, aggregate_function] : aggregate_definitions) {
     if (column_id != INVALID_COLUMN_ID) {
       aggregates.emplace_back(std::make_shared<WindowFunctionExpression>(
-          aggregate_function, pqp_column_(column_id, table->column_data_type(column_id),
-                                          table->column_is_nullable(column_id), table->column_name(column_id))));
+          aggregate_function,
+          pqp_column_(column_id, table->column_data_type(column_id), table->column_name(column_id))));
     } else {
-      aggregates.emplace_back(std::make_shared<WindowFunctionExpression>(
-          aggregate_function, pqp_column_(column_id, DataType::Long, false, "*")));
+      aggregates.emplace_back(
+          std::make_shared<WindowFunctionExpression>(aggregate_function, pqp_column_(column_id, DataType::Long, "*")));
     }
   }
 
@@ -75,8 +75,10 @@ class AggregateSortTest : public BaseTest {
     const auto table_1 =
         load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", ChunkOffset{2});
     table_1->set_value_clustered_by({ColumnID{0}});
-    table_1->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-    table_1->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
+    table_1->get_chunk(ChunkID{0})
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
+    table_1->get_chunk(ChunkID{1})
+        ->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst));
     _table_wrapper_1 = std::make_shared<TableWrapper>(table_1);
     _table_wrapper_1->never_clear_output();
     _table_wrapper_1->execute();
@@ -85,13 +87,13 @@ class AggregateSortTest : public BaseTest {
         "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_multi_columns.tbl", ChunkOffset{2});
     table_2->set_value_clustered_by({ColumnID{0}, ColumnID{1}, ColumnID{2}});
     table_2->get_chunk(ChunkID{0})
-        ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
-                                      SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
-                                      SortColumnDefinition(ColumnID{2}, SortMode::Ascending)});
+        ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst),
+                                      SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsFirst),
+                                      SortColumnDefinition(ColumnID{2}, SortMode::AscendingNullsFirst)});
     table_2->get_chunk(ChunkID{1})
-        ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Descending),
-                                      SortColumnDefinition(ColumnID{1}, SortMode::Descending),
-                                      SortColumnDefinition(ColumnID{2}, SortMode::Ascending)});
+        ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst),
+                                      SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsFirst),
+                                      SortColumnDefinition(ColumnID{2}, SortMode::AscendingNullsFirst)});
     _table_wrapper_multi_columns = std::make_shared<TableWrapper>(table_2);
     _table_wrapper_multi_columns->never_clear_output();
     _table_wrapper_multi_columns->execute();
@@ -158,9 +160,9 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
           continue;
         }
         const auto table = sort->get_output();
-        const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{max_(pqp_column_(
-            aggregate_by_column_id, table->column_data_type(aggregate_by_column_id),
-            table->column_is_nullable(aggregate_by_column_id), table->column_name(aggregate_by_column_id)))};
+        const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+            max_(pqp_column_(aggregate_by_column_id, table->column_data_type(aggregate_by_column_id),
+                             table->column_name(aggregate_by_column_id)))};
         const auto groupby_column_ids = std::vector<ColumnID>{group_by_column_id};
         const auto sorted_aggregate = std::make_shared<AggregateSort>(sort, aggregate_expressions, groupby_column_ids);
         const auto unsorted_aggregate = std::make_shared<AggregateHash>(this->_table_wrapper_multi_columns,
@@ -183,8 +185,7 @@ TEST_F(AggregateSortTest, AggregateOnPresortedValueClustered) {
     table_wrapper_sorted_value_clustered->execute();
 
     const auto aggregate_expression = std::vector<std::shared_ptr<WindowFunctionExpression>>{
-        sum_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_is_nullable(ColumnID{1}),
-                         table->column_name(ColumnID{1})))};
+        sum_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_name(ColumnID{1})))};
     const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}};
     const auto aggregate =
         std::make_shared<AggregateSort>(table_wrapper_sorted_value_clustered, aggregate_expression, groupby_column_ids);
@@ -202,7 +203,7 @@ TEST_F(AggregateSortTest, AggregateOnPresortedValueClustered) {
   const auto chunk_count = table_sorted_value_clustered->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = table_sorted_value_clustered->get_chunk(chunk_id);
-    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+    chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
   }
   test_clustered_table_input(table_sorted_value_clustered);
   test_clustered_table_input(to_simple_reference_table(table_sorted_value_clustered));

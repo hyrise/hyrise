@@ -75,7 +75,7 @@ class CsvConverter : public BaseCsvConverter {
       // clang-format on
       if (_config.reject_quoted_nonstrings) {
         Assert(value == unescape_copy(value, _config),
-               "Unexpected quoted string " + value + " encountered in non-string column");
+               "Unexpected quoted string " + value + " encountered in non-string column.");
       } else {
         unescape(value, _config);
       }
@@ -109,7 +109,7 @@ class CsvConverter : public BaseCsvConverter {
 template <>
 inline std::function<int32_t(const std::string&)> CsvConverter<int32_t>::_get_conversion_function() {
   return [](const std::string& str) {
-    size_t pos;
+    auto pos = size_t{0};
     auto converted = std::stoi(str, &pos);
     Assert(pos == str.size(), "Unprocessed characters found while converting to int: " + str);
     return converted;
@@ -119,7 +119,7 @@ inline std::function<int32_t(const std::string&)> CsvConverter<int32_t>::_get_co
 template <>
 inline std::function<int64_t(const std::string&)> CsvConverter<int64_t>::_get_conversion_function() {
   return [](const std::string& str) {
-    size_t pos;
+    auto pos = size_t{0};
     auto converted = static_cast<int64_t>(std::stoll(str, &pos));
     Assert(pos == str.size(), "Unprocessed characters found while converting to long: " + str);
     return converted;
@@ -129,7 +129,7 @@ inline std::function<int64_t(const std::string&)> CsvConverter<int64_t>::_get_co
 template <>
 inline std::function<float(const std::string&)> CsvConverter<float>::_get_conversion_function() {
   return [](const std::string& str) {
-    size_t pos;
+    auto pos = size_t{0};
     auto converted = std::stof(str, &pos);
     Assert(pos == str.size(), "Unprocessed characters found while converting to float: " + str);
     return converted;
@@ -139,7 +139,7 @@ inline std::function<float(const std::string&)> CsvConverter<float>::_get_conver
 template <>
 inline std::function<double(const std::string&)> CsvConverter<double>::_get_conversion_function() {
   return [](const std::string& str) {
-    size_t pos;
+    auto pos = size_t{0};
     auto converted = std::stod(str, &pos);
     Assert(pos == str.size(), "Unprocessed characters found while converting to double: " + str);
     return converted;

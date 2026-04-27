@@ -20,7 +20,8 @@ class SortNodeTest : public BaseTest {
     _a_f = _table_node->get_column("f");
     _a_d = _table_node->get_column("d");
 
-    _sort_node = SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::Ascending}, _table_node);
+    _sort_node =
+        SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::AscendingNullsFirst}, _table_node);
   }
 
   std::shared_ptr<StoredTableNode> _table_node;
@@ -30,46 +31,54 @@ class SortNodeTest : public BaseTest {
 };
 
 TEST_F(SortNodeTest, Descriptions) {
-  EXPECT_EQ(_sort_node->description(), "[Sort] i (Ascending)");
+  EXPECT_EQ(_sort_node->description(), "[Sort] i (AscendingNullsFirst)");
 
-  auto sort_b = SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::Descending}, _table_node);
-  EXPECT_EQ(sort_b->description(), "[Sort] i (Descending)");
+  auto sort_b =
+      SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::DescendingNullsFirst}, _table_node);
+  EXPECT_EQ(sort_b->description(), "[Sort] i (DescendingNullsFirst)");
 
   auto sort_c = SortNode::make(expression_vector(_a_d, _a_f, _a_i),
-                               std::vector<SortMode>{SortMode::Descending, SortMode::Ascending, SortMode::Descending});
+                               std::vector<SortMode>{SortMode::DescendingNullsFirst, SortMode::AscendingNullsFirst,
+                                                     SortMode::DescendingNullsLast});
   sort_c->set_left_input(_table_node);
-  EXPECT_EQ(sort_c->description(), "[Sort] d (Descending), f (Ascending), i (Descending)");
+  EXPECT_EQ(sort_c->description(), "[Sort] d (DescendingNullsFirst), f (AscendingNullsFirst), i (DescendingNullsLast)");
 }
 
 TEST_F(SortNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_sort_node, *_sort_node);
 
-  const auto sort_a = SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::Descending}, _table_node);
+  const auto sort_a =
+      SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::DescendingNullsFirst}, _table_node);
   const auto sort_b =
       SortNode::make(expression_vector(_a_d, _a_f, _a_i),
-                     std::vector<SortMode>{SortMode::Descending, SortMode::Ascending, SortMode::Descending});
-  const auto sort_c = SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::Ascending}, _table_node);
+                     std::vector<SortMode>{SortMode::DescendingNullsFirst, SortMode::AscendingNullsFirst,
+                                           SortMode::DescendingNullsFirst});
+  const auto sort_c =
+      SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::AscendingNullsFirst}, _table_node);
+  const auto sort_d =
+      SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::AscendingNullsLast}, _table_node);
 
   EXPECT_NE(*_sort_node, *sort_a);
   EXPECT_NE(*_sort_node, *sort_b);
   EXPECT_EQ(*_sort_node, *sort_c);
+  EXPECT_NE(*_sort_node, *sort_d);
 
-  EXPECT_NE(_sort_node->hash(), sort_a->hash());
-  EXPECT_NE(_sort_node->hash(), sort_b->hash());
   EXPECT_EQ(_sort_node->hash(), sort_c->hash());
 }
 
 TEST_F(SortNodeTest, Copy) {
   EXPECT_EQ(*_sort_node->deep_copy(), *_sort_node);
 
-  const auto sort_b = SortNode::make(
-      expression_vector(_a_d, _a_f, _a_i),
-      std::vector<SortMode>{SortMode::Descending, SortMode::Ascending, SortMode::Descending}, _table_node);
+  const auto sort_b =
+      SortNode::make(expression_vector(_a_d, _a_f, _a_i),
+                     std::vector<SortMode>{SortMode::DescendingNullsFirst, SortMode::AscendingNullsFirst,
+                                           SortMode::DescendingNullsFirst},
+                     _table_node);
   EXPECT_EQ(*sort_b->deep_copy(), *sort_b);
 }
 
 TEST_F(SortNodeTest, NodeExpressions) {
-  ASSERT_EQ(_sort_node->node_expressions.size(), 1u);
+  ASSERT_EQ(_sort_node->node_expressions.size(), 1);
   EXPECT_EQ(*_sort_node->node_expressions.at(0), *_a_i);
 }
 

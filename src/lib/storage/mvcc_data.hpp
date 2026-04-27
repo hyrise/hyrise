@@ -17,9 +17,6 @@ struct MvccData {
   friend std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);
 
  public:
-  // The last commit id is reserved for uncommitted changes
-  static constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
-
   // This is used for optimizing the validation process. It is set during `Chunk::set_immutable()` and for each
   // commit of an Insert/Delete operator. Consult `Validate::_on_execute()` for further details.
   std::atomic<CommitID> max_begin_cid{MAX_COMMIT_ID};
@@ -29,9 +26,6 @@ struct MvccData {
   // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
   explicit MvccData(const size_t size, CommitID begin_commit_id);
 
-  /**
-   * The following functions are inlined for performance.
-   */
   CommitID get_begin_cid(const ChunkOffset offset) const;
   void set_begin_cid(const ChunkOffset offset, const CommitID commit_id,
                      const std::memory_order memory_order = std::memory_order_seq_cst);
@@ -50,9 +44,9 @@ struct MvccData {
 
   // Register and deregister Insert operators that write to the chunk. We use this information to notice when all
   // Inserts are either committed or rolled back and if we can mark a chunk as immutable. For more details, see
-  // `chunk.hpp`.
+  // `chunk.hpp`. `deregister_insert()` returns the number of Insert operators that are still active.
   void register_insert();
-  void deregister_insert();
+  uint32_t deregister_insert();
   uint32_t pending_inserts() const;
 
  private:

@@ -13,7 +13,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
-#include "magic_enum.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -31,7 +31,7 @@ std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_
   }
 
   auto type_str = std::string{magic_enum::enum_name(frame_bound_type)};
-  std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(), [](const auto character) {
+  std::ranges::transform(type_str, type_str.begin(), [](const auto character) {
     return std::toupper(character);
   });
   stream << type_str;
@@ -76,7 +76,7 @@ std::ostream& operator<<(std::ostream& stream, const FrameBound& frame_bound) {
 
 std::ostream& operator<<(std::ostream& stream, const FrameType frame_type) {
   auto type_str = std::string{magic_enum::enum_name(frame_type)};
-  std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(), [](const auto character) {
+  std::ranges::transform(type_str, type_str.begin(), [](const auto character) {
     return std::toupper(character);
   });
   stream << type_str;
@@ -121,9 +121,8 @@ WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExp
   Assert(order_by_expression_count == sort_modes.size(), "Passed sort modes do not match ORDER BY expressions.");
 
   arguments.resize(order_by_expressions_begin_idx + order_by_expression_count);
-  std::copy(partition_by_expressions.begin(), partition_by_expressions.end(), arguments.begin());
-  std::copy(order_by_expressions.begin(), order_by_expressions.end(),
-            arguments.begin() + static_cast<int64_t>(order_by_expressions_begin_idx));
+  std::ranges::copy(partition_by_expressions, arguments.begin());
+  std::ranges::copy(order_by_expressions, arguments.begin() + static_cast<int64_t>(order_by_expressions_begin_idx));
 }
 
 std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(

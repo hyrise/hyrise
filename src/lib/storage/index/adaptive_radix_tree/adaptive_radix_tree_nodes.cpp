@@ -29,11 +29,10 @@ constexpr uint8_t INVALID_INDEX = 255u;
  */
 
 ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
-  std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
-              return left.first < right.first;
-            });
+  std::ranges::sort(children, [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
+                                 const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
+    return left.first < right.first;
+  });
   _partial_keys.fill(INVALID_INDEX);
   const auto child_count = children.size();
   for (auto index = size_t{0}; index < child_count; ++index) {
@@ -126,11 +125,10 @@ AbstractChunkIndex::Iterator ARTNode4::end() const {
  */
 
 ARTNode16::ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
-  std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
-              return left.first < right.first;
-            });
+  std::ranges::sort(children, [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
+                                 const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
+    return left.first < right.first;
+  });
   _partial_keys.fill(INVALID_INDEX);
   const auto child_count = children.size();
   for (auto index = uint32_t{0}; index < child_count; ++index) {
@@ -167,7 +165,7 @@ AbstractChunkIndex::Iterator ARTNode16::_delegate_to_child(
     const std::function<std::vector<ChunkOffset>::const_iterator(
         std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type, size_t)>& function) const {
   auto partial_key = key[depth];
-  const auto* const partial_key_iterator = std::lower_bound(_partial_keys.begin(), _partial_keys.end(), partial_key);
+  const auto* const partial_key_iterator = std::ranges::lower_bound(_partial_keys, partial_key);
   const auto partial_key_pos = std::distance(_partial_keys.begin(), partial_key_iterator);
 
   if (*partial_key_iterator == partial_key) {
@@ -214,7 +212,7 @@ AbstractChunkIndex::Iterator ARTNode16::begin() const {
  */
 
 AbstractChunkIndex::Iterator ARTNode16::end() const {
-  const auto* const partial_key_iterator = std::lower_bound(_partial_keys.begin(), _partial_keys.end(), INVALID_INDEX);
+  const auto* const partial_key_iterator = std::ranges::lower_bound(_partial_keys, INVALID_INDEX);
   const auto partial_key_pos = std::distance(_partial_keys.begin(), partial_key_iterator);
   if (!_children[partial_key_pos]) {
     // there does not exist a child with partial_key 255u, we take the partial_key in front of it
@@ -238,7 +236,7 @@ AbstractChunkIndex::Iterator ARTNode16::end() const {
 ARTNode48::ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
   _index_to_child.fill(INVALID_INDEX);
   const auto child_count = children.size();
-  for (auto index = uint8_t{0}; index < child_count; ++index) {
+  for (auto index = uint8_t{0}; index < static_cast<uint8_t>(child_count); ++index) {
     _index_to_child[children[index].first] = index;
     _children[index] = children[index].second;
   }

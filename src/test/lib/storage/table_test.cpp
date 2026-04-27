@@ -7,8 +7,10 @@
 #include "base_test.hpp"
 #include "memory/zero_allocator.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/table.hpp"
+#include "ucc_discovery_plugin.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -142,7 +144,7 @@ TEST_F(StorageTableTest, FillingUpAChunkSetImmutable) {
   const auto chunk = table->get_chunk(ChunkID{0});
   const auto mvcc_data = chunk->mvcc_data();
   ASSERT_TRUE(mvcc_data);
-  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MAX_COMMIT_ID);
   EXPECT_TRUE(chunk->is_mutable());
 
   table->append({6, "world"});
@@ -286,7 +288,9 @@ TEST_F(StorageTableTest, StableChunks) {
   // The vector should have been resized / expanded by now
 
   EXPECT_EQ(first_chunk, &chunks_vector[0]);
+  // clang-format off
   EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant{100});
+  // clang-format on
 }
 
 TEST_F(StorageTableTest, LastChunkOfReferenceTable) {

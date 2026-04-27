@@ -26,7 +26,8 @@ class PredicatePlacementRule : public AbstractRule {
   std::string name() const override;
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
+                                         OptimizationContext& optimization_context) const override;
 
  private:
   // Traverse the LQP and perform push downs of predicates.
@@ -34,7 +35,7 @@ class PredicatePlacementRule : public AbstractRule {
   //                        position and will be re-inserted as low as possible
   static void _push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side,
                                    std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
-                                   AbstractCardinalityEstimator& estimator);
+                                   CardinalityEstimator& estimator);
 
   // Traverse the LQP and pull up expensive predicates.
   // @returns expensive predicates from the LQP below @param current_node @param input_side.

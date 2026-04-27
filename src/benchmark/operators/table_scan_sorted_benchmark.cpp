@@ -103,9 +103,9 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     const auto chunk = table->get_chunk(chunk_id);
 
     if (mode == "Sorted") {
-      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::AscendingNullsFirst));
     } else if (mode == "SortedDescending") {
-      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
+      chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::DescendingNullsFirst));
     }
   }
 
@@ -137,8 +137,7 @@ void BM_TableScanSorted(
 
   std::shared_ptr<AbstractPredicateExpression> predicate;
   std::shared_ptr<AbstractPredicateExpression> reference_scan_predicate;
-  const auto column_expression =
-      pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
+  const auto column_expression = pqp_column_(column_index, column_definition.data_type, column_definition.name);
 
   resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;

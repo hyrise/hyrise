@@ -19,8 +19,8 @@ class MockSocket {
 
   MockSocket() : _path(test_data_path + filename) {
     _file_descriptor = open(_path.c_str(), O_RDWR | O_CREAT | O_APPEND, 0755);
-    _stream = std::make_shared<AsioStreamDescriptor>(_io_service, _file_descriptor);
-    _io_service.run();
+    _stream = std::make_shared<AsioStreamDescriptor>(_io_context, _file_descriptor);
+    _io_context.run();
   }
 
   ~MockSocket() {
@@ -48,7 +48,7 @@ class MockSocket {
  private:
   const std::string _path;
   int _file_descriptor;
-  boost::asio::io_service _io_service;
+  boost::asio::io_context _io_context;
   std::shared_ptr<AsioStreamDescriptor> _stream;
 };
 

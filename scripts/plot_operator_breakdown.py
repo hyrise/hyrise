@@ -188,8 +188,8 @@ if paper_mode:
 
 handles, labels = ax_relative_queries.get_legend_handles_labels()
 fig.legend(
-    reversed(handles),
-    reversed(labels),
+    list(reversed(handles)),
+    list(reversed(labels)),
     loc="upper center",
     ncol=10,
 )

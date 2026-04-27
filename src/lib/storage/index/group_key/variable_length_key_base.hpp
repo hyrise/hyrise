@@ -28,8 +28,7 @@ class VariableLengthKeyBase {
 
   /**
    * Performs an 'or'-assignment on the eight (at most) least significant bytes. If more bits have to be set, shifting
-   * has to
-   * be performed.
+   * has to be performed.
    */
   VariableLengthKeyBase& operator|=(uint64_t other);
 

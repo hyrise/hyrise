@@ -19,9 +19,10 @@ class JoinGraph;
 using CsgCmpPair = std::pair<JoinGraphVertexSet, JoinGraphVertexSet>;
 
 /**
- * CsgCmpPair ("CCP") enumeration algorithm described in "Analysis of two existing and one new dynamic programming
- * algorithm for the generation of optimal bushy join trees without cross products"
- * https://dl.acm.org/citation.cfm?id=1164207
+ * CsgCmpPair ("CCP") enumeration algorithm described in Moerkotte and Neumann "Analysis of two existing and one new
+ * dynamic programming algorithm for the generation of optimal bushy join trees without cross products"
+ * (https://www.vldb.org/conf/2006/p930-moerkotte.pdf) incorporating the correction of the errata
+ * (http://www.vldb.org/pvldb/vol11/p1069-meister.pdf).
  *
  * Input: A JoinGraph in the form of a number of vertices and edges as a set of index pairs
  *
@@ -54,32 +55,33 @@ using CsgCmpPair = std::pair<JoinGraphVertexSet, JoinGraphVertexSet>;
  */
 class EnumerateCcp final {
  public:
-  EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges);
+  EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges);
 
-  // Corresponds to EnumerateCsg in the paper
+  // Corresponds to EnumerateCsg in the paper.
   std::vector<CsgCmpPair> operator()();
 
  private:
-  // Corresponds to EnumerateCsgRec in the paper
+  // Corresponds to EnumerateCsgRec in the paper.
   void _enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csgs, const JoinGraphVertexSet& vertex_set,
                                 const JoinGraphVertexSet& exclusion_set);
 
-  // Corresponds to EnumerateCmp in the paper
+  // Corresponds to EnumerateCmp in the paper. Includes the change from Meister et al.'s errata to the original paper
+  // (http://www.vldb.org/pvldb/vol11/p1069-meister.pdf).
   void _enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set);
 
-  // Corresponds to B_i(V) in the paper
+  // Corresponds to B_i(V) in the paper.
   JoinGraphVertexSet _exclusion_set(const size_t vertex_idx) const;
 
-  // Corresponds to N(S) in the paper
+  // Corresponds to N(S) in the paper.
   JoinGraphVertexSet _neighborhood(const JoinGraphVertexSet& vertex_set, const JoinGraphVertexSet& exclusion_set) const;
 
   JoinGraphVertexSet _single_vertex_neighborhood(const size_t vertex_idx) const;
 
-  // Corresponds to subset-first subset enumeration in the paper
+  // Corresponds to subset-first subset enumeration in the paper.
   std::vector<JoinGraphVertexSet> _non_empty_subsets(const JoinGraphVertexSet& vertex_set) const;
 
   const size_t _num_vertices;
-  const std::vector<std::pair<size_t, size_t>> _edges;
+  const std::vector<std::pair<size_t, size_t>>& _edges;
 
   std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> _csg_cmp_pairs;
 
