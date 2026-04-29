@@ -23,7 +23,8 @@ std::optional<float> next_float_towards(const double value, const double towards
 
   const auto casted_value = static_cast<float>(value);
 
-  if ((static_cast<double>(casted_value) < value && towards < value) || (static_cast<double>(casted_value) > value && towards > value)) {
+  if ((static_cast<double>(casted_value) < value && towards < value) ||
+      (static_cast<double>(casted_value) > value && towards > value)) {
     return casted_value;
   }
 
