@@ -172,10 +172,10 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
    */
   const auto table_0 =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0, 100.0)});
   const auto table_1 =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0, 100.0)});
 
   // clang-format off
   _lqp =
@@ -227,7 +227,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
    */
   const auto table_node =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0, 100.0)});
 
   // clang-format off
   const auto sub_lqp =

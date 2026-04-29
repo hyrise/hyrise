@@ -103,7 +103,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
                                     const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side,
                                     const CardinalityEstimator& cardinality_estimator) {
-  Cardinality row_count = NAN;
+  Cardinality row_count = std::numeric_limits<Cardinality>::quiet_NaN();
   auto row_percentage = 100.0;
 
   row_count = cardinality_estimator.estimate_cardinality(source_node);

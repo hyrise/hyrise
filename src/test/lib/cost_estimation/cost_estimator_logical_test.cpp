@@ -71,7 +71,7 @@ TEST_F(CostEstimatorLogicalTest, UnionPositions) {
   const auto union_node = UnionNode::make(SetOperationMode::Positions, node_a, node_b);
 
   const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(union_node);
-  const auto expected_cost = 100.0 * std::log(100.0) + 50.0f * std::log(50.0) + output_cardinality;
+  const auto expected_cost = 100.0 * std::log(100.0) + 50.0 * std::log(50.0) + output_cardinality;
   EXPECT_DOUBLE_EQ(cost_estimator->estimate_node_cost(union_node), expected_cost);
 }
 

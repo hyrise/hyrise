@@ -136,7 +136,7 @@ lossless_cast(const Source& source) {
   auto integral_part = Source{};
 
   // No lossless float-to-int conversion possible if the source float has a fractional part
-  if (std::modf(source, &integral_part) != 0.0) {
+  if (std::modf(source, &integral_part) != Source{}) {
     return std::nullopt;
   }
 
@@ -184,8 +184,9 @@ std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>
     return std::nullopt;
   }
 
-  if (static_cast<float>(source) == source) {
-    return static_cast<float>(source);
+  const auto casted_source = static_cast<float>(source);
+  if (static_cast<double>(casted_source) == source) {
+    return casted_source;
   }
 
   return std::nullopt;

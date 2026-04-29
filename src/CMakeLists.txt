@@ -79,7 +79,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
             -Wno-ctad-maybe-unsupported         # Warns on some of the class template argument deductions we use. Could
                                                 # be fixable.
             -Wno-documentation                  # We do not use Doxygen.
-            -Wno-double-promotion               # We implicitly convert float to double several times.
+            # -Wno-double-promotion               # We implicitly convert float to double several times.
             -Wno-exit-time-destructors          # We use declarations that require exit-time destructors.
             -Wno-float-equal                    # Currently we compare floats for equality or inequality.
             -Wno-global-constructors            # We use declarations that require global destructors.

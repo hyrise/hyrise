@@ -18,9 +18,10 @@ class MinMaxFilterTest : public BaseTest {
     _values = pmr_vector<T>{-1000, 2, 3, 4, 7, 8, 10, 17, 123456};
     _min_value = *std::min_element(std::begin(_values), std::end(_values));
     _max_value = *std::max_element(std::begin(_values), std::end(_values));
-    _in_between = static_cast<T>(_min_value + 0.5 * (_max_value - _min_value));  // value in between the min and max
+    using CalcType = std::conditional_t<std::is_floating_point_v<T>, T, double>;
+    _in_between = static_cast<T>(_min_value + static_cast<CalcType>(0.5) * (_max_value - _min_value));  // value in between the min and max
     _in_between2 =
-        static_cast<T>(_in_between + 0.5 * (_max_value - _in_between));  // value in between _in_between and max
+        static_cast<T>(_in_between + static_cast<CalcType>(0.5) * (_max_value - _in_between));  // value in between _in_between and max
     _before_range = _min_value - 1;                                      // value smaller than the minimum
     _after_range = _max_value + 1;                                       // value larger than the maximum
   }

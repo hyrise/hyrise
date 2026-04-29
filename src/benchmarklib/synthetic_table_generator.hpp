@@ -94,7 +94,7 @@ class SyntheticTableGenerator {
     if constexpr (std::is_integral_v<T>) {
       return static_cast<T>(input);
     } else if constexpr (std::is_floating_point_v<T>) {
-      return static_cast<T>(input) * 0.999999f;
+      return static_cast<T>(input) * static_cast<T>(0.999999);
     } else if constexpr (std::is_same_v<T, pmr_string>) {
       Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
 

@@ -112,7 +112,7 @@ void check_consistency(const size_t num_warehouses) {
     Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto w_ytd = double{*table->get_value<float>(ColumnID{1}, row_id)};
+      const auto w_ytd = static_cast<double>(*table->get_value<float>(ColumnID{1}, row_id));
       const auto d_ytd_sum = *table->get_value<double>(ColumnID{2}, row_id);
 
       Assert(floats_near(w_ytd, d_ytd_sum), "Mismatching YTD for WAREHOUSE and DISTRICT.");
@@ -258,7 +258,7 @@ void check_consistency(const size_t num_warehouses) {
     Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto w_ytd = double{*table->get_value<float>(ColumnID{1}, row_id)};
+      const auto w_ytd = static_cast<double>(*table->get_value<float>(ColumnID{1}, row_id));
       const auto h_amount = *table->get_value<double>(ColumnID{2}, row_id);
 
       Assert(floats_near(w_ytd, h_amount), "Mismatching YTD for WAREHOUSE and HISTORY.");
@@ -276,7 +276,7 @@ void check_consistency(const size_t num_warehouses) {
     Assert(table && table->row_count() == total_num_districts, "Lost a district.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto d_ytd = double{*table->get_value<float>(ColumnID{2}, row_id)};
+      const auto d_ytd = static_cast<double>(*table->get_value<float>(ColumnID{2}, row_id));
       const auto h_amount = *table->get_value<double>(ColumnID{3}, row_id);
 
       Assert(floats_near(d_ytd, h_amount), "Mismatching YTD for DISTRICT and HISTORY.");
@@ -316,7 +316,7 @@ void check_consistency(const size_t num_warehouses) {
              "Lost a customer.");
       const auto row_count = table->row_count();
       for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-        const auto c_balance = double{*table->get_value<float>(ColumnID{3}, row_id)};
+        const auto c_balance = static_cast<double>(*table->get_value<float>(ColumnID{3}, row_id));
         const auto sum_h_amount = *table->get_value<double>(ColumnID{4}, row_id);
         const auto sum_ol_amount = *table->get_value<double>(ColumnID{5}, row_id);
 
@@ -354,8 +354,8 @@ void check_consistency(const size_t num_warehouses) {
            "Lost a customer.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto c_balance = double{*table->get_value<float>(ColumnID{3}, row_id)};
-      const auto c_ytd_payment = double{*table->get_value<float>(ColumnID{4}, row_id)};
+      const auto c_balance = static_cast<double>(*table->get_value<float>(ColumnID{3}, row_id));
+      const auto c_ytd_payment = static_cast<double>(*table->get_value<float>(ColumnID{4}, row_id));
       const auto sum_ol_amount = *table->get_value<double>(ColumnID{5}, row_id);
 
       Assert(floats_near(c_balance + c_ytd_payment, sum_ol_amount), "Mismatching YTD for CUSTOMER and ORDER.");
