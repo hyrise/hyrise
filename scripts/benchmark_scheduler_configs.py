@@ -18,8 +18,15 @@ MAX_CORE_COUNT = multiprocessing.cpu_count()
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--verbose", action="store_true", help="Print log messages.")
-    parser.add_argument("-m", "--master", action="store_true", help="Assume master branch is checked out.")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Print log messages."
+    )
+    parser.add_argument(
+        "-m",
+        "--master",
+        action="store_true",
+        help="Assume master branch is checked out.",
+    )
     parser.add_argument(
         "-c",
         "--cores",
@@ -28,7 +35,12 @@ def get_parser():
         help="Cores to be used for the benchmarks.",
     )
     parser.add_argument(
-        "-b", "--build_dir", action="store", type=str, default="rel", help="Directly with CMake release build."
+        "-b",
+        "--build_dir",
+        action="store",
+        type=str,
+        default="rel",
+        help="Directly with CMake release build.",
     )
 
     return parser
@@ -67,12 +79,22 @@ if __name__ == "__main__":
                 for benchmark in ["TPCH", "TPCDS", "JoinOrder", "StarSchema"]:
                     for mode in ["Shuffled", "Ordered"]:
                         client_count = 1 if mode == "Ordered" else core_count
-                        run_limit = f"--runs={runs}" if mode == "Ordered" else f"--time={runtime}"
+                        run_limit = (
+                            f"--runs={runs}"
+                            if mode == "Ordered"
+                            else f"--time={runtime}"
+                        )
                         output_filename = f'./{hostname}/{"master" if args.master else "branch"}__{benchmark}__min_{NUM_GROUPS_MIN_FACTOR}__max_{NUM_GROUPS_MAX_FACTOR}__limit_{UPPER_LIMIT_QUEUE_SIZE_FACTOR}__clients_{client_count}__cores_{core_count}.json'
-                        scale = "" if benchmark == "JoinOrder" else ("--scale=1" if args.verbose else "--scale=5")
+                        scale = (
+                            ""
+                            if benchmark == "JoinOrder"
+                            else ("--scale=1" if args.verbose else "--scale=5")
+                        )
 
                         if Path(output_filename).exists():
-                            print(f"Skipping as result JSON already exists ({output_filename}).")
+                            print(
+                                f"Skipping as result JSON already exists ({output_filename})."
+                            )
                             continue
 
                         try:

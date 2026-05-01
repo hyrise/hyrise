@@ -1,22 +1,17 @@
 #!/usr/bin/env python3
 
 import argparse
-import atexit
 import json
 import lzma
 import matplotlib.pyplot as plt
 import multiprocessing
 import numpy as np
-import os
 import pandas as pd
 import seaborn as sns
 import socket
-import sys
 
-from datetime import datetime
 from pathlib import Path
 from statistics import geometric_mean
-from scipy.stats import gmean
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
 
@@ -26,7 +21,11 @@ plt.rcParams.update({"font.size": plt.rcParams["font.size"] / 2})
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--host_dir", action="store", type=str, required=True, help="Which directoy to pull results from for plotting."
+        "--host_dir",
+        action="store",
+        type=str,
+        required=True,
+        help="Which directoy to pull results from for plotting.",
     )
 
     return parser
@@ -52,7 +51,8 @@ def get_results(result_file_path):
 
     for benchmark in result_file_content["benchmarks"]:
         averages.append(
-            sum([item["duration"] for item in benchmark["successful_runs"]]) / len(benchmark["successful_runs"])
+            sum([item["duration"] for item in benchmark["successful_runs"]])
+            / len(benchmark["successful_runs"])
         )
 
     sum_runtimes = sum(averages)
@@ -111,9 +111,15 @@ if __name__ == "__main__":
     df_branch = df.query("branch != 'master'")
     df_master = df.query("branch == 'master'")
 
-    df_merged = df_branch.merge(df_master, on=["clients", "cores", "benchmark"], suffixes=("_branch", "_master"))
-    df_merged["RUNTIME_DIFF"] = df_merged.RUNTIME_US_branch / df_merged.RUNTIME_US_master
-    df_merged["GEOMEAN_DIFF"] = df_merged.RUNTIME_GEOMEAN_US_branch / df_merged.RUNTIME_GEOMEAN_US_master
+    df_merged = df_branch.merge(
+        df_master, on=["clients", "cores", "benchmark"], suffixes=("_branch", "_master")
+    )
+    df_merged["RUNTIME_DIFF"] = (
+        df_merged.RUNTIME_US_branch / df_merged.RUNTIME_US_master
+    )
+    df_merged["GEOMEAN_DIFF"] = (
+        df_merged.RUNTIME_GEOMEAN_US_branch / df_merged.RUNTIME_GEOMEAN_US_master
+    )
 
     df_merged = df_merged[
         [
@@ -132,13 +138,20 @@ if __name__ == "__main__":
     # Pivot data for each category
     def draw_heatmap(*args, **kwargs):
         data = kwargs.pop("data")
-        vmin = kwargs.pop("vmin")
-        vmax = kwargs.pop("vmax")
         value = kwargs.pop("value")
-        d = data.pivot(index="NUM_GROUPS_MIN_FACTOR_branch", columns="NUM_GROUPS_MAX_FACTOR_branch", values=value)
-        sns.heatmap(d, vmin=rt_diff_min, vmax=rt_diff_max, annot=True, fmt=".3g", **kwargs)
+        d = data.pivot(
+            index="NUM_GROUPS_MIN_FACTOR_branch",
+            columns="NUM_GROUPS_MAX_FACTOR_branch",
+            values=value,
+        )
+        sns.heatmap(
+            d, vmin=rt_diff_min, vmax=rt_diff_max, annot=True, fmt=".3g", **kwargs
+        )
 
-    for client_title, client_filter in [("Single-User", "clients == 1"), ("Multi-User", "clients > 1")]:
+    for client_title, client_filter in [
+        ("Single-User", "clients == 1"),
+        ("Multi-User", "clients > 1"),
+    ]:
         df_filtered = df_merged.query(client_filter)
 
         rt_diff_min = df_filtered["RUNTIME_DIFF"].min()
@@ -147,10 +160,18 @@ if __name__ == "__main__":
         row_order = sorted(df_filtered["benchmark"].unique(), reverse=True)
 
         fg = sns.FacetGrid(
-            df_filtered, col="UPPER_LIMIT_QUEUE_SIZE_FACTOR_branch", row="benchmark", row_order=row_order
+            df_filtered,
+            col="UPPER_LIMIT_QUEUE_SIZE_FACTOR_branch",
+            row="benchmark",
+            row_order=row_order,
         )
         fg.map_dataframe(
-            draw_heatmap, vmin=rt_diff_min, vmax=rt_diff_max, value="RUNTIME_DIFF", cbar=True, cmap="coolwarm"
+            draw_heatmap,
+            vmin=rt_diff_min,
+            vmax=rt_diff_max,
+            value="RUNTIME_DIFF",
+            cbar=True,
+            cmap="coolwarm",
         )
         plt.savefig(f"{args.host_dir}/{client_title}.pdf")
 
@@ -180,10 +201,14 @@ if __name__ == "__main__":
         df_grouped_master, on=["clients", "cores"], suffixes=("_branch", "_master")
     )
     df_grouped_merged["GEOMEAN_RUNTIME_US_DIFF"] = (
-        df_grouped_merged.GEOMEAN_RUNTIME_US_branch / df_grouped_merged.GEOMEAN_RUNTIME_US_master
+        df_grouped_merged.GEOMEAN_RUNTIME_US_branch
+        / df_grouped_merged.GEOMEAN_RUNTIME_US_master
     )
 
-    for client_title, client_filter in [("Single-User", "clients == 1"), ("Multi-User", "clients > 1")]:
+    for client_title, client_filter in [
+        ("Single-User", "clients == 1"),
+        ("Multi-User", "clients > 1"),
+    ]:
         df_filtered = df_grouped_merged.query(client_filter)
 
         rt_diff_min = df_filtered["GEOMEAN_RUNTIME_US_DIFF"].min()
@@ -205,7 +230,13 @@ if __name__ == "__main__":
     ######
     df_grouped = (
         df.groupby(
-            ["NUM_GROUPS_MIN_FACTOR", "NUM_GROUPS_MAX_FACTOR", "UPPER_LIMIT_QUEUE_SIZE_FACTOR", "cores", "branch"],
+            [
+                "NUM_GROUPS_MIN_FACTOR",
+                "NUM_GROUPS_MAX_FACTOR",
+                "UPPER_LIMIT_QUEUE_SIZE_FACTOR",
+                "cores",
+                "branch",
+            ],
             dropna=True,
         )["RUNTIME_US"]
         .apply(geo_mean)
@@ -216,9 +247,12 @@ if __name__ == "__main__":
     df_grouped_branch = df_grouped.query("branch != 'master'")
     df_grouped_master = df_grouped.query("branch == 'master'")
 
-    df_grouped_merged = df_grouped_branch.merge(df_grouped_master, on=["cores"], suffixes=("_branch", "_master"))
+    df_grouped_merged = df_grouped_branch.merge(
+        df_grouped_master, on=["cores"], suffixes=("_branch", "_master")
+    )
     df_grouped_merged["GEOMEAN_RUNTIME_US_DIFF"] = (
-        df_grouped_merged.GEOMEAN_RUNTIME_US_branch / df_grouped_merged.GEOMEAN_RUNTIME_US_master
+        df_grouped_merged.GEOMEAN_RUNTIME_US_branch
+        / df_grouped_merged.GEOMEAN_RUNTIME_US_master
     )
     # print(df_grouped_merged.to_string())
 
@@ -227,6 +261,11 @@ if __name__ == "__main__":
 
     fg = sns.FacetGrid(df_grouped_merged, col="UPPER_LIMIT_QUEUE_SIZE_FACTOR_branch")
     fg.map_dataframe(
-        draw_heatmap, vmin=rt_diff_min, vmax=rt_diff_max, value="GEOMEAN_RUNTIME_US_DIFF", cbar=True, cmap="coolwarm"
+        draw_heatmap,
+        vmin=rt_diff_min,
+        vmax=rt_diff_max,
+        value="GEOMEAN_RUNTIME_US_DIFF",
+        cbar=True,
+        cmap="coolwarm",
     )
     plt.savefig(f"{args.host_dir}/grouped_total.pdf")
