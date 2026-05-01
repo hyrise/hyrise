@@ -163,7 +163,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
   // A clock that measures (user and system) CPU time consumed by (all of the threads in) the calling process.
 #ifdef __linux__
-  struct timespec time_spec{};
+  struct timespec time_spec {};
 
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);  // NOLINT(misc-include-cleaner)
   Assert(ret == 0, "Failed in clock_gettime.");
@@ -267,7 +267,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #endif
 
 #ifdef __APPLE__
-  struct task_basic_info info{};
+  struct task_basic_info info {};
 
   auto count = mach_msg_type_number_t{TASK_BASIC_INFO_COUNT};
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
