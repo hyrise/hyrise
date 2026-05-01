@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
-import matplotlib
 import multiprocessing
 import os
 import socket
 import sys
 
-from datetime import datetime
 from pathlib import Path
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
