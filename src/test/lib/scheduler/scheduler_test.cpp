@@ -1,11 +1,9 @@
 #include <chrono>
 #include <memory>
 #include <thread>
-#include <utility>
 #include <vector>
 
 #include "base_test.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
@@ -439,7 +437,8 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
 }
 
 TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
-  constexpr auto WORKER_COUNT = size_t{4};
+  constexpr auto WORKER_COUNT = size_t{24};
+
   Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -454,7 +453,7 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
 
   // For 40 (4 workers * 20) tasks, grouping should happen.
   const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
-  EXPECT_TRUE(num_groups_without_load);
+  ASSERT_TRUE(num_groups_without_load);
 
   // Create load on queue. Schedule jobs that are blocked on `block_jobs`.
   volatile auto block_jobs = std::atomic_bool{true};
@@ -470,7 +469,7 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   }
 
   const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
-  EXPECT_TRUE(num_groups_with_load);
+  ASSERT_TRUE(num_groups_with_load);
 
   // We should receive a larger group count when the queue load is low.
   EXPECT_GT(*num_groups_without_load, *num_groups_with_load);

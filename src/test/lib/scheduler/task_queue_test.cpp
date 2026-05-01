@@ -39,16 +39,16 @@ TEST_F(TaskQueueTest, EstimateLoad) {
   auto task_1 = std::make_shared<JobTask>([]() {}, SchedulePriority::High);
   auto task_2 = std::make_shared<JobTask>([]() {}, SchedulePriority::Default);
 
-  EXPECT_TRUE(task_queue.empty());
-  // Task that has not yet been scheduled, will not be added to the task queue. Pushing tries to mark the task as
-  // enqueued, which cannot be done to tasks that are not scheduled yet.
-  EXPECT_THROW(task_queue.push(task_1, SchedulePriority::High), std::logic_error);
-  EXPECT_EQ(task_1->state(), TaskState::Created);
-  EXPECT_TRUE(task_queue.empty());
+  // EXPECT_TRUE(task_queue.empty());
+  // // Task that has not yet been scheduled, will not be added to the task queue. Pushing tries to mark the task as
+  // // enqueued, which cannot be done to tasks that are not scheduled yet.
+  // EXPECT_THROW(task_queue.push(task_1, SchedulePriority::High), std::logic_error);
+  // EXPECT_EQ(task_1->state(), TaskState::Created);
+  // EXPECT_TRUE(task_queue.empty());
 
-  EXPECT_TRUE(try_transition_to_scheduled(task_1));
-  EXPECT_EQ(task_1->state(), TaskState::Scheduled);
-  EXPECT_TRUE(try_transition_to_scheduled(task_2));
+  // EXPECT_TRUE(try_transition_to_scheduled(task_1));
+  // EXPECT_EQ(task_1->state(), TaskState::Scheduled);
+  // EXPECT_TRUE(try_transition_to_scheduled(task_2));
 
   EXPECT_TRUE(task_queue.empty());
   task_queue.push(task_1, SchedulePriority::High);

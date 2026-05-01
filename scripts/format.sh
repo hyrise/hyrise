@@ -1,12 +1,12 @@
 #!/bin/bash
 
-unamestr=$(uname)
-if [[ "$unamestr" == 'Darwin' ]]; then
-	clang_format="$(brew --prefix llvm)/bin/clang-format"
+# unamestr=$(uname)
+# if [[ "$unamestr" == 'Darwin' ]]; then
+	# clang_format="$(brew --prefix llvm)/bin/clang-format"
 	format_cmd="$clang_format -i -style=file '{}'"
-elif [[ "$unamestr" == 'Linux' ]]; then
+# elif [[ "$unamestr" == 'Linux' ]]; then
 	format_cmd="clang-format -i -style=file '{}'"
-fi
+# fi
 
 
 if [ "${1}" = "all" ]; then
