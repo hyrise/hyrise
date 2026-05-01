@@ -96,7 +96,7 @@ do
   git checkout "$commit"
   git submodule update --init --recursive
 
-  # If there is a bolt or pgo profile, we should use it.
+  # If there is a BOLT or PGO profile, we use it for building.
   if [ -f ../resources/bolt.fdata ] || [ -f ../resources/libhyrise.profdata ]
   then
     echo "Detected bolt.fdata or libhyrise.profdata file, building $commit with PGO/BOLT..."
