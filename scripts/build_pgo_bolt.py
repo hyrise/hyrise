@@ -10,13 +10,22 @@
 # There is a GiHhub comment summarizing the PGO options we evaluated:
 #   https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523
 
+import platform
+import sys
+
 from argparse import (
     ArgumentParser,
     ArgumentDefaultsHelpFormatter,
     BooleanOptionalAction,
 )
-from subprocess import run
 from os import cpu_count, getcwd
+from subprocess import run
+
+if platform.system() != 'Linux':
+    # Note: macOS support is possible but currently out of scope.
+    print("This script has only been tested on Linux.")
+    sys.exit(1)
+
 
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument(
@@ -41,7 +50,7 @@ parser.add_argument(
     "--ci",
     action=BooleanOptionalAction,
     default=False,
-    help="Whether this script is run in the CI. Improves runtime while reducing profile quality to an absolute"
+    help="Whether this script is run in the CI. Improves runtime while reducing profile quality to an absolute "
     "minimum. This is not intended for actual optimization, just to test the script.",
 )
 parser.add_argument(
@@ -49,15 +58,15 @@ parser.add_argument(
     "--export-profile",
     action=BooleanOptionalAction,
     default=False,
-    help="Don't build an optimized library, just benchmark and export the profile to the resources folder. Useful if"
-    "you want to reuse your profiles, or even store them in Git.",
+    help="Do not build an optimized library, just benchmark and export the profile to the resources folder. Useful if "
+    "you want to reuse your profiles, or even store them in git.",
 )
 parser.add_argument(
     "-i",
     "--import-profile",
     action=BooleanOptionalAction,
     default=False,
-    help="Don't run benchmarks, just import the profile data from the resources folder and build an optimized library.",
+    help="Do not run benchmarks, just import the profile data from the resources folder and build an optimized library."
 )
 parser.add_argument(
     "-p", "--pgo", action=BooleanOptionalAction, default=True, help="Use PGO for profiling / optimization."
@@ -69,7 +78,7 @@ parser.add_argument("-s", "--build-system", type=str, default="ninja", help="The
 args = parser.parse_args()
 assert not (
     args.export_profile and args.import_profile
-), "You cannot export and import at the same time. This would result in no benchmarks and no library built."
+), "You cannot export and import at the same time. This would result in no benchmarks or library built."
 assert args.pgo or args.bolt, "You should either specify --pgo or --bolt for any optimization."
 
 build_folder = getcwd()
@@ -139,7 +148,7 @@ def build(
         )
 
 
-# This function can be used if the previous build has already built libhyrise_impl and moved it to .old. Then bolt can
+# This function can be used if the previous build has already built libhyrise_impl and moved it to '.old'. Then bolt can
 # just use the old compilation output, which is significantly faster than rebuilding the binary. If a source file
 # changed, then this will trigger a full rebuild of libhyrise. So this function should only be called by this script,
 # if it can be sure that itself build the proper library and no input files changed.
