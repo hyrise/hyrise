@@ -176,8 +176,8 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
     for benchmark in benchmarks_to_run:
         run_in_hyrise_folder(
             f"{build_folder}/{benchmark}",
+            "--clients 2",  # Trigger multi-client paths.
             "--scheduler",
-            f"--clients {args.num_cores}",
             f"--cores {args.num_cores}",
             f"-t {args.time}",
             "-m Shuffled",
