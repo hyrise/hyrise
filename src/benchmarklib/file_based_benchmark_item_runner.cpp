@@ -55,6 +55,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   }
 
   _items.resize(_queries.size());
+  // NOLINTNEXTLINE(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
   // Sort queries by name.

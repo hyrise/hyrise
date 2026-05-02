@@ -874,7 +874,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
   }
 
   // The constraints were cleared, so we expect no constraints to be present anymore.
-  ASSERT_LE(table->soft_key_constraints().size(), 0);
+  EXPECT_TRUE(table->soft_key_constraints().empty());
 }
 
 }  // namespace hyrise
