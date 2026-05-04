@@ -11,7 +11,9 @@
 #   https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523
 
 import platform
+import psutil
 import sys
+
 
 from argparse import (
     ArgumentParser,
@@ -42,7 +44,7 @@ parser.add_argument(
     "-n",
     "--num-cores",
     type=int,
-    default=cpu_count(),
+    default=len(psutil.Process().cpu_affinity()),
     help="The number of CPU cores to use for compiling and benchmarking.",
 )
 parser.add_argument(
@@ -179,7 +181,7 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
             "--clients 2",  # Trigger multi-client paths.
             "--scheduler",
             f"--cores {args.num_cores}",
-            f"-t {args.time}",
+            f"-t {30 if args.ci else args.time}",
             "-m Shuffled",
             ("" if not args.ci else ("-s 0.01" if benchmark in benchmarks_with_float_scaling else "-s 1")),
         )
