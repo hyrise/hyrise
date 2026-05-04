@@ -286,8 +286,6 @@ void Insert::_on_rollback_records() {
       // Just unlock the rows by resetting the TID to 0. For other transactions, this row looks like it was never
       // inserted (which is basically true).
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
-      // Update chunk statistics.
-      target_chunk->increase_invalid_row_count(ChunkOffset{1}, std::memory_order_relaxed);
     }
 
     const auto record_count = target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;

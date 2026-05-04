@@ -140,10 +140,6 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
         ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
         encoding_performed = true;
       }
-
-      if (!chunk->is_mutable()) {
-        generate_chunk_pruning_statistics(chunk);
-      }
     };
     jobs.emplace_back(std::make_shared<JobTask>(encode));
   }
