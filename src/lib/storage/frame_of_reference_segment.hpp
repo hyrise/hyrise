@@ -28,7 +28,6 @@ class BaseCompressedVector;
  * NULL values are stored in a separate vector. Note, for correct offset handling, the minimum of each frame is stored
  * in the offset_values vector at each position that is NULL.
  *
- *TODO:
  * std::enable_if_t must be used here and cannot be replaced by a static_assert in order to prevent instantiation of
  * FrameOfReferenceSegment<T> with T other than int32_t. Otherwise, the compiler might instantiate
  * FrameOfReferenceSegment with other types even if they are never actually needed.

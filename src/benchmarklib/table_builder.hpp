@@ -40,7 +40,8 @@ class OptionalConstexpr {
 };
 
 template <typename T, bool has_value>
-class OptionalConstexpr<T, has_value, std::enable_if_t<!has_value>> {
+  requires(!has_value)
+class OptionalConstexpr<T, has_value> {
  public:
   template <typename... Args>
   explicit OptionalConstexpr(Args&&... /*args*/) {}
@@ -59,7 +60,8 @@ template <typename T, typename Enable = void>
 struct is_optional : std::false_type {};
 
 template <typename T>
-struct is_optional<T, std::enable_if_t<std::is_same_v<T, std::optional<typename T::value_type>>>> : std::true_type {};
+  requires(std::is_same_v<T, std::optional<typename T::value_type>>)
+struct is_optional<T> : std::true_type {};
 
 // is_optional_v<T> <=> T is of type std::optional<?>
 template <typename T>
@@ -73,7 +75,8 @@ struct GetValueType {
 };
 
 template <typename T>
-struct GetValueType<T, std::enable_if_t<is_optional_v<T>>> {
+  requires(is_optional_v<T>)
+struct GetValueType<T> {
   using value_type = typename T::value_type;
 };
 
