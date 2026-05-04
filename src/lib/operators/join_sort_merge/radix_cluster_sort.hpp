@@ -67,12 +67,14 @@ class RadixClusterSort {
   }
 
   template <typename T2>
-  static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+    requires(std::is_integral_v<T2>)
+  static size_t get_radix(T2 value, size_t radix_bitmask) {
     return static_cast<uint64_t>(value) & radix_bitmask;
   }
 
   template <typename T2>
-  static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(const T2& value, size_t radix_bitmask) {
+    requires(!std::is_integral_v<T2>)
+  static size_t get_radix(const T2& value, size_t radix_bitmask) {
     PerformanceWarning("Using hash to perform bit_cast/radix partitioning of floating point number and strings");
     return std::hash<T2>{}(value)&radix_bitmask;
   }

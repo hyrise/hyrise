@@ -96,7 +96,8 @@ int main(int argc, char* argv[]) {
 }
 
 namespace {
-template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+template <typename T>
+  requires(std::is_floating_point_v<T>)
 bool floats_near(T float1, T float2) {
   if (float1 == float2) {
     return true;

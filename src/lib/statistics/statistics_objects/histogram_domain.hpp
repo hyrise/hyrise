@@ -26,7 +26,8 @@ template <typename T, typename Enable = void>
 class HistogramDomain {};
 
 template <typename T>
-class HistogramDomain<T, std::enable_if_t<std::is_integral_v<T>>> {
+  requires(std::is_integral_v<T>)
+class HistogramDomain<T> {
  public:
   T next_value_clamped(T value) const {
     if (value == std::numeric_limits<T>::max()) {
@@ -44,7 +45,8 @@ class HistogramDomain<T, std::enable_if_t<std::is_integral_v<T>>> {
 };
 
 template <typename T>
-class HistogramDomain<T, std::enable_if_t<std::is_floating_point_v<T>>> {
+  requires(std::is_floating_point_v<T>)
+class HistogramDomain<T> {
  public:
   T next_value_clamped(T value) const {
     return std::nextafter(value, std::numeric_limits<T>::infinity());

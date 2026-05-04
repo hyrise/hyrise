@@ -32,14 +32,15 @@ namespace hyrise {
 
 // Identity
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<Target, std::decay_t<Source>>, std::optional<Target>> lossless_cast(Source&& source) {
+  requires(std::is_same_v<Target, std::decay_t<Source>>)
+std::optional<Target> lossless_cast(Source&& source) {
   return std::forward<Source>(source);
 }
 
 // int64_t to int32_t
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<int64_t, Source> && std::is_same_v<int32_t, Target>, std::optional<Target>>
-lossless_cast(const Source& source) {
+  requires(std::is_same_v<int64_t, Source> && std::is_same_v<int32_t, Target>)
+std::optional<Target> lossless_cast(const Source& source) {
   if (source < std::numeric_limits<int32_t>::min() || source > std::numeric_limits<int32_t>::max()) {
     return std::nullopt;
   }
@@ -48,29 +49,29 @@ lossless_cast(const Source& source) {
 
 // int32_t to int64_t
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<int32_t, Source> && std::is_same_v<int64_t, Target>, std::optional<Target>>
-lossless_cast(const Source& source) {
+  requires(std::is_same_v<int32_t, Source> && std::is_same_v<int64_t, Target>)
+std::optional<Target> lossless_cast(const Source& source) {
   return static_cast<Target>(source);
 }
 
 // NULL to anything but NULL
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<NullValue, Source> && !std::is_same_v<NullValue, Target>, std::optional<Target>>
-lossless_cast(const Source& /*source*/) {
+  requires(std::is_same_v<NullValue, Source> && !std::is_same_v<NullValue, Target>)
+std::optional<Target> lossless_cast(const Source& /*source*/) {
   return std::nullopt;
 }
 
 // Anything but NULL to NULL
 template <typename Target, typename Source>
-std::enable_if_t<!std::is_same_v<NullValue, Source> && std::is_same_v<NullValue, Target>, std::optional<Target>>
-lossless_cast(const Source& /*source*/) {
+  requires(!std::is_same_v<NullValue, Source> && std::is_same_v<NullValue, Target>)
+std::optional<Target> lossless_cast(const Source& /*source*/) {
   return std::nullopt;
 }
 
 // String to integral
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target>, std::optional<Target>> lossless_cast(
-    const Source& source) {
+  requires(std::is_same_v<pmr_string, Source> && std::is_integral_v<Target>)
+std::optional<Target> lossless_cast(const Source& source) {
   static_assert(std::is_same_v<int32_t, Target> || std::is_same_v<int64_t, Target>, "Expected int32_t or int64_t");
 
   Target result{};
@@ -88,15 +89,15 @@ std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_integral_v<Target
 //                string to floating point conversion just sets up confusion why one string was convertible and another
 //                was not.
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<pmr_string, Source> && std::is_floating_point_v<Target>, std::optional<Target>>
-lossless_cast(const Source& /*source*/) {
+  requires(std::is_same_v<pmr_string, Source> && std::is_floating_point_v<Target>)
+std::optional<Target> lossless_cast(const Source& /*source*/) {
   return std::nullopt;
 }
 
 // integral to string
 template <typename Target, typename Source>
-std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>> lossless_cast(
-    const Source& source) {
+  requires(std::is_integral_v<Source> && std::is_same_v<pmr_string, Target>)
+std::optional<Target> lossless_cast(const Source& source) {
   return pmr_string{std::to_string(source)};
 }
 
@@ -106,15 +107,15 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target
 //                Lossless floating point to string conversion might be possible in theory, but standard library
 //                functions do not openly support such a conversion
 template <typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
-lossless_cast(const Source& /*source*/) {
+  requires(std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>)
+std::optional<Target> lossless_cast(const Source& /*source*/) {
   return std::nullopt;
 }
 
 // integral to floating point
 template <typename Target, typename Source>
-std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>, std::optional<Target>> lossless_cast(
-    const Source& source) {
+  requires(std::is_integral_v<Source> && std::is_floating_point_v<Target>)
+std::optional<Target> lossless_cast(const Source& source) {
   auto floating_point = static_cast<Target>(source);
   auto integral = static_cast<Source>(floating_point);
   if (source == integral) {
@@ -126,15 +127,13 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_floating_point_v<Target>,
 
 // floating point type to 32/64 bit integral type
 template <typename Target, typename Source>
-std::enable_if_t<std::is_floating_point_v<Source> &&
-                     (std::is_same_v<Target, int32_t> || std::is_same_v<Target, int64_t>),
-                 std::optional<Target>>
-lossless_cast(const Source& source) {
+  requires(std::is_floating_point_v<Source> && (std::is_same_v<Target, int32_t> || std::is_same_v<Target, int64_t>))
+std::optional<Target> lossless_cast(const Source& source) {
   static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
 
   auto integral_part = Source{};
 
-  // No lossless float-to-int conversion possible if the source float has a fractional part
+  // No lossless float-to-int conversion possible if the source float has a fractional part.
   if (std::modf(source, &integral_part) != 0.0) {
     return std::nullopt;
   }
@@ -166,15 +165,15 @@ lossless_cast(const Source& source) {
 
 // float to double
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<float, Source> && std::is_same_v<double, Target>, std::optional<Target>> lossless_cast(
-    const Source& source) {
+  requires(std::is_same_v<float, Source> && std::is_same_v<double, Target>)
+std::optional<Target> lossless_cast(const Source& source) {
   return static_cast<Target>(source);
 }
 
 // double to float
 template <typename Target, typename Source>
-std::enable_if_t<std::is_same_v<double, Source> && std::is_same_v<float, Target>, std::optional<Target>> lossless_cast(
-    const Source& source) {
+  requires(std::is_same_v<double, Source> && std::is_same_v<float, Target>)
+std::optional<Target> lossless_cast(const Source& source) {
   static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 floating point representation expected.");
 
   // Check the source double against the highest and lowest double that can still be converted to a float
