@@ -1,15 +1,14 @@
 #include <memory>
 #include <string>
-#include <utility>
-#include <vector>
 
 #include "base_test.hpp"
-#include "operators/abstract_read_only_operator.hpp"
 #include "operators/product.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
+#include "testing_assert.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 class OperatorsProductTest : public BaseTest {

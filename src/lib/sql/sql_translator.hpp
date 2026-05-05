@@ -29,7 +29,7 @@ class Table;
 */
 struct SQLTranslationInfo {
   bool cacheable{true};
-  std::vector<ParameterID> parameter_ids_of_value_placeholders{};
+  std::vector<ParameterID> parameter_ids_of_value_placeholders;
 };
 
 /**

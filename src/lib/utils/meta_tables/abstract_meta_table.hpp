@@ -43,8 +43,6 @@ class AbstractMetaTable : public Noncopyable {
 
   explicit AbstractMetaTable(const TableColumnDefinitions& column_definitions);
 
-  virtual ~AbstractMetaTable() = default;
-
   /**
    * Generates the meta table on the fly by calling `_on_generate()`. It ensures that all chunks are immutable.
    */

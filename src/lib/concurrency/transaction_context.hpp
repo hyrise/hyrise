@@ -5,12 +5,11 @@
 #include <memory>
 #include <vector>
 
+#include "concurrency/commit_context.hpp"
+#include "operators/abstract_read_write_operator.hpp"
 #include "types.hpp"
 
 namespace hyrise {
-
-class AbstractReadWriteOperator;
-class CommitContext;
 
 /**
  * @brief Overview of the different transaction phases
@@ -44,7 +43,7 @@ class CommitContext;
  *  state of RolledBackAfterConflict is considered as a failure, while RolledBackByUser is considered as a successful
  *  transaction. Among other things this has an influence on the result message, the database client receives.
  */
-enum class TransactionPhase {
+enum class TransactionPhase : uint8_t {
   Active,                   // Transaction has just been created. Operators may be executed.
   Conflicted,               // One of the operators ran into a conflict. Transaction needs to be rolled back.
   RolledBackAfterConflict,  // Transaction has been rolled back because an operator failed. (Considered a failure)
@@ -62,6 +61,12 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   friend class TransactionManager;
 
  public:
+  // These four need not be deleted, but they are for the same reason that std::atomic has them deleted.
+  // You can implement them, but you should think about the implications for this class.
+  TransactionContext(const TransactionContext&) = delete;
+  TransactionContext(TransactionContext&&) = delete;
+  TransactionContext& operator=(const TransactionContext&) = delete;
+  TransactionContext& operator=(TransactionContext&&) = delete;
   TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id, AutoCommit is_auto_commit);
   ~TransactionContext();
 
@@ -123,7 +128,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Add an operator to the list of read-write operators.
    */
-  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) {
+  void register_read_write_operator(const std::shared_ptr<AbstractReadWriteOperator>& op) {
     _read_write_operators.push_back(op);
   }
 
@@ -195,7 +200,6 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    */
   void _transition(TransactionPhase from_phase, TransactionPhase to_phase);
 
- private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
   const AutoCommit _is_auto_commit;

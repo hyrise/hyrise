@@ -1,6 +1,9 @@
+#include <memory>
+#include <stdexcept>
+
 #include "base_test.hpp"
-#include "storage/chunk.hpp"
 #include "storage/mvcc_data.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

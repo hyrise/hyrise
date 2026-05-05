@@ -1,11 +1,15 @@
-#include <chrono>
+#include <algorithm>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <utility>
+#include <stdexcept>
+#include <thread>
 #include <vector>
 
 #include "base_test.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
@@ -14,10 +18,14 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class SchedulerTest : public BaseTest {
  protected:
@@ -391,9 +399,13 @@ void merge_sort(Iterator first, Iterator last) {
 // Recursive merge sort. Creates a typical divide-and-conquer fan out pattern of tasks. We use the text book
 // implementation that recurses until the vector length is 1 to increase the depth of the fan out.
 TEST_F(SchedulerTest, MergeSort) {
-  // Sizes up to 20'000 works for MacOS (debug mode, more for release) with its comparatively small stack size. If this
-  // test fails on a new platform, check the system's stack size and if ITEM_COUNT needs to be reduced.
-  constexpr auto ITEM_COUNT = size_t{5'000};
+  // With #2697, we needed to limit the ITEM_COUNT from 5'000 to 1'000 (for Debug builds) as we otherwise got an "bus
+  // error" on the Mac ARM machine. Running the address sanatizers showed that it is caused by stack overflow, caused by
+  // introducing <format>. We do not consider this an issue as <format> improves the code and we have seen a negative
+  // effect on release builds. In addition, this test aims to penetrate the scheduler more (here via recursion) than
+  // typical operators should.
+  // If this test fails, check the system's stack size and if ITEM_COUNT needs to be adapted.
+  constexpr auto ITEM_COUNT = HYRISE_DEBUG ? size_t{1'000} : size_t{20'000};
   Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
 
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
