@@ -81,13 +81,13 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<on
 
   template <bool on_const_storage_local = on_const_storage>
     requires(on_const_storage_local)
-  std::string_view dereference() const {
+  std::string_view dereference() const {  // NOLINT(readability-identifier-naming)
     return std::string_view{&_chars[_pos], strnlen(&_chars[_pos], _string_length)};
   }
 
   template <bool on_const_storage_local = on_const_storage>
     requires(!on_const_storage_local)
-  FixedString dereference() const {
+  FixedString dereference() const {  // NOLINT(readability-identifier-naming)
     return FixedString{&_chars[_pos], _string_length};
   }
 
