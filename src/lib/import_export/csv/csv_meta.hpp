@@ -21,7 +21,7 @@ struct ColumnMeta {
 //                    null value.
 // NullStringAsValue: An unquoted null string is parsed as a string - eg. "Null", case is not changed.
 // NullStringAsNull:  An unquoted null string (case-insensitive) is parsed as a null value.
-enum class NullHandling { RejectNullStrings, NullStringAsNull, NullStringAsValue };
+enum class NullHandling : uint8_t { RejectNullStrings, NullStringAsNull, NullStringAsValue };
 
 struct ParseConfig {
   char delimiter = '\n';

@@ -1,16 +1,20 @@
+#include <memory>
 #include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;
+using namespace hyrise::expression_functional;
 
 using MockCosts = std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>;
 

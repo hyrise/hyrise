@@ -15,7 +15,7 @@ class Table;
 
 class MetaTableManager : public Noncopyable {
  public:
-  static inline const auto META_PREFIX = std::string{"meta_"};
+  static constexpr auto META_PREFIX = std::string{"meta_"};
 
   static bool is_meta_table_name(const std::string& name);
 

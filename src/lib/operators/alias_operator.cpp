@@ -1,8 +1,8 @@
 #include "alias_operator.hpp"
 
 #include <algorithm>
+#include <format>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -34,11 +34,8 @@ const std::string& AliasOperator::name() const {
 
 std::string AliasOperator::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  auto stream = std::stringstream{};
-
-  stream << AbstractOperator::description(description_mode) << separator;
-  stream << "[" << boost::algorithm::join(_aliases, ", ") << "]";
-  return stream.str();
+  return std::format("{1}{0}[{2}]", separator, AbstractOperator::description(description_mode),
+                     boost::algorithm::join(_aliases, ", "));
 }
 
 std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(

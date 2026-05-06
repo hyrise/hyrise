@@ -8,6 +8,9 @@
 #include "types.hpp"
 
 namespace hyrise {
+// Our function naming for iterables is not correct. `_on_with` is a public function and should not start with `_`,
+// whereas the iterator functions should start with `_` as they are private (but can't, because boost requires them).
+// NOLINTBEGIN(readability-identifier-naming)
 
 using ValueType = bool;
 using NullValueVector = pmr_vector<bool>;
@@ -37,13 +40,11 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
  private:
   const pmr_vector<bool>& _null_values;
 
- private:
   class Iterator : public AbstractSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
     using ValueType = bool;
     using NullValueIterator = pmr_vector<bool>::const_iterator;
 
-   public:
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
@@ -58,8 +59,8 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
       --_null_value_it;
     }
 
-    void advance(std::ptrdiff_t n) {
-      _null_value_it += n;
+    void advance(std::ptrdiff_t distance) {
+      _null_value_it += distance;
     }
 
     bool equal(const Iterator& other) const {
@@ -75,7 +76,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
                                    static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
-   private:
     const NullValueIterator _begin_null_value_it;
     NullValueIterator _null_value_it;
   };
@@ -95,13 +95,12 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     IsNullSegmentPosition dereference() const {
-      const auto& chunk_offsets = this->chunk_offsets();
+      const auto& chunk_offsets = this->_chunk_offsets();
 
       return IsNullSegmentPosition{_null_values[chunk_offsets.offset_in_referenced_chunk],
                                    chunk_offsets.offset_in_poslist};
     }
 
-   private:
     const NullValueVector& _null_values;
   };
 
@@ -110,4 +109,5 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
       -> PointAccessIterator<PosListIteratorType>;
 };
 
+// NOLINTEND(readability-identifier-naming)
 }  // namespace hyrise

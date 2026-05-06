@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <format>
 #include <fstream>
 #include <ios>
 #include <list>
@@ -224,8 +225,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
       }
     }
   } catch (const std::exception& exception) {
-    Fail("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " + std::to_string(column_id) +
-         ":\n" + exception.what());
+    Fail(std::format("Exception while parsing CSV, row {}, column {}:\n{}", row_id, column_id.t, exception.what()));
   }
 
   // Transform the field_offsets to segments and add segments to chunk.

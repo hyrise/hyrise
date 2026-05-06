@@ -1,6 +1,7 @@
 #include "import.hpp"
 
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -49,7 +50,7 @@ const std::string& Import::name() const {
 std::shared_ptr<const Table> Import::_on_execute() {
   // Check if file exists before giving it to the parser
   auto file = std::ifstream{filename};
-  Assert(file.is_open(), "Import: Could not find file " + filename);
+  Assert(file.is_open(), std::format("Import: Could not find file '{}'.", filename));
   file.close();
 
   auto table = std::shared_ptr<Table>{};

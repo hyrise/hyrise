@@ -1,10 +1,13 @@
 #include <memory>
+#include <stdexcept>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "storage/table.hpp"
-#include "utils/assert.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

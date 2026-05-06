@@ -9,7 +9,6 @@ class CardinalityEstimator;
 class AbstractCostEstimator;
 class AbstractLQPNode;
 class LogicalPlanRootNode;
-class LQPSubqueryExpression;
 struct OptimizationContext;
 
 class AbstractRule {

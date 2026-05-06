@@ -19,7 +19,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<AbstractLQPNode>& lqp) {
   // No need to create a join graph consisting of just one vertex and no predicates
@@ -38,7 +38,7 @@ std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Abst
   edges.insert(edges.end(), cross_edges.begin(), cross_edges.end());
 
   // A single vertex without predicates is not considered a JoinGraph
-  if (_vertices.size() <= 1u && edges.empty()) {
+  if (_vertices.size() <= 1 && edges.empty()) {
     return std::nullopt;
   }
 

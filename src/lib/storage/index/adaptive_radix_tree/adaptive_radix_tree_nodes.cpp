@@ -17,7 +17,7 @@
 
 namespace hyrise {
 
-constexpr uint8_t INVALID_INDEX = 255u;
+constexpr auto INVALID_INDEX = uint8_t{255};
 
 /**
  *
@@ -25,7 +25,7 @@ constexpr uint8_t INVALID_INDEX = 255u;
  *  - _partial_keys stores the contained partial_keys of its children
  *  - _children stores pointers to the children
  * _partial_key[i] is the partial_key for child _children[i]
- * default value of the _partial_keys array is 255u
+ * default value of the _partial_keys array is 255
  */
 
 ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
@@ -120,7 +120,7 @@ AbstractChunkIndex::Iterator ARTNode4::end() const {
  *  - _partial_keys stores the contained partial_keys of its children
  *  - _children stores pointers to the children
  * _partial_key[i] is the partial_key for child _children[i]
- * default value of the _partial_keys array is 255u
+ * default value of the _partial_keys array is 255
  *
  */
 
@@ -206,8 +206,8 @@ AbstractChunkIndex::Iterator ARTNode16::begin() const {
 
 /**
  * _end searches the child with the largest partial key == the last child in the _children array.
- * As the _partial_keys array is filled with 255u per default, we expect the largest child at the index right in front
- * of the first entry with 255u. But 255u can also be a valid partial_key: In this case the _children array contains a
+ * As the _partial_keys array is filled with 255 per default, we expect the largest child at the index right in front
+ * of the first entry with 255. But 255 can also be a valid partial_key: In this case the _children array contains a
  * pointer at this index as a means to differentiate the two cases.
  */
 
@@ -215,11 +215,11 @@ AbstractChunkIndex::Iterator ARTNode16::end() const {
   const auto* const partial_key_iterator = std::ranges::lower_bound(_partial_keys, INVALID_INDEX);
   const auto partial_key_pos = std::distance(_partial_keys.begin(), partial_key_iterator);
   if (!_children[partial_key_pos]) {
-    // there does not exist a child with partial_key 255u, we take the partial_key in front of it
+    // there does not exist a child with partial_key 255, we take the partial_key in front of it
     return _children[partial_key_pos - 1]->end();
   }
 
-  // there exists a child with partial_key 255u
+  // there exists a child with partial_key 255
   return _children[partial_key_pos]->end();
 }
 
@@ -229,7 +229,7 @@ AbstractChunkIndex::Iterator ARTNode16::end() const {
  *  - _index_to_child of length 256 that can be directly addressed
  *  - _children of length 48 stores pointers to the children
  * _index_to_child[partial_key] stores the index for the child in _children
- * default value of the _index_to_child array is 255u. This is safe as the maximum value set in _index_to_child will be
+ * default value of the _index_to_child array is 255. This is safe as the maximum value set in _index_to_child will be
  * 47 as this is the maximum index for _children.
  */
 

@@ -152,8 +152,10 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   // Create temporary referencing table that contains the given chunk only. Include all ChunksIDs of current table
   // except chunk_id for pruning in GetTable.
   auto excluded_chunk_ids = std::vector<ChunkID>(table->chunk_count() - 1);
+  // NOLINTBEGIN(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
+  // NOLINTEND(modernize-use-ranges)
 
   const auto get_table = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
   get_table->set_transaction_context(transaction_context);

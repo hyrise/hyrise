@@ -1,16 +1,21 @@
 #include <cstdio>
+#include <exception>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "import_export/csv/csv_meta.hpp"
+#include "import_export/file_type.hpp"
 #include "operators/export.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-#include "utils/assert.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {

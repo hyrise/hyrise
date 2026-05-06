@@ -1,11 +1,11 @@
 #include "abstract_table_generator.hpp"
 
 #include <filesystem>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -152,9 +152,8 @@ void AbstractTableGenerator::generate_and_store() {
           });
 
           if (is_sorted) {
-            auto output = std::stringstream{};
-            output << "-  Table '" << table_name << "' is already sorted by '" << column_name << "'\n";
-            std::cout << output.str() << std::flush;
+            std::cout << std::format("-  Table '{}' is already sorted by '{}'\n", table_name, column_name)
+                      << std::flush;
             const SortColumnDefinition sort_column{sort_column_id, sort_mode};
 
             if (_all_chunks_sorted_by(table, sort_column)) {
@@ -201,10 +200,9 @@ void AbstractTableGenerator::generate_and_store() {
             table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
           }
 
-          auto output = std::stringstream{};
-          output << "-  Sorted '" << table_name << "' by '" << column_name << "' (" << per_table_timer.lap_formatted()
-                 << ")\n";
-          std::cout << output.str() << std::flush;
+          std::cout << std::format("-  Sorted '{}' by '{}' ({})\n", table_name, column_name,
+                                   per_table_timer.lap_formatted())
+                    << std::flush;
         };
         jobs.emplace_back(std::make_shared<JobTask>(sort_table));
       }
@@ -236,12 +234,10 @@ void AbstractTableGenerator::generate_and_store() {
         auto per_table_timer = Timer{};
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
-        auto output = std::stringstream{};
-        output << "-  Processing '" + table_name << "' - "
-               << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
-               << per_table_timer.lap_formatted() << ")\n"
-               << std::flush;
-        std::cout << output.str() << std::flush;
+        std::cout << std::format("-  Processing '{}' - {} ({})\n", table_name,
+                                 table_info.re_encoded ? "encoding applied" : "no encoding necessary",
+                                 per_table_timer.lap_formatted())
+                  << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(encode_table));
     }
@@ -260,9 +256,10 @@ void AbstractTableGenerator::generate_and_store() {
     for (auto& [table_name, table_info] : table_info_by_name) {
       const auto& table = table_info.table;
       if (table->chunk_count() > 1 && table->get_chunk(ChunkID{0})->size() != _benchmark_config->chunk_size) {
-        Fail("Table '" + table_name + "' was loaded from binary, but has a mismatching chunk size of " +
-             std::to_string(table->get_chunk(ChunkID{0})->size()) +
-             ". Delete cached files or use '--dont_cache_binary_tables'.");
+        Fail(
+            std::format("Table '{}' was loaded from binary, but has a mismatching chunk size of '{}'. Delete cached "
+                        "files or use '--dont_cache_binary_tables'.",
+                        table_name, table->get_chunk(ChunkID{0})->size().t));
       }
     }
 
@@ -310,8 +307,7 @@ void AbstractTableGenerator::generate_and_store() {
           storage_manager.drop_table(table_name);
         }
         storage_manager.add_table(table_name, table_info.table);
-        const auto output =
-            std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
+        const auto output = std::format("-  Added '{}' ({})\n", table_name, per_table_timer.lap_formatted());
         std::cout << output << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(add_table));
@@ -480,10 +476,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
       auto& table_info = table_name_info_pair.second;
       table_info.table = BinaryParser::parse(*table_info.binary_file_path);
 
-      auto message = std::stringstream{};
-      message << "-  Loaded table '" << table_name_info_pair.first << "' from cached binary "
-              << *table_info.binary_file_path << " (" << timer.lap_formatted() << ")\n";
-      std::cout << message.str() << std::flush;
+      std::cout << std::format("-  Loaded table '{}' from cached binary \"{}\" ({})\n", table_name_info_pair.first,
+                               table_info.binary_file_path->string(), timer.lap_formatted())
+                << std::flush;
     }));
   }
 

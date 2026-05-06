@@ -1,5 +1,6 @@
 #include "drop_table.hpp"
 
+#include <format>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -22,7 +23,7 @@ const std::string& DropTable::name() const {
 }
 
 std::string DropTable::description(DescriptionMode description_mode) const {
-  return AbstractOperator::description(description_mode) + " '" + table_name + "'";
+  return std::format("{} '{}'", AbstractOperator::description(description_mode), table_name);
 }
 
 std::shared_ptr<const Table> DropTable::_on_execute() {

@@ -1,12 +1,22 @@
+#include <filesystem>
 #include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
+
+#include "cxxopts.hpp"
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
 #include "ssb/ssb_table_generator.hpp"
+#include "utils/assert.hpp"
 
 /**
  * The Star Schema Benchmark was introduced by O'Neil et al. "The Star Schema Benchmark and Augmented Fact Table
@@ -18,7 +28,7 @@
  *     - https://www.cs.umb.edu/~poneil/StarSchemaB.PDF
  */
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Star Schema Benchmark");
@@ -79,16 +89,15 @@ int main(int argc, char* argv[]) {
   const auto executable_path = std::filesystem::canonical(std::string{argv[0]}).remove_filename();
   const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
   Assert(std::filesystem::exists(ssb_dbgen_path / "dbgen"),
-         std::string{"SSB dbgen not found at "} + ssb_dbgen_path.c_str());
+         std::format("SSB dbgen not found at '{}'.", ssb_dbgen_path.c_str()));
   const auto query_path = executable_path / "../resources/benchmark/ssb/queries";
   const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
 
   // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
-  auto ssb_data_path_str = std::stringstream{};
-  ssb_data_path_str << "ssb_data/sf-" << std::noshowpoint << scale_factor;
-  std::filesystem::create_directories(ssb_data_path_str.str());
+  const auto ssb_data_path_str = std::format("ssb_data/sf-{}", scale_factor);
+  std::filesystem::create_directories(ssb_data_path_str);
   // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths.
-  const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str.str());
+  const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str);
 
   std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << '\n';
   std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';

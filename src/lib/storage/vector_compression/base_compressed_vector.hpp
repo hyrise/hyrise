@@ -27,8 +27,6 @@ namespace hyrise {
  */
 class BaseCompressedVector : private Noncopyable {
  public:
-  virtual ~BaseCompressedVector() = default;
-
   /**
    * @brief Returns the number of elements in the vector
    */
@@ -62,6 +60,8 @@ using BaseCompressedVectorIterator =
  */
 template <typename Derived>
 class CompressedVector : public BaseCompressedVector {
+  CompressedVector() = default;
+
  public:
   /**
    * @defgroup Non-virtual interface
@@ -102,7 +102,6 @@ class CompressedVector : public BaseCompressedVector {
 
   /**@}*/
 
- public:
   /**
    * @defgroup Virtual interface implementation
    * @{
@@ -134,6 +133,8 @@ class CompressedVector : public BaseCompressedVector {
   const Derived& _self() const {
     return static_cast<const Derived&>(*this);
   }
+
+  friend Derived;
 };
 
 }  // namespace hyrise

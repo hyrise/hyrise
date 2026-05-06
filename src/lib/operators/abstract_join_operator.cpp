@@ -71,7 +71,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     }
 
     // Fallback - use column ID
-    return "Column #" + std::to_string(column_id);
+    return std::format("Column #{}", column_id.t);
   };
 
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');

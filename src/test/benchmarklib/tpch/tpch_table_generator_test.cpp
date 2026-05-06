@@ -1,5 +1,9 @@
+#include <cmath>
+#include <string>
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "testing_assert.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"

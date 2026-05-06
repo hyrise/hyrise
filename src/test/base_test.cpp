@@ -1,21 +1,36 @@
 #include "base_test.hpp"
 
+#include <cstddef>
 #include <fstream>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/is_null_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "operators/table_scan.hpp"
+#include "resolve_type.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -180,10 +195,10 @@ bool file_exists(const std::string& name) {
 
 bool compare_files(const std::string& original_file, const std::string& created_file) {
   std::ifstream original(original_file);
-  Assert(original.is_open(), "compare_file: Could not find file '" + original_file + "'.");
+  Assert(original.is_open(), std::format("compare_file: Could not find file '{}'.", original_file));
 
   std::ifstream created(created_file);
-  Assert(created.is_open(), "compare_file: Could not find file '" + created_file + "'.");
+  Assert(created.is_open(), std::format("compare_file: Could not find file '{}'.", created_file));
 
   std::istreambuf_iterator<char> iterator_original(original);
   std::istreambuf_iterator<char> iterator_created(created);

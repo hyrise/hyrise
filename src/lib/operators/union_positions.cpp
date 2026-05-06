@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -347,15 +348,13 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
           }
 
           Assert(ref_segment->referenced_table() == _referenced_tables[next_cluster_id - 1],
-                 "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
-                     ") "
-                     "does not reference the same table as the segment at the same index in the first chunk "
-                     "of the left input table does.");
+                 std::format("ReferenceSegment (Chunk: {}, Column: {}) does not reference the same table as the "
+                             "segment at the same index in the first chunk of the left input table does.",
+                             chunk_id.t, column_id.t));
           Assert(ref_segment->referenced_column_id() == _referenced_column_ids[column_id],
-                 "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
-                     ")"
-                     " does not reference the same column as the segment at the same index in the first chunk "
-                     "of the left input table does.");
+                 std::format("ReferenceSegment (Chunk: {}, Column: {}) does not reference the same column as the "
+                             "segment at the same index in the first chunk of the left input table does.",
+                             chunk_id.t, column_id.t));
           Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster.");
         }
       }
