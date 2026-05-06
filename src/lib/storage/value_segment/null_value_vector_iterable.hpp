@@ -9,14 +9,15 @@
 
 namespace hyrise {
 
+using ValueType = bool;
+using NullValueVector = pmr_vector<bool>;
+
 /**
  * This is an iterable for the null value vector used by, e.g, value, LZ4, or frame of reference segments.
  * It is used for example in the IS NULL implementation of the table scan.
  */
 class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueVectorIterable> {
  public:
-  using ValueType = bool;
-
   explicit NullValueVectorIterable(const pmr_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
@@ -83,10 +84,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
                                                                         IsNullSegmentPosition, PosListIteratorType> {
    public:
-    using ValueType = bool;
-    using NullValueVector = pmr_vector<bool>;
-
-   public:
     explicit PointAccessIterator(const NullValueVector& null_values, const PosListIteratorType position_filter_begin,
                                  PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition,
@@ -107,6 +104,10 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
    private:
     const NullValueVector& _null_values;
   };
+
+  template <typename PosListIteratorType>
+  explicit PointAccessIterator(const NullValueVector&, const PosListIteratorType, PosListIteratorType)
+      -> PointAccessIterator<PosListIteratorType>;
 };
 
 }  // namespace hyrise

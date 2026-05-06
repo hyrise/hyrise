@@ -132,7 +132,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
           pseudorandom_engine.seed(random_device());
 
-          auto probability_dist = std::uniform_real_distribution{0.0, 1.0};
+          auto probability_dist = std::uniform_real_distribution<double>{0.0, 1.0};
           auto generate_value_by_distribution_type = std::function<int(void)>{};
 
           // Generate distribution from column configuration.

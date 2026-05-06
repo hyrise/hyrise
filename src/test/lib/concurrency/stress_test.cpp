@@ -825,7 +825,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
       std::this_thread::sleep_for(SLEEP_TIME);
       // Notify the reading threads that the writer is waiting.
       writer_waiting_flag.test_and_set();
-      const auto lock = std::unique_lock{deletion_mutex};
+      const auto lock = std::unique_lock<std::shared_mutex>{deletion_mutex};
       // We need to clear the constraints to simulate concurrent insertions. Normally, a deletion of a constraint would
       // not happen at all. Instead, we store that this constraint was invalidated for the specific commit ID. This
       // prevents unnecessary revalidation of constraints that are known to be invalid.
@@ -843,7 +843,7 @@ TEST_F(StressTest, AddModifyTableKeyConstraintsConcurrently) {
       const auto stored_table_node = std::make_shared<StoredTableNode>("dummy_table");
       // Access the unique column combinations. We need to lock here because `unique_column_combinations` uses a
       // reference to iterate over the constraints. This reference is invalidated when the constraints are cleared.
-      const auto lock = std::shared_lock{deletion_mutex};
+      const auto lock = std::shared_lock<std::shared_mutex>{deletion_mutex};
       // Check that the set of TableKeyConstraints does not contain any duplicates.
       ASSERT_LE(stored_table_node->unique_column_combinations().size(), 3);
     }

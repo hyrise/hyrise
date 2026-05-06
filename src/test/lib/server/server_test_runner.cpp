@@ -226,14 +226,14 @@ TEST_F(ServerTestRunner, TestTransactionCommit) {
   auto connection = pqxx::connection{_connection_string};
   pqxx::connection verification_connection{_connection_string};
 
-  pqxx::transaction transaction{connection};
+  pqxx::transaction<> transaction{connection};
   transaction.exec("INSERT INTO table_a (a, b) VALUES (1, 2);");
 
   const auto result = transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(result.size(), 4);
 
   {
-    auto verification_transaction = pqxx::transaction{verification_connection};
+    auto verification_transaction = pqxx::transaction<>{verification_connection};
     const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
     EXPECT_EQ(verification_result.size(), 3);
   }
@@ -241,7 +241,7 @@ TEST_F(ServerTestRunner, TestTransactionCommit) {
   transaction.commit();
 
   {
-    auto verification_transaction = pqxx::transaction{verification_connection};
+    auto verification_transaction = pqxx::transaction<>{verification_connection};
     const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
     EXPECT_EQ(verification_result.size(), 4);
   }
@@ -250,7 +250,7 @@ TEST_F(ServerTestRunner, TestTransactionCommit) {
 TEST_F(ServerTestRunner, TestTransactionRollback) {
   auto connection = pqxx::connection{_connection_string};
 
-  pqxx::transaction transaction{connection};
+  pqxx::transaction<> transaction{connection};
   transaction.exec("INSERT INTO table_a (a, b) VALUES (1, 2);");
 
   const auto result = transaction.exec("SELECT * FROM table_a;");
@@ -258,7 +258,7 @@ TEST_F(ServerTestRunner, TestTransactionRollback) {
 
   transaction.abort();
 
-  auto verification_transaction = pqxx::transaction{connection};
+  auto verification_transaction = pqxx::transaction<>{connection};
   const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(verification_result.size(), 3);
 }
@@ -266,7 +266,7 @@ TEST_F(ServerTestRunner, TestTransactionRollback) {
 TEST_F(ServerTestRunner, TestInvalidTransactionFlow) {
   auto connection = pqxx::connection{_connection_string};
 
-  pqxx::transaction transaction{connection};
+  pqxx::transaction<> transaction{connection};
   EXPECT_THROW(transaction.exec("BEGIN;"), pqxx::broken_connection);
 }
 
