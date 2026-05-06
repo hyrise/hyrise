@@ -384,8 +384,7 @@ class SortedSegmentSearch {
 
 template <typename IteratorType, typename SearchValueType>
 SortedSegmentSearch(IteratorType, IteratorType, const SortMode&, bool, const PredicateCondition&,
-                    const SearchValueType&)
-    -> SortedSegmentSearch<IteratorType, SearchValueType>;
+                    const SearchValueType&) -> SortedSegmentSearch<IteratorType, SearchValueType>;
 
 template <typename IteratorType, typename SearchValueType>
 SortedSegmentSearch(IteratorType, IteratorType, const SortMode&, bool, const PredicateCondition&,

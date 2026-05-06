@@ -41,8 +41,7 @@ class GenericHistogramBuilder {
 };
 
 template <typename T>
-explicit GenericHistogramBuilder(const size_t, const HistogramDomain<T>&)
-    -> GenericHistogramBuilder<T>;
+explicit GenericHistogramBuilder(const size_t, const HistogramDomain<T>&) -> GenericHistogramBuilder<T>;
 
 EXPLICITLY_DECLARE_DATA_TYPES(GenericHistogramBuilder);
 
