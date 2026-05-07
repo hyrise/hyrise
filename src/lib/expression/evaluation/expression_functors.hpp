@@ -215,8 +215,8 @@ struct CaseEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct Supports {
     // NOLINTNEXTLINE(readability-identifier-naming)
-    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>) &&
-                                  (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
+    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>)&&(
+        std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
   };
 
   template <typename Result, typename ArgA, typename ArgB>

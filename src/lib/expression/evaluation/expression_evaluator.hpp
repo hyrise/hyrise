@@ -203,7 +203,7 @@ extern template std::shared_ptr<ExpressionResult<float>> ExpressionEvaluator::ev
     const AbstractExpression& expression);
 extern template std::shared_ptr<ExpressionResult<double>> ExpressionEvaluator::evaluate_expression_to_result<double>(
     const AbstractExpression& expression);
-extern template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::evaluate_expression_to_result<pmr_string>(
-    const AbstractExpression& expression);
+extern template std::shared_ptr<ExpressionResult<pmr_string>>
+ExpressionEvaluator::evaluate_expression_to_result<pmr_string>(const AbstractExpression& expression);
 
 }  // namespace hyrise

@@ -314,16 +314,20 @@ extern template std::shared_ptr<GenericHistogram<pmr_string>>
 CardinalityEstimator::estimate_column_vs_column_equi_scan_with_histograms(
     const AbstractHistogram<pmr_string>& left_histogram, const AbstractHistogram<pmr_string>& right_histogram);
 
-extern template std::shared_ptr<GenericHistogram<int32_t>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(
-    const AbstractHistogram<int32_t>& left_histogram, const AbstractHistogram<int32_t>& right_histogram);
-extern template std::shared_ptr<GenericHistogram<int64_t>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(
-    const AbstractHistogram<int64_t>& left_histogram, const AbstractHistogram<int64_t>& right_histogram);
+extern template std::shared_ptr<GenericHistogram<int32_t>>
+CardinalityEstimator::estimate_inner_equi_join_with_histograms(const AbstractHistogram<int32_t>& left_histogram,
+                                                               const AbstractHistogram<int32_t>& right_histogram);
+extern template std::shared_ptr<GenericHistogram<int64_t>>
+CardinalityEstimator::estimate_inner_equi_join_with_histograms(const AbstractHistogram<int64_t>& left_histogram,
+                                                               const AbstractHistogram<int64_t>& right_histogram);
 extern template std::shared_ptr<GenericHistogram<float>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(
     const AbstractHistogram<float>& left_histogram, const AbstractHistogram<float>& right_histogram);
-extern template std::shared_ptr<GenericHistogram<double>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(
-    const AbstractHistogram<double>& left_histogram, const AbstractHistogram<double>& right_histogram);
-extern template std::shared_ptr<GenericHistogram<pmr_string>> CardinalityEstimator::estimate_inner_equi_join_with_histograms(
-    const AbstractHistogram<pmr_string>& left_histogram, const AbstractHistogram<pmr_string>& right_histogram);
+extern template std::shared_ptr<GenericHistogram<double>>
+CardinalityEstimator::estimate_inner_equi_join_with_histograms(const AbstractHistogram<double>& left_histogram,
+                                                               const AbstractHistogram<double>& right_histogram);
+extern template std::shared_ptr<GenericHistogram<pmr_string>>
+CardinalityEstimator::estimate_inner_equi_join_with_histograms(const AbstractHistogram<pmr_string>& left_histogram,
+                                                               const AbstractHistogram<pmr_string>& right_histogram);
 
 std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);
 

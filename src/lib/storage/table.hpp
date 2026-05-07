@@ -305,10 +305,10 @@ class Table : private Noncopyable {
 };
 
 extern template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,
-                                                       const std::string& name);
+                                                              const std::string& name);
 extern template void Table::create_chunk_index<CompositeGroupKeyIndex>(const std::vector<ColumnID>& column_ids,
-                                                                const std::string& name);
+                                                                       const std::string& name);
 extern template void Table::create_chunk_index<AdaptiveRadixTreeIndex>(const std::vector<ColumnID>& column_ids,
-                                                                const std::string& name);
+                                                                       const std::string& name);
 
 }  // namespace hyrise

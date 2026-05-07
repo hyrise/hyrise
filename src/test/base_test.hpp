@@ -58,7 +58,7 @@ template <typename T>
 std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_type,
                                                                   const std::vector<std::optional<T>>& values);
 
-#define DECLARE_CREATE_DICT_SEGMENT(r, data, type)                           \
+#define DECLARE_CREATE_DICT_SEGMENT(r, data, type)                                      \
   extern template std::shared_ptr<DictionarySegment<type>> create_dict_segment_by_type( \
       DataType data_type, const std::vector<std::optional<type>>& values);
 
