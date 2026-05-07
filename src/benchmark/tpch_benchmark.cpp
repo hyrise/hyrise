@@ -29,8 +29,6 @@
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
-using namespace hyrise;
-
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
  * TPC-H *benchmark* exactly as it is specified.
@@ -47,6 +45,8 @@ using namespace hyrise;
  */
 
 int main(int argc, char* argv[]) {
+  using namespace hyrise;
+  
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H/JCC-H Benchmark");
 
   // NOLINTBEGIN(whitespace/line_length)

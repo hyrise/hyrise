@@ -19,8 +19,6 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/assert.hpp"
 
-using namespace hyrise;
-
 /**
  * This benchmark measures Hyrise's performance executing the TPC-C benchmark. As with the other TPC-* benchmarks, we
  * took some liberty in interpreting the standard. Most notably, all parts about the simulated terminals are ignored.
@@ -46,6 +44,8 @@ void check_consistency(const size_t num_warehouses);
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  using namespace hyrise;
+
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-C Benchmark");
 
   // clang-format off
@@ -96,6 +96,9 @@ int main(int argc, char* argv[]) {
 }
 
 namespace {
+
+using namespace hyrise;
+
 template <typename T>
   requires(std::is_floating_point_v<T>)
 bool floats_near(T float1, T float2) {
