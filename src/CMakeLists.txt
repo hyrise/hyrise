@@ -93,7 +93,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
                                                 # covered. Contradicts -Wcovered-switch-default.
             -Wno-switch-enum                    # We have switches in which we do not want to cover every enum value
                                                 # but use a default.
-            -Wno-undefined-func-template        # Complains about missing explicit instantiation declarations. I do not
+            # -Wno-undefined-func-template        # Complains about missing explicit instantiation declarations. I do not
                                                 # know if this is fixable.
             -Wno-unsafe-buffer-usage            # We access buffers via pointers / pointer arithmetic in some cases when
                                                 # we know what we do (e.g., uninitialized vector works like this).

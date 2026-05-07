@@ -188,6 +188,14 @@ template <typename ExpressionContainer>
 bool contains_all_expressions(const ExpressionContainer& search_expressions,
                               const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
 
+extern template bool contains_all_expressions<ExpressionUnorderedSet>(
+    const ExpressionUnorderedSet& search_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
+
+extern template bool contains_all_expressions<std::vector<std::shared_ptr<AbstractExpression>>>(
+    const std::vector<std::shared_ptr<AbstractExpression>>& search_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
+
 /**
  * Checks that @param lhs_expressions is the head of @param rhs_expressions, i.e., all expressions of the left-hand
  * side are the first expressions of the right-hand side in the same order.

@@ -20,6 +20,7 @@
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
+#include "storage/index/chunk_index_map.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/table_index_statistics.hpp"
@@ -302,4 +303,12 @@ class Table : private Noncopyable {
   // chunks more than once.
   mutable std::optional<uint64_t> _cached_row_count;
 };
+
+extern template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,
+                                                       const std::string& name);
+extern template void Table::create_chunk_index<CompositeGroupKeyIndex>(const std::vector<ColumnID>& column_ids,
+                                                                const std::string& name);
+extern template void Table::create_chunk_index<AdaptiveRadixTreeIndex>(const std::vector<ColumnID>& column_ids,
+                                                                const std::string& name);
+
 }  // namespace hyrise
