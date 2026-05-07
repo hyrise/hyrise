@@ -5,6 +5,7 @@
 
 #include "tsl/sparse_map.h"
 
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -63,5 +64,7 @@ class FlatMapIteratorImpl : public BaseFlatMapIteratorImpl {
   MapIterator _map_iterator;
   size_t _vector_index;
 };
+
+EXPLICITLY_DECLARE_DATA_TYPES(FlatMapIteratorImpl);
 
 }  // namespace hyrise
