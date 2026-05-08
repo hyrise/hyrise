@@ -80,14 +80,11 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
             -Wno-exit-time-destructors          # We use declarations that require exit-time destructors.
             -Wno-float-equal                    # Currently we compare floats for equality or inequality.
             -Wno-global-constructors            # We use declarations that require global destructors.
-            # -Wno-header-hygiene                 # Complains about "using namespace hyrise" in our tests and benchmarks
-                                                # when a unity builds are activated.
             -Wno-missing-prototypes             # Messes with our tests and benchmarks.
             -Wno-newline-eof                    # Warns about the third_party sql-parser. Please examine.
             -Wno-padded                         # Of course the compiler adds padding to our classes.
             -Wno-pass-failed                    # Complains about failed loop unrolling when building release builds
                                                 # with sanitization.
-            # -Wno-poison-system-directories      # Only fails on the x86 Mac CI stage. Could be worth a closer look.
             -Wno-sign-conversion                # Currently we do many implicit conversions that change signedness.
             -Wno-switch-default                 # Warns if a switch has no default, even if all enum values are
                                                 # covered. Contradicts -Wcovered-switch-default.
