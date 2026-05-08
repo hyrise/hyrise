@@ -149,6 +149,6 @@ std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
   return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _target_encoding);
 }
 
-void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
+void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace hyrise

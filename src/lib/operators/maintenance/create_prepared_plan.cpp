@@ -48,7 +48,7 @@ std::shared_ptr<const Table> CreatePreparedPlan::_on_execute() {
   return nullptr;
 }
 
-void CreatePreparedPlan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
+void CreatePreparedPlan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<AbstractOperator> CreatePreparedPlan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,

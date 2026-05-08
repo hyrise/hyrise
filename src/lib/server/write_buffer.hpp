@@ -62,7 +62,4 @@ class WriteBuffer {
   std::shared_ptr<SocketType> _socket;
 };
 
-extern template class WriteBuffer<Socket>;
-extern template class WriteBuffer<boost::asio::posix::stream_descriptor>;
-
 }  // namespace hyrise

@@ -62,7 +62,4 @@ class ReadBuffer {
   std::shared_ptr<SocketType> _socket;
 };
 
-extern template class ReadBuffer<Socket>;
-extern template class ReadBuffer<boost::asio::posix::stream_descriptor>;
-
 }  // namespace hyrise

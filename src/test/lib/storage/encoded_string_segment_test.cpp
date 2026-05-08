@@ -139,7 +139,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) 
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators([&](auto value_segment_it, auto /*value_segment_end*/) {
+    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
           EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
@@ -159,7 +159,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators([&](auto value_segment_it, auto /*value_segment_end*/) {
+    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
         auto row_idx = ChunkOffset{0};
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
@@ -192,7 +192,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableStringSegment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators([&](auto value_segment_it, auto /*value_segment_end*/) {
+    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
           EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
@@ -212,7 +212,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators([&](auto value_segment_it, auto /*value_segment_end*/) {
+    value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
         auto row_idx = ChunkOffset{0};
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
@@ -247,7 +247,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithChunkO
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto /*value_segment_end*/) {
+    value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators(position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
           EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
@@ -273,7 +273,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithShuffl
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto /*value_segment_end*/) {
+    value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators(position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
           EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());

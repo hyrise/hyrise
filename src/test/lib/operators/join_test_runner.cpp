@@ -42,9 +42,9 @@
  * number of configurations (i.e. JoinModes, predicates, data types, ...)
  */
 
-namespace {
-
 using namespace std::string_literals;
+
+namespace {
 
 using namespace hyrise;
 

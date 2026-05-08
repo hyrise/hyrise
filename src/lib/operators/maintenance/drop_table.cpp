@@ -42,7 +42,7 @@ std::shared_ptr<AbstractOperator> DropTable::_on_deep_copy(
   return std::make_shared<DropTable>(table_name, if_exists);
 }
 
-void DropTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {
+void DropTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   // No parameters possible for DROP TABLE
 }
 

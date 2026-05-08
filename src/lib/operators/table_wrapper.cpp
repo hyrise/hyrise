@@ -27,7 +27,7 @@ std::shared_ptr<AbstractOperator> TableWrapper::_on_deep_copy(
   return std::make_shared<TableWrapper>(table);
 }
 
-void TableWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
+void TableWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> TableWrapper::_on_execute() {
   return table;

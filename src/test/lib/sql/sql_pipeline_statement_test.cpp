@@ -739,7 +739,7 @@ TEST_F(SQLPipelineStatementTest, NonCacheablePlanNotCached) {
     }
 
    protected:
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/,
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
                                            OptimizationContext& optimization_context) const override {
       optimization_context.set_not_cacheable();
     }
@@ -786,7 +786,7 @@ TEST_F(SQLPipelineStatementTest, CachedPlanStaysCached) {
     }
 
    protected:
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/,
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root,
                                            OptimizationContext& optimization_context) const override {
       optimization_context.set_not_cacheable();
     }

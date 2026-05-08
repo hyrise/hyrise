@@ -744,7 +744,7 @@ std::shared_ptr<AbstractOperator> AggregateSort::_on_deep_copy(
   return std::make_shared<AggregateSort>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
-void AggregateSort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
+void AggregateSort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void AggregateSort::_on_cleanup() {}
 

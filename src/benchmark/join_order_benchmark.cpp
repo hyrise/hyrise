@@ -33,10 +33,9 @@
  * found running the Join Order Benchmark" - 2.1 The IMDB data set, Fig. 2, p. 645.)
  */
 
-namespace {
-
 using namespace hyrise;
 
+namespace {
 void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   // Get all tables.
   const auto& aka_name_table = table_info_by_name.at("aka_name").table;
@@ -154,8 +153,6 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  using namespace hyrise;
-
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Join Order Benchmark");
 
   constexpr auto DEFAULT_TABLE_PATH = "imdb_data";

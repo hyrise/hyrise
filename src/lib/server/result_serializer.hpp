@@ -32,18 +32,4 @@ class ResultSerializer {
   static std::string build_command_complete_message(const OperatorType root_operator_type, const uint64_t row_count);
 };
 
-extern template void ResultSerializer::send_table_description<Socket>(
-    const std::shared_ptr<const Table>&, const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
-
-extern template void ResultSerializer::send_table_description<boost::asio::posix::stream_descriptor>(
-    const std::shared_ptr<const Table>&,
-    const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
-
-extern template void ResultSerializer::send_query_response<Socket>(
-    const std::shared_ptr<const Table>&, const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
-
-extern template void ResultSerializer::send_query_response<boost::asio::posix::stream_descriptor>(
-    const std::shared_ptr<const Table>&,
-    const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
-
 }  // namespace hyrise

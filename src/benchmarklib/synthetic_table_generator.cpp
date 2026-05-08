@@ -133,7 +133,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
           pseudorandom_engine.seed(random_device());
 
-          auto probability_dist = std::uniform_real_distribution<double>{0.0, 1.0};
+          auto probability_dist = std::uniform_real_distribution{0.0, 1.0};
           auto generate_value_by_distribution_type = std::function<int(void)>{};
 
           // Generate distribution from column configuration.
@@ -177,7 +177,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           if (column_specifications[column_index].null_ratio > 0) {
             null_values.resize(chunk_size, false);
 
-            const double step_size = 1.0 / static_cast<double>(column_specifications[column_index].null_ratio);
+            const double step_size = 1.0 / column_specifications[column_index].null_ratio;
             double current_row_offset = 0.0;
             while (current_row_offset < chunk_size) {
               null_values[static_cast<size_t>(std::round(current_row_offset))] = true;

@@ -49,23 +49,19 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   const auto lowest = std::numeric_limits<TypeParam>::lowest();
   const auto max = std::numeric_limits<TypeParam>::max();
   // A distance of 1.6 * max is obviously larger than max, so fall back.
-  using CalcType = std::conditional_t<std::is_floating_point_v<TypeParam>, TypeParam, double>;
-  const auto test_vector = pmr_vector<TypeParam>{static_cast<TypeParam>(static_cast<CalcType>(0.9) * lowest),
-                                                 static_cast<TypeParam>(static_cast<CalcType>(0.8) * lowest),
-                                                 static_cast<TypeParam>(static_cast<CalcType>(0.8) * max),
-                                                 static_cast<TypeParam>(static_cast<CalcType>(0.9) * max)};
+  const auto test_vector =
+      pmr_vector<TypeParam>{static_cast<TypeParam>(0.9 * lowest), static_cast<TypeParam>(0.8 * lowest),
+                            static_cast<TypeParam>(0.8 * max), static_cast<TypeParam>(0.9 * max)};
 
   auto filter = RangeFilter<TypeParam>::build_filter(test_vector, 5);
-  auto expected_range = Ranges{{static_cast<TypeParam>(static_cast<CalcType>(0.9) * lowest),
-                                static_cast<TypeParam>(static_cast<CalcType>(0.9) * max)}};
+  auto expected_range = Ranges{{static_cast<TypeParam>(0.9 * lowest), static_cast<TypeParam>(0.9 * max)}};
   EXPECT_EQ(filter->ranges, expected_range);
 
   // Having only one range means the filter cannot prune 0 right in the largest gap.
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, TypeParam{0}));
 
   // Nonetheless, the filter should prune values outside the single range.
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals,
-                                       static_cast<TypeParam>(lowest * static_cast<CalcType>(0.95))));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(lowest * 0.95)));
 
   // [lowest, ... , 1] and [-1, ... , max] also have a distance > max.
   const auto range_lowest_to_one = pmr_vector<TypeParam>{lowest, lowest + TypeParam{1}, TypeParam{-1}, TypeParam{1}};
@@ -260,35 +256,26 @@ TYPED_TEST(RangeFilterTest, Between) {
 
 // Test larger value ranges.
 TYPED_TEST(RangeFilterTest, LargeValueRange) {
-  using CalcType = std::conditional_t<std::is_floating_point_v<TypeParam>, TypeParam, double>;
-
   const auto lowest = std::numeric_limits<TypeParam>::lowest();
   const auto max = std::numeric_limits<TypeParam>::max();
 
-  const auto values = pmr_vector<TypeParam>{static_cast<TypeParam>(static_cast<CalcType>(0.4) * lowest),
-                                            static_cast<TypeParam>(static_cast<CalcType>(0.38) * lowest),
-                                            static_cast<TypeParam>(static_cast<CalcType>(0.36) * lowest),
-                                            static_cast<TypeParam>(static_cast<CalcType>(0.30) * lowest),
-                                            static_cast<TypeParam>(static_cast<CalcType>(0.28) * lowest),
-                                            static_cast<TypeParam>(static_cast<CalcType>(0.36) * max),
-                                            static_cast<TypeParam>(static_cast<CalcType>(0.38) * max),
-                                            static_cast<TypeParam>(static_cast<CalcType>(0.4) * max)};
+  const auto values =
+      pmr_vector<TypeParam>{static_cast<TypeParam>(0.4 * lowest),  static_cast<TypeParam>(0.38 * lowest),
+                            static_cast<TypeParam>(0.36 * lowest), static_cast<TypeParam>(0.30 * lowest),
+                            static_cast<TypeParam>(0.28 * lowest), static_cast<TypeParam>(0.36 * max),
+                            static_cast<TypeParam>(0.38 * max),    static_cast<TypeParam>(0.4 * max)};
 
   const auto filter = RangeFilter<TypeParam>::build_filter(values, 3);
 
   // A filter with three ranges has two gaps: (i) 0.28 * lowest - 0.36 * max and (ii) 0.36 * lowest - 0.30 * lowest.
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive,
-                                       static_cast<TypeParam>(static_cast<CalcType>(0.27) * lowest),
-                                       static_cast<TypeParam>(static_cast<CalcType>(0.35) * max)));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive,
-                                       static_cast<TypeParam>(static_cast<CalcType>(0.35) * lowest),
-                                       static_cast<TypeParam>(static_cast<CalcType>(0.31) * lowest)));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.27 * lowest),
+                                       static_cast<TypeParam>(0.35 * max)));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.35 * lowest),
+                                       static_cast<TypeParam>(0.31 * lowest)));
 
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(TypeParam{0})));  // In gap.
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals,
-                                       static_cast<TypeParam>(static_cast<CalcType>(0.5) * lowest)));
-  EXPECT_TRUE(
-      filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(static_cast<CalcType>(0.5) * max)));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * lowest)));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * max)));
 
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(values.front()),
                                         static_cast<TypeParam>(values[4])));
@@ -299,15 +286,12 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(values[4]),
                                         static_cast<TypeParam>(values[5])));
 
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals,
-                                        static_cast<TypeParam>(static_cast<CalcType>(0.4) * lowest)));
-  EXPECT_FALSE(
-      filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(static_cast<CalcType>(0.4) * max)));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.4 * lowest)));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.4 * max)));
 
   // With two gaps, the following should not exist.
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive,
-                                        static_cast<TypeParam>(static_cast<CalcType>(0.4) * lowest),
-                                        static_cast<TypeParam>(static_cast<CalcType>(0.38) * lowest)));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.4 * lowest),
+                                        static_cast<TypeParam>(0.38 * lowest)));
 }
 
 TYPED_TEST(RangeFilterTest, Sliced) {

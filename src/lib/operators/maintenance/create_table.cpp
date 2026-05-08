@@ -100,7 +100,7 @@ std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(
   return std::make_shared<CreateTable>(table_name, if_not_exists, copied_left_input);
 }
 
-void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {
+void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   // No parameters possible for CREATE TABLE
 }
 

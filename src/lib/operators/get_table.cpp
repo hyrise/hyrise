@@ -130,7 +130,7 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
   return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
 }
 
-void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
+void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);

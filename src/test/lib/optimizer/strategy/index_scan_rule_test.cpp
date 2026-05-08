@@ -39,7 +39,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
     b = stored_table_node->get_column("b");
   }
 
-  void generate_mock_statistics(HistogramCountType row_count = 10.0) {
+  void generate_mock_statistics(float row_count = 10.0f) {
     auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(2);
     const auto statistics_a = std::make_shared<AttributeStatistics<int32_t>>();
     statistics_a->set_statistics_object(GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));

@@ -40,7 +40,7 @@ std::shared_ptr<AbstractOperator> CreateView::_on_deep_copy(
   return std::make_shared<CreateView>(_view_name, _view->deep_copy(), _if_not_exists);
 }
 
-void CreateView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
+void CreateView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> CreateView::_on_execute() {
   // If IF NOT EXISTS is not set and the view already exists, StorageManager throws an exception.

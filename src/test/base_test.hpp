@@ -58,12 +58,6 @@ template <typename T>
 std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_type,
                                                                   const std::vector<std::optional<T>>& values);
 
-#define DECLARE_CREATE_DICT_SEGMENT(r, data, type)                                      \
-  extern template std::shared_ptr<DictionarySegment<type>> create_dict_segment_by_type( \
-      DataType data_type, const std::vector<std::optional<type>>& values);
-
-BOOST_PP_SEQ_FOR_EACH(DECLARE_CREATE_DICT_SEGMENT, _, DATA_TYPES)
-
 void execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators);
 
 std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,

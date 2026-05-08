@@ -58,9 +58,6 @@ class ExpressionResultNullableSeries {
   const pmr_vector<bool>& _nulls;
 };
 
-template <typename T>
-ExpressionResultNullableSeries(const pmr_vector<T>&, const pmr_vector<bool>&) -> ExpressionResultNullableSeries<T>;
-
 /**
  * View that looks at an ExpressionResult knowing that is a series, but may not return nulls, so is_null() always returns
  * false
@@ -101,9 +98,6 @@ class ExpressionResultNonNullSeries {
   const pmr_vector<T>& _values;
 };
 
-template <typename T>
-explicit ExpressionResultNonNullSeries(const pmr_vector<T>&) -> ExpressionResultNonNullSeries<T>;
-
 /**
  * View that looks at an ExpressionResult knowing that is a literal, so always returns the first element in value() and
  * is_null(), no matter which index is requested
@@ -143,8 +137,5 @@ class ExpressionResultLiteral {
   T _value;
   bool _null;
 };
-
-template <typename T>
-ExpressionResultLiteral(const T&, const bool) -> ExpressionResultLiteral<T>;
 
 }  // namespace hyrise

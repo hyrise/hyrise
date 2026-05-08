@@ -47,14 +47,6 @@ template <typename Node>
 void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeGetChildrenFn<Node>& get_children_fn,
                                   const NodePrintFn<Node>& print_node_fn, std::ostream& stream = std::cout);
 
-extern template void print_directed_acyclic_graph<const AbstractLQPNode>(
-    const std::shared_ptr<const AbstractLQPNode>& node, const NodeGetChildrenFn<const AbstractLQPNode>& get_children_fn,
-    const NodePrintFn<const AbstractLQPNode>& print_node_fn, std::ostream& stream);
-extern template void print_directed_acyclic_graph<const AbstractOperator>(
-    const std::shared_ptr<const AbstractOperator>& node,
-    const NodeGetChildrenFn<const AbstractOperator>& get_children_fn,
-    const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
-
 /**
  * Utility for formatted printing of table key constraints.
  *

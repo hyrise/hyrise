@@ -257,8 +257,4 @@ class TableBuilder {
   }
 };
 
-template <typename... DataTypes, typename Names>
-TableBuilder(ChunkOffset, const boost::hana::tuple<DataTypes...>&, const Names&, ChunkOffset)
-    -> TableBuilder<DataTypes...>;
-
 }  // namespace hyrise

@@ -272,6 +272,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
         break;
       case DataType::Null:
         Fail("SQLiteWrapper: column type not supported.");
+        break;
     }
   }
 
@@ -341,8 +342,8 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
                   sqlite3_bind_int64(insert_into_statement, sqlite_column_id, boost::get<int64_t>(value));
               break;
             case DataType::Float:
-              sqlite3_bind_return_code = sqlite3_bind_double(insert_into_statement, sqlite_column_id,
-                                                             static_cast<double>(boost::get<float>(value)));
+              sqlite3_bind_return_code =
+                  sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<float>(value));
               break;
             case DataType::Double:
               sqlite3_bind_return_code =
@@ -356,6 +357,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
             } break;
             case DataType::Null:
               Fail("SQLiteWrapper: column type not supported.");
+              break;
           }
         }
 

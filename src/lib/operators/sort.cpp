@@ -282,7 +282,7 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
   return std::make_shared<Sort>(copied_left_input, _sort_definitions, _output_chunk_size, _force_materialization);
 }
 
-void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
+void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   const auto& input_table = left_input_table();

@@ -34,7 +34,7 @@ class CreateTable : public AbstractReadWriteOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   // Commit happens in Insert operator
-  void _on_commit_records(const CommitID /*cid*/) override {}
+  void _on_commit_records(const CommitID cid) override {}
 
   // Rollback happens in Insert operator
   void _on_rollback_records() override {}

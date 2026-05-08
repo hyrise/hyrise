@@ -32,9 +32,9 @@ using MetaTables = std::vector<MetaTable>;
 using MetaTableNames = std::vector<std::string>;
 
 #ifdef __GLIBCXX__
-static constexpr auto lib_suffix = "_libstdcpp";
+auto lib_suffix = "_libstdcpp";
 #elif _LIBCPP_VERSION
-static constexpr auto lib_suffix = "_libcpp";
+auto lib_suffix = "_libcpp";
 #else
 static_assert(false, "Unknown c++ library");
 #endif

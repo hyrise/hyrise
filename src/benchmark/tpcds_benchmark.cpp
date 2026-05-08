@@ -17,6 +17,8 @@
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
+using namespace hyrise;
+
 namespace {
 
 std::unordered_set<std::string> filename_excludelist() {
@@ -41,8 +43,6 @@ std::unordered_set<std::string> filename_excludelist() {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  using namespace hyrise;
-
   auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-DS Benchmark");
 
   // clang-format off

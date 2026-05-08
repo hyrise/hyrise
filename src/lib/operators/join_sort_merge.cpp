@@ -68,7 +68,7 @@ std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
                                          _secondary_predicates);
 }
 
-void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
+void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   Assert(supports({_mode, _primary_predicate.predicate_condition,
@@ -587,6 +587,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           right_run_start = right_run_end;
           right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
           break;
+        default:
+          throw std::logic_error("Unknown CompareResult.");
       }
     }
 

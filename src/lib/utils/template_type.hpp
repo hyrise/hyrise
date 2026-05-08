@@ -20,6 +20,6 @@ struct TemplateType {
  */
 template <template <typename...> typename TemplateT>
 // NOLINTNEXTLINE(readability-identifier-naming)
-inline constexpr auto template_c = hana::type_c<TemplateType<TemplateT>>;
+constexpr auto template_c = hana::type_c<TemplateType<TemplateT>>;
 
 }  // namespace hyrise

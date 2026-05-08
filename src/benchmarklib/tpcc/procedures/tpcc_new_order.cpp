@@ -64,7 +64,7 @@ bool TPCCNewOrder::_on_execute() {
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
 
   const auto w_tax = *warehouse_table->get_value<float>(ColumnID{0}, 0);
-  Assert(w_tax >= 0 && w_tax <= float{.2f}, "Invalid warehouse tax rate encountered.");
+  Assert(w_tax >= 0 && w_tax <= .2, "Invalid warehouse tax rate encountered.");
 
   // Find the district tax rate and the next order ID.
   const auto district_select_pair =
@@ -73,7 +73,7 @@ bool TPCCNewOrder::_on_execute() {
   const auto& district_table = district_select_pair.second;
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
   const auto d_tax = *district_table->get_value<float>(ColumnID{0}, 0);
-  Assert(d_tax >= 0 && d_tax <= float{.2f}, "Invalid warehouse tax rate encountered.");
+  Assert(d_tax >= 0 && d_tax <= .2, "Invalid warehouse tax rate encountered.");
   const auto d_next_o_id = *district_table->get_value<int32_t>(ColumnID{1}, 0);
   o_id = d_next_o_id;
 
@@ -96,7 +96,7 @@ bool TPCCNewOrder::_on_execute() {
   const auto& customer_table = customer_select_pair.second;
   Assert(customer_table && customer_table->row_count() == 1, "Did not find customer (or found more than one).");
   const auto c_discount = *customer_table->get_value<float>(ColumnID{0}, 0);
-  Assert(c_discount >= 0 && c_discount <= float{.5f}, "Invalid customer discount rate encountered.");
+  Assert(c_discount >= 0 && c_discount <= .5, "Invalid customer discount rate encountered.");
   const auto c_credit = *customer_table->get_value<pmr_string>(ColumnID{2}, 0);
   Assert(c_credit == "GC" || c_credit == "BC", "Invalid customer credit encountered.");
 

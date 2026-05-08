@@ -120,7 +120,7 @@ template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Count> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, const size_t /*aggregate_count*/, AggregateType& /*accumulator*/) {};
+    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
   }
 };
 
@@ -128,7 +128,7 @@ template <typename ColumnDataType, typename AggregateType>
 class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::CountDistinct> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, const size_t /*aggregate_count*/, AggregateType& /*accumulator*/) {};
+    return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
   }
 };
 

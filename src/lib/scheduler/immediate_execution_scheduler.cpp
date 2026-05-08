@@ -41,7 +41,7 @@ void ImmediateExecutionScheduler::_schedule(std::shared_ptr<AbstractTask> task, 
   Assert(task->is_done(), "Task should have been executed by now.");
 }
 
-void ImmediateExecutionScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& /*tasks*/) const {
+void ImmediateExecutionScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   // Nothing to do in this scheduler.
 }
 
