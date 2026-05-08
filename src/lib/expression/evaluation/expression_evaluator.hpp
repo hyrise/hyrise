@@ -194,7 +194,6 @@ class ExpressionEvaluator final {
   ConstExpressionUnorderedMap<std::shared_ptr<BaseExpressionResult>> _cached_expression_results;
 };
 
-// We explicitly declare these template functions because clang-12(+) does not instantiate them for us.
 extern template std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_expression_to_result<int32_t>(
     const AbstractExpression& expression);
 extern template std::shared_ptr<ExpressionResult<int64_t>> ExpressionEvaluator::evaluate_expression_to_result<int64_t>(
