@@ -190,12 +190,14 @@ def profile(bolt_instrumented=False, pgo_instrumented=False):
         if bolt_instrumented:
             run_in_build_folder(f"mv /tmp/prof.fdata {benchmark}.fdata")
 
+        if pgo_instrumented:
+            run_in_hyrise_folder(f"mv *.profraw {build_folder}/{benchmark}.profraw")
+
     if bolt_instrumented:
         run_in_build_folder("merge-fdata *.fdata > bolt.fdata")
 
     if pgo_instrumented:
-        run_in_hyrise_folder(f"mv *.profraw {build_folder}/libhyrise.profraw")
-        run_in_build_folder("llvm-profdata merge -output libhyrise.profdata libhyrise.profraw")
+        run_in_build_folder("llvm-profdata merge -output libhyrise.profdata *.profraw")
 
 
 def cleanup():
