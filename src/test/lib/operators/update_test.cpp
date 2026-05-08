@@ -2,27 +2,29 @@
 #include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "statistics/table_statistics.hpp"
-#include "storage/table.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorsUpdateTest : public BaseTest {
  public:
   static void SetUpTestCase() {
-    column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-    column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
+    column_a = pqp_column_(ColumnID{0}, DataType::Int, "a");
+    column_b = pqp_column_(ColumnID{1}, DataType::Float, "b");
   }
 
   void SetUp() override {
@@ -64,6 +66,11 @@ class OperatorsUpdateTest : public BaseTest {
   std::string table_to_update_name{"updateTestTable"};
   inline static std::shared_ptr<AbstractExpression> column_a, column_b;
 };
+
+TEST_F(OperatorsUpdateTest, OperatorName) {
+  const auto update = std::make_shared<Update>("", nullptr, nullptr);
+  EXPECT_EQ(update->name(), "Update");
+}
 
 TEST_F(OperatorsUpdateTest, SelfOverride) {
   helper(greater_than_(column_a, 0), expression_vector(column_a, column_b), "resources/test_data/tbl/int_float2.tbl");

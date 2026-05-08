@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -112,10 +113,12 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   /**
    * Init the virtual pos lists
    */
+  // NOLINTBEGIN(modernize-use-ranges): We need LLVM 21's libc++ for std::ranges::iota.
   auto virtual_pos_list_left = VirtualPosList(left_in_table.row_count(), 0);
   std::iota(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), 0);
   auto virtual_pos_list_right = VirtualPosList(right_input_table()->row_count(), 0);
   std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0);
+  // NOLINTEND(modernize-use-ranges)
 
   /**
    * Sort the virtual pos lists so that they bring the rows in their respective ReferenceMatrix into order.
@@ -345,15 +348,13 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
           }
 
           Assert(ref_segment->referenced_table() == _referenced_tables[next_cluster_id - 1],
-                 "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
-                     ") "
-                     "does not reference the same table as the segment at the same index in the first chunk "
-                     "of the left input table does.");
+                 std::format("ReferenceSegment (Chunk: {}, Column: {}) does not reference the same table as the "
+                             "segment at the same index in the first chunk of the left input table does.",
+                             chunk_id.t, column_id.t));
           Assert(ref_segment->referenced_column_id() == _referenced_column_ids[column_id],
-                 "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
-                     ")"
-                     " does not reference the same column as the segment at the same index in the first chunk "
-                     "of the left input table does.");
+                 std::format("ReferenceSegment (Chunk: {}, Column: {}) does not reference the same column as the "
+                             "segment at the same index in the first chunk of the left input table does.",
+                             chunk_id.t, column_id.t));
           Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster.");
         }
       }

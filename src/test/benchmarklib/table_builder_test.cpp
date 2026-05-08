@@ -1,6 +1,14 @@
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <vector>
+
 #include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "storage/table.hpp"
 #include "table_builder.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

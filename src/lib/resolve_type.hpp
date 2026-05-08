@@ -110,8 +110,8 @@ using ConstOutIfConstIn = std::conditional_t<std::is_const_v<In>, const Out, Out
 
 template <typename ColumnDataType, typename AbstractSegmentType, typename Functor>
 // AbstractSegmentType allows segment to be const and non-const
-std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSegmentType>>>
-/*void*/ resolve_segment_type(AbstractSegmentType& segment, const Functor& functor) {
+  requires(std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSegmentType>>)
+void resolve_segment_type(AbstractSegmentType& segment, const Functor& functor) {
   using ValueSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, ValueSegment<ColumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, ReferenceSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, AbstractEncodedSegment>*;
@@ -130,7 +130,7 @@ std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSeg
 // Used as a template parameter that is passed whenever we conditionally erase the type of the position list. This is
 // done to reduce the compile time at the cost of the runtime performance. We do not re-use EraseTypes here, as it
 // might confuse readers who could think that the setting erases all types within the functor.
-enum class ErasePosListType { OnlyInDebugBuild, Always };
+enum class ErasePosListType : uint8_t { OnlyInDebugBuild, Always };
 
 template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
 void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped_pos_list, const Functor& functor) {
@@ -177,8 +177,8 @@ void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped
  */
 template <typename Functor,
           typename AbstractSegmentType>  // AbstractSegmentType allows segment to be const and non-const
-std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSegmentType>>>
-/*void*/ resolve_data_and_segment_type(AbstractSegmentType& segment, const Functor& functor) {
+  requires(std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSegmentType>>)
+void resolve_data_and_segment_type(AbstractSegmentType& segment, const Functor& functor) {
   resolve_data_type(segment.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 

@@ -1,3 +1,7 @@
+#include <memory>
+#include <optional>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -8,7 +12,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class ProjectionNodeTest : public BaseTest {
  protected:

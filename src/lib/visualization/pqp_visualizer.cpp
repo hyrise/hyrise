@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <format>
 #include <locale>
 #include <memory>
 #include <ratio>
@@ -149,8 +150,8 @@ void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOp
     _build_subtree(pqp_subquery_expression->pqp, visualized_ops);
 
     auto edge_info = _default_edge;
-    auto correlated_str = std::string(pqp_subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
-    edge_info.label = correlated_str + " subquery";
+    edge_info.label =
+        std::format("{} subquery", pqp_subquery_expression->is_correlated() ? "correlated" : "uncorrelated");
     edge_info.style = "dashed";
     _add_edge(pqp_subquery_expression->pqp, op, edge_info);
 
@@ -193,7 +194,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   const auto& performance_data = *op->performance_data;
   if (op->executed()) {
     auto total = performance_data.walltime;
-    label += "\n\n" + format_duration(total);
+    label += std::format("\n\n{}", format_duration(total));
     info.pen_width = static_cast<double>(total.count());
 
     auto operator_performance_data_stream = std::stringstream{};

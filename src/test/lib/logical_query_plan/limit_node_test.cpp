@@ -1,11 +1,16 @@
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class LimitNodeTest : public BaseTest {
  protected:

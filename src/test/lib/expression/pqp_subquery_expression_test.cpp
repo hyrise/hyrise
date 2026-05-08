@@ -1,5 +1,9 @@
+#include <memory>
 #include <regex>
+#include <string>
+#include <utility>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -7,6 +11,7 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
@@ -16,8 +21,8 @@
 
 namespace hyrise {
 
-using namespace std::string_literals;   // NOLINT(build/namespaces)
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace std::string_literals;
+using namespace expression_functional;
 
 class PQPSubqueryExpressionTest : public BaseTest {
  public:
@@ -47,7 +52,7 @@ class PQPSubqueryExpressionTest : public BaseTest {
 
       _parameters = {std::make_pair(ParameterID{0}, ColumnID{0})};
       _pqp_subquery_expression_with_param =
-          std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Int, false, _parameters);
+          std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Int, _parameters);
     }
   }
 
@@ -70,13 +75,13 @@ TEST_F(PQPSubqueryExpressionTest, DeepEquals) {
   // different parameters:
   const auto parameters_b = PQPSubqueryExpression::Parameters{std::make_pair(ParameterID{0}, ColumnID{2})};
   const auto subquery_different_parameter =
-      std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Int, false, parameters_b);
+      std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Int, parameters_b);
   EXPECT_NE(*_pqp_subquery_expression_with_param, *subquery_different_parameter);
 
   // different PQP:
   const auto pqp_without_limit = _pqp_with_param->mutable_left_input();
   const auto subquery_different_lqp =
-      std::make_shared<PQPSubqueryExpression>(pqp_without_limit, DataType::Int, false, _parameters);
+      std::make_shared<PQPSubqueryExpression>(pqp_without_limit, DataType::Int, _parameters);
   EXPECT_NE(*_pqp_subquery_expression_with_param, *subquery_different_lqp);
 }
 
@@ -86,7 +91,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
       std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression_with_param->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_with_param_copy);
 
-  ASSERT_EQ(_pqp_subquery_expression_with_param_copy->parameters.size(), 1u);
+  ASSERT_EQ(_pqp_subquery_expression_with_param_copy->parameters.size(), 1);
   EXPECT_EQ(_pqp_subquery_expression_with_param_copy->parameters[0].first, ParameterID{0});
   EXPECT_EQ(_pqp_subquery_expression_with_param_copy->parameters[0].second, ColumnID{0});
   EXPECT_NE(_pqp_subquery_expression_with_param_copy->pqp, _pqp_subquery_expression_with_param->pqp);
@@ -97,7 +102,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
       std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_copy);
 
-  ASSERT_EQ(_pqp_subquery_expression_copy->parameters.size(), 0u);
+  ASSERT_TRUE(_pqp_subquery_expression_copy->parameters.empty());
   EXPECT_NE(_pqp_subquery_expression_copy->pqp, _pqp_subquery_expression_with_param->pqp);
   EXPECT_EQ(_pqp_subquery_expression_copy->pqp->type(), OperatorType::TableScan);
 }
@@ -128,8 +133,7 @@ TEST_F(PQPSubqueryExpressionTest, DataType) {
   // Subqueries returning tables don't have a data type
   EXPECT_ANY_THROW(_pqp_subquery_expression->data_type());
   EXPECT_EQ(_pqp_subquery_expression_with_param->data_type(), DataType::Int);
-  const auto subquery_float =
-      std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Float, true, _parameters);
+  const auto subquery_float = std::make_shared<PQPSubqueryExpression>(_pqp_with_param, DataType::Float, _parameters);
   EXPECT_EQ(subquery_float->data_type(), DataType::Float);
 }
 

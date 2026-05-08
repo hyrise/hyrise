@@ -1,8 +1,7 @@
 #include <memory>
 #include <string>
-#include <vector>
 
-#include "expression/abstract_expression.hpp"
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -10,15 +9,14 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/between_composition_rule.hpp"
-#include "statistics/table_statistics.hpp"
 #include "strategy_base_test.hpp"
-#include "utils/assert.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class BetweenCompositionRuleTest : public StrategyBaseTest {
  protected:

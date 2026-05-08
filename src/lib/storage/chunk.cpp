@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -63,9 +63,9 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
-  DebugAssert((_segments.size() == values.size()),
-              ("append: number of segments (" + std::to_string(_segments.size()) + ") does not match value list (" +
-               std::to_string(values.size()) + ")."));
+  DebugAssert(
+      (_segments.size() == values.size()),
+      std::format("Number of segments ({}) does not match size of value list ({}).", _segments.size(), values.size()));
 
   auto segment_it = _segments.cbegin();
   auto value_it = values.begin();
@@ -160,7 +160,7 @@ void Chunk::remove_index(const std::shared_ptr<AbstractChunkIndex>& index) {
   _indexes.erase(it);
 }
 
-bool Chunk::references_exactly_one_table() const {
+bool Chunk::segments_share_table_and_positions() const {
   if (column_count() == 0) {
     return false;
   }
@@ -183,6 +183,15 @@ bool Chunk::references_exactly_one_table() const {
     }
 
     if (first_pos_list != segment->pos_list()) {
+      if constexpr (HYRISE_DEBUG) {
+        const auto segment_pos_list = segment->pos_list();
+        auto position_lists_are_equal = true;
+        for (auto offset = ChunkOffset{0}; offset < first_pos_list->size(); ++offset) {
+          position_lists_are_equal =
+              position_lists_are_equal && (*first_pos_list)[offset] == (*segment_pos_list)[offset];
+        }
+        DebugAssert(!position_lists_are_equal, "Expected two different position lists.");
+      }
       return false;
     }
   }
@@ -228,9 +237,8 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
   if constexpr (HYRISE_DEBUG) {
     const auto number_of_columns = static_cast<ColumnID>(column_count());
     for (const auto& column_id : column_ids) {
-      Assert(column_id < number_of_columns, "ColumnID " + std::to_string(column_id) +
-                                                " exceeds the maximum column index which is " +
-                                                std::to_string(column_count() - 1) + ".");
+      Assert(column_id < number_of_columns, std::format("ColumnID {} exceeds the maximum column index, which is {}.",
+                                                        column_id.t, column_count() - 1));
     }
   }
 

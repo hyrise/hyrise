@@ -36,6 +36,7 @@ decltype(auto) erase_type_from_iterable_if_debug(const UnerasedIterable& iterabl
  * @{
  */
 
+// NOLINTBEGIN(readability-identifier-naming)
 template <typename T>
 struct is_any_segment_iterable : std::false_type {};
 
@@ -44,6 +45,7 @@ struct is_any_segment_iterable<AnySegmentIterable<T>> : std::true_type {};
 
 template <typename UnerasedIterable>
 constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<UnerasedIterable>::value;
+// NOLINTEND(readability-identifier-naming)
 /**@}*/
 
 template <typename ValueType>
@@ -123,9 +125,8 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
     static_assert(!is_any_segment_iterable_v<UnerasedIterable>, "Iterables should not be wrapped twice.");
   }
 
-  AnySegmentIterable(const AnySegmentIterable&) = default;
-  AnySegmentIterable(AnySegmentIterable&&) noexcept = default;
-
+  // Our function naming for iterables is not correct. `_on_with` is a public function and should not start with `_`.
+  // NOLINTBEGIN(readability-identifier-naming)
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     const auto functor_wrapper = AnySegmentIterableFunctorWrapper<T>{functor};
@@ -141,6 +142,8 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
   size_t _on_size() const {
     return _iterable_wrapper->size();
   }
+
+  // NOLINTEND(readability-identifier-naming)
 
  private:
   std::shared_ptr<BaseAnySegmentIterableWrapper<ValueType>> _iterable_wrapper;

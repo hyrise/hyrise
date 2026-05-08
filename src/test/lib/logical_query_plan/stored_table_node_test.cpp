@@ -1,8 +1,11 @@
+#include <memory>
+#include <stdexcept>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -15,12 +18,14 @@
 #include "storage/encoding_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class StoredTableNodeTest : public BaseTest {
  protected:
@@ -212,43 +217,43 @@ TEST_F(StoredTableNodeTest, Copy) {
 }
 
 TEST_F(StoredTableNodeTest, NodeExpressions) {
-  ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u);
+  ASSERT_EQ(_stored_table_node->node_expressions.size(), 0);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneFirstColumn) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
-  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(1u);
+  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(1);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // column with ColumnID{0} was pruned, therefore the column has to be left shifted
   expected_statistics.column_ids[0] -= 1;
 
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0u), expected_statistics);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0), expected_statistics);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneSecondColumn) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
-  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(0u);
+  auto expected_statistics = _stored_table_node->chunk_indexes_statistics().at(0);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{1}});
 
   // column with ColumnID{1} was pruned, so ColumnID{0} should be untouched
 
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0u), expected_statistics);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 1);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().at(0), expected_statistics);
 }
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneBothColumns) {
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 4);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
 
   // All indexed columns were pruned, therefore the index statistics should be empty
-  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 0u);
+  EXPECT_EQ(_stored_table_node->chunk_indexes_statistics().size(), 0);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {

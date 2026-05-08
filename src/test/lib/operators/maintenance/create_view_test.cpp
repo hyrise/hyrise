@@ -1,13 +1,16 @@
 #include <memory>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/maintenance/create_view.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
-#include "utils/assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
