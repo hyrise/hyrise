@@ -81,4 +81,8 @@ class PostgresProtocolHandler {
   ReadBuffer<SocketType> _read_buffer;
   WriteBuffer<SocketType> _write_buffer;
 };
+
+extern template class PostgresProtocolHandler<Socket>;
+extern template class PostgresProtocolHandler<boost::asio::posix::stream_descriptor>;
+
 }  // namespace hyrise

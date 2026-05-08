@@ -426,7 +426,7 @@ AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_
 }
 
 void AbstractTableGenerator::_add_constraints(
-    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
+    std::unordered_map<std::string, BenchmarkTableInfo>& /*table_info_by_name*/) const {}
 
 bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>& table,
                                                    const SortColumnDefinition& sort_column) {

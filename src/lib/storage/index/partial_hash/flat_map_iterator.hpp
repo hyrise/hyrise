@@ -5,6 +5,7 @@
 
 #include "tsl/sparse_map.h"
 
+#include "all_type_variant.hpp"
 #include "flat_map_iterator_impl.hpp"
 #include "types.hpp"
 
@@ -93,5 +94,7 @@ class CreateFlatMapIterator {
   static FlatMapIterator from_map_iterator(
       const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
 };
+
+EXPLICITLY_DECLARE_DATA_TYPES(CreateFlatMapIterator);
 
 }  // namespace hyrise

@@ -565,7 +565,7 @@ std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
   return std::make_shared<AggregateHash>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
-void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 void AggregateHash::_on_cleanup() {
   _contexts_per_column.clear();
