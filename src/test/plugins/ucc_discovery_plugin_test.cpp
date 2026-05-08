@@ -198,7 +198,7 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
     const auto& ucc_candidates = _identify_ucc_candidates();
     SCOPED_TRACE("for JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
 
-    // For semi joins, the plugin should only look at the right join input.
+    // For semi-joins, the plugin should only look at the right join input.
     const auto expected_candidate_count = join_mode == JoinMode::Inner ? 4 : 2;
     EXPECT_EQ(ucc_candidates.size(), expected_candidate_count);
 

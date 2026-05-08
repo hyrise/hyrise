@@ -290,10 +290,10 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
 }
 
 /**
- * For semi joins, the semi relation (which is filtered and returned in a semi join) is passed as the left input and
+ * For semi-joins, the semi relation (which is filtered and returned in a semi-join) is passed as the left input and
  * the other relation (which is solely checked for value existence and then discarded) is passed as the right side.
  *
- * For hash-based semi joins, inputs are switched as the left relation can probe the (later discarded) right relation.
+ * For hash-based semi-joins, inputs are switched as the left relation can probe the (later discarded) right relation.
  * In case the left relation is significantly smaller, the hash join does not perform optimally due to the switching.
  */
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationSmaller)(benchmark::State& state) {

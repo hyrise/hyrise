@@ -457,7 +457,7 @@ TEST_F(CardinalityEstimatorTest, JoinSemiHistograms) {
 }
 
 TEST_F(CardinalityEstimatorTest, JoinAnti) {
-  // Test that anti joins are estimated return the left input statistics (for now)
+  // Test that anti-joins are estimated return the left input statistics (for now)
 
   const auto anti_null_as_false_join_lqp = JoinNode::make(JoinMode::AntiNullAsFalse, equals_(a_a, b_a), node_a, node_b);
   EXPECT_EQ(estimator.estimate_statistics(anti_null_as_false_join_lqp), node_a->table_statistics());

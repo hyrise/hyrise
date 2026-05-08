@@ -715,7 +715,7 @@ TEST_F(JoinNodeTest, OrderDependenciesSemiAndAntiJoin) {
   EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
   EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
 
-  // Semi and anti joins should forward ODs from left input.
+  // Semi- and anti-joins should forward ODs from left input.
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     const auto& order_dependencies = join_node->order_dependencies();
@@ -902,7 +902,7 @@ TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {
   const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
   semi_reduction_node->mark_as_semi_reduction(join_node);
 
-  // The semi join reduction node should use the stored weak pointer to create and return a shared pointer to the
+  // The semi-join reduction node should use the stored weak pointer to create and return a shared pointer to the
   // reduced join.
   EXPECT_EQ(semi_reduction_node->get_or_find_reduced_join_node(), join_node);
 
@@ -939,7 +939,7 @@ TEST_F(JoinNodeTest, GetOrFindReducedJoinNodeWithMultiplePredicates) {
   const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
   semi_reduction_node->mark_as_semi_reduction(join_node);
 
-  // The semi join reduction node should use the stored weak pointer to create and return a shared pointer to the
+  // The semi-join reduction node should use the stored weak pointer to create and return a shared pointer to the
   // reduced join.
   EXPECT_EQ(semi_reduction_node->get_or_find_reduced_join_node(), join_node);
 
