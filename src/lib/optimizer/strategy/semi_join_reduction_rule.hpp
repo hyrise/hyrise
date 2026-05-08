@@ -50,7 +50,7 @@ class SemiJoinReductionRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  // Defines the minimum selectivity for a semi-join reduction to be added. For a candidate location in the LQP with an
+  // Defines the maximum selectivity for a semi-join reduction to be added. For a candidate location in the LQP with an
   // input cardinality `i`, the output cardinality of the semi-join has to be lower than `i * MAXIMUM_SELECTIVITY`.
   constexpr static auto MAXIMUM_SELECTIVITY = .25;
 
