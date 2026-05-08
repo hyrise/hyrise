@@ -44,7 +44,7 @@ template <typename T>
 struct is_any_segment_iterable<AnySegmentIterable<T>> : std::true_type {};
 
 template <typename UnerasedIterable>
-constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<UnerasedIterable>::value;
+inline constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<UnerasedIterable>::value;
 // NOLINTEND(readability-identifier-naming)
 /**@}*/
 
@@ -179,6 +179,8 @@ class CreateAnySegmentIterable {
  public:
   static AnySegmentIterable<T> create(const AbstractSegment& abstract_segment);
 };
+
+EXPLICITLY_DECLARE_DATA_TYPES(CreateAnySegmentIterable);
 }  // namespace detail
 
 template <typename T>

@@ -33,4 +33,10 @@ template <bool include_null_row_ids>
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,
                                              size_t number_of_chunks);
 
+extern template PosListsByChunkID split_pos_list_by_chunk_id<true>(
+    const std::shared_ptr<const AbstractPosList>& input_pos_list, size_t number_of_chunks);
+
+extern template PosListsByChunkID split_pos_list_by_chunk_id<false>(
+    const std::shared_ptr<const AbstractPosList>& input_pos_list, size_t number_of_chunks);
+
 }  // namespace hyrise

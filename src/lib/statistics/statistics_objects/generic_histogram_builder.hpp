@@ -40,6 +40,9 @@ class GenericHistogramBuilder {
   std::vector<HistogramCountType> _bin_distinct_counts;
 };
 
+template <typename T>
+explicit GenericHistogramBuilder(const size_t, const HistogramDomain<T>&) -> GenericHistogramBuilder<T>;
+
 EXPLICITLY_DECLARE_DATA_TYPES(GenericHistogramBuilder);
 
 }  // namespace hyrise

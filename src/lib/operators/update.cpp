@@ -66,6 +66,6 @@ std::shared_ptr<AbstractOperator> Update::_on_deep_copy(
   return std::make_shared<Update>(_table_to_update_name, copied_left_input, copied_right_input);
 }
 
-void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) {}
 
 }  // namespace hyrise

@@ -23,11 +23,12 @@ std::optional<float> next_float_towards(const double value, const double towards
 
   const auto casted_value = static_cast<float>(value);
 
-  if ((casted_value < value && towards < value) || (casted_value > value && towards > value)) {
+  if ((static_cast<double>(casted_value) < value && towards < value) ||
+      (static_cast<double>(casted_value) > value && towards > value)) {
     return casted_value;
   }
 
-  const float next = std::nexttowardf(casted_value, towards);
+  const float next = std::nexttowardf(casted_value, static_cast<long double>(towards));
   // Maybe someone smarter understands all the edge cases of floats. I'd rather be on the safe side.
   if (!std::isfinite(next)) {
     return std::nullopt;
