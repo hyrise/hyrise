@@ -12,15 +12,16 @@ namespace hyrise {
 // whereas the iterator functions should start with `_` as they are private (but can't, because boost requires them).
 // NOLINTBEGIN(readability-identifier-naming)
 
-using ValueType = bool;
-using NullValueVector = pmr_vector<bool>;
-
 /**
  * This is an iterable for the null value vector used by, e.g, value, LZ4, or frame of reference segments.
  * It is used for example in the IS NULL implementation of the table scan.
  */
 class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueVectorIterable> {
  public:
+  using ValueType = bool;
+  using NullValueIterator = pmr_vector<bool>::const_iterator;
+  using NullValueVector = pmr_vector<bool>;
+
   explicit NullValueVectorIterable(const pmr_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
@@ -42,9 +43,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
   class Iterator : public AbstractSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
-    using ValueType = bool;
-    using NullValueIterator = pmr_vector<bool>::const_iterator;
-
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
