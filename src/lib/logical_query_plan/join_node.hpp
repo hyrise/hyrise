@@ -31,20 +31,20 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * (1) Forwards left input node's unique column combinations for JoinMode::Semi- and JoinMode::AntiNullAsTrue/False.
-   * (2) Discards all input UCCs for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins.
-   * (3) Forwards selected input UCCs for Inner and Outer Equi-Joins based on join column uniqueness.
+   * (1) Forwards left input node's unique column combinations for JoinMode::Semi and JoinMode::AntiNullAsTrue/False.
+   * (2) Discards all input UCCs for cross joins, multi-predicate joins and non-equi joins.
+   * (3) Forwards selected input UCCs for inner and outer equi joins based on join column uniqueness.
    */
   UniqueColumnCombinations unique_column_combinations() const override;
 
   OrderDependencies order_dependencies() const override;
 
   /**
-   * (a) Semi- & Anti-Joins:
-   *      - Forwards left input node's non-trivial FDs
-   * (b) Cross-Joins:
+   * (a) Semi-\anti-joins:
+   *      - Forwards left input node's non-trivial FDs.
+   * (b) Cross joins:
    *      - Forwards non-trivial FDs from both input nodes.
-   * (c) Inner-/Outer-Joins:
+   * (c) Inner/outer joins:
    *      - Forwards non-trivial FDs from both input nodes whose determinant expressions stay non-nullable.
    *      - Turns derived, trivial FDs from the left and/or right input node into non-trivial FDs if the underlying
    *        unique column combinations do not survive the join.

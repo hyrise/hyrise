@@ -55,7 +55,7 @@ void reorder_join_predicates_recursively(const std::shared_ptr<AbstractLQPNode>&
     return predicate_cardinalities[lhs] < predicate_cardinalities[rhs];
   });
 
-  // Semi- and anti-joins are currently only implemented by hash joins. These need an equals comparison as the primary
+  // Semi-/anti-joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. Check that one exists and move it to the front.
   if (is_semi_or_anti_join(join_mode)) {
     auto first_equals_predicate = std::ranges::find_if(join_predicates, [](const auto& expression) {
@@ -67,7 +67,7 @@ void reorder_join_predicates_recursively(const std::shared_ptr<AbstractLQPNode>&
 
     // SubqueryToJoinRule and JoinToSemiJoinRule should have taken care of that, so this is really just a safeguard.
     Assert(first_equals_predicate != join_predicates.end(),
-           "Semi/anti-joins require at least one equals predicate at the moment.");
+           "Semi-/anti-joins require at least one equals predicate at the moment.");
 
     // Shift all predicates before first_equals_predicate back one slot and move first_equals_predicate to the front.
     std::rotate(join_predicates.begin(), first_equals_predicate, first_equals_predicate + 1);
@@ -91,7 +91,7 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(const std::sha
   caching_cardinality_estimator->guarantee_bottom_up_construction(lqp_root);
 
   // In theory, the order of join predicates does not make a difference for cardinality estimation. However, we only use
-  // the first join predicate to estimate cardinalities. To not massively over-estimate (and to push semi/anti-joins as
+  // the first join predicate to estimate cardinalities. To not massively over-estimate (and to push semi-/anti-joins as
   // far as possible), the first join predicate should be the one with the smallest selectivity. Because estimations for
   // join predicates further up in the plan depend on the estimates of the nodes below, we must reorder join predicates
   // bottom-up.

@@ -86,7 +86,7 @@ UniqueColumnCombinations JoinNode::unique_column_combinations() const {
     return UniqueColumnCombinations{};
   }
 
-  // Semi- and Anti-Joins act as mere filters for input_left(). Thus, existing unique column combinations remain valid.
+  // Semi-/anti-joins act as mere filters for input_left(). Thus, existing unique column combinations remain valid.
   if (is_semi_or_anti_join(join_mode)) {
     return _forward_left_unique_column_combinations();
   }
@@ -206,7 +206,7 @@ OrderDependencies JoinNode::order_dependencies() const {
 
 FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
   /**
-   * In the case of Semi- & Anti-Joins, this node acts as a filter for the left input node. The number of output
+   * In the case of semi-/anti-joins, this node acts as a filter for the left input node. The number of output
    * expressions does not change and therefore we should forward non-trivial FDs as follows:
    */
   if (is_semi_or_anti_join(join_mode)) {

@@ -1011,7 +1011,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
 }
 
 TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
-  // Multi-predicate semi- and anti-joins cannot be executed efficiently, so we do not treat them as predicates.
+  // Multi-predicate semi-/anti-joins cannot be executed efficiently, so we do not treat them as predicates.
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     // clang-format off
     _lqp =

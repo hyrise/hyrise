@@ -32,7 +32,7 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
-      // We don't rewrite semi- and anti-joins.
+      // We don't rewrite semi-/anti-joins.
       if (join_node->join_mode != JoinMode::Inner) {
         return LQPVisitation::VisitInputs;
       }

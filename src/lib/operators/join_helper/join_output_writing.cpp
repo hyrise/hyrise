@@ -274,7 +274,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
     if (allow_partition_merge) {
       // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same size
-      // or are empty (in case of semi/anti-joins).
+      // or are empty (in case of semi-/anti-joins).
       while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
              right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
         // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
