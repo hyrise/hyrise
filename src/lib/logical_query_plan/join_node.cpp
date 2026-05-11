@@ -81,7 +81,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
 }
 
 UniqueColumnCombinations JoinNode::unique_column_combinations() const {
-  // We cannot guarantee any UCCs for Cross-Joins.
+  // We cannot guarantee any UCCs for cross joins.
   if (join_mode == JoinMode::Cross) {
     return UniqueColumnCombinations{};
   }

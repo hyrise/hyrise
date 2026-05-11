@@ -40,7 +40,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   OrderDependencies order_dependencies() const override;
 
   /**
-   * (a) Semi-\anti-joins:
+   * (a) Semi-/anti-joins:
    *      - Forwards left input node's non-trivial FDs.
    * (b) Cross joins:
    *      - Forwards non-trivial FDs from both input nodes.
