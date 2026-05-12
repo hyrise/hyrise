@@ -29,9 +29,9 @@ struct RadixClusterOutput {
 // Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis of the least
 // significant bits of the values because the values there are much more evenly distributed than for the most
 // significant bits. As a result, equal values always get moved to the same cluster and the clusters are sorted in
-// themselves but not in between the clusters. This approach works for equi-joins, because we are only interested in
-// equality. In the case of a non-equi-joins however, complete sortedness is required, because join matches exist beyond
-// cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi-join.
+// themselves but not in between the clusters. This approach works for equi joins, because we are only interested in
+// equality. In the case of a non-equi joins however, complete sortedness is required, because join matches exist beyond
+// cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi join.
 // General clustering process:
 //  -> Input chunks are materialized and sorted. Every value is stored together with its row id.
 //  -> Then, either radix clustering or range clustering is performed.

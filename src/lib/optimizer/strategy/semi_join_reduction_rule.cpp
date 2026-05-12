@@ -28,7 +28,7 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
                                                               OptimizationContext& optimization_context) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto.");
 
-  // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
+  // Adding semi-joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
   // reductions that we want to add to the plan, write them into semi_join_reductions and actually add them after
   // visit_lqp.
   auto semi_join_reductions =
@@ -47,7 +47,7 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
     }
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
-    // As multi-predicate joins are expensive, we do not want to create semi join reductions that use them. Instead, we
+    // As multi-predicate joins are expensive, we do not want to create semi-join reductions that use them. Instead, we
     // look at each predicate of the join independently. We can do this as a JoinNode's predicates are conjunctive.
     // Disjunctive predicates are currently not supported and if they were, they would be stored in a single
     // join_predicates entry.
@@ -58,7 +58,7 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
         continue;
       }
 
-      // Since semi join reductions might be beneficial for both sides of the join, we create this helper lambda,
+      // Since semi-join reductions might be beneficial for both sides of the join, we create this helper lambda,
       // which can deal with both sides.
       const auto reduce_if_beneficial = [&](const auto side_of_join) {
         auto reduced_node = join_node->input(side_of_join);
@@ -78,14 +78,14 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
         semi_join_reduction_node->set_right_input(nullptr);
         lqp_remove_node(semi_join_reduction_node);
 
-        // While semi join reductions might not be immediately beneficial if the original cardinality is low, remember
+        // While semi-join reductions might not be immediately beneficial if the original cardinality is low, remember
         // that they might be pushed down in the LQP to a point where they are more beneficial (e.g., below an
         // Aggregate).
-        if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
+        if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MAXIMUM_SELECTIVITY) {
           return;
         }
 
-        // For `t1 JOIN t2 on t1.a = t2.a` where a semi join reduction is supposed to be added to t1, `t1.a = t2.a`
+        // For `t1 JOIN t2 on t1.a = t2.a` where a semi-join reduction is supposed to be added to t1, `t1.a = t2.a`
         // is the predicate_expression. The values from t1 are supposed to be filtered by looking at t1.a, which is
         // called the reducer_side_expression.
         const auto& reducer_side_expression =
@@ -95,11 +95,11 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
         DebugAssert(!expression_evaluable_on_lqp(reducer_side_expression, *join_node->input(side_of_join)),
                     "Expected filtered expression to be uniquely evaluable on one side of the join.");
 
-        // Currently, the right input of the semi join reduction (i.e., the reducer node) is the opposite input of the
+        // Currently, the right input of the semi-join reduction (i.e., the reducer node) is the opposite input of the
         // join_node. By walking down that LQP, we might find a suitable reducer node where predicate_expression
         // continues to be evaluable but where the cardinality is lower (mostly, because we moved below a join). Also,
-        // by moving further down in the LQP, we (1) allow the semi join reduction to start earlier in multi-threaded
-        // environments and (2) have a better chance at finding a common reducer node for multiple semi joins,
+        // by moving further down in the LQP, we (1) allow the semi-join reduction to start earlier in multi-threaded
+        // environments and (2) have a better chance at finding a common reducer node for multiple semi-joins,
         // improving the reusability of sub-LQPs.
         while (true) {
           // Independent of the join type of the reducer_node, we can use either side of the join's input as a candidate
@@ -137,8 +137,8 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
         }
 
         if (reducer_node_cardinality > original_cardinality) {
-          // The JoinHash, which is currently used for semi joins is bad at handling cases where the build side is
-          // larger than the probe side. In these cases, do not add a semi join reduction for now.
+          // The JoinHash, which is currently used for semi-joins is bad at handling cases where the build side is
+          // larger than the probe side. In these cases, do not add a semi-join reduction for now.
           return;
         }
 
@@ -146,15 +146,15 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
         semi_join_reductions.emplace_back(join_node, side_of_join, semi_join_reduction_node);
       };
 
-      // Having defined the lambda responsible for conditionally adding a semi join reduction, we now apply it to both
+      // Having defined the lambda responsible for conditionally adding a semi-join reduction, we now apply it to both
       // inputs of the join. For outer joins, we must not filter the side on which tuples survive even without a join
       // partner.
       if (join_node->join_mode != JoinMode::Right && join_node->join_mode != JoinMode::FullOuter) {
         reduce_if_beneficial(LQPInputSide::Right);
       }
 
-      // On the left side we must not create semi join reductions for anti joins as those rely on the very existence of
-      // non-matching values on the right side. Also, we should not create semi join reductions for semi joins as those
+      // On the left side we must not create semi-join reductions for anti-joins as those rely on the very existence of
+      // non-matching values on the right side. Also, we should not create semi-join reductions for semi-joins as those
       // would simply duplicate the original join.
       if (join_node->join_mode != JoinMode::Left && join_node->join_mode != JoinMode::FullOuter &&
           join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse &&

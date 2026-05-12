@@ -32,19 +32,19 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   /**
    * (1) Forwards left input node's unique column combinations for JoinMode::Semi and JoinMode::AntiNullAsTrue/False.
-   * (2) Discards all input UCCs for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins.
-   * (3) Forwards selected input UCCs for Inner and Outer Equi-Joins based on join column uniqueness.
+   * (2) Discards all input UCCs for cross joins, multi-predicate joins and non-equi joins.
+   * (3) Forwards selected input UCCs for inner and outer equi joins based on join column uniqueness.
    */
   UniqueColumnCombinations unique_column_combinations() const override;
 
   OrderDependencies order_dependencies() const override;
 
   /**
-   * (a) Semi- & Anti-Joins:
-   *      - Forwards left input node's non-trivial FDs
-   * (b) Cross-Joins:
+   * (a) Semi-/anti-joins:
+   *      - Forwards left input node's non-trivial FDs.
+   * (b) Cross joins:
    *      - Forwards non-trivial FDs from both input nodes.
-   * (c) Inner-/Outer-Joins:
+   * (c) Inner/outer joins:
    *      - Forwards non-trivial FDs from both input nodes whose determinant expressions stay non-nullable.
    *      - Turns derived, trivial FDs from the left and/or right input node into non-trivial FDs if the underlying
    *        unique column combinations do not survive the join.
@@ -67,7 +67,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * @pre     The SemiJoinReductionRule must have added this JoinNode to the LQP, so that ::is_semi_reduction returns
    *          true.
-   * @returns a shared pointer to the JoinNode for which the semi join reduction was added as a pre-filter.
+   * @returns a shared pointer to the JoinNode for which the semi-join reduction was added as a pre-filter.
    *          If the internal weak pointer to the reduced join is not set or expired, the LQP will be traversed upwards
    *          until the reduced join has been found, otherwise the function fails.
    */
@@ -75,8 +75,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   /**
    * Sets the `is_semi_reduction` property of this JoinNode to true, and stores a weak pointer to the
-   * @param reduced_join which gets pre-filtered by this semi join reduction.
-   * Note: This function is meant to be called by the SemiJoinReductionRule, which adds semi join reductions to LQPs.
+   * @param reduced_join which gets pre-filtered by this semi-join reduction.
+   * Note: This function is meant to be called by the SemiJoinReductionRule, which adds semi-join reductions to LQPs.
    */
   void mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_join);
 
@@ -92,7 +92,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
  protected:
   /**
-   * The following data members are only relevant for semi joins added by the SemiJoinReductionRule. For details,
+   * The following data members are only relevant for semi-joins added by the SemiJoinReductionRule. For details,
    * read the documentation of ::mark_as_semi_reduction and ::get_or_find_reduced_join_node.
    */
   bool _is_semi_reduction = false;

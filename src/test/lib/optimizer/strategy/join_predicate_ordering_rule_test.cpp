@@ -117,7 +117,7 @@ TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
                                 GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 20),
                                 GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 10)});
 
-  // Test that the equals predicate comes first, as semi joins are only supported by hash joins, which require
+  // Test that the equals predicate comes first, as semi-joins are only supported by hash joins, which require
   // their primary predicate to be equal predicates.
   const auto expected_join_predicates =
       expression_vector(equals_(a_y, b_y), greater_than_(a_x, b_x), greater_than_(a_z, b_z));
