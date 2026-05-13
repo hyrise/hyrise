@@ -131,13 +131,13 @@ def build(
     )
     run_in_build_folder(f"{args.build_system} {" ".join(targets)} -j {args.num_cores}")
     if bolt_instrument:
-        run_in_build_folder("mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old")
-        run_in_build_folder("llvm-bolt lib/libhyrise_impl.so.old -instrument -o lib/libhyrise_impl.so")
+        run_in_build_folder("mv lib/libhyrise_impl.so lib/libhyrise_impl_prebolt.so")
+        run_in_build_folder("llvm-bolt lib/libhyrise_impl_prebolt.so -instrument -o lib/libhyrise_impl.so")
     if bolt_optimize:
-        run_in_build_folder("mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old")
+        run_in_build_folder("mv lib/libhyrise_impl.so lib/libhyrise_impl_prebolt.so")
         run_in_build_folder(
             "llvm-bolt",
-            "lib/libhyrise_impl.so.old",
+            "lib/libhyrise_impl_prebolt.so",
             "-o lib/libhyrise_impl.so",
             "--data bolt.fdata",
             "--reorder-blocks=ext-tsp",
@@ -157,12 +157,12 @@ def build(
 # changed, then this will trigger a full rebuild of libhyrise. So this function should only be called by this script,
 # if it can be sure that itself build the proper library and no input files changed.
 def build_with_bolt_from_previous_build(*targets):
-    run_in_build_folder("mv lib/libhyrise_impl.so.old lib/libhyrise_impl.so")
+    run_in_build_folder("mv lib/libhyrise_impl_prebolt.so lib/libhyrise_impl.so")
     run_in_build_folder(f"{args.build_system} {" ".join(targets)} -j {args.num_cores}")
-    run_in_build_folder("mv lib/libhyrise_impl.so lib/libhyrise_impl.so.old")
+    run_in_build_folder("mv lib/libhyrise_impl.so lib/libhyrise_impl_prebolt.so")
     run_in_build_folder(
         "llvm-bolt",
-        "lib/libhyrise_impl.so.old",
+        "lib/libhyrise_impl_prebolt.so",
         "-o lib/libhyrise_impl.so",
         "--data bolt.fdata",
         "--reorder-blocks=ext-tsp",
