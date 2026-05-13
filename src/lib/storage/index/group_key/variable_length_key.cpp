@@ -5,6 +5,7 @@
 #include <memory>
 #include <ostream>
 #include <utility>
+#include <vector>
 
 #include "storage/index/group_key/variable_length_key_base.hpp"
 #include "variable_length_key_proxy.hpp"
@@ -13,13 +14,13 @@
 namespace hyrise {
 
 VariableLengthKey::VariableLengthKey(CompositeKeyLength bytes_per_key)
-    : _owned_data(std::make_unique<VariableLengthKeyWord[]>(bytes_per_key)),  // NOLINT
-      _impl(_owned_data.get(), bytes_per_key) {}
+    : _owned_data(std::make_unique<std::vector<VariableLengthKeyWord>>(bytes_per_key)),
+      _impl(_owned_data->data(), bytes_per_key) {}
 
 VariableLengthKey::VariableLengthKey(const VariableLengthKeyBase& other)
-    : _owned_data(std::make_unique<VariableLengthKeyWord[]>(other._size)),  // NOLINT
-      _impl(_owned_data.get(), other._size) {
-  std::copy(other._data, other._data + other._size, _impl._data);
+    : _owned_data(std::make_unique<std::vector<VariableLengthKeyWord>>(other.size)),
+      _impl(_owned_data->data(), other.size) {
+  std::copy(other.data, other.data + other.size, _impl.data);
 }
 
 VariableLengthKey::VariableLengthKey(const VariableLengthKey& other) : VariableLengthKey(other._impl) {}
@@ -75,7 +76,7 @@ VariableLengthKey& VariableLengthKey::shift_and_set(uint64_t value, uint8_t bits
 }
 
 CompositeKeyLength VariableLengthKey::bytes_per_key() const {
-  return _impl._size;
+  return _impl.size;
 }
 
 std::ostream& operator<<(std::ostream& stream, const VariableLengthKey& key) {

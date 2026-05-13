@@ -27,7 +27,7 @@ namespace hana = boost::hana;
  *
  * Note: Add your encoded segment class here!
  */
-constexpr auto encoded_segment_for_type = hana::make_map(
+constexpr auto ENCODED_SEGMENT_FOR_TYPE = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionarySegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthSegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>,
@@ -47,14 +47,14 @@ constexpr auto encoded_segment_for_type = hana::make_map(
 template <typename ColumnDataType, typename Functor>
 void resolve_encoded_segment_type(const AbstractEncodedSegment& segment, const Functor& functor) {
   // Iterate over all pairs in the map
-  hana::fold(encoded_segment_for_type, false, [&](auto match_found, auto encoded_segment_pair) {
+  hana::fold(ENCODED_SEGMENT_FOR_TYPE, false, [&](auto match_found, auto encoded_segment_pair) {
     const auto encoding_type_c = hana::first(encoded_segment_pair);
     const auto segment_template_c = hana::second(encoded_segment_pair);
 
-    constexpr auto encoding_type = hana::value(encoding_type_c);
+    constexpr auto ENCODING_TYPE = hana::value(encoding_type_c);
 
     // If the segment's encoding type matches that of the pair, we have found the segment's type
-    if (!match_found && (encoding_type == segment.encoding_type())) {
+    if (!match_found && (ENCODING_TYPE == segment.encoding_type())) {
       // Check if ColumnDataType is supported by encoding
       const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<ColumnDataType>);
 

@@ -1,11 +1,14 @@
 #include <memory>
 
 #include "expression/abstract_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy_base_test.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 

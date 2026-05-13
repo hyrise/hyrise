@@ -18,7 +18,7 @@
 #include "types.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 // Returns whether a certain node is a "predicate-style" node, i.e., a node that can be moved freely within a predicate
 // chain.

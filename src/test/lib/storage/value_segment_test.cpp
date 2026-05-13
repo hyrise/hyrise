@@ -1,10 +1,12 @@
 #include <cstdint>
+#include <exception>
 #include <limits>
 #include <string>
-#include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

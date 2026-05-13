@@ -119,11 +119,11 @@ try {
             // can finish in peace.
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity} .. && make -j \$(nproc) libjemalloc-build"
 
-            // Configure the rest in parallel. We use unity builds to decrease build times. The only exception is the
-            // clang-tidy build as it might otherwise miss some issues (e.g., missing includes).
+            // Configure the rest in parallel. We use unity builds to decrease build times. The only exceptions are the
+            // clang-tidy and precompiled-headers build as they might otherwise miss some issues (e.g., missing includes).
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
+            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}                      ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&       ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
             mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&   ${cmake} ${release}        ${clang}   ${unity}           ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}           ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
@@ -168,7 +168,7 @@ try {
           parallel clangRelease: {
             stage("clang-release") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-release && ninja all -j \$(( \$(nproc) / 10))"
+                sh "cd clang-release && ninja all -j \$(( \$(nproc) / 30))"
                 sh "./clang-release/hyriseTest clang-release"
                 sh "./clang-release/hyriseSystemTest clang-release"
                 sh "./scripts/test/hyriseConsole_test.py clang-release"
@@ -221,7 +221,7 @@ try {
             stage("clang-debug-unity-odr") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-                sh "cd clang-debug-unity-odr && ninja all -j 2"
+                sh "cd clang-debug-unity-odr && ninja all -j \$(( \$(nproc) / 30))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugUnityODR")
               }
@@ -230,7 +230,7 @@ try {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 4))"
+                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 2))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
@@ -239,7 +239,7 @@ try {
             stage("clang-debug:disable-precompile-headers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
-                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k 0 -j 2"
+                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k 0 -j \$(( \$(nproc) / 4))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
               }
@@ -247,7 +247,7 @@ try {
           }, clangDebugAddrUBLeakSanitizers: {
             stage("clang-debug:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 20))"
+                sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 30))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseTest clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
@@ -258,7 +258,7 @@ try {
           }, gccRelease: {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               stage("gcc-release") {
-                sh "cd gcc-release && ninja all -j \$(( \$(nproc) / 10))"
+                sh "cd gcc-release && ninja all -j \$(( \$(nproc) / 30))"
                 sh "./gcc-release/hyriseTest gcc-release"
                 sh "./gcc-release/hyriseSystemTest gcc-release"
                 sh "./scripts/test/hyriseConsole_test.py gcc-release"
@@ -274,7 +274,7 @@ try {
           }, clangReleaseAddrUBLeakSanitizers: {
             stage("clang-release:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 4))"
+                sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 30))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseTest clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
@@ -421,53 +421,6 @@ try {
     }
   }
 
-  // parallel clangMacX64: {
-  //   node('mac') {
-  //     stage("clangMacX64") {
-  //       if (env.BRANCH_NAME == 'master' || full_ci) {
-  //         try {
-  //           // We have experienced frequent network problems with this CI machine. So far, we have not found the cause.
-  //           // Since we run this stage very late and it frequently fails due to network problems, we retry pulling the
-  //           // sources five times to avoid re-runs of entire Full CI runs that failed in the very last stage due to a
-  //           // single network issue.
-  //           retry(5) {
-  //             try {
-  //               checkout scm
-
-  //               // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container.
-  //               sh "git submodule update --init --recursive --jobs 4 --depth=1"
-  //             } catch (error) {
-  //               sh "ls -A1 | xargs rm -rf"
-  //               throw error
-  //             }
-  //           }
-
-  //           // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it. Passing clang
-  //           // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
-  //           // that are not found otherwise.
-  //           sh "mkdir clang-apple-debug && cd clang-apple-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
-  //           sh "cd clang-apple-debug && ninja"
-  //           sh "./clang-apple-debug/hyriseTest"
-
-  //           // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
-  //           // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
-  //           // only build release with LTO on the ARM machine.
-  //           sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} ${unity} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
-  //           sh "cd clang-release && ninja"
-  //           sh "./clang-release/hyriseTest"
-  //           sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
-  //           sh "./scripts/test/hyriseConsole_test.py clang-release"
-  //           sh "./scripts/test/hyriseServer_test.py clang-release"
-  //           sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
-  //         } finally {
-  //           sh "ls -A1 | xargs rm -rf"
-  //         }
-  //       } else {
-  //         Utils.markStageSkippedForConditional("clangMacX64")
-  //       }
-  //     }
-  //   }
-  // },
   clangMacArm: {
     // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
     node('mac-arm') {

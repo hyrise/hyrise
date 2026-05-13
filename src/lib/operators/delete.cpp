@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "abstract_read_write_operator.hpp"
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
@@ -19,7 +20,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;
 
 template <bool is_single_chunk>
 void commit_with_pos_list(const std::shared_ptr<const Table>& referenced_table, const AbstractPosList& pos_list,

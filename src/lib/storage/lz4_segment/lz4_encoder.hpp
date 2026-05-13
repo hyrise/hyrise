@@ -46,8 +46,9 @@ namespace hyrise {
  */
 class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
+  // NOLINTNEXTLINE(readability-identifier-naming)
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
-  static constexpr auto _uses_vector_compression = true;
+  static constexpr auto USES_VECTOR_COMPRESSION = true;
   /**
    * A block size of 16 KB was chosen, since the recommended minimal amount of data to train a zstd dictionary is around
    * 20 KB. Therefore, there is no point in trying to train a dictionary with less data than that (and the training
@@ -57,13 +58,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * (due to not enough data) the compression ratio suffers, since LZ4 can only view and compress small amounts of data
    * at once (refer to the comment above).
    */
-  static constexpr auto _block_size = size_t{16384u};
-  static_assert(_block_size <= size_t{std::numeric_limits<int>::max()},
+  static constexpr auto BLOCK_SIZE = size_t{16384};
+  static_assert(BLOCK_SIZE <= size_t{std::numeric_limits<int>::max()},
                 "LZ4 block size can't be larger than the maximum value of a 32 bit signed int");
 
   template <typename T>
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
-                                                     const PolymorphicAllocator<T>& allocator) {
+  std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<T>& segment_iterable,
+                                                    const PolymorphicAllocator<T>& allocator) {
     // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
     // copying it element by element
     auto values = pmr_vector<T>{allocator};
@@ -75,13 +76,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      */
     auto segment_contains_null = false;
 
-    segment_iterable.with_iterators([&](auto it, auto end) {
+    segment_iterable.with_iterators([&](auto it, const auto& end) {
       const auto segment_size = static_cast<size_t>(std::distance(it, end));
       values.resize(segment_size);
       null_values.resize(segment_size);
 
       // iterate over the segment to access the values and increment the row index to copy values and null flags
-      auto row_index = size_t{0u};
+      auto row_index = size_t{0};
       for (; it != end; ++it) {
         const auto segment_value = *it;
         const auto contains_null = segment_value.is_null();
@@ -102,7 +103,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      */
     const auto input_size = values.size() * sizeof(T);
     auto dictionary = pmr_vector<char>{};
-    if (input_size > _block_size) {
+    if (input_size > BLOCK_SIZE) {
       dictionary = _train_dictionary(values);
     }
 
@@ -113,31 +114,31 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * estimated.
      */
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{allocator};
-    auto total_compressed_size = size_t{0u};
-    auto last_block_size = size_t{0u};
+    auto total_compressed_size = size_t{0};
+    auto last_block_size = size_t{0};
     if (!values.empty()) {
       _compress(values, lz4_blocks, dictionary);
-      last_block_size = input_size % _block_size != 0 ? input_size % _block_size : _block_size;
+      last_block_size = input_size % BLOCK_SIZE != 0 ? input_size % BLOCK_SIZE : BLOCK_SIZE;
       for (const auto& compressed_block : lz4_blocks) {
         total_compressed_size += compressed_block.size();
       }
     }
 
     return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(optional_null_values),
-                                           std::move(dictionary), _block_size, last_block_size, total_compressed_size,
+                                           std::move(dictionary), BLOCK_SIZE, last_block_size, total_compressed_size,
                                            values.size());
   }
 
-  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
-                                                     const PolymorphicAllocator<pmr_string>& allocator) {
+  std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<pmr_string>& segment_iterable,
+                                                    const PolymorphicAllocator<pmr_string>& allocator) {
     /**
      * First iterate over the values for two reasons.
      * 1) If all the strings are empty LZ4 will try to compress an empty vector which will cause a segmentation fault.
      *    In this case we can and need to do an early exit.
      * 2) Sum the length of the strings to improve the performance when copying the data to the char vector.
      */
-    auto num_chars = size_t{0u};
-    segment_iterable.with_iterators([&](auto it, auto end) {
+    auto num_chars = size_t{0};
+    segment_iterable.with_iterators([&](auto it, const auto& end) {
       for (; it != end; ++it) {
         if (!it->is_null()) {
           num_chars += it->value().size();
@@ -174,14 +175,14 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      */
     auto string_samples_lengths = pmr_vector<size_t>{allocator};
 
-    segment_iterable.with_iterators([&](auto it, auto end) {
+    segment_iterable.with_iterators([&](auto it, const auto& end) {
       const auto segment_size = std::distance(it, end);
 
       null_values.resize(segment_size);
       offsets.resize(segment_size);
       string_samples_lengths.resize(segment_size);
 
-      auto offset = uint32_t{0u};
+      auto offset = uint32_t{0};
       // iterate over the iterator to access the values and increment the row index to write to the values and null
       // values vectors
       auto row_index = size_t{0};
@@ -191,9 +192,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         null_values[row_index] = contains_null;
         segment_contains_null = segment_contains_null || contains_null;
         offsets[row_index] = offset;
-        auto sample_size = size_t{0u};
+        auto sample_size = size_t{0};
         if (!contains_null) {
-          const auto value = segment_element.value();
+          const auto& value = segment_element.value();
           const auto string_length = value.size();
           values.insert(values.cend(), value.begin(), value.end());
           Assert(string_length <= std::numeric_limits<uint32_t>::max(),
@@ -218,7 +219,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{allocator};
       auto empty_dictionary = pmr_vector<char>{};
       return std::make_shared<LZ4Segment<pmr_string>>(std::move(empty_blocks), std::move(optional_null_values),
-                                                      std::move(empty_dictionary), nullptr, _block_size, 0u, 0u,
+                                                      std::move(empty_dictionary), nullptr, BLOCK_SIZE, 0, 0,
                                                       null_values.size());
     }
 
@@ -226,7 +227,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // BitPacking is chosen over fixed-width integer (FixedWidthInteger) vector compression, since it compresses
     // better and the performance advantage of FixedWidthInteger is neglectable, because runtime is dominated by the
     // LZ4 encoding/decoding anyways. Prohibiting FixedWidthInteger here reduces the compile time.
-    Assert(vector_compression_type() == VectorCompressionType::BitPacking, "Only BitPacking is supported for LZ4");
+    Assert(_get_vector_compression_type() == VectorCompressionType::BitPacking, "Only BitPacking is supported for LZ4");
     auto compressed_offsets = compress_vector(offsets, VectorCompressionType::BitPacking, allocator, {offsets.back()});
 
     /**
@@ -236,7 +237,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      */
     const auto input_size = values.size();
     auto dictionary = pmr_vector<char>{allocator};
-    if (input_size > _block_size) {
+    if (input_size > BLOCK_SIZE) {
       dictionary = _train_dictionary(values, string_samples_lengths);
     }
 
@@ -249,21 +250,21 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto lz4_blocks = pmr_vector<pmr_vector<char>>{allocator};
     _compress(values, lz4_blocks, dictionary);
 
-    auto last_block_size = input_size % _block_size != 0 ? input_size % _block_size : _block_size;
+    auto last_block_size = input_size % BLOCK_SIZE != 0 ? input_size % BLOCK_SIZE : BLOCK_SIZE;
 
-    auto total_compressed_size = size_t{0u};
+    auto total_compressed_size = size_t{0};
     for (const auto& compressed_block : lz4_blocks) {
       total_compressed_size += compressed_block.size();
     }
 
     return std::make_shared<LZ4Segment<pmr_string>>(std::move(lz4_blocks), std::move(optional_null_values),
-                                                    std::move(dictionary), std::move(compressed_offsets), _block_size,
+                                                    std::move(dictionary), std::move(compressed_offsets), BLOCK_SIZE,
                                                     last_block_size, total_compressed_size, null_values.size());
   }
 
  private:
-  static constexpr auto _minimum_dictionary_size = size_t{1000u};
-  static constexpr auto _minimum_value_size = size_t{20000u};
+  static constexpr auto MINIMUM_DICTIONARY_SIZE = size_t{1000};
+  static constexpr auto MINIMUM_VALUE_SIZE = size_t{20000};
 
   /**
    * Use the LZ4 high compression stream API to compress the input values. The data is separated into different
@@ -291,23 +292,23 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * every new block that is to be compressed, but the stream returns a raw pointer to an internal structure.
      * The stream memory is freed with another call to a library function after compression is done.
      */
-    auto lz4_stream = LZ4_createStreamHC();
+    auto* lz4_stream = LZ4_createStreamHC();
     // We use the maximum high compression level available in LZ4 for best compression ratios.
     LZ4_resetStreamHC(lz4_stream, LZ4HC_CLEVEL_MAX);
 
     const auto input_size = values.size() * sizeof(T);
-    auto num_blocks = input_size / _block_size;
+    auto num_blocks = input_size / BLOCK_SIZE;
     // Only add the last not-full block if the data doesn't perfectly fit into the block size.
-    if (input_size % _block_size != 0) {
+    if (input_size % BLOCK_SIZE != 0) {
       num_blocks++;
     }
     lz4_blocks.reserve(num_blocks);
 
-    for (auto block_index = size_t{0u}; block_index < num_blocks; ++block_index) {
-      auto decompressed_block_size = _block_size;
+    for (auto block_index = size_t{0}; block_index < num_blocks; ++block_index) {
+      auto decompressed_block_size = BLOCK_SIZE;
       // The last block's uncompressed size varies.
       if (block_index + 1 == num_blocks) {
-        decompressed_block_size = input_size - (block_index * _block_size);
+        decompressed_block_size = input_size - (block_index * BLOCK_SIZE);
       }
       // LZ4_compressBound returns an upper bound for the size of the compressed data
       const auto block_bound = static_cast<size_t>(LZ4_compressBound(static_cast<int>(decompressed_block_size)));
@@ -328,7 +329,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
 
       // The offset in the source data where the current block starts.
-      const auto value_offset = block_index * _block_size;
+      const auto value_offset = block_index * BLOCK_SIZE;
       // move pointer to start position and pass to the actual compression method
       const int compression_result = LZ4_compress_HC_continue(
           lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
@@ -365,7 +366,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   template <typename T>
   pmr_vector<char> _train_dictionary(const pmr_vector<T>& values) {
     static_assert(std::is_arithmetic_v<T>);
-    const auto min_sample_size = size_t{8u};
+    const auto min_sample_size = size_t{8};
     const auto values_size = values.size() * sizeof(T);
     const auto sample_size = std::max(sizeof(T), min_sample_size);
     const auto num_samples = values_size / sample_size;
@@ -395,12 +396,12 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * least 1KB. Smaller dictionaries won't work.
      */
     auto max_dictionary_size = values.size() / 100;
-    max_dictionary_size = std::max(max_dictionary_size, _minimum_dictionary_size);
+    max_dictionary_size = std::max(max_dictionary_size, MINIMUM_DICTIONARY_SIZE);
 
     auto dictionary = pmr_vector<char>{values.get_allocator()};
 
     // If the input does not contain enough values, it won't be possible to train a dictionary for it.
-    if (values.size() < _minimum_value_size) {
+    if (values.size() < MINIMUM_VALUE_SIZE) {
       return dictionary;
     }
 

@@ -40,7 +40,7 @@ class BetweenCompositionRule : public AbstractRule {
    * The ColumnBoundaryType defines whether a value represents a boundary for a column or not (NONE) and if it is a
    * boundary it also defines which kind of boundary it is including the inclusive and exclusive property.
    */
-  enum class ColumnBoundaryType {
+  enum class ColumnBoundaryType : uint8_t {
     None,
     LowerBoundaryInclusive,
     LowerBoundaryExclusive,
@@ -76,7 +76,8 @@ class BetweenCompositionRule : public AbstractRule {
 
   static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary);
 
-  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
+  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
+                                      const size_t expression_id);
 };
 
 }  // namespace hyrise

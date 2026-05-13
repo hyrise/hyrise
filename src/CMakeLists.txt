@@ -81,6 +81,7 @@ if (ENABLE_CLANG_TIDY)
     message(STATUS "clang-tidy enabled")
 endif()
 
+add_subdirectory(benchmark)
 add_subdirectory(benchmarklib)
 add_subdirectory(bin)
 add_subdirectory(lib)
@@ -88,5 +89,4 @@ add_subdirectory(plugins)
 
 # No clang-tidy for the following subfolders
 set(CMAKE_CXX_CLANG_TIDY "")
-add_subdirectory(benchmark)
 add_subdirectory(test)

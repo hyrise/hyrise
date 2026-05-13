@@ -1,14 +1,23 @@
+#include <memory>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/window_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/window_node.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class WindowNodeTest : public BaseTest {
  public:

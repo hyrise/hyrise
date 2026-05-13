@@ -1,6 +1,7 @@
 #include "file_type.hpp"
 
 #include <filesystem>
+#include <format>
 #include <string>
 
 #include <boost/algorithm/string/case_conv.hpp>
@@ -40,7 +41,7 @@ FileType file_type_from_filename(const std::string& filename) {
     return FileType::Binary;
   }
 
-  Fail("Unknown file extension " + extension);
+  Fail(std::format("Unknown file extension '{}'.", extension));
 }
 
 }  // namespace hyrise

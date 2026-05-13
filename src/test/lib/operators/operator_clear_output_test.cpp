@@ -1,10 +1,14 @@
 #include <memory>
+#include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "expression/abstract_expression.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -12,10 +16,12 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class OperatorClearOutputTest : public BaseTest {
  protected:

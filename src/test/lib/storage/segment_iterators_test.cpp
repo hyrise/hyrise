@@ -1,5 +1,14 @@
+#include <memory>
+#include <string>
+#include <type_traits>
+
+#include "base_test.hpp"
 #include "encoding_test.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/segment_iterables/segment_positions.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

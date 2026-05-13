@@ -1,14 +1,21 @@
+#include <cstdint>
 #include <memory>
 
-#include "expression/abstract_expression.hpp"
+#include "all_type_variant.hpp"
+#include "base_test.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;
 
 class SemiJoinReductionRuleTest : public StrategyBaseTest {
  protected:

@@ -1,5 +1,6 @@
 #include "sqlite_add_indices.hpp"
 
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -25,28 +26,27 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
     // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape it. No need to escape the
     // "..._unindexed" name.
-    const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+    const auto escaped_table_name = std::format("\"{}\"", table_name);
 
-    sqlite_wrapper->main_connection.raw_execute_query(std::string{"ALTER TABLE "}
-                                                          .append(escaped_table_name)
-                                                          .append(" RENAME TO ")
-                                                          .append(table_name)
-                                                          .append("_unindexed"));
+    sqlite_wrapper->main_connection.raw_execute_query(
+        std::format("ALTER TABLE {} RENAME TO {}_unindexed", escaped_table_name, table_name));
   }
 
   // Recreate tables using the passed schema sql file
   auto schema_file = std::ifstream{schema_file_path};
-  Assert(schema_file.good(), std::string{"Schema file "} + schema_file_path +
-                                 " not found - try running the binary from the Hyrise root or the build directory.");
+  Assert(schema_file.good(),
+         std::format("Schema file '{}' not found - try running the binary from the Hyrise root or the build directory.",
+                     schema_file_path));
   const auto schema_sql = std::string{std::istreambuf_iterator<char>(schema_file), std::istreambuf_iterator<char>()};
   sqlite_wrapper->main_connection.raw_execute_query(schema_sql);
 
   // If indices are not part of the schema file, add them here
   if (!create_indices_file_path.empty()) {
     std::ifstream create_indices_file(create_indices_file_path);
-    Assert(create_indices_file.good(),
-           std::string{"Index file "} + create_indices_file_path +
-               " not found - try running the binary from the Hyrise root or the build directory.");
+    Assert(
+        create_indices_file.good(),
+        std::format("Index file '{}' not found - try running the binary from the Hyrise root or the build directory.",
+                    create_indices_file_path));
     const auto create_indices_sql =
         std::string{std::istreambuf_iterator<char>(create_indices_file), std::istreambuf_iterator<char>()};
     sqlite_wrapper->main_connection.raw_execute_query(create_indices_sql);
@@ -57,13 +57,10 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
     auto per_table_time = Timer{};
     std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 
-    const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+    const auto escaped_table_name = std::format("\"{}\"", table_name);
 
-    sqlite_wrapper->main_connection.raw_execute_query(std::string{"INSERT INTO "}
-                                                          .append(escaped_table_name)
-                                                          .append(" SELECT * FROM ")
-                                                          .append(table_name)
-                                                          .append("_unindexed"));
+    sqlite_wrapper->main_connection.raw_execute_query(
+        std::format("INSERT INTO {} SELECT * FROM {}_unindexed", escaped_table_name, table_name));
 
     std::cout << " (" << per_table_time.lap_formatted() << ")\n";
   }
