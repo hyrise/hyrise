@@ -62,7 +62,7 @@ class VariableLengthKeyStore {
    * already stored key.
    */
   VariableLengthKeyProxy operator[](ChunkOffset position);
-  VariableLengthKeyConstProxy operator[](ChunkOffset position) const;
+  VariableLengthKeyConstProxy operator[](ChunkOffset position) const [[clang::lifetimebound]];
 
   /**
    * Returns how many bytes are at least required to save a single key. The returned size does not have to match the
@@ -90,14 +90,14 @@ class VariableLengthKeyStore {
   /**
    * Removes elements in range [first; last).
    */
-  iterator erase(iterator first, iterator last);
+  iterator erase(iterator first, iterator last) [[clang::lifetimebound]];
 
-  iterator begin();
-  iterator end();
-  const_iterator begin() const;
-  const_iterator end() const;
-  const_iterator cbegin() const;
-  const_iterator cend() const;
+  iterator begin() [[clang::lifetimebound]];
+  iterator end()[[clang::lifetimebound]];
+  const_iterator begin() const[[clang::lifetimebound]];
+  const_iterator end() const [[clang::lifetimebound]];
+  const_iterator cbegin() const [[clang::lifetimebound]];
+  const_iterator cend() const [[clang::lifetimebound]];
 
  private:
   CompositeKeyLength _bytes_per_key{};
@@ -133,7 +133,7 @@ class VariableLengthKeyStore {
      * Creates new iterator pointing to given address.
      */
     explicit IteratorBase(CompositeKeyLength bytes_per_key, CompositeKeyLength key_alignment,
-                          VariableLengthKeyWord* data)
+                          VariableLengthKeyWord* data [[clang::lifetimebound]])
         : _bytes_per_key(bytes_per_key), _key_alignment(key_alignment), _data(data) {}
 
     // NOLINTBEGIN(readability-identifier-naming)

@@ -66,20 +66,20 @@ class GroupKeyIndex : public AbstractChunkIndex {
   explicit GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
+  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const [[clang::lifetimebound]] final;
 
-  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
+  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const [[clang::lifetimebound]] final;
 
-  Iterator _cbegin() const final;
+  Iterator _cbegin() const [[clang::lifetimebound]] [[clang::lifetimebound]] final;
 
-  Iterator _cend() const final;
+  Iterator _cend() const [[clang::lifetimebound]] [[clang::lifetimebound]] final;
 
   /**
    *
    * @returns an iterator pointing to the the first ChunkOffset in the positions-vector
    * that belongs to a given value-id.
    */
-  Iterator _get_positions_iterator_at(ValueID value_id) const;
+  Iterator _get_positions_iterator_at(ValueID value_id) const [[clang::lifetimebound]];
 
   std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const override;
 

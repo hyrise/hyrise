@@ -38,7 +38,7 @@ struct UniqueColumnCombination final {
   mutable bool _is_genuine;
 };
 
-std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc);
+std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const UniqueColumnCombination& ucc);
 
 using UniqueColumnCombinations = std::unordered_set<UniqueColumnCombination>;
 

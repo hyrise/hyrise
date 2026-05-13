@@ -20,7 +20,7 @@ class ListExpression : public AbstractExpression {
 
   DataType data_type() const override;
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& elements() const;
+  const std::vector<std::shared_ptr<AbstractExpression>>& elements() const [[clang::lifetimebound]];
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;

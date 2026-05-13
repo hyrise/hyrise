@@ -53,10 +53,10 @@ class CompositeGroupKeyIndex : public AbstractChunkIndex {
   explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
-  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
-  Iterator _cbegin() const final;
-  Iterator _cend() const final;
+  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const [[clang::lifetimebound]] final;
+  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const [[clang::lifetimebound]] final;
+  Iterator _cbegin() const [[clang::lifetimebound]] final;
+  Iterator _cend() const [[clang::lifetimebound]] final;
   std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const final;
 
   size_t _memory_consumption() const final;
@@ -98,7 +98,7 @@ class CompositeGroupKeyIndex : public AbstractChunkIndex {
    * @returns an iterator pointing to the first ChunkOffset in the position-vector
    * that belongs to the given VariableLengthKey
    */
-  Iterator _get_position_iterator_for_key(const VariableLengthKey& key) const;
+  Iterator _get_position_iterator_for_key(const VariableLengthKey& key) const [[clang::lifetimebound]];
 
   // The segments the index is based on.
   std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;

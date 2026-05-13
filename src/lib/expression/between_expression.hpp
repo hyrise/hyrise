@@ -17,9 +17,9 @@ class BetweenExpression : public AbstractPredicateExpression {
                     const std::shared_ptr<AbstractExpression>& lower_bound,
                     const std::shared_ptr<AbstractExpression>& upper_bound);
 
-  const std::shared_ptr<AbstractExpression>& operand() const;
-  const std::shared_ptr<AbstractExpression>& lower_bound() const;
-  const std::shared_ptr<AbstractExpression>& upper_bound() const;
+  const std::shared_ptr<AbstractExpression>& operand() const [[clang::lifetimebound]];
+  const std::shared_ptr<AbstractExpression>& lower_bound() const [[clang::lifetimebound]];
+  const std::shared_ptr<AbstractExpression>& upper_bound() const [[clang::lifetimebound]];
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;

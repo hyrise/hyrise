@@ -11,7 +11,7 @@ namespace hyrise {
 
 enum class LogicalOperator : uint8_t { And, Or };
 
-std::ostream& operator<<(std::ostream& stream, const LogicalOperator logical_operator);
+std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const LogicalOperator logical_operator);
 
 class LogicalExpression : public AbstractExpression {
  public:
@@ -19,8 +19,8 @@ class LogicalExpression : public AbstractExpression {
                     const std::shared_ptr<AbstractExpression>& left_operand,
                     const std::shared_ptr<AbstractExpression>& right_operand);
 
-  const std::shared_ptr<AbstractExpression>& left_operand() const;
-  const std::shared_ptr<AbstractExpression>& right_operand() const;
+  const std::shared_ptr<AbstractExpression>& left_operand() const [[clang::lifetimebound]];
+  const std::shared_ptr<AbstractExpression>& right_operand() const [[clang::lifetimebound]];
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;

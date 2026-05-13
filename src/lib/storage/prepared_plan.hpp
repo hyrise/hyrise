@@ -34,6 +34,6 @@ class PreparedPlan final {
   std::vector<ParameterID> parameter_ids;
 };
 
-std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan);
+std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const PreparedPlan& prepared_plan);
 
 }  // namespace hyrise

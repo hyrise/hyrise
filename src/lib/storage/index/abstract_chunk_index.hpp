@@ -126,7 +126,7 @@ class AbstractChunkIndex : private Noncopyable {
    *
    * @return An Iterator on the position of the first NULL.
    */
-  Iterator null_cbegin() const;
+  Iterator null_cbegin() const [[clang::lifetimebound]];
 
   /**
    * Returns an Iterator past the position of the last NULL.
@@ -136,7 +136,7 @@ class AbstractChunkIndex : private Noncopyable {
    *
    * @return An Iterator on the end of the NULLs (one after the last NULL).
    */
-  Iterator null_cend() const;
+  Iterator null_cend() const [[clang::lifetimebound]];
 
   ChunkIndexType type() const;
 

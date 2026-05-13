@@ -52,7 +52,7 @@ enum class TransactionPhase : uint8_t {
   Committed,                // Transaction has been committed.
 };
 
-std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase);
+std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const TransactionPhase& phase);
 
 /**
  * @brief Representation of a transaction
@@ -135,7 +135,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Returns the read-write operators.
    */
-  const std::vector<std::shared_ptr<AbstractReadWriteOperator>>& read_write_operators() {
+  const std::vector<std::shared_ptr<AbstractReadWriteOperator>>& read_write_operators() [[clang::lifetimebound]] {
     return _read_write_operators;
   }
 

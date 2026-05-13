@@ -48,12 +48,12 @@ class VariableLengthKey {
   bool operator<(const VariableLengthKey& other) const;
   bool operator<(const VariableLengthKeyConstProxy& other) const;
 
-  VariableLengthKey& operator<<=(CompositeKeyLength shift);
-  VariableLengthKey& operator|=(uint64_t other);
+  VariableLengthKey& operator<<=(CompositeKeyLength shift) [[clang::lifetimebound]];
+  VariableLengthKey& operator|=(uint64_t other) [[clang::lifetimebound]];
 
-  VariableLengthKey& shift_and_set(uint64_t value, uint8_t bits_to_set);
+  VariableLengthKey& shift_and_set(uint64_t value, uint8_t bits_to_set) [[clang::lifetimebound]];
 
-  friend std::ostream& operator<<(std::ostream& stream, const VariableLengthKey& key);
+  friend std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const VariableLengthKey& key);
 
  private:
   explicit VariableLengthKey(const VariableLengthKeyBase& other);

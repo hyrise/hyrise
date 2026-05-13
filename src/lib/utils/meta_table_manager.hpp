@@ -20,7 +20,7 @@ class MetaTableManager : public Noncopyable {
   static bool is_meta_table_name(const std::string& name);
 
   // Returns a sorted list of all meta table names (without prefix)
-  const std::vector<std::string>& table_names() const;
+  const std::vector<std::string>& table_names() const [[clang::lifetimebound]];
 
   void add_table(const std::shared_ptr<AbstractMetaTable>& table);
   bool has_table(const std::string& table_name) const;

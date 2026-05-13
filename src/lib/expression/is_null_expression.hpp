@@ -15,7 +15,7 @@ class IsNullExpression : public AbstractPredicateExpression {
   IsNullExpression(const PredicateCondition init_predicate_condition,
                    const std::shared_ptr<AbstractExpression>& operand);
 
-  const std::shared_ptr<AbstractExpression>& operand() const;
+  const std::shared_ptr<AbstractExpression>& operand() const [[clang::lifetimebound]];
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;

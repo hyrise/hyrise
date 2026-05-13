@@ -30,10 +30,10 @@
       t = other;                                                                                          \
       return *this;                                                                                       \
     }                                                                                                     \
-    constexpr operator const T&() const {                                                                 \
+    constexpr operator const T&() const [[clang::lifetimebound]] {                                                                 \
       return t;                                                                                           \
     }                                                                                                     \
-    operator T&() {                                                                                       \
+    operator T&() [[clang::lifetimebound]] {                                                                                       \
       return t;                                                                                           \
     }                                                                                                     \
     constexpr bool operator==(const D& other) const {                                                     \

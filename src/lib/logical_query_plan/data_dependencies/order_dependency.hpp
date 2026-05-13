@@ -30,7 +30,7 @@ struct OrderDependency final {
   std::vector<std::shared_ptr<AbstractExpression>> ordered_expressions;
 };
 
-std::ostream& operator<<(std::ostream& stream, const OrderDependency& od);
+std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const OrderDependency& od);
 
 using OrderDependencies = std::unordered_set<OrderDependency>;
 

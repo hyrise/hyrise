@@ -24,7 +24,7 @@ class LogManager : public Noncopyable {
  public:
   void add_message(const std::string& reporter, const std::string& message, const LogLevel log_level = LogLevel::Debug);
 
-  const tbb::concurrent_vector<LogEntry>& log_entries() const;
+  const tbb::concurrent_vector<LogEntry>& log_entries() const [[clang::lifetimebound]];
 
  protected:
   friend class Hyrise;

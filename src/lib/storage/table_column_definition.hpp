@@ -21,7 +21,7 @@ struct TableColumnDefinition final {
 };
 
 // So that google test, e.g., prints readable error messages
-inline std::ostream& operator<<(std::ostream& stream, const TableColumnDefinition& definition) {
+inline std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const TableColumnDefinition& definition) {
   stream << definition.name << " ";
   stream << definition.data_type << " ";
   stream << (definition.nullable ? "nullable" : "not nullable");

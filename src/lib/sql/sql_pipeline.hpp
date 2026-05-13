@@ -24,7 +24,7 @@ struct SQLPipelineMetrics {
   std::chrono::nanoseconds parse_time_nanos{0};
 };
 
-std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics);
+std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const SQLPipelineMetrics& metrics);
 
 /**
  * The SQLPipeline represents the flow from the basic SQL string (containing one or more statements) to the result
@@ -42,29 +42,29 @@ class SQLPipeline : public Noncopyable {
               const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache);
 
   // Returns the original SQL string
-  const std::string& get_sql() const;
+  const std::string& get_sql() const [[clang::lifetimebound]];
 
   // Returns the SQL string for each statement.
-  const std::vector<std::string>& get_sql_per_statement();
+  const std::vector<std::string>& get_sql_per_statement() [[clang::lifetimebound]];
 
   // Returns the parsed SQL string for each statement.
-  const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
+  const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements() [[clang::lifetimebound]];
 
   // Returns the unoptimized LQP root for each statement.
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans();
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans() [[clang::lifetimebound]];
 
   // Returns information obtained during SQL parsing.
-  const std::vector<std::reference_wrapper<const SQLTranslationInfo>>& get_sql_translation_infos();
+  const std::vector<std::reference_wrapper<const SQLTranslationInfo>>& get_sql_translation_infos() [[clang::lifetimebound]];
 
   // Returns the optimized LQP root for each statement
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
+  const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans() [[clang::lifetimebound]];
 
   // Returns the Physical Plans for each statement.
   // The plans are either retrieved from the SQLPhysicalPlanCache or, if unavailable, translated from the optimized LQPs
-  const std::vector<std::shared_ptr<AbstractOperator>>& get_physical_plans();
+  const std::vector<std::shared_ptr<AbstractOperator>>& get_physical_plans() [[clang::lifetimebound]];
 
   // Returns all tasks for each statement that need to be executed for this query.
-  const std::vector<std::vector<std::shared_ptr<AbstractTask>>>& get_tasks();
+  const std::vector<std::vector<std::shared_ptr<AbstractTask>>>& get_tasks() [[clang::lifetimebound]];
 
   // Executes all tasks, waits for them to finish, and returns
   //   - {Success, tables}     if the statement was successful
@@ -95,7 +95,7 @@ class SQLPipeline : public Noncopyable {
   // another uses it)
   bool requires_execution() const;
 
-  SQLPipelineMetrics& metrics();
+  SQLPipelineMetrics& metrics() [[clang::lifetimebound]];
 
   const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
@@ -104,7 +104,7 @@ class SQLPipeline : public Noncopyable {
   friend class SQLPipelineStatementTest;
 
   // Returns the individual SQLPipelineStatements. Only for testing purposes.
-  const std::vector<std::shared_ptr<SQLPipelineStatement>>& _get_sql_pipeline_statements() const;
+  const std::vector<std::shared_ptr<SQLPipelineStatement>>& _get_sql_pipeline_statements() const [[clang::lifetimebound]];
 
   std::string _sql;
 

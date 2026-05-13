@@ -110,7 +110,7 @@ struct RowID {
 
   auto operator<=>(const RowID&) const = default;
 
-  friend std::ostream& operator<<(std::ostream& stream, const RowID& row_id) {
+  friend std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const RowID& row_id) {
     stream << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
     return stream;
   }

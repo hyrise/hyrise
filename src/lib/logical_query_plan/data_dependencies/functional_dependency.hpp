@@ -48,7 +48,7 @@ struct FunctionalDependency {
   mutable bool is_genuine;
 };
 
-std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
+std::ostream& operator<<(std::ostream& stream [[clang::lifetimebound]], const FunctionalDependency& fd);
 
 using FunctionalDependencies = std::unordered_set<FunctionalDependency>;
 

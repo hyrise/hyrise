@@ -67,13 +67,13 @@ class AdaptiveRadixTreeIndex : public AbstractChunkIndex {
   };
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
+  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const [[clang::lifetimebound]] final;
 
-  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
+  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const [[clang::lifetimebound]] final;
 
-  Iterator _cbegin() const final;
+  Iterator _cbegin() const [[clang::lifetimebound]] final;
 
-  Iterator _cend() const final;
+  Iterator _cend() const [[clang::lifetimebound]] final;
 
   std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values);
 

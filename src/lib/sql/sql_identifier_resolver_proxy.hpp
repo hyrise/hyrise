@@ -40,7 +40,7 @@ class SQLIdentifierResolverProxy final {
 
   std::shared_ptr<AbstractExpression> resolve_identifier_relaxed(const SQLIdentifier& identifier);
 
-  const ExpressionUnorderedMap<ParameterID>& accessed_expressions() const;
+  const ExpressionUnorderedMap<ParameterID>& accessed_expressions() const [[clang::lifetimebound]];
 
  private:
   std::shared_ptr<SQLIdentifierResolver> _wrapped_resolver;

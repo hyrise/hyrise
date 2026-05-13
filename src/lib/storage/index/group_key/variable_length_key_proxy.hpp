@@ -40,10 +40,10 @@ class VariableLengthKeyConstProxy {
   bool operator<(const VariableLengthKeyConstProxy& other) const;
   bool operator<(const VariableLengthKey& other) const;
 
-  friend std::ostream& operator<<(std::ostream& ostream, const VariableLengthKeyConstProxy& key);
+  friend std::ostream& operator<<(std::ostream& ostream  [[clang::lifetimebound]], const VariableLengthKeyConstProxy& key);
 
  protected:
-  explicit VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key);
+  explicit VariableLengthKeyConstProxy(VariableLengthKeyWord* data  [[clang::lifetimebound]], CompositeKeyLength bytes_per_key);
 
   VariableLengthKeyBase _impl{};
 };
@@ -72,10 +72,10 @@ class VariableLengthKeyProxy : public VariableLengthKeyConstProxy {
   VariableLengthKeyProxy& operator=(const VariableLengthKeyConstProxy& other);
 
   VariableLengthKeyProxy& operator=(const VariableLengthKey& other);
-  VariableLengthKeyProxy& operator<<=(CompositeKeyLength shift);
-  VariableLengthKeyProxy& operator|=(uint64_t other);
+  VariableLengthKeyProxy& operator<<=(CompositeKeyLength shift) [[clang::lifetimebound]];
+  VariableLengthKeyProxy& operator|=(uint64_t other) [[clang::lifetimebound]];
 
-  VariableLengthKeyProxy& shift_and_set(uint64_t value, uint8_t bits_to_set);
+  VariableLengthKeyProxy& shift_and_set(uint64_t value, uint8_t bits_to_set) [[clang::lifetimebound]];
 
  private:
   explicit VariableLengthKeyProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key);

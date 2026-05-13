@@ -26,7 +26,7 @@ class AbstractMetaTable : public Noncopyable {
  public:
   virtual const std::string& name() const = 0;
 
-  const TableColumnDefinitions& column_definitions() const;
+  const TableColumnDefinitions& column_definitions() const [[clang::lifetimebound]];
 
   virtual bool can_insert() const;
   virtual bool can_update() const;
