@@ -60,6 +60,12 @@ target_compile_options(
     -fPIC
 )
 
+target_compile_options(
+    magic_enum
+    INTERFACE
+    -Wno-nrvo
+)
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
