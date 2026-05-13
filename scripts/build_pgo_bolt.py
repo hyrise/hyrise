@@ -9,6 +9,10 @@
 # it is finished, even when it crashed. You can run the script with -h for a detailed explanation of cli arguments.
 # There is a GiHhub comment summarizing the PGO options we evaluated:
 #   https://github.com/hyrise/hyrise/pull/2724#issuecomment-3734286523
+#
+# Please note that PGO/LTO/BOLT optimization pipelines are steadily changing (and improving) with LLVM updates. We use
+# IR-PGO (fprofile-generate) + LTO + BOLT as recommended here: https://www.youtube.com/watch?app=desktop&v=KdHtOMc5_c8
+# We found this combination to work well with LLVM 20. For newer LLVM versions, this pipeline should be re-evaluated.
 
 import platform
 import sys
