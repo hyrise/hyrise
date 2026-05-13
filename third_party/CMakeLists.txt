@@ -15,6 +15,7 @@ add_subdirectory(benchmark)
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(magic_enum)
+set_target_properties(magic_enum PROPERTIES SYSTEM TRUE)
 add_subdirectory(nlohmann_json)
 add_subdirectory(sparse-map)
 add_subdirectory(tpch-dbgen)
@@ -58,12 +59,6 @@ target_compile_options(
     -std=c++1z
     -O3 -Wno-sign-compare
     -fPIC
-)
-
-target_compile_options(
-    magic_enum
-    INTERFACE
-    -Wno-nrvo
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
