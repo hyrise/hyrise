@@ -146,11 +146,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
-    // copy values and null flags from value segment
+    // Copy values and null flags from value segment.
     auto values = pmr_vector<char>{allocator};
     values.reserve(num_chars);
-    auto sample_values = pmr_vector<char>{allocator};
-    sample_values.reserve(num_chars);
     auto null_values = pmr_vector<bool>{allocator};
 
     /**
@@ -176,6 +174,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * These are the lengths of each string. They are needed to train the zstd dictionary.
      */
     auto string_samples_lengths = pmr_vector<size_t>{allocator};
+    auto sample_values = pmr_vector<char>{allocator};
+    sample_values.reserve(num_chars);
 
     segment_iterable.with_iterators([&](auto it, const auto& end) {
       const auto segment_size = std::distance(it, end);
@@ -193,20 +193,18 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         null_values[row_index] = contains_null;
         segment_contains_null = segment_contains_null || contains_null;
         offsets[row_index] = offset;
-        auto sample_size = size_t{0};
         if (!contains_null) {
           const auto& value = segment_element.value();
           const auto string_length = value.size();
           values.insert(values.cend(), value.begin(), value.end());
-	  if (!value.empty()) {
-            // Don't collect empty strings for sample
+	        if (!value.empty() && row_index % 16 == 0) {
+            // Do not collect empty strings for sample.
             sample_values.insert(sample_values.cend(), value.begin(), value.end());
-            string_samples_lengths.push_back(sample_size);
+            string_samples_lengths.push_back(string_length);
           }
           Assert(string_length <= std::numeric_limits<uint32_t>::max(),
                  "The size of string row value exceeds the maximum of uint32 in LZ4 encoding.");
           offset += static_cast<uint32_t>(string_length);
-          sample_size = string_length;
         }
 
         ++row_index;
@@ -411,15 +409,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     dictionary.resize(max_dictionary_size);
-    std::cout << "\n\n\n\n And go ... " << std::endl;
-    std::cout << "Dictionary - Size: " << dictionary.size() << " - Capacity: " << dictionary.capacity() << " \t\t Values: " << values.size() << " - Capacity: " << values.capacity() << " \t\t minimum_value_size: " << MINIMUM_VALUE_SIZE << " - max_dictionary_size: " << max_dictionary_size << std::endl;
-    std::cout << "Values: ";
-    auto i = 0;
-    for (const auto& sample : values) { if (++i > 10) break; std::cout << sample << " - "; }
-    std::cout << std::endl;
-    std::cout << "Sample sizes: ";
-    for (const auto& sample : sample_sizes) { std::cout << sample << " - "; Assert(sample > 0, "fuck"); }
-    std::cout << std::endl;
     const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
                                                        sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
 
