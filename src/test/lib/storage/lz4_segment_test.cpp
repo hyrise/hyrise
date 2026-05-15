@@ -252,7 +252,7 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
-  const auto block_size = LZ4Encoder::BLOCK_SIZE;
+  constexpr auto block_size = LZ4Encoder::BLOCK_SIZE;
   constexpr auto num_rows = 100'000 / 20;
 
   for (auto index = size_t{0}; index < num_rows; ++index) {
