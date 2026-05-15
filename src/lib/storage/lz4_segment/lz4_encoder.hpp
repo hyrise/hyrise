@@ -412,7 +412,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
     dictionary.resize(max_dictionary_size);
     std::cout << "\n\n\n\n And go ... " << std::endl;
-    std::cout << "Dictionary - Size: " << dictionary.size() << " - Capacity: " << dictionary.capacity() << " \t\t Values: " << values.size() << " - Capacity: " << values.capacity() << " \t\t minimum_value_size: " << _minimum_value_size << " - max_dictionary_size: " << max_dictionary_size << std::endl;
+    std::cout << "Dictionary - Size: " << dictionary.size() << " - Capacity: " << dictionary.capacity() << " \t\t Values: " << values.size() << " - Capacity: " << values.capacity() << " \t\t minimum_value_size: " << MINIMUM_VALUE_SIZE << " - max_dictionary_size: " << max_dictionary_size << std::endl;
     std::cout << "Values: ";
     auto i = 0;
     for (const auto& sample : values) { if (++i > 10) break; std::cout << sample << " - "; }
