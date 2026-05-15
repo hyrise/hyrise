@@ -58,15 +58,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    * (due to not enough data) the compression ratio suffers, since LZ4 can only view and compress small amounts of data
    * at once (refer to the comment above).
    */
-  static constexpr auto BLOCK_SIZE = size_t{16384};
+  static constexpr auto BLOCK_SIZE = size_t{16'384};
   static_assert(BLOCK_SIZE <= size_t{std::numeric_limits<int>::max()},
-                "LZ4 block size can't be larger than the maximum value of a 32 bit signed int");
+                "LZ4 block size cannot be larger than the maximum value of a 32 bit signed int");
 
   template <typename T>
   std::shared_ptr<AbstractEncodedSegment> on_encode(const AnySegmentIterable<T>& segment_iterable,
                                                     const PolymorphicAllocator<T>& allocator) {
-    // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
-    // copying it element by element
     auto values = pmr_vector<T>{allocator};
     auto null_values = pmr_vector<bool>{allocator};
 
@@ -133,7 +131,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                     const PolymorphicAllocator<pmr_string>& allocator) {
     /**
      * First iterate over the values for two reasons.
-     * 1) If all the strings are empty LZ4 will try to compress an empty vector which will cause a segmentation fault.
+     * 1) If all the strings are empty, LZ4 will try to compress an empty vector which will cause a segmentation fault.
      *    In this case we can and need to do an early exit.
      * 2) Sum the length of the strings to improve the performance when copying the data to the char vector.
      */
@@ -146,7 +144,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     });
 
-    // copy values and null flags from value segment
+    // Copy values and null flags from value segment.
     auto values = pmr_vector<char>{allocator};
     values.reserve(num_chars);
     auto null_values = pmr_vector<bool>{allocator};
@@ -180,7 +178,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
       null_values.resize(segment_size);
       offsets.resize(segment_size);
-      string_samples_lengths.resize(segment_size);
+      string_samples_lengths.reserve(segment_size);
 
       auto offset = uint32_t{0};
       // iterate over the iterator to access the values and increment the row index to write to the values and null
@@ -192,7 +190,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
         null_values[row_index] = contains_null;
         segment_contains_null = segment_contains_null || contains_null;
         offsets[row_index] = offset;
-        auto sample_size = size_t{0};
         if (!contains_null) {
           const auto& value = segment_element.value();
           const auto string_length = value.size();
@@ -200,10 +197,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
           Assert(string_length <= std::numeric_limits<uint32_t>::max(),
                  "The size of string row value exceeds the maximum of uint32 in LZ4 encoding.");
           offset += static_cast<uint32_t>(string_length);
-          sample_size = string_length;
+          string_samples_lengths.push_back(string_length);
         }
 
-        string_samples_lengths[row_index] = sample_size;
         ++row_index;
       }
     });
@@ -414,8 +410,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       return pmr_vector<char>{};
     }
 
-    DebugAssert(dictionary_size <= max_dictionary_size,
-                "Generated ZSTD dictionary in LZ4 compression is larger than the memory allocated for it.");
+    Assert(dictionary_size <= max_dictionary_size,
+           "Generated ZSTD dictionary in LZ4 compression is larger than the memory allocated for it.");
 
     // Shrink the allocated dictionary size to the actual size.
     dictionary.resize(dictionary_size);
